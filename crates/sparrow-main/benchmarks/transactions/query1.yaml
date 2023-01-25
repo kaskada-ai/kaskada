@@ -1,0 +1,37 @@
+tables:
+  - config:
+      name: Transaction
+      time_column_name: transaction_date
+      subsort_column_name: msno
+      group_column_name: idx
+      grouping: Transaction
+    source_files:
+      - parquet_path: prepared-Transaction-bucket-00000-0.parquet
+      - parquet_path: prepared-Transaction-bucket-00000-1.parquet
+      - parquet_path: prepared-Transaction-bucket-00001-0.parquet
+      - parquet_path: prepared-Transaction-bucket-00001-1.parquet
+
+feature_set:
+  query: >
+    let meaningful_txns = Transaction | if(Transaction.payment_plan_days > 0)
+
+    let max_expires_at = max(meaningful_txns.membership_expire_date)
+    let expiration_is_previous = (max_expires_at < meaningful_txns.transaction_date)
+
+    let subscription_expires_at =  max_expires_at | if(not(expiration_is_previous)) | else(meaningful_txns.transaction_date)
+
+    let cleaned_transactions = {
+        msno: meaningful_txns.msno,
+        payment_plan_days: meaningful_txns.payment_plan_days,
+        payment_method_id: meaningful_txns.payment_method_id,
+        trans_at: meaningful_txns.transaction_date,
+        membership_expire_date: meaningful_txns.membership_expire_date,
+        expires_at: subscription_expires_at
+    }
+
+    let first_transaction = cleaned_transactions | first()
+
+    in {
+        payment_plan_days: first_transaction.payment_plan_days,
+    }
+
