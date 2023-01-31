@@ -1,15 +1,43 @@
 tables:
   - config:
       name: Transaction
+      uuid: ece50bec-9cdb-11ed-a8fc-0242ac120002
       time_column_name: transaction_date
-      subsort_column_name: msno
       group_column_name: idx
       grouping: Transaction
-    source_files:
-      - parquet_path: prepared-Transaction-bucket-00000-0.parquet
-      - parquet_path: prepared-Transaction-bucket-00000-1.parquet
-      - parquet_path: prepared-Transaction-bucket-00001-0.parquet
-      - parquet_path: prepared-Transaction-bucket-00001-1.parquet
+    metadata:
+      file_count: 1
+      schema:
+        fields:
+          - name: msno
+            data_type:
+              kind: !Primitive 14 # STRING
+          - name: payment_method_id
+            data_type:
+              kind: !Primitive 6 # I64
+          - name: payment_plan_days
+            data_type:
+              kind: !Primitive 6 # I64
+          - name: transaction_date
+            data_type:
+              kind: !Primitive 24 # TIMESTAMP_NANOSECOND
+          - name: membership_expire_date
+            data_type:
+              kind: !Primitive 24 # TIMESTAMP_NANOSECOND
+          - name: idx
+            data_type:
+              kind: !Primitive 6 # I64
+    file_sets:
+      - slice_plan:
+          table_name: Transaction
+          entity_keys: idx
+        prepared_files:
+          - path: prepared-Transaction-transactions-100k-0.parquet
+            metadata_path: prepared-Transaction-transactions-100k-0-metadata.parquet
+            min_event_time: 2015-01-01T00:00:00Z
+            max_event_time: 2017-02-28T00:00:00Z
+            num_rows: 288561
+
 
 feature_set:
   query: >
@@ -35,3 +63,8 @@ feature_set:
         payment_plan_days: first_transaction.payment_plan_days,
     }
 
+output_to:
+  destination:
+    !ObjectStore
+      format: 1 # FILE_FORMAT_PARQUET
+      output_prefix_uri: file:///home/jonathan/kaskada/crates/sparrow-main/benchmarks/transactions
