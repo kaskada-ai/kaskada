@@ -11,6 +11,7 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
 use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig};
+use serde_yaml;
 
 mod error;
 mod prepare_iter;
@@ -99,6 +100,15 @@ pub fn prepare_file(
                 .change_context(Error::Internal)?;
             tracing::info!("Prepared batch {batch_count} with metadata {prepared_metadata:?}");
             prepared_metadatas.push(prepared_metadata);
+
+            let metadata_yaml_output =
+                output_path.join(format!("{output_prefix}-{batch_count}-metadata.yaml"));
+            let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
+            serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
+                .into_report()
+                .change_context(Error::Internal)?;
+            tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
+
             prepared_files.push(prepared_file);
         }
     }
