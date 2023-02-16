@@ -1,0 +1,10 @@
+name: kaskada
+title: Kaskada Documentation
+version: true
+
+nav:
+  - modules/getting-started/nav.adoc
+  - modules/ROOT/nav.adoc
+  - modules/how-to-guides/nav.adoc
+  - modules/reference/nav.adoc
+  - modules/fenl/nav.adoc

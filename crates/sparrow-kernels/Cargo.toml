@@ -1,0 +1,32 @@
+[package]
+name = "sparrow-kernels"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Computation kernels defined over Arrow arrays.
+"""
+
+[dependencies]
+anyhow.workspace = true
+ahash.workspace = true
+arrow.workspace = true
+bitvec.workspace = true
+chrono.workspace = true
+chronoutil.workspace = true
+itertools.workspace = true
+num.workspace = true
+smallvec.workspace = true
+sparrow-core = { path = "../sparrow-core" }
+static_init.workspace = true
+substring.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lib]
+bench = false
+doctest = false
+

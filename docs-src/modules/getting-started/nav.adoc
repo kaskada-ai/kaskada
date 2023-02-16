@@ -1,0 +1,7 @@
+* Getting Started  
+** xref:overview.adoc[Overview]
+** xref:hello-world.adoc[Hello World] 
+*** xref:hello-client-setup.adoc[Client Setup] 
+*** xref:hello-loading-data.adoc[Loading Data] 
+*** xref:hello-querying-data.adoc[Querying Data] 
+*** xref:hello-sharing-queries.adoc[Sharing Queries] 

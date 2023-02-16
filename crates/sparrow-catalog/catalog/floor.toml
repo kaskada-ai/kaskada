@@ -1,0 +1,36 @@
+name = 'floor'
+signature = 'floor(n: number) -> number'
+short_doc = 'Rounds the number down to the next smallest integer.'
+long_doc = '''
+See also [`round`](#round) and [`ceil`](#ceil).
+
+### Parameters
+* n: The number to round down.
+
+Note: This method may be applied to any numeric type. For anything other than
+`float32` and `float64` it has no affect since the values are already integers.
+
+### Results
+Returns a numeric column of the same type as `n`.
+The result contains `null` if `n` was null at that row.
+Otherwise, it contains the result of rounding `n` down to the next smallest integer.
+'''
+tags = ['math']
+
+[[examples]]
+name = 'Floor'
+expression = 'Input.a | floor()'
+input_csv = '''
+time,key,a
+2021-01-01T00:00:00.000000000Z,A,5.7
+2021-01-01T00:00:00.000000000Z,A,6.3
+2021-01-02T00:00:00.000000000Z,B,
+2021-01-02T00:00:00.000000000Z,B,-2.3
+'''
+output_csv = '''
+time,key,a,result
+2021-01-01T00:00:00.000000000Z,A,5.7,5.0
+2021-01-01T00:00:00.000000000Z,A,6.3,6.0
+2021-01-02T00:00:00.000000000Z,B,,
+2021-01-02T00:00:00.000000000Z,B,-2.3,-3.0
+'''

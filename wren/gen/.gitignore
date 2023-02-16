@@ -1,0 +1,5 @@
+# exclude everything except `*.ent.go` files and this .gitignore
+*.go
+*.conf
+!**/*.ent.go
+!/.gitignore

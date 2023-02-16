@@ -1,0 +1,15 @@
+version: v1
+name: buf.build/kaskada/kaskada
+deps:
+  - buf.build/envoyproxy/protoc-gen-validate
+  - buf.build/googleapis/googleapis
+build:
+  excludes:
+    - google
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE
+

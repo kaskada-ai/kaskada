@@ -1,0 +1,37 @@
+# Maintain draft releases based on changes.
+
+name: Update draft releases
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Draft Engine release
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: release-drafter-engine.yml
+          disable-autolabeler: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Draft Python release
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: release-drafter-python.yml
+          disable-autolabeler: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

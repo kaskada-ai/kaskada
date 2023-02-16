@@ -1,0 +1,76 @@
+name = 'minutely'
+signature = 'minutely() -> bool'
+short_doc = 'A periodic function that produces a `true` value at the start of each minutely.'
+long_doc = '''
+This function is often used in aggregations to produce windows or
+as a predicate column.
+
+### Results
+Returns a boolean column with each row containing a `true` value
+at the start of each minute, and `null` at all other times.
+'''
+tags = ['tick']
+
+[[examples]]
+name = 'Minutely Aggregated Window'
+description = '''
+In this example, the `minutely()` function is used as an argument to
+the [`since](#since) function, which produces a window. The result
+is a windowed aggregation that resets minutely.
+'''
+full_expression = '''
+{ n: Input.n, hourly_sum: sum(Input.n, window = since(minutely())) }
+| extend({time: time_of($input), key: first(Input.key) })
+'''
+input_csv = '''
+time,key,n
+1996-12-19T16:00:57-00:00,Ben,2
+1996-12-19T16:00:58-00:00,Ryan,3
+1996-12-19T16:01:59-00:00,Ben,6
+1996-12-19T16:02:00-00:00,Ben,9
+1996-12-19T16:02:00-00:00,Ryan,8
+1996-12-19T16:03:00-00:00,Ben,1
+'''
+output_csv = '''
+time,key,n,hourly_sum
+1996-12-19T16:00:57.000000000,Ben,2,2
+1996-12-19T16:00:58.000000000,Ryan,3,3
+1996-12-19T16:01:00.000000000,Ben,,2
+1996-12-19T16:01:00.000000000,Ryan,,3
+1996-12-19T16:01:59.000000000,Ben,6,6
+1996-12-19T16:02:00.000000000,Ben,9,15
+1996-12-19T16:02:00.000000000,Ryan,8,8
+1996-12-19T16:02:00.000000000,Ben,,15
+1996-12-19T16:02:00.000000000,Ryan,,8
+1996-12-19T16:03:00.000000000,Ben,1,1
+1996-12-19T16:03:00.000000000,Ben,,1
+1996-12-19T16:03:00.000000000,Ryan,,
+'''
+
+[[examples]]
+name = 'Filter Minutely'
+description = '''
+In this example, the `minutely()` function is used as an argument to
+the [`when`](#when) function, which filters input.
+
+The output includes the last input row before a [`tick`](#tick) occurs.
+'''
+full_expression = 'Input | last() | when(minutely())'
+input_csv = '''
+time,key,n
+1996-12-19T16:00:57-00:00,Ben,2
+1996-12-19T16:00:58-00:00,Ryan,3
+1996-12-19T16:01:59-00:00,Ben,6
+1996-12-19T16:02:00-00:00,Ben,9
+1996-12-19T16:02:00-00:00,Ryan,8
+1996-12-19T16:03:00-00:00,Ben,1
+'''
+output_csv = '''
+time,key,n
+1996-12-19T16:00:57-00:00,Ben,2
+1996-12-19T16:00:58-00:00,Ryan,3
+1996-12-19T16:02:00-00:00,Ben,9
+1996-12-19T16:02:00-00:00,Ryan,8
+1996-12-19T16:03:00-00:00,Ben,1
+1996-12-19T16:02:00-00:00,Ryan,8
+'''

@@ -1,0 +1,97 @@
+Time plays a critical role when working with event-based data and
+event-based models. The ability to calculate point-in-time historical
+feature values is one of the core features of Kaskada.
+
+Rather than computing a single value, Fenl expressions produce temporal
+streams describing the result of a given computation as its changes over
+time.
+
+== Solving the Challenge of Event-Based Data
+
+Kaskada is an event-based computation engine. An "event" can be any fact
+about the world associated with a time, for example, a user signing up
+for a service, or a customer purchasing a product. Most sources of
+event-based data change over time as events occur and are added to the
+system. Computing values from a set of events that changes over time
+means that the results must change as well.
+
+Traditional data processing systems are designed to answer questions
+about the _current_ state of a dataset, for instance, "how many
+purchases has a given user made?". This approach has some drawbacks: the
+answer to a given question changes based on when it is asked, and the
+only time at which you can ask questions is "now".
+
+These limitations are reasonable for many use cases, but they make it
+difficult to build feature examples for training many machine learning
+models. A common error is accidentally using information that is known
+"now" to build training examples intended to describe the information
+available in the past.
+
+The way traditional computations are _expressed_ doesn't help matters.
+Query languages like SQL and data-processing interfaces like DataFrames
+were designed to answer questions about tabular (rather than temporal)
+data. Seemingly simple questions like "how many fraud reports had been
+filed against each purchase's vendor at the time of purchase?" can
+require complex windowing and partitioning operations.
+
+== How Fenl Deals with Time
+
+Fenl takes a different approach by designing awareness of time into the
+query language.
+
+=== Value Streams
+
+Rather than answering a question with a single value, Fenl produces a
+stream of values describing the answer as it changes over time. For
+example, the answer to the question "how many purchases has a given user
+made?" might be the following table:
+
+[cols=",",options="header",]
+|===
+|Time |Purchase \| count()
+|2012-02-23 |1
+|2012-05-10 |2
+|2018-11-03 |3
+|2019-10-26 |4
+|===
+
+image::value-stream.png[]
+
+From this table we can see that if the question was asked in
+2015 the answer would be "the user has made _two_ purchases", but if the
+question was asked now the answer would be "the user has made _four_
+purchases".
+
+=== Final Results
+
+Often it is valuable to know the "final" answer to a question - the last
+answer that would be produced after all values have been processed. Fenl
+provides the ability to request `final-results` for these use cases. The
+result of query with result behavior set to `final-results` would be the
+following:
+
+[cols=",",options="header",]
+|===
+|Time |Purchase | count()
+|2019-10-26 |4
+|===
+
+
+image::final-results.png[]
+
+
+Final queries make it possible to know the "current" value of
+a query. Incremental queries and materializations always use final
+queries.
+
+=== Temporally-Correct Joins
+
+A core feature of Fenl is the ability to compute temporal joins across
+datasets. For example the question "how many fraud reports had been
+filed against each purchase's vendor at the time of purchase?" can be
+written in a single line.
+
+[source,fenl]
+----
+FraudReport | count() | lookup(Purchase.vendor_id)
+----

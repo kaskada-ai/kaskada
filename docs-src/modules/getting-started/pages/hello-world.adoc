@@ -1,0 +1,19 @@
+This quick start is intended to get you comfortable working with Kaskada
+quickly.
+
+Kaskada is a fully managed feature engine. Most interactions with
+Kaskada are performed via an API. A Python client library is provided to
+make interacting with the API as easy as possible.
+
+This tutorial assumes that you are working in an IPython environment
+such as Jupyter.
+
+Over the next 4 pages, you will learn how to:
+
+[arabic]
+. Install and set up our Python client library in a notebook
+environment.
+. Create a table and load data into the table.
+. Write queries over the table and see results.
+. Save a query as a view, for sharing in other notebooks or use in
+production.

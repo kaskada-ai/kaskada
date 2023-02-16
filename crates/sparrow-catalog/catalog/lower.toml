@@ -1,0 +1,36 @@
+name = 'lower'
+signature = 'lower(s: string) -> string'
+short_doc = 'Converts the string to lower case.'
+long_doc = '''
+### Parameters
+
+* s: The string to convert to lower case.
+
+### Results
+Returns a `string` column with each row containing the string `s`
+from that row converted to all lower case. The row contains `null`
+if `s` is `null` in that row.
+'''
+tags = ['string']
+
+[[examples]]
+name = 'Lower Case'
+expression = 'Input.value | lower()'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,Hello World
+2021-01-02T00:00:00.000000000Z,Ryan,
+2021-01-02T00:00:00.000000000Z,Ryan,Hi Earth
+2021-01-03T00:00:00.000000000Z,Ben,Hello
+2021-01-03T00:00:00.000000000Z,Ben,
+2021-01-04T00:00:00.000000000Z,Ryan,hi
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,Hello World,hello world
+2021-01-02T00:00:00.000000000Z,Ryan,,
+2021-01-02T00:00:00.000000000Z,Ryan,Hi Earth,hi earth
+2021-01-03T00:00:00.000000000Z,Ben,Hello,hello
+2021-01-03T00:00:00.000000000Z,Ben,,
+2021-01-04T00:00:00.000000000Z,Ryan,hi,hi
+'''

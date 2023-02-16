@@ -1,0 +1,307 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/schema.proto";
+
+message ComputePlan {
+  PerEntityBehavior per_entity_behavior = 1;
+
+  // Topologically ordered operations to execute.
+  //
+  // Each operation is executed with a separate work area, since
+  // the domain (rows) of the operation may differ) from other
+  // operations.
+  repeated OperationPlan operations = 2;
+
+  // The name of the grouping associated with the query.
+  //
+  // All of the tables used directly in the query (not via lookup)
+  // must have this grouping.
+  //
+  // All entity keys occurring within the results of a query must
+  // come from tables associated with this grouping.
+  string primary_grouping = 3;
+
+  // The key type of the primary grouping.
+  DataType primary_grouping_key_type = 4;
+}
+
+message OperationPlan {
+  repeated ExpressionPlan expressions = 1;
+
+  oneof operator {
+    // Should have no arguments.
+    ScanOperation scan = 2;
+
+    MergeOperation merge = 3;
+
+    SelectOperation select = 4;
+
+    TickOperation tick = 5;
+
+    WithKeyOperation with_key = 6;
+
+    // A lookup request converts from primary to foreign domain.
+    // The primary subsort and key are retained to enable sending the response.
+    LookupRequestOperation lookup_request = 7;
+
+    // A lookup response converts from foreign back to primary domain.
+    // The subsort and key are determined from retained columns.
+    LookupResponseOperation lookup_response = 8;
+
+    ShiftToOperation shift_to = 9;
+
+    ShiftUntilOperation shift_until = 10;
+  }
+
+  message ScanOperation {
+    Uuid table_id = 1;
+
+    // The (projected) table schema.
+    //
+    // When used within Sparrow, we should take care to convert this to
+    // a SchemaRef once to avoid creating multiple copies of it.
+    Schema schema = 2;
+
+    SlicePlan slice_plan = 3;
+  }
+
+  message MergeOperation {
+    // Index of the left operation.
+    uint32 left = 1;
+    // Index of the right operation.
+    uint32 right = 2;
+  }
+
+  message SelectOperation {
+    // Index of the operation that the select reads from.
+    uint32 input = 1;
+
+    // Reference to the operation input representing the condition.
+    OperationInputRef condition = 2;
+  }
+
+  message WithKeyOperation {
+    // Index of the operation that the with_key reads from.
+    uint32 input = 1;
+
+    // Reference to the operation input representing the new key column.
+    OperationInputRef new_key = 2;
+
+    // The name of the grouping this operation produces.
+    string grouping = 3;
+  }
+
+  message TickOperation {
+    // Describes the times this operation will tick over.
+    //
+    // Note that while this currently only allows for producing a single
+    // tick column, a good evolution would be to recognize when multiple
+    // tick behaviors are going to be merged together, and allow for this
+    // operation to accept repeated tick behavior, doing the merge
+    // pre-emptively.
+    TickBehavior behavior = 1;
+
+    // Index of the operation that the tick reads from.
+    //
+    // The domain (keys) of this operation are determined from the input
+    // operation.
+    uint32 input = 2;
+
+    enum TickBehavior {
+      TICK_BEHAVIOR_UNSPECIFIED = 0;
+
+      // Tick once after all other inputs have been processed.
+      // Corresponds to "after all events".
+      TICK_BEHAVIOR_FINISHED = 1;
+
+      TICK_BEHAVIOR_HOURLY = 2;
+      TICK_BEHAVIOR_DAILY = 3;
+      TICK_BEHAVIOR_MONTHLY = 4;
+      TICK_BEHAVIOR_YEARLY = 5;
+      TICK_BEHAVIOR_MINUTELY = 6;
+    }
+  }
+
+  message LookupRequestOperation {
+    // Index of the operation this LookupRequest reads from.
+    uint32 primary_operation = 1;
+
+    // The expression that contains the foreign key hash.
+    OperationInputRef foreign_key_hash = 2;
+  }
+
+  message LookupResponseOperation {
+    // Index of the operation this LookupResponse reads from.
+    uint32 foreign_operation = 1;
+
+    // Reference to the requesting key column in the `foreign_operation`.
+    OperationInputRef requesting_key_hash = 2;
+  }
+
+  message ShiftToOperation {
+    uint32 input = 1;
+
+    oneof time {
+      // Shift inputs to the corresponding computed time.
+      OperationInputRef computed = 2;
+      // Shift inputs to the given fixed timestamp.
+      google.protobuf.Timestamp literal = 3;
+    }
+  }
+
+  message ShiftUntilOperation {
+    uint32 input = 1;
+    OperationInputRef condition = 2;
+  }
+}
+
+message ExpressionPlan {
+  // Each argument references an expression from the operation.
+  repeated uint32 arguments = 1;
+
+  DataType result_type = 2;
+
+  // If true, the column computed by this expression should be included in
+  // the output of the operation.
+  bool output = 3;
+
+  // The operator this step applies.
+  oneof operator {
+    // Applies a named operator.
+    string instruction = 4;
+
+    // References one of the inputs to the operation.
+    OperationInputRef input = 5;
+
+    Literal literal = 6;
+
+    LateBoundValue late_bound = 7;
+  }
+}
+
+message Literal {
+  // TODO: Better ScalarValue proto encoding
+  oneof literal {
+    bool bool = 8;
+    int32 int8 = 9;
+    int32 int16 = 10;
+    int32 int32 = 11;
+    int64 int64 = 12;
+    uint32 uint8 = 13;
+    uint32 uint16 = 14;
+    uint32 uint32 = 15;
+    uint64 uint64 = 16;
+    float float32 = 17;
+    double float64 = 18;
+    TimestampValue timestamp = 19;
+    int32 date32 = 20;
+    int64 date64 = 21;
+    Time32Value time32 = 22;
+    Time64Value time64 = 23;
+    DurationValue duration = 24;
+    IntervalDayTimeValue interval_day_time = 25;
+    int32 interval_months = 26;
+    string utf8 = 27;
+    RecordValue record = 28;
+  }
+  message TimestampValue {
+    google.protobuf.Int64Value value = 1;
+    string unit = 2;
+    google.protobuf.StringValue tz = 3;
+  }
+
+  message Time32Value {
+    int32 value = 1;
+    string unit = 2;
+  }
+  message Time64Value {
+    int64 value = 1;
+    string unit = 2;
+  }
+  message DurationValue {
+    int64 value = 1;
+    string unit = 2;
+  }
+  message IntervalDayTimeValue {
+    int32 start = 1;
+    int32 end = 2;
+  }
+  message RecordValue {
+    repeated Literal values = 1;
+  }
+}
+
+enum LateBoundValue {
+  LATE_BOUND_VALUE_UNSPECIFIED = 0;
+  LATE_BOUND_VALUE_CHANGED_SINCE_TIME = 1;
+  LATE_BOUND_VALUE_FINAL_AT_TIME = 2;
+}
+
+// References one of the inputs to the operation.
+//
+// These refer to an input based on the producing operation and expression.
+//
+// One notable exception is the scan operation which has exactly one input
+// corresponding to the records read from the table. It uses it's own index
+// as the `producing_operation` (indicating that it "inputs from itself") and
+// `producing_expression = 0` (as expression 0) to indicate the rows being
+// read.
+message OperationInputRef {
+  // The index of the producing operation within the compute plan.
+  // This index should be one of the `consumed_operation_indices` for this operation.
+  uint32 producing_operation = 1;
+
+  oneof column {
+    KeyColumn key_column = 2;
+
+    // Reference the result of this expression within the producer.
+    //
+    // The referenced expression must be marked as on output expression.
+    uint32 producer_expression = 3;
+
+    // Indicates that this is referencing the scanned record.
+    google.protobuf.Empty scan_record = 4;
+
+    // Indicates that this is referencing the tick column.
+    google.protobuf.Empty tick = 7;
+  }
+
+  // The index of the referenced column in the producing operation's output.
+  //
+  // * 0 = time,
+  // * 1 = subsort,
+  // * 2 = key_hash,
+  // * 3 = first output column,
+  // * 4 = second output column,
+  // * ...
+  uint32 input_column = 5;
+
+  Interpolation interpolation = 6;
+
+  enum KeyColumn {
+    KEY_COLUMN_UNSPECIFIED = 0;
+    KEY_COLUMN_TIME = 1;
+    KEY_COLUMN_SUBSORT = 2;
+    KEY_COLUMN_KEY_HASH = 3;
+  }
+
+  // How values should be interpolated.
+  //
+  // This is currently only respected in merge operations, but that should
+  // be OK since that is the only operation that introduces new rows. We may
+  // need to include interpolation in other places such as `TickOperation`.
+  enum Interpolation {
+    INTERPOLATION_UNSPECIFIED = 0;
+
+    // Interpolate as `null` if no value is available.
+    INTERPOLATION_NULL = 1;
+    // Interpolate from the most recent row for the key if no value is
+    // available.
+    INTERPOLATION_AS_OF = 2;
+  }
+}

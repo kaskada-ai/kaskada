@@ -1,0 +1,48 @@
+name = 'shift_to'
+signature = 'shift_to(time: timestamp_ns, value: any) -> any'
+short_doc = 'Produces the current `value` shifted forward to the given `time`.'
+long_doc = '''
+### Parameters
+* time: Column containing the times to shift values to.
+* value: The values to be shifted.
+
+### Results
+For each row, shifts the `value` forward to the given `time`.
+For rows where either `value` or `time` is `null`, nothing is shifted forward.
+If value of the `time` column is less than the time of the current row, nothing is shifted forward.
+
+If multiple values for the same entity key are shifted to the same time, all
+of them will be emitted in the order they originally appeared.
+
+New `subsort` IDs will be assigned to each row.
+'''
+tags = ['time']
+
+[[examples]]
+name = 'Shift To'
+description = '''
+This example uses `shift_to` to shift values from `Input` forward to the `date` field.
+The order of rows (shown in field `n`) changes based on the order of `date`.
+Since the row containing `n = 4` has a `date` less than the `time`, it is dropped.
+
+The rows with `n = 3` and `n = 5` had the same `date`.
+We see that they have both been shifted to the same time, and the original order preserved within that time.
+'''
+full_expression = 'Input | shift_to(Input.date)'
+input_csv = '''
+time,key,date,n
+1996-03-21T00:00:00-00:00,Ben,1996-08-19T00:00:00-00:00,1
+1996-04-21T00:00:00-00:00,Ryan,1996-07-20T00:00:00-00:00,2
+1996-05-21T00:00:00-00:00,Ryan,1996-07-22T00:00:00-00:00,3
+1996-06-21T00:00:00-00:00,Ryan,1996-05-22T00:00:00-00:00,4
+1996-07-21T00:00:00-00:00,Ben,1996-07-22T00:00:00-00:00,5
+1996-08-21T00:00:00-00:00,Ben,1996-08-22T00:00:00-00:00,6
+'''
+output_csv = '''
+time,key,date,n
+1996-04-21T00:00:00-00:00,Ryan,1996-07-20T00:00:00-00:00,2
+1996-05-21T00:00:00-00:00,Ryan,1996-07-22T00:00:00-00:00,3
+1996-07-21T00:00:00-00:00,Ben,1996-07-22T00:00:00-00:00,5
+1996-03-21T00:00:00-00:00,Ben,1996-08-19T00:00:00-00:00,1
+1996-08-21T00:00:00-00:00,Ben,1996-08-22T00:00:00-00:00,6
+'''

@@ -1,0 +1,63 @@
+= Generating License Report 
+
+The repo currently contains software in 3 programming languages. 
+For each software we can generate the list of dependencies and their associated license. 
+
+== Rust licenses 
+
+1. Install crate  https://github.com/onur/cargo-license[`license`]
+[,shell]
+----
+cargo install cargo-license
+----
+1. Generate the report 
+[,shell]
+----
+cargo license --all-features --avoid-dev-deps --avoid-build-deps > cargo-licenses.txt
+----
+
+== Go licenses 
+
+
+1. Install https://github.com/google/go-licenses[go-licenses]
+[,shell]
+----
+go install github.com/google/go-licenses@latest
+----
+1. Partially build `wren`
+[,source]
+----
+$ make proto/generate
+$ make ent/generate
+----
+1. Move into the `wren` directory and run the command 
+[,shell]
+----
+cd wren; go-license report . > go-licenses.txt`
+----
+1. Sort go-licenses output
+[,shell]
+----
+cat go-licenses.txt | awk '{split($0,a,","); print a[3], a[1], a[2]}' | sort -d > go-licenses-sorted.txt
+----
+
+== Python licenses 
+1, Install pip-licenses
+[,shell]
+----
+pip3 install pip-licenses
+---- 
+1. Move into `clients/python` and run the `pip-license` command showing only the package listed in  `pyproject.toml` file, under they key `[tool.poetry.dependencies]`
+[,shell]
+----
+ pip-licenses -p python certifi domonic googleapis-common-protos html5lib ipython pandas pyarrow requests grpcio-status grpcio > python-licenses.txt
+----
+
+== Putting it all together 
+
+You can cat the outputs from the previous section into one file 
+
+[,shell]
+----
+cat cargo-licenses.txt go-licenses-sorted.txt python-licenses.txt > licenses-report.txt
+----

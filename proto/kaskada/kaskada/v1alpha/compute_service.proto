@@ -1,0 +1,336 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/destinations.proto";
+import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
+import "kaskada/kaskada/v1alpha/plan.proto";
+import "kaskada/kaskada/v1alpha/schema.proto";
+
+message FeatureSet {
+  // Named Fenl formulas which may be referenced by the `query`.
+  repeated Formula formulas = 1;
+
+  // The Fenl expression corresponding to use as the result of the query.
+  //
+  // If the query produces a record, each of the fields will be a column in
+  // the output.
+  string query = 2;
+}
+
+// A named Fenl formula.
+message Formula {
+  string name = 1;
+  string formula = 2;
+
+  // A string describing the source location of this formula.
+  // This will be used when reporting compilation errors.
+  // If not set this will default to `Formula:<name>`.
+  string source_location = 3;
+}
+
+// A table is a name assigned to one or more data sources.
+//
+// All of the data in a table should have the same schema, possibly merged
+// across one or more evolutions of the schema.
+//
+// Each row in the table is associated with a time. The table should be sorted
+// by time.
+//
+// Each row may be associated with a subsort column, indicating ordering
+// within the given time. If defined, the table should be sorted lexicographically by
+// `(time, subsort)`.
+message ComputeTable {
+  // General configuration of the table
+  TableConfig config = 1;
+
+  // The table metadata.
+  //
+  // This is currently optional. If present, it will be used to determine
+  // the schema of the table, as well as (in the future) reporting progress.
+  // At some point it is likely to become required.
+  TableMetadata metadata = 2;
+
+  repeated FileSet file_sets = 3;
+
+  message FileSet {
+    // How this FileSet is sliced.
+    // Default (`None`) indicates no slicing needs to be performed.
+    SlicePlan slice_plan = 1;
+
+    // TODO: Allow per-file set metadata.
+
+    // The source(s) of information for the table.
+    //
+    // Note: If this is empty, the table will be assumed to be empty.
+    repeated PreparedFile prepared_files = 2;
+  }
+}
+
+enum LongQueryState {
+  LONG_QUERY_STATE_UNSPECIFIED = 0;
+  LONG_QUERY_STATE_INITIAL = 1;
+  LONG_QUERY_STATE_RUNNING = 2;
+  LONG_QUERY_STATE_FINAL = 3;
+}
+
+message PlanHash {
+  // The calculated hash of the query plan.
+  bytes hash = 1;
+}
+
+message ResultPaths {
+  repeated string paths = 1;
+}
+
+message GetCurrentSnapshotVersionRequest {}
+message GetCurrentSnapshotVersionResponse {
+  // The current snapshot version.
+  int32 snapshot_version = 1;
+}
+
+message CompileRequest {
+  // The tables that are available to the query.
+  repeated ComputeTable tables = 1;
+
+  // The features to be compiled for the query.
+  FeatureSet feature_set = 2;
+
+  // The slice request provided by the user.
+  SliceRequest slice_request = 3;
+
+  // The kind of Fenl expression being compiled.
+  ExpressionKind expression_kind = 4;
+
+  // Whether experimental features should be enabled.
+  //
+  // If we require multiple experiments, we may introduce a repeated field
+  // enabling specific experiments by enum or name (if we want to hide
+  // the set of experiments). But for now, if this flag is true, then the
+  // current set of "experiments" will be enabled.
+  bool experimental = 5;
+
+  PerEntityBehavior per_entity_behavior = 6;
+
+  enum ExpressionKind {
+    EXPRESSION_KIND_UNSPECIFIED = 0;
+    // The expression represents a complete query, and should be checked as such.
+    // Complete queries must produce a struct.
+    EXPRESSION_KIND_COMPLETE = 1;
+    // The query represents a formula, and should be checked as such.
+    // Formulas may produce primitive types.
+    EXPRESSION_KIND_FORMULA = 2;
+  }
+}
+
+message CompileResponse {
+  // Names that were missing in the query request.
+  //
+  // These are formulas (views) and tables referenced directly or
+  // indirectly by the query which were not provided in the request.
+  // An indirect reference occurs when the query references a
+  // provided formula which references formulas or tables.
+  //
+  // If this is non-empty, the FenlDiagnostics should include
+  // corresponding "missing name" errors
+  repeated string missing_names = 1;
+
+  // Fenl Diagnostics -- warnings and errors derived from the query.
+  FenlDiagnostics fenl_diagnostics = 2;
+
+  // The compiled compute plan.
+  //
+  // Will be null if the query is not executable due to errors or being
+  // an incomplete query.
+  ComputePlan plan = 3;
+
+  // The result type of the query.
+  DataType result_type = 4;
+
+  // Top level names that are directly referenced by the query.
+  //
+  // These are formulas (views) and tables referenced by the query.
+  //
+  // This includes all free names, including those which were "missing".
+  //
+  // This may be empty if the query or formulas failed to parse.
+  repeated string free_names = 5;
+
+  // Necessary table slices.
+  //
+  // The same table may be sliced in multiple ways and therefore can appear
+  // multiple times.
+  //
+  // Implementation detail: As Sparrow implements, needed tables should be returned
+  // even if there is no slice plan related to it. Wren relies on this to enumerate
+  // the set of prepared tables that need to be passed to query.
+  repeated SlicePlan table_slices = 6;
+
+  // Whether incremental should be enabled for this query.
+  // If false, either incremental is not enabled (currently requires experimental)
+  // or the query uses operations not yet supported by incremental.
+  bool incremental_enabled = 7;
+
+  // Hash of the query plan.
+  PlanHash plan_hash = 8;
+}
+
+message ExecuteRequest {
+  // The compiled compute plan.
+  ComputePlan plan = 1;
+
+  // Tables that are available to the query.
+  //
+  // This should have file sets for the necessary tables properly configured.
+  repeated ComputeTable tables = 2;
+
+  // Describes the destinations that results will be produced to.
+  //
+  // Note: Can be a repeated field to support multiple destinations.
+  OutputTo output_to = 3;
+
+  Limits limits = 5;
+
+  // Configuration for snapshot storage and retrieval.
+  // If not set, then no snapshots will be written by the query.
+  ComputeSnapshotConfig compute_snapshot_config = 6;
+
+  // If set, only values representing changes at or after this time are included.
+  // By default (none), results will include all rows.
+  //
+  // When used with query type `final_results`, only the final result of any entities
+  // that have changed at or after this time are included.
+  // When used with query type `all results`, all results at or after this time
+  // are included.
+  //
+  // This timestamp is determined from the user-provided timestamp or
+  // the minimum event from a given data token.
+  google.protobuf.Timestamp changed_since = 7;
+
+  // Only inputs prior to this time are included in the final result at this this time
+  google.protobuf.Timestamp final_result_time = 8;
+
+  // Originally used for `should_export_entity_key` but was removed after default behavior set to true.
+  reserved 9;
+
+  message Limits {
+    // Produces a preview of the data with at least this many rows.
+    //
+    // Default value (0) indicates all rows should be produced.
+    int64 preview_rows = 1;
+  }
+
+  message ComputeSnapshotConfig {
+    // S3 URI prefix where *all* snapshots should be written.
+    // This should be unique to the query hash.
+    // Snapshots will be written to this prefix.
+    //
+    // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data`.
+    string output_prefix = 1;
+
+    // If set, the S3 URI prefix of a snapshot to resume from.
+    //
+    // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data/<snapshotId>`.
+    google.protobuf.StringValue resume_from = 2;
+  }
+
+  message OutputTo {
+    // The destination to materialize results to.
+    oneof destination {
+      ObjectStoreDestination object_store = 1;
+      RedisDestination redis = 2;
+    }
+  }
+}
+
+message ExecuteResponse {
+  LongQueryState state = 1;
+
+  // If true, the query is *done* (no more results should be produced)
+  // but there may be some pending finalization that is not done.
+  // Diagnostics such as query flight records may still be returned in
+  /// future messages.
+  bool is_query_done = 2;
+
+  // Progress information included in every message.
+  ProgressInformation progress = 3;
+
+  // The paths of results from the query.
+  //
+  // Files may be returned at any point in the response stream.
+  // Each file represents a different subset of the results. All files
+  // should be considered part of the result set.
+  // Each output file will appear once in the output paths of one of
+  // the message in the response stream. All output paths appearing in
+  // any message in the response should be collected and used to represent
+  // the complete output.
+  ResultPaths output_paths = 4;
+
+  // Path to the flight record.
+  // Currently this is sent only on the final message, after the flight
+  // record has been uploaded. It may change in the future to be set
+  // earlier if we stream the flight records to the destination.
+  google.protobuf.StringValue flight_record_path = 5;
+
+  // Path to the plan yaml.
+  // If included, this will be set on one of the earlier responses indicating
+  // the path within the diagnostic prefix where the plan yaml has been placed.
+  google.protobuf.StringValue plan_yaml_path = 6;
+
+  // 0 or more snapshots produced during the computation.
+  repeated ComputeSnapshot compute_snapshots = 7;
+
+  message ProgressInformation {
+    // Total input rows to be processed by this query.
+    int64 total_input_rows = 1;
+    // Number of input rows processed by this query.
+    int64 processed_input_rows = 2;
+
+    // Number of rows added to buffers.
+    int64 buffered_rows = 3;
+
+    // Number of buffered rows that have been processed.
+    //
+    // Note: Not all buffered rows *will* be processed.
+    // For example, `shift_until`` with a predicate that is never `true`.
+    // This exists to provide an indication of work remaining *after*
+    // processed_input_rows == total_input_rows.
+    int64 processed_buffered_rows = 8;
+
+    // Minimum event time present in input.
+    int64 min_event_time = 4;
+    // Maximum event time present in input.
+    int64 max_event_time = 5;
+    // Current event time present in output.
+    int64 output_time = 6;
+
+    // The number of output rows produced so far.
+    int64 produced_output_rows = 7;
+  }
+
+  message ComputeSnapshot {
+    // Full S3 URI path to the snapshot.
+    // A snapshot is a set of RocksDB files
+    // Example: `s3://<bucket>/<request.snapshot.prefix>/<snapshot_id>`
+    string path = 1;
+
+    // The maximum event time included in the snapshot.
+    google.protobuf.Timestamp max_event_time = 2;
+
+    // The plan hash the snapshot was taken for.
+    PlanHash plan_hash = 3;
+
+    // The snapshot version
+    int32 snapshot_version = 4;
+  }
+}
+
+service ComputeService {
+  rpc Compile(CompileRequest) returns (CompileResponse);
+  rpc Execute(ExecuteRequest) returns (stream ExecuteResponse);
+
+  // Gets the current snapshot version.
+  rpc GetCurrentSnapshotVersion(GetCurrentSnapshotVersionRequest) returns (GetCurrentSnapshotVersionResponse);
+}

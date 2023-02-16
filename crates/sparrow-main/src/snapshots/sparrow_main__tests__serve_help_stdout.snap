@@ -1,0 +1,30 @@
+---
+source: crates/sparrow-main/src/main.rs
+expression: output
+---
+Run the Sparrow gRPC service
+
+Usage: sparrow-main serve [OPTIONS]
+
+Options:
+      --service-addr <SERVICE_ADDR>
+          Address to run the service on
+          
+          [env: SPARROW_GRPC_ADDR=]
+          [default: 0.0.0.0:50052]
+
+      --flight-record-path <FLIGHT_RECORD_PATH>
+          Path for writing (flight records and query plans).
+          
+          If `None`, flight records and query plans will not be written.
+          
+          For example, `s3://<bucket>/flight_records` to write to the `flight_records` prefix of the given S3 bucket.
+          
+          [env: SPARROW_FLIGHT_RECORD_PATH=]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+

@@ -1,0 +1,252 @@
+---
+source: sparrow-compiler/tests/compiler_golden_tests.rs
+expression: compute_plan
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: store_id
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: sender_id
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: true
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: sender_id
+      - arguments:
+          - 0
+          - 1
+        result_type:
+          kind:
+            Primitive: 10
+        output: true
+        operator:
+          Instruction: field_ref
+      - arguments:
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: is_valid
+    operator:
+      Scan:
+        table_id:
+          high: 4921766025386347933
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: store_id
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: sender_id
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: StoreReceived
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 1
+        output: false
+        operator:
+          Literal:
+            literal: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: store_id
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: sender_id
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 0
+      - arguments:
+          - 3
+          - 2
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 5
+            interpolation: 1
+            column:
+              ProducerExpression: 3
+      - arguments:
+          - 5
+          - 4
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: if
+      - arguments:
+          - 6
+          - 1
+          - 1
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: sum
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: sum_store_received
+      - arguments:
+          - 8
+          - 7
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sum_store_received
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Instruction: record
+      - arguments:
+          - 9
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 10
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      WithKey:
+        input: 0
+        new_key:
+          producing_operation: 0
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 2
+        grouping: u64
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sum_store_received
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 3
+            interpolation: 2
+            column:
+              ProducerExpression: 9
+    operator:
+      Select:
+        input: 1
+        condition:
+          producing_operation: 1
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 11
+primary_grouping: u64
+primary_grouping_key_type:
+  kind:
+    Primitive: 10
+

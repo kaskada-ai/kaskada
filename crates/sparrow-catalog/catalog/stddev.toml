@@ -1,0 +1,45 @@
+name = 'stddev'
+signature = 'stddev(input: number, window: window = null) -> f64'
+short_doc = 'Computes the sample standard deviation of values across the input.'
+long_doc = '''
+Computes the sample standard deviation, which is the square root of the
+[sample variance](#variance).
+
+### Parameters
+* input: The input to compute the standard deviation of.
+* window: The window to aggregate within, as described in
+[Aggregation Functions](#aggregation-functions). If `null`, aggregates are across all
+rows for the current entity. If non-`null`, aggregates are within the specified window.
+See [window functions](#window-functions) for how to specify the aggregation window.
+
+### Results
+For each input row, return the mean of new, non-`null` rows in `input` up to and
+including the input row for the given entity. Returns `null` until there has been
+at least two such inputs.
+'''
+tags = [
+    'aggregation',
+    'math',
+]
+
+[[examples]]
+name = 'Standard Deviation'
+expression = 'stddev(Input.value)'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,50.7
+2021-01-01T00:00:00.000000000Z,Ryan,
+2021-01-02T00:00:00.000000000Z,Ryan,67.2
+2021-01-03T00:00:00.000000000Z,Ben,1.2
+2021-01-04T00:00:00.000000000Z,Ben,
+2021-01-04T00:00:00.000000000Z,Ryan,2.3
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,50.7,
+2021-01-01T00:00:00.000000000Z,Ryan,,
+2021-01-02T00:00:00.000000000Z,Ryan,67.2,
+2021-01-03T00:00:00.000000000Z,Ben,1.2,24.750000000000004
+2021-01-04T00:00:00.000000000Z,Ben,,24.750000000000004
+2021-01-04T00:00:00.000000000Z,Ryan,2.3,32.45
+'''

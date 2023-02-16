@@ -1,0 +1,115 @@
+The results of a Fenl query can be written to an external data store and
+kept up to date as the data underlying the query changes using
+materializations. A materialization is similar to a query, except that
+the results are updated any time data is added to a table used by the
+query. Materializations can be used to populate feature vectors in a
+variety of feature stores to be used in production for low-latency
+inference.
+
+All methods on this page use from the `materialization` object. Be sure
+to import it before running any method:
+
+[source,python]
+----
+from kaskada import materialization
+----
+
+== Materialization Methods
+
+=== Creating a Materialization
+
+To create a materialization, we'll start by describing the expression
+we'd like to materialize. In this case, we're interested in some
+purchase statistics for each user. This definition depends on business
+logic and might require some iteration to get just right.
+
+==== Using fenlmagic
+
+[source,IPython]
+----
+%%fenl --var purchase_stats
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+Notice that we added `--var purchase_stats` to the beginning of the
+magic block; this causes the extension to assign the query string to the
+variable `purchase_stats` when the block is run.
+
+We can use this variable to create a materialization using the Python
+client without re-typing the expression:
+
+[source,python]
+----
+redis_db = 1
+redis_host = "redisai"
+redis_port = 6379
+destination = materialization.RedisAIDestination(redis_db, redis_host, redis_port)
+
+materialization.create_materialization(
+    name = "PurchaseStats",
+    destination = destination,
+    query = purchase_stats,
+)
+----
+
+==== Using python
+
+Materializations can also be created without using fenlmagic:
+
+[source,python]
+----
+materialization.create_materialization(
+    name = "PurchaseStats",
+    destination = destination,
+    query = "{
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+    }"
+)
+----
+
+=== List Materializations
+
+The list materializations method returns all materializations defined
+for your user. An optional search string can filter the response set.
+
+Here is an example of listing tables:
+
+[source,python]
+----
+materialization.list_materializations("Purchase")
+----
+
+=== Get Materialization
+
+You can get a materialization using its name:
+
+[source,python]
+----
+materialization.get_materialization("PurchaseStats")
+----
+
+=== Updating a Materialization
+
+Materializations are currently immutable. Updating a materialization
+requires deleting that materialization and then re-creating it with a
+new expression.
+
+=== Deleting a materialization
+
+You can delete a materialization using its name:
+
+[source,python]
+----
+materialization.delete_materialization("PurchaseStats")
+----
+
+Deleting a materialization does not delete any data persisted in the
+external data store.

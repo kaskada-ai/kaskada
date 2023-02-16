@@ -1,0 +1,343 @@
+Let's walk through an example of using Fenl to build features for a
+simple fraud detection model.
+
+== Data Model
+
+Features will be built from two event tables; a `Purchase` table and a
+`FraudReport` table. The goal will be to build a model predicting if a
+given purchase will result in a fraud report within the next 30 days.
+
+A `Purchase` event occurs when a transaction is recorded. It describes
+the items that were purchased, the vendor selling the items, the
+customer buying the items and the total value of the transaction.
+
+[source,json]
+----
+# Purchases
+{ time: timestamp_ns, id: string, vendor_id: string, customer_id: string, total: i64 }
+----
+
+[cols="<,<,<,<,<",options="header",]
+|===
+|entity(id) |time |vendor_id |customer_id |total
+|cb_001 |100 |chum_bucket |karen |9
+|cb_002 |101 |chum_bucket |karen |2
+|cb_003 |102 |chum_bucket |karen |4
+|cb_004 |103 |chum_bucket |patrick |5000
+|cb_005 |103 |chum_bucket |karen |3
+|cb_006 |104 |chum_bucket |karen |5
+|kk_001 |100 |krusty_krab |patrick |3
+|kk_002 |101 |krusty_krab |patrick |5
+|kk_003 |102 |krusty_krab |patrick |12
+|kk_004 |104 |krusty_krab |patrick |9
+|===
+
+A `FraudReport` event occurs when a transaction is reported as
+fraudulent. It identifies the purchase that was reported as fraudulent.
+
+[source,json]
+----
+# FraudReports
+{ time: timestamp_ns, purchase_id: string }
+----
+
+[cols="<,<",options="header",]
+|===
+|entity (purchase_id) |time
+|cb_004 |120
+|===
+
+The values produced by a Fenl expression are associated with an _entity
+key_. Entity keys describe something each value is associated with. For
+example, a purchase could be related to a specific user, and a fraud
+report could be related to a specific vendor. The `Purchase` table's
+entity key is the `id` field, while the `FraudReport` table's entity key
+is the `purchase_id` field. Any entity key will do - these specific keys
+are chosen because they're convenient for this exercise.
+
+== Simple Aggregation: Target Value
+
+Before we can start building the inputs to our model, we need to
+describe the target value the model will predict. We would like to
+predict if a given purchase will result in a fraud report - if the
+number of daily fraud reports is greater than zero.
+
+[source,fenl]
+----
+let Target = count(FraudReport, window=since(daily())) > 0
+----
+
+[cols="<,<,<", options="header"]
+|===
+| entity | time | entity  
+|cb_004 | 120 | *true* 
+|===
+
+Aggregations in Fenl are scoped to entity key; the `Target` expression
+produces a `bool` value associated with _each_ purchase (as identified
+by `FraudReport.purchase_id`). In this case we've applied a window
+operation to the aggregation - the target value is the number of
+`FraudReport` values so far in a given day.
+
+== First Feature: Purchase Total
+
+We can describe some simple features based on attributes of a purchase
+event. For example, we can describe the purchase total by referencing
+the appropriate event field:
+
+[source,fenl]
+----
+let PurchaseTotal = Purchase.total
+----
+
+[cols="<,<,<",options="header",]
+|===
+|entity |time |Purchase.total
+|cb_001 |100 |*9*
+|cb_002 |101 |*2*
+|cb_003 |102 |*4*
+|cb_004 |103 |*5000*
+|cb_005 |103 |*3*
+|cb_006 |104 |*5*
+|kk_001 |100 |*3*
+|kk_002 |101 |*5*
+|kk_003 |102 |*12*
+|kk_004 |104 |*9*
+|===
+
+Fenl expressions are either _continuous_ or _discrete_. Discrete
+expressions are defined at a finite set of times and their value is
+`null` at all other times. For example, `PurchaseTotal` is a discrete
+expression: it is defined at the times associated with each purchase
+event.
+
+Continuous expressions are defined at _all_ times, and are generally the
+result of an aggregation. For example, `Target` is a continuous
+expression because it uses the `count()` aggregation: at any point in
+time its value is `true` if there have been 1 or more `FraudReport`
+events before that time or `false` otherwise.
+
+== Changing Entity Key: Purchase Average by Customer part I
+
+It could be useful to compare how each individual purchase compares to
+the customer's other purchases. We can describe a given customer's
+purchases by transforming the purchase table to use `customer_id` as the
+entity key rather than `id`. The resulting expression contains the same
+values, but aggregations will now be scoped to customer ID rather than a
+purchase ID.
+
+[source,fenl]
+----
+let PurchaseByCustomer = Purchase | with_key($input.customer_id)
+----
+
+[cols="<,<,<,<,<",options="header",]
+|===
+|entity |time |vendor_id |customer_id |total
+|*karen* |100 |chum_bucket |karen |9
+|*karen* |101 |chum_bucket |karen |2
+|*karen* |102 |chum_bucket |karen |4
+|*karen* |103 |chum_bucket |karen |3
+|*karen* |104 |chum_bucket |karen |5
+|*patrick* |100 |krusty_krab |patrick |3
+|*patrick* |101 |krusty_krab |patrick |5
+|*patrick* |102 |krusty_krab |patrick |12
+|*patrick* |103 |chum_bucket |patrick |5000
+|*patrick* |104 |krusty_krab |patrick |9
+|===
+
+[TIP]
+====
+This expression uses "pipe syntax" which allows sequential
+operations to be chained.
+
+
+Pipe syntax works by assigning the left-hand-side of the pipe to the
+name `$input` in the right-hand-side of the pipe. Within the
+right-hand-side of a pipe expression, required function arguments that
+are omitted from the function call default to `$input`.
+
+An equivalent way to write this expression is
+`let PurchaseByCustomer = with_key(Purchase.customer_id, Purchase)`
+====
+
+This allows us to describe the average of each customer's purchases:
+
+[source,fenl]
+----
+let AveragePurchaseByCustomer = PurchaseByCustomer.total | mean()
+----
+
+[cols="<,<,<",options="header",]
+|===
+|time |entity |... | mean()
+|karen |100 |*9*
+|karen |101 |*5.5*
+|karen |102 |*5*
+|karen |103 |*4.5*
+|karen |104 |*4.6*
+|patrick |100 |*3*
+|patrick |101 |*4*
+|patrick |102 |*6.666*
+|patrick |103 |*1255*
+|patrick |104 |*1005.8*
+|===
+
+Expressions in Fenl are _temporal_; they describe the result of a given
+computation at every point in time. In this case,
+`AveragePurchaseByCustomer` is an expression whose value changes over
+time as purchase events occur. The temporal nature of expressions allows
+Fenl to describe the values as they would have been computed at
+arbitrary times in the past.
+
+== Joining Between Entities: Purchase Average By Customer part II
+
+Our goal is to predict if a given _purchase_ will be reported as
+fraudulent, but the entity key of `AveragePurchaseByCustomer` describes
+a _customer_. We can operate between entities by "looking up" the
+average purchase of a particular purchase's customer:
+
+[source,fenl]
+----
+let CustomerAveragePurchase = AveragePurchaseByCustomer | lookup(Purchase.customer_id)
+----
+
+[cols="<,<,<,<",options="header",]
+|===
+|entity |time |customer_id |... | lookup(...)
+|cb_001 |100 |karen |*9*
+|cb_002 |101 |karen |*5.5*
+|cb_003 |102 |karen |*5*
+|cb_004 |103 |patrick |*1255*
+|cb_005 |103 |karen |*4.5*
+|cb_006 |104 |karen |*4.6*
+|kk_001 |100 |patrick |*3*
+|kk_002 |101 |patrick |*4*
+|kk_003 |102 |patrick |*6.666*
+|kk_004 |104 |patrick |*1005.8*
+|===
+
+In this case, for each `Purchase` event, the value of
+`AveragePurchaseByCustomer` computed for the purchases `customer_id` _at
+the time of the purchase_ is produced. The value being looked up (in
+this case `AveragePurchaseByCustomer`) is referred to as the _foreign_
+value, while the value describing the foreign entity (in this case
+`Purchase.customer_id`) is referred to as the _key_ value.
+
+Lookups are similar to SQL left-joins: a foreign value is produced for
+each key value. In contrast to SQL joins, the lookup produces the
+foreign expression value at the point in time associated with each key
+expression value.
+
+== Time Travel: Shifting Features Forward in Time
+
+We would like to predict if a purchase will result in a fraud report
+within 30 days of the purchase. We began by describing our `Target`
+value, and then we described two features that could be useful for
+making such a prediction: `PurchaseTotal` and `CustomerAveragePurchase`.
+
+For our model to make predictions about the future, it must be trained
+on features and target values computed at different points in time - we
+would like the target value to be computed 30 days after the feature
+values.
+
+Fenl allows values to "time-travel" forward in time. This can be
+accomplished by _shifting_ the feature expressions forward in time by 30
+days:
+
+[source,fenl]
+----
+let ShiftedPurchaseTime            = PurchaseTotal.time | add_time(days(30))
+let ShiftedCustomerAverageTime     = CustomerAveragePurchase.time | add_time(days(30)) 
+let ShiftedPurchaseTotal           = PurchaseTotal | shift_to(ShiftedPurchaseTime)
+let ShiftedCustomerAveragePurchase = CustomerAveragePurchase | shift_to(ShiftedCustomerAverageTime)
+----
+
+[cols="<,<,<,<",options="header",]
+|===
+|entity |time |ShiftedPurchaseTotal |ShiftedCustomerAveragePurchase
+|cb_001 |*130* |9 |9
+|cb_002 |*131* |2 |5.5
+|cb_003 |*132* |4 |5
+|cb_004 |*133* |5000 |1255
+|cb_005 |*133* |3 |4.5
+|cb_006 |*134* |5 |4.6
+|kk_001 |*130* |3 |3
+|kk_002 |*131* |5 |4
+|kk_003 |*132* |12 |6.666
+|kk_004 |*134* |9 |1005.8
+|===
+
+The result of these shift operations contain the same values as
+`PurchaseTotal` and `CustomerAveragePurchase`, but the times associated
+with each value will be 30 days later. We can now describe our training
+set by combining the shifted predictor values with the non-shifted
+target value:
+
+[source,fenl]
+----
+let TrainingExample = {
+  p_total: ShiftedPurchaseTotal,
+  avg_purchase: ShiftedCustomerAveragePurchase,
+  target: Target,
+}
+----
+
+[cols="<,<,<,<,<",options="header",]
+|===
+|entity |time |p_total |avg_purchase |target
+|cb_001 |130 |9 |9 |false
+|cb_002 |131 |2 |5.5 |false
+|cb_003 |132 |4 |5 |false
+|cb_004 |133 |5000 |1255 |true
+|cb_005 |133 |3 |4.5 |false
+|cb_006 |134 |5 |4.6 |false
+|kk_001 |130 |3 |3 |false
+|kk_002 |131 |5 |4 |false
+|kk_003 |132 |12 |6.666 |false
+|kk_004 |134 |9 |1005.8 |false
+|===
+
+[TIP]
+====
+Values cannot travel _backwards_ in time. This helps to ensure
+that temporal leakage cannot happen.
+====
+
+== Going to Production: Feature Vectors
+
+Once a model has been trained, we'll need to compute feature vectors for
+making predictions. Feature vectors consist of the non-shifted predictor
+expressions but not the target value.
+
+[source,fenl]
+----
+let FeatureVector = {
+  p_total: PurchaseTotal,
+  avg_purchase: CustomerAveragePurchase,
+}
+----
+
+[cols="<,<,<,<",options="header",]
+|===
+|entity |time |p_total |avg_purchase
+|cb_001 |100 |9 |9
+|cb_002 |101 |2 |5.5
+|cb_003 |102 |4 |5
+|cb_004 |103 |5000 |1255
+|cb_005 |103 |3 |4.5
+|cb_006 |104 |5 |4.6
+|kk_001 |100 |3 |3
+|kk_002 |101 |5 |4
+|kk_003 |102 |12 |6.666
+|kk_004 |104 |9 |1005.8
+|===
+
+[IMPORTANT]
+====
+`PurchaseTotal` is a discrete expression whose value depends on
+the purchase event. A feature store implementation would seem to require
+some way of providing the "current" event. Alternately, we may want to
+omit discrete values and tell users they have to provide this type of
+information to the model.
+====

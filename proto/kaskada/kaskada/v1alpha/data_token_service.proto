@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package kaskada.kaskada.v1alpha;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+import "kaskada/kaskada/v1alpha/common.proto";
+
+message DataToken {
+  string data_token_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // map of table-id to table-version
+  map<string, int64> table_versions = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The creation timestamp of the dataToken in kaskada
+  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message GetDataTokenRequest {
+  string data_token_id = 1;
+}
+
+message GetDataTokenResponse {
+  DataToken data_token = 1;
+
+  // Information, help, or warnings related to the request
+  RequestDetails request_details = 2;
+}
+
+service DataTokenService {
+  rpc GetDataToken(GetDataTokenRequest) returns (GetDataTokenResponse) {
+    // Get maps to HTTP GET.
+    option (google.api.http) = {get: "/v1alpha/data_tokens/{data_token_id=*}"};
+  }
+}

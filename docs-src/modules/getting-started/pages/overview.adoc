@@ -1,0 +1,42 @@
+== Why Kaskada?
+
+With Kaskada, you can connect directly to your event-based data and
+calculate aggregated feature values at any point in time to train models
+without the risk of leakage.
+
+When you’re ready, you can compute the current value of the same
+features to make predictions using the latest data and a live model in
+production.
+
+== Simplified Process
+
+[arabic]
+. Connect your event-based data
+. Build and iterate with familiar interfaces
+. Share features as code
+. Deploy feature vectors to production
+
+== Rapidly Author and Iterate on Features
+
+Features are composed using xref:fenl:language-guide.adoc[Fenl], a query language
+designed for authoring and sharing feature definitions.
+
+Fenl expressions are _temporal_ -- they describe how the result of a
+computation changes over time rather than just the current result.
+Temporal queries make it easy to reconstruct the information available
+at arbitrary times in the past.
+
+The rich time-traveling tools provided by Fenl make it easy to build
+training datasets without leaking knowledge of the future.
+
+== Go Directly to Production
+
+Collaborate by sharing code, not just data. Fenl's composability allows
+you to share and re-use cleaned or pre-aggregated expressions.
+
+Authoring in Fenl ensures your features are scalable, reproducible, and
+can be computed incrementally.
+
+Features can be exported to external storage for training. When you're
+ready to host a model, the same feature definitions used in training can
+be continuously written to a feature-vector cache.

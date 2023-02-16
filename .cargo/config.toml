@@ -1,0 +1,8 @@
+# lld is around 3x faster at linking Sparrow than the default ld on
+# Linux.  (On Mac OS, we use the default because (a) it is reasonably
+# quick and (b) lld is less stable.)
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[env]
+RUST_TEST_THREADS = {value="300", force=true}

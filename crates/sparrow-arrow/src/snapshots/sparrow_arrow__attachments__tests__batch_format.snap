@@ -1,0 +1,9 @@
+---
+source: crates/sparrow-arrow/src/attachments.rs
+expression: annotation
+---
+Record Batch: test batch
+{"a":0}
+{"a":1,"b":1}
+{"a":2,"b":8}
+

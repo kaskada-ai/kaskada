@@ -1,0 +1,10 @@
+FROM python:3.9-buster
+
+RUN python3 -m pip install --user pipx
+RUN python3 -m pipx ensurepath
+
+RUN python3 -m pipx install poetry==1.3.2
+
+WORKDIR /src
+
+ENTRYPOINT ["/root/.local/pipx/venvs/poetry/bin/poetry"]

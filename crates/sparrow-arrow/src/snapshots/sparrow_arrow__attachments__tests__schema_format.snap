@@ -1,0 +1,9 @@
+---
+source: crates/sparrow-arrow/src/attachments.rs
+expression: annotation
+---
+Schema: test schema
+
+  Field: 'a' (non-nullable) = Int32
+  Field: 'b' = Utf8
+

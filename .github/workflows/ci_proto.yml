@@ -1,0 +1,86 @@
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_call:
+  # Run as part of the merge train.
+  merge_group:
+    branches: ["main"]
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  # Used by linter to write lint problems.
+  checks: write
+  contents: read
+
+name: Protobuf CI
+
+jobs:
+  proto_skip:
+    name: Proto Skip Unchanged
+    continue-on-error: true # Uncomment once integration is finished
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "never"
+          skip_after_successful_duplicate: "true"
+          paths: '["proto/**/*.proto", "proto/buf.*"]'
+          do_not_skip: '["workflow_dispatch", "schedule"]'
+
+  proto_build:
+    name: Generate Protobufs
+    runs-on: ubuntu-latest
+    if: needs.proto_skip.outputs.should_skip != 'true'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Buf
+        uses: bufbuild/buf-setup-action@v1.12.0
+        with:
+          version: "1.10.0"
+          buf_user: ${{ secrets.BUF_USER }}
+          buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Protos
+        run: buf generate
+        working-directory: proto
+
+  proto_lint:
+    name: Lint Protobufs
+    runs-on: ubuntu-latest
+    if: needs.proto_skip.outputs.should_skip != 'true'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Buf
+        uses: bufbuild/buf-setup-action@v1.12.0
+        with:
+          version: "1.10.0"
+          buf_user: ${{ secrets.BUF_USER }}
+          buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint Protos
+        uses: bufbuild/buf-lint-action@v1
+        with:
+          input: proto
+
+      - name: Format Protos
+        run: buf format -d --exit-code
+        working-directory: proto
+
+      # TODO: Use buf actions for better PR experiences
+      #  https://github.com/marketplace/actions/buf-breaking

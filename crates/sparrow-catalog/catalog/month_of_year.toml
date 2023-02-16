@@ -1,0 +1,35 @@
+name = 'month_of_year'
+signature = 'month_of_year(time: timestamp_ns) -> u32'
+short_doc = 'Return the month-of-year for the given time, starting with 1.'
+long_doc = '''
+### Parameters
+* time: The timestamp to return the month-of-year for.
+
+### Results
+Returns a `u32` column containing the month-of-year for each input `time`.
+Returns `null` for rows where `time` is `null`. January is `1`. The result
+will be in the range 1 to 12 (inclusive).
+'''
+tags = ['time']
+
+[[examples]]
+name = 'Month of Year'
+expression = 'month_of_year(Input.time)'
+input_csv = '''
+time,key
+1996-03-21T00:00:00-00:00,Ben
+1996-04-21T00:00:00-00:00,Ryan
+1996-05-21T00:00:00-00:00,Ryan
+1996-06-21T00:00:00-00:00,Ryan
+1996-07-21T00:00:00-00:00,Ben
+1996-08-21T00:00:00-00:00,Ben
+'''
+output_csv = '''
+time,key,result
+1996-03-21T00:00:00-00:00,Ben,3
+1996-04-21T00:00:00-00:00,Ryan,4
+1996-05-21T00:00:00-00:00,Ryan,5
+1996-06-21T00:00:00-00:00,Ryan,6
+1996-07-21T00:00:00-00:00,Ben,7
+1996-08-21T00:00:00-00:00,Ben,8
+'''

@@ -1,0 +1,233 @@
+---
+source: sparrow-compiler/tests/compiler_golden_tests.rs
+expression: compute_plan
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sender
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: store
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Literal:
+            literal:
+              Int64: 7
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: b
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments:
+          - 0
+          - 4
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: a
+      - arguments:
+          - 6
+          - 5
+          - 3
+          - 2
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: a
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: b
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: false
+        operator:
+          Instruction: record
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Literal:
+            literal: ~
+      - arguments:
+          - 6
+          - 5
+          - 3
+          - 8
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: a
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: b
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: false
+        operator:
+          Instruction: record
+      - arguments:
+          - 9
+          - 7
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: a
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: b
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: true
+        operator:
+          Instruction: coalesce
+      - arguments:
+          - 10
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 11
+          - 1
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      Scan:
+        table_id:
+          high: 1233317930569911709
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: sender
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: receiver
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: store
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: Sent
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: a
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: b
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: true
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 10
+    operator:
+      Select:
+        input: 0
+        condition:
+          producing_operation: 0
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 12
+primary_grouping: account
+primary_grouping_key_type:
+  kind:
+    Primitive: 10
+

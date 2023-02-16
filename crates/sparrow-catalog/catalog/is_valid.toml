@@ -1,0 +1,38 @@
+name = 'is_valid'
+signature = 'is_valid(input: any) -> bool'
+short_doc = 'Returns `true` if `input` is non-`null`.'
+long_doc = '''
+### Parameters
+* input: The input to test for `null`.
+
+### Results
+Returns a `bool` column that is `true` if the `input` is
+`null` and `false` otherwise.
+
+Note: Unlike many functions which return `null` if any of
+their arguments are `null`, `is_valid` will never return
+`null`.
+'''
+tags = ['misc']
+
+[[examples]]
+name = 'Is Valid'
+expression = 'is_valid(Input.value)'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,5
+2021-01-01T00:00:00.000000000Z,Ryan,
+2021-01-02T00:00:00.000000000Z,Ryan,7
+2021-01-03T00:00:00.000000000Z,Ben,3
+2021-01-04T00:00:00.000000000Z,Ben,
+2021-01-04T00:00:00.000000000Z,Ryan,2
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,5,true
+2021-01-01T00:00:00.000000000Z,Ryan,,false
+2021-01-02T00:00:00.000000000Z,Ryan,7,true
+2021-01-03T00:00:00.000000000Z,Ben,3,true
+2021-01-04T00:00:00.000000000Z,Ben,,false
+2021-01-04T00:00:00.000000000Z,Ryan,2,true
+'''

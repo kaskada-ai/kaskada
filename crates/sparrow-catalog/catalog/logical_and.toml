@@ -1,0 +1,43 @@
+name = 'logical_and'
+signature = 'logical_and(a: bool, b: bool) -> bool'
+operator = 'a and b'
+short_doc = 'Returns the logical conjunction (AND) of two booleans.'
+long_doc = '''
+This is the function used for the binary operation `a and b`.
+
+### Parameters
+* a: The left-hand side of the conjunction.
+* b: The right-hand side of the conjunction.
+
+### Results
+* Returns `true` if `a` and `b` are both `true`.
+* Returns `false` if `a` or `b` are `false`.
+* Returns `null` if `a` or `b` are `null`.
+'''
+tags = ['logical']
+
+[[examples]]
+name = 'Logical And'
+expression = 'Input.a and Input.b'
+input_csv = '''
+time,key,a,b
+2021-01-01T00:00:00.000000000Z,A,true,false
+2021-01-02T00:00:00.000000000Z,B,true,true
+2021-01-03T00:00:00.000000000Z,A,false,true
+2021-01-04T00:00:00.000000000Z,A,false,false
+2021-01-05T00:00:00.000000000Z,A,,true
+2021-02-01T00:00:00.000000000Z,B,true,
+2021-02-02T00:00:00.000000000Z,A,,false
+2021-03-01T00:00:00.000000000Z,B,false,
+'''
+output_csv = '''
+time,key,a,b,result
+2021-01-01T00:00:00.000000000Z,A,true,false,false
+2021-01-02T00:00:00.000000000Z,B,true,true,true
+2021-01-03T00:00:00.000000000Z,A,false,true,false
+2021-01-04T00:00:00.000000000Z,A,false,false,false
+2021-01-05T00:00:00.000000000Z,A,,true,
+2021-02-01T00:00:00.000000000Z,B,true,,
+2021-02-02T00:00:00.000000000Z,A,,false,false
+2021-03-01T00:00:00.000000000Z,B,false,,false
+'''

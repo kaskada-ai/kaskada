@@ -1,0 +1,103 @@
+To use Kaskada, you'll need to have Python and the Kaskada Python
+library installed.
+
+== Install Python
+
+If you're using a Mac or Linux machine, you may already have Python
+installed. Verify Python is installed by opening up a terminal and
+running the following command:
+
+[source,bash]
+----
+python --version
+----
+
+You should see something like:
+
+[source,bash]
+----
+$ python --version
+Python 3.6
+----
+
+*Please note*: Kaskada's Python library only supports Python 3.6+.
+
+== Client Installation
+
+The first step in using Kaskada in a notebook is to install the Kaskada
+Python client package.
+
+[source,bash]
+----
+pip install kaskada 
+----
+
+=== Setup "fenlmagic" Extension
+
+IPython (the Python runtime used by Jupyter) supports what it calls
+"magic commands" - commands prefixed with `%` or `%%`, whose
+implementation may be provided by arbitrary Python code.
+
+Kaskada provides a magic command to improve the Fenl authoring
+experience.
+
+To use the magic extension you must first install the `fenlmagic`
+package in your notebook environment:
+
+[source,bash]
+----
+pip install fenlmagic
+----
+
+Additional information about client installation can be found here:
+xref:reference:client-installation.adoc[Reference - Client Installation]
+
+== Client Authentication
+
+The next step is to connect to Kaskada by logging in to Kaskada's admin
+page and set up your environment.
+
+To do this, you'll need to obtain your API client id and secret. These
+may be obtained by logging into Kaskada and navigating to
+studio.kaskada.com/access. (If you don't have an account, click the
+"sign up" link on the login page.)
+
+We recommend using the python `getpass` method to avoid saving your
+client id and secret to the notebook:
+
+[source,python]
+----
+import os
+from getpass import getpass
+
+os.environ["KASKADA_CLIENT_ID"] = getpass("Enter your Kaskada Client ID here: ")
+os.environ["KASKADA_CLIENT_SECRET"] = getpass("Enter your Kaskada Client Secret here: ")
+----
+
+When executing this code-block, paste in your client id and secret, and
+they will be added to the environment without displaying to the screen
+or saving to the notebook.
+
+=== Client Initialization
+
+After setting the environment variables, initialize the Kaskada client.
+
+[source,python]
+----
+import kaskada as kda
+kda.init()
+----
+
+If your credentials are valid, this should return no results. If you get
+an error, check your credentials.
+
+Finally, the `fenlmagic` extension must be initialized to register the
+syntax extension with IPython:
+
+[source, iptyhom]
+----
+%load_ext fenlmagic
+----
+
+Additional information about client authentication can be found here:
+xref:reference:client-authentication.adoc[Reference - Client Authentication]

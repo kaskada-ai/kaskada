@@ -1,0 +1,266 @@
+use lalrpop_util::{ParseError};
+use smallvec::{smallvec, SmallVec};
+use std::str::FromStr;
+use std::sync::Arc;
+
+use crate::*;
+use super::token::Token;
+
+grammar<'input, 'e>(part_id: FeatureSetPart, errors: &'e mut  Vec<ParseError<usize, Token<'input>, (usize, String, usize)>>);
+
+// Declare the relationship between terminal symbols in the grammar (this file)
+// and the tokens produced by the lexer.
+extern {
+  type Error = (usize, String, usize);
+  type Location = usize;
+
+  enum Token<'input> {
+    literal  => Token::Literal(<LiteralValue>),
+    ident    => Token::Ident(<&'input str>),
+
+    "let" => Token::KwLet,
+    "const" => Token::KwConst,
+    "in" => Token::KwIn,
+    "$input" => Token::KwInput,
+    "or" => Token::KwOr,
+    "and" => Token::KwAnd,
+    "as" => Token::KwAs,
+
+    "," => Token::SymComma,
+    "+" => Token::SymPlus,
+    "-" => Token::SymMinus,
+    "*" => Token::SymStar,
+    "/" => Token::SymSlash,
+    "." => Token::SymDot,
+    "|" => Token::SymPipe,
+    "[" => Token::SymLBrack,
+    "]" => Token::SymRBrack,
+    "{" => Token::SymLBrace,
+    "}" => Token::SymRBrace,
+    "(" => Token::SymLParen,
+    ")" => Token::SymRParen,
+    "<" => Token::SymLt,
+    ">" => Token::SymGt,
+    "=" => Token::SymEquals,
+    "<=" => Token::SymLte,
+    ">=" => Token::SymGte,
+    "==" => Token::SymDoubleEquals,
+    "<>" => Token::SymLtGt,
+    "!=" => Token::SymNeq,
+    "!" => Token::SymExclamation,
+    "->" => Token::SymSingleArrow,
+    ":" => Token::SymColon,
+    "=" => Token::SymEquals,
+  }
+}
+
+pub ExprRef: ExprRef = {
+  <Arc<Expr>>,
+}
+
+pub Expr: Expr = {
+  <CastExpr>,
+}
+
+CastExpr: Expr = {
+  <PipeExpr>,
+  <value:Located<Arc<PipeExpr>>> <op:Located<"as">> <fenl_type:Located<Type>> =>
+    Expr::new(ExprOp::Cast(fenl_type, op.take_location()), [value]),
+}
+
+PipeExpr: Expr = {
+  <LogicalOrExpr>,
+  <lhs:Located<Arc<LogicalOrExpr>>> <op:Located<"|">> <rhs:Located<Arc<PipeExpr>>> =>
+    Expr::new(ExprOp::Pipe(op.take_location()), [lhs, rhs]),
+  <l:@L> <bindings:Many1<LetBinding>> "in" <value:Located<Arc<PipeExpr>>> <r: @R> =>
+    Expr::new_let(bindings, value, Location::new(part_id, l, r)),
+}
+
+LogicalOrExpr: Expr = {
+  <LogicalAndExpr>,
+  <lhs:Located<Arc<LogicalOrExpr>>> <op:Located<"or">> <rhs:Located<Arc<LogicalAndExpr>>> =>
+    Expr::call(op.with_value("logical_or"), [lhs, rhs])
+}
+
+LogicalAndExpr: Expr = {
+  <EqualityExpr>,
+  <lhs:Located<Arc<LogicalAndExpr>>> <op:Located<"and">> <rhs:Located<Arc<EqualityExpr>>> =>
+    Expr::call(op.with_value("logical_and"), [lhs, rhs])
+}
+
+EqualityExpr: Expr = {
+  <RelationalExpr>,
+  <lhs:Located<Arc<EqualityExpr>>> <op:Located<"==">> <rhs:Located<Arc<RelationalExpr>>> =>
+    Expr::call(op.with_value("eq"), [lhs, rhs]),
+  <lhs:Located<Arc<EqualityExpr>>> <op:Located<"<>">> <rhs:Located<Arc<RelationalExpr>>> =>
+    Expr::call(op.with_value("neq"), [lhs, rhs]),
+  <lhs:Located<Arc<EqualityExpr>>> <op:Located<"!=">> <rhs:Located<Arc<RelationalExpr>>> =>
+    Expr::call(op.with_value("neq"), [lhs, rhs]),
+}
+
+RelationalExpr: Expr = {
+  <AdditiveExpr>,
+  <lhs:Located<Arc<RelationalExpr>>> <op:Located<"<">> <rhs:Located<Arc<AdditiveExpr>>> =>
+    Expr::call(op.with_value("lt"), [lhs, rhs]),
+  <lhs:Located<Arc<RelationalExpr>>> <op:Located<">">>  <rhs:Located<Arc<AdditiveExpr>>> =>
+    Expr::call(op.with_value("gt"), [lhs, rhs]),
+  <lhs:Located<Arc<RelationalExpr>>> <op:Located<"<=">> <rhs:Located<Arc<AdditiveExpr>>> =>
+    Expr::call(op.with_value("lte"), [lhs, rhs]),
+  <lhs:Located<Arc<RelationalExpr>>> <op:Located<">=">> <rhs:Located<Arc<AdditiveExpr>>> =>
+    Expr::call(op.with_value("gte"), [lhs, rhs]),
+}
+
+AdditiveExpr: Expr = {
+  <MultiplicativeExpr>,
+  <lhs:Located<Arc<AdditiveExpr>>> <op:Located<"+">> <rhs:Located<Arc<MultiplicativeExpr>>> =>
+    Expr::call(op.with_value("add"), [lhs, rhs]),
+  <lhs:Located<Arc<AdditiveExpr>>> <op:Located<"-">> <rhs:Located<Arc<MultiplicativeExpr>>> =>
+    Expr::call(op.with_value("sub"), [lhs, rhs]),
+}
+
+MultiplicativeExpr: Expr = {
+  <UnaryExpr>,
+  <lhs:Located<Arc<MultiplicativeExpr>>> <op:Located<"*">> <rhs:Located<Arc<UnaryExpr>>> =>
+    Expr::call(op.with_value("mul"), [lhs, rhs]),
+  <lhs:Located<Arc<MultiplicativeExpr>>> <op:Located<"/">> <rhs:Located<Arc<UnaryExpr>>> =>
+    Expr::call(op.with_value("div"), [lhs, rhs]),
+}
+
+UnaryExpr: Expr = {
+  <PostfixExpr>,
+  <op:Located<"-">> <value:Located<Arc<UnaryExpr>>> =>
+    Expr::call(op.with_value("neg"), [value]),
+  <op:Located<"!">> <value:Located<Arc<UnaryExpr>>> =>
+    Expr::call(op.with_value("not"), [value]),
+}
+
+PostfixExpr: Expr = {
+  <PrimaryExpr>,
+  <base:Located<Arc<PostfixExpr>>> <op:Located<".">> <field:Located<ident>> =>
+    Expr::new_field_ref(base, field, op.take_location()),
+  <base:Located<Arc<PostfixExpr>>> <l:@L> "[" <index:Located<ExprRef>> "]" <r:@R> =>
+    Expr::call(Located::new("index", Location::new(part_id, l, r)), [base, index]),
+  <function:Located<ident>> "(" <args:Args> ")" =>
+    Expr::call_args(function, args),
+}
+
+PrimaryExpr: Expr = {
+  <name:Located<ident>> => Expr::reference(name),
+  <name:Located<"$input">> => Expr::reference(name.with_value("$input")),
+  <l:Located<literal>> => Expr::literal(l),
+  "(" <Expr> ")",
+  <l:@L> "{" <fields:Comma<RecordField>> "}" <r:@R> =>
+    Expr::new_record(fields, Location::new(part_id, l, r)),
+  ! => {
+    errors.push(<>.error);
+    Expr::error()
+  }
+}
+
+RecordField: (Located<&'input str>, Located<ExprRef>) = {
+  <name:Located<ident>> ":" <value:Located<ExprRef>> => (name, value),
+  <name:Located<ident>> => {
+    let reference = Expr::reference(name.clone());
+    let value = name.with_value(Arc::new(reference));
+    (name, value)
+  }
+}
+
+// Macro for 0 or more comma-separated repetitions of `T`.
+Comma<T>: ArgVec<T> = {
+    => smallvec![],
+    <v:T> => smallvec![v],
+    <vs:Comma<T>> "," <v:T> => {
+      let mut vs = vs;
+      vs.push(v);
+      vs
+    },
+    <vs:Comma<T>> "," => vs,
+};
+
+// Macro for 1 or more repetitions of `T`.
+Many1<T>: ArgVec<T> = {
+    <v:T> => smallvec![v],
+    <vs:Many1<T>> <e:!> => {
+      errors.push(e.error);
+      vs
+    },
+    <vs:Many1<T>> <v:T> => {
+      let mut vs = vs;
+      vs.push(v);
+      vs
+    },
+};
+
+LetBinding: (Located<&'input str>, Located<ExprRef>) = {
+  "let" <name:Located<ident>> "=" <value:Located<ExprRef>> => (name, value),
+  "let" <e:!> =>? {
+    Err(e.error)
+  },
+}
+
+pub(crate) Args: Arguments<ExprRef> = {
+  <arguments:Comma<OneArg>> => Arguments::new(arguments)
+}
+
+OneArg: Argument<ExprRef> = {
+  <name:(Located<ident> "=")?> <value:Located<ExprRef>> => match name {
+    Some((name, _)) => Argument::Keyword(name.transform(ToOwned::to_owned), value),
+    None => Argument::Positional(value)
+  }
+}
+
+pub(crate) Params: Parameters<ExprRef> = {
+  <l:@L> <params:Comma<Param>> <r:@R> =>? {
+    use bitvec::prelude::BitVec;
+
+    let mut names = SmallVec::with_capacity(params.len());
+    let mut constants = BitVec::with_capacity(params.len());
+    let mut types = SmallVec::with_capacity(params.len());
+    let mut defaults = SmallVec::with_capacity(params.len());
+    let mut varargs = BitVec::with_capacity(params.len());
+    for (name, is_const, fenl_type, default, is_vararg) in params {
+      names.push(name.transform(ToOwned::to_owned));
+      constants.push(is_const);
+      types.push(fenl_type);
+      defaults.push(default);
+      varargs.push(is_vararg);
+    }
+    Parameters::try_new(names, constants, types, defaults, varargs).map_err(|e|
+      ParseError::User {
+        error: (l, format!("Invalid parameters: {}", e), r)
+      })
+  }
+}
+
+Param: (Located<&'input str>, bool, Located<FenlType>, Option<Located<ExprRef>>, bool) = {
+  <is_const:"const"?> <name:Located<ident>> <is_vararg:"+"?> ":" <fenl_type:Located<Type>> <default:("=" Located<ExprRef>)?> =>
+    (name, is_const.is_some(), fenl_type, default.map(|(_, e)| e), is_vararg.is_some()),
+}
+
+pub(crate) Signature: Signature = {
+  <name:ident> "(" <l:@L> <parameters:Params> <r:@R> ")" "->" <result:Type> =>?
+    Signature::try_new(name.to_owned(), parameters, result).map_err(|e|
+      ParseError::User{ error: (l, e.to_string(), r) })
+}
+
+Type: FenlType = {
+  <l:@L> <name:ident> <r:@R> => FenlType::from_str(name).unwrap_or_else(|e| {
+    errors.push(ParseError::User{ error: (l, format!("Invalid Fenl Type '{}'", name), r)});
+    e
+  }),
+  ! => {
+    errors.push(<>.error);
+    FenlType::Error
+  }
+}
+
+Located<T>: Located<T> = {
+  <l:@L> <v:T> <r:@R> => {
+    Located::new(v, Location::new(part_id, l, r))
+  }
+}
+
+Arc<T>: Arc<T> = {
+  <v:T> => { Arc::new(v) }
+}

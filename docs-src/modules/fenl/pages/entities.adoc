@@ -1,0 +1,212 @@
+Entities are how Kaskada organizes data for use in feature engineering.
+They describe the particular objects that are being represented in the
+system.
+
+== What is an Entity?
+
+Entities represent the categories or "nouns" in Kaskada's system and can
+generally be thought of as any category of object that can be identified
+from the data sets ingested into the system. Common examples of entities
+are "Users" or "Vendors".
+
+If something can be given a name or other unique identifier, it can
+probably be expressed as an entity. In a relational database, an entity
+would be anything that is identified by the same key in a set of tables.
+
+== What is an Entity Key?
+
+While Entities represent a category of a type of thing, an "Entity Key"
+represents a specific item in that category. Below is a table with some
+example Entities and specific Entity instances.
+
+[cols=",",options="header",]
+|===
+|Entity |Example Entity Key
+|Address |1600 Pennsylvania Ave
+|Airport |SEA
+|Customer |John Doe
+|City |Seattle
+|State |Washington
+|===
+
+== How are Entities Used?
+
+To demonstrate how entities affect Fenl expressions, we'll start with a
+simplified dataset consisting of two tables. The `Purchase` table
+describes purchase transactions.
+
+[source,json]
+----
+{ customer_id: string, time: datetime, product_id: string, amount: number }
+----
+
+[cols="<,<,<,<",options="header",]
+|===
+|entity(customer_id) |time |product_id |amount
+|`patrick` |`100` |`krabby_patty` |`3.99`
+|`squidward` |`101` |`krabby_patty` |`5.99`
+|===
+
+The `ProductReview` table describes customer's ratings of products
+they've purchased
+
+[source,json]
+----
+{ customer_id: string, time: datetime, product_id: string, stars: number }
+----
+
+[cols="<,<,<,<",options="header",]
+|===
+|entity(customer_id) |time |product_id |stars
+|`patrick` |`100` |`krabby_patty` |`5`
+|`squidward` |`101` |`krabby_patty` |`2`
+|===
+
+=== Per-entity Aggregation
+
+All aggregations (ie `sum`, `count`, etc) are scoped to the entities of
+the aggregated expression. For example the purchase count will produce
+per-customer results.
+
+[source,fenl]
+----
+Purchase | count()
+----
+
+[cols="<,<,<",options="header",]
+|===
+|entity(customer_id) |time |Purchase | count()
+|`patrick` |`100` |`1`
+|`squidward` |`101` |`1`
+|===
+
+=== Cross-Table Operations
+
+If two tables describe the same entity they can be combined without the
+need to provide join conditions. The entity key acts as an implicit join
+key. For example, "customers" are the entity for both the `Purchase` and
+`ProductReview` tables. We can combine aggregations over each table
+without any boilerplate join code.
+
+[source,fenl]
+----
+{
+  p_count: Purchase | count(),
+  c_avg_rating: ProductReview.stars | mean(),
+}
+----
+
+[cols="<,<,<",options="header",]
+|===
+|entity(customer_id) |time |output
+|`patrick` |`100` |`{ p_count: 1, c_avg_rating: 5 }`
+|`squidward` |`101` |`{ p_count: 1, c_avg_rating: 2 }`
+|===
+
+== Changing Entities
+
+Some values are related to more than one entity, for example a
+`ProductReview` may be related to both the customer who reviewed a
+product and the product that was reviewed. An expression's entity can be
+changed by providing a new entity key.
+
+[source,fenl]
+----
+ProductReview | with_key(ProductReview.product_id)
+----
+
+[cols="<,<,<,<",options="header",]
+|===
+|customer_id |time |entity(product_id) |stars
+|`patrick` |`100` |`krabby_patty` |`5`
+|`squidward` |`101` |`krabby_patty` |`2`
+|===
+
+Changing an expression's entity has no effect on the values produced by
+the expression. The change only becomes visible when the result is used
+in an operation that depends on entity key, for example an aggregation.
+
+[source,fenl]
+----
+ProductReview 
+  | with_key(ProductReview.product_id)
+  | mean()
+----
+
+[cols="<,<,<",options="header",]
+|===
+|entity(product_id) |time |... mean()
+|`krabby_patty` |`100` |`5`
+|`krabby_patty` |`101` |`3.5`
+|===
+
+== Working with different entities
+
+In many cases it's necessary to combine values associated with different
+entities. This can be accomplished by looking up the value of an
+expression for a particular key.
+
+The lookup function takes two arguments: the first argument (the key
+expression) describes the entity key being looked up, and the second
+argument (the foreign expression) describes the value to be looked up:
+
+[source,fenl]
+----
+let avg_review_by_product = ProductReview 
+  | with_key(ProductReview.product_id)
+  | mean()
+
+in {
+  p_count: Purchase | count(),
+  c_avg_rating: ProductReview.stars | mean(),
+  p_avg_rating: avg_review_by_product | lookup($input, Purchase.product_id)
+}
+----
+
+[cols="<,<,<",options="header",]
+|===
+|entity(customer_id) |time |output
+|`patrick` |`100` |`{ p_count: 1, c_avg_rating: 5, p_avg_rating: 5 }`
+
+|`squidward` |`101`
+|`{ p_count: 1, c_avg_rating: 2, p_avg_rating: 3.5 }`
+|===
+
+A lookup expression produces the value of the foreign expression at
+every time the key expression produces a non-null value.
+
+[NOTE]
+.Time Travel 
+====
+Just like every other Fenl expression, lookups are
+xref::temporal-aggregation.adoc[temporal]. This means that the value produced
+by a lookup expression accurately reflects the value being looked up _at
+the time it's produced_. With Kaskada, information *cannot* travel
+backwards in time, just like in the real world.
+====
+
+== Entities In Query Results
+
+All Fenl expressions are associated with an entity, and all Fenl values
+are associated with an entity key.
+
+Fenl queries return every non-null value produced by the query
+expression. There are cases where an entity exists in a table, but
+doesn't produce any values for a given query.
+
+[source,fenl]
+----
+let total = Purchase.amount | sum()
+in { total: total | if(total >= 0) }
+----
+
+This expression may produce zero rows for any entities whose `total` is
+negative, because null values are omitted from query results. To capture
+the null value, the conditional can be moved inside a record; the value
+will be null, but the enclosing record won't be.
+
+[source,fenl]
+----
+let total = Purchase.amount | sum()
+in { total: total | if(total >= 0) }
+----

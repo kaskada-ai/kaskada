@@ -1,0 +1,212 @@
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  merge_group:
+    branches: [ main ]
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  # Used by clippy action to report lint errors.
+  checks: write
+  contents: read
+
+name: Rust CI
+
+env:
+  # See https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Workflow.
+  # Speeds up CI builds, which won't have previous results anyway.
+  CARGO_INCREMENTAL: 0
+
+# TODO: Consider using `skip-duplicate-actions` to only run if there are changes.
+# TODO: Matrix for multi-platform tests.
+# TODO: Look at caching the toolchain https://github.com/actions-rs/toolchain/issues/54
+
+jobs:
+  rust_skip:
+    name: Rust Skip Duplicates
+    continue-on-error: true # Uncomment once integration is finished
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "never"
+          skip_after_successful_duplicate: "true"
+          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto"]'
+          do_not_skip: '["workflow_dispatch", "schedule"]'
+
+  rust_check:
+    name: Rust Checks
+    runs-on: ubuntu-latest
+    needs: [rust_skip]
+    steps:
+      - name: Checkout sources
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        uses: actions/checkout@v3
+
+      - name: Install stable toolchain
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler lld
+          version: 1.0
+
+      # For caching, we use a special `rust-cache` action, which ensures we
+      # cache based on the architecture, and also deletes stuff that shouldn't
+      # be put in the cache (such as the toolchain).
+      #
+      # See
+      # https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Caching.
+      #
+      # This currently saves the cache on each branch. This may exceed GitHub's
+      # cache size limit. If we start hitting that, we could choose to only
+      # cache the `main` branch, which would provide caching for cases where the
+      # dependencies of crates haven't changed. See
+      # https://github.com/Swatinem/rust-cache/issues/95.
+      - name: Cache Rust Dependencies
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        with:
+          # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
+          cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
+
+      - name: Cargo Test (Compile)
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-run --locked --all-features
+
+      - name: Cargo Test (Run)
+        uses: actions-rs/cargo@v1
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        with:
+          command: test
+          args:  --all-features -- --nocapture --quiet
+
+      # Run a build. The earlier test compile won't have built the executables.
+      # This makes sure we have artifacts available for later integration tests
+      # and execution, if needed.
+      - name: Cargo Build
+        uses: actions-rs/cargo@v1
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        with:
+          command: build
+
+      - name: Cargo Clippy
+        uses: actions-rs/clippy-check@v1
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # The `lib.rs` or `bin.rs` files for each create *should* specify the same
+          # flags to ensure vscode, etc. reports warnings. But, specifying them in the
+          # CI protects against cases where we forgot to do that.
+          args: >
+            -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
+            -Dclippy::mod_module_files
+            -Dclippy::print-stdout
+            -Dclippy::print-stderr
+            -Dclippy::undocumented-unsafe-blocks
+
+      # If we're skipping the build steps, we'd still like to produce artifacts
+      # so they are available for integration tests. To do this, we download the
+      # artifacts from the previously successful run (that allowed us to skip
+      # this run), and re-upload them.
+      #
+      # There is a small risk that the they have been removed (we only retain
+      # them for 5 days). Currently, we ignore that possibility. A short hack
+      # (touching a cargo file, for instance) would cause them to rerun. Or even
+      # an explicit retry could be used to bypass the skipping. If it becomes a
+      # frequent issue, we should move the fetch step earlier, and use the
+      # existence of the retrieved artifacts as a condition on the build. In
+      # that case, if we *can* skip a build, we would still rebuild if the
+      # artifacts were needed.
+      - name: Fetch Artifacts (if skipping)
+        id: download-artifact
+        if: needs.rust_skip.outputs.should_skip == 'true'
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{needs.rust_skip.outputs.run_id}}
+          name: engine-debug
+          # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
+          # Required, if the artifact is from a different repo
+          # Required, if the repo is private a Personal Access Token with `repo` scope is needed
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          path: target/debug
+
+      - name: Upload Engine Artifacts (Debug)
+        uses: actions/upload-artifact@v3
+        with:
+          name: engine-debug
+          retention-days: 5
+          path: |
+            target/debug/sparrow-main
+            target/debug/sparrow-catalog
+
+  # We don't bother skipping rust format because it sufficiently fast (<10s)
+  # that waiting to determine if we *should* skip it would be a waste.
+  rust_format:
+    name: Rust Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install stable toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      # `cargo fmt` doesn't need any dependencies, so no need to cache.
+      # Restoring the cache takes 2m. Running rustfmt takes 10s.
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  # We don't bother skipping rust audit because it sufficiently fast (<10s)
+  # that waiting to determine if we *should* skip it would be a waste.
+  rust_audit:
+    name: Rust Audits
+    runs-on: ubuntu-latest
+
+    # Audits don't need a toolchain or any of the dependencies, so we don't cache.
+    # Restoring the cache takes 2m. Running `cargo deny` takes 10s.
+
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}

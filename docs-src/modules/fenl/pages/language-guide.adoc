@@ -1,0 +1,27 @@
+== What is Fenl?
+
+Fenl is a declarative query language for feature engineering. It allows
+you to focus on declaring _what_ you want computed, rather than _how_ it
+should be computed. Because Fenl is focused on the _what_, expressions
+are easy to combine and re-use.
+
+== How is Fenl Different?
+
+Computations in Fenl are _temporal_: they produce a time-series of
+values describing the full history of a computation's results. Temporal
+computation allows Fenl to capture what an expression's value would have
+been at arbitrary times in the past.
+
+Fenl values can _time-travel_ forward through time. Time travel allows
+combining the result of different computations at different points in
+time. Because values can only travel forward in time, Fenl prevents
+information about the future from "leaking" into the past.
+
+As a query language, Fenl is focused on _succinctly_ expressing the most
+common operations used in feature engineering. Fenl makes it easy to
+read and write feature definitions by providing intuitive syntax for:
+
+* Temporal lookups
+* Chained operations
+* Named expressions
+* Reading & constructing structured values

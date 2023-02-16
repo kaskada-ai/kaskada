@@ -1,0 +1,58 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/schema.proto";
+
+message FileMetadata {
+  // The schema of the file.
+  Schema schema = 1;
+}
+
+message GetMetadataRequest {
+  // The source of information for the files.
+  repeated FilePath file_paths = 1;
+}
+
+message GetMetadataResponse {
+  // The metadata for each of the source files.
+  //
+  // Each source file will have a matching entry here, in the same order
+  // as the request.
+  repeated FileMetadata file_metadatas = 1;
+}
+
+message MergeMetadataRequest {
+  TableMetadata table_metadata = 1;
+
+  repeated FileMetadata new_file_metadata = 2;
+}
+
+message MergeMetadataResponse {
+  TableMetadata merged_table_metadata = 1;
+
+  // The result of merging for each of the files in the request.
+  repeated FileMergeResult new_file_results = 2;
+
+  message FileMergeResult {
+    // True if this file was successfully merged.
+    bool compatible = 1;
+
+    // TODO: For incompatible files, add explanations?
+  }
+}
+
+service FileService {
+  // Fetches the metadata.
+  rpc GetMetadata(GetMetadataRequest) returns (GetMetadataResponse);
+
+  // Incorporate additional files into the table schema.
+  //
+  // This is initially planned to perform a *widening* merge. Specifically, this
+  // should be used when the table schema is "all (compatible) columns in any of
+  // the files", with `null` values when the file doesn't contain that column.
+  //
+  // We may add a separate method for checking file schemas against a fixed
+  // table schema, or make that a property of the merge request.
+  rpc MergeMetadata(MergeMetadataRequest) returns (MergeMetadataResponse);
+}

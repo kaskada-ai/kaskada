@@ -1,0 +1,111 @@
+Fenl expressions can be shared and re-used by creating a _view_. A view
+is a named expression. In subsequent Fenl expressions, the view's name
+is synonymous with the view's expression. Views are persisted in the
+Kaskada platform and are accessible to any query.
+
+All methods on this page use from the `view` object. Be sure to import
+it before running any method:
+
+[source,python]
+----
+from kaskada import view
+----
+
+== View Methods
+
+=== Creating a View
+
+To create a view, we'll start by describing the expression we'd like to
+name. In this case, we're interested in some purchase statistics for
+each user. This definition depends on business logic and might require
+some iteration to get just right.
+
+[TIP]
+.Idiomatic Kaskada
+====
+ We like to use CamelCase for view names. This is
+the same naming convention as we use for tables, and helps to
+communicate that we're referring to a persistent resource in the Kaskada
+system, as opposed to a temporary local value created as part of a
+query.
+====
+
+==== Using fenlmagic
+
+[source,IPython]
+----
+%%fenl --var purchase_stats
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+Notice that we added `--var purchase_stats` to the beginning of the
+magic block; this causes the extension to assign the query string to the
+variable `purchase_stats` when the block is run.
+
+We can use this variable to create a view using the Python client
+without re-typing the expression:
+
+[source,python]
+----
+view.create_view(
+    view_name = "PurchaseStats",
+    expression = purchase_stats,
+)
+----
+
+==== Using python
+
+Views can also be created without using fenlmagic:
+
+[source,python]
+----
+view.create_view(
+    view_name = "PurchaseStats",
+    expression = "{
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+    }"
+)
+----
+
+=== List Views
+
+The list views method returns all views defined for your user. An
+optional search string can filter the response set.
+
+Here is an example of listing tables:
+
+[source,python]
+----
+view.list_views("Purchase")
+----
+
+=== Get View
+
+You can get a view using its name:
+
+[source,python]
+----
+view.get_view("PurchaseStats")
+----
+
+=== Updating a View
+
+Views are currently immutable. Updating a view requires deleting that
+view and then re-creating it with a new expression.
+
+=== Deleting a view
+
+You can delete a view using its name:
+
+[source,python]
+----
+view.delete_view("PurchaseStats")
+----

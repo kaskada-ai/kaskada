@@ -1,0 +1,5693 @@
+== Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#add[add] |Returns the sum of two numbers.
+
+|link:#add_time[add_time] |Adds a `timedelta` (duration or interval) to
+a time.
+
+|link:#ceil[ceil] |Rounds the number up to the next largest integer.
+
+|link:#clamp[clamp] |Returns `value` clamped between the bounds `min`
+and `max`.
+
+|link:#coalesce[coalesce] |Return first non-`null` value or `null` if
+all values are `null`.
+
+|link:#count[count] |Counts each new, non-`null` value in the input.
+
+|link:#count_if[count_if] |Counts each `true` value across in input.
+
+|link:#daily[daily] |A periodic function that produces a `true` value at
+the start of each calendar day (UTC).
+
+|link:#day_of_month[day_of_month] |Return the day-of-month for the given
+time, starting with 1.
+
+|link:#day_of_month0[day_of_month0] |Return the day-of-month for the
+given time, starting with 0.
+
+|link:#day_of_year[day_of_year] |Return the day-of-year for the given
+time, starting with 1.
+
+|link:#day_of_year0[day_of_year0] |Return the day-of-year for the given
+time, starting with 0.
+
+|link:#days[days] |Produces an interval corresponding to the given
+number of calendar days.
+
+|link:#days_between[days_between] |Returns the number of days between
+the first and second timestamp.
+
+|link:#div[div] |Returns the division of two numbers.
+
+|link:#else[else] |Return the `value` if it is non-`null`, `default`
+otherwise.
+
+|link:#eq[eq] |Return `true` if `a` is equal to `b`.
+
+|link:#exp[exp] |Returns `e^power`.
+
+|link:#extend[extend] |Extends a record with fields from another.
+
+|link:#first[first] |Computes the first value present across the input.
+
+|link:#floor[floor] |Rounds the number down to the next smallest
+integer.
+
+|link:#gt[gt] |Return `true` if `a` is greater than `b`.
+
+|link:#gte[gte] |Return `true` if `a` is greater than or equal to `b`.
+
+|link:#hash[hash] |Returns the hash of the `input`.
+
+|link:#hourly[hourly] |A periodic function that produces a `true` value
+at the start of each hour.
+
+|link:#if[if] |Return the `value` if `condition` is `true`, `null`
+otherwise.
+
+|link:#is_valid[is_valid] |Returns `true` if `input` is non-`null`.
+
+|link:#json[json] |Creates a JSON object from a string.
+
+|link:#lag[lag] |Returns a lagging value of `e`.
+
+|link:#last[last] |Computes the last value present across the input.
+
+|link:#len[len] |Returns the length of the string `s`.
+
+|link:#logical_and[logical_and] |Returns the logical conjunction (AND)
+of two booleans.
+
+|link:#logical_or[logical_or] |Returns the logical disjunction (OR) of
+two booleans.
+
+|link:#lookup[lookup] |Looks up the value for a foreign key.
+
+|link:#lower[lower] |Converts the string to lower case.
+
+|link:#lt[lt] |Return `true` if `a` is less than `b`.
+
+|link:#lte[lte] |Return `true` if `a` is less than or equal to `b`.
+
+|link:#max[max] |Computes the maximum of values across the input.
+
+|link:#mean[mean] |Computes the arithmetic mean of values across the
+input.
+
+|link:#min[min] |Computes the minimum of values across the input.
+
+|link:#minutely[minutely] |A periodic function that produces a `true`
+value at the start of each minutely.
+
+|link:#month_of_year[month_of_year] |Return the month-of-year for the
+given time, starting with 1.
+
+|link:#month_of_year0[month_of_year0] |Return the month-of-year for the
+given time, starting with 0.
+
+|link:#monthly[monthly] |A periodic function that produces a `true`
+value at the start of each calendar month (UTC).
+
+|link:#months[months] |Produces an interval corresponding to the given
+number of calendar months.
+
+|link:#months_between[months_between] |Returns the number of months
+between the first and second timestamp.
+
+|link:#mul[mul] |Returns the product of two numbers.
+
+|link:#neg[neg] |Returns the negation of `n`.
+
+|link:#neq[neq] |Return `true` if `a` is not equal to `b`.
+
+|link:#not[not] |Returns the logical negation of a boolean.
+
+|link:#null_if[null_if] |Return the `value` if `condition` is `false`,
+`null` otherwise.
+
+|link:#powf[powf] |Returns `base^power`.
+
+|link:#remove_fields[remove_fields] |Remove fields from a record.
+
+|link:#round[round] |Rounds the number to the nearest integer.
+
+|link:#seconds[seconds] |Produces a duration corresponding to the given
+number of seconds.
+
+|link:#seconds_between[seconds_between] |Returns the number of seconds
+between the first and second timestamp.
+
+|link:#select_fields[select_fields] |Limits fields in a record to a
+given set.
+
+|link:#shift_to[shift_to] |Produces the current `value` shifted forward
+to the given `time`.
+
+|link:#shift_until[shift_until] |Produces the `value` shifted forward to
+the time the `predicate` is true.
+
+|link:#since[since] |Configures a windowed aggregation.
+
+|link:#sliding[sliding] |Configures sliding windowed aggregations.
+
+|link:#sqrt[sqrt] |Returns the square root of `a`.
+
+|link:#stddev[stddev] |Computes the sample standard deviation of values
+across the input.
+
+|link:#sub[sub] |Returns the difference of two numbers.
+
+|link:#substring[substring] |Takes a substring of the input between
+start and end indices.
+
+|link:#sum[sum] |Computes the sum of values across the input.
+
+|link:#time_of[time_of] |Returns the timestamp of rows in `input`.
+
+|link:#upper[upper] |Converts the string to upper case.
+
+|link:#variance[variance] |Computes the sample variance of values across
+the input.
+
+|link:#when[when] |Produces the current `value` when the `condition`
+evaluates to `true`.
+
+|link:#with_key[with_key] |Changes the grouping of the input `value`.
+
+|link:#year[year] |Return the year of the given timestamp.
+
+|link:#yearly[yearly] |A periodic function that produces a `true` value
+at the start of each calendar year (UTC).
+
+|link:#zip_max[zip_max] |Returns the maximum of two values.
+
+|link:#zip_min[zip_min] |Returns the minimum of two values.
+|===
+
+== Function Categories
+
+=== Operators
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#add[a + b] |Returns the sum of two numbers.
+
+|link:#div[a / b] |Returns the division of two numbers.
+
+|link:#eq[a == b] |Return `true` if `a` is equal to `b`.
+
+|link:#gt[a > b] |Return `true` if `a` is greater than `b`.
+
+|link:#gte[a >= b] |Return `true` if `a` is greater than or equal to
+`b`.
+
+|link:#logical_and[a and b] |Returns the logical conjunction (AND) of
+two booleans.
+
+|link:#logical_or[a or b] |Returns the logical disjunction (OR) of two
+booleans.
+
+|link:#lt[a < b] |Return `true` if `a` is less than `b`.
+
+|link:#lte[a < b] |Return `true` if `a` is less than or equal to `b`.
+
+|link:#mul[a * b] |Returns the product of two numbers.
+
+|link:#neg[-n] |Returns the negation of `n`.
+
+|link:#neq[a != b] |Return `true` if `a` is not equal to `b`.
+
+|link:#not[!input] |Returns the logical negation of a boolean.
+
+|link:#sub[a - b] |Returns the difference of two numbers.
+|===
+
+=== Aggregation Functions
+
+Aggregation functions provide the mechanism for computing across rows.
+The result of an aggregation represents the aggregate result for each
+key up to and including the current row. This approximately corresponds
+to the result you would get if you ran a SQL aggregation over the values
+available at the time of that row.
+
+Aggregations may be configured to operate in a specific window by
+providing a link:#window-functions[window function] as the optional
+`window` argument. If no window is provided, the aggregation is over all
+rows for the entity, up to and including the current time. If a window
+is provided, the result of an aggregation is the result for that entity
+in the current window up to and including the current time. The current
+window is often not yet complete.
+
+NOTE: All aggregations in Fenl are implicitly scoped to the entity key.
+This would be equivalent to performing a grouped aggregation in SQL.
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#count[count] |Counts each new, non-`null` value in the input.
+
+|link:#count_if[count_if] |Counts each `true` value across in input.
+
+|link:#first[first] |Computes the first value present across the input.
+
+|link:#last[last] |Computes the last value present across the input.
+
+|link:#max[max] |Computes the maximum of values across the input.
+
+|link:#mean[mean] |Computes the arithmetic mean of values across the
+input.
+
+|link:#min[min] |Computes the minimum of values across the input.
+
+|link:#stddev[stddev] |Computes the sample standard deviation of values
+across the input.
+
+|link:#sum[sum] |Computes the sum of values across the input.
+
+|link:#variance[variance] |Computes the sample variance of values across
+the input.
+|===
+
+=== Comparison Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#eq[eq] |Return `true` if `a` is equal to `b`.
+|link:#gt[gt] |Return `true` if `a` is greater than `b`.
+|link:#gte[gte] |Return `true` if `a` is greater than or equal to `b`.
+|link:#lt[lt] |Return `true` if `a` is less than `b`.
+|link:#lte[lte] |Return `true` if `a` is less than or equal to `b`.
+|link:#neq[neq] |Return `true` if `a` is not equal to `b`.
+|===
+
+=== Grouping Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#lookup[lookup] |Looks up the value for a foreign key.
+|link:#with_key[with_key] |Changes the grouping of the input `value`.
+|===
+
+=== Logical Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#coalesce[coalesce] |Return first non-`null` value or `null` if
+all values are `null`.
+
+|link:#else[else] |Return the `value` if it is non-`null`, `default`
+otherwise.
+
+|link:#if[if] |Return the `value` if `condition` is `true`, `null`
+otherwise.
+
+|link:#logical_and[logical_and] |Returns the logical conjunction (AND)
+of two booleans.
+
+|link:#logical_or[logical_or] |Returns the logical disjunction (OR) of
+two booleans.
+
+|link:#not[not] |Returns the logical negation of a boolean.
+
+|link:#null_if[null_if] |Return the `value` if `condition` is `false`,
+`null` otherwise.
+|===
+
+=== Math Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#add[add] |Returns the sum of two numbers.
+
+|link:#ceil[ceil] |Rounds the number up to the next largest integer.
+
+|link:#clamp[clamp] |Returns `value` clamped between the bounds `min`
+and `max`.
+
+|link:#div[div] |Returns the division of two numbers.
+
+|link:#exp[exp] |Returns `e^power`.
+
+|link:#floor[floor] |Rounds the number down to the next smallest
+integer.
+
+|link:#max[max] |Computes the maximum of values across the input.
+
+|link:#mean[mean] |Computes the arithmetic mean of values across the
+input.
+
+|link:#min[min] |Computes the minimum of values across the input.
+
+|link:#mul[mul] |Returns the product of two numbers.
+
+|link:#neg[neg] |Returns the negation of `n`.
+
+|link:#powf[powf] |Returns `base^power`.
+
+|link:#round[round] |Rounds the number to the nearest integer.
+
+|link:#sqrt[sqrt] |Returns the square root of `a`.
+
+|link:#stddev[stddev] |Computes the sample standard deviation of values
+across the input.
+
+|link:#sub[sub] |Returns the difference of two numbers.
+
+|link:#sum[sum] |Computes the sum of values across the input.
+
+|link:#variance[variance] |Computes the sample variance of values across
+the input.
+
+|link:#zip_max[zip_max] |Returns the maximum of two values.
+
+|link:#zip_min[zip_min] |Returns the minimum of two values.
+|===
+
+=== Misc Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#hash[hash] |Returns the hash of the `input`.
+|link:#is_valid[is_valid] |Returns `true` if `input` is non-`null`.
+|===
+
+=== Record Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#extend[extend] |Extends a record with fields from another.
+
+|link:#remove_fields[remove_fields] |Remove fields from a record.
+
+|link:#select_fields[select_fields] |Limits fields in a record to a
+given set.
+|===
+
+=== String Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#json[json] |Creates a JSON object from a string.
+
+|link:#len[len] |Returns the length of the string `s`.
+
+|link:#lower[lower] |Converts the string to lower case.
+
+|link:#substring[substring] |Takes a substring of the input between
+start and end indices.
+
+|link:#upper[upper] |Converts the string to upper case.
+|===
+
+=== Tick Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#daily[daily] |A periodic function that produces a `true` value at
+the start of each calendar day (UTC).
+
+|link:#hourly[hourly] |A periodic function that produces a `true` value
+at the start of each hour.
+
+|link:#minutely[minutely] |A periodic function that produces a `true`
+value at the start of each minutely.
+
+|link:#monthly[monthly] |A periodic function that produces a `true`
+value at the start of each calendar month (UTC).
+
+|link:#yearly[yearly] |A periodic function that produces a `true` value
+at the start of each calendar year (UTC).
+|===
+
+=== Time Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#add_time[add_time] |Adds a `timedelta` (duration or interval) to
+a time.
+
+|link:#day_of_month[day_of_month] |Return the day-of-month for the given
+time, starting with 1.
+
+|link:#day_of_month0[day_of_month0] |Return the day-of-month for the
+given time, starting with 0.
+
+|link:#day_of_year[day_of_year] |Return the day-of-year for the given
+time, starting with 1.
+
+|link:#day_of_year0[day_of_year0] |Return the day-of-year for the given
+time, starting with 0.
+
+|link:#days[days] |Produces an interval corresponding to the given
+number of calendar days.
+
+|link:#days_between[days_between] |Returns the number of days between
+the first and second timestamp.
+
+|link:#lag[lag] |Returns a lagging value of `e`.
+
+|link:#month_of_year[month_of_year] |Return the month-of-year for the
+given time, starting with 1.
+
+|link:#month_of_year0[month_of_year0] |Return the month-of-year for the
+given time, starting with 0.
+
+|link:#months[months] |Produces an interval corresponding to the given
+number of calendar months.
+
+|link:#months_between[months_between] |Returns the number of months
+between the first and second timestamp.
+
+|link:#seconds[seconds] |Produces a duration corresponding to the given
+number of seconds.
+
+|link:#seconds_between[seconds_between] |Returns the number of seconds
+between the first and second timestamp.
+
+|link:#shift_to[shift_to] |Produces the current `value` shifted forward
+to the given `time`.
+
+|link:#shift_until[shift_until] |Produces the `value` shifted forward to
+the time the `predicate` is true.
+
+|link:#time_of[time_of] |Returns the timestamp of rows in `input`.
+
+|link:#when[when] |Produces the current `value` when the `condition`
+evaluates to `true`.
+
+|link:#year[year] |Return the year of the given timestamp.
+|===
+
+=== Window Functions
+
+[cols="<,<",options="header",]
+|===
+|Function |Summary
+|link:#since[since] |Configures a windowed aggregation.
+|link:#sliding[sliding] |Configures sliding windowed aggregations.
+|===
+
+== Function Details
+
+=== add
+
+Returns the sum of two numbers.
+
+This is the function used for the binary operation `a + b`.
+
+==== Parameters
+
+* a: The left-hand side of the addition.
+* b: The right-hand side of the addition.
+
+Note: Both `a` and `b` are promoted to a compatible numeric type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules].
+
+==== Results
+
+Returns a numeric column of the promoted numeric type compatible with
+both `a` and `b`. The result contains `null` if `a` or `b` was null at
+that row. Otherwise the row contains the sum of `a` and `b`.
+
+*Tags:* link:#math-functions[math] link:#operators[operator]
+
+==== Example: Addition
+
+In this example, `a` is an integer column (defaulting to `i64`) and `b`
+is a floating point column (defaulting to `f64`). The result is a
+floating point column, achieved by implicitly converting `a` to `f64`.
+
+===== Query
+
+....
+Input.a + Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5 |1.2
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4
+|2021-03-01T00:00:00.000000000Z |B | |3.7
+|2021-04-10T00:00:00.000000000Z |A |13 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.0 |1.2 |6.2
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4 |6.7
+|2021-03-01T00:00:00.000000000Z |B | |3.7 |
+|2021-04-10T00:00:00.000000000Z |A |13.0 | |
+|===
+
+=== add_time
+
+Adds a `timedelta` (duration or interval) to a time.
+
+==== Parameters
+
+* delta: The time delta to add to the timestamp. See other
+link:#time-functions[time functions] for how to create `timedelta`s.
+* time: The time to add to.
+
+==== Results
+
+Returns a time column with each row containing the value of `time` for
+that row plus the given `delta`. If either the `delta` or `time` are
+`null` then the result is `null` in that row.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Adding a fixed number of days
+
+This example uses link:#days[`days`] to create a fixed `interval_days`
+to add to a given date.
+
+===== Query
+
+....
+Input.time | add_time(days(3))
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |1996-03-24T00:00:00.000000000
+|1996-04-21T00:00:00-00:00 |Ryan |1996-04-24T00:00:00.000000000
+|1996-05-21T00:00:00-00:00 |Ryan |1996-05-24T00:00:00.000000000
+|1996-06-21T00:00:00-00:00 |Ryan |1996-06-24T00:00:00.000000000
+|1996-07-21T00:00:00-00:00 |Ben |1996-07-24T00:00:00.000000000
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-24T00:00:00.000000000
+|===
+
+=== ceil
+
+Rounds the number up to the next largest integer.
+
+See also link:#round[`round`] and link:#floor[`floor`].
+
+==== Parameters
+
+* n: The number to round up.
+
+Note: This method may be applied to any numeric type. For anything other
+than `float32` and `float64` it has no affect since the values are
+already integers.
+
+==== Results
+
+Returns a numeric column of the same type as `n`. The result contains
+`null` if `n` was null at that position. Otherwise, it contains the
+result of rounding `n` up to the next largest integer.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Ceil
+
+===== Query
+
+....
+Input.a | ceil()
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-02T00:00:00.000000000Z |B |
+|2021-01-02T00:00:00.000000000Z |B |-2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |6.0
+|2021-01-01T00:00:00.000000000Z |A |6.3 |7.0
+|2021-01-02T00:00:00.000000000Z |B | |
+|2021-01-02T00:00:00.000000000Z |B |-2.3 |-2.0
+|===
+
+=== clamp
+
+Returns `value` clamped between the bounds `min` and `max`.
+
+==== Parameters
+
+* `value`: The value to be clamped.
+* `min`: The minimum bound. If `null`, no minimum bound will be applied.
+* `max`: The maximum bound. If `null`, no maximum bound will be applied.
+
+Note: Since `min` and `max` have default values, they must be passed by
+name. The `value` is first so it is amenable to pipe. For example
+`value | clamp(min = 3)` or `value | clamp(max = 8)`.
+
+The arguments will be promoted to a compatible numeric type following
+the docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a numeric column of the promoted numeric type. For each row, it
+contains `value` if `value` is between `min` and `max`, `min` if `value`
+is less than `min`, `max` if `value` is greater than `max`, and `null`
+if `value` is `null` or `min > max`. If `min` or `max` are null than no
+clamping on that side will be performed.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Clamp With Min and Max
+
+This example shows the use of `clamp` with both a `min` and `max` value
+provided.
+
+===== Query
+
+....
+Input.a | clamp(min = 0.5, max = 9.5)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-01T00:00:00.000000000Z |B |
+|2021-01-01T00:00:00.000000000Z |A |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3 |6.3
+|2021-01-01T00:00:00.000000000Z |B | |
+|2021-01-01T00:00:00.000000000Z |A | |
+|===
+
+==== Example: Clamp with Min
+
+This example shows the use of clamp with just a minimum bound.
+
+===== Query
+
+....
+Input.a | clamp(min = 0.5)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-01T00:00:00.000000000Z |B |
+|2021-01-01T00:00:00.000000000Z |A |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3 |6.3
+|2021-01-01T00:00:00.000000000Z |B | |
+|2021-01-01T00:00:00.000000000Z |A | |
+|===
+
+=== coalesce
+
+Return first non-`null` value or `null` if all values are `null`.
+
+==== Parameters
+
+* values: One or more values to be coalesced. Note that all of the
+values must be promotable to the same type.
+
+==== Results
+
+For each row, return the first non-`null` value from that row. If all
+values are `null`, then returns `null`.
+
+The type of the result is the minimum type that all of the `values` were
+docs:data-model#type-promotion-rules[promotable] to.
+
+*Tags:* link:#logical-functions[logical]
+
+==== Example
+
+In this example we use `coalesce` to apply multiple conditions, almost
+like a `switch` statement. Each case uses link:#if[`if`] to only pass
+through the cases where the condition is met.
+
+One thing to be aware of when using `coalesce` like this is that the
+first non-`null` is taken. Which means that even if a condition is met,
+if the corresponding value was `null`, it would move on to other
+conditions.
+
+===== Query
+
+....
+coalesce(
+    # Tax exempt items
+    Input.value | if(Input.tax_category == 'exempt'),
+    # Flat tax (1.0) items
+    Input.value + 1.0 | if(Input.tax_category == 'flat'),
+    # Normal tax (10%) items
+    Input.value * 1.1
+)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |tax_category
+|2020-01-01T00:00:00.000000000Z |Ben |10.00 |exempt
+|2020-01-02T00:00:00.000000000Z |Ben |12.00 |
+|2020-01-02T01:00:00.000000000Z |Ryan |13.00 |flat
+|2020-01-02T01:00:00.000000000Z |Ryan | |exempt
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |value |tax_category |result
+|2020-01-01T00:00:00.000000000Z |Ben |10.0 |exempt |10.0
+|2020-01-02T00:00:00.000000000Z |Ben |12.0 | |13.200000000000001
+|2020-01-02T01:00:00.000000000Z |Ryan |13.0 |flat |14.0
+|2020-01-02T01:00:00.000000000Z |Ryan | |exempt |
+|===
+
+=== count
+
+Counts each new, non-`null` value in the input.
+
+==== Parameters
+
+* input: The input to be counted.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the count of new, non-`null` rows in `input`
+up to and including the input row for the given entity. Returns `0` if
+there have been no such inputs.
+
+*Tags:* link:#aggregation-functions[aggregation]
+
+==== Example: Count
+
+===== Query
+
+....
+count(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-05T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |1
+|2021-01-02T00:00:00.000000000Z |Ryan | |0
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |1
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |2
+|2021-01-04T00:00:00.000000000Z |Ben | |2
+|2021-01-05T00:00:00.000000000Z |Ryan |2.3 |2
+|===
+
+=== count_if
+
+Counts each `true` value across in input.
+
+==== Parameters
+
+* input: The input to be counted.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the count of new rows containing `true` in
+`input` up to and including the input row for the given entity. Returns
+`0` if there have been no such inputs.
+
+*Tags:* link:#aggregation-functions[aggregation]
+
+==== Example: Count If
+
+===== Query
+
+....
+count_if(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |false
+|2021-01-02T00:00:00.000000000Z |Ryan |true
+|2021-01-03T00:00:00.000000000Z |Ryan |true
+|2021-01-04T00:00:00.000000000Z |Ben |true
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-05T00:00:00.000000000Z |Ryan |false
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |false |0
+|2021-01-02T00:00:00.000000000Z |Ryan |true |1
+|2021-01-03T00:00:00.000000000Z |Ryan |true |2
+|2021-01-04T00:00:00.000000000Z |Ben |true |1
+|2021-01-04T00:00:00.000000000Z |Ben | |1
+|2021-01-05T00:00:00.000000000Z |Ryan |false |2
+|===
+
+=== daily
+
+A periodic function that produces a `true` value at the start of each
+calendar day (UTC).
+
+This function is often used in aggregations to produce windows or as a
+predicate column.
+
+==== Results
+
+Returns a boolean column with each row containing a `true` value at the
+start of the day, corresponding to time 00:00:00Z, and `null` at all
+other times.
+
+*Tags:* link:#tick-functions[tick]
+
+==== Example: Daily Aggregated Window
+
+In this example, the `daily()` function is used as an argument to the
+link:#since[`since] window function. The result is a windowed
+aggregation that resets daily.
+
+===== Query
+
+....
+{ n: Input.n, daily_sum: sum(Input.n, window = since(daily())) }
+| extend({time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T04:00:00-00:00 |Ben |1
+|1996-12-19T05:00:00-00:00 |Ryan |2
+|1996-12-20T01:00:00-00:00 |Ben |3
+|1996-12-20T22:00:00-00:00 |Ben |4
+|1996-12-21T03:00:00-00:00 |Ryan |5
+|1996-12-21T07:00:00-00:00 |Ben |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |daily_sum
+|1996-12-19T04:00:00.000000000 |Ben |1 |1
+|1996-12-19T05:00:00.000000000 |Ryan |2 |2
+|1996-12-20T00:00:00.000000000 |Ben | |1
+|1996-12-20T00:00:00.000000000 |Ryan | |2
+|1996-12-20T01:00:00.000000000 |Ben |3 |3
+|1996-12-20T22:00:00.000000000 |Ben |4 |7
+|1996-12-21T00:00:00.000000000 |Ben | |7
+|1996-12-21T00:00:00.000000000 |Ryan | |
+|1996-12-21T03:00:00.000000000 |Ryan |5 |5
+|1996-12-21T07:00:00.000000000 |Ben |6 |6
+|===
+
+==== Example: Filter Daily
+
+In this example, the `daily()` function is used as an argument to the
+link:#when[`when`] function, which filters input.
+
+The output includes the last input row before a link:#tick[`tick`]
+occurs.
+
+===== Query
+
+....
+Input | last() | when(daily())
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T04:00:00-00:00 |Ben |1
+|1996-12-19T05:00:00-00:00 |Ryan |2
+|1996-12-20T01:00:00-00:00 |Ben |3
+|1996-12-20T22:00:00-00:00 |Ben |4
+|1996-12-21T03:00:00-00:00 |Ryan |5
+|1996-12-21T07:00:00-00:00 |Ben |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T04:00:00-00:00 |Ben |1
+|1996-12-19T05:00:00-00:00 |Ryan |2
+|1996-12-20T22:00:00-00:00 |Ben |4
+|1996-12-19T05:00:00-00:00 |Ryan |2
+|===
+
+=== day_of_month
+
+Return the day-of-month for the given time, starting with 1.
+
+==== Parameters
+
+* time: The timestamp to return the day-of-month for.
+
+==== Results
+
+Returns a `u32` column containing the day-of-month for each input
+`time`. Returns `null` for rows where `time` is `null`. The first day of
+the month is `1`. The result will be in the range 1 to 31 (inclusive).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Day of Month
+
+===== Query
+
+....
+day_of_month(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |21
+|1996-04-21T00:00:00-00:00 |Ryan |21
+|1996-05-21T00:00:00-00:00 |Ryan |21
+|1996-06-21T00:00:00-00:00 |Ryan |21
+|1996-07-21T00:00:00-00:00 |Ben |21
+|1996-08-21T00:00:00-00:00 |Ben |21
+|===
+
+=== day_of_month0
+
+Return the day-of-month for the given time, starting with 0.
+
+==== Parameters
+
+* time: The timestamp to return the day-of-month for.
+
+==== Results
+
+Returns a `u32` column containing the day-of-month for each input
+`time`. Returns `null` for rows where `time` is `null`. The first day of
+the month is `0`. The result will be in the range 0 to 30 (inclusive).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Day of Month (Zero Based)
+
+===== Query
+
+....
+day_of_month0(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |20
+|1996-04-21T00:00:00-00:00 |Ryan |20
+|1996-05-21T00:00:00-00:00 |Ryan |20
+|1996-06-21T00:00:00-00:00 |Ryan |20
+|1996-07-21T00:00:00-00:00 |Ben |20
+|1996-08-21T00:00:00-00:00 |Ben |20
+|===
+
+=== day_of_year
+
+Return the day-of-year for the given time, starting with 1.
+
+==== Parameters
+
+* time: The timestamp to return the day-of-year for.
+
+==== Results
+
+Returns a `u32` column containing the day-of-year for each input `time`.
+Returns `null` for rows where `time` is `null`. The first day of the
+month is `1`. The result will be in the range 1 to 366 (inclusive).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Day Of Year
+
+===== Query
+
+....
+day_of_year(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |81
+|1996-04-21T00:00:00-00:00 |Ryan |112
+|1996-05-21T00:00:00-00:00 |Ryan |142
+|1996-06-21T00:00:00-00:00 |Ryan |173
+|1996-07-21T00:00:00-00:00 |Ben |203
+|1996-08-21T00:00:00-00:00 |Ben |234
+|===
+
+=== day_of_year0
+
+Return the day-of-year for the given time, starting with 0.
+
+==== Parameters
+
+* time: The timestamp to return the day-of-year for.
+
+==== Results
+
+Returns a `u32` column containing the day-of-year for each input `time`.
+Returns `null` for rows where `time` is `null`. The first day of the
+year is `0`. The result will be in the range 0 to 365 (inclusive).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Day of Year (Zero Based)
+
+===== Query
+
+....
+day_of_year0(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |80
+|1996-04-21T00:00:00-00:00 |Ryan |111
+|1996-05-21T00:00:00-00:00 |Ryan |141
+|1996-06-21T00:00:00-00:00 |Ryan |172
+|1996-07-21T00:00:00-00:00 |Ben |202
+|1996-08-21T00:00:00-00:00 |Ben |233
+|===
+
+=== days
+
+Produces an interval corresponding to the given number of calendar days.
+
+==== Parameters
+
+* days: The number of days to create the interval for.
+
+==== Results
+
+Returns an `interval_days` column with each row containing the value of
+`days` converted to an interval with the corresponding number of days.
+Rows where `days` is `null`, less than `0` or greater than `i32::MAX`
+will be `null`.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Adding a variable number of days
+
+This example uses link:#add-time[`add_time`] to add the created interval
+to the `time` column.
+
+===== Query
+
+....
+Input.time | add_time(days(Input.n))
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-03-21T00:00:00-00:00 |Ben |1
+|1996-04-21T00:00:00-00:00 |Ryan |2
+|1996-05-21T00:00:00-00:00 |Ryan |3
+|1996-06-21T00:00:00-00:00 |Ryan |
+|1996-07-21T00:00:00-00:00 |Ben |2
+|1996-08-21T00:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-03-21T00:00:00-00:00 |Ben |1 |1996-03-22T00:00:00.000000000
+|1996-04-21T00:00:00-00:00 |Ryan |2 |1996-04-23T00:00:00.000000000
+|1996-05-21T00:00:00-00:00 |Ryan |3 |1996-05-24T00:00:00.000000000
+|1996-06-21T00:00:00-00:00 |Ryan | |
+|1996-07-21T00:00:00-00:00 |Ben |2 |1996-07-23T00:00:00.000000000
+|1996-08-21T00:00:00-00:00 |Ben |1 |1996-08-22T00:00:00.000000000
+|===
+
+=== days_between
+
+Returns the number of days between the first and second timestamp.
+
+==== Parameters
+
+* t1: The first timestamp
+* t2: The second timestamp
+
+==== Results
+
+Returns an `interval_days` column representing the number of whole days
+between the two timestamps. Fractional days will be rounded towards
+zero.
+
+In rows where `t1` or `t2` are `null`, the result will be `null`. If
+`t1` is before `t2`, the result will be positive. If `t1` is after `t2`
+the result will be negative.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Days Between
+
+Note that the expression uses `as i32` to convert the `interval_days` to
+the integer number of days. This discards the units.
+
+===== Query
+
+....
+days_between(Input.time, Input.date) as i32
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |date
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00
+|1996-04-21T00:00:00-00:00 |Ryan |1995-07-20T00:00:00-00:00
+|1996-05-21T23:00:00-00:00 |Ryan |1996-05-22T00:00:00-00:00
+|1996-06-21T00:00:00-00:00 |Ryan |1996-06-19T05:00:00-00:00
+|1996-07-21T00:00:00-00:00 |Ben |
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |date |result
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00 |151
+|1996-04-21T00:00:00-00:00 |Ryan |1995-07-20T00:00:00-00:00 |-276
+|1996-05-21T23:00:00-00:00 |Ryan |1996-05-22T00:00:00-00:00 |0
+|1996-06-21T00:00:00-00:00 |Ryan |1996-06-19T05:00:00-00:00 |-1
+|1996-07-21T00:00:00-00:00 |Ben | |
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00 |1
+|===
+
+=== div
+
+Returns the division of two numbers.
+
+This is the function used for the binary operation `a / b`.
+
+==== Parameters
+
+* a: The left-hand side of the division.
+* b: The right-hand side of the division.
+
+Note: Both `a` and `b` are promoted to a compatible numeric type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules].
+
+==== Results
+
+Returns a numeric column of the promoted numeric type compatible with
+both `a` and `b`. The result contains `null` if `a` or `b` was null at
+that row, or if `b` was `0`. Otherwise the row contains the resulting of
+dividing `a` by `b`.
+
+*Tags:* link:#math-functions[math] link:#operators[operator]
+
+==== Example: Division
+
+===== Query
+
+....
+Input.a / Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4
+|2021-01-03T00:00:00.000000000Z |B | |3.7
+|2021-01-03T00:00:00.000000000Z |A |13.2 |
+|2021-01-04T00:00:00.000000000Z |A |12.2 |0
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2 |4.75
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4 |15.749999999999998
+|2021-01-03T00:00:00.000000000Z |B | |3.7 |
+|2021-01-03T00:00:00.000000000Z |A |13.2 | |
+|2021-01-04T00:00:00.000000000Z |A |12.2 |0.0 |
+|===
+
+=== else
+
+Return the `value` if it is non-`null`, `default` otherwise.
+
+==== Parameters
+
+* default: The result to use if `value` is `null`.
+* value: The result to prefer if it is non-`null`.
+
+Note the order of arguments has `default` first, so that you can use it
+with the pipe syntax to provide default values, as in
+`value | else(default)`.
+
+==== Results
+
+For each row, returns `value` if it is non-`null` in that row, or
+`default` if `value is `null`.
+
+*Tags:* link:#logical-functions[logical]
+
+==== Example: Choosing between two values
+
+In this example the result is `Input.a` if it is non-`null`, and
+`Input.b` otherwise. This may be combined with link:#if[`if`] to
+conditionaly `null` out cases to implement various logical operations.
+
+When chaining multiple conditionals, it may be better to use
+link:#coalesce[`coalesce`].
+
+===== Query
+
+....
+Input.a | else(Input.b)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |X |57.8 |63
+|2021-01-02T00:00:00.000000000Z |Y | |86.3
+|2021-01-03T00:00:00.000000000Z |X |6873 |
+|2021-01-04T00:00:00.000000000Z |X | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |X |57.8 |63.0 |57.8
+|2021-01-02T00:00:00.000000000Z |Y | |86.3 |86.3
+|2021-01-03T00:00:00.000000000Z |X |6873.0 | |6873.0
+|2021-01-04T00:00:00.000000000Z |X | | |
+|===
+
+==== Example: Providing a default value
+
+This example shows how to use `else` to provide a default value for a
+possibly `null` value.
+
+===== Query
+
+....
+Input.a | else(42.0)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |X |57.8 |63
+|2021-01-02T00:00:00.000000000Z |Y | |86.3
+|2021-01-03T00:00:00.000000000Z |X |6873 |
+|2021-01-04T00:00:00.000000000Z |X | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |X |57.8 |63.0 |57.8
+|2021-01-02T00:00:00.000000000Z |Y | |86.3 |42.0
+|2021-01-03T00:00:00.000000000Z |X |6873.0 | |6873.0
+|2021-01-04T00:00:00.000000000Z |X | | |42.0
+|===
+
+=== eq
+
+Return `true` if `a` is equal to `b`.
+
+This is the function used for the binary comparison `a == b`.
+
+==== Parameters
+
+* a: The left hand side of the comparison.
+* b: The right hand side of the comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ, they
+may be promoted to a compatible numeric type following the
+docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a `bool` column indicating the results. For each row, it
+contains `null` if `a` or `b` are `null`, `true` if they are equal and
+`false` if they are not equal.
+
+*Tags:* link:#comparison-functions[comparison] link:#operators[operator]
+
+==== Example: Equals
+
+===== Query
+
+....
+Input.a == Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0
+|2021-01-02T00:00:00.000000000Z |Ryan | |70
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-05T00:00:00.000000000Z |Ben |65 |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7
+|2021-01-07T00:00:00.000000000Z |Ryan | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0 |false
+|2021-01-02T00:00:00.000000000Z |Ryan | |70.0 |
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3 |false
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2 |true
+|2021-01-05T00:00:00.000000000Z |Ben |65.0 | |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7 |false
+|2021-01-07T00:00:00.000000000Z |Ryan | | |
+|===
+
+=== exp
+
+Returns `e^power`.
+
+==== Parameters
+
+* power: The power to raise `e` to.
+
+The exponential function applies to `f64` numbers only. Other numbers
+will be implicitly promoted.
+
+==== Results
+
+Returns a column of `f64` values. Each row contains `null` if `power` is
+`null`. Otherwise, the row contains the value `e ^ power`.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Exponential
+
+===== Query
+
+....
+exp(Input.a)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-02T00:00:00.000000000Z |A |6.3
+|2021-01-02T00:00:00.000000000Z |B |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |298.8674009670603
+|2021-01-02T00:00:00.000000000Z |A |6.3 |544.571910125929
+|2021-01-02T00:00:00.000000000Z |B | |
+|===
+
+=== extend
+
+Extends a record with fields from another.
+
+==== Parameters
+
+* new: The record column containing the new fields.
+* old: The record column containing the old fields.
+
+Note: The order of parameters is chosen to allow `old | extend(new)` as
+a way to add fields to the `old` record.
+
+==== Results
+
+Returns a column containing the combined record fields from both `old`
+and `new`. If either `old` or `new` are `null` then the fields from the
+given record are `null`. If a field exists in both `old` and `new`, the
+value from `new` is preferred.
+
+*Tags:* link:#record-functions[record]
+
+==== Example: Record Extension
+
+===== Query
+
+....
+extend(Input, { sum: Input.a + Input.b, five: 5 })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5 |1.2
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4
+|2021-03-01T00:00:00.000000000Z |B | |3.7
+|2021-04-10T00:00:00.000000000Z |A |13 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |sum |five
+|2021-01-01T00:00:00.000000000Z |A |5.0 |1.2 |6.2 |5
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4 |6.7 |5
+|2021-03-01T00:00:00.000000000Z |B | |3.7 | |5
+|2021-04-10T00:00:00.000000000Z |A |13.0 | | |5
+|===
+
+=== first
+
+Computes the first value present across the input.
+
+==== Parameters
+
+* input: The input to be considered.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the first new, non-`null` value in the input,
+up to and including the current row. Returns `null` until there has been
+at least one such input.
+
+NOTE: The first value is inclusive of any values at the current time.
+
+*Tags:* link:#aggregation-functions[aggregation]
+
+==== Example: First
+
+===== Query
+
+....
+first(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |50.7
+|2021-01-02T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |50.7
+|2021-01-03T00:00:00.000000000Z |Ben | |50.7
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |67.2
+|===
+
+=== floor
+
+Rounds the number down to the next smallest integer.
+
+See also link:#round[`round`] and link:#ceil[`ceil`].
+
+==== Parameters
+
+* n: The number to round down.
+
+Note: This method may be applied to any numeric type. For anything other
+than `float32` and `float64` it has no affect since the values are
+already integers.
+
+==== Results
+
+Returns a numeric column of the same type as `n`. The result contains
+`null` if `n` was null at that row. Otherwise, it contains the result of
+rounding `n` down to the next smallest integer.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Floor
+
+===== Query
+
+....
+Input.a | floor()
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-02T00:00:00.000000000Z |B |
+|2021-01-02T00:00:00.000000000Z |B |-2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |5.0
+|2021-01-01T00:00:00.000000000Z |A |6.3 |6.0
+|2021-01-02T00:00:00.000000000Z |B | |
+|2021-01-02T00:00:00.000000000Z |B |-2.3 |-3.0
+|===
+
+=== gt
+
+Return `true` if `a` is greater than `b`.
+
+This is the function used for the binary comparison `a > b`.
+
+==== Parameters
+
+* a: The left hand side of the comparison.
+* b: The right hand side of the comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ, they
+may be promoted to a compatible numeric type following the
+docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a `bool` column indicating the results. For each row, it
+contains `null` if `a` or `b` are `null`, `true` if `a` is greater than
+`b`, and `false` if `a` is less than or equal to `b`.
+
+*Tags:* link:#comparison-functions[comparison] link:#operators[operator]
+
+==== Example: Greater Than
+
+===== Query
+
+....
+Input.a > Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0
+|2021-01-02T00:00:00.000000000Z |Ryan | |70
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-05T00:00:00.000000000Z |Ben |65 |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7
+|2021-01-07T00:00:00.000000000Z |Ryan | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0 |true
+|2021-01-02T00:00:00.000000000Z |Ryan | |70.0 |
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3 |false
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2 |false
+|2021-01-05T00:00:00.000000000Z |Ben |65.0 | |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7 |false
+|2021-01-07T00:00:00.000000000Z |Ryan | | |
+|===
+
+=== gte
+
+Return `true` if `a` is greater than or equal to `b`.
+
+This is the function used for the binary comparison `a >= b`.
+
+==== Parameters
+
+* a: The left hand side of the comparison.
+* b: The right hand side of the comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ, they
+may be promoted to a compatible numeric type following the
+docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a `bool` column indicating the results. For each row, it
+contains `null` if `a` or `b` are `null`, `true` if `a` is greater than
+or equal to `b`, and `false` if `a` is less than `b`.
+
+*Tags:* link:#comparison-functions[comparison] link:#operators[operator]
+
+==== Example: Greater Than or Equal To
+
+===== Query
+
+....
+Input.a >= Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0
+|2021-01-02T00:00:00.000000000Z |Ryan | |70
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-05T00:00:00.000000000Z |Ben |65 |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7
+|2021-01-07T00:00:00.000000000Z |Ryan | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0 |true
+|2021-01-02T00:00:00.000000000Z |Ryan | |70.0 |
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3 |false
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2 |true
+|2021-01-05T00:00:00.000000000Z |Ben |65.0 | |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7 |false
+|2021-01-07T00:00:00.000000000Z |Ryan | | |
+|===
+
+=== hash
+
+Returns the hash of the `input`.
+
+==== Parameters
+
+* input: The argument to hash.
+
+==== Results
+
+Returns a `u64` column which contains the hash of the `input`.
+
+Note: Unlike many functions which return `null` if any of their
+arguments are `null`, `hash` will never return `null`.
+
+*Tags:* link:#misc-functions[misc]
+
+==== Example: String Hash
+
+===== Query
+
+....
+hash(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |hello
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |world
+|2021-01-03T00:00:00.000000000Z |Ben |hi
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |earth
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |hello |15811883632611753650
+|2021-01-01T00:00:00.000000000Z |Ryan | |5927736130248593597
+|2021-01-02T00:00:00.000000000Z |Ryan |world |10724100356298933117
+|2021-01-03T00:00:00.000000000Z |Ben |hi |8732440231931982831
+|2021-01-04T00:00:00.000000000Z |Ben | |5927736130248593597
+|2021-01-04T00:00:00.000000000Z |Ryan |earth |2958664733073760318
+|===
+
+==== Example: Integer Hash
+
+===== Query
+
+....
+hash(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |5
+|2021-01-01T00:00:00.000000000Z |Ryan |8
+|2021-01-02T00:00:00.000000000Z |Ryan |9
+|2021-01-03T00:00:00.000000000Z |Ben |8
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |9
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |5 |11871059458584583621
+|2021-01-01T00:00:00.000000000Z |Ryan |8 |4028879376188845851
+|2021-01-02T00:00:00.000000000Z |Ryan |9 |9468338612501459910
+|2021-01-03T00:00:00.000000000Z |Ben |8 |4028879376188845851
+|2021-01-04T00:00:00.000000000Z |Ben | |5791815708761125353
+|2021-01-04T00:00:00.000000000Z |Ryan |9 |9468338612501459910
+|===
+
+=== hourly
+
+A periodic function that produces a `true` value at the start of each
+hour.
+
+This function is often used in aggregations to produce windows or as a
+predicate column.
+
+==== Results
+
+Returns a boolean column with each row containing a `true` value at the
+start of the hour, and `null` at all other times.
+
+*Tags:* link:#tick-functions[tick]
+
+==== Example: Hourly Aggregated Window
+
+In this example, the `hourly()` function is used as an argument to the
+link:#since[`since] function, which produces a window. The result is a
+windowed aggregation that resets hourly.
+
+===== Query
+
+....
+{ n: Input.n, hourly_sum: sum(Input.n, window = since(hourly())) }
+| extend({time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T17:00:59-00:00 |Ben |6
+|1996-12-19T17:01:00-00:00 |Ben |9
+|1996-12-19T17:01:00-00:00 |Ryan |8
+|1996-12-19T18:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |hourly_sum
+|1996-12-19T16:00:57.000000000 |Ben |2 |2
+|1996-12-19T16:00:58.000000000 |Ryan |3 |3
+|1996-12-19T17:00:00.000000000 |Ben | |2
+|1996-12-19T17:00:00.000000000 |Ryan | |3
+|1996-12-19T17:00:59.000000000 |Ben |6 |6
+|1996-12-19T17:01:00.000000000 |Ben |9 |15
+|1996-12-19T17:01:00.000000000 |Ryan |8 |8
+|1996-12-19T18:00:00.000000000 |Ben |1 |16
+|1996-12-19T18:00:00.000000000 |Ben | |16
+|1996-12-19T18:00:00.000000000 |Ryan | |8
+|===
+
+==== Example: Filter Hourly
+
+In this example, the `hourly()` function is used as an argument to the
+link:#when[`when`] function, which filters input.
+
+The output includes the last input row before a link:#tick[`tick`]
+occurs.
+
+===== Query
+
+....
+Input | last() | when(hourly())
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T17:00:59-00:00 |Ben |6
+|1996-12-19T17:01:00-00:00 |Ben |9
+|1996-12-19T17:01:00-00:00 |Ryan |8
+|1996-12-19T18:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T18:00:00-00:00 |Ben |1
+|1996-12-19T17:01:00-00:00 |Ryan |8
+|===
+
+=== if
+
+Return the `value` if `condition` is `true`, `null` otherwise.
+
+`if` "nulls out" the `value` if `condition` is `false`. It is equivalent
+to `null_if(!condition, value)`.
+
+See also link:#null_if[`null_if`].
+
+==== Parameters
+
+* condition: The condition which determines whether to return the
+`value` or `null`.
+* value: The value to return if `condition` is `true`.
+
+Note: The order of arguments is chosen to allow use with the pipe
+operation. Specifically, `value | if(condition)` may be used to
+conditionally "null-out" the value on the left-hand side.
+
+==== Results
+
+For each row, return the `value` if `condition` is `true`. Returns
+`null` if the `condition` is `false` or `null`.
+
+*Tags:* link:#logical-functions[logical]
+
+==== Example
+
+===== Query
+
+....
+Input.value | if(Input.condition)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |condition
+|2021-01-01T00:00:00.000000000Z |A |57.8 |false
+|2021-01-02T00:00:00.000000000Z |B |58.7 |true
+|2021-01-03T00:00:00.000000000Z |A | |true
+|2021-01-04T00:00:00.000000000Z |A |876 |
+|2021-01-05T00:00:00.000000000Z |A |786.0 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |value |condition |result
+|2021-01-01T00:00:00.000000000Z |A |57.8 |false |
+|2021-01-02T00:00:00.000000000Z |B |58.7 |true |58.7
+|2021-01-03T00:00:00.000000000Z |A | |true |
+|2021-01-04T00:00:00.000000000Z |A |876.0 | |
+|2021-01-05T00:00:00.000000000Z |A |786.0 | |
+|===
+
+=== is_valid
+
+Returns `true` if `input` is non-`null`.
+
+==== Parameters
+
+* input: The input to test for `null`.
+
+==== Results
+
+Returns a `bool` column that is `true` if the `input` is `null` and
+`false` otherwise.
+
+Note: Unlike many functions which return `null` if any of their
+arguments are `null`, `is_valid` will never return `null`.
+
+*Tags:* link:#misc-functions[misc]
+
+==== Example: Is Valid
+
+===== Query
+
+....
+is_valid(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |5
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |7
+|2021-01-03T00:00:00.000000000Z |Ben |3
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |5 |true
+|2021-01-01T00:00:00.000000000Z |Ryan | |false
+|2021-01-02T00:00:00.000000000Z |Ryan |7 |true
+|2021-01-03T00:00:00.000000000Z |Ben |3 |true
+|2021-01-04T00:00:00.000000000Z |Ben | |false
+|2021-01-04T00:00:00.000000000Z |Ryan |2 |true
+|===
+
+=== json
+
+Creates a JSON object from a string.
+
+____
+🚧 Warning `json` is experimental functionality. You should expect the
+behavior to potentially change in the future. Certain functionality,
+such as nested types, are not yet supported.
+____
+
+This functions converts a JSON string into a JSON object. Fields of the
+JSON object can be accessed as strings and cast into other types.
+
+==== Parameters
+
+* s: The JSON-formatted string.
+
+==== Results
+
+Returns a JSON object.
+
+*Tags:* link:#string-functions[string]
+
+==== Example: JSON field access
+
+===== Query
+
+....
+json(Input.json_string).a
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |json_string
+|2021-01-01T00:00:00.000000000Z |Ben |\{"a": 10}
+|2021-01-02T00:00:00.000000000Z |Ryan |\{"a": 2}
+|2021-01-03T00:00:00.000000000Z |Ryan |\{"b": 10}
+|2021-01-04T00:00:00.000000000Z |Ben |\{"a": 4}
+|2021-01-05T00:00:00.000000000Z |Ben |\{"c": 12}
+|2021-01-06T00:00:00.000000000Z |Jordan |\{"a": 0}
+|2021-01-07T00:00:00.000000000Z |Ryan |\{"a": 8}
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |json_string |result
+|2021-01-01T00:00:00.000000000Z |Ben |\{"a": 10} |10
+|2021-01-02T00:00:00.000000000Z |Ryan |\{"a": 2} |2
+|2021-01-03T00:00:00.000000000Z |Ryan |\{"b": 10} |
+|2021-01-04T00:00:00.000000000Z |Ben |\{"a": 4} |4
+|2021-01-05T00:00:00.000000000Z |Ben |\{"c": 12} |
+|2021-01-06T00:00:00.000000000Z |Jordan |\{"a": 0} |0
+|2021-01-07T00:00:00.000000000Z |Ryan |\{"a": 8} |8
+|===
+
+=== lag
+
+Returns a lagging value of `e`.
+
+==== Parameters
+
+* n: The amount of lag to retrieve. For instance, `n = 1` is the
+previous non-`null` value, `n = 2` is the non-`null` value before that,
+etc.
+* input: The value to retrieve.
+
+==== Results
+
+Returns a new column with the same type as `input`, but with each row
+containing the value of `input` from `n` rows earlier (counting only
+non-`null` rows for the current entity).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Lag for Previous Value
+
+===== Query
+
+....
+lag(1, Input.n)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-03-21T00:00:00-00:00 |Ben |1
+|1996-04-21T00:00:00-00:00 |Ryan |2
+|1996-05-21T00:00:00-00:00 |Ryan |3
+|1996-06-21T00:00:00-00:00 |Ryan |4
+|1996-07-21T00:00:00-00:00 |Ben |5
+|1996-08-21T00:00:00-00:00 |Ben |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-03-21T00:00:00-00:00 |Ben |1 |
+|1996-04-21T00:00:00-00:00 |Ryan |2 |
+|1996-05-21T00:00:00-00:00 |Ryan |3 |2
+|1996-06-21T00:00:00-00:00 |Ryan |4 |3
+|1996-07-21T00:00:00-00:00 |Ben |5 |1
+|1996-08-21T00:00:00-00:00 |Ben |6 |5
+|===
+
+==== Example: Lag for Average Change
+
+This example uses `lag` to compute the average difference between values
+of `n`.
+
+===== Query
+
+....
+# Will always be non-`null` after the first non-`null` `Input.n`.
+let prev_value = Input.n | lag(1)
+
+# Will be `null` if current `Input.n` is `null`.
+let difference = Input.n - prev_value
+in
+{
+  difference,
+  mean_difference: mean(difference),
+} | extend({ time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-03-21T00:00:00-00:00 |Ben |1
+|1996-04-21T00:00:00-00:00 |Ryan |2
+|1996-05-21T00:00:00-00:00 |Ryan |
+|1996-06-21T00:00:00-00:00 |Ryan |4
+|1996-07-21T00:00:00-00:00 |Ben |5
+|1996-08-21T00:00:00-00:00 |Ben |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |difference |mean_difference
+|1996-03-21T00:00:00.000000000 |Ben | |
+|1996-04-21T00:00:00.000000000 |Ryan | |
+|1996-05-21T00:00:00.000000000 |Ryan | |
+|1996-06-21T00:00:00.000000000 |Ryan |2 |2.0
+|1996-07-21T00:00:00.000000000 |Ben |4 |4.0
+|1996-08-21T00:00:00.000000000 |Ben |1 |2.5
+|===
+
+=== last
+
+Computes the last value present across the input.
+
+==== Parameters
+
+* input: The input to be considered.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the last new, non-`null` value in the input,
+up to and including the current row. Returns `null` until there has been
+at least one such input.
+
+NOTE: The last value is inclusive of any values at the current time.
+This means that if the current row is new and non-`null`, the result
+will be the same of the input. If the input is not new or `null`, this
+will be the previous value that was new and non-`null`.
+
+*Tags:* link:#aggregation-functions[aggregation]
+
+==== Example: Last
+
+As shown in the example, the last aggregation is useful for
+extrapolating missing results from the most recent present result.
+
+===== Query
+
+....
+last(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |50.7
+|2021-01-02T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-03T00:00:00.000000000Z |Ben | |1.2
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |2.3
+|===
+
+=== len
+
+Returns the length of the string `s`.
+
+==== Parameters
+
+* s: The string to compute the length of.
+
+==== Results
+
+Returns an `i32` column with each row containing the length of the
+string `s` in that row. Returns `0` for the empty string and `null` if
+`s` is `null`.
+
+*Tags:* link:#string-functions[string]
+
+==== Example: String Length
+
+===== Query
+
+....
+Input.value | len()
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World
+|2021-01-02T00:00:00.000000000Z |Ryan |''
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello
+|2021-01-03T00:00:00.000000000Z |Ben |''
+|2021-01-04T00:00:00.000000000Z |Ryan |hi
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World |11
+|2021-01-02T00:00:00.000000000Z |Ryan |'' |2
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth |8
+|2021-01-03T00:00:00.000000000Z |Ben |Hello |5
+|2021-01-03T00:00:00.000000000Z |Ben |'' |2
+|2021-01-04T00:00:00.000000000Z |Ryan |hi |2
+|===
+
+=== logical_and
+
+Returns the logical conjunction (AND) of two booleans.
+
+This is the function used for the binary operation `a and b`.
+
+==== Parameters
+
+* a: The left-hand side of the conjunction.
+* b: The right-hand side of the conjunction.
+
+==== Results
+
+* Returns `true` if `a` and `b` are both `true`.
+* Returns `false` if `a` or `b` are `false`.
+* Returns `null` if `a` or `b` are `null`.
+
+*Tags:* link:#logical-functions[logical] link:#operators[operator]
+
+==== Example: Logical And
+
+===== Query
+
+....
+Input.a and Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |true |false
+|2021-01-02T00:00:00.000000000Z |B |true |true
+|2021-01-03T00:00:00.000000000Z |A |false |true
+|2021-01-04T00:00:00.000000000Z |A |false |false
+|2021-01-05T00:00:00.000000000Z |A | |true
+|2021-02-01T00:00:00.000000000Z |B |true |
+|2021-02-02T00:00:00.000000000Z |A | |false
+|2021-03-01T00:00:00.000000000Z |B |false |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |true |false |false
+|2021-01-02T00:00:00.000000000Z |B |true |true |true
+|2021-01-03T00:00:00.000000000Z |A |false |true |false
+|2021-01-04T00:00:00.000000000Z |A |false |false |false
+|2021-01-05T00:00:00.000000000Z |A | |true |
+|2021-02-01T00:00:00.000000000Z |B |true | |
+|2021-02-02T00:00:00.000000000Z |A | |false |false
+|2021-03-01T00:00:00.000000000Z |B |false | |false
+|===
+
+=== logical_or
+
+Returns the logical disjunction (OR) of two booleans.
+
+This is the function used for the binary operation `a or b`.
+
+==== Parameters
+
+* a: The left-hand side of the disjunction.
+* b: The right-hand side of the disjunction.
+
+==== Results
+
+* Returns `true` if `a` or `b` are `true`.
+* Returns `false` if `a` and `b` are both `false`.
+* Returns `null` if `a` or `b` are `null`.
+
+*Tags:* link:#logical-functions[logical] link:#operators[operator]
+
+==== Example: Logical Or
+
+===== Query
+
+....
+Input.a or Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |subsort |key |a |b
+|2021-01-01T00:00:00.000000000Z |0 |A |true |false
+|2021-01-02T00:00:00.000000000Z |0 |B |true |true
+|2021-01-03T00:00:00.000000000Z |0 |A |false |true
+|2021-01-04T00:00:00.000000000Z |0 |A |false |false
+|2021-01-05T00:00:00.000000000Z |0 |A | |true
+|2021-02-01T00:00:00.000000000Z |0 |B |true |
+|2021-02-02T00:00:00.000000000Z |0 |A | |false
+|2021-03-01T00:00:00.000000000Z |0 |B |false |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^,^",options="header",]
+|===
+|time |subsort |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |0 |A |true |false |true
+|2021-01-02T00:00:00.000000000Z |0 |B |true |true |true
+|2021-01-03T00:00:00.000000000Z |0 |A |false |true |true
+|2021-01-04T00:00:00.000000000Z |0 |A |false |false |false
+|2021-01-05T00:00:00.000000000Z |0 |A | |true |true
+|2021-02-01T00:00:00.000000000Z |0 |B |true | |true
+|2021-02-02T00:00:00.000000000Z |0 |A | |false |
+|2021-03-01T00:00:00.000000000Z |0 |B |false | |
+|===
+
+=== lookup
+
+Looks up the value for a foreign key.
+
+Performs a lookup join between the `key` and the computed `value` from a
+foreign entity.
+
+==== Parameters
+
+* key: Expression which computes the foreign key to lookup. This must
+match the type of the keys in the foreign grouping.
+* value: Foreign expression computing the value to lookup. The `value`
+argument should normally be a continuous value (result of an
+aggregation). This ensures there will be an available value at the time
+of the lookup.
+
+==== Results
+
+For each row with a non-`null` key, returns the value at that time from
+the `value` computed for the entity identified by the `key`. Yields
+`null` if the `key` is `null` or if there is no foreign value computed
+for that key at the corresponding time.
+
+*Tags:* link:#grouping-functions[grouping]
+
+==== Example: Lookup
+
+This example operates on customer reviews. It augments each review with
+the average rating the customer has given and the average rating the
+product has received, up to that point in time.
+
+===== Query
+
+....
+# This is the average review a product has received (keyed by products)
+let average_review_by_product = ProductReviewsByProduct.stars | mean()
+
+# This is the average review a customer has given (keyed by customer ID)
+let product_id_by_customer = ProductReviewsByCustomer.product_id
+let average_customer_review = ProductReviewsByCustomer.stars | mean()
+
+# Lookup the average product review for the current purchase.
+let average_product_review =
+  lookup(product_id_by_customer, average_review_by_product)
+in
+
+{
+    key: product_id_by_customer,
+    average_customer_review,
+    average_product_review,
+} | extend({ time: time_of($input)} )
+....
+
+===== Table: ProductReviewsByProduct
+
+* *Name*: `ProductReviewsByProduct`
+* *Time Column*: `time`
+* *Group Column*: `product_id`
+* *Grouping*: `products`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |customer_id |product_id |stars
+|2021-01-01T00:00:00.000000000Z |Patrick |krabby_patty |3
+|2021-01-02T00:00:00.000000000Z |Patrick |coral_bits |4
+|2021-03-01T00:00:00.000000000Z |Squidward |krabby_patty |5
+|2021-04-10T00:00:00.000000000Z |Patrick |krabby_patty |1
+|===
+
+===== Table: ProductReviewsByCustomer
+
+* *Name*: `ProductReviewsByCustomer`
+* *Time Column*: `time`
+* *Group Column*: `customer_id`
+* *Grouping*: `customers`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |customer_id |product_id |stars
+|2021-01-01T00:00:00.000000000Z |Patrick |krabby_patty |3
+|2021-01-02T00:00:00.000000000Z |Patrick |coral_bits |4
+|2021-03-01T00:00:00.000000000Z |Squidward |krabby_patty |5
+|2021-04-10T00:00:00.000000000Z |Patrick |krabby_patty |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |average_customer_review |average_product_review
+|2021-01-01T00:00:00.000000000 |krabby_patty |3.0 |3.0
+|2021-01-02T00:00:00.000000000 |coral_bits |3.5 |4.0
+|2021-03-01T00:00:00.000000000 |krabby_patty |5.0 |4.0
+|2021-04-10T00:00:00.000000000 |krabby_patty |2.6666666666666665 |3.0
+|===
+
+=== lower
+
+Converts the string to lower case.
+
+==== Parameters
+
+* s: The string to convert to lower case.
+
+==== Results
+
+Returns a `string` column with each row containing the string `s` from
+that row converted to all lower case. The row contains `null` if `s` is
+`null` in that row.
+
+*Tags:* link:#string-functions[string]
+
+==== Example: Lower Case
+
+===== Query
+
+....
+Input.value | lower()
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World |hello world
+|2021-01-02T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth |hi earth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello |hello
+|2021-01-03T00:00:00.000000000Z |Ben | |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi |hi
+|===
+
+=== lt
+
+Return `true` if `a` is less than `b`.
+
+This is the function used for the binary comparison `a < b`.
+
+==== Parameters
+
+* a: The left hand side of the comparison.
+* b: The right hand side of the comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ, they
+may be promoted to a compatible numeric type following the
+docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a `bool` column indicating the results. For each row, it
+contains `null` if `a` or `b` are `null`, `true` if `a` is less than `b`
+and `false` if `a` is greater than or equal to `b`.
+
+*Tags:* link:#comparison-functions[comparison] link:#operators[operator]
+
+==== Example: Less Than
+
+===== Query
+
+....
+Input.a < Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0
+|2021-01-02T00:00:00.000000000Z |Ryan | |70
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-05T00:00:00.000000000Z |Ben |65 |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7
+|2021-01-07T00:00:00.000000000Z |Ryan | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0 |false
+|2021-01-02T00:00:00.000000000Z |Ryan | |70.0 |
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3 |true
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2 |false
+|2021-01-05T00:00:00.000000000Z |Ben |65.0 | |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7 |true
+|2021-01-07T00:00:00.000000000Z |Ryan | | |
+|===
+
+=== lte
+
+Return `true` if `a` is less than or equal to `b`.
+
+This is the function used for the binary comparison `a <= b`.
+
+==== Parameters
+
+* a: The left hand side of the comparison.
+* b: The right hand side of comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ, they
+may be promoted to a compatible numeric type following the
+docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a `bool` column indicating the results. For each row, it
+contains `null` if `a` or `b` are `null`, `true` if `a` is less than or
+equal to `b`, and `false` if `a` is greater than `b`.
+
+*Tags:* link:#comparison-functions[comparison] link:#operators[operator]
+
+==== Example: Less Than or Equal To
+
+===== Query
+
+....
+Input.a <= Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0
+|2021-01-02T00:00:00.000000000Z |Ryan | |70
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-05T00:00:00.000000000Z |Ben |65 |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7
+|2021-01-07T00:00:00.000000000Z |Ryan | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0 |false
+|2021-01-02T00:00:00.000000000Z |Ryan | |70.0 |
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3 |true
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2 |true
+|2021-01-05T00:00:00.000000000Z |Ben |65.0 | |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7 |true
+|2021-01-07T00:00:00.000000000Z |Ryan | | |
+|===
+
+=== max
+
+Computes the maximum of values across the input.
+
+This is an aggregation that computes the maximum across multiple rows.
+See link:#zip-max[`zip_max`] to take the maximum of two values from each
+row.
+
+==== Parameters
+
+* input: The input to compute the maximum of.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the maximum of new, non-`null` rows in
+`input` up to and including the input row for the given entity. Returns
+`null` until there has been at least one such input.
+
+*Tags:* link:#aggregation-functions[aggregation]
+link:#math-functions[math]
+
+==== Example: Maximum
+
+===== Query
+
+....
+max(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |50.7
+|2021-01-04T00:00:00.000000000Z |Ben | |50.7
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |67.2
+|===
+
+=== mean
+
+Computes the arithmetic mean of values across the input.
+
+==== Parameters
+
+* input: The input to compute the mean of.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the mean of new, non-`null` rows in `input`
+up to and including the input row for the given entity. Returns `null`
+until there has been at least one such input.
+
+*Tags:* link:#aggregation-functions[aggregation]
+link:#math-functions[math]
+
+==== Example: Mean
+
+===== Query
+
+....
+mean(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-02T00:00:00.000000000Z |Ben |1.2
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-03T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |67.2
+|2021-01-02T00:00:00.000000000Z |Ben |1.2 |25.950000000000003
+|2021-01-03T00:00:00.000000000Z |Ben | |25.950000000000003
+|2021-01-03T00:00:00.000000000Z |Ryan |2.3 |34.75
+|===
+
+=== min
+
+Computes the minimum of values across the input.
+
+This is an aggregation that computes the minimum across multiple rows.
+See link:#zip-min[`zip_min`] to take the minimum of two values from each
+row.
+
+==== Parameters
+
+* input: The input to compute the minimum of.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the minimum of new, non-`null` rows in
+`input` up to and including the input row for the given entity. Returns
+`null` until there has been at least one such input.
+
+*Tags:* link:#aggregation-functions[aggregation]
+link:#math-functions[math]
+
+==== Example: Minimum
+
+===== Query
+
+....
+min(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-04T00:00:00.000000000Z |Ben | |1.2
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |2.3
+|===
+
+=== minutely
+
+A periodic function that produces a `true` value at the start of each
+minutely.
+
+This function is often used in aggregations to produce windows or as a
+predicate column.
+
+==== Results
+
+Returns a boolean column with each row containing a `true` value at the
+start of each minute, and `null` at all other times.
+
+*Tags:* link:#tick-functions[tick]
+
+==== Example: Minutely Aggregated Window
+
+In this example, the `minutely()` function is used as an argument to the
+link:#since[`since] function, which produces a window. The result is a
+windowed aggregation that resets minutely.
+
+===== Query
+
+....
+{ n: Input.n, hourly_sum: sum(Input.n, window = since(minutely())) }
+| extend({time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T16:01:59-00:00 |Ben |6
+|1996-12-19T16:02:00-00:00 |Ben |9
+|1996-12-19T16:02:00-00:00 |Ryan |8
+|1996-12-19T16:03:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |hourly_sum
+|1996-12-19T16:00:57.000000000 |Ben |2 |2
+|1996-12-19T16:00:58.000000000 |Ryan |3 |3
+|1996-12-19T16:01:00.000000000 |Ben | |2
+|1996-12-19T16:01:00.000000000 |Ryan | |3
+|1996-12-19T16:01:59.000000000 |Ben |6 |6
+|1996-12-19T16:02:00.000000000 |Ben |9 |15
+|1996-12-19T16:02:00.000000000 |Ryan |8 |8
+|1996-12-19T16:02:00.000000000 |Ben | |15
+|1996-12-19T16:02:00.000000000 |Ryan | |8
+|1996-12-19T16:03:00.000000000 |Ben |1 |1
+|1996-12-19T16:03:00.000000000 |Ben | |1
+|1996-12-19T16:03:00.000000000 |Ryan | |
+|===
+
+==== Example: Filter Minutely
+
+In this example, the `minutely()` function is used as an argument to the
+link:#when[`when`] function, which filters input.
+
+The output includes the last input row before a link:#tick[`tick`]
+occurs.
+
+===== Query
+
+....
+Input | last() | when(minutely())
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T16:01:59-00:00 |Ben |6
+|1996-12-19T16:02:00-00:00 |Ben |9
+|1996-12-19T16:02:00-00:00 |Ryan |8
+|1996-12-19T16:03:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T16:02:00-00:00 |Ben |9
+|1996-12-19T16:02:00-00:00 |Ryan |8
+|1996-12-19T16:03:00-00:00 |Ben |1
+|1996-12-19T16:02:00-00:00 |Ryan |8
+|===
+
+=== month_of_year
+
+Return the month-of-year for the given time, starting with 1.
+
+==== Parameters
+
+* time: The timestamp to return the month-of-year for.
+
+==== Results
+
+Returns a `u32` column containing the month-of-year for each input
+`time`. Returns `null` for rows where `time` is `null`. January is `1`.
+The result will be in the range 1 to 12 (inclusive).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Month of Year
+
+===== Query
+
+....
+month_of_year(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |3
+|1996-04-21T00:00:00-00:00 |Ryan |4
+|1996-05-21T00:00:00-00:00 |Ryan |5
+|1996-06-21T00:00:00-00:00 |Ryan |6
+|1996-07-21T00:00:00-00:00 |Ben |7
+|1996-08-21T00:00:00-00:00 |Ben |8
+|===
+
+=== month_of_year0
+
+Return the month-of-year for the given time, starting with 0.
+
+==== Parameters
+
+* time: The timestamp to return the day-of-month for.
+
+==== Results
+
+Returns a `u32` column containing the month-of-year for each input
+`time`. Returns `null` for rows where `time` is `null`. January is `1`.
+The result will be in the range 0 to 11 (inclusive).
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Month of Year (Zero Based)
+
+===== Query
+
+....
+month_of_year0(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |2
+|1996-04-21T00:00:00-00:00 |Ryan |3
+|1996-05-21T00:00:00-00:00 |Ryan |4
+|1996-06-21T00:00:00-00:00 |Ryan |5
+|1996-07-21T00:00:00-00:00 |Ben |6
+|1996-08-21T00:00:00-00:00 |Ben |7
+|===
+
+=== monthly
+
+A periodic function that produces a `true` value at the start of each
+calendar month (UTC).
+
+This function is often used in aggregations to produce windows or as a
+predicate column.
+
+==== Results
+
+Returns a boolean column with each row containing a `true` value at the
+start of each calendar month, and `null` at all other times.
+
+*Tags:* link:#tick-functions[tick]
+
+==== Example: Monthly Aggregated Window
+
+In this example, the `monthly()` function is used as an argument to the
+link:#since[`since] function, which produces a window. The result is a
+windowed aggregation that resets at the start of each calendar month.
+
+===== Query
+
+....
+{ n: Input.n, monthly_sum: sum(Input.n, window = since(monthly())) }
+| extend({time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-02-19T16:00:00-00:00 |Ben |2
+|1996-02-19T16:00:00-00:00 |Ryan |3
+|1996-04-20T16:00:00-00:00 |Ben |6
+|1996-04-20T16:01:00-00:00 |Ben |9
+|1996-04-21T16:00:00-00:00 |Ryan |8
+|1996-05-21T16:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |monthly_sum
+|1996-02-19T16:00:00.000000000 |Ben |2 |2
+|1996-02-19T16:00:00.000000000 |Ryan |3 |3
+|1996-03-01T00:00:00.000000000 |Ben | |2
+|1996-03-01T00:00:00.000000000 |Ryan | |3
+|1996-04-01T00:00:00.000000000 |Ben | |
+|1996-04-01T00:00:00.000000000 |Ryan | |
+|1996-04-20T16:00:00.000000000 |Ben |6 |6
+|1996-04-20T16:01:00.000000000 |Ben |9 |15
+|1996-04-21T16:00:00.000000000 |Ryan |8 |8
+|1996-05-01T00:00:00.000000000 |Ben | |15
+|1996-05-01T00:00:00.000000000 |Ryan | |8
+|1996-05-21T16:00:00.000000000 |Ben |1 |1
+|===
+
+==== Example: Filter Monthly
+
+In this example, the `monthly()` function is used as an argument to the
+link:#when[`when`] function, which filters input.
+
+The output includes the last input row before a link:#tick[`tick`]
+occurs.
+
+===== Query
+
+....
+Input | last() | when(monthly())
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-02-19T16:00:00-00:00 |Ben |2
+|1996-02-19T16:00:00-00:00 |Ryan |3
+|1996-04-20T16:00:00-00:00 |Ben |6
+|1996-04-20T16:01:00-00:00 |Ben |9
+|1996-04-21T16:00:00-00:00 |Ryan |8
+|1996-05-21T16:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-02-19T16:00:00-00:00 |Ben |2
+|1996-02-19T16:00:00-00:00 |Ryan |3
+|1996-02-19T16:00:00-00:00 |Ben |2
+|1996-02-19T16:00:00-00:00 |Ryan |3
+|1996-04-20T16:01:00-00:00 |Ben |9
+|1996-04-21T16:00:00-00:00 |Ryan |8
+|===
+
+=== months
+
+Produces an interval corresponding to the given number of calendar
+months.
+
+==== Parameters
+
+* months: The number of calendar months to create the interval for.
+
+==== Results
+
+Returns an `interval_months` column with each row containing the value
+of `months` converted to an interval with the corresponding number of
+calendar months. Rows where `months` is `null`, less than `i32::MIN` or
+greater than `i32::MAX` will be `null`.
+
+*Tags:* link:#time-functions[time]
+
+==== Example
+
+This example uses link:#add-time[`add_time`] to add the created interval
+to the `time` column.
+
+===== Query
+
+....
+Input.time | add_time(months(Input.n))
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-03-21T00:00:00-00:00 |Ben |1
+|1996-04-21T00:00:00-00:00 |Ryan |2
+|1996-05-21T00:00:00-00:00 |Ryan |3
+|1996-06-21T00:00:00-00:00 |Ryan |
+|1996-07-21T00:00:00-00:00 |Ben |2
+|1996-08-21T00:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-03-21T00:00:00-00:00 |Ben |1 |1996-04-21T00:00:00.000000000
+|1996-04-21T00:00:00-00:00 |Ryan |2 |1996-06-21T00:00:00.000000000
+|1996-05-21T00:00:00-00:00 |Ryan |3 |1996-08-21T00:00:00.000000000
+|1996-06-21T00:00:00-00:00 |Ryan | |
+|1996-07-21T00:00:00-00:00 |Ben |2 |1996-09-21T00:00:00.000000000
+|1996-08-21T00:00:00-00:00 |Ben |1 |1996-09-21T00:00:00.000000000
+|===
+
+=== months_between
+
+Returns the number of months between the first and second timestamp.
+
+==== Parameters
+
+* t1: The first timestamp
+* t2: The second timestamp
+
+==== Results
+
+Returns an `interval_months` column representing the number of calendar
+months between the two timestamps.
+
+In rows where `t1` or `t2` are `null`, the result will be `null`. If
+`t1` is before `t2`, the result will be positive. If `t1` is after `t2`
+the result will be negative.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Months Between
+
+Note that the expression uses `as i32` to convert the `interval_months`
+to the integer number of months. This discards the units.
+
+===== Query
+
+....
+months_between(Input.time, Input.date) as i32
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |date
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00
+|1996-04-21T00:00:00-00:00 |Ryan |1995-07-20T00:00:00-00:00
+|1996-05-21T23:00:00-00:00 |Ryan |1996-06-20T00:00:00-00:00
+|1996-06-21T00:00:00-00:00 |Ryan |1996-08-19T05:00:00-00:00
+|1996-07-21T00:00:00-00:00 |Ben |
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |date |result
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00 |5
+|1996-04-21T00:00:00-00:00 |Ryan |1995-07-20T00:00:00-00:00 |-9
+|1996-05-21T23:00:00-00:00 |Ryan |1996-06-20T00:00:00-00:00 |1
+|1996-06-21T00:00:00-00:00 |Ryan |1996-08-19T05:00:00-00:00 |2
+|1996-07-21T00:00:00-00:00 |Ben | |
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00 |0
+|===
+
+=== mul
+
+Returns the product of two numbers.
+
+This is the function used for the binary operation `a * b`.
+
+==== Parameters
+
+* a: The left-hand side of the multiplication.
+* b: The right-hand side of the multiplication.
+
+Note: Both `a` and `b` are promoted to a compatible numeric type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules].
+
+==== Results
+
+Returns a numeric column of the promoted numeric type compatible with
+both `a` and `b`. The result contains `null` if `a` or `b` was null at
+that row. Otherwise the row contains the product of `a` and `b`.
+
+*Tags:* link:#math-functions[math] link:#operators[operator]
+
+==== Example: Multiplication
+
+===== Query
+
+....
+Input.a * Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4
+|2021-01-01T00:00:00.000000000Z |B | |3.7
+|2021-01-01T00:00:00.000000000Z |A |13.2 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2 |6.84
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4 |2.52
+|2021-01-01T00:00:00.000000000Z |B | |3.7 |
+|2021-01-01T00:00:00.000000000Z |A |13.2 | |
+|===
+
+=== neg
+
+Returns the negation of `n`.
+
+This is the function used for the unary operation `-n`.
+
+==== Parameters
+
+* n: The number to be negated.
+
+Note: If `n` is an unsigned integer type it is promoted to a signed type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules]. If it is an unsigned integer type other than `u64`, it
+is promoted to the next wider signed integer type. If it is `u64` it is
+promoted to `f64`.
+
+==== Results
+
+For each row in the input, returns `null` if `n` is `null`. Otherwise,
+returns the negation of `n`.
+
+*Tags:* link:#math-functions[math] link:#operators[operator]
+
+==== Example: Negation
+
+===== Query
+
+....
+-Input.a
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-02T00:00:00.000000000Z |B |
+|2021-01-02T00:00:00.000000000Z |B |-2.2
+|2021-01-03T00:00:00.000000000Z |B |0
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |-5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3 |-6.3
+|2021-01-02T00:00:00.000000000Z |B | |
+|2021-01-02T00:00:00.000000000Z |B |-2.2 |2.2
+|2021-01-03T00:00:00.000000000Z |B |0.0 |0.0
+|===
+
+=== neq
+
+Return `true` if `a` is not equal to `b`.
+
+This is the function used for the binary comparison `a != b`.
+
+==== Parameters
+
+* a: The left hand side of the comparison.
+* b: The right hand side of the comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ, they
+may be promoted to a compatible numeric type following the
+docs:data-model#numeric-type-coercion-table[numeric type coercion
+rules].
+
+==== Results
+
+Returns a `bool` column indicating the results. For each row, it
+contains `null` if `a` or `b` are `null`, `true` if they are not equal
+and `false` if they are equal.
+
+*Tags:* link:#comparison-functions[comparison] link:#operators[operator]
+
+==== Example: Not Equals
+
+===== Query
+
+....
+Input.a != Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0
+|2021-01-02T00:00:00.000000000Z |Ryan | |70
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2
+|2021-01-05T00:00:00.000000000Z |Ben |65 |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7
+|2021-01-07T00:00:00.000000000Z |Ryan | |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |6.0 |true
+|2021-01-02T00:00:00.000000000Z |Ryan | |70.0 |
+|2021-01-03T00:00:00.000000000Z |Ryan |67.2 |71.3 |true
+|2021-01-04T00:00:00.000000000Z |Ben |1.2 |1.2 |false
+|2021-01-05T00:00:00.000000000Z |Ben |65.0 | |
+|2021-01-06T00:00:00.000000000Z |Jordan |2.3 |68.7 |true
+|2021-01-07T00:00:00.000000000Z |Ryan | | |
+|===
+
+=== not
+
+Returns the logical negation of a boolean.
+
+This is the function used for the unary operation `!input`.
+
+==== Parameters
+
+* input: The boolean value to negate.
+
+==== Results
+
+For each row, return `true` if `input` is `false`, `false` if `input` is
+`true` and `null` if `input` is `null`.
+
+*Tags:* link:#logical-functions[logical] link:#operators[operator]
+
+==== Example
+
+===== Query
+
+....
+!Input.a
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |true |false
+|2021-01-02T00:00:00.000000000Z |B |true |true
+|2021-01-03T00:00:00.000000000Z |A |false |true
+|2021-01-04T00:00:00.000000000Z |A |false |false
+|2021-02-01T00:00:00.000000000Z |A | |true
+|2021-02-02T00:00:00.000000000Z |B |true |
+|2021-03-01T00:00:00.000000000Z |A | |false
+|2021-03-03T00:00:00.000000000Z |B |false |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |true |false |false
+|2021-01-02T00:00:00.000000000Z |B |true |true |false
+|2021-01-03T00:00:00.000000000Z |A |false |true |true
+|2021-01-04T00:00:00.000000000Z |A |false |false |true
+|2021-02-01T00:00:00.000000000Z |A | |true |
+|2021-02-02T00:00:00.000000000Z |B |true | |false
+|2021-03-01T00:00:00.000000000Z |A | |false |
+|2021-03-03T00:00:00.000000000Z |B |false | |true
+|===
+
+=== null_if
+
+Return the `value` if `condition` is `false`, `null` otherwise.
+
+`null_if` "nulls out" the `value` if `condition` is `true`. It is
+equivalent to `if(!condition, value)`](#if).
+
+See also link:#if[`if`].
+
+==== Parameters
+
+* condition: The condition which determines whether to return the
+`value` or `null`.
+* value: The value to return if `condition` is `false`.
+
+Note: The order of arguments is chosen to allow use with the pipe
+operation. Specifically, `value | null_if(condition)` may be used to
+conditionally "null-out" the value on the left-hand side.
+
+==== Results
+
+For each row, return the `value` if `condition` is `false`. Returns
+`null` if the `condition` is `true` or `null`.
+
+*Tags:* link:#logical-functions[logical]
+
+==== Example: Null If
+
+===== Query
+
+....
+Input.value | null_if(Input.condition)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |condition
+|2021-01-01T00:00:00.000000000Z |A |57.8 |false
+|2021-01-02T00:00:00.000000000Z |B |58.7 |true
+|2021-01-03T00:00:00.000000000Z |A | |true
+|2021-01-04T00:00:00.000000000Z |A |876 |
+|2021-01-05T00:00:00.000000000Z |A |786.0 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |value |condition |result
+|2021-01-01T00:00:00.000000000Z |A |57.8 |false |57.8
+|2021-01-02T00:00:00.000000000Z |B |58.7 |true |
+|2021-01-03T00:00:00.000000000Z |A | |true |
+|2021-01-04T00:00:00.000000000Z |A |876.0 | |
+|2021-01-05T00:00:00.000000000Z |A |786.0 | |
+|===
+
+=== powf
+
+Returns `base^power`.
+
+==== Parameters
+
+* base: The base to raise to the given power.
+* power: The power to raise the base to.
+
+The power function applies to `f64` numbers only. Other numbers will be
+implicitly promoted.
+
+
+Returns a column of `f64` values. Each row contains `null` if `base` or
+`power` are `null`. Otherwise, the row contains the value
+`base ^ power`.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Power
+
+===== Query
+
+....
+powf(Input.a, Input.b)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4
+|2021-01-02T00:00:00.000000000Z |B | |3.7
+|2021-01-03T00:00:00.000000000Z |A |13.2 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2 |8.073276500106656
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4 |2.0880275269924504
+|2021-01-02T00:00:00.000000000Z |B | |3.7 |
+|2021-01-03T00:00:00.000000000Z |A |13.2 | |
+|===
+
+=== remove_fields
+
+Remove fields from a record.
+
+Note: If more fields are being removed than retained, you can use
+link:#select_fields[`select_fields`].
+
+==== Parameters
+
+* record: The record column containing the fields.
+* fields: The name of one or more fields to remove from the record.
+
+Note: Since this is a variable arity function, the `$input` will not be
+implicitly provided. If you wish to use `remove_fields` with pipe syntax
+you must be explicit, as in the example.
+
+==== Results
+
+Returns a column containing the fields in `record` not listed in
+`fields`, with the corresponding values from `record`. The result is
+`null` in rows where `record` is `null`.
+
+*Tags:* link:#record-functions[record]
+
+==== Example: Record Field Filtering
+
+===== Query
+
+....
+Input | remove_fields($input, 'c')
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |c
+|2021-01-01T00:00:00.000000000Z |A |5 |1.2 |true
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4 |false
+|2021-03-01T00:00:00.000000000Z |B | |3.7 |true
+|2021-04-10T00:00:00.000000000Z |A |13 | |true
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.0 |1.2
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4
+|2021-03-01T00:00:00.000000000Z |B | |3.7
+|2021-04-10T00:00:00.000000000Z |A |13.0 |
+|===
+
+=== round
+
+Rounds the number to the nearest integer.
+
+See also link:#ceil[`ceil`] and link:#floor[`floor`].
+
+==== Parameters
+
+* n: The number to round.
+
+Note: This method may be applied to any numeric type. For anything other
+than `float32` and `float64` it has no affect since the values are
+already integers.
+
+==== Results
+
+Returns a numeric column of the same type as `n`. The result contains
+`null` if `n` was null at that position. Otherwise, it contains the
+result of rounding `n` to the nearest integer.
+
+Numbers half-way between two integers are rounded away from `0`. For
+example, `0.5` rounds to `1.0` and `-0.5` rounds to `-1.0`.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Round
+
+===== Query
+
+....
+Input.a | round()
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-02T00:00:00.000000000Z |B |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |6.0
+|2021-01-01T00:00:00.000000000Z |A |6.3 |6.0
+|2021-01-02T00:00:00.000000000Z |B | |
+|===
+
+=== seconds
+
+Produces a duration corresponding to the given number of seconds.
+
+==== Parameters
+
+* seconds: The number of seconds to create the duration for.
+
+==== Results
+
+Returns a `duration_s` column with each row containing the value of
+`seconds` converted to the corresponding duration. Rows where `seconds`
+is `null` will be `null`.
+
+*Tags:* link:#time-functions[time]
+
+==== Example
+
+This example uses link:#add-time[`add_time`] to add the created duration
+to the `time` column.
+
+===== Query
+
+....
+Input.time | add_time(seconds(Input.n))
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-03-21T00:00:00-00:00 |Ben |1
+|1996-04-21T00:00:00-00:00 |Ryan |2
+|1996-05-21T00:00:00-00:00 |Ryan |3
+|1996-06-21T00:00:00-00:00 |Ryan |
+|1996-07-21T00:00:00-00:00 |Ben |2
+|1996-08-21T00:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-03-21T00:00:00-00:00 |Ben |1 |1996-03-21T00:00:01.000000000
+|1996-04-21T00:00:00-00:00 |Ryan |2 |1996-04-21T00:00:02.000000000
+|1996-05-21T00:00:00-00:00 |Ryan |3 |1996-05-21T00:00:03.000000000
+|1996-06-21T00:00:00-00:00 |Ryan | |
+|1996-07-21T00:00:00-00:00 |Ben |2 |1996-07-21T00:00:02.000000000
+|1996-08-21T00:00:00-00:00 |Ben |1 |1996-08-21T00:00:01.000000000
+|===
+
+=== seconds_between
+
+Returns the number of seconds between the first and second timestamp.
+
+==== Parameters
+
+* t1: The first timestamp
+* t2: The second timestamp
+
+==== Results
+
+Returns a `duration_s` column representing the number of seconds between
+the two timestamps.
+
+In rows where `t1` or `t2` are `null`, the result will be `null`. If
+`t1` is before `t2`, the result will be positive. If `t1` is after `t2`,
+the result will be negative.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Seconds Between
+
+Note that the expression uses `as i64` to convert the `duration_s` to
+the integer number of seconds. This discards the units.
+
+===== Query
+
+....
+seconds_between(Input.time, Input.date) as i64
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |date
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00
+|1996-04-21T00:00:00-00:00 |Ryan |1995-07-20T00:00:00-00:00
+|1996-05-21T23:00:00-00:00 |Ryan |1996-06-20T00:00:00-00:00
+|1996-06-21T00:00:00-00:00 |Ryan |1996-08-19T05:00:00-00:00
+|1996-07-21T00:00:00-00:00 |Ben |
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |date |result
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00 |13046400
+|1996-04-21T00:00:00-00:00 |Ryan |1995-07-20T00:00:00-00:00 |-23846400
+|1996-05-21T23:00:00-00:00 |Ryan |1996-06-20T00:00:00-00:00 |2509200
+|1996-06-21T00:00:00-00:00 |Ryan |1996-08-19T05:00:00-00:00 |5115600
+|1996-07-21T00:00:00-00:00 |Ben | |
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00 |86400
+|===
+
+=== select_fields
+
+Limits fields in a record to a given set.
+
+Note: If more fields are being selected than removed, you can use
+link:#remove_fields[`remove_fields`].
+
+==== Parameters
+
+* record: The record column containing the fields.
+* fields: The name of one or more fields to select from the record.
+
+Note: Since this is a variable arity function, the `$input` will not be
+implicitly provided. If you wish to use `select_fields` with pipe syntax
+you must be explicit, as in the example.
+
+==== Results
+
+Returns a column containing the record fields listed in `fields` with
+the corresponding values from `record`. The result is `null` in rows
+where `record` is `null`.
+
+*Tags:* link:#record-functions[record]
+
+==== Example: Record Field Selection
+
+===== Query
+
+....
+Input | select_fields($input, 'key', 'a', 'b')
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |c
+|2021-01-01T00:00:00.000000000Z |A |5 |1.2 |true
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4 |false
+|2021-03-01T00:00:00.000000000Z |B | |3.7 |true
+|2021-04-10T00:00:00.000000000Z |A |13 | |true
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|key |a |b
+|A |5.0 |1.2
+|A |6.3 |0.4
+|B | |3.7
+|A |13.0 |
+|===
+
+=== shift_to
+
+Produces the current `value` shifted forward to the given `time`.
+
+==== Parameters
+
+* time: Column containing the times to shift values to.
+* value: The values to be shifted.
+
+==== Results
+
+For each row, shifts the `value` forward to the given `time`. For rows
+where either `value` or `time` is `null`, nothing is shifted forward. If
+value of the `time` column is less than the time of the current row,
+nothing is shifted forward.
+
+If multiple values for the same entity key are shifted to the same time,
+all of them will be emitted in the order they originally appeared.
+
+New `subsort` IDs will be assigned to each row.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Shift To
+
+This example uses `shift_to` to shift values from `Input` forward to the
+`date` field. The order of rows (shown in field `n`) changes based on
+the order of `date`. Since the row containing `n = 4` has a `date` less
+than the `time`, it is dropped.
+
+The rows with `n = 3` and `n = 5` had the same `date`. We see that they
+have both been shifted to the same time, and the original order
+preserved within that time.
+
+===== Query
+
+....
+Input | shift_to(Input.date)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |date |n
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00 |1
+|1996-04-21T00:00:00-00:00 |Ryan |1996-07-20T00:00:00-00:00 |2
+|1996-05-21T00:00:00-00:00 |Ryan |1996-07-22T00:00:00-00:00 |3
+|1996-06-21T00:00:00-00:00 |Ryan |1996-05-22T00:00:00-00:00 |4
+|1996-07-21T00:00:00-00:00 |Ben |1996-07-22T00:00:00-00:00 |5
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00 |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |date |n
+|1996-04-21T00:00:00-00:00 |Ryan |1996-07-20T00:00:00-00:00 |2
+|1996-05-21T00:00:00-00:00 |Ryan |1996-07-22T00:00:00-00:00 |3
+|1996-07-21T00:00:00-00:00 |Ben |1996-07-22T00:00:00-00:00 |5
+|1996-03-21T00:00:00-00:00 |Ben |1996-08-19T00:00:00-00:00 |1
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-22T00:00:00-00:00 |6
+|===
+
+=== shift_until
+
+Produces the `value` shifted forward to the time the `predicate` is
+true.
+
+==== Parameters
+
+* predicate: The predicate to determine whether to emit shifted rows.
+* value: The value to shift until the `predicate` is true.
+
+==== Results
+
+Shifts non-`null` rows of `value` forward until the next time the
+`predicate` evaluates to true for that entity. Note that the `predicate`
+is evaluated in the current row.
+
+If multiple values for the same entity are shifted to the same time, all
+of them will be emitted in the order they originally appeared. New
+`subsort` IDs will be assigned to each row.
+
+A value may be produced at the same time it occurs if the `predicate`
+evaluates to true at that time.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Shift Until
+
+This examples uses `shift_until` to shift values from `Input` forward
+until the condition is true. We see that the rows are output in the
+original order (seen by looking at the `n` column). Rows where the
+`condition` is `true` cause rows to be output at that time, including
+any preceding (but not yet output) rows. Also note that the final row
+(with `n = 7`) has not yet been output, since the condition has not been
+`true` after it (yet).
+
+===== Query
+
+....
+Input | shift_until(Input.condition)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |condition |n
+|1996-03-21T00:00:00-00:00 |Ben |true |1
+|1996-04-21T00:00:00-00:00 |Ryan |false |2
+|1996-05-21T00:00:00-00:00 |Ryan |false |3
+|1996-06-21T00:00:00-00:00 |Ryan |true |4
+|1996-07-21T00:00:00-00:00 |Ben | |5
+|1996-08-21T00:00:00-00:00 |Ben |true |6
+|1996-06-21T00:00:00-00:00 |Ryan |false |7
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |condition |n
+|1996-03-21T00:00:00-00:00 |Ben |true |1
+|1996-04-21T00:00:00-00:00 |Ryan |false |2
+|1996-05-21T00:00:00-00:00 |Ryan |false |3
+|1996-06-21T00:00:00-00:00 |Ryan |true |4
+|1996-07-21T00:00:00-00:00 |Ben | |5
+|1996-08-21T00:00:00-00:00 |Ben |true |6
+|===
+
+=== since
+
+Configures a windowed aggregation.
+
+Configures aggregations to window since the last time the `condition`
+was `true`.
+
+==== Parameters
+
+* condition: The condition used to determine when a new window is
+started.
+
+==== Results
+
+Returns a window behavior that can be used with an
+link:#aggregation-functions[aggregation] to configure windowed
+aggregations.
+
+*Tags:* link:#window-functions[window]
+
+==== Example: Hourly Count
+
+Produces the count since the start of the hour.
+
+NOTE: The time and key are not available on the rows created by the
+ticks. The expression here uses `extend`, `time_of` and `first` to
+compute the `time` and `key` columns for all rows.
+
+===== Query
+
+....
+{ n: Input.n, result: count(Input, window = since(hourly())) }
+# Compute time and key for all rows, even the ticks.
+| extend({ time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T17:00:00-00:00 |Ben |9
+|1996-12-19T17:03:00-00:00 |Ben |9
+|1996-12-19T17:01:00-00:00 |Ryan |8
+|1996-12-19T18:01:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-12-19T16:00:57.000000000 |Ben |2 |1
+|1996-12-19T16:00:58.000000000 |Ryan |3 |1
+|1996-12-19T17:00:00.000000000 |Ben |9 |2
+|1996-12-19T17:00:00.000000000 |Ben | |2
+|1996-12-19T17:00:00.000000000 |Ryan | |1
+|1996-12-19T17:01:00.000000000 |Ryan |8 |1
+|1996-12-19T17:03:00.000000000 |Ben |9 |1
+|1996-12-19T18:00:00.000000000 |Ben | |1
+|1996-12-19T18:00:00.000000000 |Ryan | |1
+|1996-12-19T18:01:00.000000000 |Ben |1 |1
+|===
+
+==== Example: Count Since Predicate
+
+===== Query
+
+....
+count(Input, window = since(Input.n > 5))
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:57-00:00 |Ben |2
+|1996-12-19T16:00:58-00:00 |Ryan |3
+|1996-12-19T17:00:00-00:00 |Ben |9
+|1996-12-19T17:03:00-00:00 |Ben |9
+|1996-12-19T17:01:00-00:00 |Ryan |8
+|1996-12-19T18:01:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-12-19T16:00:57-00:00 |Ben |2 |1
+|1996-12-19T16:00:58-00:00 |Ryan |3 |1
+|1996-12-19T17:00:00-00:00 |Ben |9 |2
+|1996-12-19T17:01:00-00:00 |Ryan |8 |2
+|1996-12-19T17:03:00-00:00 |Ben |9 |1
+|1996-12-19T18:01:00-00:00 |Ben |1 |1
+|===
+
+=== sliding
+
+Configures sliding windowed aggregations.
+
+Configures aggregations to slide over a window of inputs, where the
+width of the window is determined by the number of times (`duration`)
+the `condition` is `true`.
+
+Given the function `sliding(3, hourly())`, at 8:27 PM the window starts
+at 6:00 PM, with points at 7:00 and 8:00 PM. Once time advances to 9:00
+PM, the `condition` is `true` and the window slides forward to start at
+7:00 PM. The 3 most recent points where `condition` was `true` are 7:00
+PM, 8:00 PM, and 9:00 PM.
+
+==== Parameters
+
+* duration: The number of sliding intervals to use in the window.
+* condition: The condition used to determine when the window should
+slide.
+
+==== Results
+
+Returns a window behavior that can be used with an
+link:#aggregation-functions[aggregation] to configure windowed
+aggregations.
+
+*Tags:* link:#window-functions[window]
+
+==== Example: Sliding Over 2 Days
+
+Produces the sum of `Input.n` over a window of 2 days.
+
+NOTE: The time and key are not available on the rows created by the
+ticks. The expression here uses `extend`, `time_of` and `first` to
+compute the `time` and `key` columns for all rows.
+
+===== Query
+
+....
+{ n: Input.n, result: sum(Input.n, window = sliding(2, daily())) }
+# Compute time and key for all rows, even the ticks.
+| extend({ time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T00:00:00-00:00 |Ben |1
+|1996-12-19T00:00:00-00:00 |Ryan |2
+|1996-12-20T00:00:00-00:00 |Ben |3
+|1996-12-20T01:00:00-00:00 |Ben |4
+|1996-12-21T00:00:00-00:00 |Ryan |5
+|1996-12-21T00:00:00-00:00 |Ben |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |result
+|1996-12-19T00:00:00.000000000 |Ben |1 |1
+|1996-12-19T00:00:00.000000000 |Ryan |2 |2
+|1996-12-19T00:00:00.000000000 |Ben | |1
+|1996-12-19T00:00:00.000000000 |Ryan | |2
+|1996-12-20T00:00:00.000000000 |Ben |3 |4
+|1996-12-20T00:00:00.000000000 |Ben | |4
+|1996-12-20T00:00:00.000000000 |Ryan | |2
+|1996-12-20T01:00:00.000000000 |Ben |4 |7
+|1996-12-21T00:00:00.000000000 |Ryan |5 |5
+|1996-12-21T00:00:00.000000000 |Ben |6 |13
+|1996-12-21T00:00:00.000000000 |Ben | |13
+|1996-12-21T00:00:00.000000000 |Ryan | |5
+|===
+
+==== Example: Sliding Over 3 Events
+
+In this example, the `condition` evaluates to `true` when the input is
+valid, meaning the width of the window is 3 `Input` rows.
+
+===== Query
+
+....
+mean(Input.n, window = sliding(3, is_valid(Input)))
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |subsort |key |n
+|1996-12-19T00:00:00-00:00 |0 |Ben |1
+|1996-12-19T00:00:00-00:00 |0 |Ryan |2
+|1996-12-20T00:00:00-00:00 |0 |Ben |3
+|1996-12-20T01:00:00-00:00 |0 |Ben |4
+|1996-12-21T00:00:00-00:00 |0 |Ryan |5
+|1996-12-21T00:00:00-00:00 |0 |Ben |6
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |subsort |key |n |result
+|1996-12-19T00:00:00-00:00 |0 |Ben |1 |1.0
+|1996-12-19T00:00:00-00:00 |0 |Ryan |2 |2.0
+|1996-12-20T00:00:00-00:00 |0 |Ben |3 |2.0
+|1996-12-20T01:00:00-00:00 |0 |Ben |4 |2.6666666666666665
+|1996-12-21T00:00:00-00:00 |0 |Ryan |5 |3.5
+|1996-12-21T00:00:00-00:00 |0 |Ben |6 |4.333333333333333
+|===
+
+=== sqrt
+
+Returns the square root of `a`.
+
+==== Parameters
+
+* a: The number to take the square root of.
+
+==== Results
+
+Returns a column of type `f64`. The result contains `null` if `a` was
+null at that row. Otherwise the row contains the square root of `a`.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Square Root
+
+===== Query
+
+....
+sqrt(Input.a)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |a
+|2021-01-01T00:00:00.000000000Z |A |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3
+|2021-01-02T00:00:00.000000000Z |B |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |2.3874672772626644
+|2021-01-01T00:00:00.000000000Z |A |6.3 |2.5099800796022267
+|2021-01-02T00:00:00.000000000Z |B | |
+|===
+
+=== stddev
+
+Computes the sample standard deviation of values across the input.
+
+Computes the sample standard deviation, which is the square root of the
+link:#variance[sample variance].
+
+==== Parameters
+
+* input: The input to compute the standard deviation of.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the mean of new, non-`null` rows in `input`
+up to and including the input row for the given entity. Returns `null`
+until there has been at least two such inputs.
+
+*Tags:* link:#aggregation-functions[aggregation]
+link:#math-functions[math]
+
+==== Example: Standard Deviation
+
+===== Query
+
+....
+stddev(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |
+|2021-01-01T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |24.750000000000004
+|2021-01-04T00:00:00.000000000Z |Ben | |24.750000000000004
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |32.45
+|===
+
+=== sub
+
+Returns the difference of two numbers.
+
+This is the function used for the binary operation `a - b`.
+
+==== Parameters
+
+* a: The left-hand side of the subtraction.
+* b: The right-hand side of the subtraction.
+
+Note: Both `a` and `b` are promoted to a compatible numeric type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules].
+
+==== Results
+
+Returns a numeric column of the promoted numeric type compatible with
+both `a` and `b`. The result contains `null` if `a` or `b` was null at
+that row. Otherwise the row contains the difference of `a` and `b`.
+
+*Tags:* link:#math-functions[math] link:#operators[operator]
+
+==== Example: Subtraction
+
+===== Query
+
+....
+Input.a - Input.b
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4
+|2021-01-03T00:00:00.000000000Z |B | |3.7
+|2021-01-03T00:00:00.000000000Z |A |13.2 |
+|2021-01-04T00:00:00.000000000Z |A |12.2 |0
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2 |4.5
+|2021-01-02T00:00:00.000000000Z |A |6.3 |0.4 |5.8999999999999995
+|2021-01-03T00:00:00.000000000Z |B | |3.7 |
+|2021-01-03T00:00:00.000000000Z |A |13.2 | |
+|2021-01-04T00:00:00.000000000Z |A |12.2 |0.0 |12.2
+|===
+
+=== substring
+
+Takes a substring of the input between start and end indices.
+
+==== Parameters
+
+* s: The string to take a substring of.
+* start: The inclusive index to start at. `null` indicates the beginning
+of the string. Negative indices count backwards from the end of the
+string.
+* end: The exclusive index to end at. `null` indicates the length of the
+string. Negative indices count backwards from the end of the string.
+
+==== Results
+
+Returns a `string` column, with each row containing the substring of `s`
+starting at `start` (inclusive) up to but not including the `end`.
+
+If `s` is `null`, returns `null`. If `end > start` an empty string is
+returned.
+
+*Tags:* link:#string-functions[string]
+
+==== Example: Substring Suffix
+
+This example shows using the `substring` function to extract the last 3
+characters of a string. Note that if the string is shorter than 3
+characters the empty string is returned.
+
+Specifically, `-3` is interpreted as `len(s) - 3`, which produces a
+negative number for shorter strings, and is thus less than the start of
+the string (`0`).
+
+===== Query
+
+....
+Input.value | substring(start = -3)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World |rld
+|2021-01-02T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth |rth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello |llo
+|2021-01-03T00:00:00.000000000Z |Ben | |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi |
+|===
+
+==== Example: Substring
+
+===== Query
+
+....
+Input.value | substring(start = 3, end = -3)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World |lo Wo
+|2021-01-02T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth |Ea
+|2021-01-03T00:00:00.000000000Z |Ben |Hello |
+|2021-01-03T00:00:00.000000000Z |Ben | |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi |
+|===
+
+=== sum
+
+Computes the sum of values across the input.
+
+==== Parameters
+
+* input: The input to compute the sum of.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the minimum of new, non-`null` rows in
+`input` up to and including the input row for the given entity. Returns
+`null` until there has been at least one such input.
+
+*Tags:* link:#aggregation-functions[aggregation]
+link:#math-functions[math]
+
+==== Example: Sum
+
+===== Query
+
+....
+sum(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |51.900000000000006
+|2021-01-04T00:00:00.000000000Z |Ben | |51.900000000000006
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |69.5
+|===
+
+=== time_of
+
+Returns the timestamp of rows in `input`.
+
+==== Parameters
+
+* input: The column to retrieve timestamps for. It may be of any type
+(including records).
+
+==== Results
+
+Returns a `timestamp_ns` column containing the timestamp of each row in
+the `input`.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Time Of Record Column
+
+===== Query
+
+....
+time_of(Input)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1996-04-21T00:00:00-00:00 |Ryan
+|1996-05-21T00:00:00-00:00 |Ryan
+|1996-06-21T00:00:00-00:00 |Ryan
+|1996-07-21T00:00:00-00:00 |Ben
+|1996-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |1996-03-21T00:00:00.000000000
+|1996-04-21T00:00:00-00:00 |Ryan |1996-04-21T00:00:00.000000000
+|1996-05-21T00:00:00-00:00 |Ryan |1996-05-21T00:00:00.000000000
+|1996-06-21T00:00:00-00:00 |Ryan |1996-06-21T00:00:00.000000000
+|1996-07-21T00:00:00-00:00 |Ben |1996-07-21T00:00:00.000000000
+|1996-08-21T00:00:00-00:00 |Ben |1996-08-21T00:00:00.000000000
+|===
+
+==== Example: Time Of Integer Column
+
+===== Query
+
+....
+time_of(Input.integer)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |integer
+|1996-03-21T00:00:00-00:00 |Ben |8
+|1996-04-21T00:00:00-00:00 |Ryan |12
+|1996-05-21T00:00:00-00:00 |Ryan |
+|1996-06-21T00:00:00-00:00 |Ryan |37
+|1996-07-21T00:00:00-00:00 |Ben |
+|1996-08-21T00:00:00-00:00 |Ben |24
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |integer |result
+|1996-03-21T00:00:00-00:00 |Ben |8 |1996-03-21T00:00:00.000000000
+|1996-04-21T00:00:00-00:00 |Ryan |12 |1996-04-21T00:00:00.000000000
+|1996-05-21T00:00:00-00:00 |Ryan | |1996-05-21T00:00:00.000000000
+|1996-06-21T00:00:00-00:00 |Ryan |37 |1996-06-21T00:00:00.000000000
+|1996-07-21T00:00:00-00:00 |Ben | |1996-07-21T00:00:00.000000000
+|1996-08-21T00:00:00-00:00 |Ben |24 |1996-08-21T00:00:00.000000000
+|===
+
+=== upper
+
+Converts the string to upper case.
+
+==== Parameters
+
+* s: The string to convert to upper case.
+
+==== Results
+
+Returns a `string` column with each row containing the string `s` from
+that row converted to all upper case. The row contains `null` if `s` is
+`null` in that row.
+
+*Tags:* link:#string-functions[string]
+
+==== Example: Upper Case
+
+===== Query
+
+....
+Input.value | upper()
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World
+|2021-01-02T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth
+|2021-01-03T00:00:00.000000000Z |Ben |Hello
+|2021-01-03T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |Hello World |HELLO WORLD
+|2021-01-02T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |Hi Earth |HI EARTH
+|2021-01-03T00:00:00.000000000Z |Ben |Hello |HELLO
+|2021-01-03T00:00:00.000000000Z |Ben | |
+|2021-01-04T00:00:00.000000000Z |Ryan |hi |HI
+|===
+
+=== variance
+
+Computes the sample variance of values across the input.
+
+Computes the sample variance. This divides by the number of values minus
+1, rather the number of values (which would be the population variance).
+
+==== Parameters
+
+* input: The input to compute the variance of.
+* window: The window to aggregate within, as described in
+link:#aggregation-functions[Aggregation Functions]. If `null`,
+aggregates are across all rows for the current entity. If non-`null`,
+aggregates are within the specified window. See
+link:#window-functions[window functions] for how to specify the
+aggregation window.
+
+==== Results
+
+For each input row, return the mean of new, non-`null` rows in `input`
+up to and including the input row for the given entity. Returns `null`
+until there has been at least two such inputs.
+
+*Tags:* link:#aggregation-functions[aggregation]
+link:#math-functions[math]
+
+==== Example: Variance
+
+===== Query
+
+....
+variance(Input.value)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |value
+|2021-01-01T00:00:00.000000000Z |Ben |50.7
+|2021-01-01T00:00:00.000000000Z |Ryan |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2
+|2021-01-03T00:00:00.000000000Z |Ben |1.2
+|2021-01-04T00:00:00.000000000Z |Ben |
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |value |result
+|2021-01-01T00:00:00.000000000Z |Ben |50.7 |
+|2021-01-01T00:00:00.000000000Z |Ryan | |
+|2021-01-02T00:00:00.000000000Z |Ryan |67.2 |
+|2021-01-03T00:00:00.000000000Z |Ben |1.2 |612.5625000000001
+|2021-01-04T00:00:00.000000000Z |Ben | |612.5625000000001
+|2021-01-04T00:00:00.000000000Z |Ryan |2.3 |1053.0025000000003
+|===
+
+=== when
+
+Produces the current `value` when the `condition` evaluates to `true`.
+
+Performs filtering of rows. Unlike link:#if[`if`] which just "nulls" out
+a value in the current row, this removes the row entirely.
+
+==== Parameters
+
+* condition: Determines whether to include a given row.
+* value: The value to return if `condition` is `true`.
+
+Note: The order of arguments is chosen to allow use with the pipe
+operation. Specifically, `value | when(condition)` may be used to filter
+rows.
+
+==== Results
+
+For each row, return the `value` if `condition` is `true`. Omits rows
+where the `condition` is `false` or `null`.
+
+Note: If the `value` is continuous (eg., the result of an aggregation)
+then this returns the latest result of the aggregation when `condition`
+is `true`. If the `value` is not continuous (eg., taken directly from
+events) then this returns the current `value` when the `condition` is
+`true`.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: When
+
+===== Query
+
+....
+Input | when(Input.condition)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |condition
+|1996-03-21T00:00:00-00:00 |Ben |true
+|1996-04-21T00:00:00-00:00 |Ryan |true
+|1996-05-21T00:00:00-00:00 |Ryan |false
+|1996-06-21T00:00:00-00:00 |Ryan |true
+|1996-07-21T00:00:00-00:00 |Ben |false
+|1996-08-21T00:00:00-00:00 |Ben |true
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |condition
+|1996-03-21T00:00:00-00:00 |Ben |true
+|1996-04-21T00:00:00-00:00 |Ryan |true
+|1996-06-21T00:00:00-00:00 |Ryan |true
+|1996-08-21T00:00:00-00:00 |Ben |true
+|===
+
+=== with_key
+
+Changes the grouping of the input `value`.
+
+____
+🚧 Warning `with_key` is experimental functionality. You should expect
+the behavior to potentially change in the future. There may be issues
+when using this if multiple rows are assigned the same key.
+____
+
+==== Parameters
+
+* key: The new key to use for the grouping.
+* value: The value to be re-grouped.
+* grouping: A string literal naming the new grouping. This should match
+other tables associated with the same entity type in order for
+docs:entities#cross-table-operations[cross-table operations] to be
+possible. If no `grouping` is specified one will be computed from the
+type of the `key`.
+
+==== Results
+
+Returns a column containing the non-`null` rows of `value`. Each row
+occurs at the same time as in `value`. The results have been re-keyed
+based on the value of `key` to be part of the named `grouping`.
+
+*Tags:* link:#grouping-functions[grouping]
+
+==== Example: Changing Keys
+
+This example starts with input grouped by the `key` column. We wish to
+instead compute aggregates grouped by the `other_key` column. We do this
+by using the `with_key` function to change the grouping. We use
+`other_key` as the name of the grouping so that this table is compatible
+with others grouped similarly.
+
+After we have regrouped we compute the `sum`, which we see is grouped by
+the `other_key`. The `extend` function is used so that we can add fields
+to the regrouped record.
+
+===== Query
+
+....
+Input
+    | with_key($input.other_key, grouping = 'other_key')
+    | extend($input, { sum_n_by_other_key: sum($input.n) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |other_key |n
+|2021-01-01T00:00:00.000000000Z |A |X |5
+|2021-01-02T00:00:00.000000000Z |A |Y |8
+|2021-03-01T00:00:00.000000000Z |B |X |9
+|2021-04-10T00:00:00.000000000Z |A |X |
+|2021-04-11T00:00:00.000000000Z |A | |9
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |other_key |n |sum_n_by_other_key
+|2021-01-01T00:00:00.000000000Z |A |X |5 |5
+|2021-01-02T00:00:00.000000000Z |A |Y |8 |8
+|2021-03-01T00:00:00.000000000Z |B |X |9 |14
+|2021-04-10T00:00:00.000000000Z |A |X | |14
+|2021-04-11T00:00:00.000000000Z |A | |9 |9
+|===
+
+=== year
+
+Return the year of the given timestamp.
+
+==== Parameters
+
+* time: The timestamp to return the year for.
+
+==== Results
+
+Returns an `i32` column containing the year for each input `time`.
+Returns `null` for rows where `time` is `null`.
+
+*Tags:* link:#time-functions[time]
+
+==== Example: Year
+
+===== Query
+
+....
+year(Input.time)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^",options="header",]
+|===
+|time |key
+|1996-03-21T00:00:00-00:00 |Ben
+|1997-04-21T00:00:00-00:00 |Ryan
+|1999-05-21T00:00:00-00:00 |Ryan
+|2000-06-21T00:00:00-00:00 |Ryan
+|2021-07-21T00:00:00-00:00 |Ben
+|2022-08-21T00:00:00-00:00 |Ben
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |result
+|1996-03-21T00:00:00-00:00 |Ben |1996
+|1997-04-21T00:00:00-00:00 |Ryan |1997
+|1999-05-21T00:00:00-00:00 |Ryan |1999
+|2000-06-21T00:00:00-00:00 |Ryan |2000
+|2021-07-21T00:00:00-00:00 |Ben |2021
+|2022-08-21T00:00:00-00:00 |Ben |2022
+|===
+
+=== yearly
+
+A periodic function that produces a `true` value at the start of each
+calendar year (UTC).
+
+This function is often used in aggregations to produce windows or as a
+predicate column.
+
+==== Results
+
+Returns a boolean column with each row containing a `true` value at the
+start of each calendary yea rand `null` at all other times.
+
+*Tags:* link:#tick-functions[tick]
+
+==== Example: Yearly Aggregated Window
+
+In this example, the `yearly()` function is used as an argument to the
+link:#since[`since] function, which produces a window. The result is a
+windowed aggregation that resets at the start of each calendar year
+(UTC).
+
+===== Query
+
+....
+{ n: Input.n, yearly_sum: sum(Input.n, window = since(yearly())) }
+| extend({time: time_of($input), key: first(Input.key) })
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:00-00:00 |Ben |2
+|1996-12-19T16:00:00-00:00 |Ryan |3
+|1997-12-20T16:00:00-00:00 |Ben |6
+|1997-12-20T16:01:00-00:00 |Ben |9
+|1997-12-21T16:00:00-00:00 |Ryan |8
+|1998-12-21T16:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |n |yearly_sum
+|1996-12-19T16:00:00.000000000 |Ben |2 |2
+|1996-12-19T16:00:00.000000000 |Ryan |3 |3
+|1997-01-01T00:00:00.000000000 |Ben | |2
+|1997-01-01T00:00:00.000000000 |Ryan | |3
+|1997-12-20T16:00:00.000000000 |Ben |6 |6
+|1997-12-20T16:01:00.000000000 |Ben |9 |15
+|1997-12-21T16:00:00.000000000 |Ryan |8 |8
+|1998-01-01T00:00:00.000000000 |Ben | |15
+|1998-01-01T00:00:00.000000000 |Ryan | |8
+|1998-12-21T16:00:00.000000000 |Ben |1 |1
+|===
+
+==== Example: Filter Yearly
+
+In this example, the `yearly()` function is used as an argument to the
+link:#when[`when`] function, which filters input.
+
+The output includes the last input row before a link:#tick[`tick`]
+occurs.
+
+===== Query
+
+....
+Input | last() | when(yearly())
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:00-00:00 |Ben |2
+|1996-12-19T16:00:00-00:00 |Ryan |3
+|1997-12-20T16:00:00-00:00 |Ben |6
+|1997-12-20T16:01:00-00:00 |Ben |9
+|1997-12-21T16:00:00-00:00 |Ryan |8
+|1998-12-21T16:00:00-00:00 |Ben |1
+|===
+
+===== Output CSV
+
+[cols="^,^,^",options="header",]
+|===
+|time |key |n
+|1996-12-19T16:00:00-00:00 |Ben |2
+|1996-12-19T16:00:00-00:00 |Ryan |3
+|1997-12-20T16:01:00-00:00 |Ben |9
+|1997-12-21T16:00:00-00:00 |Ryan |8
+|===
+
+=== zip_max
+
+Returns the maximum of two values.
+
+This returns the maximum of two values. See the aggregation
+link:#max[`max`] for the maximum of values in a column up to and
+including the current row.
+
+==== Parameters
+
+* a, b: The two values to take the maximum of.
+
+Note: Both `a` and `b` are promoted to a compatible ordered type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules].
+
+==== Results
+
+Returns a numeric column of the promoted type. Each row contains the
+value from `a` if `a` is greater than `b`, otherwise it contains `b`.
+Specifically, if `a` or `b` is `NaN` then `b` will be returned. If `a`
+or `b` are `null`, then `b` will be returned.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Zip Max
+
+===== Query
+
+....
+zip_max(Input.a, Input.b)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4
+|2021-01-02T00:00:00.000000000Z |B | |3.7
+|2021-01-03T00:00:00.000000000Z |A |13.2 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2 |5.7
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4 |6.3
+|2021-01-02T00:00:00.000000000Z |B | |3.7 |
+|2021-01-03T00:00:00.000000000Z |A |13.2 | |
+|===
+
+=== zip_min
+
+Returns the minimum of two values.
+
+This returns the minimum of two values. See the aggregation
+link:#min[`min`] for the minimum of values in a column up to and
+including the current row.
+
+==== Parameters
+
+* a, b: The two values to take the minimum of.
+
+Note: Both `a` and `b` are promoted to a compatible ordered type
+following the docs:data-model#numeric-type-coercion-table[numeric type
+coercion rules].
+
+==== Results
+
+Returns a numeric column of the promoted type. Each row contains the
+value from `a` if `a` is less than `b`, otherwise it contains `b`.
+Specifically, if `a` or `b` is `NaN` then `b` will be returned. If `a`
+or `b` are `null`, then `b` will be returned.
+
+*Tags:* link:#math-functions[math]
+
+==== Example: Zip Min
+
+===== Query
+
+....
+zip_min(Input.a, Input.b)
+....
+
+===== Table: Input
+
+* *Name*: `Input`
+* *Time Column*: `time`
+* *Group Column*: `key`
+* *Grouping*: `grouping`
+
+[cols="^,^,^,^",options="header",]
+|===
+|time |key |a |b
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4
+|2021-01-02T00:00:00.000000000Z |B | |3.7
+|2021-01-03T00:00:00.000000000Z |A |13.2 |
+|===
+
+===== Output CSV
+
+[cols="^,^,^,^,^",options="header",]
+|===
+|time |key |a |b |result
+|2021-01-01T00:00:00.000000000Z |A |5.7 |1.2 |1.2
+|2021-01-01T00:00:00.000000000Z |A |6.3 |0.4 |0.4
+|2021-01-02T00:00:00.000000000Z |B | |3.7 |
+|2021-01-03T00:00:00.000000000Z |A |13.2 | |
+|===

@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package kaskada.kaskada.v1alpha;
+
+import "kaskada/kaskada/v1alpha/options.proto";
+
+message RedactTestCase {
+  string root_safe_value = 1;
+
+  string root_sensitive_value = 2 [(kaskada.v1alpha.sensitive) = true];
+
+  repeated string repeated_sensitive_values = 3 [(kaskada.v1alpha.sensitive) = true];
+
+  EmbeddedObject root_embedded_object = 4;
+
+  repeated EmbeddedObject repeated_embedded_object = 5;
+
+  reserved 6; //make sure code doesn't error on reserved
+
+  oneof one_of_test {
+    string one_of_safe_value = 7;
+
+    string one_of_sensitive_value = 8 [(kaskada.v1alpha.sensitive) = true];
+
+    EmbeddedObject one_of_embedded_value = 9;
+  }
+
+  map<string, string> map_sensitive_values = 10 [(kaskada.v1alpha.sensitive) = true];
+
+  map<string, EmbeddedObject> map_embedded_objects = 11;
+
+  message EmbeddedObject {
+    string safe_string = 1;
+
+    string sensitive_string = 2 [(kaskada.v1alpha.sensitive) = true];
+  }
+}

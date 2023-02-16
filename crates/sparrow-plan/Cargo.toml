@@ -1,0 +1,33 @@
+[package]
+name = "sparrow-plan"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Execution plans for Sparrow.
+"""
+
+[dependencies]
+anyhow.workspace = true
+arrow.workspace = true
+bigdecimal.workspace = true
+enum-map.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+parse-display.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-core = { path = "../sparrow-core" }
+sparrow-syntax = { path = "../sparrow-syntax" }
+static_init.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+serde_yaml.workspace = true
+
+[lib]
+doctest = false

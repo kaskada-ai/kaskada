@@ -1,0 +1,39 @@
+[package]
+name = "sparrow-syntax"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Representation and parser for Fenl syntax.
+"""
+
+[dependencies]
+anyhow.workspace = true
+arrow.workspace = true
+arrow-schema.workspace = true
+bigdecimal.workspace = true
+bitvec.workspace = true
+codespan-reporting.workspace = true
+decorum.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+lalrpop-util.workspace = true
+logos.workspace = true
+serde.workspace = true
+smallvec.workspace = true
+sparrow-core = { path = "../sparrow-core" }
+static_init.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[build-dependencies]
+lalrpop.workspace = true
+
+[dev-dependencies]
+approx.workspace = true
+insta.workspace = true
+
+[lib]
+doctest = false

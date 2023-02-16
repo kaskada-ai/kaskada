@@ -1,0 +1,6 @@
+---
+source: sparrow-compiler/tests/compiler_golden_tests.rs
+expression: compute_plan
+
+---
+Incompatible types for any: f64, string

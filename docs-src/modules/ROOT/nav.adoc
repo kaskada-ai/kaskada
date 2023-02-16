@@ -1,0 +1,9 @@
+
+
+* Tutorials 
+*** https://colab.research.google.com/drive/1gPshkDfMQEb_DJ6qalGJVai-Uj0oV7zO?usp=sharing[Hello World Notebook (Collab)]
+*** https://colab.research.google.com/drive/1dLK18pjf9puYZDuA_otIP3NvJYCUBSgR?usp=sharing[Customer Retention Demo Notebook] 
+*** https://colab.research.google.com/drive/1eFcrgVGcV2skqNEiNDhV5DvCPwLmuqVs?usp=sharing[ML Workshop Demo (Colab)] 
+*** https://colab.research.google.com/drive/1Wg02zrxrJI_EEN8sAtoEXsRM7u8oDdBw?usp=sharing[Comparison of Fenl SQL Pandas (Colab)]
+
+

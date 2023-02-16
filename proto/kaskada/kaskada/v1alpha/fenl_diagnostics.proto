@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package kaskada.kaskada.v1alpha;
+
+message FenlDiagnostics {
+  repeated FenlDiagnostic fenl_diagnostics = 1;
+  int64 num_errors = 2;
+}
+
+message FenlDiagnostic {
+  Severity severity = 1;
+
+  // The error code associated with this diagnostic.
+  // Uniquely identifies the *kind* of problem being reported.
+  // Example: "E0001".
+  string code = 2;
+
+  // The message associated with the code.
+  // Example: "Undefined field reference".
+  string message = 3;
+
+  // The full formatted diagnostic, suitable for display purposes.
+  string formatted = 4;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_BUG = 1;
+  SEVERITY_ERROR = 2;
+  SEVERITY_WARNING = 3;
+  SEVERITY_NOTE = 4;
+  SEVERITY_HELP = 5;
+}

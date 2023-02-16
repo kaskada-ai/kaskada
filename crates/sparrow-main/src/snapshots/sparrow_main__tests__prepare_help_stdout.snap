@@ -1,0 +1,37 @@
+---
+source: crates/sparrow-main/src/main.rs
+expression: output
+---
+Prepare a file for use as part of a table
+
+Usage: sparrow-main prepare [OPTIONS] --query <QUERY> --table <TABLE> <INPUT>
+
+Arguments:
+  <INPUT>
+          Input file containing the Parquet file to prepare
+
+Options:
+      --output-path <OUTPUT_PATH>
+          Output path to write the files to
+          
+          [default: .]
+
+      --file-prefix <FILE_PREFIX>
+          Prefix for the output file names
+
+      --query <QUERY>
+          Path to the query that will be executed.
+          
+          This path is used to read the actual query and extract the table config.
+
+      --table <TABLE>
+          The name of the table being prepared.
+          
+          This must exist within the tables in the query.
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+

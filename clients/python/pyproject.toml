@@ -1,0 +1,128 @@
+[tool.poetry]
+name = "kaskada"
+version = "0.1.1a2"
+description = "A client library for the Kaskada time travel machine learning service"
+authors = ["Kaskada <support@kaskada.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [
+    { include = "kaskada", from = "src" },
+    { include = "validate", from = "vendor" },
+    { include = "fenlmagic", from = "src" },
+]
+include = [ "**/src/kaskada/kaskada/**/*.py"]
+
+[tool.poetry.dependencies]
+python = "^3.7.2"
+certifi = "^2022.12.7"
+domonic = "^0.9.11"
+googleapis-common-protos = "^1.58.0"
+html5lib = "^1.1"
+pyarrow = "^10.0.1"
+requests = "^2.28.2"
+grpcio-status = "^1.51.1"
+grpcio = "^1.51.1"
+tqdm = "^4.64.1"
+pygithub = "^1.57"
+pandas = "~1.3"
+ipython = "7.34.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+isort = "^5.11.4"
+pylint = "^2.15.10"
+pytest = "^7.2.0"
+mypy = "^0.991"
+poethepoet = "^0.18.0"
+pytest-cov = "^4.0.0"
+types-decorator = "^5.1.8.1"
+types-requests = "^2.28.11.7"
+types-setuptools = "^65.7.0.1"
+types-six = "^1.16.21.4"
+types-typed-ast = "^1.5.8.3"
+autoflake = "^2.0.0"
+autopep8 = "^2.0.1"
+types-protobuf = "^4.21.0.5"
+
+[tool.poe.tasks]
+    [tool.poe.tasks.clean]
+    help = "Remove generated files"
+    cmd  = """
+        # multiline commands including comments work too!
+        rm -rf .coverage
+            .mypy_cache
+            .pytest_cache
+            ./**/__pycache__
+            dist
+            htmlcov
+            ./tests/fixtures/simple_project/venv
+            ./tests/fixtures/venv_project/myvenv
+            ./tests/fixtures/poetry_plugin_project/**/.venv
+            ./tests/temp
+    """
+
+    [tool.poe.tasks.format-isort]
+    help = "Run import sort (isort) on the code base"
+    cmd = "isort src tests"
+
+    [tool.poe.tasks.format-black]
+    help = "Run black on the code base"
+    cmd = "black src tests"
+
+    [tool.poe.tasks.format]
+    help = "Run formating tools on the code base"
+    sequence  = ["format-isort", "format-black"]
+
+    [tool.poe.tasks.test]
+    help = "Run unit and feature tests"
+    cmd = "pytest --cov=src"
+
+    [tool.poe.tasks.types-fenlmagic]
+    help = "Run the type checker for fenlmagic"
+    cmd  = "mypy --ignore-missing-imports src/fenlmagic"
+
+    [tool.poe.tasks.types-python]
+    help = "Run the type checker for python client"
+    cmd  = "mypy --ignore-missing-imports src/kaskada"
+
+    [tool.poe.tasks.types]
+    help = "Run the type checker"
+    sequence = ["types-fenlmagic", "types-python"]
+
+    [tool.poe.tasks.lint]
+    help = "Run the linter"
+    cmd  = "pylint src --ignore-paths=src/kaskada/kaskada"
+
+    [tool.poe.tasks.style-black]
+    help = "Validate black code style"
+    cmd  = "black src --check --diff --target-version=py310"
+
+    [tool.poe.tasks.style-isort]
+    help = "Validate isort code style"
+    cmd  = "isort src --check --diff"
+
+    [tool.poe.tasks.style]
+    help = "Validate code style"
+    sequence = ["style-isort", "style-black"]
+
+    [tool.poe.tasks.remove-imports-vars]
+    help = "Run to remove unused imports and variables"
+    cmd = "autoflake -r --in-place --remove-unused-variables src/"
+
+[tool.isort]
+profile = "black"
+skip = ["src/kaskada/kaskada"]
+
+[tool.mypy]
+exclude = ["src/kaskada/kaskada"]
+
+[tool.pylint.format]
+max-line-length = "120"
+fail-under = "5"
+
+[tool.pylint.MASTER]
+ignore-paths = 'src/ksakada/kaskada'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,49 @@
+on:
+  # Once we figure out the flow for docs in PRs we can uncomment pull_requests
+  # pull_request:
+  #   branches: ["main"]
+  push:
+    branches: ["main"]
+  # Allow manual triggering of this workflow
+  workflow_dispatch:
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+name: Publish Antora Docs
+
+jobs:
+  docs_skip:
+    name: Docs Skip Duplicates
+    continue-on-error: true # Uncomment once integration is finished
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "never"
+          skip_after_successful_duplicate: "true"
+          paths: '["docs-src/**"]'
+          do_not_skip: '["workflow_dispatch", "schedule"]'
+
+  run_antora_build:
+    name: Run Publish Workflow at kaskada-ai/docs-site
+    needs: [docs_skip]
+    runs-on: ubuntu-latest
+    if: needs.docs_skip.outputs.should_skip != 'true'
+    steps:
+      - run: gh workflow run publish.yml -R kaskada-ai/docs-site
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_TOKEN }}

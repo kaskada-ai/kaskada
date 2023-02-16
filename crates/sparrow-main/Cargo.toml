@@ -1,0 +1,71 @@
+[package]
+name = "sparrow-main"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+The main executable for Sparrow.
+"""
+
+[dependencies]
+ahash.workspace = true
+anyhow.workspace = true
+arrow.workspace = true
+async-stream.workspace = true
+aws-config.workspace = true
+aws-sdk-s3.workspace = true
+aws-types.workspace = true
+chrono.workspace = true
+clap.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
+fallible-iterator.workspace = true
+futures.workspace = true
+hashbrown.workspace = true
+hex.workspace = true
+itertools.workspace = true
+opentelemetry.workspace = true
+opentelemetry-otlp.workspace = true
+parquet.workspace = true
+prost.workspace = true
+prost-wkt-types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-compiler = { path = "../sparrow-compiler" }
+sparrow-core = { path = "../sparrow-core" }
+sparrow-instructions = { path = "../sparrow-instructions" }
+sparrow-kernels = { path = "../sparrow-kernels" }
+sparrow-plan = { path = "../sparrow-plan" }
+sparrow-qfr = { path = "../sparrow-qfr" }
+sparrow-runtime = { path = "../sparrow-runtime" }
+sparrow-syntax = { path = "../sparrow-syntax" }
+tempfile.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tonic.workspace = true
+tonic-health.workspace = true
+tonic-reflection.workspace = true
+tracing.workspace = true
+tracing-error.workspace = true
+tracing-opentelemetry.workspace = true
+tracing-serde.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+assert_cmd = "2.0.8"
+data-encoding.workspace = true
+indoc.workspace = true
+insta.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+similar-asserts.workspace = true
+sparrow-testing = { path = "../sparrow-testing" }
+
+[lib]
+doctest = false

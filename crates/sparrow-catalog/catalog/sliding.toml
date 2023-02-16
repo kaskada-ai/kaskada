@@ -1,0 +1,85 @@
+name = 'sliding'
+signature = 'sliding(const duration: i64, condition: bool) -> window'
+short_doc = 'Configures sliding windowed aggregations.'
+long_doc = '''
+Configures aggregations to slide over a window of inputs, where the width
+of the window is determined by the number of times (`duration`) the
+`condition` is `true`.
+
+Given the function `sliding(3, hourly())`, at 8:27 PM the window starts
+at 6:00 PM, with points at 7:00 and 8:00 PM. Once time advances to 9:00 PM,
+the `condition` is `true` and the window slides forward to start at 7:00 PM.
+The 3 most recent points where `condition` was `true` are 7:00 PM, 8:00 PM,
+and 9:00 PM.
+
+### Parameters
+* duration: The number of sliding intervals to use in the window.
+* condition: The condition used to determine when the window should slide.
+
+### Results
+Returns a window behavior that can be used with an [aggregation](#aggregation-functions)
+to configure windowed aggregations.
+'''
+tags = ['window']
+
+[[examples]]
+name = 'Sliding Over 2 Days'
+description = '''
+Produces the sum of `Input.n` over a window of 2 days.
+
+NOTE: The time and key are not available on the rows created by the ticks.
+The expression here uses `extend`, `time_of` and `first` to compute the `time` and `key` columns for all rows.
+'''
+full_expression = '''
+{ n: Input.n, result: sum(Input.n, window = sliding(2, daily())) }
+# Compute time and key for all rows, even the ticks.
+| extend({ time: time_of($input), key: first(Input.key) })
+'''
+input_csv = '''
+time,key,n
+1996-12-19T00:00:00-00:00,Ben,1
+1996-12-19T00:00:00-00:00,Ryan,2
+1996-12-20T00:00:00-00:00,Ben,3
+1996-12-20T01:00:00-00:00,Ben,4
+1996-12-21T00:00:00-00:00,Ryan,5
+1996-12-21T00:00:00-00:00,Ben,6'''
+output_csv = '''
+time,key,n,result
+1996-12-19T00:00:00.000000000,Ben,1,1
+1996-12-19T00:00:00.000000000,Ryan,2,2
+1996-12-19T00:00:00.000000000,Ben,,1
+1996-12-19T00:00:00.000000000,Ryan,,2
+1996-12-20T00:00:00.000000000,Ben,3,4
+1996-12-20T00:00:00.000000000,Ben,,4
+1996-12-20T00:00:00.000000000,Ryan,,2
+1996-12-20T01:00:00.000000000,Ben,4,7
+1996-12-21T00:00:00.000000000,Ryan,5,5
+1996-12-21T00:00:00.000000000,Ben,6,13
+1996-12-21T00:00:00.000000000,Ben,,13
+1996-12-21T00:00:00.000000000,Ryan,,5
+'''
+
+[[examples]]
+name = 'Sliding Over 3 Events'
+description = '''
+In this example, the `condition` evaluates to `true` when the input
+is valid, meaning the width of the window is 3 `Input` rows.
+'''
+expression = 'mean(Input.n, window = sliding(3, is_valid(Input)))'
+input_csv = '''
+time,subsort,key,n
+1996-12-19T00:00:00-00:00,0,Ben,1
+1996-12-19T00:00:00-00:00,0,Ryan,2
+1996-12-20T00:00:00-00:00,0,Ben,3
+1996-12-20T01:00:00-00:00,0,Ben,4
+1996-12-21T00:00:00-00:00,0,Ryan,5
+1996-12-21T00:00:00-00:00,0,Ben,6'''
+output_csv = '''
+time,subsort,key,n,result
+1996-12-19T00:00:00-00:00,0,Ben,1,1.0
+1996-12-19T00:00:00-00:00,0,Ryan,2,2.0
+1996-12-20T00:00:00-00:00,0,Ben,3,2.0
+1996-12-20T01:00:00-00:00,0,Ben,4,2.6666666666666665
+1996-12-21T00:00:00-00:00,0,Ryan,5,3.5
+1996-12-21T00:00:00-00:00,0,Ben,6,4.333333333333333
+'''

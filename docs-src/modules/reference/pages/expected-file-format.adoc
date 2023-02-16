@@ -1,0 +1,95 @@
+The Kaskada compute engine expects uploaded file data to be parquet
+version 2. Additionally, it expects the following:
+
+* The `time_column` (and all other date-time columns in your dataset)
+should be of integer type and contain a nano-second unix timestamp.
+* All rows within the dataset must be sorted by `time_column`,
+ascending.
+* The combination of the `time_column` and the `subsort_column` should
+guarantee that each row is unique.
+** An easy way to do this is to use add an index column to your dataset,
+that contains the row index, and set this as the `subsort_column`.
+
+Below are some code examples to help you get your data into the proper
+format:
+
+== Requirements
+
+The below samples utilize pandas and pyarrow.
+
+[source, ipython]
+----
+!pip install pandas
+!pip install pyarrow
+
+import pandas as pd
+----
+
+== Working with CSV
+
+CSV files need to be converted to Parquet version 2 before being
+uploaded to Kaskada.
+
+Below is some helper code using pandas data frames, that can perform the
+conversion.
+
+[source,python]
+----
+df = pd.read_csv('<path_to_the_input_file.csv>')
+df.to_parquet('<path_to_the_output_file.parquet>', version="2.0")
+----
+
+== Parsing date-time strings
+
+The time values in the CSV files may need to be converted explicitly.
+
+Below is some helper code using pandas data frames to perform the
+conversion.
+
+[source,python]
+----
+df = pd.read_csv('<path_to_the_input_file.csv>' parse_dates=[<time column>])
+----
+
+== Adding a subsort column
+
+The combination of the `time_column` and the `subsort_column` must
+guarantee that each row in your dataset is unique. An easy way to do
+this is to use add an index column to your dataset, that contains the
+row index, and set this as the `subsort_column`.
+
+Below is some helper code using pandas data frames, that can add an
+index column named `"idx"`.
+
+[source,python]
+----
+df = pd.read_parquet('<path_to_the_input_file.parquet>')
+df["idx"] = df.index
+df.to_parquet('<path_to_the_output_file.parquet>', version="2.0")
+----
+
+== Sorting parquet files
+
+To load data into the Kaskada compute engine, rows must be time sorted
+by `time_column`, ascending.
+
+Below is some helper code using pandas data frames, that can sort the
+file by the `time_column`.
+
+[source,python]
+----
+df = pd.read_parquet('<path_to_unsorted_input_file.parquet>')
+df = df.sort_values("time_column")
+df.to_parquet('<path_to_sorted_output_file.parquet>', version="2.0")
+----
+
+If the dataset already has a subsort column (as per the previous
+example), you could provide it as the second element in a list of
+strings to configure the `sort` operation.
+
+[source,python]
+----
+df = pd.read_parquet('<path_to_unsorted_input_file.parquet>')
+df = df.sort_values(["time_column", "subsort_column"])
+df.to_parquet('<path_to_sorted_output_file.parquet>', version="2.0")
+----

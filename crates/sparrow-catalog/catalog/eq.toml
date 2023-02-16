@@ -1,0 +1,45 @@
+name = 'eq'
+signature = 'eq(a: any, b: any) -> bool'
+operator = 'a == b'
+short_doc = 'Return `true` if `a` is equal to `b`.'
+long_doc = '''
+This is the function used for the binary comparison `a == b`.
+
+### Parameters
+* a: The left hand side of the comparison.
+* b: The right hand side of the comparison.
+
+Note: Both `a` and `b` must be of the same type. If they differ,
+they may be promoted to a compatible numeric type following the
+[numeric type coercion rules](docs:data-model#numeric-type-coercion-table).
+
+### Results
+Returns a `bool` column indicating the results. For each row, it contains
+`null` if `a` or `b` are `null`, `true` if they are equal and `false`
+if they are not equal.
+'''
+tags = ['comparison']
+
+[[examples]]
+name = 'Equals'
+expression = 'Input.a == Input.b'
+input_csv = '''
+time,key,a,b
+2021-01-01T00:00:00.000000000Z,Ben,50.7,6.0
+2021-01-02T00:00:00.000000000Z,Ryan,,70
+2021-01-03T00:00:00.000000000Z,Ryan,67.2,71.3
+2021-01-04T00:00:00.000000000Z,Ben,1.2,1.2
+2021-01-05T00:00:00.000000000Z,Ben,65,
+2021-01-06T00:00:00.000000000Z,Jordan,2.3,68.7
+2021-01-07T00:00:00.000000000Z,Ryan,,
+'''
+output_csv = '''
+time,key,a,b,result
+2021-01-01T00:00:00.000000000Z,Ben,50.7,6.0,false
+2021-01-02T00:00:00.000000000Z,Ryan,,70.0,
+2021-01-03T00:00:00.000000000Z,Ryan,67.2,71.3,false
+2021-01-04T00:00:00.000000000Z,Ben,1.2,1.2,true
+2021-01-05T00:00:00.000000000Z,Ben,65.0,,
+2021-01-06T00:00:00.000000000Z,Jordan,2.3,68.7,false
+2021-01-07T00:00:00.000000000Z,Ryan,,,
+'''

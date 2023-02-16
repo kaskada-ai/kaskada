@@ -1,0 +1,47 @@
+name = 'shift_until'
+signature = 'shift_until(predicate: bool, value: any) -> any'
+short_doc = 'Produces the `value` shifted forward to the time the `predicate` is true.'
+long_doc = '''
+### Parameters
+* predicate: The predicate to determine whether to emit shifted rows.
+* value: The value to shift until the `predicate` is true.
+
+### Results
+Shifts non-`null` rows of `value` forward until the next time the `predicate` evaluates to true for that entity.
+Note that the `predicate` is evaluated in the current row.
+
+If multiple values for the same entity are shifted to the same time, all of them will be emitted in the order they originally appeared.
+New `subsort` IDs will be assigned to each row.
+
+A value may be produced at the same time it occurs if the `predicate` evaluates to true at that time.
+'''
+tags = ['time']
+
+[[examples]]
+name = 'Shift Until'
+description = '''
+This examples uses `shift_until` to shift values from `Input` forward until the condition is true.
+We see that the rows are output in the original order (seen by looking at the `n` column).
+Rows where the `condition` is `true` cause rows to be output at that time, including any preceding (but not yet output) rows.
+Also note that the final row (with `n = 7`) has not yet been output, since the condition has not been `true` after it (yet).
+'''
+full_expression = 'Input | shift_until(Input.condition)'
+input_csv = '''
+time,key,condition,n
+1996-03-21T00:00:00-00:00,Ben,true,1
+1996-04-21T00:00:00-00:00,Ryan,false,2
+1996-05-21T00:00:00-00:00,Ryan,false,3
+1996-06-21T00:00:00-00:00,Ryan,true,4
+1996-07-21T00:00:00-00:00,Ben,,5
+1996-08-21T00:00:00-00:00,Ben,true,6
+1996-06-21T00:00:00-00:00,Ryan,false,7
+'''
+output_csv = '''
+time,key,condition,n
+1996-03-21T00:00:00-00:00,Ben,true,1
+1996-04-21T00:00:00-00:00,Ryan,false,2
+1996-05-21T00:00:00-00:00,Ryan,false,3
+1996-06-21T00:00:00-00:00,Ryan,true,4
+1996-07-21T00:00:00-00:00,Ben,,5
+1996-08-21T00:00:00-00:00,Ben,true,6
+'''

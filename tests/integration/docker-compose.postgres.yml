@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+  migrate:
+    command: -path=/migrations/ -database postgres://wren:wren123@postgres:5432/wren?sslmode=disable up
+    container_name: migrate
+    depends_on:
+      - postgres
+    image: migrate/migrate
+    logging:
+      driver: "json-file"
+      options: 
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - integration
+    restart: on-failure
+    volumes:
+      - ../../wren/db/migrations:/migrations
+
+  postgres:
+    container_name: postgres
+    environment:
+      POSTGRES_USER: wren
+      POSTGRES_PASSWORD: wren123
+    hostname: postgres
+    image: postgres:14.3-alpine
+    logging:
+      driver: "json-file"
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - integration
+    ports: 
+      - "5432:5432"
+
+  kaskada:
+    depends_on:
+      - postgres
+    environment: 
+      # for wren
+      DB_DIALECT: "postgres"
+

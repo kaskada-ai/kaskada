@@ -1,0 +1,177 @@
+== Example Modeling Problem
+
+We'll begin by laying out a simple modeling problem, based on the
+xref:fenl:fenl-quick-start.adoc[Fenl Quickstart] guide. The goal will be to build a
+model predicting if a given purchase will result in a fraud report
+within the next 30 days given two event tables; a `Purchase` table and a
+`FraudReport` table.
+
+=== Setup
+
+[source,python]
+----
+table.create_table(
+  table_name = "Purchase",
+  time_column_name = "purchase_time",
+  entity_key_column_name = "id",
+  subsort_column_name = "subsort_id",
+)
+table.create_table(
+  table_name = "PurchaseByCustomer",
+  time_column_name = "purchase_time",
+  entity_key_column_name = "customer_id",
+  subsort_column_name = "subsort_id",
+)
+purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk"
+purchases = pandas.read_parquet(purchases_url)
+table.upload_dataframe("Purchase", purchases)
+table.upload_dataframe("PurchaseByCustomer", purchases)
+
+table.create_table(
+  table_name = "FraudReport",
+  time_column_name = "time",
+  entity_key_column_name = "purchase_id",
+  subsort_column_name = "subsort_id",
+)
+frauds_url = "https://drive.google.com/uc?export=download&id=1WXRW1zt1EEPcbrw4nw9rCdhTqlatxTSR"
+frauds = pandas.read_parquet(frauds_url)
+table.upload_dataframe("FraudReport", frauds)
+----
+
+== Feature Definitions
+
+To train a model we must produce separate training and validation
+datasets. These datasets will be created by partitioning the full set of
+training examples into two time ranges, one spanning the years 2000-2015
+and another spanning the years 2015-2020.
+
+We'll execute the feature query twice, once to produce the training
+dataset and another time to produce the validation dataset. The training
+query will provide start and end times corresponding to the time
+interval 2000-2015, while the validation query will times corresponding
+to the time interval 2015-2020.
+
+[NOTE]
+.Usage
+====
+The fenlmagic extension is designed to make it easy to
+interactively explore your dataset. When you're ready time to train
+model we recommend using the Python client. The python client exposes
+the full functionality of the Kaskada API and is better-suited to tasks
+such as managing Views, Tables, and making multiple queries with
+different query variables.
+====
+
+[source,IPython]
+----
+%%fenl --var examples
+
+let average_purchase_by_customer = PurchaseByCustomer.amount
+  | mean()
+
+let predictors = {
+    entity: Purchase.id,
+    purchase_total: Purchase.amount | last(),
+    mean_purchase: lookup(Purchase.customer_id, average_purchase_by_customer),
+}
+let target = {
+  target: count(FraudReport),
+}
+
+let shifted =  predictors 
+  | shift_to(time_of($input) | add_time(days(30)))
+
+in shifted | extend(lookup($input.entity, target))
+----
+
+We've provided the fenl-magic flag `--var examples` which causes the
+query string to be assigned to a local variable named `examples`. We'll
+use this variable to create a view we can re-use when we make the
+training and validation queries.
+
+[source,python]
+----
+from kaskada import view
+
+view.create_view(
+    view_name = "Examples",
+    expression = examples,
+)
+----
+
+== Training a Model Locally
+
+Depending on the size of your training dataset and how you intend to
+train a model, you may want to copy the training features locally or
+transfer them to a remote data store. We'll show the simple case of
+training locally.
+
+Begin by limiting the examples to the training time range.
+
+[source,IPython]
+----
+%%fenl
+
+Examples 
+  | when time_of($input) > ("2020-01-01T00:00:00Z" as timestamp_ns)
+    and time_of($input) <= ("2020-02-03T00:00:00Z" as timestamp_ns))
+----
+
+[source,python]
+----
+training_resp = compute.query(
+  query = """
+  Examples 
+    | when(time_of($input) > ("2020-01-01T00:00:00Z" as timestamp_ns)
+      and time_of($input) <= ("2020-02-03T00:00:00Z" as timestamp_ns))
+  """,
+)
+training = pandas.read_parquet(training_resp.parquet.path, engine = "pyarrow")
+----
+
+Next we limit the examples to different time bounds to produce a
+validation dataset.
+
+[source,IPython]
+----
+%%fenl
+
+Examples 
+  | when time_of($input) > ("2020-02-03T00:00:00Z" as timestamp_ns)
+    and time_of($input) <= ("2020-04-12T00:00:00Z" as timestamp_ns))
+----
+
+[source,python]
+----
+validation_resp = compute.query(
+  query = """
+  Examples 
+    | when time_of($input) > ("2020-02-03T00:00:00Z" as timestamp_ns)
+    and time_of($input) <= ("2020-04-01T00:00:00Z" as timestamp_ns))
+  """,
+)
+validation = pandas.read_parquet(validation_resp.parquet.path, engine = "pyarrow")
+----
+
+We're finally ready to train a model. This shows a simple linear
+regression model.
+
+[source,python]
+----
+from sklearn.linear_model import LogisticRegression
+from sklearn import preprocessing
+
+X_train = training.drop(['_time', '_subsort', '_key_hash', 'entity', 'target'], axis = 1)
+y_train = training['target']
+X_validation = validation.drop(['_time', '_subsort', '_key_hash', 'entity', 'target'], axis = 1)
+y_validation = validation['target']
+
+scaler = preprocessing.StandardScaler().fit(X_train)
+X_train_scaled = scaler.transform(X_train)
+X_validation_scaled = scaler.transform(X_validation)
+
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train_scaled, y_train)
+
+model.score(X_validation_scaled, y_validation)
+----

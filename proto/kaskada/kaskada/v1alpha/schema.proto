@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package kaskada.kaskada.v1alpha;
+
+import "google/protobuf/empty.proto";
+
+// Protobuf representation of the Fenl DataType.
+//
+// NOTE: Some of these types (especially related to time) are subject to
+// change.
+message DataType {
+  oneof kind {
+    // Primitive Fenl types.
+    //
+    // Each primitive enum corresponds to a specific Fenl type, as noted.
+    PrimitiveType primitive = 1;
+
+    // Struct types.
+    //
+    // The schema contains the field and types of the struct.
+    //
+    // String representation is `{ field: type, field: type, ... }`.
+    Schema struct = 2;
+
+    // Fenl type `window`.
+    //
+    // These cannot be output nor should they appear within a plan -- they are
+    // generally compiled away as part of the implementation of aggrgeations.
+    //
+    // However, the `window` type may appear as the result of a view, allowing
+    // the view to be used as part of aggregations.
+    google.protobuf.Empty window = 3;
+
+    // A list of a different type.
+    DataType list = 4;
+  }
+
+  enum PrimitiveType {
+    PRIMITIVE_TYPE_UNSPECIFIED = 0;
+
+    // Fenl type `null`.
+    PRIMITIVE_TYPE_NULL = 1;
+    // Fenl type `bool`.
+    PRIMITIVE_TYPE_BOOL = 2;
+    // Fenl type `i8`.
+    PRIMITIVE_TYPE_I8 = 3;
+    // Fenl type `i16`.
+    PRIMITIVE_TYPE_I16 = 4;
+    // Fenl type `i32`.
+    PRIMITIVE_TYPE_I32 = 5;
+    // Fenl type `i64`.
+    PRIMITIVE_TYPE_I64 = 6;
+    // Fenl type `u8`.
+    PRIMITIVE_TYPE_U8 = 7;
+    // Fenl type `u16`.
+    PRIMITIVE_TYPE_U16 = 8;
+    // Fenl type `u32`.
+    PRIMITIVE_TYPE_U32 = 9;
+    // Fenl type `u64`.
+    PRIMITIVE_TYPE_U64 = 10;
+    // Fenl type `f16`.
+    PRIMITIVE_TYPE_F16 = 11;
+    // Fenl type `f32`.
+    PRIMITIVE_TYPE_F32 = 12;
+    // Fenl type `f64`.
+    PRIMITIVE_TYPE_F64 = 13;
+    // Fenl type `string`.
+    PRIMITIVE_TYPE_STRING = 14;
+
+    // Fenl type `interval_days`.
+    // A time interval represented as calendar days and milliseconds.
+    PRIMITIVE_TYPE_INTERVAL_DAY_TIME = 15;
+    // Fenl type `interval_months`.
+    // A time interval represented as calendar months.
+    PRIMITIVE_TYPE_INTERVAL_YEAR_MONTH = 16;
+
+    // Fenl type `duration_s`.
+    // Duration represented as a number of seconds.
+    PRIMITIVE_TYPE_DURATION_SECOND = 17;
+    // Fenl type `duration_ms`.
+    // Duration represented as a number of milliseconds.
+    PRIMITIVE_TYPE_DURATION_MILLISECOND = 18;
+    // Fenl type `duration_us`.
+    // Duration represented as a number of microseconds.
+    PRIMITIVE_TYPE_DURATION_MICROSECOND = 19;
+    // Fenl type `duration_ns`.
+    // Duration represented as a number of nanoseconds.
+    PRIMITIVE_TYPE_DURATION_NANOSECOND = 20;
+
+    // Fenl type `timestamp_s`.
+    // Timestamp represented as a number of seconds since epoch.
+    PRIMITIVE_TYPE_TIMESTAMP_SECOND = 21;
+    // Fenl type `timestamp_ms`.
+    // Timestamp represented as a number of milliseconds since epoch.
+    PRIMITIVE_TYPE_TIMESTAMP_MILLISECOND = 22;
+    // Fenl type `timestamp_us`.
+    // Timestamp represented as a number of microseconds since epoch.
+    PRIMITIVE_TYPE_TIMESTAMP_MICROSECOND = 23;
+    // Fenl type `timestamp_ns`.
+    // Timestamp represented as a number of nanoseconds since epoch.
+    PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND = 24;
+
+    // Fenl type `json`
+    // Represents a json object in fenl
+    PRIMITIVE_TYPE_JSON = 25;
+
+    // Currently nsupported in fenl functions.
+    PRIMITIVE_TYPE_DATE32 = 26;
+  }
+}
+
+// A schema for an Arrow Struct column or an entire RecordBatch / table.
+//
+// When used, should generally be converted to a SchemaRef once and then
+// additional references to the corresponding Arc used.
+message Schema {
+  repeated Field fields = 1;
+
+  message Field {
+    string name = 1;
+    DataType data_type = 2;
+  }
+}

@@ -1,0 +1,45 @@
+name = 'when'
+signature = 'when(condition: bool, value: any) -> any'
+short_doc = 'Produces the current `value` when the `condition` evaluates to `true`.'
+long_doc = '''
+Performs filtering of rows.
+Unlike [`if`](#if) which just "nulls" out a value in the current row, this removes the row entirely.
+
+### Parameters
+* condition: Determines whether to include a given row.
+* value: The value to return if `condition` is `true`.
+
+Note: The order of arguments is chosen to allow use with the pipe operation.
+Specifically, `value | when(condition)` may be used to filter rows.
+
+### Results
+For each row, return the `value` if `condition` is `true`.
+Omits rows where the `condition` is `false` or `null`.
+
+Note: If the `value` is continuous (eg., the result of an aggregation)
+then this returns the latest result of the aggregation when `condition`
+is `true`. If the `value` is not continuous (eg., taken directly from
+events) then this returns the current `value` when the `condition` is
+`true`.
+'''
+tags = ['time']
+
+[[examples]]
+name = 'When'
+full_expression = 'Input | when(Input.condition)'
+input_csv = '''
+time,key,condition
+1996-03-21T00:00:00-00:00,Ben,true
+1996-04-21T00:00:00-00:00,Ryan,true
+1996-05-21T00:00:00-00:00,Ryan,false
+1996-06-21T00:00:00-00:00,Ryan,true
+1996-07-21T00:00:00-00:00,Ben,false
+1996-08-21T00:00:00-00:00,Ben,true
+'''
+output_csv = '''
+time,key,condition
+1996-03-21T00:00:00-00:00,Ben,true
+1996-04-21T00:00:00-00:00,Ryan,true
+1996-06-21T00:00:00-00:00,Ryan,true
+1996-08-21T00:00:00-00:00,Ben,true
+'''

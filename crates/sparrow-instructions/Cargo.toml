@@ -1,0 +1,56 @@
+[package]
+name = "sparrow-instructions"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+The instructions supported in Sparrow execution plans.
+"""
+
+[dependencies]
+anyhow.workspace = true
+arrow.workspace = true
+bincode.workspace = true
+bit-set.workspace = true
+bitvec.workspace = true
+chrono.workspace = true
+erased-serde.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+num.workspace = true
+owning_ref.workspace = true
+prost.workspace = true
+prost-wkt-types.workspace = true
+rocksdb.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+smallvec.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-core = { path = "../sparrow-core" }
+sparrow-kernels = { path = "../sparrow-kernels" }
+sparrow-plan = { path = "../sparrow-plan" }
+sparrow-syntax = { path = "../sparrow-syntax" }
+static_init.workspace = true
+tempfile.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+lz4-sys.workspace = true
+
+[dev-dependencies]
+approx.workspace = true
+criterion.workspace = true
+rand.workspace = true
+
+[lib]
+doctest = false
+
+[[bench]]
+name = "sparrow_instructions_benches"
+# This can be discovered by Cargo, but not by Cargo Chef, so specify it.
+path = "benches/sparrow_instructions_benches/main.rs"
+harness = false
+# Disable compute store benchmarks until the flush/rehydrate pattern is
+# established.
+test = false

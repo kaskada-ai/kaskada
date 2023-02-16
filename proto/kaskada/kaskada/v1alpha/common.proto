@@ -1,0 +1,248 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
+import "kaskada/kaskada/v1alpha/schema.proto";
+
+// Configuration for a single source of data in a table.
+message FilePath {
+  oneof path {
+    // Path to a Parquet file to read for the table.
+    string parquet_path = 1;
+
+    // Path to a CSV file to read for the table.
+    string csv_path = 2;
+
+    // CSV string to include in the table.
+    //
+    // This is analogous to a [`data:`
+    // URI](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs).
+    string csv_data = 3;
+  }
+}
+
+enum FileType {
+  // if unspecified, the engine will default to parquet
+  // note: this behavior may change in the future
+  FILE_TYPE_UNSPECIFIED = 0;
+  FILE_TYPE_PARQUET = 1;
+  FILE_TYPE_CSV = 2;
+}
+
+message FileInput {
+  FileType file_type = 1;
+
+  // The URI of the parquet file to load into the table
+  // Examples:
+  // for azure:         https://myaccount.blob.core.windows.net/mycontainer/file.parquet
+  // for gcs:           gs://bucket/prefix/file.parquet
+  // for s3:            s3://bucket/prefix/file.parquet
+  // for local storage: file://local_path/file.parquet
+  string uri = 2;
+}
+
+message FileResults {
+  FileType file_type = 1;
+  repeated string paths = 2;
+}
+
+message AsFiles {
+  FileType file_type = 1;
+}
+
+// General configuration for a table.
+message TableConfig {
+  // The name of the table.
+  string name = 1;
+
+  // The unique uuid for the table.
+  //
+  // Equivalent to the `TableId` in Wren.
+  string uuid = 6;
+
+  // The name of the time column within the table.
+  string time_column_name = 2;
+
+  // The name of the subsort column within the table.
+  //
+  // If the subsort column is not defined, a sequential subsort column will be created
+  // starting at the hash of the file.
+  google.protobuf.StringValue subsort_column_name = 3;
+
+  // The name of the grouping column within the table.
+  //
+  // TODO: Allow the grouping column to be optional, defaulting to unique IDs?
+  string group_column_name = 4;
+
+  // A name describing how the table is grouped.
+  //
+  // The type of the `group_column_name` should be the same for all tables with the same
+  // `grouping`. This name is used for ensuring that different tables with the same type
+  // of group key are compatible for implicit joining.
+  //
+  // If unspecified, this will default to a unique name (the name of the table). This
+  // will require explicit joins.
+  //p
+  // TODO: Consider instead defaulting to a name derived from the type of the group
+  // key. This would default to allowing implicit grouping amongst tables.
+  string grouping = 5;
+}
+
+message TableMetadata {
+  // The schema of the table.
+  Schema schema = 1;
+
+  // The number of files in this table.
+  int64 file_count = 2;
+}
+
+message PreparedFile {
+  // The path to the prepared parquet file. S3 paths will be prefixed with s3://
+  string path = 1;
+
+  // NOTE: This explicitly doesn't include the schema. We should only need
+  // the "merged" table Schema, and each file schema can be determined when
+  // it is actually read. Including it in the prepared metadata would make
+  // this much larger.
+  //
+  // Instead, we only include those statistics that are necessary for
+  // determining which files to read and/or accurately reporting progress
+  // before downloading the files.
+
+  // The minimum event time in the file
+  //
+  // As the file is sorted by time, this should be the first row's time.
+  google.protobuf.Timestamp min_event_time = 2;
+
+  // The maximum event time in the file
+  //
+  // As the file is sorted by time, this should be the last row's time.
+  google.protobuf.Timestamp max_event_time = 3;
+
+  // Number of rows in the prepared file.
+  int64 num_rows = 4;
+
+  // The path to metadata mapping the entity key hash to the entity key
+  string metadata_path = 5;
+}
+
+// used internally in wren
+message PreparedFileMetadata {
+  // the path of the original raw file that was prepared
+  string raw_file_path = 1;
+
+  // the prepared files
+  repeated PreparedFile prepared_files = 2;
+}
+
+// The plan for how to slice the data.
+//
+// The internal representation of a slice plan is for communication between Sparrow and Wren
+// and is decoupled from the user representation of slices to allow evolution and inferring
+// slices / filtering beyond what the user specifies.  e.g. if the user says "10% of entities"
+// and the query was Table1 | when($input.x > 10) | ... the plan may be "10% of entities and
+// filtered to inputs with x > 10".
+//
+// Currently, the plan supports percentage of the data to operate on and will filter the
+// entity key appropriately.
+//
+// In the future, we will want to support additional methods of slicing such as partitioning,
+// filtering, etc.
+message SlicePlan {
+  // The name of the table to be sliced.
+  string table_name = 1;
+  // Each slice plan has a specific method of slicing.
+  //
+  // As the slices evolve, additional slices will be added.
+  oneof slice {
+    PercentSlice percent = 2;
+    EntityKeysSlice entity_keys = 3;
+  }
+  // A percent slice will slice a percentage of data and filter by the entity key.
+  message PercentSlice {
+    // Percent of entities to include in the slice.
+    double percent = 1;
+  }
+  // An entity key slice will filter the data by the entity keys
+  message EntityKeysSlice {
+    repeated string entity_keys = 1;
+  }
+}
+
+enum PerEntityBehavior {
+  PER_ENTITY_BEHAVIOR_UNSPECIFIED = 0;
+  // (Default) Outputs all results for each entity.
+  PER_ENTITY_BEHAVIOR_ALL = 1;
+  // Outputs the final result for each entity.
+  PER_ENTITY_BEHAVIOR_FINAL = 2;
+  // Outputs the final results at a specific time for each entity.
+  PER_ENTITY_BEHAVIOR_FINAL_AT_TIME = 3;
+}
+
+// Represents a 128-bit UUID as a pair of u64.
+message Uuid {
+  uint64 high = 1;
+  uint64 low = 2;
+}
+
+// A shared request populated by the user defining how to slice the data
+//
+// Used in data preparation and eventually in materializations
+message SliceRequest {
+  oneof slice {
+    PercentSlice percent = 1;
+    EntityKeysSlice entity_keys = 2;
+  }
+
+  message PercentSlice {
+    // The percentage of entities (not overall data) to slice the data
+    double percent = 1;
+  }
+
+  message EntityKeysSlice {
+    // The entity keys to slice the data.
+    //
+    // Each entity key is the string encoding of the entity key.
+    // For string keys, the entity key is the provided string.
+    // For numeric keys, such as i64, this is the string representation.
+    //   e.g. Numeric Entity Key: 15 -> "15"
+    repeated string entity_keys = 2;
+  }
+}
+
+message Analysis {
+  // Names that were missing in the query.
+  //
+  // These are formulas (views) and tables referenced directly or
+  // indirectly by the query which were not provided in the request.
+  // An indirect reference occurs when the query references a
+  // provided formula which references formulas or tables.
+  //
+  // If this is non-empty, the FenlDiagnostics should include
+  // corresponding "missing name" errors
+  repeated string missing_names = 1;
+
+  // Fenl Diagnostics -- warnings and errors derived from the query.
+  FenlDiagnostics fenl_diagnostics = 2;
+
+  // The executable state of the query. If false, there could be an issue executing the query
+  // otherwise the query is executable.
+  bool can_execute = 3;
+
+  // Top level names that are directly referenced by the query.
+  //
+  // These are formulas (views) and tables referenced by the query.
+  //
+  // This includes all free names, including those which were "missing".
+  //
+  // This may be empty if the query or formulas failed to parse.
+  repeated string free_names = 4;
+}
+
+message RequestDetails {
+  // a opaque string that can help identify this request when debugging an
+  // issue.
+  string request_id = 1;
+}

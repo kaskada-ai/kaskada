@@ -1,0 +1,193 @@
+== Types
+
+Fenl operates on typed values. Fenl's type system describes several
+different kinds of values.
+
+Every expression has an associated type. Since every expression produces
+a column of values (corresponding to the value at specific points in
+time), each expression can be thought of as a column of the given type.
+
+Simple values such as the string "hello" or the integer 57 are _scalar_
+types. They correspond to a column containing values of the given type
+(or `null`).
+
+Types may be combined to create _records_. Record fields may be scalar
+or nested record types. An expression producing a record type is a
+column that produces a value of the given record type or `null` at each
+point in time.
+
+=== Scalars
+
+Scalar types include booleans, numbers, strings, timestamps, durations
+and calendar intervals. 
+
+
+[options="header"]
+|===
+| Type | Example | Description
+|`bool` | `true`, `false` |  Booleans represent true or false
+| u8, u32, u64| `0`, `1`, `10000 | Unsigned integer numbers of a particular bit size.
+| i8, i32, i64| `0`, `1`, `-100`, `10000`, `0.0`, `-1.0`| Signed integer numbers of a particular bit size.
+| f32, f64 | `0`, `1`, `-100`, `10000`, `0.0`, `-1.0`, `-100837.631` | Floating point numbers. When using a decimal a leading numeric character is required.
+|string | `"hello"`, `"hello \"john\""` | Unicode strings. Strings are written with double-quotes. Double quotes may be escaped within the string.
+| timestamp_s, 
+
+timestamp_ms, 
+
+timestamp_us, 
+
+timestamp_ns | `1639595174 as timestamp_s` | The point in time a given number of seconds, milliseconds, microseconds or nanoseconds after the Unix Epoch (00:00:00 UTC on January 1, 1970).
+| duration_s, 
+
+duration_ms, 
+
+duration_us, 
+
+duration_ns | `0 as duration_s`, `1 as duration_ms`, `-100 as duration_us`, `10000 as duration_ns` | A given number of seconds, milliseconds, microseconds or nanoseconds.
+| interval_days, 
+
+interval_months | `0 as interval_days`, `1 as interval_days`, `-100 as interval_months`, `10000 as interavl_months` | A calendrical interval.
+|===
+
+
+
+=== Records
+
+Records allow combining multiple different types into a single value.
+Records are unnamed - any two records with the same set of fields and
+value types are considered equal. Fields within a record may have
+different types. Field names must start with a letter.
+
+[options="header"]
+
+|===
+| Type | Examples | Description"
+|`{name: string, age: number}`  
+|`{name: \"john\", age: 32}` 
+|  "A record is a composite type made up of 0 or (generally) more components. Each component is associated with a field name 
+|===
+
+=== Type Coercion
+
+Fenl implicitly coerces numeric types when different kinds of numbers
+are combined. For example adding a 64-bit signed integer value to a
+32-bit floating point value produces a 64-point floating point value.
+
+==== Type Promotion Rules
+
+Type coercion will never produce an integer overflow or reduction in
+numeric precision. Such conversions may be explicitly specified using
+`as`.
+
+The coercion rules can be summarized with the following rules:
+
+[arabic]
+. Integers can be widened: `i8 -> i16 -> i32 -> i64`.
+. Unsigned integers can be widened: `u8 -> u16 -> u32 -> u64`.
+. Floating point numbers can be widened: `f16 -> f32 -> f64`.
+. Unsigned integers can be promoted to the next wider integer `u8` ->
+`i16`, `u16 -> i32`, `u32 -> i64`.
+. All numbers may be converted to `f64`.
+. Strings may be implicitly converted to timestamps by attempting to
+parse them as RFC3339 values. The timestamp will be `null` for strings
+that don't successfully parse.
+
+==== Numeric Type Coercion Table
+
+When two numbers are used, Fenl attempts to promote them to a compatible
+type as the smallest type that both types may be converted to. The
+following table shows the result of this promotion for pairs of numeric
+types.
+
+[cols=",,,,,,,,,,,",options="header",]
+|===
+| |i8 |i16 |i32 |i64 |u8 |u16 |u32 |u64 |f16 |f32 |f64
+|*i8* |i8 |i16 |i32 |i64 |i16 |i32 |i64 |*f64* |f16 |f32 |f64
+|*i16* |i16 |i16 |i32 |i64 |i16 |i32 |i64 |*f64* |f16 |f32 |f64
+|*i32* |i32 |i32 |i32 |i64 |i16 |i32 |i64 |*f64* |f16 |f32 |f64
+|*i64* |i64 |i64 |i64 |i64 |i64 |i64 |i64 |*f64* |f16 |f32 |f64
+|*u8* |i16 |i16 |i16 |i64 |u8 |u16 |u32 |u64 |f16 |f32 |f64
+|*u16* |i32 |i32 |i32 |i64 |u16 |u16 |u32 |u64 |f16 |f32 |f64
+|*u32* |i64 |i64 |i64 |i64 |u32 |u32 |u32 |u64 |f16 |f32 |f64
+|*u64* |*f64* |*f64* |*f64* |*f64* |u64 |u64 |u64 |u64 |f16 |f32 |f64
+|*f16* |f16 |f16 |f16 |f16 |f16 |f16 |f16 |f16 |f16 |f32 |f64
+|*f32* |f32 |f32 |f32 |f32 |f32 |f32 |f32 |f32 |f32 |f32 |f64
+|*f64* |f64 |f64 |f64 |f64 |f64 |f64 |f64 |f64 |f64 |f64 |f64
+|===
+
+[WARNING]
+.Coercion to Floating-Point
+====
+Note that when `u64` is combined with a
+signed type the result is `f64`. This is the only case where an
+operation between integers produces a floating-point value.
+====
+
+== Functions and Signatures
+
+Every function in Fenl has a type signature. For example,
+`count(input: any, window: window = null) -> u32`. This tells us many
+things about the function:
+
+[arabic]
+. It takes two arguments `input` and `window`.
+. The first argument can be of any type (scalar or record).
+. The second argument must be a type of `window` (the result of a
+xref:fenl:catalog#window-functions[window] function such as
+xref:fenl:catalog#since[`since`] or xref:fenl:catalog#sliding[`sliding`]).
+. The second argument (`window`) is optional, and provides a default
+value of `null`.
+. The result is a <<scalars,`u32`>>.
+
+Parameters without default values are required. Required arguments may
+be provided by position or keyword. One required argument may be
+omitted, in which case it is implicitly `$input`. This allows for use of
+functions with the `|` (pipe) syntax. For instance, `TableFoo | count()`
+is treated as `TableFoo | count($input)` which is the same as
+`TableFoo | count(input=$input, window=null)`.
+
+=== Optional Parameters
+
+Parameters with default values in the signature are optional. Arguments
+for optional parameters must be keyword arguments. For example
+`count(window = since(...))` but not `count(since(...))`.
+
+=== Type Constraints
+
+When a type constraint (such as `any`) appears in a signature, all
+occurrences of that must be the same type. <<type-coercion,Type
+coercion>> is applied as necessary to make all of the arguments for that
+constraint compatible.
+
+Additionally, each type constraint imposes restrictions on the types
+that are valid for arguments with that constraint, as shown in the table
+below.
+
+[cols="<,<",options="header",]
+|===
+|Type Constraint |Valid Types
+|*any* |Any scalar or record type.
+
+|*key* |Any hashable type. This includes `bool`, `i8`, `i16`, `i32`,
+`i64`, `u8`, `u16`, `u32`, `u64` and `string`
+
+|*number* |Any numeric scalar type. This includes `i8`, `i16`, `i32`,
+`i64`, `u8`, `u16`, `u32`, `u64`, `f16`, `f32` and `f64`.
+
+|*signed* |Any signed numeric scalar type. This includes `i8`, `i16`,
+`i32`, `i64`, `f16`, `f32` and `f64`.
+
+|*float* |Any floating point numeric scalar type. This includes `f16`,
+`f32` and `f64`.
+
+|*timedelta* |Any time delta scalar type. This includes `duration_s`,
+`duration_ms`, `duration_us`, `duration_ns`, `interval_days` and
+`interval_months`.
+
+|*ordered* |Any ordered scalar type. This includes `i8`, `i16`, `i32`,
+`i64`, `u8`, `u16`, `u32`, `u64`, `f16`, `f32`, `f64`, `timestamp_s`,
+`timestamp_ms`, `timestamp_us`, and `timestamp_ns`.
+
+|*window* |Any result of a xref:catalog#window-functions[window
+function].
+|===

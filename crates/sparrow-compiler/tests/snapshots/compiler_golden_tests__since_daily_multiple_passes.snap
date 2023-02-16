@@ -1,0 +1,399 @@
+---
+source: sparrow-compiler/tests/compiler_golden_tests.rs
+expression: compute_plan
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sender
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: store
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Literal:
+            literal:
+              Float64: 10
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments:
+          - 0
+          - 2
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments:
+          - 3
+          - 1
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gt
+      - arguments:
+          - 3
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: is_valid
+      - arguments:
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: is_valid
+    operator:
+      Scan:
+        table_id:
+          high: 1233317930569911709
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: sender
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: receiver
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: store
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: Sent
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 0
+            interpolation: 1
+            column:
+              Tick: ~
+    operator:
+      Tick:
+        behavior: 3
+        input: 0
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 4
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Literal:
+            literal:
+              Int64: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 0
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 4
+            interpolation: 1
+            column:
+              ProducerExpression: 5
+      - arguments:
+          - 3
+          - 2
+          - 1
+        result_type:
+          kind:
+            Primitive: 9
+        output: true
+        operator:
+          Instruction: count_if
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 5
+            interpolation: 1
+            column:
+              ProducerExpression: 6
+      - arguments:
+          - 5
+          - 2
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: logical_or
+    operator:
+      Merge:
+        left: 0
+        right: 1
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 9
+        output: false
+        operator:
+          Input:
+            producing_operation: 2
+            input_column: 4
+            interpolation: 2
+            column:
+              ProducerExpression: 4
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 2
+            input_column: 5
+            interpolation: 1
+            column:
+              ProducerExpression: 6
+      - arguments:
+          - 1
+          - 0
+        result_type:
+          kind:
+            Primitive: 9
+        output: true
+        operator:
+          Instruction: if
+    operator:
+      ShiftUntil:
+        input: 2
+        condition:
+          producing_operation: 2
+          input_column: 3
+          interpolation: 1
+          column:
+            ProducerExpression: 0
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Input:
+            producing_operation: 4
+            input_column: 0
+            interpolation: 1
+            column:
+              Tick: ~
+    operator:
+      Tick:
+        behavior: 3
+        input: 3
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Literal:
+            literal:
+              Int64: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 4
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 0
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 9
+        output: false
+        operator:
+          Input:
+            producing_operation: 3
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 2
+      - arguments:
+          - 3
+          - 2
+          - 1
+        result_type:
+          kind:
+            Primitive: 9
+        output: false
+        operator:
+          Instruction: sum
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: a
+      - arguments:
+          - 5
+          - 4
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: a
+                  data_type:
+                    kind:
+                      Primitive: 9
+        output: true
+        operator:
+          Instruction: record
+      - arguments:
+          - 6
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 7
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      Merge:
+        left: 3
+        right: 4
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: a
+                  data_type:
+                    kind:
+                      Primitive: 9
+        output: true
+        operator:
+          Input:
+            producing_operation: 5
+            input_column: 3
+            interpolation: 2
+            column:
+              ProducerExpression: 6
+    operator:
+      Select:
+        input: 5
+        condition:
+          producing_operation: 5
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 8
+primary_grouping: account
+primary_grouping_key_type:
+  kind:
+    Primitive: 10
+

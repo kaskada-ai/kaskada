@@ -1,0 +1,13 @@
+# Style
+use_field_init_shorthand = true    # Omit field names if they match the variable.
+
+# Formatting / Line Length
+#format_strings = true              # Split strings to fit line length
+#normalize_comments = true          # Convert /* */ to // comments.
+#normalize_doc_attributes = true    # Convert `#![doc]` attributes to `//!` comments.
+#wrap_comments = true               # Break comments to fit lines.
+
+# Imports
+# Create three import groups: (std, core, alloc); (external crates); (self, super, crate)
+#group_imports = "StdExternalCrate"
+# imports_granularity = "Module"     # Only group imports from the same module

@@ -1,0 +1,28 @@
+---
+source: crates/sparrow-arrow/src/avro/schema.rs
+expression: "&avro_schema"
+---
+{
+  "type": "record",
+  "name": "",
+  "fields": [
+    {
+      "name": "a",
+      "type": [
+        "null",
+        "long"
+      ]
+    },
+    {
+      "name": "b",
+      "type": "double"
+    },
+    {
+      "name": "c",
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  ]
+}

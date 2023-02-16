@@ -1,0 +1,43 @@
+name = 'json'
+signature = 'json(s: string) -> json'
+short_doc = 'Creates a JSON object from a string.'
+experimental = '''
+`json` is experimental functionality.
+You should expect the behavior to potentially change in the future.
+Certain functionality, such as nested types, are not yet supported.
+'''
+long_doc = '''
+This functions converts a JSON string into a JSON object. Fields of 
+the JSON object can be accessed as strings and cast into other types.  
+
+### Parameters
+* s: The JSON-formatted string.
+
+### Results
+Returns a JSON object.
+'''
+tags = ['string']
+
+[[examples]]
+name = 'JSON field access'
+expression = 'json(Input.json_string).a'
+input_csv = '''
+time,key,json_string
+2021-01-01T00:00:00.000000000Z,Ben,"{""a"": 10}"
+2021-01-02T00:00:00.000000000Z,Ryan,"{""a"": 2}"
+2021-01-03T00:00:00.000000000Z,Ryan,"{""b"": 10}"
+2021-01-04T00:00:00.000000000Z,Ben,"{""a"": 4}"
+2021-01-05T00:00:00.000000000Z,Ben,"{""c"": 12}"
+2021-01-06T00:00:00.000000000Z,Jordan,"{""a"": 0}"
+2021-01-07T00:00:00.000000000Z,Ryan,"{""a"": 8}"
+'''
+output_csv = '''
+time,key,json_string,result
+2021-01-01T00:00:00.000000000Z,Ben,"{""a"": 10}",10
+2021-01-02T00:00:00.000000000Z,Ryan,"{""a"": 2}",2
+2021-01-03T00:00:00.000000000Z,Ryan,"{""b"": 10}",
+2021-01-04T00:00:00.000000000Z,Ben,"{""a"": 4}",4
+2021-01-05T00:00:00.000000000Z,Ben,"{""c"": 12}",
+2021-01-06T00:00:00.000000000Z,Jordan,"{""a"": 0}",0
+2021-01-07T00:00:00.000000000Z,Ryan,"{""a"": 8}",8
+'''

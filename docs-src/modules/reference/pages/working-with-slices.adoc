@@ -1,0 +1,130 @@
+_This document assumes the client is authenticated._
+
+Kaskada offers the ability to interact with slices of datasets. A
+*slice* represents a way to filter a large dataset to create a smaller
+dataset. By slicing a vast dataset, queries may access a subset of the
+data and thus run significantly faster.
+
+Slices preserve the statistical properties of the entire dataset. In
+general, slices either include all of a given entity's data or none of
+it - sampling occurs at the granularity of individual entities.
+
+Slicing only ever affects the produced set of results - never the data
+_used_ to produce a given result. As a result, some expressions like
+`lookup` cannot slice as efficiently as others because the entire
+dataset may be required to produce any result.
+
+== Entity Key Percent Filter
+
+This filter type slices the input dataset down to a percentage of the
+entity keys. Recall that Kaskada manages data with tables, and creating
+a table requires an `entity_key_column_name`. An entity key is a key
+associated with each row. The entity should identify a thing in the
+world related to each event.
+
+This filter will read every row and remove rows based on the entity key
+column in a deterministic and scalable fashion. The filter only runs on
+the new data when adding additional data to the table. Re-computation of
+previous sliced data is not required.
+
+Here is an example of creating an entity key filter:
+
+[source,python]
+----
+from kaskada.slice_filters import EntityPercentFilter
+
+filter_percentage = 12.34
+entity_filter = EntityPercentFilter(filter_percentage)
+----
+
+The example above creates a new `EntityPercentFilter` from the Kaskada
+Compute module with a filtering percentage of 12.34%.
+
+=== Entity Key Percent Filter Additional Details
+
+* The provided filter percentage must be between 0.1% and 100%
+inclusive.
+* Slices with larger percentages include entities from smaller
+percentages. For example:
+** Given a slice with 10% included results from entities: A, B, and C.
+** A slice with 20% would at least include A, B, and C plus additional
+entities D, E, and F.
+* If new data is added to the table, the previously sliced entity keys
+will also be included in the latest data with an additional probability
+of new entity keys. For example:
+** Given a slice with 10% included results from entities: A and B.
+** New data is uploaded to the table with entities: A, C, D, and E. A
+will automatically be included in the slice. C, D, and E all have a 10%
+chance of being included in the slice.
+
+== Usage
+
+The usage of a slice is only applicable at query time, and only _one_
+filter can be applied per query. To apply a filter to a query, use the
+Kaskada module method: `set_default_slice`.
+
+Here is an example of setting the slice filter:
+
+[source,python]
+----
+#entity_filter is created in the example above
+kda.set_default_slice(entity_filter)
+----
+
+After setting the slice, all subsequent queries will utilize the slice
+filter on the same session.
+
+=== IPython (Jupyter) Extension
+
+[source,ipython]
+----
+%%fenl
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+=== Python
+
+[source,python]
+----
+from kaskada import compute
+
+query = '''
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: last(Purchase.amount) | max(), min_amount: Purchase.amount | min()
+}
+'''
+
+compute.query(query=query)
+----
+
+== Entity Keys Filter
+
+The entity keys filter slices the input dataset to the provided entity
+keys. Once the filter is applied, only data with an entity key in the
+provided entity keys will be queryable. Currently, we only support
+numeric and string entity key filtering.
+
+Here is an example of creating an entity key filter:
+
+[source,python]
+----
+from kaskada.slice_filters import EntityFilter
+
+entity_keys = ["customer_01", "customer_03"]
+entity_filter = EntityFilter(entity_keys)
+----
+
+The example above creates a new `EntityFilter` from the Kaskada Compute
+module with entity key filters for "customer_01" and "customer_03".
+
+=== Entity Key Filter Additional Details
+
+* The provided keys must match the table's entity key type, and only
+numeric/string types are supported.

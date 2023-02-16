@@ -1,0 +1,270 @@
+syntax = "proto3";
+package kaskada.sparrow.v1alpha;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "gitlab.com/kaskada/kaskada/wren/gen/go/kaskada/sparrow/v1alpha";
+option java_multiple_files = true;
+option java_package = "com.kaskada.sparrow.v1alpha1";
+
+// A batch of 0 or more flight records.
+//
+// A Query Flight Record (QFR) file contains 0 or more batches, each
+// prefixed with the encoded size.
+message FlightRecordBatch {
+  repeated FlightRecord records = 1;
+}
+
+// Metadata added at the beginning of the flight record file.
+//
+// Contains metadata on the query, plan, etc. useful for interepreting
+// the flight record.
+message FlightRecordHeader {
+  // The version of the flight record format contained here.
+  uint32 version = 1;
+
+  // The request ID this flight record is for.
+  string request_id = 2;
+
+  // Build information about the Sparrow Binary.
+  BuildInfo sparrow_build_info = 3;
+
+  // TODO: Include the plan in the Flight Record (ideally as a proto)?
+  // This would allow interpreting it in a self-contained way.
+
+  message BuildInfo {
+    string sparrow_version = 1;
+    string github_ref = 2;
+    string github_sha = 3;
+    string github_workflow = 4;
+  }
+}
+
+// Identifies a specific processing thread within the query execution.
+message ThreadId {
+  // The pass this thread is associated with.
+  uint32 pass_id = 1;
+  // The kind of processing thread.
+  ThreadKind kind = 2;
+  // The thread ID within the pass.
+  uint32 thread_id = 3;
+
+  enum ThreadKind {
+    UNKNOWN = 0;
+
+    // The source reader for a specific table scan as part of a pass.
+    // These are generally associated with input tables.
+    //
+    // `pass_id` should be the pass that reads the source.
+    // `thread_id` should be the source in the pass performing the read.
+    //
+    // NOTE: Not all sources in a pass will have an associated reader thread.
+    // Specifically, this is only part of the `ScanTable` source.
+    SOURCE_READER = 1;
+
+    // The gather / merge operation for the inputs to the pass.
+    //
+    // `thread_id` should be `0`.
+    MERGE = 2;
+
+    // The actual executor for the pass.
+    //
+    // `thread_id` should be `0`.
+    EXECUTE = 3;
+
+    // The thread which converts results written to a sink for the source.
+    //
+    // `pass_id` should correspond to the pass containing the sink.
+    SINK_PROCESSOR = 4;
+  }
+}
+
+// A single flight record.
+message FlightRecord {
+  // The thread that produced this flight record.
+  ThreadId thread_id = 1;
+
+  // The type of event being recorded.
+  EventType event_type = 2;
+
+  // Indicate the specific activity for event types that may have
+  // multiple occurrences within a thread. For example, this should
+  // be the instruction index when executing an instruction.
+  uint32 index = 3;
+
+  // The time within the trace at which this event was recorded.
+  uint64 wall_timestamp_us = 4;
+
+  // Wall clock time spent executing this event.
+  //
+  // This should be `0` for events point-wise events.
+  uint64 wall_duration_us = 5;
+
+  // CPU time spent executing this event.
+  uint64 cpu_duration_us = 6;
+
+  oneof metrics {
+    // Payloads associated with control events (start/finish/etc).
+    StartInfo start = 10;
+
+    // Metrics associated with specific events.
+    ReceiveBatchMetrics receive_batch = 11;
+    GatherBatchesMetrics gather_batches = 12;
+    MergeBatchesMetrics merge_batches = 13;
+    ExecutePassMetrics execute_pass = 14;
+    ExecuteSinkMetrics execute_sink = 15;
+  }
+
+  enum EventType {
+    UNKNOWN = 0;
+
+    ///////////////////////////////////////////////////////////////////////
+    // General Control Events - 100 ... 199
+
+    // Sent at the beginning of a thread to record existence.
+    // May include process and thread name in the info, along with other details.
+    START = 100;
+
+    // Sent at the end of a thread to indicate that it is complete.
+    // For a trace to be considered complete, all expected threads must have started
+    // and all started threads must have completed.
+    FINISH = 101;
+
+    ///////////////////////////////////////////////////////////////////////
+    // Input Events - 200 ... 299
+
+    // Sent when a batch is read from a file.
+    // Arguments identify the file being read and the table it was part of.
+    INPUT_READ_TABLE_FILE = 200;
+
+    // Sent when batches have been gathered from the active inputs.
+    // TODO: Include arguments describing the active sources/time range/etc.
+    INPUT_GATHER_TABLE_BATCHES = 201;
+
+    // Sent when gathered inputs for a table are merged.
+    INPUT_MERGE_TABLE_BATCHES = 202;
+
+    ///////////////////////////////////////////////////////////////////////
+    // Pass Merge Events - 300 ... 399
+
+    // Sent when a batch is read received from a channel.
+    MERGE_RECEIVE_INPUT = 300;
+
+    // Sent when batches have been gathered for merging.
+    MERGE_GATHER_INPUTS = 301;
+
+    // Sent when batches have been merged.
+    MERGE_MERGE_INPUTS = 302;
+
+    ///////////////////////////////////////////////////////////////////////
+    // Pass Execution Events - 400 ... 499
+
+    // Sent when a pass is being executed on some input.
+    EXECUTE_PASS = 400;
+
+    // Sent when each instruction in the pass is executed.
+    //
+    // TODO: It may be useful to include information about the argument
+    // types and whether they're literals (to determine which evaluator
+    // is used). Could be part of the stack frame or the individual events.
+    EXECUTE_PASS_INSTRUCTION = 401;
+
+    // Sent when each sink in the pass is executed.
+    EXECUTE_PASS_SINK = 402;
+
+    ///////////////////////////////////////////////////////////////////////
+    // Sink Processor Events - 500 ... 599
+
+    // Sent when output is written.
+    SINK_WRITE_RESULTS = 500;
+
+    // Sent when batches are processed by the lookup request adapter.
+    SINK_LOOKUP_REQUEST = 501;
+
+    // Sent when batches are processed by the lookup response adapter.
+    SINK_LOOKUP_RESPONSE = 502;
+  }
+
+  message StartInfo {
+    string thread_name = 1;
+  }
+
+  message ReceiveBatchMetrics {
+    // The minimum time present in the received batch.
+    int64 min_time = 1;
+    // The maximum time present in the received batch.
+    int64 max_time = 2;
+
+    // The number of rows in the received batch.
+    uint32 num_rows = 3;
+  }
+
+  message GatherBatchesMetrics {
+    // The minimum time present in any of the gathered batches.
+    int64 min_time = 1;
+    // The maximum time present in any of the gathered batches.
+    int64 max_time = 2;
+
+    // The number of active sources.
+    //
+    // For tables this is the number of source files currently open.
+    // For passes this is the number of inputs to the pass still active.
+    uint32 active_sources = 3;
+
+    // The number of remaining but not yet active sources.
+    //
+    // For tables this is the number of sources that haven't been opened yet.
+    // For passes, this should be `0`.
+    uint32 remaining_sources = 4;
+  }
+
+  message MergeBatchesMetrics {
+    // Number of rows in each input to the merge operation.
+    repeated uint32 num_input_rows = 1;
+
+    // The number of rows in the merged results.
+    uint32 num_rows = 2;
+  }
+
+  message ExecutePassMetrics {
+    // Number of input rows.
+    uint32 num_rows = 1;
+
+    // Number of cumulative entities including the current input batch.
+    uint32 num_cumulative_entities = 2;
+
+    Cause cause = 3;
+
+    enum Cause {
+      CAUSE_UNKNOWN = 0;
+
+      // Execution caused by an input batch.
+      CAUSE_INPUTS = 1;
+      // Execution caused by ticks.
+      CAUSE_TICKS = 2;
+      // Execution caused by finishing the pass.
+      CAUSE_FINISH = 3;
+    }
+  }
+
+  message ExecuteSinkMetrics {
+    // Number of rows in the batch output by this sink.
+    uint32 num_output_rows = 1;
+
+    // A measure of how much is buffered within the sink.
+    // TODO: Flesh this out, possibly with different definitions for different sinks?
+    uint32 num_buffered_rows = 2;
+
+    // Statistics about the channel the sink writes to.
+    SinkChannelStats channel_stats = 3;
+
+    message SinkChannelStats {
+      // The number of elements the channel can hold.
+      // `null` indicates no limit.
+      google.protobuf.UInt32Value capacity = 1;
+
+      // The number of elements the channel is holding.
+      uint32 len = 2;
+    }
+  }
+}

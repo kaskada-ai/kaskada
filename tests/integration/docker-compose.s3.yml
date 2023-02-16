@@ -1,0 +1,43 @@
+version: "3"
+
+services:
+  minio:
+    command: server --console-address ":9001" /data
+    container_name: minio
+    environment:
+      MINIO_REGION_NAME: us-west-2
+      MINIO_ROOT_USER: minio 
+      MINIO_ROOT_PASSWORD: minio123
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    image: minio/minio:latest
+    logging:
+      driver: "json-file"
+      options: 
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - integration
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  kaskada:
+    depends_on:
+      - minio
+    environment: 
+      # for sparrow
+      S3_ENDPOINT:                    http://minio:9000
+      # for wren
+      OBJECT_STORE_TYPE:              "s3"
+      OBJECT_STORE_BUCKET:            "integration"
+      OBJECT_STORE_DISABLE_SSL:       true
+      OBJECT_STORE_ENDPOINT:          "http://minio:9000"
+      OBJECT_STORE_FORCE_PATH_STYLE:  true
+      # for both
+      AWS_ACCESS_KEY_ID:              "kaskada"
+      AWS_SECRET_ACCESS_KEY:          "kaskada123"
+      AWS_DEFAULT_REGION:             us-west-2
+      AWS_REGION:                     us-west-2

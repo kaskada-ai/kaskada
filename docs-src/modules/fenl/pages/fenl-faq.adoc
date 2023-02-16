@@ -1,0 +1,93 @@
+== Choosing between `when` and `if`
+
+Fenl provides two predication functions:
+
+* `if(condition, value)` returns the `value` if the `condition` is true,
+and returns `null` in all other cases. The function's result follows the
+standard continuity rules. For example, the result will be continuous if
+`value` and `condition` are both continuous, otherwise the result will
+be discrete.
+* `when(condition, value)` returns the value of `value` every time
+`condition` produces the value `true`. The result of `when` is _always_
+discrete, and produces values at the set of times `condition` produces
+the value `true`.
+
+These functions filter values in different ways: `if` filters by
+replacing values with `null`, whereas `when` filters values by limiting
+the set of times at which values are produced. Kaskada's compute engine
+is tabular, so in some cases the performance of `if` will be better than
+that of `when` because `if` can be applied as a simple transformation
+while `when` requires building a new table. In other cases, `when` may
+be more performant if it allows subsequent operations to be computed
+over a table with significantly fewer rows.
+
+A general guideline is to use `if` for replacing values, and `when` for
+filtering values.
+
+For example, use `if` and `else` to clean values:
+
+[source,fenl]
+----
+Event.duration | if($input > 0) | else(0)
+----
+
+Alternately, use `when` to filter rows returned by a query:
+
+[source,fenl]
+----
+Event | when(Event.kind == "conversion")
+----
+
+== Joining expressions with different entities
+
+The values produced by all Fenl expressions are either constant or
+associated with an entity. For example, the expression `42` produces a
+constant integer value. By comparison the expression
+`ProductReview.stars` might produce integer values associated with each
+review's entity, for example a particular product.
+
+Aggregations (e.g. `sum`, `min`, `first`) are scoped to each value's
+entity key. Simple functions that accept multiple arguments (ie `add` or
+`eq`) require that their non-constant arguments have compatible entity
+key types, and operate between values with the same entity key.
+
+This scoping behavior makes it easy to write common operations, but
+often times it's necessary to combine values with different entity keys.
+The `lookup` function support supports these use cases. The lookup
+function takes two arguments: the first argument `key` (the key
+expression) describes the entity key being looked up, and the second
+argument `value` (the foreign expression) describes the value to be
+looked up:
+
+[source,fenl]
+----
+lookup(key, value)
+----
+
+The key expression identifies the "other" entity key, and should be
+expressed as an operation on "this" entity's values. For example, if we
+want to lookup some information about the reviewer associated with each
+individual product review, the key expression might be something like
+`ProductReview.reviewer_id`.
+
+The `value`, or foreign expression, describes the value to look up, and
+should be expressed as an operation on the "other" entity's values.
+Continuing the prior example, if we wanted to know the average number of
+stars a reviewer gives products, the foreign expression might be
+something like `ProductReviewByReviewer.stars | mean()`.
+
+Using these two expressions it's possible to describe some facts about
+each product review:
+
+[source,fenl]
+----
+{
+  product_id:     ProductReview.product_id,
+  reviewer:       ProductReview.reviewer_id,
+  reviewer_avg:   lookup(ProductReview.reviewer_id, ProductReviewByReviewer.stars | mean()),
+  reviewer_count: lookup(ProductReview.reviewer_id, ProductReviewByReviewer | count()),
+}
+----
+
+A lookup expression produces the value of the foreign expression at
+every time the key expression produces a non-null value.

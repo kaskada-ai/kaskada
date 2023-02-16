@@ -1,0 +1,48 @@
+https://docs.kaskada.com/docs/data-model#records[Records] allow one or
+more values into a single record. Each value is part of a named field
+within the record.
+
+== Creating a Record
+
+Records may be created using curly braces, such as
+`{name: "john", age: 32}`. The corresponding type would be described as
+`{name: string, age: 32}`. 
+
+
+
+[WARNING]
+.Order of Record Fields
+====
+Fields in a record are
+ordered, and the ordering matters, both for determining if two records
+are the same type as well as for determining the order of columns in the
+output.
+====
+
+== Extending a Record
+
+A record may be extended with the fields of another record. When names
+collide, the new fields override the older fields. This may be done as
+`extend(new_record, original)` or `original | extend(new_record)`.
+
+Example:
+`{name: "john", age: 32} | extend({age: 33, lastname: "smith" })` would
+produce the record `{name: "john", age: 33, lastname: "smith" }`.
+
+== Selecting or Projecting Fields
+
+Specific fields from a record may be selected using `select_fields`. The
+result is a record containing only the specified fields.
+
+Example:
+`select_fields({name: "john", age: 33, lastname: "smith" }, "lastname", "name")`
+produces the record `{name: "john", lastname: "smith"}`.
+
+== Removing Fields
+
+Specific fields from a record may be removed using `remove_fields`. The
+result is a record without the named fields.
+
+Example:
+`remove_fields({name: "john", age: 33, lastname: "smith" }, "lastname", "name")`
+produces the record `{age: 33}`.

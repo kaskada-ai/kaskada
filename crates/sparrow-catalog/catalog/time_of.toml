@@ -1,0 +1,56 @@
+name = 'time_of'
+signature = 'time_of(input: any) -> timestamp_ns'
+short_doc = 'Returns the timestamp of rows in `input`.'
+long_doc = '''
+### Parameters
+* input: The column to retrieve timestamps for. It may be of any type (including records).
+
+### Results
+Returns a `timestamp_ns` column containing the timestamp of each row in the
+`input`.
+'''
+tags = ['time']
+
+[[examples]]
+name = 'Time Of Record Column'
+expression = 'time_of(Input)'
+input_csv = '''
+time,key
+1996-03-21T00:00:00-00:00,Ben
+1996-04-21T00:00:00-00:00,Ryan
+1996-05-21T00:00:00-00:00,Ryan
+1996-06-21T00:00:00-00:00,Ryan
+1996-07-21T00:00:00-00:00,Ben
+1996-08-21T00:00:00-00:00,Ben
+'''
+output_csv = '''
+time,key,result
+1996-03-21T00:00:00-00:00,Ben,1996-03-21T00:00:00.000000000
+1996-04-21T00:00:00-00:00,Ryan,1996-04-21T00:00:00.000000000
+1996-05-21T00:00:00-00:00,Ryan,1996-05-21T00:00:00.000000000
+1996-06-21T00:00:00-00:00,Ryan,1996-06-21T00:00:00.000000000
+1996-07-21T00:00:00-00:00,Ben,1996-07-21T00:00:00.000000000
+1996-08-21T00:00:00-00:00,Ben,1996-08-21T00:00:00.000000000
+'''
+
+[[examples]]
+name = 'Time Of Integer Column'
+expression = 'time_of(Input.integer)'
+input_csv = '''
+time,key,integer
+1996-03-21T00:00:00-00:00,Ben,8
+1996-04-21T00:00:00-00:00,Ryan,12
+1996-05-21T00:00:00-00:00,Ryan,
+1996-06-21T00:00:00-00:00,Ryan,37
+1996-07-21T00:00:00-00:00,Ben,
+1996-08-21T00:00:00-00:00,Ben,24
+'''
+output_csv = '''
+time,key,integer,result
+1996-03-21T00:00:00-00:00,Ben,8,1996-03-21T00:00:00.000000000
+1996-04-21T00:00:00-00:00,Ryan,12,1996-04-21T00:00:00.000000000
+1996-05-21T00:00:00-00:00,Ryan,,1996-05-21T00:00:00.000000000
+1996-06-21T00:00:00-00:00,Ryan,37,1996-06-21T00:00:00.000000000
+1996-07-21T00:00:00-00:00,Ben,,1996-07-21T00:00:00.000000000
+1996-08-21T00:00:00-00:00,Ben,24,1996-08-21T00:00:00.000000000
+'''

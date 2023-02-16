@@ -1,0 +1,4 @@
+id,purchase_time,customer_id,vendor_id,amount,subsort_id
+kk_007,2021-01-09T00:00:00.000000000+00:00,patrick,krusty_krab,55,0
+kk_008,2021-01-10T00:00:00.000000000+00:00,patrick,krusty_krab,1,1
+kk_009,2021-01-12T00:00:00.000000000+00:00,patrick,krusty_krab,22,2

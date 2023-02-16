@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  push-python:
+    build:
+      dockerfile: Dockerfile.poetry
+    container_name: push-python
+    command: ["publish", "--build"]
+    environment:
+      - POETRY_PYPI_TOKEN_PYPI=$POETRY_PYPI_TOKEN_PYPI
+    volumes:
+      - ./python:/src

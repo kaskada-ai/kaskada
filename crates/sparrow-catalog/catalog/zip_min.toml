@@ -1,0 +1,38 @@
+name = 'zip_min'
+signature = 'zip_min(a: ordered, b: ordered) -> ordered'
+short_doc = 'Returns the minimum of two values.'
+long_doc = '''
+This returns the minimum of two values. See the aggregation [`min`](#min) for
+the minimum of values in a column up to and including the current row.
+
+### Parameters
+* a, b: The two values to take the minimum of.
+
+Note: Both `a` and `b` are promoted to a compatible ordered type
+following the [numeric type coercion rules](docs:data-model#numeric-type-coercion-table).
+
+### Results
+Returns a numeric column of the promoted type.
+Each row contains the value from `a` if `a` is less than `b`, otherwise it contains `b`.
+Specifically, if `a` or `b` is `NaN` then `b` will be returned. If `a`
+or `b` are `null`, then `b` will be returned.
+'''
+tags = ['math']
+
+[[examples]]
+name = 'Zip Min'
+expression = 'zip_min(Input.a, Input.b)'
+input_csv = '''
+time,key,a,b
+2021-01-01T00:00:00.000000000Z,A,5.7,1.2
+2021-01-01T00:00:00.000000000Z,A,6.3,0.4
+2021-01-02T00:00:00.000000000Z,B,,3.7
+2021-01-03T00:00:00.000000000Z,A,13.2,
+'''
+output_csv = '''
+time,key,a,b,result
+2021-01-01T00:00:00.000000000Z,A,5.7,1.2,1.2
+2021-01-01T00:00:00.000000000Z,A,6.3,0.4,0.4
+2021-01-02T00:00:00.000000000Z,B,,3.7,
+2021-01-03T00:00:00.000000000Z,A,13.2,,
+'''

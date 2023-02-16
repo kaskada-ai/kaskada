@@ -1,0 +1,48 @@
+name = 'last'
+signature = 'last(input: any, window: window = null) -> any'
+short_doc = 'Computes the last value present across the input.'
+long_doc = '''
+### Parameters
+* input: The input to be considered.
+* window: The window to aggregate within, as described in
+[Aggregation Functions](#aggregation-functions). If `null`, aggregates are across all
+rows for the current entity. If non-`null`, aggregates are within the specified window.
+See [window functions](#window-functions) for how to specify the aggregation window.
+
+### Results
+For each input row, return the last new, non-`null` value in the input,
+up to and including the current row. Returns `null` until there has been
+at least one such input.
+
+NOTE: The last value is inclusive of any values at the current time.
+This means that if the current row is new and non-`null`, the result
+will be the same of the input. If the input is not new or `null`,
+this will be the previous value that was new and non-`null`.
+'''
+tags = ['aggregation']
+
+[[examples]]
+name = 'Last'
+description = '''
+As shown in the example, the last aggregation is useful for extrapolating
+missing results from the most recent present result.
+'''
+expression = 'last(Input.value)'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,50.7
+2021-01-02T00:00:00.000000000Z,Ryan,
+2021-01-02T00:00:00.000000000Z,Ryan,67.2
+2021-01-03T00:00:00.000000000Z,Ben,1.2
+2021-01-03T00:00:00.000000000Z,Ben,
+2021-01-04T00:00:00.000000000Z,Ryan,2.3
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,50.7,50.7
+2021-01-02T00:00:00.000000000Z,Ryan,,
+2021-01-02T00:00:00.000000000Z,Ryan,67.2,67.2
+2021-01-03T00:00:00.000000000Z,Ben,1.2,1.2
+2021-01-03T00:00:00.000000000Z,Ben,,1.2
+2021-01-04T00:00:00.000000000Z,Ryan,2.3,2.3
+'''

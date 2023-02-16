@@ -1,0 +1,375 @@
+---
+source: sparrow-compiler/src/plan.rs
+expression: "create_plan(\"three_tables\", &DataContext::for_test(),\n            FeatureSet::new(\"{ x: Table1.x_i64 + Table2.x_i64 + Table3.x_i64 }\",\n                vec![]), None, PerEntityBehavior::All).await.unwrap()"
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: x_i64
+                  data_type:
+                    kind:
+                      Primitive: 6
+                - name: y_i64
+                  data_type:
+                    kind:
+                      Primitive: 6
+                - name: s_str
+                  data_type:
+                    kind:
+                      Primitive: 14
+                - name: z_i32
+                  data_type:
+                    kind:
+                      Primitive: 5
+                - name: f_f64
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: a_bool
+                  data_type:
+                    kind:
+                      Primitive: 2
+                - name: b_bool
+                  data_type:
+                    kind:
+                      Primitive: 2
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: x_i64
+      - arguments:
+          - 0
+          - 1
+        result_type:
+          kind:
+            Primitive: 6
+        output: true
+        operator:
+          Instruction: field_ref
+    operator:
+      Scan:
+        table_id:
+          high: 0
+          low: 0
+        schema:
+          fields:
+            - name: x_i64
+              data_type:
+                kind:
+                  Primitive: 6
+            - name: y_i64
+              data_type:
+                kind:
+                  Primitive: 6
+            - name: s_str
+              data_type:
+                kind:
+                  Primitive: 14
+            - name: z_i32
+              data_type:
+                kind:
+                  Primitive: 5
+            - name: f_f64
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: a_bool
+              data_type:
+                kind:
+                  Primitive: 2
+            - name: b_bool
+              data_type:
+                kind:
+                  Primitive: 2
+        slice_plan:
+          table_name: Table1
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: x_i64
+                  data_type:
+                    kind:
+                      Primitive: 6
+                - name: y_i64
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: false
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: x_i64
+      - arguments:
+          - 0
+          - 1
+        result_type:
+          kind:
+            Primitive: 6
+        output: true
+        operator:
+          Instruction: field_ref
+    operator:
+      Scan:
+        table_id:
+          high: 0
+          low: 1
+        schema:
+          fields:
+            - name: x_i64
+              data_type:
+                kind:
+                  Primitive: 6
+            - name: y_i64
+              data_type:
+                kind:
+                  Primitive: 6
+        slice_plan:
+          table_name: Table2
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 2
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 2
+      - arguments:
+          - 1
+          - 0
+        result_type:
+          kind:
+            Primitive: 6
+        output: true
+        operator:
+          Instruction: add
+    operator:
+      Merge:
+        left: 1
+        right: 0
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: x_i64
+                  data_type:
+                    kind:
+                      Primitive: 6
+                - name: y_i64
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: false
+        operator:
+          Input:
+            producing_operation: 3
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: x_i64
+      - arguments:
+          - 0
+          - 1
+        result_type:
+          kind:
+            Primitive: 6
+        output: true
+        operator:
+          Instruction: field_ref
+    operator:
+      Scan:
+        table_id:
+          high: 0
+          low: 2
+        schema:
+          fields:
+            - name: x_i64
+              data_type:
+                kind:
+                  Primitive: 6
+            - name: y_i64
+              data_type:
+                kind:
+                  Primitive: 6
+        slice_plan:
+          table_name: Table3
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Input:
+            producing_operation: 2
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 2
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Input:
+            producing_operation: 3
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 2
+      - arguments:
+          - 2
+          - 1
+        result_type:
+          kind:
+            Primitive: 6
+        output: false
+        operator:
+          Instruction: add
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: x
+      - arguments:
+          - 4
+          - 3
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: x
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: true
+        operator:
+          Instruction: record
+      - arguments:
+          - 5
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 6
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      Merge:
+        left: 3
+        right: 2
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: x
+                  data_type:
+                    kind:
+                      Primitive: 6
+        output: true
+        operator:
+          Input:
+            producing_operation: 4
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 5
+    operator:
+      Select:
+        input: 4
+        condition:
+          producing_operation: 4
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 7
+primary_grouping: group
+primary_grouping_key_type:
+  kind:
+    Primitive: 6
+

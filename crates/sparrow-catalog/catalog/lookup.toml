@@ -1,0 +1,79 @@
+name = 'lookup'
+signature = 'lookup(key: key, value: any) -> any'
+short_doc = 'Looks up the value for a foreign key.'
+long_doc = '''
+Performs a lookup join between the `key` and the computed `value` from a foreign entity.
+
+### Parameters
+* key: Expression which computes the foreign key to lookup.
+  This must match the type of the keys in the foreign grouping.
+* value: Foreign expression computing the value to lookup.
+  The `value` argument should normally be a continuous value (result of an aggregation).
+  This ensures there will be an available value at the time of the lookup.
+
+### Results
+For each row with a non-`null` key, returns the value at that time from the `value` computed for the entity identified by the `key`.
+Yields `null` if the `key` is `null` or if there is no foreign value computed for that key at the corresponding time.
+'''
+tags = ['grouping']
+
+[[examples]]
+name = 'Lookup'
+description = '''
+This example operates on customer reviews.
+It augments each review with the average rating the customer has given and the average rating the product has received, up to that point in time.
+'''
+full_expression = '''
+# This is the average review a product has received (keyed by products)
+let average_review_by_product = ProductReviewsByProduct.stars | mean()
+
+# This is the average review a customer has given (keyed by customer ID)
+let product_id_by_customer = ProductReviewsByCustomer.product_id
+let average_customer_review = ProductReviewsByCustomer.stars | mean()
+
+# Lookup the average product review for the current purchase.
+let average_product_review =
+  lookup(product_id_by_customer, average_review_by_product)
+in
+
+{
+    key: product_id_by_customer,
+    average_customer_review,
+    average_product_review,
+} | extend({ time: time_of($input)} )
+'''
+output_csv = '''
+time,key,average_customer_review,average_product_review
+2021-01-01T00:00:00.000000000,krabby_patty,3.0,3.0
+2021-01-02T00:00:00.000000000,coral_bits,3.5,4.0
+2021-03-01T00:00:00.000000000,krabby_patty,5.0,4.0
+2021-04-10T00:00:00.000000000,krabby_patty,2.6666666666666665,3.0
+'''
+
+[[examples.tables]]
+name = 'ProductReviewsByProduct'
+uuid = 'dd440605-4cee-431b-b208-360ec00a2192'
+time_column_name = 'time'
+group_column_name = 'product_id'
+grouping = 'products'
+input_csv = '''
+time,customer_id,product_id,stars
+2021-01-01T00:00:00.000000000Z,Patrick,krabby_patty,3
+2021-01-02T00:00:00.000000000Z,Patrick,coral_bits,4
+2021-03-01T00:00:00.000000000Z,Squidward,krabby_patty,5
+2021-04-10T00:00:00.000000000Z,Patrick,krabby_patty,1
+'''
+
+[[examples.tables]]
+name = 'ProductReviewsByCustomer'
+uuid = '7ababffe-a104-4f8b-8288-20d9ce8fb162'
+time_column_name = 'time'
+group_column_name = 'customer_id'
+grouping = 'customers'
+input_csv = '''
+time,customer_id,product_id,stars
+2021-01-01T00:00:00.000000000Z,Patrick,krabby_patty,3
+2021-01-02T00:00:00.000000000Z,Patrick,coral_bits,4
+2021-03-01T00:00:00.000000000Z,Squidward,krabby_patty,5
+2021-04-10T00:00:00.000000000Z,Patrick,krabby_patty,1
+'''

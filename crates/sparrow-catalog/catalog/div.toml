@@ -1,0 +1,40 @@
+name = 'div'
+signature = 'div(a: number, b: number) -> number'
+operator = 'a / b'
+short_doc = 'Returns the division of two numbers.'
+long_doc = '''
+This is the function used for the binary operation `a / b`.
+
+### Parameters
+* a: The left-hand side of the division.
+* b: The right-hand side of the division.
+
+Note: Both `a` and `b` are promoted to a compatible numeric type
+following the [numeric type coercion rules](docs:data-model#numeric-type-coercion-table).
+
+### Results
+Returns a numeric column of the promoted numeric type compatible with both `a` and `b`.
+The result contains `null` if `a` or `b` was null at that row, or if `b` was `0`.
+Otherwise the row contains the resulting of dividing `a` by `b`.
+'''
+tags = ['math']
+
+[[examples]]
+name = 'Division'
+expression = 'Input.a / Input.b'
+input_csv = '''
+time,key,a,b
+2021-01-01T00:00:00.000000000Z,A,5.7,1.2
+2021-01-02T00:00:00.000000000Z,A,6.3,0.4
+2021-01-03T00:00:00.000000000Z,B,,3.7
+2021-01-03T00:00:00.000000000Z,A,13.2,
+2021-01-04T00:00:00.000000000Z,A,12.2,0
+'''
+output_csv = '''
+time,key,a,b,result
+2021-01-01T00:00:00.000000000Z,A,5.7,1.2,4.75
+2021-01-02T00:00:00.000000000Z,A,6.3,0.4,15.749999999999998
+2021-01-03T00:00:00.000000000Z,B,,3.7,
+2021-01-03T00:00:00.000000000Z,A,13.2,,
+2021-01-04T00:00:00.000000000Z,A,12.2,0.0,
+'''

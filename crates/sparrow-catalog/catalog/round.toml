@@ -1,0 +1,37 @@
+name = 'round'
+signature = 'round(n: number) -> number'
+short_doc = 'Rounds the number to the nearest integer.'
+long_doc = '''
+See also [`ceil`](#ceil) and [`floor`](#floor).
+
+### Parameters
+* n: The number to round.
+
+Note: This method may be applied to any numeric type. For anything other than
+`float32` and `float64` it has no affect since the values are already integers.
+
+### Results
+Returns a numeric column of the same type as `n`.
+The result contains `null` if `n` was null at that position.
+Otherwise, it contains the result of rounding `n` to the nearest integer.
+
+Numbers half-way between two integers are rounded away from `0`.
+For example, `0.5` rounds to `1.0` and `-0.5` rounds to `-1.0`.
+'''
+tags = ['math']
+
+[[examples]]
+name = 'Round'
+expression = 'Input.a | round()'
+input_csv = '''
+time,key,a
+2021-01-01T00:00:00.000000000Z,A,5.7
+2021-01-01T00:00:00.000000000Z,A,6.3
+2021-01-02T00:00:00.000000000Z,B,
+'''
+output_csv = '''
+time,key,a,result
+2021-01-01T00:00:00.000000000Z,A,5.7,6.0
+2021-01-01T00:00:00.000000000Z,A,6.3,6.0
+2021-01-02T00:00:00.000000000Z,B,,
+'''

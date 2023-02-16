@@ -1,0 +1,75 @@
+== Environment Variable Configuration
+
+To authenticate with the API, by default the clients grab your Kaskada
+client-id and client-secret from the environment variables. Depending on
+whether or not you are working inside a notebook, there are two primary
+ways to do this:
+
+=== Working from Notebooks
+
+If you are running in a notebook environment (like Jupyter or Google
+Colab), we recommend using the python `getpass` method to avoid saving
+your client secret to the notebook:
+
+[source,python]
+----
+import os
+from getpass import getpass
+
+os.environ['KASKADA_CLIENT_ID'] = '<your-client-id>'
+os.environ['KASKADA_CLIENT_SECRET'] = getpass('Enter your Kaskada Client Secret here: ')
+----
+
+When executing this code-block, paste in your client secret, and it will
+be added to the environment without displaying it to the screen or
+saving it to the notebook.
+
+=== Working with generic python (outside a notebook)
+
+If you are running outside a notebook, you can simply set environment
+variables on your machine:
+
+[source,bash]
+----
+export KASKADA_CLIENT_ID=<your-client-id>
+export KASKADA_CLIENT_SECRET=<your-client-secret>
+----
+
+== Client Initialization
+
+After setting the environment variables, initialize your desired client:
+
+=== Python
+
+[source,python]
+----
+import kaskada as kda
+
+kda.init()
+----
+
+If you get an error check your credentials. If no output is returned,
+you should be good to start working with Kaskada.
+
+You may also provide your Client ID and Client Secret explicitly when
+creating a client:
+
+[source,python]
+----
+kda.init(client_id = "<your-client-id>", client_secret = "<your-client-secret>")
+----
+
+=== Fenl Magic
+
+[source,ipython]
+----
+%load_ext fenlmagic
+----
+
+To explicitly provide your Client ID and Client Secret, use the
+`fenl_auth` magic command:
+
+[source,ipython]
+----
+%fenl_auth <your-client-id> <your-client-secret>
+----

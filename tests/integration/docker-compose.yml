@@ -1,0 +1,57 @@
+version: "3"
+
+networks:
+  integration:
+
+services:
+  # redis:
+  #  container_name: redis
+  #  image: redislabs/redisai:1.2.4-cpu-bionic
+  #  networks:
+  #    - integration
+  #  ports:
+  #  - "6379:6379"
+
+  kaskada:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    container_name: kaskada
+    # depends_on:
+    #  - redis
+    environment: 
+      # for sparrow
+      SPARROW_GRPC_ADDR:              0.0.0.0:50052
+      SPARROW_LOG_FILTER:             "egg::=warn,sparrow_=info,info"
+      # for wren
+      DB_DIALECT:                     "sqlite"
+      DB_PATH:                        "/data/kaskada.db"
+      DB_IN_MEMORY:                   "false"
+      DEBUG:                          "true"
+      ENV:                            docker-compose
+      FILE_SERVICE_HOST:              localhost
+      FILE_SERVICE_PORT:              "50052"
+      OBJECT_STORE_TYPE:              "local"
+      OBJECT_STORE_PATH:              "/data"
+      PREPARE_SERVICE_HOST:           localhost
+      PREPARE_SERVICE_PORT:           "50052"
+      QUERY_SERVICE_HOST:             localhost
+      QUERY_SERVICE_PORT:             "50052"
+      # for both
+      TMPDIR:                         "/data/tmp"
+    logging:
+      driver: "json-file"
+      options: 
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    networks:
+      - integration
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    volumes:
+      - ./data:/data
+      - ../../testdata:/testdata
+    restart: unless-stopped
+
+volumes: 
+  shared:

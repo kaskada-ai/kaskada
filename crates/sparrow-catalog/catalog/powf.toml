@@ -1,0 +1,35 @@
+name = 'powf'
+signature = 'powf(base: f64, power: f64) -> f64'
+short_doc = 'Returns `base^power`.'
+long_doc = '''
+### Parameters
+* base: The base to raise to the given power.
+* power: The power to raise the base to.
+
+The power function applies to `f64` numbers only.
+Other numbers will be implicitly promoted.
+
+###
+Returns a column of `f64` values.
+Each row contains `null` if `base` or `power` are `null`.
+Otherwise, the row contains the value `base ^ power`.
+'''
+tags = ['math']
+
+[[examples]]
+name = 'Power'
+expression = 'powf(Input.a, Input.b)'
+input_csv = '''
+time,key,a,b
+2021-01-01T00:00:00.000000000Z,A,5.7,1.2
+2021-01-01T00:00:00.000000000Z,A,6.3,0.4
+2021-01-02T00:00:00.000000000Z,B,,3.7
+2021-01-03T00:00:00.000000000Z,A,13.2,
+'''
+output_csv = '''
+time,key,a,b,result
+2021-01-01T00:00:00.000000000Z,A,5.7,1.2,8.073276500106656
+2021-01-01T00:00:00.000000000Z,A,6.3,0.4,2.0880275269924504
+2021-01-02T00:00:00.000000000Z,B,,3.7,
+2021-01-03T00:00:00.000000000Z,A,13.2,,
+'''

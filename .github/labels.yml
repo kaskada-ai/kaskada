@@ -1,0 +1,84 @@
+# kinds
+- name: bug
+  description: Something isn't working
+  color: "d73a4a"
+- name: documentation
+  description: Improvements or additions to documentation
+  color: "0075ca"
+- name: duplicate
+  description: This issue or pull request already exists
+  color: "cfd3d7"
+- name: enhancement
+  description: New feature or request
+  color: "a2eeef"
+- name: good first issue
+  description: Good for newcomers
+  color: "7057ff"
+- name: help wanted
+  description: Extra attention is needed
+  color: "008672"
+- name: invalid
+  description: This doesn't seem right
+  color: "e4e669"
+- name: question
+  description: Further information is requested
+  color: "d876e3"
+- name: wontfix
+  description: This will not be worked on
+  color: "ffffff"
+- name: revert
+  description: Reverting earlier changes
+  color: "e4e669"
+- name: build
+  description: Changes to Build and CI
+  color: "e4e669"
+- name: refactor
+  description: Improvements to code quality
+  color: "e4e669"
+- name: highlight
+  description: Changes to highlight in the changelog
+  color: "a2eeef"
+- name: removal
+  description: Removal of existing functionality
+  color: "cc0000"
+
+- name: release
+  description: Ship it!
+  color: "55eb34"
+- name: skip-changelog
+  description: Apply to PRs that should not appear in the changelog
+  color: d8eb34
+
+# components
+- name: sparrow
+  description: Issues or changes to the Rust compute engine (Sparrow)
+- name: wren
+  description: Issues or changes to the Go intermediary (Wren)
+- name: python
+  description: Issues or changes to the Python client or Fenl Magic
+- name: proto
+  description: Issues or changes to the protobuf API
+- name: build
+  description: Issues or changes to the build or CI process
+
+# statuses
+- name: duplicate
+  description: Indicates similar issues, pull requests, or discussions
+  color: e0e0e0
+- name: invalid
+  description: Indicates that an issue, pull request, or discussion is no longer relevant
+  color: e0e0e0
+- name: wontfix
+  description: Indicates that work won't continue on an issue, pull request, or discussion
+  color: e0e0e0
+
+# platforms
+#- name: linux
+#  description: Linux-specific issue
+#  color: a1887f
+#- name: macos
+#  description: macOS-specific issue
+#  color: a1887f
+#- name: windows
+#  description: Windows-specific issue
+#  color: a1887f

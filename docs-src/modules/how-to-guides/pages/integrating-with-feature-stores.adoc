@@ -1,0 +1,172 @@
+== Online Feature Stores
+
+Models being used in production often have strict latency and freshness
+requirements — real-time models in particular. Feature engines address
+the freshness, while feature stores address latency. Kaskada's feature
+engine keeps real-time features fresh and integrates with several
+existing data stores for low-latency key retrieval.
+
+=== AWS DynamoDB
+
+DynamoDB is a hosted key-value store that provides consistent
+low-latency query responses and elastic scalability.
+
+Features can be loaded into DynamoDB by exporting features as Parquet
+and using an AWS client to upload each feature vector using the
+batch-write API. To load features into DynamoDB, first construct a query
+describing the feature vectors.
+
+[source,rust]
+----
+%%fenl
+{
+  key: Purchase.customer_id,
+  max_amount: Purchase.amount | max(),
+  min_amount: Purchase.amount | min(),
+}
+----
+
+The dataframe returned by this query can be loaded into DynamoDB using
+the `boto` Python library.
+
+[source,python]
+----
+import pandas as pd
+import boto3
+
+df = pd.read_parquet(_)
+
+dynamo = boto3.resource('dynamodb')
+table = dynamo.Table('data-services-dev-testing')
+
+with table.batch_writer() as bw:
+    for i, record in enumerate(df.to_dict("records")):
+        bw.put_item(Item=record)
+----
+
+=== Redis
+
+Redis is an OpenSource in-memory data-structure store. The RedisAI
+module provides support for tensor data structures and allows applying a
+variety of trained models to input tensors within the Redis process.
+
+Kaskada can export feature vectors to Redis as tensors. To load features
+into Redis, first construct a query describing the feature vectors. This
+query must produce a record including a field named `key`. All other
+fields in the record must produce numeric values.
+
+[source,rust]
+----
+{
+  key: Purchase.customer_id,
+  max_amount: Purchase.amount | max(),
+  min_amount: Purchase.amount | min(),
+}
+----
+
+The results of a Fenl query can be written to an external data store and
+kept up to date as the data underlying the query changes using
+materializations. A materialization is similar to a query, except that
+the results are updated any time data is added to a table used by the
+query.
+
+[source,python]
+----
+redis_db = 1
+redis_host = "redisai"
+redis_port = 6379
+destination = materialization.RedisAIDestination(redis_db, redis_host, redis_port)
+
+materialization.create_materialization(
+    name = "MaterializedFeatures",
+    destination = destination,
+    query = "{
+      key: Purchase.customer_id,
+      max_amount: Purchase.amount | max(),
+      min_amount: Purchase.amount | min(),
+    }"
+)
+----
+
+== Offline Feature Stores
+
+Models used for batch inference benefit from having access to feature
+vectors in a data store optimized for throughput rather than latency.
+Kaskada supports serving high-throughput feature vectors by integrating
+with a number of existing data stores designed for bulk-data management.
+
+=== Snowflake
+
+Snowflake is a hosted data warehouse that provides scalable SQL queries
+over large data sets.
+
+Features can be loaded into Snowflake by exporting features as Parquet
+and using the `COPY` instruction to load the Parquet file into a Parquet
+table. To load features into Snowflake, first construct a query
+describing the feature vectors. Query results can be returned as a URL
+identifying the output Parquet file by supplying the output config
+`--output parquet`.
+
+[source,rust]
+----
+%%fenl --output parquet
+{
+  key: Purchase.customer_id,
+  max_amount: Purchase.amount | max(),
+  min_amount: Purchase.amount | min(),
+}
+----
+
+The resulting Parquet file can be loaded into a temporary Snowflake
+table.
+
+[source,sql]
+----
+create or replace temporary table feature_vectors (
+  key varchar default null,
+  max_amount number,
+  min_amount number
+);
+
+create or replace file format feature_vector_parquet_format
+  type = 'parquet';
+
+create or replace temporary stage feature_vector_stage
+  file_format = feature_vector_parquet_format;
+
+put <file url> @sf_tut_stage;
+
+copy into cities
+  from (select * from @sf_tut_stage/<filename>.parquet);
+----
+
+=== Redshift
+
+Redshift is a hosted data warehouse that provides scalable SQL queries
+over large data sets.
+
+Features can be loaded into Redshift by exporting features as Parquet
+and using the `COPY` instruction to load the Parquet file into a Parquet
+table. To load features into Redshift, first construct a query
+describing the feature vectors. Query results can be returned as a URL
+identifying the output Parquet file by supplying the output config
+`--output parquet`.
+
+[source,rust]
+----
+%%fenl --output parquet
+{
+  key: Purchase.customer_id,
+  max_amount: Purchase.amount | max(),
+  min_amount: Purchase.amount | min(),
+}
+----
+
+The resulting Parquet file can be loaded into a Redshift table.
+
+[source,sql]
+----
+COPY feature_vectors
+FROM '<file url>'
+FORMAT AS PARQUET;
+----

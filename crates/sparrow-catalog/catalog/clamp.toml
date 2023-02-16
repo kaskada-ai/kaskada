@@ -1,0 +1,67 @@
+name = 'clamp'
+signature = 'clamp(value: number, min: number = null, max: number = null) -> number'
+short_doc = 'Returns `value` clamped between the bounds `min` and `max`.'
+long_doc = '''
+### Parameters
+* `value`: The value to be clamped.
+* `min`: The minimum bound. If `null`, no minimum bound will be applied.
+* `max`: The maximum bound. If `null`, no maximum bound will be applied.
+
+Note: Since `min` and `max` have default values, they must be passed by name.
+The `value` is first so it is amenable to pipe. For example `value | clamp(min = 3)`
+or `value | clamp(max = 8)`.
+
+The arguments will be promoted to a compatible numeric type following
+the [numeric type coercion rules](docs:data-model#numeric-type-coercion-table).
+
+### Results
+Returns a numeric column of the promoted numeric type. For each row,
+it contains `value` if `value` is between `min` and `max`, `min` if
+`value` is less than `min`, `max` if `value` is greater than `max`, and
+`null` if `value` is `null` or `min > max`. If `min` or `max`
+are null than no clamping on that side will be performed.
+'''
+tags = ['math']
+
+[[examples]]
+name = 'Clamp With Min and Max'
+description = '''
+This example shows the use of `clamp` with both a `min` and
+`max` value provided.
+'''
+expression = 'Input.a | clamp(min = 0.5, max = 9.5)'
+input_csv = '''
+time,key,a
+2021-01-01T00:00:00.000000000Z,A,5.7
+2021-01-01T00:00:00.000000000Z,A,6.3
+2021-01-01T00:00:00.000000000Z,B,
+2021-01-01T00:00:00.000000000Z,A,
+'''
+output_csv = '''
+time,key,a,result
+2021-01-01T00:00:00.000000000Z,A,5.7,5.7
+2021-01-01T00:00:00.000000000Z,A,6.3,6.3
+2021-01-01T00:00:00.000000000Z,B,,
+2021-01-01T00:00:00.000000000Z,A,,
+'''
+
+[[examples]]
+name = 'Clamp with Min'
+description = '''
+This example shows the use of clamp with just a minimum bound.
+'''
+expression = 'Input.a | clamp(min = 0.5)'
+input_csv = '''
+time,key,a
+2021-01-01T00:00:00.000000000Z,A,5.7
+2021-01-01T00:00:00.000000000Z,A,6.3
+2021-01-01T00:00:00.000000000Z,B,
+2021-01-01T00:00:00.000000000Z,A,
+'''
+output_csv = '''
+time,key,a,result
+2021-01-01T00:00:00.000000000Z,A,5.7,5.7
+2021-01-01T00:00:00.000000000Z,A,6.3,6.3
+2021-01-01T00:00:00.000000000Z,B,,
+2021-01-01T00:00:00.000000000Z,A,,
+'''

@@ -1,0 +1,406 @@
+---
+source: sparrow-compiler/tests/compiler_golden_tests.rs
+expression: compute_plan
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 1
+        output: false
+        operator:
+          Literal:
+            literal: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments:
+          - 0
+          - 2
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments:
+          - 3
+          - 1
+          - 1
+        result_type:
+          kind:
+            Primitive: 13
+        output: true
+        operator:
+          Instruction: sum
+    operator:
+      Scan:
+        table_id:
+          high: 3692283327114202525
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: receiver
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: Received
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sender
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: store
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 1
+        output: false
+        operator:
+          Literal:
+            literal: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: receiver
+      - arguments:
+          - 0
+          - 2
+        result_type:
+          kind:
+            Primitive: 10
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments:
+          - 3
+          - 1
+          - 1
+        result_type:
+          kind:
+            Primitive: 10
+        output: true
+        operator:
+          Instruction: last
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments:
+          - 0
+          - 5
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments:
+          - 6
+          - 1
+          - 1
+        result_type:
+          kind:
+            Primitive: 13
+        output: true
+        operator:
+          Instruction: sum
+    operator:
+      Scan:
+        table_id:
+          high: 1233317930569911709
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: sender
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: receiver
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: store
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: Sent
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            List:
+              kind:
+                Primitive: 10
+        output: true
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 2
+            interpolation: 1
+            column:
+              KeyColumn: 3
+    operator:
+      LookupRequest:
+        primary_operation: 1
+        foreign_key_hash:
+          producing_operation: 1
+          input_column: 3
+          interpolation: 2
+          column:
+            ProducerExpression: 4
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            List:
+              kind:
+                Primitive: 10
+        output: true
+        operator:
+          Input:
+            producing_operation: 2
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 0
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 13
+        output: true
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 2
+            column:
+              ProducerExpression: 4
+    operator:
+      Merge:
+        left: 2
+        right: 0
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 13
+        output: true
+        operator:
+          Input:
+            producing_operation: 3
+            input_column: 4
+            interpolation: 2
+            column:
+              ProducerExpression: 1
+    operator:
+      LookupResponse:
+        foreign_operation: 3
+        requesting_key_hash:
+          producing_operation: 3
+          input_column: 3
+          interpolation: 1
+          column:
+            ProducerExpression: 0
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Input:
+            producing_operation: 4
+            input_column: 3
+            interpolation: 2
+            column:
+              ProducerExpression: 0
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: sum_received
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Input:
+            producing_operation: 1
+            input_column: 4
+            interpolation: 2
+            column:
+              ProducerExpression: 7
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: sum_amount
+      - arguments:
+          - 4
+          - 3
+          - 2
+          - 1
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sum_amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: sum_received
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Instruction: record
+      - arguments:
+          - 5
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 6
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      Merge:
+        left: 1
+        right: 4
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sum_amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: sum_received
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Input:
+            producing_operation: 5
+            input_column: 3
+            interpolation: 2
+            column:
+              ProducerExpression: 5
+    operator:
+      Select:
+        input: 5
+        condition:
+          producing_operation: 5
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 7
+primary_grouping: account
+primary_grouping_key_type:
+  kind:
+    Primitive: 10
+

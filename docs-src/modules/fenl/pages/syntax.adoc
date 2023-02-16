@@ -1,0 +1,211 @@
+Fenl is composed of _expressions_. Every Fenl expression describes a
+stream of values. Expressions may be composed to form new expressions.
+
+== Constructors
+
+Fenl supports a rich variety of value types. Each type has a
+corresponding syntax for writing values in Fenl. See the
+xref::data-model.adoc[Data Model] section for example syntax for constructing
+different value types.
+
+== Unary and Binary operations
+
+Arithmetic operations can be expressed as they are in most languages:
+
+[source,fenl]
+----
+1 + 2 / (3 * 4)
+----
+
+Logical operations use standard comparators, and can be combined with
+`and` and `or`:
+
+[source,fenl]
+----
+true and (5 >= 2) or !false
+----
+
+Data types that compose multiple values allow individual values to be
+referenced using dot-syntax:
+
+[source,fenl]
+----
+{ a: 10, b: true }.a
+----
+
+All Fenl expressions produce a value, so conditional logic is primarily
+used to determine when an expression's value should be `null`, for
+example the following expression's value is `null`
+
+[source,fenl]
+----
+5 | if(false)
+----
+
+== Let Binding
+
+Let-binding is a special operation that introduces local names for other
+expressions. It is useful when a given expression needs to be referenced
+multiple times, or when you want to break up a complex expression into
+smaller pieces.
+
+Let bindings have two components: name / expression bindings followed by
+a body expression in which the bound names may be referenced.
+
+[source,fenl]
+----
+let the_answer = 42
+in the_answer * 2
+----
+
+Multiple bindings may be introduced by repeating the `let` portion.
+Bindings may reference prior bindings.
+
+[source,fenl]
+----
+let the_answer = 42
+let not_the_answer = the_answer * 2
+in the_answer != not_the_answer
+----
+
+The value of a let expression is the value of the `in` expression,
+evaluated in the context of the name bindings.
+
+== Function Calls
+
+Functions are called with parens. Function parameters are named.
+
+[source,fenl]
+----
+substring(s = "input", start = 0, end = 2)
+----
+
+Some parameters declare default values. These parameters may be omitted
+from the function call.
+
+[source,fenl]
+----
+substring("input")
+----
+
+However, if you provide a value for a named parameter with a default
+value, the parameter name must be included.
+
+[source,fenl]
+----
+substring("input", 0) # invalid syntax
+substring("input", start = 0) # valid syntax
+----
+
+== Pipe Syntax
+
+In Fenl the pipe operator `|` can be used to chain function calls. The
+pipe operator is a binary operation that binds the left-hand expression
+to the name `$input` within the right-hand expression. The pipe
+operation `lhs | rhs` is equivalent to the let-binding
+`let $input = lhs in rhs`.
+
+[source,fenl]
+----
+42 | mul(2, $input)
+----
+
+Functions used within the RHS of a pipe expression may omit required
+arguments to use `$input`. The following is equivalent to the previous
+expression.
+
+[source,fenl]
+----
+42 | mul(2)
+----
+
+Pipe operators are useful for applying multiple operations in sequence.
+
+[source,fenl]
+----
+the_answer
+  | add(10)
+  | div(2)
+  | gt(0)
+----
+
+[NOTE]
+.Design 
+====
+Many functions can be though of having "data" parameters
+and "config" parameters. For example `substring` transforms a string
+(the "data" parameter) by selecting a range of characters from a start
+offset to and end offset (the "config" parameters). The start and end
+offsets are allowed to be any expression, but most of the time they're
+constants, for example `substring(zipcode, start=0, end=6)`.
+
+Fenl's functions try to place "data" parameters as the last required /
+positional parameter. Placing "data" parameters last makes it easy to
+omit them when using pipe syntax. The resulting code emphases the
+"config" parameters when reading chains of operations.
+====
+
+Generally, `A | B()` is equivalent to the explicit application
+`A | B($input)` which is equivalent to `B(A)`.
+
+== Name Resolution
+
+Fenl name resolution is context-dependent. The context generally starts
+with the set of user-defined ref:tableservice[tables] and
+ref:viewservice[views]. ref:computeservice_query[Query requests] may
+provide additional name bindings with the `withTables` parameter.
+
+Names may be added to the context with `let` and the `|` operator. Names
+bound in these ways are only visible in the associated subexpressions,
+for example the `in` clause of `let` and the RHS expression of `|`.
+
+Names may be bound more than once. If a name is bound two times, the
+second binding is only visible within the `in` subexpression of the
+second binding.
+
+[source,fenl]
+----
+let current_favorite = "pizza"
+let first_favorite = current_favorite
+let current_favorite = "hot dogs"
+
+in { current_favorite, first_favorite }
+----
+
+In this example, the name `first_favorite` is bound to the value of
+`current_favorite` _at the time it is declared_, then the name
+`current_favorite` is bound to a different value. The value of
+`first_favorite` is unaffected by the re-binding of `current_favorite`.
+
+[source,json]
+----
+{ "current_favorite": "hot dogs", "first_favorite": "pizza"}
+----
+
+== Syntax Design Principles
+
+Fenl was designed with a few key principles in mind. In alphabetic order
+they are:
+
+* *Composable*: Complex behaviors should be possible by composing simple
+operations.
+* *Consistent*: Similar operations should be expressed similarly.
+* *Data Centric*: Fenl focuses on manipulating data. Failures are data
+too.
+* *Deterministic*: Applying the same operations to the same data should
+produce the same results.
+* *Explicit*: Explicit syntax more clearly indicates what is happening
+than implicit behavior. It is easier to add implicit behavior than
+remove confusing implicit behaviors.
+* *Familiar*: All factors being equal, Fenl prefers to be familiar.
+Divergence must have clear benefits and rationale.
+* *Flat*: Flat syntax is easier to read and understand than nested.
+* *Informative*: Fenl strives to inform how to think about defining
+features and guide users to success.
+* *Local*: Reasoning about behavior should be possible with only the
+information "nearby". Generally, expressions should be self-contained.
+* *Safe & Performant*: Features should be safe and performant by
+default.
+* *Simple*: Simple operations should be simple to express. Common
+operations should be simple. Not all conceivable operations are
+necessary.

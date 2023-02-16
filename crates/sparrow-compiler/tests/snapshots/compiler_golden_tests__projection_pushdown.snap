@@ -1,0 +1,249 @@
+---
+source: sparrow-compiler/tests/compiler_golden_tests.rs
+expression: "compile(TestScript {\n            tables: vec![account_sent_table()],\n            feature_set: FeatureSet {\n                formulas: vec![],\n                query: \"{ amount: Sent | first() | $input.amount  }\".to_owned(),\n            },\n        }, None).await"
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sender
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: store
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 1
+        output: false
+        operator:
+          Literal:
+            literal: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments:
+          - 0
+          - 3
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments:
+          - 4
+          - 2
+          - 2
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: first
+      - arguments:
+          - 4
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Instruction: is_valid
+      - arguments:
+          - 0
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Instruction: is_valid
+      - arguments:
+          - 7
+          - 6
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Instruction: if
+      - arguments:
+          - 8
+          - 2
+          - 2
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Instruction: first
+      - arguments:
+          - 9
+          - 5
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: if
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 9
+        output: false
+        operator:
+          Literal:
+            literal:
+              Uint32: 0
+      - arguments:
+          - 7
+          - 2
+          - 2
+        result_type:
+          kind:
+            Primitive: 9
+        output: false
+        operator:
+          Instruction: count_if
+      - arguments:
+          - 12
+          - 11
+        result_type:
+          kind:
+            Primitive: 2
+        output: false
+        operator:
+          Instruction: gt
+      - arguments:
+          - 13
+          - 10
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: if
+      - arguments:
+          - 3
+          - 14
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Instruction: record
+      - arguments:
+          - 15
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 16
+          - 1
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      Scan:
+        table_id:
+          high: 1233317930569911709
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: sender
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: receiver
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: store
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: Sent
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 2
+            column:
+              ProducerExpression: 15
+    operator:
+      Select:
+        input: 0
+        condition:
+          producing_operation: 0
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 17
+primary_grouping: account
+primary_grouping_key_type:
+  kind:
+    Primitive: 10
+

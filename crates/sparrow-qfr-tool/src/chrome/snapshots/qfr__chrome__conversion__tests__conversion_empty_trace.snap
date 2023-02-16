@@ -1,0 +1,18 @@
+---
+source: sparrow-qfr-tool/src/chrome/conversion.rs
+expression: trace
+
+---
+{
+  "traceEvents": [],
+  "metadata": {
+    "request_id": "request_id",
+    "build_info": {
+      "sparrow_version": "sparrow_version",
+      "compiler_version": "compiler_version",
+      "build_timestamp": "build_timestamp",
+      "build_profile": "build_profile",
+      "version_control": "version_control"
+    }
+  }
+}

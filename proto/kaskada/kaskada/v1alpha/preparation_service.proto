@@ -1,0 +1,53 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+import "kaskada/kaskada/v1alpha/common.proto";
+
+message PrepareDataRequest {
+  // The source of information for the prepare data
+  //
+  // Note: Version 1 - Allow only 1 file
+  FilePath file_path = 1;
+
+  // General configuration of the table
+  TableConfig config = 2;
+
+  // Prefix path for the output file(s).
+  string output_path_prefix = 3;
+
+  // Prefix for each output file(s).
+  //
+  // The full local path of the file will be <prefix_output_path>/<file_prefix>-#.parquet
+  // TODO: Seems like we could merge the `output_path_prefix` and `file_prefix`.
+  string file_prefix = 4;
+
+  // The slicing plan provided from the analysis
+  //
+  // If no slice plan is provided, then the full file is prepared.
+  SlicePlan slice_plan = 5;
+}
+
+message PrepareDataResponse {
+  // The preparation ID of the prepare data response
+  //
+  // Note: As more data preparation states are added, the preparation ID allows us to keep track and re-process as needed.
+  int32 prep_id = 1;
+
+  // The prepared files after processing
+  //
+  // A single source file may produce multiple prepared files.
+  repeated PreparedFile prepared_files = 2;
+}
+
+message GetCurrentPrepIDRequest {}
+message GetCurrentPrepIDResponse {
+  // The current preparation ID of the data preparation
+  int32 prep_id = 1;
+}
+
+service PreparationService {
+  // Prepares the data from source files
+  rpc PrepareData(PrepareDataRequest) returns (PrepareDataResponse);
+  // Returns the current preparation ID of the preparation (currently hard coded)
+  rpc GetCurrentPrepID(GetCurrentPrepIDRequest) returns (GetCurrentPrepIDResponse);
+}

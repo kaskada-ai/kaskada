@@ -1,0 +1,149 @@
+---
+source: sparrow-qfr-tool/src/chrome/conversion.rs
+expression: trace
+---
+{
+  "traceEvents": [
+    {
+      "name": "process_name",
+      "ph": "M",
+      "args": {
+        "name": "Pass 0"
+      },
+      "ts": 0,
+      "pid": 0,
+      "tid": 0
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "args": {
+        "name": "Merger"
+      },
+      "ts": 0,
+      "pid": 0,
+      "tid": 0
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "args": {
+        "name": "Executor"
+      },
+      "ts": 0,
+      "pid": 0,
+      "tid": 1
+    },
+    {
+      "name": "sum inst",
+      "ph": "X",
+      "dur": 700,
+      "tdur": 650,
+      "sf": 9,
+      "ts": 1100,
+      "pid": 0,
+      "tid": 1
+    },
+    {
+      "name": "first inst",
+      "ph": "X",
+      "dur": 680,
+      "tdur": 600,
+      "sf": 10,
+      "ts": 1810,
+      "pid": 0,
+      "tid": 1
+    },
+    {
+      "name": "input_rows",
+      "ph": "C",
+      "args": {
+        "num_rows": 5000
+      },
+      "ts": 1000,
+      "pid": 0,
+      "tid": 1
+    },
+    {
+      "name": "cumulative_entity_count",
+      "ph": "C",
+      "args": {
+        "entities": 4000
+      },
+      "ts": 1000,
+      "pid": 0,
+      "tid": 1
+    },
+    {
+      "name": "Executor",
+      "ph": "X",
+      "dur": 1500,
+      "tdur": 1400,
+      "sf": 8,
+      "args": {
+        "num_input_rows": 5000,
+        "cumulative_entities": 4000,
+        "cause": "input"
+      },
+      "ts": 1000,
+      "pid": 0,
+      "tid": 1
+    }
+  ],
+  "stackFrames": {
+    "1": {
+      "category": "",
+      "name": "Start"
+    },
+    "2": {
+      "category": "",
+      "name": "Finish"
+    },
+    "3": {
+      "category": "MERGE",
+      "name": "Receive Input"
+    },
+    "4": {
+      "category": "MERGE",
+      "name": "Gather Batches",
+      "parent": 3
+    },
+    "5": {
+      "category": "MERGE",
+      "name": "Merge Inputs",
+      "parent": 3
+    },
+    "6": {
+      "category": "",
+      "name": "Start"
+    },
+    "7": {
+      "category": "",
+      "name": "Finish"
+    },
+    "8": {
+      "category": "EXEC",
+      "name": "Executor"
+    },
+    "9": {
+      "category": "INST",
+      "name": "sum inst",
+      "parent": 8
+    },
+    "10": {
+      "category": "INST",
+      "name": "first inst",
+      "parent": 8
+    }
+  },
+  "metadata": {
+    "request_id": "request_id",
+    "build_info": {
+      "sparrow_version": "sparrow_version",
+      "compiler_version": "compiler_version",
+      "build_timestamp": "build_timestamp",
+      "build_profile": "build_profile",
+      "version_control": "version_control"
+    }
+  }
+}

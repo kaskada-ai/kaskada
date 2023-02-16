@@ -1,0 +1,50 @@
+[package]
+name = "sparrow-catalog"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Executable for generating the Sparrow Catalog.
+"""
+
+[dependencies]
+arrow.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
+fallible-iterator.workspace = true
+futures.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+logos.workspace = true
+parquet.workspace = true
+prettytable-rs.workspace = true
+prost-wkt-types.workspace = true
+serde.workspace = true
+similar.workspace = true
+static_init.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-compiler = { path = "../sparrow-compiler" }
+sparrow-core = { path = "../sparrow-core" }
+sparrow-main = { path = "../sparrow-main" }
+sparrow-syntax = { path = "../sparrow-syntax" }
+sparrow-qfr = { path = "../sparrow-qfr" }
+sparrow-runtime = { path = "../sparrow-runtime" }
+tempfile.workspace = true
+tera.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+sparrow-testing = { path = "../sparrow-testing" }
+
+[[bin]]
+name = "sparrow-catalog"
+doctest = false
+path = "src/catalog.rs"

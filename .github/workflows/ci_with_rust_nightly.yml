@@ -1,0 +1,115 @@
+# We should abstract yml code in this file and the normal Rust CI,
+#   - see https://docs.github.com/en/actions/using-workflows/reusing-workflows
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "22 22 * * *" # run daily at 22:22 UTC
+
+name: Nightly Rust CI
+
+permissions:
+  actions: write
+  # Used by clippy action to report lint errors.
+  checks: write
+  contents: read
+
+jobs:
+  rust_check:
+    name: Nightly Rust Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      # TODO: Cache the toolchain?
+      - name: Nightly Install nightly toolchain
+        id: toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          default: true
+          override: true
+          components: clippy
+
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler lld
+          version: 1.0
+
+      # For caching, we use a special `rust-cache` action, which ensures we
+      # cache based on the architecture, and also deletes stuff that shouldn't
+      # be put in the cache (such as the toolchain).
+      #
+      # See
+      # https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Caching.
+      #
+      # This currently saves the cache on each branch. This may exceed GitHub's
+      # cache size limit. If we start hitting that, we could choose to only
+      # cache the `main` branch, which would provide caching for cases where the
+      # dependencies of crates haven't changed. See
+      # https://github.com/Swatinem/rust-cache/issues/95.
+      - name: Nightly Cache Rust Dependencies
+        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        with:
+          # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
+          cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
+
+      - name: Nightly Run cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+      - name: Nightly Cargo Test (Compile)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-run --locked
+
+      - name: Nightly Cargo Test (Run)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --nocapture --quiet
+
+      - name: Nightly Cargo Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: Nightly Cargo Clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # The `lib.rs` or `bin.rs` files for each create *should* specify the same
+          # flags to ensure vscode, etc. reports warnings. But, specifying them in the
+          # CI protects against cases where we forgot to do that.
+          args: >
+            -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
+            -Dclippy::mod_module_files
+            -Dclippy::print-stdout
+            -Dclippy::print-stderr
+            -Dclippy::undocumented-unsafe-blocks
+
+  rust_format:
+    name: Nightly Rust Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nightly Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Nightly Install stable toolchain
+        id: toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          default: true
+          components: rustfmt
+
+      - name: Nightly Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check

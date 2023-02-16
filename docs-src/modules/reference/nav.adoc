@@ -1,0 +1,11 @@
+* Reference 
+*** xref:client-authentication.adoc[Client Authentication]
+*** xref:client-credentials.adoc[Client Credentials]
+*** xref:client-installation.adoc[Client Installation] 
+*** xref:expected-file-format.adoc[Expected File Format]
+*** xref:tables.adoc[Working with Tables]
+*** xref:views.adoc[Working with Views] 
+*** xref:writing-queries.adoc[Writing Queries] 
+*** xref:example-queries.adoc[Examples Queries]
+*** xref:working-with-materializations.adoc[Working with Materializations] 
+*** xref:working-with-slices.adoc[Working with Slices] 

@@ -1,0 +1,78 @@
+[package]
+name = "sparrow-runtime"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+The Sparrow runtime used for executing Sparrow plans.
+"""
+
+[dependencies]
+ahash.workspace = true
+anyhow.workspace = true
+arrow.workspace = true
+async-once-cell.workspace = true
+async-stream.workspace = true
+async-trait.workspace = true
+aws-config.workspace = true
+aws-sdk-s3.workspace = true
+aws-types.workspace = true
+bit-set.workspace = true
+bitvec.workspace = true
+chrono.workspace = true
+clap.workspace = true
+data-encoding.workspace = true
+derive_more.workspace = true
+enum-map.workspace = true
+erased-serde.workspace = true
+error-stack.workspace = true
+fallible-iterator.workspace = true
+futures.workspace = true
+half.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+num-traits.workspace = true
+owning_ref.workspace = true
+parquet.workspace = true
+pin-project.workspace = true
+prost-wkt-types.workspace = true
+serde.workspace = true
+sha2.workspace = true
+smallvec.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-compiler = { path = "../sparrow-compiler" }
+sparrow-core = { path = "../sparrow-core" }
+sparrow-instructions = { path = "../sparrow-instructions" }
+sparrow-kernels = { path = "../sparrow-kernels" }
+sparrow-plan = { path = "../sparrow-plan" }
+sparrow-qfr = { path = "../sparrow-qfr" }
+sparrow-syntax = { path = "../sparrow-syntax" }
+static_init.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+insta.workspace = true
+proptest.workspace = true
+rand.workspace = true
+serde_json.workspace = true
+postcard.workspace = true
+sparrow-testing = { path = "../sparrow-testing" }
+tempfile.workspace = true
+
+[lib]
+bench = false
+doctest = false
+
+[[bench]]
+name = "main"
+harness = false

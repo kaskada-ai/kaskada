@@ -1,0 +1,74 @@
+---
+source: crates/sparrow-main/src/main.rs
+expression: output
+---
+Run Sparrow in batch-mode on a specific script
+
+Usage: sparrow-main batch [OPTIONS] <SCRIPT> <OUTPUT_DIR>
+
+Arguments:
+  <SCRIPT>
+          Input file containing the script to run
+
+  <OUTPUT_DIR>
+          Output directory to write the output to
+
+Options:
+      --store-initial-dfg <STORE_INITIAL_DFG>
+          Path to store a copy of the pre-optimization DFG to. Defaults to not storing anything
+
+      --store-final-dfg <STORE_FINAL_DFG>
+          Path to store a copy of the post-optimization DFG to. Defaults to not storing anything
+
+      --store-plan-graph <STORE_PLAN_GRAPH>
+          Path to store a copy of the query plan to as a `dot` file. Defaults to not storing a plan
+
+      --store-plan-yaml <STORE_PLAN_YAML>
+          Path to store a copy of the query plan to as a `yaml` file. Defaults to not storing a plan
+
+      --simplifier-iteration-limit <SIMPLIFIER_ITERATION_LIMIT>
+          Maximum number of iterations of the simplifier to run.
+          
+          NOTE: The environment variable won't affect the default values.
+          
+          [env: SPARROW_SIMPLIFIER_ITERATION_LIMIT=]
+          [default: 30]
+
+      --simplifier-node-limit <SIMPLIFIER_NODE_LIMIT>
+          Maximum number of nodes during simplifier execution.
+          
+          NOTE: The environment variable won't affect the default values.
+          
+          [env: SPARROW_SIMPLIFIER_NODE_LIMIT=]
+          [default: 10000]
+
+      --simplifier-time-limit-seconds <SIMPLIFIER_TIME_LIMIT_SECONDS>
+          Maximum amount of time to run the simplifier before ending early.
+          
+          NOTE: The environment variable won't affect the default values.
+          
+          [env: SPARROW_SIMPLIFIER_TIME_LIMIT_SECONDS=]
+          [default: 5]
+
+      --experimental
+          Whether experimental behaviors should be enabled
+
+      --preview-rows <PREVIEW_ROWS>
+          Produces a preview of the data with at least this many rows.
+          
+          Default value (0) indicates all rows should be produced.
+          
+          [default: 0]
+
+      --flight-record-path <FLIGHT_RECORD_PATH>
+          Path to store the Query Flight Record to. Defaults to not storing anything
+
+      --compile-only
+          Only compile (and output the plan/etc. if requested)
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+

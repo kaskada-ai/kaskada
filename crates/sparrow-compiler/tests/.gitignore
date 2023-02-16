@@ -1,0 +1,3 @@
+test-output
+snapshots/*.snap.new
+*.pending-snap

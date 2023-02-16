@@ -1,0 +1,59 @@
+name = 'hash'
+signature = 'hash(input: key) -> u64'
+short_doc = 'Returns the hash of the `input`.'
+long_doc = '''
+### Parameters
+* input: The argument to hash.
+
+### Results
+Returns a `u64` column which contains the hash of the `input`.
+
+Note: Unlike many functions which return `null` if any of
+their arguments are `null`, `hash` will never return
+`null`.
+'''
+tags = ['misc']
+
+[[examples]]
+name = 'String Hash'
+expression = 'hash(Input.value)'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,hello
+2021-01-01T00:00:00.000000000Z,Ryan,
+2021-01-02T00:00:00.000000000Z,Ryan,world
+2021-01-03T00:00:00.000000000Z,Ben,hi
+2021-01-04T00:00:00.000000000Z,Ben,
+2021-01-04T00:00:00.000000000Z,Ryan,earth
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,hello,13572866306152653102
+2021-01-01T00:00:00.000000000Z,Ryan,,8429509363638065888
+2021-01-02T00:00:00.000000000Z,Ryan,world,16979493163667785006
+2021-01-03T00:00:00.000000000Z,Ben,hi,16532275944129373820
+2021-01-04T00:00:00.000000000Z,Ben,,8429509363638065888
+2021-01-04T00:00:00.000000000Z,Ryan,earth,9400903662585293146
+'''
+
+[[examples]]
+name = 'Integer Hash'
+expression = 'hash(Input.value)'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,5
+2021-01-01T00:00:00.000000000Z,Ryan,8
+2021-01-02T00:00:00.000000000Z,Ryan,9
+2021-01-03T00:00:00.000000000Z,Ben,8
+2021-01-04T00:00:00.000000000Z,Ben,
+2021-01-04T00:00:00.000000000Z,Ryan,9
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,5,10021492687541564645
+2021-01-01T00:00:00.000000000Z,Ryan,8,4864632034659211723
+2021-01-02T00:00:00.000000000Z,Ryan,9,2122274938272070218
+2021-01-03T00:00:00.000000000Z,Ben,8,4864632034659211723
+2021-01-04T00:00:00.000000000Z,Ben,,11832085162654999889
+2021-01-04T00:00:00.000000000Z,Ryan,9,2122274938272070218
+'''

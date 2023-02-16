@@ -1,0 +1,11 @@
+id,purchase_time,customer_id,vendor_id,amount,subsort_id
+cb_001,2020-01-01T00:00:00.000000000+00:00,karen,chum_bucket,9,0
+cb_002,2020-01-02T00:00:00.000000000+00:00,karen,chum_bucket,2,1
+cb_003,2020-01-03T00:00:00.000000000+00:00,karen,chum_bucket,4,2
+cb_004,2020-01-04T00:00:00.000000000+00:00,patrick,chum_bucket,5000,3
+cb_005,2020-01-04T00:00:00.000000000+00:00,karen,chum_bucket,3,4
+cb_006,2020-01-05T00:00:00.000000000+00:00,karen,chum_bucket,5,5
+kk_001,2020-01-01T00:00:00.000000000+00:00,patrick,krusty_krab,3,6
+kk_002,2020-01-02T00:00:00.000000000+00:00,patrick,krusty_krab,5,7
+kk_003,2020-01-03T00:00:00.000000000+00:00,patrick,krusty_krab,12,8
+kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9

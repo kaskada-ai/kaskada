@@ -1,0 +1,41 @@
+name = 'select_fields'
+signature = 'select_fields(record, fields: string+) -> record'
+short_doc = 'Limits fields in a record to a given set.'
+long_doc = '''
+Note: If more fields are being selected than removed, you can use
+[`remove_fields`](#remove_fields).
+
+### Parameters
+* record: The record column containing the fields.
+* fields: The name of one or more fields to select from the record.
+
+Note: Since this is a variable arity function, the `$input` will not
+be implicitly provided. If you wish to use `select_fields` with pipe
+syntax you must be explicit, as in the example.
+
+### Results
+Returns a column containing the record fields listed in `fields` with
+the corresponding values from `record`. The result is `null` in rows
+where `record` is `null`.
+'''
+tags = ['record']
+
+[[examples]]
+name = 'Record Field Selection'
+full_expression = '''
+Input | select_fields($input, 'key', 'a', 'b')
+'''
+input_csv = '''
+time,key,a,b,c
+2021-01-01T00:00:00.000000000Z,A,5,1.2,true
+2021-01-02T00:00:00.000000000Z,A,6.3,0.4,false
+2021-03-01T00:00:00.000000000Z,B,,3.7,true
+2021-04-10T00:00:00.000000000Z,A,13,,true
+'''
+output_csv = '''
+key,a,b
+A,5.0,1.2
+A,6.3,0.4
+B,,3.7
+A,13.0,
+'''

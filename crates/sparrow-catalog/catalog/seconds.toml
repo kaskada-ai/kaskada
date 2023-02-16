@@ -1,0 +1,38 @@
+name = 'seconds'
+signature = 'seconds(seconds: i64) -> duration_s'
+short_doc = 'Produces a duration corresponding to the given number of seconds.'
+long_doc = '''
+### Parameters
+* seconds: The number of seconds to create the duration for.
+
+### Results
+Returns a `duration_s` column with each row containing the
+value of `seconds` converted to the corresponding duration.
+Rows where `seconds` is `null` will be `null`.
+'''
+tags = ['time']
+
+[[examples]]
+description = '''
+This example uses [`add_time`](#add-time) to add the created
+duration to the `time` column.
+'''
+expression = 'Input.time | add_time(seconds(Input.n))'
+input_csv = '''
+time,key,n
+1996-03-21T00:00:00-00:00,Ben,1
+1996-04-21T00:00:00-00:00,Ryan,2
+1996-05-21T00:00:00-00:00,Ryan,3
+1996-06-21T00:00:00-00:00,Ryan,
+1996-07-21T00:00:00-00:00,Ben,2
+1996-08-21T00:00:00-00:00,Ben,1
+'''
+output_csv = '''
+time,key,n,result
+1996-03-21T00:00:00-00:00,Ben,1,1996-03-21T00:00:01.000000000
+1996-04-21T00:00:00-00:00,Ryan,2,1996-04-21T00:00:02.000000000
+1996-05-21T00:00:00-00:00,Ryan,3,1996-05-21T00:00:03.000000000
+1996-06-21T00:00:00-00:00,Ryan,,
+1996-07-21T00:00:00-00:00,Ben,2,1996-07-21T00:00:02.000000000
+1996-08-21T00:00:00-00:00,Ben,1,1996-08-21T00:00:01.000000000
+'''

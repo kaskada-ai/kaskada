@@ -1,0 +1,29 @@
+---
+source: crates/sparrow-main/src/serve/compute_service.rs
+expression: result
+---
+- state: 2
+  is_query_done: true
+  progress:
+    total_input_rows: 50231
+    processed_input_rows: 50231
+    buffered_rows: 0
+    processed_buffered_rows: 0
+    min_event_time: 0
+    max_event_time: 0
+    output_time: 0
+    produced_output_rows: 50231
+  output_paths:
+    paths:
+      - "<redacted_output_path>"
+  flight_record_path: ~
+  plan_yaml_path: ~
+  compute_snapshots: []
+- state: 3
+  is_query_done: true
+  progress: ~
+  output_paths: ~
+  flight_record_path: ~
+  plan_yaml_path: ~
+  compute_snapshots: []
+

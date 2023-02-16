@@ -1,0 +1,6 @@
+id,purchase_time,customer_id,vendor_id,amount,subsort_id
+kk_005,2020-01-06T00:00:00.000000000+00:00,patrick,krusty_krab,2,0
+wh_001,2020-01-06T00:00:00.000000000+00:00,spongebob,weenie_hut,7,1
+cb_007,2020-01-07T00:00:00.000000000+00:00,spongebob,chum_bucket,34,2
+wh_002,2020-01-08T00:00:00.000000000+00:00,karen,weenie_hut,8,3
+kk_006,2020-01-08T00:00:00.000000000+00:00,patrick,krusty_krab,9,4

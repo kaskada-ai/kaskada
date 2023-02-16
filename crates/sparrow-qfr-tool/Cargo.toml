@@ -1,0 +1,37 @@
+[package]
+name = "sparrow-qfr-tool"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Query Flight Recorder for Sparrow queries.
+"""
+
+[dependencies]
+anyhow.workspace = true
+cpu-time.workspace = true
+fallible-iterator.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+smallvec.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-compiler = { path = "../sparrow-compiler" }
+sparrow-plan = { path = "../sparrow-plan" }
+sparrow-qfr = { path = "../sparrow-qfr" }
+sparrow-syntax = { path = "../sparrow-syntax" }
+tracing.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+sparrow-core = { path = "../sparrow-core" }
+tempfile.workspace = true
+
+[[bin]]
+name = "qfr"
+doctest = false
+path = "src/main.rs"
