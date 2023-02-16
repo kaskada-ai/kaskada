@@ -133,7 +133,6 @@ def convert_fenl_datatype(data_type):
         str: The string representation of the fenl DataType
     """
     type_string = None
-    kaskada_fenl_primitive_types = {}
     if data_type.HasField("primitive"):
         type_string = kaskada_fenl_primitive_types.get(data_type.primitive, "<unknown>")
     elif data_type.HasField("struct"):
@@ -163,7 +162,8 @@ def get_schema_dataframe(obj):
     fields = {}
     for idx, field in enumerate(obj.fields):
         name, typeString = convert_fenl_schema_field(field)
-        fields[idx] = [name, typeString]
+        if len(name) > 0:
+            fields[idx] = [name, typeString]
     return pandas.DataFrame.from_dict(
         data=fields, orient="index", columns=["column_name", "column_type"]
     )

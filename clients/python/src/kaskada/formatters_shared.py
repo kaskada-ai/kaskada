@@ -9,7 +9,6 @@ import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
 from .formatters_helpers import (
     appendChildren,
     appendHtmlObjTableRowIfAttrExists,
-    appendHtmlObjTableRowIfHasField,
     convert_fenl_datatype,
     get_datetime,
     get_properties,
