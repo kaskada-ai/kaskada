@@ -159,6 +159,14 @@ pub struct ThreadSafeKeyHashInverse {
     pub key_type: DataType,
 }
 
+impl std::fmt::Debug for ThreadSafeKeyHashInverse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ThreadSafeKeyHashInverse")
+            .field("key_type", &self.key_type)
+            .finish()
+    }
+}
+
 impl ThreadSafeKeyHashInverse {
     /// The thread safe key hash inverse is a wrapper around the key hash
     /// inverse that does the book keeping on the concurrent reads and uses

@@ -16,6 +16,7 @@ use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
 use crate::Batch;
 
+#[derive(Debug)]
 pub(super) struct SelectOperation {
     condition_input_column: usize,
     /// The input stream of batches.

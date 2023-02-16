@@ -34,6 +34,7 @@ mod tick;
 mod tick_producer;
 mod with_key;
 
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -50,6 +51,7 @@ use sparrow_compiler::DataContext;
 use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use tokio::task::JoinHandle;
+use tokio::time::Instant;
 use tracing::Instrument;
 
 use self::final_tick::FinalTickOperation;
@@ -103,7 +105,7 @@ impl OperationContext {
 /// Each operation may define how they send the next input batch.
 /// This also allows operations to store internal state.
 #[async_trait]
-trait Operation: Send {
+trait Operation: Send + Debug {
     fn restore_from(
         &mut self,
         operation_index: u8,
@@ -228,7 +230,11 @@ impl OperationExecutor {
 
             let operation_handle: JoinHandle<error_stack::Result<_, Error>> = tokio::spawn(
                 async move {
+                    tracing::debug!("Begin operation {:?}", operation);
+                    let start = Instant::now();
                     operation.execute(send).await?;
+                    let elapsed = start.elapsed();
+                    tracing::debug!("End operation after {:?}: {:?}", elapsed, operation);
                     Ok(operation)
                 }
                 .in_current_span(),

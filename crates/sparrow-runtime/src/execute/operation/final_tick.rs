@@ -56,6 +56,15 @@ pub(super) struct FinalTickOperation {
     current_time: i64,
 }
 
+impl std::fmt::Debug for FinalTickOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FinalTickOperation")
+            .field("key_hashes", &self.key_hashes)
+            .field("current_time", &self.current_time)
+            .finish()
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct FinalTickOperationState {
     current_time: i64,
