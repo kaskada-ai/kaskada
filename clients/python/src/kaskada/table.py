@@ -1,3 +1,5 @@
+import logging
+import sys
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -8,6 +10,9 @@ import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 from kaskada.client import Client, get_client
 from kaskada.utils import handleException, handleGrpcError
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_table_name(
@@ -62,6 +67,7 @@ def list_tables(
         req = table_pb.ListTablesRequest(
             search=search,
         )
+        logger.debug(f"List Tables Request: {req}")
         return client.table_stub.ListTables(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -89,6 +95,7 @@ def get_table(
         table_name = get_table_name(table)
         client = get_client(client)
         req = table_pb.GetTableRequest(table_name=table_name)
+        logger.debug(f"Get Tables Request: {req}")
         return client.table_stub.GetTable(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -138,6 +145,7 @@ def create_table(
                 value=subsort_column_name
             )
         req = table_pb.CreateTableRequest(table=table_pb.Table(**table_args))
+        logger.debug(f"Create Tables Request: {req}")
         return client.table_stub.CreateTable(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -167,6 +175,7 @@ def delete_table(
         table_name = get_table_name(table)
         client = get_client(client)
         req = table_pb.DeleteTableRequest(table_name=table_name, force=force)
+        logger.debug(f"Delete Tables Request: {req}")
         return client.table_stub.DeleteTable(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -208,6 +217,7 @@ def load(
             uri=f"file://{path}",
         )
         req = table_pb.LoadDataRequest(table_name=table_name, file_input=input)
+        logger.debug(f"Load Tables Request: {req}")
         return client.table_stub.LoadData(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)

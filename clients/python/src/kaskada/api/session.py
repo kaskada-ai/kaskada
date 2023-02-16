@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 import time
 import uuid
 from abc import ABC
@@ -8,6 +10,9 @@ from typing import Optional
 
 import kaskada.client
 from kaskada.api import api_utils, release
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Session:
@@ -30,22 +35,24 @@ class Session:
 
     def __del__(self):
         if self._api_process is not None:
-            print("Stopping API server")
+            logger.info("Stopping Kaskada Manager server")
             self._api_process.kill()
 
         if self._compute_process is not None:
-            print("Stopping Compute server")
+            logger.info("Stopping Kaskada Engine server")
             self._compute_process.kill()
 
     def connect(self):
         attempt = 0
         is_valid_session = False
         while attempt < 3 and not is_valid_session:
-            # Sleep with exponential backoff
-            time.sleep(1.5**attempt)
+            logger.debug(f"Attempting (try #{attempt}) to connect to {self._endpoint}")
             if api_utils.check_socket(self._endpoint):
+                logger.info(f"Successfully connected to session.")
                 is_valid_session = True
             attempt += 1
+            # Sleep with exponential backoff
+            time.sleep(1.5**attempt)
         if is_valid_session == False:
             raise ConnectionError(
                 "unable to connect to API or Compute engine after {} attempts".format(
@@ -165,10 +172,14 @@ class LocalBuilder(Builder):
 
         # TODO: Verify the logging output (stdout/stderr)
         api_cmd = "{} > {} 2>&1".format(api_binary_path, api_log_path)
+        logger.debug(f"Manager start command: {api_cmd}")
         compute_cmd = "{} {} > {} 2>&1".format(
             compute_binary_path, compute_params, compute_log_path
         )
+        logger.debug(f"Compute start command: {compute_cmd}")
+        logger.info("Initializing manager process")
         api_process = api_utils.run_subprocess(api_cmd)
+        logger.info("Initializing compute process")
         compute_process = api_utils.run_subprocess(compute_cmd)
         return (api_process, compute_process)
 
@@ -182,6 +193,9 @@ class LocalBuilder(Builder):
             self.KASKADA_MANAGER_BIN_NAME_DEFAULT,
             self.KASKADA_ENGINE_BIN_NAME_DEFAULT,
         )
+        logger.debug(f"Download Path: {local_release._download_path}")
+        logger.debug(f"Manager Path: {local_release._manager_path}")
+        logger.debug(f"Engine Path: {local_release._manager_path}")
         # Update the binary path to the path downloaded and saved to by the latest release downloader.
         self.bin_path(
             local_release._download_path.absolute().relative_to(

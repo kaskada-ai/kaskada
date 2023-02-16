@@ -1,13 +1,17 @@
 import functools
+import logging
 import os
 import shutil
+import sys
 from pathlib import Path
-from typing import Tuple
 
 import requests
 from github import Github
 
 import kaskada.api.api_utils
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class LocalRelease(object):
@@ -54,17 +58,21 @@ class ReleaseClient(object):
             Tuple[str, str]: manager path and engine path
         """
         manager_name = f"kaskada-manager-{self._platform_details}"
+        logger.debug(f"Looking for manager binary name: {manager_name}")
         engine_name = f"kaskada-engine-{self._platform_details}"
+        logger.debug(f"Looking for engine binary name: {engine_name}")
         session = requests.Session()
         access_token = os.getenv(self.GITHUB_ACCESS_TOKEN_ENV)
         if access_token is not None:
+            logger.debug("Access token set. Using Github Access token.")
             session.headers["Authorization"] = f"token {access_token}"
 
         repo = self._github.get_repo(f"{self.ORGANIZATION}/{self.REPO_NAME}")
         latest_release = repo.get_latest_release()
-        print(f"Using latest release version: {latest_release.tag_name}")
+        logger.info(f"Using latest release version: {latest_release.tag_name}")
         download_path = download_path / latest_release.tag_name
         download_path.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Download path: {download_path}")
         assets = latest_release.get_assets()
 
         manager_path, engine_path = (None, None)
@@ -116,9 +124,12 @@ class ReleaseClient(object):
         Returns:
             Path: The local download path
         """
+        logger.debug(
+            f"Downloading: {url} to {download_path}. Content Size: {file_size}"
+        )
         # A naive cache hit algorithm where a hit is if the file exists and is the same size as the asset.
         if download_path.exists() and download_path.stat().st_size == file_size:
-            print(f"Skipping download. Using binary: {download_path}")
+            logger.info(f"Skipping download. Using binary: {download_path}")
             return download_path
         # Request header to get the binary
         r.headers["Accept"] = "application/octet-stream"
@@ -145,4 +156,5 @@ class ReleaseClient(object):
                 "wb"
             ) as f:  # Start downloading the raw response as the binary
                 shutil.copyfileobj(r_raw, f)
+        logger.debug(f"Successfully downloaded to: {download_path}")
         return download_path
