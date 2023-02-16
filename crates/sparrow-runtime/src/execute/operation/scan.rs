@@ -245,7 +245,7 @@ mod tests {
     use std::default::Default;
     use std::sync::Arc;
 
-    use arrow::array::{StringArray, TimestampNanosecondArray, UInt64Array};
+    use arrow::array::{Int64Array, StringArray, TimestampNanosecondArray, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
     use futures::StreamExt;
@@ -437,7 +437,7 @@ mod tests {
     // TODO: This testing helper is copied from `table_reader.rs`
     // Should try to refactor into a shareable place.
     fn mk_file(
-        rows: &[(i64, u64, u64, &'static str, &'static str)],
+        rows: &[(i64, i64, u64, &'static str, &'static str)],
     ) -> (tempfile::TempPath, PreparedFile) {
         let (batch, metadata) = mk_batch(rows);
 
@@ -462,12 +462,12 @@ mod tests {
     }
 
     fn mk_batch(
-        rows: &[(i64, u64, u64, &'static str, &'static str)],
+        rows: &[(i64, i64, u64, &'static str, &'static str)],
     ) -> (RecordBatch, RecordBatch) {
         let times = Arc::new(TimestampNanosecondArray::from_iter_values(
             rows.iter().map(|tuple| tuple.0),
         ));
-        let subsort = Arc::new(UInt64Array::from_iter_values(
+        let subsort = Arc::new(Int64Array::from_iter_values(
             rows.iter().map(|tuple| tuple.1),
         ));
         let key_hash = Arc::new(UInt64Array::from_iter_values(

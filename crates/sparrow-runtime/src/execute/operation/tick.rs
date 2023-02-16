@@ -262,12 +262,12 @@ impl TickOperation {
             // Update the bounds
             let new_lower_bound = KeyTriple {
                 time: incoming.upper_bound.time,
-                subsort: u64::MIN,
+                subsort: i64::MIN,
                 key_hash: u64::MIN,
             };
             let new_upper_bound = KeyTriple {
                 time: incoming.upper_bound.time,
-                subsort: u64::MIN,
+                subsort: i64::MIN,
                 key_hash: u64::MIN,
             };
 
@@ -322,12 +322,12 @@ impl TickOperation {
             // the minimum subsort and time to ensure the next batch isn't out of order.
             let lower_bound = KeyTriple {
                 time: incoming.upper_bound.time,
-                subsort: u64::MIN,
+                subsort: i64::MIN,
                 key_hash: u64::MIN,
             };
             let upper_bound = KeyTriple {
                 time: incoming.upper_bound.time,
-                subsort: u64::MIN,
+                subsort: i64::MIN,
                 key_hash: u64::MIN,
             };
 
@@ -450,12 +450,12 @@ async fn send_tick_batch(
         // The tick batches only occur at one time, so the bounds are at that time.
         let lower_bound = KeyTriple {
             time: tick.timestamp_nanos(),
-            subsort: u64::MAX,
+            subsort: i64::MAX,
             key_hash: first_key,
         };
         let upper_bound = KeyTriple {
             time: tick.timestamp_nanos(),
-            subsort: u64::MAX,
+            subsort: i64::MAX,
             key_hash: last_key,
         };
 

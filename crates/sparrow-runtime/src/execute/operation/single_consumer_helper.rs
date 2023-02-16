@@ -1,4 +1,4 @@
-use arrow::array::{ArrayRef, TimestampNanosecondArray, UInt64Array};
+use arrow::array::{ArrayRef, Int64Array, TimestampNanosecondArray, UInt64Array};
 use itertools::Itertools;
 use sparrow_core::{downcast_primitive_array, KeyTriple};
 use sparrow_instructions::ComputeStore;
@@ -167,7 +167,7 @@ fn bounds(
     anyhow::ensure!(time.len() > 0);
 
     let time: &TimestampNanosecondArray = downcast_primitive_array(time.as_ref())?;
-    let subsort: &UInt64Array = downcast_primitive_array(subsort.as_ref())?;
+    let subsort: &Int64Array = downcast_primitive_array(subsort.as_ref())?;
     let key_hash: &UInt64Array = downcast_primitive_array(key_hash.as_ref())?;
 
     let last = time.len() - 1;

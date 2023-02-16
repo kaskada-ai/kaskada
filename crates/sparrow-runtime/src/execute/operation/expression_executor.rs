@@ -352,7 +352,7 @@ static KEY_FIELDS: [Field; 3] = [
         DataType::Timestamp(TimeUnit::Nanosecond, None),
         false,
     ),
-    Field::new("_subsort", DataType::UInt64, false),
+    Field::new("_subsort", DataType::Int64, false),
     Field::new("_key_hash", DataType::UInt64, false),
 ];
 

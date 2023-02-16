@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::array::{
-    Array, ArrayBuilder, ArrayData, ArrayRef, Int32BufferBuilder, ListArray,
+    Array, ArrayBuilder, ArrayData, ArrayRef, Int32BufferBuilder, Int64Array, ListArray,
     TimestampNanosecondArray, UInt32Array, UInt64Array,
 };
 use arrow::buffer::Buffer;
@@ -154,7 +154,7 @@ impl LookupRequestOperation {
         // batch. We do this at the same time as creating the foreign `time,
         // subsort, key_hash` columns.
         let time: &TimestampNanosecondArray = downcast_primitive_array(input.column(0).as_ref())?;
-        let subsort: &UInt64Array = downcast_primitive_array(input.column(1).as_ref())?;
+        let subsort: &Int64Array = downcast_primitive_array(input.column(1).as_ref())?;
 
         // TODO: Lookup Optimization
         // Rather than eagerly applying `take` on the foreign key hash which
@@ -165,7 +165,7 @@ impl LookupRequestOperation {
 
         let mut offset_builder = Int32BufferBuilder::new(512);
         let mut foreign_time_builder = TimestampNanosecondArray::builder(512);
-        let mut foreign_subsort_builder = UInt64Array::builder(512);
+        let mut foreign_subsort_builder = Int64Array::builder(512);
         let mut foreign_key_hash_builder = UInt64Array::builder(512);
 
         let mut prev_time = time.value(0);

@@ -51,6 +51,7 @@ pub fn prepared_batches(
             reader_from_csv(config, reader, prepare_hash, slice)?
         }
         file_path::Path::CsvData(content) => {
+            println!("FRAZ CONTENT: {:?}", content.to_string());
             let content = Cursor::new(content.to_string());
             let reader = BufReader::new(content);
             reader_from_csv(config, reader, prepare_hash, slice)?
@@ -202,7 +203,7 @@ fn write_batch(
     Ok(())
 }
 
-fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
+fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<i64, Error> {
     let hex_encoding = match path {
         file_path::Path::ParquetPath(source) => {
             let file = open_file(source)?;
@@ -232,13 +233,13 @@ fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
             data_encoding::HEXUPPER.encode(&hash)
         }
     };
-    Ok(get_u64_hash(&hex_encoding))
+    Ok(get_i64_hash(&hex_encoding))
 }
 
-fn get_u64_hash(str: &str) -> u64 {
+fn get_i64_hash(str: &str) -> i64 {
     let mut h = DefaultHasher::new();
     str.hash(&mut h);
-    h.finish()
+    h.finish() as i64
 }
 
 fn get_num_files(file_size: u64) -> usize {
@@ -259,7 +260,7 @@ fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
     config: &TableConfig,
     reader: R,
     file_size: u64,
-    prepare_hash: u64,
+    prepare_hash: i64,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<PrepareIter, Error> {
     let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(reader)
@@ -288,7 +289,7 @@ const BATCH_SIZE: usize = 100_000;
 fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
     config: &TableConfig,
     reader: R,
-    prepare_hash: u64,
+    prepare_hash: i64,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<PrepareIter, Error> {
     use arrow::csv::ReaderBuilder;
@@ -317,13 +318,13 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{file_path, TableConfig};
     use uuid::Uuid;
 
-    use crate::prepare::{get_batch_size, get_num_files, get_u64_hash, GIGABYTE_IN_BYTES};
+    use crate::prepare::{get_batch_size, get_i64_hash, get_num_files, GIGABYTE_IN_BYTES};
 
     #[test]
-    fn test_get_u64_hash() {
+    fn test_get_i64_hash() {
         let str = "time travel".to_string();
-        let expected_hash: u64 = 15924138204015979085;
-        let str_hash = get_u64_hash(&str);
+        let expected_hash: i64 = -2522605869693572531;
+        let str_hash = get_i64_hash(&str);
         assert_eq!(expected_hash, str_hash)
     }
 

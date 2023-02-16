@@ -41,6 +41,7 @@ impl RawMetadata {
     /// Create `RawMetadata` from a raw schema.
     pub fn try_from_raw_schema(raw_schema: SchemaRef) -> anyhow::Result<Self> {
         // Convert the raw schema to a table schema.
+        println!("FRAZ - schema: {:?}", raw_schema);
         let table_schema = convert_schema(raw_schema.as_ref());
 
         Ok(Self {

@@ -145,17 +145,17 @@ impl Batch {
 
     // Creates a batch from the time array and the given subsort/key repeated.
     #[cfg(test)]
-    pub fn test_batch(time: TimestampNanosecondArray, subsort: u64, key: u64) -> Batch {
+    pub fn test_batch(time: TimestampNanosecondArray, subsort: i64, key: u64) -> Batch {
         use std::sync::Arc;
 
-        use arrow::array::UInt64Array;
+        use arrow::array::{Int64Array, UInt64Array};
         use arrow::datatypes::{ArrowPrimitiveType, DataType, Field, TimestampNanosecondType};
 
-        let subsort = UInt64Array::from_iter_values(std::iter::repeat(subsort).take(time.len()));
+        let subsort = Int64Array::from_iter_values(std::iter::repeat(subsort).take(time.len()));
         let key_hash = UInt64Array::from_iter_values(std::iter::repeat(key).take(time.len()));
         let schema = Schema::new(vec![
             Field::new("_time", TimestampNanosecondType::DATA_TYPE, false),
-            Field::new("_subsort", DataType::UInt64, false),
+            Field::new("_subsort", DataType::Int64, false),
             Field::new("_key_hash", DataType::UInt64, false),
         ]);
         let schema = Arc::new(schema);
@@ -188,7 +188,7 @@ impl Batch {
         let key_hash = UInt64Array::from_iter_values(vals);
         let schema = Schema::new(vec![
             Field::new("_time", TimestampNanosecondType::DATA_TYPE, false),
-            Field::new("_subsort", DataType::UInt64, false),
+            Field::new("_subsort", DataType::Int64, false),
             Field::new("_key_hash", DataType::UInt64, false),
         ]);
         let schema = Arc::new(schema);
@@ -232,14 +232,14 @@ pub(crate) fn validate_bounds(
     lower_bound: &KeyTriple,
     upper_bound: &KeyTriple,
 ) -> anyhow::Result<()> {
-    use arrow::array::UInt64Array;
+    use arrow::array::{Int64Array, UInt64Array};
     if time.len() == 0 {
         // No more validation necessary for empty batches.
         return Ok(());
     }
 
     let time: &TimestampNanosecondArray = downcast_primitive_array(time)?;
-    let subsort: &UInt64Array = downcast_primitive_array(subsort)?;
+    let subsort: &Int64Array = downcast_primitive_array(subsort)?;
     let key_hash: &UInt64Array = downcast_primitive_array(key_hash)?;
 
     let mut prev_time = lower_bound.time;

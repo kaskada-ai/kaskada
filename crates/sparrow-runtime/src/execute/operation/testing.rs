@@ -72,7 +72,7 @@ pub(super) fn batch_from_csv(
             DataType::Timestamp(TimeUnit::Nanosecond, None),
             false,
         ),
-        Field::new("_subsort", DataType::UInt64, false),
+        Field::new("_subsort", DataType::Int64, false),
         Field::new("_key_hash", DataType::UInt64, false),
     ];
 
@@ -140,7 +140,7 @@ pub(super) fn batch_from_json(
                 DataType::Timestamp(TimeUnit::Nanosecond, None),
                 false,
             ),
-            Field::new("_subsort", DataType::UInt64, false),
+            Field::new("_subsort", DataType::Int64, false),
             Field::new("_key_hash", DataType::UInt64, false),
         ];
 

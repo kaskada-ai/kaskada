@@ -2,7 +2,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, ArrayRef, BooleanArray, TimestampNanosecondArray, UInt32Array, UInt64Array,
+    Array, ArrayRef, BooleanArray, Int64Array, TimestampNanosecondArray, UInt32Array, UInt64Array,
 };
 use arrow::datatypes::{
     ArrowPrimitiveType, DataType, Field, Schema, SchemaRef, TimestampNanosecondType,
@@ -29,7 +29,7 @@ const MAX_TICK_ROWS: usize = 100_000;
 #[static_init::dynamic]
 static TICK_SCHEMA: SchemaRef = Arc::new(Schema::new(vec![
     Field::new("_time", TimestampNanosecondType::DATA_TYPE, false),
-    Field::new("_subsort", DataType::UInt64, false),
+    Field::new("_subsort", DataType::Int64, false),
     Field::new("_key_hash", DataType::UInt64, false),
     Field::new("_tick", DataType::Boolean, false),
 ]));
@@ -182,7 +182,7 @@ async fn send_tick_batch(
         // processed after all other rows at the same time.
         let subsort_column =
     // SAFETY: We create the iterator with a known / fixed length.
-        unsafe { UInt64Array::from_trusted_len_iter(std::iter::repeat(Some(u64::MAX)).take(len)) };
+        unsafe { Int64Array::from_trusted_len_iter(std::iter::repeat(Some(i64::MAX)).take(len)) };
         let subsort_column: ArrayRef = Arc::new(subsort_column);
 
         // Create a tick column consisting of booleans set to `true`.
@@ -192,12 +192,12 @@ async fn send_tick_batch(
         // The tick batches only occur at one time, so the bounds are at that time.
         let lower_bound = KeyTriple {
             time: tick_nanos,
-            subsort: u64::MAX,
+            subsort: i64::MAX,
             key_hash: first_key,
         };
         let upper_bound = KeyTriple {
             time: tick_nanos,
-            subsort: u64::MAX,
+            subsort: i64::MAX,
             key_hash: last_key,
         };
 
@@ -331,7 +331,7 @@ mod tests {
     ) {
         let times =
             TimestampNanosecondArray::from_iter_values(std::iter::repeat(tick).take(num_rows));
-        let subsort = UInt64Array::from_iter_values(std::iter::repeat(u64::MAX).take(num_rows));
+        let subsort = Int64Array::from_iter_values(std::iter::repeat(i64::MAX).take(num_rows));
         let keys: UInt64Array = keys.keys().take(num_rows).collect();
         assert_eq!(tick_batch.time.as_ref(), &times);
         assert_eq!(tick_batch.subsort.as_ref(), &subsort);

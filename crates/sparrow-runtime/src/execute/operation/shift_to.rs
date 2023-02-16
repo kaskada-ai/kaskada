@@ -2,7 +2,9 @@ use std::cmp;
 use std::sync::Arc;
 
 use anyhow::Context;
-use arrow::array::{Array, ArrayRef, TimestampNanosecondArray, UInt32Array, UInt64Array};
+use arrow::array::{
+    Array, ArrayRef, Int64Array, TimestampNanosecondArray, UInt32Array, UInt64Array,
+};
 use arrow::compute::SortColumn;
 use arrow::record_batch::RecordBatch;
 use async_trait::async_trait;
@@ -30,7 +32,7 @@ struct ShiftToLiteralOperation {
     /// The timestamp nanos to shift to.
     timestamp: i64,
     /// The next subsort to use when emitting records.
-    next_subsort: u64,
+    next_subsort: i64,
     /// An array containing many repetitions of the timestamp.
     ///
     /// This allows creating the time column by reference / slicing.
@@ -180,10 +182,10 @@ impl ShiftToLiteralOperation {
         let time = self.time_array.slice(0, length);
 
         // Create a subsort column.
-        let subsort: UInt64Array =
-            (self.next_subsort..self.next_subsort + (length as u64)).collect();
+        let subsort: Int64Array =
+            (self.next_subsort..self.next_subsort + (length as i64)).collect();
         let subsort = Arc::new(subsort);
-        self.next_subsort += length as u64;
+        self.next_subsort += length as i64;
 
         let key_hash = incoming.data.column(2).clone();
 
@@ -223,7 +225,7 @@ impl Operation for ShiftToLiteralOperation {
         compute_store: &ComputeStore,
     ) -> anyhow::Result<()> {
         self.helper.restore_from(operation_index, compute_store)?;
-        let subsort: Option<u64> =
+        let subsort: Option<i64> =
             compute_store.get(&StoreKey::new_shift_to_subsort(operation_index))?;
         self.next_subsort = if let Some(s) = subsort { s } else { 0 };
         Ok(())
@@ -509,7 +511,7 @@ impl ShiftToColumnOperation {
             lower_bound.subsort = 0;
             let mut upper_bound = prefix.upper_bound;
             upper_bound.time = cmp::min(incoming_upper_bound_time, upper_bound.time);
-            upper_bound.subsort = prefix.time.len() as u64; // u64::MAX;
+            upper_bound.subsort = prefix.time.len() as i64;
 
             let prefix = InputBatch {
                 time: prefix.time,
@@ -560,7 +562,7 @@ impl ShiftToColumnOperation {
                     let mut lower_bound = result.lower_bound;
                     lower_bound.subsort = 0;
                     let mut upper_bound = result.upper_bound;
-                    upper_bound.subsort = result.time.len() as u64;
+                    upper_bound.subsort = result.time.len() as i64;
 
                     return Ok(Some(InputBatch {
                         time: result.time,

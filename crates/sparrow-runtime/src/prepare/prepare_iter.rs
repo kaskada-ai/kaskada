@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
-use arrow::array::{Array, ArrayRef, UInt64Array};
+use arrow::array::{Array, ArrayRef, Int64Array, UInt64Array};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{
     ArrowPrimitiveType, DataType, Field, Schema, SchemaRef, TimestampNanosecondType,
@@ -72,7 +72,7 @@ impl PrepareIter {
         reader: impl Iterator<Item = Result<RecordBatch, ArrowError>> + 'static,
         config: &TableConfig,
         raw_metadata: RawMetadata,
-        prepare_hash: u64,
+        prepare_hash: i64,
         slice: &Option<slice_plan::Slice>,
     ) -> anyhow::Result<Self> {
         // This is a "hacky" way of adding the 3 key columns. We may just want
@@ -250,7 +250,7 @@ pub enum ColumnBehavior {
     /// Hash the given column.
     EntityKey { index: usize, nullable: bool },
     /// A random column
-    SequentialU64 { next_offset: u64 },
+    SequentialI64 { next_offset: i64 },
     /// Create a column of nulls.
     ///
     /// The `DataType` indicates the type of column to produce.
@@ -331,23 +331,23 @@ impl ColumnBehavior {
             })?;
 
         match source_field.data_type() {
-            DataType::UInt64 => Ok(Self::Reference {
+            DataType::Int64 => Ok(Self::Reference {
                 index: source_index,
                 nullable: false,
             }),
-            DataType::UInt8 | DataType::UInt16 | DataType::UInt32 => Ok(Self::Cast {
+            DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::Int8
+            | DataType::Int16
+            | DataType::Int32 => Ok(Self::Cast {
                 index: source_index,
-                data_type: DataType::UInt64,
+                data_type: DataType::Int64,
                 nullable: false,
             }),
-
-            DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
-                Ok(Self::OrderPreservingCastToU64 {
-                    index: source_index,
-                    nullable: false,
-                })
+            DataType::UInt64 => {
+                Err(anyhow!("Cannot use u64 for subsort column.").context("tonic::Code::Internal"))
             }
-
             _ => Err(anyhow!(
                 "Expected subsort column '{}' to be numeric but was {:?}",
                 source_field.name(),
@@ -357,9 +357,9 @@ impl ColumnBehavior {
         }
     }
 
-    /// Create a column behavior that generates a random u64.
-    pub fn try_default_subsort(prepare_hash: u64) -> anyhow::Result<Self> {
-        Ok(Self::SequentialU64 {
+    /// Create a column behavior that generates a random i64.
+    pub fn try_default_subsort(prepare_hash: i64) -> anyhow::Result<Self> {
+        Ok(Self::SequentialI64 {
             next_offset: prepare_hash,
         })
     }
@@ -528,9 +528,9 @@ impl ColumnBehavior {
                 Arc::new(entity_column)
             }
             ColumnBehavior::Null(result_type) => make_null_array(result_type, batch.num_rows()),
-            ColumnBehavior::SequentialU64 { next_offset } => {
+            ColumnBehavior::SequentialI64 { next_offset } => {
                 // 1. The result is going to be [next_offset, next_offset + length).
-                let length = batch.num_rows() as u64;
+                let length = batch.num_rows() as i64;
                 // TODO: There is a potential u64 overflow. If an overflow will happen
                 // the subsort will start at 0 to length.
                 let (start, end) = if let Some(end) = next_offset.checked_add(length) {
@@ -539,7 +539,7 @@ impl ColumnBehavior {
                     (0, length)
                 };
 
-                let result = UInt64Array::from_iter_values(start..end);
+                let result = Int64Array::from_iter_values(start..end);
 
                 // 2. Update next_offset so the *next batch* gets new values.
                 *next_offset = end;
@@ -596,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_sequential_u64_zero() {
-        let mut behavior = ColumnBehavior::SequentialU64 { next_offset: 0 };
+        let mut behavior = ColumnBehavior::SequentialI64 { next_offset: 0 };
         assert_eq!(
             behavior
                 .get_result(
@@ -621,8 +621,8 @@ mod tests {
 
     #[test]
     fn test_sequential_u64_overflow() {
-        let mut behavior = ColumnBehavior::SequentialU64 {
-            next_offset: u64::MAX - 3,
+        let mut behavior = ColumnBehavior::SequentialI64 {
+            next_offset: i64::MAX - 3,
         };
         // Current behavior is to immediately wrap.
         assert_eq!(
@@ -649,7 +649,7 @@ mod tests {
 
     #[test]
     fn test_sequential_u64_nonzero() {
-        let mut behavior = ColumnBehavior::SequentialU64 { next_offset: 100 };
+        let mut behavior = ColumnBehavior::SequentialI64 { next_offset: 100 };
         assert_eq!(
             behavior
                 .get_result(

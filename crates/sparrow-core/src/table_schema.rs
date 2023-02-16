@@ -81,7 +81,7 @@ impl TableSchema {
             TimestampNanosecondType::DATA_TYPE,
             false,
         ));
-        result_fields.push(Field::new(Self::SUBSORT, DataType::UInt64, false));
+        result_fields.push(Field::new(Self::SUBSORT, DataType::Int64, false));
         result_fields.push(Field::new(Self::KEY_HASH, DataType::UInt64, false));
 
         for field in iter {

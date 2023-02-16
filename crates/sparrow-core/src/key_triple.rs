@@ -3,8 +3,10 @@ use std::convert::TryFrom;
 use std::ops;
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
-use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type};
+use arrow::array::{
+    Array, ArrayRef, Int64Array, PrimitiveArray, TimestampNanosecondArray, UInt64Array,
+};
+use arrow::datatypes::{ArrowPrimitiveType, Int64Type, TimestampNanosecondType, UInt64Type};
 use arrow::record_batch::RecordBatch;
 use owning_ref::ArcRef;
 
@@ -19,8 +21,8 @@ use crate::TableSchema;
 pub struct KeyTriples {
     /// The time column.
     time: ArcRef<dyn Array, TimestampNanosecondArray>,
-    /// The subsort column represented as a `u64`.
-    subsort: ArcRef<dyn Array, UInt64Array>,
+    /// The subsort column represented as an `i64`.
+    subsort: ArcRef<dyn Array, Int64Array>,
     /// The `key` column represented as a `u64`.
     key_hash: ArcRef<dyn Array, UInt64Array>,
 }
@@ -29,7 +31,7 @@ pub struct KeyTriples {
 #[derive(Debug, Copy, Clone)]
 pub struct KeyTriple {
     pub time: i64,
-    pub subsort: u64,
+    pub subsort: i64,
     pub key_hash: u64,
 }
 
@@ -106,7 +108,7 @@ impl KeyTriples {
         key_hash: ArrayRef,
     ) -> anyhow::Result<KeyTriples> {
         let time = owning_downcast_primitive::<TimestampNanosecondType>(time)?;
-        let subsort = owning_downcast_primitive::<UInt64Type>(subsort)?;
+        let subsort = owning_downcast_primitive::<Int64Type>(subsort)?;
         let key_hash = owning_downcast_primitive::<UInt64Type>(key_hash)?;
 
         debug_assert_eq!(
@@ -135,10 +137,10 @@ impl KeyTriples {
     ///
     /// This is mostly useful for testing. It will panic if the arrays aren't of
     /// the same length or aren't sorted.
-    pub fn new_from_slices(times: &[i64], subsorts: &[u64], key_hashes: &[u64]) -> Self {
+    pub fn new_from_slices(times: &[i64], subsorts: &[i64], key_hashes: &[u64]) -> Self {
         let triples = KeyTriples::try_new(
             Arc::new(TimestampNanosecondArray::from(times.to_vec())),
-            Arc::new(UInt64Array::from(subsorts.to_vec())),
+            Arc::new(Int64Array::from(subsorts.to_vec())),
             Arc::new(UInt64Array::from(key_hashes.to_vec())),
         )
         .unwrap();
@@ -163,7 +165,7 @@ impl KeyTriples {
         self.time.as_ref()
     }
 
-    pub fn subsort_array(&self) -> &UInt64Array {
+    pub fn subsort_array(&self) -> &Int64Array {
         self.subsort.as_ref()
     }
 
@@ -223,7 +225,7 @@ impl KeyTriples {
     }
 
     /// Return the subsort value associated with the given index.
-    pub fn subsort(&self, index: usize) -> u64 {
+    pub fn subsort(&self, index: usize) -> i64 {
         debug_assert!(
             index < self.len(),
             "Index {} must be less than length {}",
@@ -452,7 +454,7 @@ where
 }
 
 impl KeyTriple {
-    pub fn new(time: i64, subsort: u64, key_hash: u64) -> Self {
+    pub fn new(time: i64, subsort: i64, key_hash: u64) -> Self {
         Self {
             time,
             subsort,
@@ -463,7 +465,7 @@ impl KeyTriple {
     /// The minimum `KeyTriple`.
     pub const MIN: Self = Self {
         time: i64::MIN,
-        subsort: u64::MIN,
+        subsort: i64::MIN,
         key_hash: u64::MIN,
     };
 
@@ -488,7 +490,7 @@ impl KeyTriple {
             assert!(self.time > 0, "Unable to subtract 1 from MIN key triple");
             Self {
                 time: self.time - 1,
-                subsort: u64::MAX,
+                subsort: i64::MAX,
                 key_hash: u64::MAX,
             }
         }
@@ -532,7 +534,7 @@ mod tests {
             Arc::new(TimestampNanosecondArray::from(vec![
                 1, 1, 1, 2, 2, 2, 3, 3, 3,
             ])),
-            Arc::new(UInt64Array::from(vec![0, 1, 2, 1, 2, 3, 1, 5, 7])),
+            Arc::new(Int64Array::from(vec![0, 1, 2, 1, 2, 3, 1, 5, 7])),
             Arc::new(UInt64Array::from(vec![0; 9])),
         )
         .unwrap();

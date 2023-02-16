@@ -171,7 +171,7 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
                 DataType::Timestamp(TimeUnit::Nanosecond, None),
                 false,
             ),
-            Field::new("_subsort", DataType::UInt64, false),
+            Field::new("_subsort", DataType::Int64, false),
         ]);
 
         fields.extend_from_slice(&[Field::new("_key_hash", DataType::UInt64, false)]);
