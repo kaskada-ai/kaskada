@@ -44,7 +44,7 @@ use futures::Future;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_api::kaskada::v1alpha::{
-    operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
+    self, operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
 };
 use sparrow_compiler::DataContext;
 use sparrow_core::ScalarValue;
@@ -90,6 +90,8 @@ pub(crate) struct OperationContext {
     /// Channel for sending progress updates.
     pub progress_updates_tx:
         tokio::sync::mpsc::Sender<crate::execute::progress_reporter::ProgressUpdate>,
+    /// The destination for results.
+    pub output_to: v1alpha::execute_request::OutputTo,
 }
 
 impl OperationContext {
@@ -381,52 +383,36 @@ fn create_operation(
         }
         operation_plan::Operator::Merge(merge_operation) => {
             MergeOperation::create(merge_operation, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::Select(select_operation) => {
             SelectOperation::create(select_operation, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::WithKey(with_key_operation) => WithKeyOperation::create(
             context,
             with_key_operation,
             incoming_channels,
             input_columns,
-        )
-        .into_report()
-        .change_context(Error::internal_msg("unable to create operation")),
+        ),
         operation_plan::Operator::Tick(tick_operation) => {
             if matches!(tick_operation.behavior(), TickBehavior::Finished) {
                 FinalTickOperation::create(incoming_channels, input_columns)
-                    .into_report()
-                    .change_context(Error::internal_msg("unable to create operation"))
             } else {
                 TickOperation::create(tick_operation, incoming_channels, input_columns)
-                    .into_report()
-                    .change_context(Error::internal_msg("unable to create operation"))
             }
         }
         operation_plan::Operator::LookupRequest(lookup_request) => {
             LookupRequestOperation::create(lookup_request, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::LookupResponse(lookup_response) => {
             LookupResponseOperation::create(lookup_response, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::ShiftTo(shift_to) => {
             shift_to::create(shift_to, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::ShiftUntil(shift_until) => {
             ShiftUntilOperation::create(shift_until, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
     }
+    .into_report()
+    .change_context(Error::internal_msg("unable to create operation"))
 }

@@ -11,24 +11,27 @@ use futures::{FutureExt, StreamExt};
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::data_type;
 use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::execute_request::{Limits, OutputTo};
+use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_core::{downcast_primitive_array, downcast_struct_array};
 
 use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::OperationContext;
-use crate::execute::output::Error::{ObjectStoreError, SchemaError};
 use crate::execute::progress_reporter::ProgressUpdate;
 use crate::Batch;
 
 mod csv;
 mod object_store;
 mod parquet;
+mod pulsar;
 mod redis;
 
 #[derive(Debug, Display)]
 pub enum Error {
-    SchemaError { detail: String },
-    ObjectStoreError,
+    Schema { detail: String },
+    ObjectStore,
+    Pulsar,
+    Redis,
+    UnspecifiedDestination,
 }
 
 impl error_stack::Context for Error {}
@@ -38,9 +41,8 @@ pub(super) fn write(
     context: &OperationContext,
     limits: Limits,
     batches: BoxStream<'static, Batch>,
-    output_to: OutputTo,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
-) -> Result<impl Future<Output = Result<(), Error>>, Error> {
+) -> error_stack::Result<impl Future<Output = Result<(), Error>>, Error> {
     let sink_schema = determine_output_schema(context)?;
 
     // Clone things that need to move into the async stream.
@@ -76,26 +78,43 @@ pub(super) fn write(
     }
     .boxed();
 
-    let destination = output_to.destination.expect("output destination");
+    let destination = context
+        .output_to
+        .destination
+        .as_ref()
+        .ok_or(Error::UnspecifiedDestination)
+        .into_report()?;
     match destination {
         Destination::ObjectStore(store) => {
             Ok(
-                object_store::write(store, sink_schema, progress_updates_tx, batches)
-                    .change_context(ObjectStoreError)
+                object_store::write(store.clone(), sink_schema, progress_updates_tx, batches)
+                    .change_context(Error::ObjectStore)
                     .boxed(),
             )
         }
         Destination::Redis(redis) => {
             Ok(
-                redis::write(redis, sink_schema, progress_updates_tx, batches)
-                    .change_context(ObjectStoreError)
+                redis::write(redis.clone(), sink_schema, progress_updates_tx, batches)
+                    .change_context(Error::Redis)
                     .boxed(),
             )
+        }
+        Destination::Pulsar(pulsar) => {
+            Ok(pulsar::write(
+                pulsar.clone(),
+                // TODO: FRAZ - make this the materialization ID
+                context.plan_hash.to_string(),
+                sink_schema,
+                progress_updates_tx,
+                batches,
+            )
+            .change_context(Error::Pulsar)
+            .boxed())
         }
     }
 }
 
-/// Write a batch to the given destination.
+/// Adds additional information to an output batch.
 async fn post_process_batch(
     sink_schema: &SchemaRef,
     batch: Batch,
@@ -144,7 +163,7 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
     // There should be cleaner ways to determine the output schema.
     // But -- find the only output expression in the last operation.
     // It should produce a record, which should be the sink schema.
-    let last_op = context.plan.operations.last().ok_or(SchemaError {
+    let last_op = context.plan.operations.last().ok_or(Error::Schema {
         detail: "no operations in plan".to_owned(),
     })?;
     let result_type = last_op
@@ -152,12 +171,12 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
         .iter()
         .filter(|expr| expr.output)
         .exactly_one()
-        .map_err(|e| SchemaError {
+        .map_err(|e| Error::Schema {
             detail: format!("expected one output in last operation, but got {e:?}"),
         })?
         .result_type
         .as_ref()
-        .ok_or(SchemaError {
+        .ok_or(Error::Schema {
             detail: "missing result type".to_owned(),
         })?;
 
@@ -183,12 +202,12 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
                 field
                     .data_type
                     .as_ref()
-                    .ok_or(SchemaError {
+                    .ok_or(Error::Schema {
                         detail: format!("missing data_type for field {:?}", &field),
                     })?
                     .try_into()
                     .into_report()
-                    .change_context(SchemaError {
+                    .change_context(Error::Schema {
                         detail: "unable to convert Protobuf DataType to Arrow DataType".to_owned(),
                     })?,
                 true,
@@ -197,7 +216,7 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
 
         Ok(Arc::new(Schema::new(fields)))
     } else {
-        error_stack::bail!(SchemaError {
+        error_stack::bail!(Error::Schema {
             detail: format!("unexpected result type for output: {result_type:?}")
         })
     }

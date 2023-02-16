@@ -1,5 +1,12 @@
 use std::sync::Arc;
 
+use super::BoxedOperation;
+use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
+use crate::execute::operation::expression_executor::InputColumn;
+use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
+use crate::execute::operation::{InputBatch, Operation, OperationContext};
+use crate::execute::Error;
+use crate::Batch;
 use anyhow::Context;
 use async_trait::async_trait;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -9,14 +16,6 @@ use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_core::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
-
-use super::BoxedOperation;
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
-use crate::execute::operation::expression_executor::InputColumn;
-use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
-use crate::execute::operation::{InputBatch, Operation, OperationContext};
-use crate::execute::Error;
-use crate::Batch;
 
 pub(super) struct WithKeyOperation {
     new_key_input_index: usize,
@@ -59,7 +58,6 @@ impl Operation for WithKeyOperation {
                     .change_context(Error::internal())?;
             }
         }
-
         Ok(())
     }
 }

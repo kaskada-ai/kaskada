@@ -76,6 +76,17 @@ class ObjectStoreDestination(Destination):
             "output_prefix_uri": self._output_prefix_uri,
         }
 
+class PulsarDestination(Destination):
+    def __init__(self, tenant: str, namespace: str):
+        self._tenant = tenant
+        self._namespace = namespace
+
+    def to_request(self) -> Dict[str, Any]:
+        return {
+            "tenant": self._tenant,
+            "namespace": self._namespace,
+        }
+
 
 class MaterializationView(object):
     def __init__(self, name: str, expression: str):
@@ -102,6 +113,7 @@ def create_materialization(
         slice_request = None
         if slice_filter is not None:
             slice_request = common_pb.SliceRequest(**slice_filter.to_request())
+
         materialization = {
             "materialization_name": name,
             "query": query,
@@ -112,6 +124,8 @@ def create_materialization(
             materialization["destination"] = {"object_store": destination.to_request()}
         elif isinstance(destination, RedisDestination):
             materialization["destination"] = {"redis": destination.to_request()}
+        elif isinstance(destination, PulsarDestination):
+            materialization["destination"] = {"pulsar": destination.to_request()}
         else:
             raise ValueError("invalid destination supplied")
 

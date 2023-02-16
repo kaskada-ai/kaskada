@@ -1,3 +1,4 @@
+use crate::execute::Error;
 use anyhow::Context;
 use arrow::array::BooleanArray;
 use async_trait::async_trait;
@@ -13,7 +14,6 @@ use super::BoxedOperation;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::Error;
 use crate::Batch;
 
 pub(super) struct SelectOperation {
@@ -52,7 +52,6 @@ impl Operation for SelectOperation {
                 .into_report()
                 .change_context(Error::internal())?;
         }
-
         Ok(())
     }
 }

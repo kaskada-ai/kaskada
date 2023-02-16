@@ -1,6 +1,7 @@
 use std::pin::Pin;
 use std::sync::Arc;
 
+use crate::execute::Error;
 use arrow::array::{
     Array, ArrayRef, BooleanArray, TimestampNanosecondArray, UInt32Array, UInt64Array,
 };
@@ -20,7 +21,6 @@ use super::expression_executor::InputColumn;
 use super::sorted_key_hash_map::SortedKeyHashMap;
 use super::{BoxedOperation, Operation};
 use crate::execute::operation::InputBatch;
-use crate::execute::Error;
 use crate::Batch;
 
 /// Max number of rows a tick batch produces at once.
@@ -66,8 +66,12 @@ impl FinalTickOperation {
     pub(super) fn create(
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
-        let input_channel = input_channels.into_iter().exactly_one()?;
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
         let input_stream = tokio_stream::wrappers::ReceiverStream::new(input_channel).boxed();
 
         debug_assert!(

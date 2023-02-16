@@ -13,17 +13,21 @@ expression: results
     max_event_time: 0
     output_time: 0
     produced_output_rows: 54068
-  output_paths:
-    paths:
-      - "<redacted_output_path>"
   flight_record_path: ~
   plan_yaml_path: ~
   compute_snapshots: []
+  output:
+    output:
+      ObjectStore:
+        file_type: 1
+        output_paths:
+          paths:
+            - "<redacted_output_path>"
 - state: 3
   is_query_done: true
   progress: ~
-  output_paths: ~
   flight_record_path: ~
   plan_yaml_path: ~
   compute_snapshots: []
+  output: ~
 

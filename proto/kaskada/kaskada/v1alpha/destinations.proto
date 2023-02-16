@@ -1,8 +1,11 @@
+
 syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
+import "kaskada/kaskada/v1alpha/common.proto";
+
 message ObjectStoreDestination {
-  FileFormat format = 1;
+  FileType file_type = 1;
 
   // The uri of where to push output to.
   //
@@ -10,16 +13,6 @@ message ObjectStoreDestination {
   // s3://my-bucket/path/to/results/
   // file:///local/path/to/results/
   string output_prefix_uri = 2;
-
-  enum FileFormat {
-    FILE_FORMAT_UNSPECIFIED = 0;
-
-    // Format result files as Parquet.
-    FILE_FORMAT_PARQUET = 1;
-
-    // Format result files as CSV.
-    FILE_FORMAT_CSV = 2;
-  }
 }
 
 message RedisDestination {
@@ -58,4 +51,22 @@ message RedisDestination {
   // In this mode, TLS is susceptible to man-in-the-middle attacks.
   // This should be used only for testing.
   bool insecure_skip_verify = 9;
+}
+
+message PulsarDestination {
+  // The topic tenant within the instance.
+  //
+  // Defaults to "public".
+  string tenant = 1;
+
+  // The administrative unit of topics, which acts as a grouping
+  // mechanism for related topics.
+  //
+  // Defaults to "namespace".
+  string namespace = 2;
+
+  // The Pulsar protocol URL for the cluster.
+  //
+  // Defaults to "pulsar://127.0.0.1:6650".
+  string broker_service_url = 3;
 }

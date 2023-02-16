@@ -41,6 +41,9 @@ message Query {
     //
     // See https://redis.io/topics/protocol
     RedisAI redis_a_i = 102;
+
+    // Writes results directly to a Pulsar topic. 
+    Pulsar pulsar = 103;
   }
 
   // Optional. A token to run queries against. Enables repeatable queries.
@@ -111,6 +114,11 @@ message Query {
       gt: 0,
       lte: 65535
     }];
+  }
+
+  message Pulsar {
+    string tenant = 1;
+    string namespace = 2;
   }
 
   enum ResultBehavior {
@@ -202,6 +210,8 @@ message CreateQueryResponse {
     FileResults file_results = 101;
 
     RedisAI redis_a_i = 102;
+
+    Pulsar pulsar = 103;
   }
 
   enum State {
@@ -253,6 +263,13 @@ message CreateQueryResponse {
   }
 
   message RedisAI {}
+
+  message Pulsar {
+    // The topic name.
+    //
+    // e.g. '{persistent|non-persistent}://tenant/namespace/topic'
+    string topic_url = 1;
+  }
 }
 
 message GetQueryRequest {

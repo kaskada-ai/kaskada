@@ -29,15 +29,17 @@ type materializationService struct {
 	v1alpha.UnimplementedMaterializationServiceServer
 	kaskadaTableClient    internal.KaskadaTableClient
 	kaskadaViewClient     internal.KaskadaViewClient
+	dataTokenClient       internal.DataTokenClient
 	materializationClient internal.MaterializationClient
 	computeManager        *compute.Manager
 }
 
 // NewMaterializationService creates a new materialization service
-func NewMaterializationService(computeManager *compute.Manager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient) *materializationService {
+func NewMaterializationService(computeManager *compute.Manager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
 	return &materializationService{
 		kaskadaTableClient:    *kaskadaTableClient,
 		kaskadaViewClient:     *kaskadaViewClient,
+		dataTokenClient:       *dataTokenClient,
 		materializationClient: *materializationClient,
 		computeManager:        computeManager,
 	}
@@ -145,7 +147,11 @@ func (s *materializationService) CreateMaterialization(ctx context.Context, requ
 func (s *materializationService) createMaterialization(ctx context.Context, owner *ent.Owner, request *v1alpha.CreateMaterializationRequest) (*v1alpha.CreateMaterializationResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Query).Logger()
 
-	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.Materialization.Query, request.Materialization.WithViews, false, false, request.Materialization.Slice, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
+	// TODO: FRAZ - Any reason why we can't make incremental the default now?
+	// Yeah, incremental and changed since time don't work together now.
+	// Always just produces all results, even before time.
+	isExperimental := false
+	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.Materialization.Query, request.Materialization.WithViews, false, isExperimental, request.Materialization.Slice, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling materialization")
 		return nil, err
@@ -191,14 +197,26 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 		}
 	}
 
+	sliceRequest := &v1alpha.SliceRequest{}
+	if request.Materialization.Slice != nil {
+		sliceRequest = request.Materialization.Slice
+	}
+
+	// The first time we compute a materialization, we want the
+	// `changed_since_time` to be from the time of the earliest event
+	// in any file. The `DataVersionID` is used to determine the time
+	// from new files, so setting it to 0 ensures we evaluate all files
+	// to find the earliest event time.
+	var dataVersionID int64 = 0
 	newMaterialization := &ent.Materialization{
-		Name:         request.Materialization.MaterializationName,
-		Expression:   request.Materialization.Query,
-		WithViews:    &v1alpha.WithViews{Views: request.Materialization.WithViews},
-		Destination:  request.Materialization.Destination,
-		Schema:       compileResp.ResultType.GetStruct(),
-		SliceRequest: request.Materialization.Slice,
-		Analysis:     getAnalysisFromCompileResponse(compileResp),
+		Name:          request.Materialization.MaterializationName,
+		Expression:    request.Materialization.Query,
+		WithViews:     &v1alpha.WithViews{Views: request.Materialization.WithViews},
+		Destination:   request.Materialization.Destination,
+		Schema:        compileResp.ResultType.GetStruct(),
+		SliceRequest:  sliceRequest,
+		Analysis:      getAnalysisFromCompileResponse(compileResp),
+		DataVersionID: dataVersionID,
 	}
 
 	materialization, err := s.materializationClient.CreateMaterialization(ctx, owner, newMaterialization, dependencies)

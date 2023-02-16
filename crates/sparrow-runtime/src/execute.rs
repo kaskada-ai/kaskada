@@ -117,8 +117,18 @@ pub async fn execute(
                 changed_since_time.clone()
             }
             PerEntityBehavior::Final => {
-                // For final results, the snapshot can have any maximum event
-                // time. All events after that must be replayed.
+                // This is a bit confusing. Right now, the manager is responsible for
+                // choosing a valid snapshot to resume from. Thus, the work of choosing
+                // a valid snapshot with regard to any new input data is already done.
+                // However, the engine does a sanity check here to ensure the snapshot's
+                // max event time is before the allowed max event time the engine supports,
+                // dependent on the entity behavior of the query.
+                //
+                // For FinalResults, the snapshot can have a max event time of "any time",
+                // so we set this to Timestamp::MAX. This is because we just need to be able
+                // to produce results once after all new events have been processed, and
+                // we can already assume a valid snapshot is chosen and the correct input
+                // files are being processed.
                 Timestamp {
                     seconds: i64::MAX,
                     nanos: i32::MAX,
@@ -180,6 +190,7 @@ pub async fn execute(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
+        output_to,
     };
 
     // Start executing the query. We pass the response channel to the
@@ -193,7 +204,6 @@ pub async fn execute(
 
     let compute_executor = ComputeExecutor::try_spawn(
         context,
-        output_to,
         &late_bindings,
         &runtime_options,
         progress_updates_rx,

@@ -26,6 +26,11 @@ clap.workspace = true
 data-encoding.workspace = true
 derive_more.workspace = true
 enum-map.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde_json.workspace = true
+pulsar.workspace = true
+avro-schema = { workspace = true, optional = true }
 erased-serde.workspace = true
 error-stack.workspace = true
 fallible-iterator.workspace = true

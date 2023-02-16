@@ -6,6 +6,7 @@ import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
 import "kaskada/kaskada/v1alpha/destinations.proto";
 import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
+import "kaskada/kaskada/v1alpha/output.proto";
 import "kaskada/kaskada/v1alpha/plan.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
 
@@ -79,10 +80,6 @@ enum LongQueryState {
 message PlanHash {
   // The calculated hash of the query plan.
   bytes hash = 1;
-}
-
-message ResultPaths {
-  repeated string paths = 1;
 }
 
 message GetCurrentSnapshotVersionRequest {}
@@ -188,7 +185,7 @@ message ExecuteRequest {
 
   // Describes the destinations that results will be produced to.
   //
-  // Note: Can be a repeated field to support multiple destinations.
+  // Note: Can make this a repeated field to support multiple destinations.
   OutputTo output_to = 3;
 
   Limits limits = 5;
@@ -236,11 +233,12 @@ message ExecuteRequest {
     google.protobuf.StringValue resume_from = 2;
   }
 
+  // The destination to materialize results to.
   message OutputTo {
-    // The destination to materialize results to.
     oneof destination {
       ObjectStoreDestination object_store = 1;
       RedisDestination redis = 2;
+      PulsarDestination pulsar = 3;
     }
   }
 }
@@ -257,16 +255,8 @@ message ExecuteResponse {
   // Progress information included in every message.
   ProgressInformation progress = 3;
 
-  // The paths of results from the query.
-  //
-  // Files may be returned at any point in the response stream.
-  // Each file represents a different subset of the results. All files
-  // should be considered part of the result set.
-  // Each output file will appear once in the output paths of one of
-  // the message in the response stream. All output paths appearing in
-  // any message in the response should be collected and used to represent
-  // the complete output.
-  ResultPaths output_paths = 4;
+  // Reserved field. Moved `output_paths` to the `Output`. 
+  reserved 4;
 
   // Path to the flight record.
   // Currently this is sent only on the final message, after the flight
@@ -281,6 +271,21 @@ message ExecuteResponse {
 
   // 0 or more snapshots produced during the computation.
   repeated ComputeSnapshot compute_snapshots = 7;
+
+  // Information on where results are produced to.
+  Output output = 8;
+
+  // Contains information on where results were produced to.
+  //
+  // This field will be empty until the query is complete.
+  message Output {
+    oneof output {
+      UnspecifiedOutput unspecified = 1;
+      ObjectStoreOutput object_store = 2;
+      RedisOutput redis = 3;
+      PulsarOutput pulsar = 4;
+    }
+  }
 
   message ProgressInformation {
     // Total input rows to be processed by this query.

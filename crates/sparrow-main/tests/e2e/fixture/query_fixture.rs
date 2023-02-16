@@ -12,9 +12,9 @@ use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
 use sparrow_api::kaskada::v1alpha::execute_request::{ComputeSnapshotConfig, Limits, OutputTo};
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
-use sparrow_api::kaskada::v1alpha::object_store_destination::FileFormat;
 use sparrow_api::kaskada::v1alpha::{
-    CompileRequest, ExecuteRequest, FeatureSet, Formula, ObjectStoreDestination, PerEntityBehavior,
+    CompileRequest, ExecuteRequest, FeatureSet, FileType, Formula, ObjectStoreDestination,
+    PerEntityBehavior,
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
@@ -170,7 +170,7 @@ impl QueryFixture {
         data: &DataFixture,
     ) -> Result<RunResult<String>, crate::EndToEndError> {
         let output_dir = tempfile::TempDir::new().unwrap();
-        let result = self.run(data, FileFormat::Csv, output_dir.path()).await?;
+        let result = self.run(data, FileType::Csv, output_dir.path()).await?;
         let output_file = result
             .inner
             .into_iter()
@@ -188,7 +188,7 @@ impl QueryFixture {
     /// Run a query and return the results as a CSV string.
     pub async fn run_to_csv(&self, data: &DataFixture) -> Result<String, crate::EndToEndError> {
         let output_dir = tempfile::TempDir::new().unwrap();
-        let result = self.run(data, FileFormat::Csv, output_dir.path()).await?;
+        let result = self.run(data, FileType::Csv, output_dir.path()).await?;
         let output_file = result
             .inner
             .into_iter()
@@ -206,9 +206,7 @@ impl QueryFixture {
         data: &DataFixture,
     ) -> Result<PathBuf, crate::EndToEndError> {
         let output_dir = tempfile::TempDir::new().unwrap();
-        let result = self
-            .run(data, FileFormat::Parquet, output_dir.path())
-            .await?;
+        let result = self.run(data, FileType::Parquet, output_dir.path()).await?;
         let output_file = result
             .inner
             .into_iter()
@@ -219,7 +217,7 @@ impl QueryFixture {
         let mut output_path = PathBuf::new();
         output_path.push(output_file);
 
-        Ok(output_path)
+        Ok(output_file)
     }
 
     /// Run a query and return the hash of the resulting Parquet file.
@@ -228,9 +226,7 @@ impl QueryFixture {
         data: &DataFixture,
     ) -> Result<String, crate::EndToEndError> {
         let output_dir = tempfile::TempDir::new().unwrap();
-        let result = self
-            .run(data, FileFormat::Parquet, output_dir.path())
-            .await?;
+        let result = self.run(data, FileType::Parquet, output_dir.path()).await?;
         let output_file = result
             .inner
             .into_iter()
@@ -239,14 +235,14 @@ impl QueryFixture {
         let output_file = output_file.to_string_lossy().to_string();
         let output_file = output_file.strip_prefix("file://").expect("file:// prefix");
 
-        Ok(hash_parquet_file(std::path::Path::new(output_file)))
+        Ok(hash_parquet_file(&output_file))
     }
 
     /// Run a query to the given output location.
     pub async fn run(
         &self,
         data: &DataFixture,
-        output_format: FileFormat,
+        output_format: FileType,
         output_dir: &std::path::Path,
     ) -> Result<RunResult<Vec<PathBuf>>, crate::EndToEndError> {
         let request = CompileRequest {
@@ -271,7 +267,7 @@ impl QueryFixture {
 
         let destination = ObjectStoreDestination {
             output_prefix_uri: format!("file:///{}", output_dir.display()),
-            format: output_format.into(),
+            file_type: output_format.into(),
         };
         let output_to = OutputTo {
             destination: Some(Destination::ObjectStore(destination)),
@@ -297,8 +293,8 @@ impl QueryFixture {
         let mut output_files = Vec::new();
         let mut snapshots = Vec::new();
         while let Some(next) = stream.try_next().await? {
-            if let Some(output_paths) = next.output_paths {
-                output_files.extend(output_paths.paths.into_iter().map(PathBuf::from));
+            if let Some(output_paths) = next.output_paths() {
+                output_files.extend(output_paths.into_iter().map(PathBuf::from));
             }
 
             snapshots.extend(next.compute_snapshots);

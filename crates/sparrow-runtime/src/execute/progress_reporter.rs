@@ -1,9 +1,13 @@
 use std::time::Duration;
 
 use futures::Stream;
+use sparrow_api::kaskada::v1alpha::execute_response;
+use sparrow_api::kaskada::v1alpha::execute_response::output;
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::execute_response::ProgressInformation;
-use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LongQueryState, ResultPaths};
+use sparrow_api::kaskada::v1alpha::object_store_output::ResultPaths;
+use sparrow_api::kaskada::v1alpha::UnspecifiedOutput;
+use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LongQueryState};
 use tokio_stream::StreamExt;
 
 use super::Error;
@@ -22,11 +26,17 @@ struct ProgressTracker {
     /// The progress inforamation to include in the streaming RPC response.
     progress: ProgressInformation,
     /// The paths to the output files produced so far.
+    ///
+    /// If the output is not configured to write to files, this will be empty.
     output_paths: Vec<String>,
+    /// Information on where the outputs are materialized to.
+    output_to: output::Output,
 }
 
 #[derive(Debug)]
 pub(crate) enum ProgressUpdate {
+    /// Informs the progress tracker of the output destination.
+    OutputType { output: output::Output },
     /// Progress update reported for each table indicating total size.
     InputMetadata { total_num_rows: usize },
     /// Progress update indicating the given number of rows have been read.
@@ -65,11 +75,15 @@ impl ProgressTracker {
                 produced_output_rows: 0,
             },
             output_paths: vec![],
+            output_to: output::Output::Unspecified(UnspecifiedOutput {}),
         }
     }
 
     fn process_update(&mut self, stats: ProgressUpdate) {
         match stats {
+            ProgressUpdate::OutputType { output } => {
+                self.output_to = output;
+            }
             ProgressUpdate::InputMetadata { total_num_rows } => {
                 self.progress.total_input_rows += total_num_rows as i64;
             }
@@ -82,6 +96,24 @@ impl ProgressTracker {
             }
             ProgressUpdate::FilesProduced { mut paths } => {
                 self.output_paths.append(&mut paths);
+
+                // Update the outputs result paths, if applicable.
+                //
+                // This pattern isn't good - it feels like we can easily introduce
+                // a race condition. Also, a ton of unnecessary clones.
+                let output_to = &mut self.output_to;
+                match output_to {
+                    output::Output::ObjectStore(store) => {
+                        store.output_paths = Some(ResultPaths {
+                            paths: self.output_paths.clone(),
+                        })
+                    }
+                    _ => debug_assert_eq!(
+                        self.output_paths.len(),
+                        0,
+                        "expected object store output for output paths"
+                    ),
+                };
             }
             ProgressUpdate::ExecutionComplete { .. } | ProgressUpdate::ExecutionFailed { .. } => {
                 panic!("Shouldn't update process on final message")
@@ -107,12 +139,12 @@ impl ProgressTracker {
             state: LongQueryState::Running as i32,
             is_query_done: false,
             progress: Some(self.progress.clone()),
-            output_paths: Some(ResultPaths {
-                paths: self.output_paths.clone(),
-            }),
             flight_record_path: None,
             plan_yaml_path: None,
             compute_snapshots: Vec::new(),
+            output: Some(execute_response::Output {
+                output: Some(self.output_to.clone()),
+            }),
         }
     }
 }
@@ -170,10 +202,10 @@ pub(super) fn progress_stream(
                                     state: LongQueryState::Running as i32,
                                     is_query_done: true,
                                     progress: Some(tracker.progress),
-                                    output_paths: Some(ResultPaths{ paths: tracker.output_paths }),
                                     flight_record_path: None,
                                     plan_yaml_path: None,
                                     compute_snapshots,
+                                    output: Some(execute_response::Output { output: Some(tracker.output_to.clone()) }),
                                 });
                                 yield final_result;
                                 break

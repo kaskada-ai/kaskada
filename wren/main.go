@@ -122,7 +122,8 @@ func main() {
 	}
 
 	if version != nil && *version {
-		fmt.Println(service_version)
+		// fmt.Println(service_version)
+
 		return
 	}
 
@@ -285,7 +286,7 @@ func main() {
 		dependencyAnalyzerService := service.NewDependencyAnalyzer(&kaskadaViewClient, &materializationClient)
 		tableService := service.NewTableService(computeManager, &kaskadaTableClient, &objectStoreClient, tableStore, &dependencyAnalyzerService)
 		viewService := service.NewViewService(computeManager, &kaskadaTableClient, &kaskadaViewClient, &dependencyAnalyzerService)
-		materializationService := service.NewMaterializationService(computeManager, &kaskadaTableClient, &kaskadaViewClient, &materializationClient)
+		materializationService := service.NewMaterializationService(computeManager, &kaskadaTableClient, &kaskadaViewClient, &dataTokenClient, &materializationClient)
 		queryV1Service := service.NewQueryV1Service(computeManager, &kaskadaQueryClient, &objectStoreClient)
 
 		// Register the grpc services

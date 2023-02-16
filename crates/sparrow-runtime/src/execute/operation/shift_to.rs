@@ -1,6 +1,7 @@
 use std::cmp;
 use std::sync::Arc;
 
+use crate::execute::Error;
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, TimestampNanosecondArray, UInt32Array, UInt64Array};
 use arrow::compute::SortColumn;
@@ -22,7 +23,6 @@ use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::spread_zip::spread_zip;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::Error;
 use crate::Batch;
 
 /// Implementation of Shift To for a literal.
@@ -254,7 +254,6 @@ impl Operation for ShiftToLiteralOperation {
                 .into_report()
                 .change_context(Error::internal())?;
         }
-
         Ok(())
     }
 }
@@ -611,7 +610,6 @@ impl Operation for ShiftToColumnOperation {
                 .into_report()
                 .change_context(Error::internal())?;
         }
-
         Ok(())
     }
 }

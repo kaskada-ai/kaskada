@@ -47,6 +47,8 @@ type KaskadaTableClient interface {
 
 	GetKaskadaTableVersion(ctx context.Context, kaskadaTable *ent.KaskadaTable) (*ent.DataVersion, error)
 
+	GetMinTimeOfNewPreparedFiles(ctx context.Context, prepareCacheBuster int32, sliceInfo *SliceInfo, dataVersion int64) (*int64, error)
+
 	AddFilesToTable(ctx context.Context, owner *ent.Owner, kaskadaTable *ent.KaskadaTable, newFiles []AddFileProps, newMergedSchema *v1alpha.Schema, newExternalVersion *string, cleanupOnError func() error) (*ent.DataToken, error)
 	GetKaskadaFiles(ctx context.Context, owner *ent.Owner, kaskadaTable *ent.KaskadaTable, dataToken *ent.DataToken) ([]*ent.KaskadaFile, error)
 
@@ -80,6 +82,7 @@ type MaterializationClient interface {
 	GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error)
 	GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error)
 	ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error)
+	UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error)
 }
 
 // MaterializationClientProvider creates MaterializationClients

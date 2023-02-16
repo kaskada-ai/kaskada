@@ -63,11 +63,18 @@ message Materialization {
     oneof destination {
       RedisDestination redis = 1;
       ObjectStoreDestination object_store = 2;
+      PulsarDestination pulsar = 3;
     }
   }
 
   // The result of the analyze step during materialization creation
   Analysis analysis = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The latest data version id this materialization was computed at.
+  //
+  // This value should be updated on subsequent materialiations, as 
+  // new data is loaded.
+  int32 data_version_id = 10;
 }
 
 message ListMaterializationsRequest {
