@@ -89,7 +89,7 @@ pub(super) async fn write(
     } else {
         // Assumes local storage otherwise now
         let output_prefix = output_prefix
-            .strip_prefix("file://")
+            .strip_prefix("file:///")
             .ok_or(Error::UnsupportedUri)
             .into_report()
             .attach_printable_lazy(|| {
@@ -130,9 +130,9 @@ pub(super) async fn write(
         )
         .await?;
 
-        // Prepend the file:// prefix back
+        // Prepend the file:/// prefix back
         let mut output_uri = output_path.to_string_lossy().to_string();
-        output_uri.insert_str(0, "file://");
+        output_uri.insert_str(0, "file:///");
 
         progress_updates_tx
             .try_send(ProgressUpdate::FilesProduced {

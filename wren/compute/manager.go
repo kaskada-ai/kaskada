@@ -833,12 +833,12 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 }
 
 func ConvertURIForCompute(URI string) string {
-	return strings.TrimPrefix(URI, "file://")
+	return strings.TrimPrefix(URI, "file:///")
 }
 
 func ConvertURIForManager(URI string) string {
 	if strings.HasPrefix(URI, "/") {
-		return fmt.Sprintf("file://%s", URI)
+		return fmt.Sprintf("file:///%s", URI)
 	}
 	return URI
 }

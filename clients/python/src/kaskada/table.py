@@ -205,7 +205,7 @@ def load(
 
         input = common_pb.FileInput(
             file_type=file_type,
-            uri=f"file://{path}",
+            uri=f"file:///{path}",
         )
         req = table_pb.LoadDataRequest(table_name=table_name, file_input=input)
         return client.table_stub.LoadData(req, metadata=client.get_metadata())

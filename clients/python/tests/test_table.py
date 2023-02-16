@@ -16,7 +16,7 @@ def test_table_load_parquet(mockClient):
     expected_request = table_pb.LoadDataRequest(
         table_name=table_name,
         file_input=common_pb.FileInput(
-            file_type="FILE_TYPE_PARQUET", uri=f"file://{Path(local_file).absolute()}"
+            file_type="FILE_TYPE_PARQUET", uri=f"file:///{Path(local_file).absolute()}"
         ),
     )
 
@@ -33,7 +33,7 @@ def test_table_load_csv(mockClient):
     expected_request = table_pb.LoadDataRequest(
         table_name=table_name,
         file_input=common_pb.FileInput(
-            file_type="FILE_TYPE_CSV", uri=f"file://{Path(local_file).absolute()}"
+            file_type="FILE_TYPE_CSV", uri=f"file:///{Path(local_file).absolute()}"
         ),
     )
 

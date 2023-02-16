@@ -177,7 +177,7 @@ impl QueryFixture {
             .exactly_one()
             .expect("multiple output file not yet supported");
         let output_file = output_file.to_string_lossy().to_string();
-        let output_file = output_file.strip_prefix("file://").expect("file:// prefix");
+        let output_file = output_file.strip_prefix("file:///").expect("file:/// prefix");
 
         Ok(RunResult {
             inner: std::fs::read_to_string(output_file).unwrap(),
@@ -195,7 +195,7 @@ impl QueryFixture {
             .exactly_one()
             .expect("multiple output file not yet supported");
         let output_file = output_file.to_string_lossy().to_string();
-        let output_file = output_file.strip_prefix("file://").expect("file:// prefix");
+        let output_file = output_file.strip_prefix("file:///").expect("file:/// prefix");
 
         Ok(std::fs::read_to_string(output_file).unwrap())
     }
@@ -215,7 +215,7 @@ impl QueryFixture {
             .exactly_one()
             .expect("multiple output file not yet supported");
         let output_file = output_file.to_string_lossy().to_string();
-        let output_file = output_file.strip_prefix("file://").expect("file:// prefix");
+        let output_file = output_file.strip_prefix("file:///").expect("file:/// prefix");
         let mut output_path = PathBuf::new();
         output_path.push(output_file);
 
@@ -237,7 +237,7 @@ impl QueryFixture {
             .exactly_one()
             .expect("multiple output file not yet supported");
         let output_file = output_file.to_string_lossy().to_string();
-        let output_file = output_file.strip_prefix("file://").expect("file:// prefix");
+        let output_file = output_file.strip_prefix("file:///").expect("file:/// prefix");
 
         Ok(hash_parquet_file(std::path::Path::new(output_file)))
     }

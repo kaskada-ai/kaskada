@@ -39,7 +39,7 @@ message FileInput {
   // for azure:         https://myaccount.blob.core.windows.net/mycontainer/file.parquet
   // for gcs:           gs://bucket/prefix/file.parquet
   // for s3:            s3://bucket/prefix/file.parquet
-  // for local storage: file://local_path/file.parquet
+  // for local storage: file:///local_path/file.parquet
   string uri = 2;
 }
 

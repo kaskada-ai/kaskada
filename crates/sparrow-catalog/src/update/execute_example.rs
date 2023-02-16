@@ -126,7 +126,7 @@ pub(super) async fn execute_example(
         output_paths[0].starts_with("file:///"),
         "expected local file prefix"
     );
-    let output_path = output_paths[0].strip_prefix("file://").unwrap();
+    let output_path = output_paths[0].strip_prefix("file:///").unwrap();
     let output_path = std::path::Path::new(output_path);
 
     // Drop the first four (key columns).

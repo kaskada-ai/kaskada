@@ -605,7 +605,7 @@ mod tests {
         assert!(compile_response.plan.is_some());
 
         let store = ObjectStoreDestination {
-            output_prefix_uri: format!("file://{}", output_dir.path().display()),
+            output_prefix_uri: format!("file:///{}", output_dir.path().display()),
             format: FileFormat::Parquet.into(),
         };
         let output_to = OutputTo {
@@ -647,7 +647,7 @@ mod tests {
             .flatten()
             .exactly_one()
             .unwrap();
-        let file = file.strip_prefix("file://").unwrap();
+        let file = file.strip_prefix("file:///").unwrap();
 
         // Check the number of rows.
         let file = Path::new(&file);
