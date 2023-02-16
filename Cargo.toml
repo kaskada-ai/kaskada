@@ -7,7 +7,7 @@ exclude = ["crates/sparrow-qfr-tool"]
 [workspace.package]
 authors = ["Kaskada Developers"]
 edition = "2021"
-version = "0.1.1-dev"
+version = "0.1.1"
 license = "Apache-2.0"
 
 [workspace.dependencies]
