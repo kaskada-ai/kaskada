@@ -1,3 +1,5 @@
+import logging
+import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -8,6 +10,9 @@ import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.materialization_service_pb2 as material_pb
 from kaskada.client import Client, SliceFilter, get_client
 from kaskada.utils import handleException, handleGrpcError
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Destination(ABC):
@@ -113,6 +118,7 @@ def create_materialization(
         req = material_pb.CreateMaterializationRequest(
             **{"materialization": materialization}
         )
+        logger.debug(f"Create Materialization Request: {req}")
         client = get_client(client)
         return client.materialization_stub.CreateMaterialization(
             req, metadata=client.get_metadata()
@@ -129,6 +135,7 @@ def delete_materialization(
     try:
         client = get_client(client)
         req = material_pb.DeleteMaterializationRequest(materialization_name=name)
+        logger.debug(f"Delete Materialization Request: {req}")
         return client.materialization_stub.DeleteMaterialization(
             req, metadata=client.get_metadata()
         )
@@ -144,6 +151,7 @@ def get_materialization(
     try:
         client = get_client(client)
         req = material_pb.GetMaterializationRequest(materialization_name=name)
+        logger.debug(f"Get Materialization Request: {req}")
         return client.materialization_stub.GetMaterialization(
             req, metadata=client.get_metadata()
         )
@@ -161,6 +169,7 @@ def list_materializations(
         req = material_pb.ListMaterializationsRequest(
             search=search,
         )
+        logger.debug(f"List Materialization Request: {req}")
         return client.materialization_stub.ListMaterializations(
             req, metadata=client.get_metadata()
         )

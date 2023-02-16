@@ -1,3 +1,5 @@
+import logging
+import sys
 from typing import Optional, Union
 
 import grpc
@@ -5,6 +7,9 @@ import grpc
 import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
 from kaskada.client import Client, get_client
 from kaskada.utils import handleException, handleGrpcError
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_view_name(
@@ -48,6 +53,7 @@ def list_views(
         req = view_pb.ListViewsRequest(
             search=search,
         )
+        logger.debug(f"List Views Request: {req}")
         return client.view_stub.ListViews(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -74,6 +80,7 @@ def get_view(
         view_name = get_view_name(view)
         client = get_client(client)
         req = view_pb.GetViewRequest(view_name=view_name)
+        logger.debug(f"Get View Request: {req}")
         return client.view_stub.GetView(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -101,6 +108,7 @@ def create_view(
         req = view_pb.CreateViewRequest(
             view=view_pb.View(view_name=view_name, expression=expression)
         )
+        logger.debug(f"Create View Request: {req}")
         return client.view_stub.CreateView(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)
@@ -128,6 +136,7 @@ def delete_view(
         view_name = get_view_name(view)
         client = get_client(client)
         req = view_pb.DeleteViewRequest(view_name=view_name, force=force)
+        logger.debug(f"Delete View Request: {req}")
         return client.view_stub.DeleteView(req, metadata=client.get_metadata())
     except grpc.RpcError as e:
         handleGrpcError(e)

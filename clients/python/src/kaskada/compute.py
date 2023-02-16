@@ -1,20 +1,19 @@
 import datetime
+import logging
+import sys
 from enum import Enum
 from typing import List, Optional, Union
 
 import grpc
 
 import kaskada.formatters
-import kaskada.kaskada.v1alpha.materialization_service_pb2 as materialization_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
-from kaskada.client import (
-    KASKADA_DEFAULT_CLIENT,
-    KASKADA_DEFAULT_SLICE,
-    Client,
-    get_client,
-)
+from kaskada.client import KASKADA_DEFAULT_SLICE, Client, get_client
 from kaskada.slice_filters import SliceFilter
 from kaskada.utils import get_timestamp, handleException, handleGrpcError
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class ResponseType(Enum):
@@ -108,6 +107,7 @@ def queryV2(
 
         request_args = {"query": query_request, "query_options": query_options}
         request = query_pb.CreateQueryRequest(**request_args)
+        logger.debug(f"Query Request: {request}")
         return execute_query(request, client)
     except grpc.RpcError as exec:
         handleGrpcError(exec)
@@ -126,6 +126,7 @@ def execute_query(
     responses = client.query_stub.CreateQuery(request, metadata=client.get_metadata())
     for resp in responses:
         response.MergeFrom(resp)
+        logger.debug(f"Query Response: {response}")
         if in_ipython:
             clear_output(wait=True)
             display(response)

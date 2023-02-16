@@ -1,3 +1,4 @@
+import logging
 import sys
 import traceback
 from typing import List, Optional, Tuple
@@ -12,6 +13,9 @@ import kaskada.kaskada.v1alpha.query_service_pb2_grpc as query_grpc
 import kaskada.kaskada.v1alpha.table_service_pb2_grpc as table_grpc
 import kaskada.kaskada.v1alpha.view_service_pb2_grpc as view_grpc
 from kaskada.slice_filters import SliceFilter
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Module global client configured at initialization time. By default, all
 # API calls utilize the global client config
@@ -52,7 +56,9 @@ def init(
         Client: Kaskada Client
     """
     kaskada.formatters.try_init()
-
+    logger.debug(
+        f"Client initialized with client_id: {client_id}, endpoint: {endpoint}, is_secure: {is_secure}"
+    )
     global KASKADA_DEFAULT_CLIENT
     KASKADA_DEFAULT_CLIENT = Client(
         client_id=client_id,
@@ -68,6 +74,8 @@ def set_default_slice(slice: SliceFilter):
     Args:
         slice (SliceFilter): SliceFilter to set the default
     """
+    logger.debug(f"Default slice set to type {type(slice)}")
+
     global KASKADA_DEFAULT_SLICE
     KASKADA_DEFAULT_SLICE = slice
 

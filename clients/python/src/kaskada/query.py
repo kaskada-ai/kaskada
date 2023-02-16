@@ -1,3 +1,5 @@
+import logging
+import sys
 from typing import Optional
 
 import grpc
@@ -6,8 +8,11 @@ from google.protobuf.message import Message
 import kaskada.compute
 import kaskada.formatters
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
-from kaskada.client import KASKADA_DEFAULT_CLIENT, Client, get_client
+from kaskada.client import Client, get_client
 from kaskada.utils import handleException, handleGrpcError
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class QueryResource(object):
@@ -58,6 +63,7 @@ class QueryResource(object):
                 "query_options": query_options,
             }
             request = query_pb.CreateQueryRequest(**request_args)
+            logger.debug(f"Create Query Request: {request}")
             return kaskada.compute.execute_query(request, client)
         except grpc.RpcError as e:
             handleGrpcError(e)
@@ -87,6 +93,7 @@ def get_query(query_id: str, client: Optional[Client] = None):
         req = query_pb.GetQueryRequest(
             query_id=query_id,
         )
+        logger.debug(f"Get Query Request: {req}")
         resp = client.query_stub.GetQuery(req, metadata=client.get_metadata())
         return QueryResource(resp.query)
     except grpc.RpcError as e:
@@ -111,6 +118,7 @@ def list_queries(search: Optional[str] = None, client: Optional[Client] = None):
         req = query_pb.ListQueriesRequest(
             search=search,
         )
+        logger.debug(f"List Query Request: {req}")
         return client.query_stub.ListQueries(req, metadata=client.get_metadata())
 
     except grpc.RpcError as e:
