@@ -1,103 +1,161 @@
-To use Kaskada, you'll need to have Python and the Kaskada Python
-library installed.
+To use Kaskada within a Jupyter notebook you'll need to have the following pieces of software installed 
 
-== Install Python
+. https://realpython.com/installing-python/[Python] (version 3.6 and above) 
+. https://docs.jupyter.org/en/latest/install/notebook-classic.html[Jupyter] 
 
-If you're using a Mac or Linux machine, you may already have Python
-installed. Verify Python is installed by opening up a terminal and
-running the following command:
+Once you have both prerequisites installed ensure that you can run them. 
+Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
 
-[source,bash]
-----
-python --version
-----
-
-You should see something like:
-
-[source,bash]
+.Verifying Kaskada prerequisites. The output shown here is from an Ubuntu system--the output on your machine may vary.
+[,shell]
 ----
 $ python --version
-Python 3.6
+Python 3.10.6
+
+
+$ jupyter --version
+Selected Jupyter core packages...
+IPython          : 7.34.0
+ipykernel        : 6.17.0
+ipywidgets       : 8.0.2
+jupyter_client   : 7.4.4
+jupyter_core     : 4.11.2
+jupyter_server   : 1.21.0
+jupyterlab       : 3.6.1
+nbclient         : 0.7.0
+nbconvert        : 7.2.3
+nbformat         : 5.7.0
+notebook         : 6.5.2
+qtconsole        : 5.3.2
+traitlets        : 5.5.0
 ----
 
-*Please note*: Kaskada's Python library only supports Python 3.6+.
 
-== Client Installation
+== Kaskada Client Installation
 
-The first step in using Kaskada in a notebook is to install the Kaskada
-Python client package.
+The first step in using Kaskada in a notebook is to install the Kaskada Python client package. 
+Open a terminal in your OS and using `pip` install the Kaskada Python client.
 
-[source,bash]
+.Installing Kaskada using pip
+[,shell]
 ----
 pip install kaskada 
 ----
 
-=== Setup "fenlmagic" Extension
+[NOTE]
+.Pip and pip3 
+====
+Depending on you Python installation and configuration you may have `pip3` instead of `pip` available in your terminal. 
+If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 install kaskada`
+====
 
-IPython (the Python runtime used by Jupyter) supports what it calls
-"magic commands" - commands prefixed with `%` or `%%`, whose
-implementation may be provided by arbitrary Python code.
+Now that we have everything installed let's fire up a notebook and get the remaining components of Kaskada installed.
 
-Kaskada provides a magic command to improve the Fenl authoring
-experience.
+Using a terminal start a new Jupyter notebook using the command 
 
-To use the magic extension you must first install the `fenlmagic`
-package in your notebook environment:
-
-[source,bash]
+.Start a Jupyter notebook.
+[,shell]
 ----
-pip install fenlmagic
-----
-
-Additional information about client installation can be found here:
-xref:reference:client-installation.adoc[Reference - Client Installation]
-
-== Client Authentication
-
-The next step is to connect to Kaskada by logging in to Kaskada's admin
-page and set up your environment.
-
-To do this, you'll need to obtain your API client id and secret. These
-may be obtained by logging into Kaskada and navigating to
-studio.kaskada.com/access. (If you don't have an account, click the
-"sign up" link on the login page.)
-
-We recommend using the python `getpass` method to avoid saving your
-client id and secret to the notebook:
-
-[source,python]
-----
-import os
-from getpass import getpass
-
-os.environ["KASKADA_CLIENT_ID"] = getpass("Enter your Kaskada Client ID here: ")
-os.environ["KASKADA_CLIENT_SECRET"] = getpass("Enter your Kaskada Client Secret here: ")
+jupyter notebook
 ----
 
-When executing this code-block, paste in your client id and secret, and
-they will be added to the environment without displaying to the screen
-or saving to the notebook.
+The jupyter command should activate your browser and you can open a new notebook. 
+Create a new code cell in your new notebook and enter the following code in the code cell. 
 
-=== Client Initialization
-
-After setting the environment variables, initialize the Kaskada client.
-
-[source,python]
+[,python]
 ----
-import kaskada as kda
-kda.init()
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
 ----
 
-If your credentials are valid, this should return no results. If you get
-an error, check your credentials.
+Run this cell inside your notebook and you should see some output similar to the following 
 
-Finally, the `fenlmagic` extension must be initialized to register the
-syntax extension with IPython:
+.Sample output of Kaskada's installation within a Jupyter notebook.
+image::kaskada-install-output.png[Sample output of Kaskada installation within a Jupyter notebook]
 
-[source, iptyhom]
+This command imports the client's `LocalBuilder` and uses this builder to create a session. 
+This is the first time we are running the builder on this machine. 
+The builder will download (if needed) the latest release of Kaskada's components from GitHub and then run these components on your local machine. 
+The command will generate some output during the download, install and run process. 
+
+Let's now create a small table and write a simple query to see that everything is working correctly with our setup. 
+
+== Verify our Kaskada Setup 
+
+To verify that our installation is working we will 
+
+. create a table for some sample data 
+. load some sample date into our table 
+. write a simple query to print out the contents of our table 
+
+
+=== Create a table for some sample data
+
+We will use the Kaskada client's `create_table` function to create our first table. 
+Create a new code cell in your notebook and include the following code. 
+
+.Table creation in Kaskada 
+[,python]
+----
+import kaskada.table
+
+kaskada.table.create_table(
+    table_name = 'transactions',
+    time_column_name = 'transaction_time', 
+    entity_key_column_name = 'id')
+----
+
+Run this code cell and if the call is successful you should see something similar to the following.  
+
+.Sample output from a call to `create_table`
+image::create-table-output.png[Sample output from a call to create_table]
+
+
+=== Loading some sample data into our table
+
+Now that we have a table created let's load some data. We can use a small parquet file from the Kaskada project's testing data. 
+Download and save this https://github.com/kaskada-ai/kaskada/raw/main/testdata/transactions/transactions_part1.parquet[test data file]. 
+To make it easier to load make sure you save this test data file in the same folder from where we started the jupyter notebook above. 
+
+Now let's create a new code cell in our notebook and add the following code inside this new code cell. 
+
+.Loading data into the table using `table.load`.
+[,python]
+----
+kaskada.table.load('transactions', 'transactions_part1.parquet')
+----
+
+TODO: get the output from the notebook here so that the reader knows what to expect on success 
+
+==== Enable the Kaskada magic command and run a query 
+
+Kaskada's client includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks. 
+We need to enable these customizations first before we can use them. 
+
+So in a new code cell input the following command and run this cell. 
+
+.Enable fenlmagic in this notebook 
+[,python]
 ----
 %load_ext fenlmagic
 ----
 
-Additional information about client authentication can be found here:
-xref:reference:client-authentication.adoc[Reference - Client Authentication]
+Now we can start a code cell in our notebook with the first line being the string `%%fenl` to indicate that this cell will contain code in the Fenl language. 
+The special string `%%fenl` will also connect to the Kaskada components that we installed that will execute the query and report back any results to our notebook. 
+
+So let's try to write a simple query that lists all the rows in our table. 
+In a new code cell input the following commands and run this cell.  
+
+.Display all the contents of our table 
+[,fenl]
+----
+%%fenl
+
+transactions
+----
+
+TODO: add expected output from the query 
+
+Congratulations, you now have Kaskada locally installed and you can start loading and querying your data using Kaskada inside a Jupyter notebook. 
+
