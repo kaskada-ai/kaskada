@@ -3,7 +3,8 @@ To use Kaskada within a Jupyter notebook you'll need to have the following piece
 . https://realpython.com/installing-python/[Python] (version 3.6 and above) 
 . https://docs.jupyter.org/en/latest/install/notebook-classic.html[Jupyter] 
 
-Once you have both prerequisites installed ensure that you can run them. Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
+Once you have both prerequisites installed ensure that you can run them. 
+Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
 
 .Verifying Kaskada prerequisites. The output shown here is from an Ubuntu system--the output on your machine may vary.
 [,shell]
@@ -32,8 +33,8 @@ traitlets        : 5.5.0
 
 == Kaskada Client Installation
 
-The first step in using Kaskada in a notebook is to install the Kaskada
-Python client package. Open a terminal in your OS and using `pip` install the Kaskada Python client.
+The first step in using Kaskada in a notebook is to install the Kaskada Python client package. 
+Open a terminal in your OS and using `pip` install the Kaskada Python client.
 
 .Installing Kaskada using pip
 [,shell]
@@ -73,11 +74,10 @@ Run this cell inside your notebook and you should see some output similar to the
 .Sample output of Kaskada's installation within a Jupyter notebook.
 image::kaskada-install-output.png[Sample output of Kaskada installation within a Jupyter notebook]
 
-This command imports the client's `LocalBuilder` 
-and uses this builder to create a session. This is the first time we are running the builder on this machine. 
-The builder will download (if needed) the latest release of Kaskada's components from GitHub 
-and then run these components on your local machine. The command will generate 
-some output during the download, install and run process. 
+This command imports the client's `LocalBuilder` and uses this builder to create a session. 
+This is the first time we are running the builder on this machine. 
+The builder will download (if needed) the latest release of Kaskada's components from GitHub and then run these components on your local machine. 
+The command will generate some output during the download, install and run process. 
 
 Let's now create a small table and write a simple query to see that everything is working correctly with our setup. 
 
@@ -100,7 +100,10 @@ Create a new code cell in your notebook and include the following code.
 ----
 import kaskada.table
 
-kaskada.table.create_table('transactions', 'transaction_time', 'id', subsort_column_name = 'idx')
+kaskada.table.create_table(
+    table_name = 'transactions',
+    time_column_name = 'transaction_time', 
+    entity_key_column_name = 'id')
 ----
 
 Run this code cell and if the call is successful you should see something similar to the following.  
@@ -111,11 +114,9 @@ image::create-table-output.png[Sample output from a call to create_table]
 
 === Loading some sample data into our table
 
-Now that we have a table created let's load some data. We can use a small parquet 
-file from the Kaskada project's testing data. Download and save this 
-https://github.com/kaskada-ai/kaskada/raw/main/testdata/transactions/transactions_part1.parquet[test data file]. 
-To make it easier to load make sure you save this test data file in the same 
-folder from where we started the jupyter notebook above. 
+Now that we have a table created let's load some data. We can use a small parquet file from the Kaskada project's testing data. 
+Download and save this https://github.com/kaskada-ai/kaskada/raw/main/testdata/transactions/transactions_part1.parquet[test data file]. 
+To make it easier to load make sure you save this test data file in the same folder from where we started the jupyter notebook above. 
 
 Now let's create a new code cell in our notebook and add the following code inside this new code cell. 
 
@@ -129,9 +130,8 @@ TODO: get the output from the notebook here so that the reader knows what to exp
 
 ==== Enable the Kaskada magic command and run a query 
 
-Kaskada's client includes notebook customizations that allow us to write queries in the Fenl language 
-but also receive and render the results of our queries in our notebooks. We need to enable these customizations 
-first before we can use them. 
+Kaskada's client includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks. 
+We need to enable these customizations first before we can use them. 
 
 So in a new code cell input the following command and run this cell. 
 
@@ -141,11 +141,8 @@ So in a new code cell input the following command and run this cell.
 %load_ext fenlmagic
 ----
 
-Now we can start a code cell in our notebook with the first line being the
- string `%%fenl` to indicate that this cell will contain code in the Fenl language. 
-The special string `%%fenl` will also connect to the Kaskada components 
-that we installed that will execute the query and report 
-back any results to our notebook. 
+Now we can start a code cell in our notebook with the first line being the string `%%fenl` to indicate that this cell will contain code in the Fenl language. 
+The special string `%%fenl` will also connect to the Kaskada components that we installed that will execute the query and report back any results to our notebook. 
 
 So let's try to write a simple query that lists all the rows in our table. 
 In a new code cell input the following commands and run this cell.  
@@ -160,5 +157,5 @@ transactions
 
 TODO: add expected output from the query 
 
-Congratulations, you know have Kaskada locally install and you can start loading and querying your data inside a Jupyter notebook. 
+Congratulations, you now have Kaskada locally installed and you can start loading and querying your data using Kaskada inside a Jupyter notebook. 
 
