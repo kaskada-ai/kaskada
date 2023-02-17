@@ -4,8 +4,8 @@ use error_stack::{IntoReportCompat, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::execute_request::OutputTo;
+use sparrow_api::kaskada::v1alpha::output_to::Destination;
+use sparrow_api::kaskada::v1alpha::OutputTo;
 use sparrow_api::kaskada::v1alpha::{
     compute_table, file_path, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet,
     FenlDiagnostics, FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig,
@@ -88,6 +88,7 @@ pub(super) async fn execute_example(
     let destination = ObjectStoreDestination {
         output_prefix_uri: format!("file:///{}", tempdir.path().display()),
         file_type: FileType::Csv.into(),
+        output_paths: None,
     };
     let output_to = OutputTo {
         destination: Some(Destination::ObjectStore(destination)),
@@ -135,7 +136,7 @@ pub(super) async fn execute_example(
     // to write to CSV rather than creating special functionality just for examples.
     // We could also consider other options for removing the rows (regex, etc.)
     // but this works.
-    let mut table = prettytable::Table::from_csv_file(&output_paths[0]).unwrap();
+    let mut table = prettytable::Table::from_csv_file(output_path).unwrap();
     for row in table.row_iter_mut() {
         row.remove_cell(0);
         row.remove_cell(0);

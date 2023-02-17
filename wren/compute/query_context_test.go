@@ -19,7 +19,7 @@ func TestGetTableIDs(t *testing.T) {
 			one: nil,
 			two: nil,
 		}
-		queryContext, queryContextCancel := GetNewQueryContext(context.Background(), nil, nil, nil, nil, nil, false, nil, tables, nil)
+		queryContext, queryContextCancel := GetNewQueryContext(context.Background(), nil, nil, nil, nil, nil, false, nil, nil, nil, tables)
 		defer queryContextCancel()
 		tableIDs := queryContext.GetTableIDs()
 

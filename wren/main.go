@@ -122,7 +122,7 @@ func main() {
 	}
 
 	if version != nil && *version {
-		// fmt.Println(service_version)
+		fmt.Println(service_version)
 
 		return
 	}

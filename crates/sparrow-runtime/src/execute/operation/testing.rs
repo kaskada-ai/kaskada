@@ -4,7 +4,6 @@ use anyhow::Context;
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use arrow::record_batch::RecordBatch;
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::execute_request::OutputTo;
 use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan, PlanHash};
 use sparrow_compiler::DataContext;
 
@@ -207,7 +206,6 @@ pub(super) async fn run_operation(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
-        output_to: OutputTo::default_for_test(),
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())
@@ -258,7 +256,6 @@ pub(super) async fn run_operation_json(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
-        output_to: OutputTo::default_for_test(),
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())

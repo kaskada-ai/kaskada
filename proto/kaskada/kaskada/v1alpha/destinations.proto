@@ -1,8 +1,18 @@
-
 syntax = "proto3";
+
 package kaskada.kaskada.v1alpha;
 
+import "google/api/field_behavior.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
+
+// Describes the destination results are materialized to.
+message OutputTo {
+  oneof destination {
+    ObjectStoreDestination object_store = 1;
+    RedisDestination redis = 2;
+    PulsarDestination pulsar = 3;
+  }
+}
 
 message ObjectStoreDestination {
   FileType file_type = 1;
@@ -13,8 +23,31 @@ message ObjectStoreDestination {
   // s3://my-bucket/path/to/results/
   // file:///local/path/to/results/
   string output_prefix_uri = 2;
+
+  // Files may be returned at any point in the response stream.
+  // Each file represents a different subset of the results. All files
+  // should be considered part of the result set.
+  // Each output file will appear once in the output paths of one of
+  // the message in the response stream. All output paths appearing in
+  // any message in the response should be collected and used to represent
+  // the complete output.
+  ResultPaths output_paths = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  message ResultPaths {
+    repeated string paths = 1;
+  }
 }
 
+// Writes the results directly to a RedisAI instance.
+//
+// Uses a series of AI.TENSORSET operations
+//
+// The query expression's type must be a record.
+// The record type must include a field named 'key'.
+// The value of the 'key' field is used as the AI.TENSORSET key.
+// All other fields must be numeric.
+//
+// See https://redis.io/topics/protocol
 message RedisDestination {
   // The hostname of the Redis instance.
   string host_name = 1;
@@ -54,19 +87,30 @@ message RedisDestination {
 }
 
 message PulsarDestination {
+  // The Pulsar protocol URL for the cluster.
+  //
+  // Defaults to "pulsar://127.0.0.1:6650".
+  string broker_service_url = 1;
+
   // The topic tenant within the instance.
   //
   // Defaults to "public".
-  string tenant = 1;
+  string tenant = 2;
 
   // The administrative unit of topics, which acts as a grouping
   // mechanism for related topics.
   //
-  // Defaults to "namespace".
-  string namespace = 2;
+  // Defaults to "default".
+  string namespace = 3;
 
-  // The Pulsar protocol URL for the cluster.
+  // The final part of the topic url.
   //
-  // Defaults to "pulsar://127.0.0.1:6650".
-  string broker_service_url = 3;
+  // Defaults to a randomly generated uuid.
+  string topic_name = 4;
+
+  // The full topic url.
+  // e.g. "persistent://{tenant}/{namespace}/{topic_name}"
+  //
+  // This field is populated in the output response.
+  string topic_url = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

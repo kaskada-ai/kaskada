@@ -96,7 +96,11 @@ func (s *materializationService) listMaterializations(ctx context.Context, owner
 		Materializations: make([]*v1alpha.Materialization, 0, len(materializations)),
 	}
 	for _, materialization := range materializations {
-		response.Materializations = append(response.Materializations, s.getProtoFromDB(materialization))
+		materializationProto, err := s.getProtoFromDB(ctx, owner, materialization)
+		if err != nil {
+			return nil, err
+		}
+		response.Materializations = append(response.Materializations, materializationProto)
 	}
 
 	if len(materializations) > 0 && len(materializations) == pageSize {
@@ -132,7 +136,11 @@ func (s *materializationService) getMaterialization(ctx context.Context, owner *
 	if err != nil {
 		return nil, err
 	}
-	return &v1alpha.GetMaterializationResponse{Materialization: s.getProtoFromDB(materialization)}, nil
+	materializationProto, err := s.getProtoFromDB(ctx, owner, materialization)
+	if err != nil {
+		return nil, err
+	}
+	return &v1alpha.GetMaterializationResponse{Materialization: materializationProto}, nil
 }
 
 func (s *materializationService) CreateMaterialization(ctx context.Context, request *v1alpha.CreateMaterializationRequest) (*v1alpha.CreateMaterializationResponse, error) {
@@ -147,9 +155,6 @@ func (s *materializationService) CreateMaterialization(ctx context.Context, requ
 func (s *materializationService) createMaterialization(ctx context.Context, owner *ent.Owner, request *v1alpha.CreateMaterializationRequest) (*v1alpha.CreateMaterializationResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Query).Logger()
 
-	// TODO: FRAZ - Any reason why we can't make incremental the default now?
-	// Yeah, incremental and changed since time don't work together now.
-	// Always just produces all results, even before time.
 	isExperimental := false
 	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.Materialization.Query, request.Materialization.WithViews, false, isExperimental, request.Materialization.Slice, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
 	if err != nil {
@@ -227,7 +232,22 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	subLogger.Debug().Msg("running materializations")
 	s.computeManager.RunMaterializations(ctx, owner)
 
-	return &v1alpha.CreateMaterializationResponse{Materialization: s.getProtoFromDB(materialization), Analysis: materialization.Analysis}, nil
+	// Get the newly computed materialization and its associated data token.
+	//
+	// Note that we can't just return the "current data token", as it's possible a newer data token
+	// than the one the materialization is run on is the "current token".
+	//
+	// We could also store the `data_token_id` (or DataToken itself) on the materialization,
+	// which would allow us to skip the secondary lookup of the token from version.
+	computedMaterialization, err := s.materializationClient.GetMaterialization(ctx, owner, materialization.ID)
+	if err != nil {
+		return nil, err
+	}
+	materializationProto, err := s.getProtoFromDB(ctx, owner, computedMaterialization)
+	if err != nil {
+		return nil, err
+	}
+	return &v1alpha.CreateMaterializationResponse{Materialization: materializationProto, Analysis: materialization.Analysis}, nil
 }
 
 func (s *materializationService) DeleteMaterialization(ctx context.Context, request *v1alpha.DeleteMaterializationRequest) (*v1alpha.DeleteMaterializationResponse, error) {
@@ -253,7 +273,19 @@ func (s *materializationService) deleteMaterialization(ctx context.Context, owne
 	return &v1alpha.DeleteMaterializationResponse{}, nil
 }
 
-func (s *materializationService) getProtoFromDB(materialization *ent.Materialization) *v1alpha.Materialization {
+func (s *materializationService) getProtoFromDB(ctx context.Context, owner *ent.Owner, materialization *ent.Materialization) (*v1alpha.Materialization, error) {
+	dataTokenId := ""
+	dataToken, err := s.dataTokenClient.GetDataTokenFromVersion(ctx, owner, materialization.DataVersionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Materializations are created with a data version id of 0,
+	// which corresponds to an empty token id.
+	if dataToken != nil {
+		dataTokenId = dataToken.ID.String()
+	}
+
 	return &v1alpha.Materialization{
 		MaterializationId:   materialization.ID.String(),
 		MaterializationName: materialization.Name,
@@ -264,5 +296,6 @@ func (s *materializationService) getProtoFromDB(materialization *ent.Materializa
 		Schema:              materialization.Schema,
 		Slice:               materialization.SliceRequest,
 		Analysis:            materialization.Analysis,
-	}
+		DataTokenId:         dataTokenId,
+	}, nil
 }

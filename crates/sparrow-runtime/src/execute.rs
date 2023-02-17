@@ -176,8 +176,6 @@ pub async fn execute(
     let (progress_updates_tx, progress_updates_rx) =
         tokio::sync::mpsc::channel(29.max(plan.operations.len() * 2));
 
-    let output_to = request.output_to.expect("output to");
-
     // We use the plan hash for validating the snapshot is as expected.
     // Rather than accepting it as input (which could lead to us getting
     // a correct hash but an incorrect plan) we re-hash the plan.
@@ -190,7 +188,6 @@ pub async fn execute(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
-        output_to,
     };
 
     // Start executing the query. We pass the response channel to the
@@ -202,11 +199,13 @@ pub async fn execute(
         flight_record_path: None,
     };
 
+    let output_to = request.output_to.ok_or(Error::internal_msg("output to"))?;
     let compute_executor = ComputeExecutor::try_spawn(
         context,
         &late_bindings,
         &runtime_options,
         progress_updates_rx,
+        output_to,
     )
     .change_context(Error::internal_msg("spawn compute executor"))?;
 

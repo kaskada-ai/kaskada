@@ -335,6 +335,10 @@ func (*errorListMaterializationClient) ListMaterializations(ctx context.Context,
 	panic("unimplemented")
 }
 
+func (*errorListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
 type emptyListMaterializationClient struct{}
 
 func (*emptyListMaterializationClient) CreateMaterialization(ctx context.Context, owner *ent.Owner, newMaterialization *ent.Materialization, dependencies []*ent.MaterializationDependency) (*ent.Materialization, error) {
@@ -367,6 +371,10 @@ func (*emptyListMaterializationClient) GetMaterializationsWithDependency(ctx con
 
 func (*emptyListMaterializationClient) ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error) {
 	return nil, errors.New("some list materializations error")
+}
+
+func (*emptyListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+	panic("unimplemented")
 }
 
 type singleListMaterializationClient struct{}
@@ -409,4 +417,8 @@ func (*singleListMaterializationClient) GetMaterializationsWithDependency(ctx co
 
 func (*singleListMaterializationClient) ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error) {
 	return nil, errors.New("some list materializations error")
+}
+
+func (*singleListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+	panic("unimplemented")
 }

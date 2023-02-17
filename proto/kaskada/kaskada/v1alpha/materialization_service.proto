@@ -70,11 +70,10 @@ message Materialization {
   // The result of the analyze step during materialization creation
   Analysis analysis = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // The latest data version id this materialization was computed at.
+  // The latest data token id this materialization was computed at.
   //
-  // This value should be updated on subsequent materialiations, as 
-  // new data is loaded.
-  int32 data_version_id = 10;
+  // This value is updated as new data is loaded into tables.
+  string data_token_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message ListMaterializationsRequest {

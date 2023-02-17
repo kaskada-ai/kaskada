@@ -6,8 +6,7 @@ use arrow::record_batch::RecordBatch;
 use derive_more::Display;
 use error_stack::{IntoReport, IntoReportCompat, Result, ResultExt};
 use futures::stream::BoxStream;
-use sparrow_api::kaskada::v1alpha::object_store_output::ResultPaths;
-use sparrow_api::kaskada::v1alpha::{execute_response::output, ObjectStoreOutput};
+use sparrow_api::kaskada::v1alpha::output_to;
 use sparrow_api::kaskada::v1alpha::{FileType, ObjectStoreDestination};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
@@ -36,21 +35,17 @@ pub(super) async fn write(
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     batches: BoxStream<'static, RecordBatch>,
 ) -> Result<(), Error> {
-    let format = object_store.file_type();
-    let output_prefix = object_store.output_prefix_uri;
-
-    // Inform tracker of output type
+    // Inform tracker of destination type
     progress_updates_tx
-        .send(ProgressUpdate::OutputType {
-            output: output::Output::ObjectStore(ObjectStoreOutput {
-                file_type: format as i32,
-                output_paths: Some(ResultPaths { paths: vec![] }),
-            }),
+        .send(ProgressUpdate::Destination {
+            destination: output_to::Destination::ObjectStore(object_store.clone()),
         })
         .await
         .into_report()
         .change_context(Error::ProgressUpdateFailure)?;
 
+    let format = object_store.file_type();
+    let output_prefix = object_store.output_prefix_uri;
     if is_s3_path(&output_prefix) {
         // TODO: This is currently a hacky way of uploading the file to S3. We first
         // write to a local temp file and then we upload. Ideally, we would support
@@ -66,7 +61,7 @@ pub(super) async fn write(
         // the appropriate client here.
         let s3_client = S3Helper::new().await;
 
-        let tmp_output_file_name = output_file_name(format);
+        let tmp_output_file_name = output_file_name(format)?;
         let tmp_output_file = create_tempfile(&tmp_output_file_name)?;
         let tmp_output_path = tmp_output_file.path().to_owned();
 
@@ -125,7 +120,7 @@ pub(super) async fn write(
                 .attach_printable_lazy(|| format!("unable to create path {output_path:?}"))?;
         }
 
-        output_path.push(output_file_name(format));
+        output_path.push(output_file_name(format)?);
         let output_file = File::create(output_path.clone())
             .into_report()
             .change_context(Error::LocalWriteFailure)
@@ -188,14 +183,14 @@ async fn write_to_file(
     Ok(())
 }
 
-fn output_file_name(format: FileType) -> String {
+fn output_file_name(format: FileType) -> error_stack::Result<String, Error> {
     // Generate a UUID for the destination.
     let extension = match format {
         FileType::Csv => "csv",
         FileType::Parquet => "parquet",
-        FileType::Unspecified => panic!("Unspecified output file format"),
+        FileType::Unspecified => error_stack::bail!(Error::UnspecifiedFormat),
     };
-    format!("{}.{}", Uuid::new_v4().as_hyphenated(), extension)
+    Ok(format!("{}.{}", Uuid::new_v4().as_hyphenated(), extension))
 }
 
 fn create_tempfile(file_name: &str) -> Result<NamedTempFile, Error> {

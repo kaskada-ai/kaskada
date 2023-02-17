@@ -1,7 +1,7 @@
 use std::cmp;
 use std::sync::Arc;
 
-use crate::execute::Error;
+use crate::execute::{invalid_operation, Error};
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, TimestampNanosecondArray, UInt32Array, UInt64Array};
 use arrow::compute::SortColumn;
@@ -72,24 +72,39 @@ pub(super) fn create(
     operation: operation_plan::ShiftToOperation,
     incoming_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
     input_columns: &[InputColumn],
-) -> anyhow::Result<BoxedOperation> {
-    let input_channel = incoming_channels.into_iter().exactly_one()?;
+) -> error_stack::Result<BoxedOperation, super::Error> {
+    let input_channel = incoming_channels
+        .into_iter()
+        .exactly_one()
+        .into_report()
+        .change_context(Error::internal_msg("expected one channel"))?;
 
     let incoming_stream = ReceiverStream::new(input_channel);
-    let helper = SingleConsumerHelper::try_new(operation.input, input_columns)?;
+    let helper = SingleConsumerHelper::try_new(operation.input, input_columns)
+        .into_report()
+        .change_context(Error::internal_msg("error creating single consumer helper"))?;
 
-    match operation.time.context("missing time")? {
+    match operation.time.ok_or(invalid_operation!("missing time"))? {
         Time::Computed(computed) => {
-            anyhow::ensure!(computed.producing_operation == operation.input);
+            error_stack::ensure!(
+                computed.producing_operation == operation.input,
+                crate::execute::error::invalid_operation!(
+                    "producing operation and input operation do not match"
+                )
+            );
             let time_input_column = computed.input_column as usize;
             ShiftToColumnOperation::try_new(time_input_column, incoming_stream, helper)
+                .into_report()
+                .change_context(Error::internal_msg("failed to create operation"))
         }
         Time::Literal(timestamp) => {
             let timestamp =
                 NaiveDateTime::from_timestamp_opt(timestamp.seconds, timestamp.nanos as u32)
-                    .context("invalid literal timestamp")?;
+                    .ok_or(invalid_operation!("invalid literal timestamp"))?;
             let timestamp = timestamp.timestamp_nanos();
             ShiftToLiteralOperation::try_new(timestamp, incoming_stream, helper)
+                .into_report()
+                .change_context(Error::internal_msg("failed to create operation"))
         }
     }
 }

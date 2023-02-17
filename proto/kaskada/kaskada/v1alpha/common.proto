@@ -48,10 +48,6 @@ message FileResults {
   repeated string paths = 2;
 }
 
-message AsFiles {
-  FileType file_type = 1;
-}
-
 // General configuration for a table.
 message TableConfig {
   // The name of the table.

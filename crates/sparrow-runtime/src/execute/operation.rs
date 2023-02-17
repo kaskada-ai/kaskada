@@ -44,7 +44,7 @@ use futures::Future;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_api::kaskada::v1alpha::{
-    self, operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
+    operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
 };
 use sparrow_compiler::DataContext;
 use sparrow_core::ScalarValue;
@@ -90,8 +90,6 @@ pub(crate) struct OperationContext {
     /// Channel for sending progress updates.
     pub progress_updates_tx:
         tokio::sync::mpsc::Sender<crate::execute::progress_reporter::ProgressUpdate>,
-    /// The destination for results.
-    pub output_to: v1alpha::execute_request::OutputTo,
 }
 
 impl OperationContext {
@@ -413,6 +411,5 @@ fn create_operation(
             ShiftUntilOperation::create(shift_until, incoming_channels, input_columns)
         }
     }
-    .into_report()
     .change_context(Error::internal_msg("unable to create operation"))
 }

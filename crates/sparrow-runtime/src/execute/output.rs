@@ -4,14 +4,13 @@ use std::sync::Arc;
 use arrow::array::UInt64Array;
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use arrow::record_batch::RecordBatch;
-use derive_more::Display;
 use error_stack::{FutureExt as ESFutureExt, IntoReport, Result, ResultExt};
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt};
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::data_type;
-use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
+use sparrow_api::kaskada::v1alpha::output_to::Destination;
+use sparrow_api::kaskada::v1alpha::{self, data_type};
 use sparrow_core::{downcast_primitive_array, downcast_struct_array};
 
 use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
@@ -22,16 +21,24 @@ use crate::Batch;
 mod csv;
 mod object_store;
 mod parquet;
-mod pulsar;
 mod redis;
 
-#[derive(Debug, Display)]
+#[cfg(feature = "pulsar")]
+pub(crate) mod pulsar;
+
+#[derive(Debug, derive_more::Display)]
 pub enum Error {
-    Schema { detail: String },
-    ObjectStore,
-    Pulsar,
-    Redis,
+    Schema {
+        detail: String,
+    },
+    WritingToDestination {
+        dest_name: String,
+    },
     UnspecifiedDestination,
+    #[cfg(not(feature = "pulsar"))]
+    FeatureNotEnabled {
+        feature: String,
+    },
 }
 
 impl error_stack::Context for Error {}
@@ -42,6 +49,7 @@ pub(super) fn write(
     limits: Limits,
     batches: BoxStream<'static, Batch>,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
+    output_to: v1alpha::OutputTo,
 ) -> error_stack::Result<impl Future<Output = Result<(), Error>>, Error> {
     let sink_schema = determine_output_schema(context)?;
 
@@ -78,38 +86,41 @@ pub(super) fn write(
     }
     .boxed();
 
-    let destination = context
-        .output_to
-        .destination
-        .as_ref()
-        .ok_or(Error::UnspecifiedDestination)
-        .into_report()?;
+    let destination = output_to.destination.ok_or(Error::UnspecifiedDestination)?;
     match destination {
         Destination::ObjectStore(store) => {
             Ok(
-                object_store::write(store.clone(), sink_schema, progress_updates_tx, batches)
-                    .change_context(Error::ObjectStore)
+                object_store::write(store, sink_schema, progress_updates_tx, batches)
+                    .change_context(Error::WritingToDestination {
+                        dest_name: "object_store".to_owned(),
+                    })
                     .boxed(),
             )
         }
         Destination::Redis(redis) => {
             Ok(
-                redis::write(redis.clone(), sink_schema, progress_updates_tx, batches)
-                    .change_context(Error::Redis)
+                redis::write(redis, sink_schema, progress_updates_tx, batches)
+                    .change_context(Error::WritingToDestination {
+                        dest_name: "redis".to_owned(),
+                    })
                     .boxed(),
             )
         }
+        #[cfg(not(feature = "pulsar"))]
+        Destination::Pulsar(_) => {
+            error_stack::bail!(Error::FeatureNotEnabled {
+                feature: "pulsar".to_owned()
+            })
+        }
+        #[cfg(feature = "pulsar")]
         Destination::Pulsar(pulsar) => {
-            Ok(pulsar::write(
-                pulsar.clone(),
-                // TODO: FRAZ - make this the materialization ID
-                context.plan_hash.to_string(),
-                sink_schema,
-                progress_updates_tx,
-                batches,
+            Ok(
+                pulsar::write(pulsar, sink_schema, progress_updates_tx, batches)
+                    .change_context(Error::WritingToDestination {
+                        dest_name: "pulsar".to_owned(),
+                    })
+                    .boxed(),
             )
-            .change_context(Error::Pulsar)
-            .boxed())
         }
     }
 }
@@ -123,8 +134,12 @@ async fn post_process_batch(
     // TODO: Move this into the writer once it's standard.
     // TODO: Support a single output column?
     // Unpack the one struct column into the corresponding fields.
-    let mut fields = Vec::with_capacity(3 + sink_schema.fields().len());
+    let mut fields = Vec::with_capacity(4 + sink_schema.fields().len());
+
+    // Add the `_time, _subsort, _key_hash` columns
     fields.extend_from_slice(&batch.columns()[0..3]);
+
+    // Get the original keys using the inverse key hash map
     let key_col = &batch.columns()[2];
     let key_col: &UInt64Array = downcast_primitive_array(key_col.as_ref()).expect("key_col is u64");
     let key_col = key_hash_inverse
@@ -132,6 +147,7 @@ async fn post_process_batch(
         .await
         .expect("inverses are defined");
     fields.extend_from_slice(&[key_col]);
+
     let struct_array =
         downcast_struct_array(batch.columns()[3].as_ref()).expect("value is struct array");
     if batch.columns()[3].null_count() > 0 {
@@ -181,7 +197,7 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
         })?;
 
     if let Some(data_type::Kind::Struct(data_fields)) = &result_type.kind {
-        let mut fields = Vec::with_capacity(3 + data_fields.fields.len());
+        let mut fields = Vec::with_capacity(4 + data_fields.fields.len());
         // TODO: Share this with `KEY_FIELDS` in expression_evaluator if it stays
         // around.
         fields.extend_from_slice(&[
@@ -191,10 +207,9 @@ fn determine_output_schema(context: &OperationContext) -> Result<SchemaRef, Erro
                 false,
             ),
             Field::new("_subsort", DataType::UInt64, false),
+            Field::new("_key_hash", DataType::UInt64, false),
+            Field::new("_key", key_type, true),
         ]);
-
-        fields.extend_from_slice(&[Field::new("_key_hash", DataType::UInt64, false)]);
-        fields.extend_from_slice(&[Field::new("_key", key_type, true)]);
 
         for field in data_fields.fields.iter() {
             fields.push(Field::new(

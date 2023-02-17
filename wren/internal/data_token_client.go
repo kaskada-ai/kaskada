@@ -41,6 +41,28 @@ func (d *dataTokenClient) GetDataToken(ctx context.Context, owner *ent.Owner, id
 	return dataToken, nil
 }
 
+func (d *dataTokenClient) GetDataTokenFromVersion(ctx context.Context, owner *ent.Owner, version int64) (*ent.DataToken, error) {
+	subLogger := log.Ctx(ctx).With().
+		Str("method", "dataTokenClient.GetDataTokenFromVersion").
+		Int64("data_version_id", version).
+		Logger()
+
+	// A data version id of 0 corresponds to an empty id.
+	if version == 0 {
+		return nil, nil
+	}
+
+	dataToken, err := owner.QueryDataTokens().Where(datatoken.DataVersionID(version)).First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, customerrors.NewNotFoundError("data_token")
+		}
+		subLogger.Error().Err(err).Msg("issue getting data_token")
+		return nil, err
+	}
+	return dataToken, nil
+}
+
 func (d *dataTokenClient) GetCurrentDataToken(ctx context.Context, owner *ent.Owner) (*ent.DataToken, error) {
 	subLogger := log.Ctx(ctx).With().
 		Str("method", "dataTokenClient.GetCurrentDataToken").

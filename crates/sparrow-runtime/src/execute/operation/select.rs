@@ -1,4 +1,4 @@
-use crate::execute::Error;
+use crate::execute::{invalid_operation, Error};
 use anyhow::Context;
 use arrow::array::BooleanArray;
 use async_trait::async_trait;
@@ -62,18 +62,24 @@ impl SelectOperation {
         operation: operation_plan::SelectOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
-        let input_channel = input_channels.into_iter().exactly_one()?;
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
 
         let condition_input_column = operation
             .condition
-            .context("missing condition")?
+            .ok_or(invalid_operation!("missing condition"))?
             .input_column as usize;
 
         Ok(Box::new(Self {
             condition_input_column,
             input_stream: ReceiverStream::new(input_channel),
-            helper: SingleConsumerHelper::try_new(operation.input, input_columns)?,
+            helper: SingleConsumerHelper::try_new(operation.input, input_columns)
+                .into_report()
+                .change_context(Error::internal_msg("error creating single consumer helper"))?,
         }))
     }
 

@@ -62,7 +62,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		return wrapErrorWithStatus(err, subLogger)
 	}
 
-	err := q.validateResponseAs(ctx, request.Query)
+	err := q.validateOutputTo(ctx, request.Query)
 	if err != nil {
 		return wrapErrorWithStatus(err, subLogger)
 	}
@@ -229,14 +229,14 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}
 	responseStream.Send(q.addMetricsIfRequested(request, computeResponse, metrics))
 
-	outputTo := &v1alpha.ExecuteRequest_OutputTo{}
-	if request.Query.ResponseAs != nil {
+	outputTo := &v1alpha.OutputTo{}
+	if request.Query.OutputTo != nil {
 		outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
-		switch kind := request.Query.ResponseAs.(type) {
-		case *v1alpha.Query_AsFiles:
-			outputTo.Destination = &v1alpha.ExecuteRequest_OutputTo_ObjectStore{
+		switch kind := request.Query.OutputTo.Destination.(type) {
+		case *v1alpha.OutputTo_ObjectStore:
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
-					FileType:        kind.AsFiles.FileType,
+					FileType:        kind.ObjectStore.FileType,
 					OutputPrefixUri: outputURI,
 				},
 			}
@@ -323,28 +323,35 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 			subLogger.Error().Str("state", computeResponse.State.String()).Msg("unexpected long query state")
 		}
 
-		if computeResponse.Output != nil {
-			switch kind := request.Query.ResponseAs.(type) {
-			case *v1alpha.Query_AsFiles:
+		if computeResponse.OutputTo != nil {
+			switch kind := request.Query.OutputTo.Destination.(type) {
+			case *v1alpha.OutputTo_ObjectStore:
 				outputPaths := []string{}
-				for _, outputPath := range computeResponse.Output.GetObjectStore().GetOutputPaths().Paths {
-					outputPaths = append(outputPaths, outputPath)
-				}
+				outputPaths = append(outputPaths, computeResponse.OutputTo.GetObjectStore().GetOutputPaths().Paths...)
 
 				if request.QueryOptions != nil && request.QueryOptions.PresignResults {
 					outputPaths, err = q.presignResults(ctx, owner, outputPaths)
+					if err != nil {
+						return fmt.Errorf("error signing results")
+					}
 				}
 
-				queryResponse.Results = &v1alpha.CreateQueryResponse_FileResults{
-					FileResults: &v1alpha.FileResults{
-						FileType: kind.AsFiles.FileType,
-						Paths:    outputPaths,
+				outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
+				queryResponse.OutputTo = &v1alpha.OutputTo{
+					Destination: &v1alpha.OutputTo_ObjectStore{
+						ObjectStore: &v1alpha.ObjectStoreDestination{
+							FileType:        kind.ObjectStore.FileType,
+							OutputPrefixUri: outputURI,
+							OutputPaths: &v1alpha.ObjectStoreDestination_ResultPaths{
+								Paths: outputPaths,
+							},
+						},
 					},
 				}
 
-				metrics.OutputFiles += int64(len(computeResponse.Output.GetObjectStore().GetOutputPaths().Paths))
+				metrics.OutputFiles += int64(len(computeResponse.OutputTo.GetObjectStore().GetOutputPaths().Paths))
 			default:
-				subLogger.Error().Interface("kind", kind).Msg("unknown response_as")
+				subLogger.Error().Interface("kind", kind).Msg("unknown output type")
 				return fmt.Errorf("query output type %s is not supported", kind)
 			}
 		}
@@ -381,30 +388,34 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	return nil
 }
 
-// validates the ResponseAs field of the query, defaulting if unspecified or unknown.
-func (q *queryV1Service) validateResponseAs(ctx context.Context, query *v1alpha.Query) error {
-	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.validateResponseAs").Logger()
-	switch kind := query.ResponseAs.(type) {
-	case *v1alpha.Query_AsFiles:
-		switch kind.AsFiles.FileType {
+// validates the OutputTo field of the query, defaulting if unspecified or unknown.
+func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Query) error {
+	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.validateOutputTo").Logger()
+	switch kind := query.OutputTo.Destination.(type) {
+	case *v1alpha.OutputTo_ObjectStore:
+		switch kind.ObjectStore.FileType {
 		case v1alpha.FileType_FILE_TYPE_PARQUET:
 		case v1alpha.FileType_FILE_TYPE_CSV:
 		default:
-			subLogger.Warn().Interface("kind", kind).Interface("type", kind.AsFiles.FileType).Msg("unknown response_as file_type, defaulting to 'AsFiles->Parquet'")
-			query.ResponseAs = &v1alpha.Query_AsFiles{
-				AsFiles: &v1alpha.AsFiles{
-					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+			subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown response_as file_type, defaulting to 'ObjectStore->Parquet'")
+			query.OutputTo = &v1alpha.OutputTo{
+				Destination: &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
 				},
 			}
 		}
-	case *v1alpha.Query_Pulsar_, *v1alpha.Query_RedisAI_:
+	case *v1alpha.OutputTo_Pulsar, *v1alpha.OutputTo_Redis:
 		query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS
-		return fmt.Errorf("Query output type %s is only valid for materializations", kind)
+		return fmt.Errorf("query output type %s is only valid for materializations", kind)
 	default:
-		subLogger.Warn().Interface("kind", kind).Msg("unknown response_as, defaulting to 'AsFiles->Parquet'")
-		query.ResponseAs = &v1alpha.Query_AsFiles{
-			AsFiles: &v1alpha.AsFiles{
-				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+		subLogger.Warn().Interface("kind", kind).Msg("unknown response_as, defaulting to 'ObjectStore->Parquet'")
+		query.OutputTo = &v1alpha.OutputTo{
+			Destination: &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
 			},
 		}
 	}

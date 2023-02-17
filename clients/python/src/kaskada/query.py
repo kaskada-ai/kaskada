@@ -32,8 +32,8 @@ class QueryResource(object):
             "result_behavior": self.query.result_behavior,
         }
         if isinstance(self.query, Message):
-            if self.query.HasField("as_files"):
-                result["as_files"] = self.query.as_files
+            if self.query.HasField("output_to"):
+                result["output_to"] = self.query.output_to
 
         return result
 

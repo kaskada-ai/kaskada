@@ -59,7 +59,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		// load the data files
-		helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
+		helpers.LoadTestFilesIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
 	})
 
 	AfterAll(func() {
@@ -74,10 +74,16 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 	Describe("Run the query with no special options", func() {
 		It("should return the full set of query results", func() {
 			// define a query to run on the table
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 				},
 			}
@@ -91,10 +97,10 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			Expect(len(results)).Should(Equal(dataSetSize))
@@ -104,10 +110,16 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 	Describe("Run the query with preview rows set to 50", func() {
 		It("should return less than the full set of query results", func() {
 			// define a query to run on the table
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					Limits: &v1alpha.Query_Limits{
 						PreviewRows: 50,
@@ -123,10 +135,10 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(err).ShouldNot(HaveOccurred())
 
 			VerifyRequestDetails(res.RequestDetails)
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			Expect(len(results)).Should(BeNumerically("<", dataSetSize))
@@ -136,10 +148,16 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 	Describe("Run the query with preview rows set to a huge number", func() {
 		It("should return the full set of query results", func() {
 			// define a query to run on the table
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					Limits: &v1alpha.Query_Limits{
 						PreviewRows: 50000000000,
@@ -155,10 +173,10 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(err).ShouldNot(HaveOccurred())
 
 			VerifyRequestDetails(res.RequestDetails)
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			Expect(len(results)).Should(Equal(dataSetSize))

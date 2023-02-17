@@ -1,11 +1,10 @@
 #![allow(clippy::derive_partial_eq_without_eq)] // stop clippy erroring on generated code from tonic (proto)
 use itertools::Itertools;
 
-use crate::kaskada::v1alpha::execute_request::output_to::Destination;
-use crate::kaskada::v1alpha::execute_request::OutputTo;
-use crate::kaskada::v1alpha::execute_response::output::Output;
-use crate::kaskada::v1alpha::object_store_output::ResultPaths;
+use crate::kaskada::v1alpha::object_store_destination::ResultPaths;
 use crate::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
+use crate::kaskada::v1alpha::output_to::Destination;
+
 tonic::include_proto!("kaskada.kaskada.v1alpha");
 
 /// Traits for the `Slice`
@@ -30,30 +29,14 @@ impl ComputeTable {
     }
 }
 
-impl OutputTo {
-    pub fn default_for_test() -> OutputTo {
-        let tempdir = tempfile::Builder::new()
-            .prefix("example")
-            .tempdir()
-            .unwrap();
-        let destination = ObjectStoreDestination {
-            output_prefix_uri: format!("file:///{}", tempdir.path().display()),
-            file_type: FileType::Csv.into(),
-        };
-        OutputTo {
-            destination: Some(Destination::ObjectStore(destination)),
-        }
-    }
-}
-
 impl ExecuteResponse {
     /// Returns an owned vec of the output paths for this execution.
     //
-    /// Only applicable for `ObjectStoreOutput`.
+    /// Returns `None` if not an `ObjectStoreOutput`.
     pub fn output_paths(&self) -> Option<Vec<String>> {
-        match &self.output {
-            Some(output) => match &output.output {
-                Some(Output::ObjectStore(store)) => store
+        match &self.output_to {
+            Some(output) => match &output.destination {
+                Some(Destination::ObjectStore(store)) => store
                     .output_paths
                     .as_ref()
                     .map(|output_paths| output_paths.paths.clone()),
@@ -63,13 +46,14 @@ impl ExecuteResponse {
         }
     }
 
-    /// Returns a mutable reference to the result paths in an object store output
-    /// if any exist.
-    pub fn result_paths_mut(&mut self) -> Option<&mut ResultPaths> {
-        match &mut self.output {
-            Some(output) => match &mut output.output {
-                Some(Output::ObjectStore(store)) => match &mut store.output_paths {
-                    Some(result_path) => Some(result_path),
+    /// Returns a mutable reference to the output paths.
+    ///
+    /// Returns `None` if not an `ObjectStoreOutput`.
+    pub fn output_paths_mut(&mut self) -> Option<&mut ResultPaths> {
+        match &mut self.output_to {
+            Some(output) => match &mut output.destination {
+                Some(Destination::ObjectStore(store)) => match &mut store.output_paths {
+                    Some(output_path) => Some(output_path),
                     None => None,
                 },
                 Some(_) | None => None,

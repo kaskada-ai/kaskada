@@ -25,7 +25,6 @@ fn to_avro_record_schema(schema: &Schema) -> error_stack::Result<Record, Error> 
         .try_collect()?;
 
     Ok(Record {
-        // TODO: Revisit this naming
         name: "Record".to_string(),
         namespace: None,
         doc: None,

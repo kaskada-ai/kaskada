@@ -9,6 +9,11 @@ description = """
 The Sparrow runtime used for executing Sparrow plans.
 """
 
+[features]
+default = ["pulsar"]
+avro = ["avro-schema"]
+pulsar = ["dep:pulsar", "avro", "lz4"]
+
 [dependencies]
 ahash.workspace = true
 anyhow.workspace = true
@@ -26,10 +31,9 @@ clap.workspace = true
 data-encoding.workspace = true
 derive_more.workspace = true
 enum-map.workspace = true
-log.workspace = true
-env_logger.workspace = true
+lz4 = { workspace = true, optional = true }
 serde_json.workspace = true
-pulsar.workspace = true
+pulsar = { workspace = true, optional = true }
 avro-schema = { workspace = true, optional = true }
 erased-serde.workspace = true
 error-stack.workspace = true

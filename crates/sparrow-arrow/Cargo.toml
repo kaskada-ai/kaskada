@@ -10,18 +10,18 @@ General purpose functions and structs for working with Arrow.
 """
 
 [features]
-default = []
-# avro = ["avro-schema"]
+default = ["avro"]
+avro = ["avro-schema"]
 
 # This crate should not depend on any other Sparrow crates.
 [dependencies]
 arrow.workspace = true
-avro-schema.workspace = true
-# avro-schema = { workspace = true, optional = true }
+avro-schema = { workspace = true, optional = true }
 derive_more.workspace = true
 error-stack.workspace = true
 itertools.workspace = true
 serde.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

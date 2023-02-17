@@ -8,7 +8,7 @@ use futures::{FutureExt, Stream, TryFutureExt};
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::execute_request::ComputeSnapshotConfig;
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
-use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LateBoundValue, PlanHash};
+use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
@@ -52,6 +52,7 @@ impl ComputeExecutor {
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
+        output_to: v1alpha::OutputTo,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
@@ -74,7 +75,6 @@ impl ComputeExecutor {
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(13);
         consumers[context.plan.operations.len() - 1].push(output_tx.clone());
 
-        let output_to = context.output_to.clone();
         spawner.spawn(
             "output".to_owned(),
             info_span!("Output Writer", ?output_to),
@@ -83,6 +83,7 @@ impl ComputeExecutor {
                 runtime_options.limits.clone(),
                 futures::StreamExt::boxed(tokio_stream::wrappers::ReceiverStream::new(output_rx)),
                 context.progress_updates_tx.clone(),
+                output_to,
             )
             .change_context(Internal("error writing output"))?
             .map_err(|e| e.change_context(Internal("error writing output"))),

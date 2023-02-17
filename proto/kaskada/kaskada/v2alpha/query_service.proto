@@ -7,6 +7,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/destinations.proto";
 import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
 import "validate/validate.proto";
@@ -40,48 +41,6 @@ message QueryView {
 
   // The View's Fenl expression.
   string expression = 2 [(validate.rules).string.min_len = 1];
-}
-
-message DestinationRedisAI {
-  // The RedisAI database number to write to
-  int32 db = 1 [(validate.rules).int32 = {
-    gte: 0,
-    lte: 15
-  }];
-
-  // The RedisAI instance hostname
-  string host = 2 [(validate.rules).string.min_len = 1];
-
-  // The RedisAI instance port
-  int32 port = 3 [(validate.rules).int32 = {
-    gt: 0,
-    lte: 65535
-  }];
-}
-
-// where to return results of the query
-// at least 1 of these should be set
-message Destination {
-  // Returns results as files.
-  //
-  // The query expression's type must be a record.
-  // Each record field corresponds to an output column.
-  //
-  // If compute completes successfully, the Query->QueryResults
-  // object will contain URIs to files.
-  kaskada.v1alpha.AsFiles as_files = 1;
-
-  // Writes the results directly to a RedisAI instance.
-  //
-  // Uses a series of AI.TENSORSET operations
-  //
-  // The query expression's type must be a record.
-  // The record type must include a field named 'key'.
-  // The value of the 'key' field is used as the AI.TENSORSET key.
-  // All other fields must be numeric.
-  //
-  // See https://redis.io/topics/protocol
-  DestinationRedisAI redis_a_i = 3;
 }
 
 message AllResults {
@@ -145,7 +104,10 @@ message QueryConfig {
   kaskada.v1alpha.SliceRequest slice = 2;
 
   // Configures how the query results should be returned.
-  Destination destination = 3;
+  kaskada.v1alpha.OutputTo output_to = 7;
+
+  // Modified out Output is produced on Feb.24.2023
+  reserved 3;
 
   // Determines how results are returned.
   //

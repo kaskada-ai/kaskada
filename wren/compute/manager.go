@@ -373,7 +373,7 @@ func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenI
 
 func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {
 	subPath := path.Join("results", owner.ID.String(), base64.RawURLEncoding.EncodeToString(planHash))
-	return ConvertURIForCompute(m.store.GetDataPathURI(subPath))
+	return m.store.GetDataPathURI(subPath)
 }
 
 func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeService_ExecuteClient, error) {
@@ -456,11 +456,17 @@ func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryRes
 			subLogger.Warn().Err(err).Msg("issue receiving execute response")
 			return result, customerrors.NewComputeError(reMapSparrowError(queryContext.ctx, err))
 		}
-		// TODO: FRAZ - output paths, output. -
-		// This is relevant for materializing to files.
-		// if res.OutputPaths != nil {
-		// 	result.Paths = append(result.Paths, res.OutputPaths.Paths...)
-		// }
+
+		// Note: this does nothing visible to the user at the moment, as
+		// running materializations are currently opaque to the user.
+		// Eventually, we'll want to provide useful metadata for all destination types.
+		if res.OutputTo != nil {
+			switch kind := res.OutputTo.Destination.(type) {
+			case *v1alpha.OutputTo_ObjectStore:
+				result.Paths = append(result.Paths, kind.ObjectStore.OutputPaths.Paths...)
+			}
+		}
+
 		switch res.State {
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_INITIAL:
 			subLogger.Info().Msg("received initial message from execute request")
@@ -544,11 +550,11 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			return nil
 		}
 
-		outputTo := &v1alpha.ExecuteRequest_OutputTo{}
+		outputTo := &v1alpha.OutputTo{}
 		switch kind := materialization.Destination.Destination.(type) {
 		case *v1alpha.Materialization_Destination_ObjectStore:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to object store")
-			outputTo.Destination = &v1alpha.ExecuteRequest_OutputTo_ObjectStore{
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType:        kind.ObjectStore.GetFileType(),
 					OutputPrefixUri: kind.ObjectStore.GetOutputPrefixUri(),
@@ -556,11 +562,19 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			}
 		case *v1alpha.Materialization_Destination_Pulsar:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to pulsar")
-			outputTo.Destination = &v1alpha.ExecuteRequest_OutputTo_Pulsar{
+			outputTo.Destination = &v1alpha.OutputTo_Pulsar{
 				Pulsar: &v1alpha.PulsarDestination{
-					Tenant:    kind.Pulsar.GetTenant(),
-					Namespace: kind.Pulsar.GetNamespace(),
+					Tenant:           kind.Pulsar.GetTenant(),
+					Namespace:        kind.Pulsar.GetNamespace(),
+					TopicName:        kind.Pulsar.GetTopicName(),
+					BrokerServiceUrl: kind.Pulsar.GetBrokerServiceUrl(),
 				},
+			}
+		case *v1alpha.Materialization_Destination_Redis:
+			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializing to redis")
+			outputTo.Destination = &v1alpha.OutputTo_Redis{
+				// TODO: Support redis destination
+				Redis: &v1alpha.RedisDestination{},
 			}
 		default:
 			matLogger.Error().Interface("type", kind).Str("when", "pre-compute").Msg("materialization output type not implemented")
@@ -570,12 +584,9 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		queryContext, _ := GetNewQueryContext(ctx, owner, nil, compileResp, dataToken, nil, true, nil, outputTo, materialization.SliceRequest, tables)
 
 		dataVersionID := materialization.DataVersionID
-		fmt.Printf("Materailziation data version %d\n", materialization.DataVersionID)
 		var minTimeInNewFiles int64 = math.MaxInt64
 		for _, slice := range queryContext.GetSlices() {
-			fmt.Printf("Slice: %s\n", slice)
 			minTime, err := m.kaskadaTableClient.GetMinTimeOfNewPreparedFiles(ctx, *prepareCacheBuster, slice, dataVersionID)
-			// fmt.Printf("Min time in slice: %d\n", *minTime)
 			if ent.IsNotFound(err) {
 				continue
 			}
@@ -587,16 +598,12 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 				minTimeInNewFiles = *minTime
 			}
 		}
-		fmt.Printf("Min time in new files: %d\n", minTimeInNewFiles)
 
 		// Interpret the int64 (as nanos since epoch) as a proto timestamp
-		// changedSinceUnixTime := time.Unix(minTimeInNewFiles/1000, 0)
 		changedSinceTime := &timestamppb.Timestamp{
-			Seconds: minTimeInNewFiles / 1000000000,
-			Nanos:   0,
+			Seconds: minTimeInNewFiles / 1_000_000_000,
+			Nanos:   (int32)(minTimeInNewFiles % 1_000_000_000),
 		}
-
-		fmt.Printf("CHANGED SINCE TIME: %s\n", changedSinceTime)
 
 		// Remakes the query context with the changed since time.
 		//
@@ -612,21 +619,10 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			return nil
 		}
 
-		oldMat, err := m.materializationClient.GetMaterialization(ctx, owner, materialization.ID)
-		fmt.Printf("Previous Data Version: %d\n", oldMat.DataVersionID)
-		fmt.Printf("Current Data Version: %d\n", queryContext.dataToken.DataVersionID)
-
 		// Update materializations that have run with the current data version id, so on
 		// subsequent runs only the updated values will be produced.
-		matLogger.Info().Str("name", oldMat.Name).Int64("version", oldMat.DataVersionID).Msg("Old mat before upate")
-
 		_, err = m.materializationClient.UpdateMaterializationDataVersion(ctx, owner, materialization.ID, queryContext.dataToken.DataVersionID)
 
-		newMat, err := m.materializationClient.GetMaterialization(ctx, owner, materialization.ID)
-		fmt.Printf("Current (new) Data Version: %d\n", newMat.DataVersionID)
-
-		matLogger.Info().Str("name", newMat.Name).Int64("version", newMat.DataVersionID).Msg("New mat after upate")
-		matLogger.Info().Str("name", newMat.Name).Int64("version", queryContext.dataToken.DataVersionID).Msg("New mat after upate")
 		if err != nil {
 			matLogger.Error().Err(err).Str("name", materialization.Name).Int64("previousDataVersion", dataVersionID).Int64("newDataVersion", queryContext.dataToken.DataVersionID).Msg("error updating materialization with new data version")
 			return nil

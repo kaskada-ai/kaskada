@@ -21,6 +21,9 @@ type DataTokenClient interface {
 	// gets a specific dataToken for an owner
 	GetDataToken(ctx context.Context, owner *ent.Owner, id uuid.UUID) (*ent.DataToken, error)
 
+	// gets a specific dataToken at the specified version
+	GetDataTokenFromVersion(ctx context.Context, owner *ent.Owner, version int64) (*ent.DataToken, error)
+
 	// at a specific dataToken, returns a map of tableIDs to their most recent dataVersion
 	GetTableVersions(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken) (map[uuid.UUID]*ent.DataVersion, error)
 }

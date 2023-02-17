@@ -1,5 +1,6 @@
 import logging
 import sys
+import uuid
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -59,32 +60,56 @@ class RedisDestination(Destination):
         }
 
 
-class FileFormat(Enum):
-    FILE_FORMAT_UNSPECIFIED = 0
-    FILE_FORMAT_PARQUET = 1
-    FILE_FORMAT_CSV = 2
+class FileType(Enum):
+    FILE_TYPE_UNSPECIFIED = 0
+    FILE_TYPE_PARQUET = 1
+    FILE_TYPE_CSV = 2
 
 
 class ObjectStoreDestination(Destination):
-    def __init__(self, file_format: FileFormat, output_prefix_uri: str):
-        self._file_format = file_format
+    def __init__(self, file_type: FileType, output_prefix_uri: str):
+        self._file_type = file_type
         self._output_prefix_uri = output_prefix_uri
 
     def to_request(self) -> Dict[str, Any]:
         return {
-            "format": self._file_format.name,
+            "file_type": self._file_type.name,
             "output_prefix_uri": self._output_prefix_uri,
         }
 
+
 class PulsarDestination(Destination):
-    def __init__(self, tenant: str, namespace: str):
+    def __init__(
+        self,
+        tenant: str = "public",
+        namespace: str = "default",
+        topic_name: Optional[str] = None,
+        broker_service_url: str = "pulsar://127.0.0.1:6650",
+    ):
+        """
+        Pulsar Materialization Destination
+
+        Args:
+            tenant (str): pulsar tenant. defaults to "public".
+            namespace (str): pulsar namespace. defaults to "default".
+            topic_name (str): final part of topic url. defaults to a randomly generated uuid
+            broker_service_url (str): url to connect to pulsar broker. defaults to "pulsar://127.0.0.1:6650"
+        """
         self._tenant = tenant
         self._namespace = namespace
+        self._topic_name = (
+            topic_name
+            if topic_name and len(topic_name.strip()) > 0
+            else str(uuid.uuid4())
+        )
+        self._broker_service_url = broker_service_url
 
     def to_request(self) -> Dict[str, Any]:
         return {
             "tenant": self._tenant,
             "namespace": self._namespace,
+            "topic_name": self._topic_name,
+            "broker_service_url": self._broker_service_url,
         }
 
 

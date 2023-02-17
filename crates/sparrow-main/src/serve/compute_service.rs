@@ -228,7 +228,7 @@ async fn debug_message(
         state: LongQueryState::Final as i32,
         is_query_done: true,
         progress: None,
-        output: None,
+        output_to: None,
         flight_record_path: uploaded_flight_record_path,
         plan_yaml_path: uploaded_plan_yaml_path,
         compute_snapshots: Vec::new(),
@@ -295,8 +295,9 @@ mod tests {
     use parquet::file::reader::FileReader;
     use parquet::file::serialized_reader::SerializedFileReader;
     use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-    use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
-    use sparrow_api::kaskada::v1alpha::execute_request::{Limits, OutputTo};
+    use sparrow_api::kaskada::v1alpha::execute_request::Limits;
+    use sparrow_api::kaskada::v1alpha::output_to::Destination;
+    use sparrow_api::kaskada::v1alpha::OutputTo;
     use sparrow_api::kaskada::v1alpha::{
         compute_table, file_path, slice_plan, ComputeTable, FeatureSet, FilePath, FileType,
         ObjectStoreDestination, PerEntityBehavior, SlicePlan, TableConfig, TableMetadata,
@@ -604,8 +605,9 @@ mod tests {
         assert!(compile_response.plan.is_some());
 
         let store = ObjectStoreDestination {
-            output_prefix_uri: format!("file:///{}", output_dir.path().display()),
-            file_type: FileType::Parquet.into(),
+            file_type: FileType::Parquet as i32,
+            output_prefix_uri: format!("file://{}", output_dir.path().display()),
+            output_paths: None,
         };
         let output_to = OutputTo {
             destination: Some(Destination::ObjectStore(store)),
@@ -642,10 +644,11 @@ mod tests {
         // First, check the returned parquet files.
         let file = results
             .iter()
-            .filter_map(|part| part.output_paths().as_ref().map(|paths| paths.clone()))
+            .filter_map(|part| part.output_paths().as_ref().cloned())
             .flatten()
             .exactly_one()
             .unwrap();
+        let file = file.strip_prefix("file://").unwrap();
 
         // Check the number of rows.
         let file = Path::new(&file);
@@ -660,7 +663,13 @@ mod tests {
 
         // Second, redact the output paths and check the response.
         for result in results.iter_mut() {
-            let result_paths = result.result_paths_mut();
+            if let Some(output) = &mut result.output_to {
+                if let Some(Destination::ObjectStore(store)) = &mut output.destination {
+                    store.output_prefix_uri = "<redacted_output_prefix_uri>".to_owned()
+                }
+            };
+
+            let result_paths = result.output_paths_mut();
             if let Some(result_paths) = result_paths {
                 for output_path in result_paths.paths.iter_mut() {
                     // assert that the path is in the temp directory

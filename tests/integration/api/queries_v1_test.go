@@ -74,10 +74,16 @@ var _ = Describe("Queries V1", Ordered, func() {
 	Context("When a query resource is created", func() {
 		queryId := ""
 		It("should create a query resource", func() {
+			destination := &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
+
 			query := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     tableName,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       &v1alpha.OutputTo{Destination: destination},
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 				},
 				QueryOptions: &v1alpha.QueryOptions{},

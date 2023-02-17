@@ -9,9 +9,10 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::execute_request::{ComputeSnapshotConfig, Limits, OutputTo};
+use sparrow_api::kaskada::v1alpha::execute_request::{ComputeSnapshotConfig, Limits};
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
+use sparrow_api::kaskada::v1alpha::output_to::Destination;
+use sparrow_api::kaskada::v1alpha::OutputTo;
 use sparrow_api::kaskada::v1alpha::{
     CompileRequest, ExecuteRequest, FeatureSet, FileType, Formula, ObjectStoreDestination,
     PerEntityBehavior,
@@ -217,7 +218,7 @@ impl QueryFixture {
         let mut output_path = PathBuf::new();
         output_path.push(output_file);
 
-        Ok(output_file)
+        Ok(output_path)
     }
 
     /// Run a query and return the hash of the resulting Parquet file.
@@ -234,8 +235,10 @@ impl QueryFixture {
             .expect("multiple output file not yet supported");
         let output_file = output_file.to_string_lossy().to_string();
         let output_file = output_file.strip_prefix("file://").expect("file:// prefix");
+        let mut output_path = PathBuf::new();
+        output_path.push(output_file);
 
-        Ok(hash_parquet_file(&output_file))
+        Ok(hash_parquet_file(&output_path))
     }
 
     /// Run a query to the given output location.
@@ -268,6 +271,7 @@ impl QueryFixture {
         let destination = ObjectStoreDestination {
             output_prefix_uri: format!("file:///{}", output_dir.display()),
             file_type: output_format.into(),
+            output_paths: None,
         };
         let output_to = OutputTo {
             destination: Some(Destination::ObjectStore(destination)),

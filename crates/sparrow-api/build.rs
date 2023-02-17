@@ -9,9 +9,11 @@ fn main() {
         "../../proto/kaskada/kaskada/v1alpha/schema.proto",
         "../../proto/kaskada/kaskada/v1alpha/common.proto",
         "../../proto/kaskada/kaskada/v1alpha/file_service.proto",
+        "../../proto/kaskada/kaskada/v1alpha/destinations.proto",
         "../../proto/kaskada/kaskada/v1alpha/plan.proto",
         "../../proto/kaskada/kaskada/v1alpha/preparation_service.proto",
         "../../proto/kaskada/kaskada/v1alpha/compute_service.proto",
+        "../../proto/google/api/field_behavior.proto",
     ];
     println!("cargo:rerun-if-changed=build.rs");
     for proto_file in proto_files {

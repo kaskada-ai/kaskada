@@ -1,14 +1,21 @@
 use std::time::Duration;
 
 use futures::Stream;
-use sparrow_api::kaskada::v1alpha::execute_response;
-use sparrow_api::kaskada::v1alpha::execute_response::output;
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::execute_response::ProgressInformation;
-use sparrow_api::kaskada::v1alpha::object_store_output::ResultPaths;
-use sparrow_api::kaskada::v1alpha::UnspecifiedOutput;
+use sparrow_api::kaskada::v1alpha::object_store_destination::ResultPaths;
+use sparrow_api::kaskada::v1alpha::output_to;
+use sparrow_api::kaskada::v1alpha::ObjectStoreDestination;
+use sparrow_api::kaskada::v1alpha::OutputTo;
 use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LongQueryState};
 use tokio_stream::StreamExt;
+
+#[cfg(feature = "pulsar")]
+use super::output::pulsar::format_topic_url;
+#[cfg(feature = "pulsar")]
+use error_stack::ResultExt;
+#[cfg(feature = "pulsar")]
+use sparrow_api::kaskada::v1alpha::PulsarDestination;
 
 use super::Error;
 
@@ -30,13 +37,13 @@ struct ProgressTracker {
     /// If the output is not configured to write to files, this will be empty.
     output_paths: Vec<String>,
     /// Information on where the outputs are materialized to.
-    output_to: output::Output,
+    destination: Option<output_to::Destination>,
 }
 
 #[derive(Debug)]
 pub(crate) enum ProgressUpdate {
     /// Informs the progress tracker of the output destination.
-    OutputType { output: output::Output },
+    Destination { destination: output_to::Destination },
     /// Progress update reported for each table indicating total size.
     InputMetadata { total_num_rows: usize },
     /// Progress update indicating the given number of rows have been read.
@@ -75,14 +82,14 @@ impl ProgressTracker {
                 produced_output_rows: 0,
             },
             output_paths: vec![],
-            output_to: output::Output::Unspecified(UnspecifiedOutput {}),
+            destination: None,
         }
     }
 
     fn process_update(&mut self, stats: ProgressUpdate) {
         match stats {
-            ProgressUpdate::OutputType { output } => {
-                self.output_to = output;
+            ProgressUpdate::Destination { destination } => {
+                self.destination = Some(destination);
             }
             ProgressUpdate::InputMetadata { total_num_rows } => {
                 self.progress.total_input_rows += total_num_rows as i64;
@@ -96,24 +103,6 @@ impl ProgressTracker {
             }
             ProgressUpdate::FilesProduced { mut paths } => {
                 self.output_paths.append(&mut paths);
-
-                // Update the outputs result paths, if applicable.
-                //
-                // This pattern isn't good - it feels like we can easily introduce
-                // a race condition. Also, a ton of unnecessary clones.
-                let output_to = &mut self.output_to;
-                match output_to {
-                    output::Output::ObjectStore(store) => {
-                        store.output_paths = Some(ResultPaths {
-                            paths: self.output_paths.clone(),
-                        })
-                    }
-                    _ => debug_assert_eq!(
-                        self.output_paths.len(),
-                        0,
-                        "expected object store output for output paths"
-                    ),
-                };
             }
             ProgressUpdate::ExecutionComplete { .. } | ProgressUpdate::ExecutionFailed { .. } => {
                 panic!("Shouldn't update process on final message")
@@ -121,7 +110,7 @@ impl ProgressTracker {
         }
     }
 
-    fn progress_message(&mut self) -> ExecuteResponse {
+    fn progress_message(&mut self) -> error_stack::Result<ExecuteResponse, Error> {
         // This currently reports after the first period with no batches.
         // If this is spammy, we could require there be N periods with no batches.
         if self.output_batches_since_progress == 0 && !self.logged_no_batches {
@@ -135,16 +124,54 @@ impl ProgressTracker {
 
         self.output_batches_since_progress = 0;
 
-        ExecuteResponse {
+        let destination = self.destination_to_output()?;
+        Ok(ExecuteResponse {
             state: LongQueryState::Running as i32,
             is_query_done: false,
             progress: Some(self.progress.clone()),
             flight_record_path: None,
             plan_yaml_path: None,
             compute_snapshots: Vec::new(),
-            output: Some(execute_response::Output {
-                output: Some(self.output_to.clone()),
+            output_to: Some(destination),
+        })
+    }
+
+    fn destination_to_output(&mut self) -> error_stack::Result<OutputTo, Error> {
+        // Clone the output paths in for object store destinations
+        let destination = self
+            .destination
+            .as_ref()
+            .ok_or(Error::Internal("expected destination"))?;
+        match destination {
+            output_to::Destination::ObjectStore(store) => Ok(OutputTo {
+                destination: Some(output_to::Destination::ObjectStore(
+                    ObjectStoreDestination {
+                        file_type: store.file_type,
+                        output_prefix_uri: store.output_prefix_uri.clone(),
+                        output_paths: Some(ResultPaths {
+                            paths: self.output_paths.clone(),
+                        }),
+                    },
+                )),
             }),
+            #[cfg(not(feature = "pulsar"))]
+            output_to::Destination::Pulsar(pulsar) => {
+                error_stack::bail!(Error::FeatureNotEnabled { feature: "pulsar" })
+            }
+            #[cfg(feature = "pulsar")]
+            output_to::Destination::Pulsar(pulsar) => Ok(OutputTo {
+                destination: Some(output_to::Destination::Pulsar(PulsarDestination {
+                    broker_service_url: pulsar.broker_service_url.clone(),
+                    tenant: pulsar.tenant.clone(),
+                    namespace: pulsar.namespace.clone(),
+                    topic_name: pulsar.topic_name.clone(),
+                    topic_url: format_topic_url(pulsar)
+                        .change_context(Error::MissingField("missing topic name"))?,
+                })),
+            }),
+            output_to::Destination::Redis(_) => {
+                error_stack::bail!(Error::UnsupportedOutput { output: "redis" })
+            }
         }
     }
 }
@@ -171,7 +198,7 @@ pub(super) fn progress_stream(
                 biased;
 
                 _ = ticks.tick() => {
-                    yield Ok(tracker.progress_message());
+                    yield tracker.progress_message();
                 },
                 progress_update = progress_updates_rx.next() => {
                     if let Some(update) = progress_update {
@@ -182,7 +209,7 @@ pub(super) fn progress_stream(
                                     tokio::select! {
                                         biased;
                                         _ = ticks.tick() => {
-                                            yield Ok(tracker.progress_message());
+                                            yield tracker.progress_message();
                                         }
                                         stats = progress_updates_rx.next() => {
                                             match stats {
@@ -198,6 +225,14 @@ pub(super) fn progress_stream(
                                     }
                                 }
 
+                                let output = match tracker.destination_to_output() {
+                                    Ok(output) => output,
+                                    Err(e) => {
+                                        yield Err(e);
+                                        continue;
+                                    }
+                                };
+
                                 let final_result = Ok(ExecuteResponse {
                                     state: LongQueryState::Running as i32,
                                     is_query_done: true,
@@ -205,7 +240,7 @@ pub(super) fn progress_stream(
                                     flight_record_path: None,
                                     plan_yaml_path: None,
                                     compute_snapshots,
-                                    output: Some(execute_response::Output { output: Some(tracker.output_to.clone()) }),
+                                    output_to: Some(output),
                                 });
                                 yield final_result;
                                 break

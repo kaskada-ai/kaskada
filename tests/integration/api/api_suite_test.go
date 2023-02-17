@@ -199,4 +199,3 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 		},
 	}
 }
-

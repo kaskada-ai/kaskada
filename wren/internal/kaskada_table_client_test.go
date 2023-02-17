@@ -179,24 +179,24 @@ var _ = Describe("KaskadaTableClient", func() {
 			})
 		})
 
-		Describe("test getMinTimeOfNewPreparedFiles", func() {
+		Describe("test GetMinTimeOfNewPreparedFiles", func() {
 			It("should get the min time from the prepared files after the passed dataToken", func() {
 				sliceInfo1, err = GetNewSliceInfo(slicePlan1, table)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				minTime, err := getMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken1.DataVersionID)
+				minTime, err := tableClient.GetMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken1.DataVersionID)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(*minTime).Should(Equal(getTime("2022-07-22T02:03:00Z").UnixNano()))
 
-				minTime, err = getMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken2.DataVersionID)
+				minTime, err = tableClient.GetMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken2.DataVersionID)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(*minTime).Should(Equal(getTime("2022-07-22T04:01:00Z").UnixNano()))
 
-				minTime, err = getMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken3.DataVersionID)
+				minTime, err = tableClient.GetMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken3.DataVersionID)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(*minTime).Should(Equal(getTime("2022-07-22T05:04:00Z").UnixNano()))
 
-				minTime, err = getMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken4.DataVersionID)
+				minTime, err = tableClient.GetMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster1, sliceInfo1, dataToken4.DataVersionID)
 				Expect(err).Should(HaveOccurred())
 				Expect(minTime).Should(BeNil())
 
