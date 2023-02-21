@@ -65,7 +65,7 @@ class FenlMagics(Magics):
     @argument(
         "--dataframe",
         default=True,
-        help="When `True`, will render the results as a dataframe. Otherwise, only the response.",
+        help="When `True`, will render the results as a dataframe. Otherwise only returns the response.",
     )
     @argument(
         "--preview-rows",
