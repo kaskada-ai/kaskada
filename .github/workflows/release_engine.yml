@@ -168,22 +168,22 @@ jobs:
           ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
           WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: docker_meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+#      - name: Extract metadata (tags, labels) for Docker
+#        id: docker_meta
+#        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+#        if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+#        with:
+#          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker images
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
-        with:
-          context: .
-          file: release.Dockerfile
-          push: true
-          tags: ${{ needs.release_engine_draft.version }},${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
+#      - name: Build and push Docker images
+#        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+#        if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+#        with:
+#          context: .
+#          file: release.Dockerfile
+#          push: true
+#          tags: ${{ needs.release_engine_draft.version }},${{ steps.docker_meta.outputs.tags }}
+#          labels: ${{ steps.docker_meta.outputs.labels }}
 
   # TODO: Run integration tests on each (as many of?) the released artifacts as possible).
 
