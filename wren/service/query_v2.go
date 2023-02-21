@@ -11,14 +11,14 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/kaskada/kaskada-ai/wren/auth"
-	"github.com/kaskada/kaskada-ai/wren/compute"
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	apiv1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	apiv2alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v2alpha"
-	"github.com/kaskada/kaskada-ai/wren/internal"
-	"github.com/kaskada/kaskada-ai/wren/property"
+	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	apiv2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
+	"github.com/kaskada-ai/kaskada/wren/auth"
+	"github.com/kaskada-ai/kaskada/wren/compute"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/internal"
+	"github.com/kaskada-ai/kaskada/wren/property"
 )
 
 type queryV2Service struct {

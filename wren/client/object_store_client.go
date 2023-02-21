@@ -24,7 +24,7 @@ import (
 	"github.com/c2fo/vfs/v6/backend/os"
 	"github.com/c2fo/vfs/v6/backend/s3"
 	vfs_utils "github.com/c2fo/vfs/v6/utils"
-	"github.com/kaskada/kaskada-ai/wren/utils"
+	"github.com/kaskada-ai/kaskada/wren/utils"
 
 	"github.com/rs/zerolog/log"
 )

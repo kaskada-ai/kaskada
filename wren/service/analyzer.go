@@ -7,9 +7,9 @@ import (
 
 	errDetails "google.golang.org/genproto/googleapis/rpc/errdetails"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/schema"
-	"github.com/kaskada/kaskada-ai/wren/internal"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/schema"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 )
 
 type ResourceDependency struct {

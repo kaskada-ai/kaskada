@@ -8,7 +8,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 
-	"github.com/kaskada/kaskada-ai/wren/property"
+	"github.com/kaskada-ai/kaskada/wren/property"
 )
 
 // KaskadaQueryResult holds the details provided at query time.

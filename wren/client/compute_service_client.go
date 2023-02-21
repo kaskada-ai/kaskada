@@ -3,7 +3,7 @@ package client
 import (
 	"google.golang.org/grpc"
 
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
 
 // NewComputeServiceClient creates a new ComputeServiceClient from a gRPC connection
