@@ -11,6 +11,7 @@ from IPython.core.magic_arguments import argument, magic_arguments, parse_argstr
 import kaskada.client as client
 import kaskada.compute as compute
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
+from fenlmagic.utils import arg_to_response_type
 
 
 class QueryResult(object):
@@ -58,8 +59,13 @@ class FenlMagics(Magics):
     )
     @argument(
         "--output",
-        help='Output format for the query results. One of "df" (default), "json", "parquet" or "redis-bulk". \
-            "redis-bulk" implies --result-behavior "final-results"',
+        default="parquet",
+        help='Output format for the query results. One of "parquet", or "csv".',
+    )
+    @argument(
+        "--dataframe",
+        default=True,
+        help="When `True`, will render the results as a dataframe. Otherwise, only the response.",
     )
     @argument(
         "--preview-rows",
@@ -83,7 +89,8 @@ class FenlMagics(Magics):
         args = parse_argstring(self.fenl, arg)
         dry_run = test_arg(clean_arg(str(args.dry_run)), "true")
         experimental = test_arg(clean_arg(str(args.experimental)), "true")
-        output = clean_arg(args.output)
+        render_dataframe = test_arg(clean_arg(str(args.dataframe)), "true")
+        response_as = arg_to_response_type(clean_arg(args.output))
         result_behavior = clean_arg(args.result_behavior)
         preview_rows = clean_arg(args.preview_rows)
         var = clean_arg(args.var)
@@ -110,18 +117,25 @@ class FenlMagics(Magics):
                 changed_since_time=clean_arg(args.changed_since_time),
                 final_result_time=final_result_time,
                 limits=query_pb.Query.Limits(**limits),
+                response_as=response_as,
                 client=self.client,
             )
             query_result = QueryResult(query, resp)
 
-            if not dry_run and (test_arg(output, "df") or output is None):
+            if not dry_run and render_dataframe:
                 # TODO: figure out how to support reading from multiple parquet paths
                 if len(query_result.query_response.file_results.paths) > 0:
-                    df = pandas.read_parquet(
-                        query_result.query_response.file_results.paths[0],
-                        engine="pyarrow",
-                    )
-                    query_result.set_dataframe(df)
+                    if response_as == compute.ResponseType.FILE_TYPE_PARQUET:
+                        df = pandas.read_parquet(
+                            query_result.query_response.file_results.paths[0],
+                            engine="pyarrow",
+                        )
+                        query_result.set_dataframe(df)
+                    elif response_as == compute.ResponseType.FILE_TYPE_CSV:
+                        df = pandas.read_csv(
+                            query_result.query_response.file_results.paths[0],
+                        )
+                        query_result.set_dataframe(df)
 
             if var is not None:
                 IPython.get_ipython().push({var: query_result})
