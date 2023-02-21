@@ -9,13 +9,13 @@ ent/clean:
 	find wren/ent/ -type f ! -name 'generate.go' ! -name '.gitignore' ! -regex '.*/schema/.*' -delete
 
 ent/generate: ent/clean
-	go generate ./wren/ent
+	cd wren && go generate ./ent
 
 # starts a postgres container, runs the create migration tool, then stops the postgres container
 ent/create-migrations:
 	docker run --rm --name migrate_postgres --detach -p 5433:5432 --env POSTGRES_PASSWORD=mpostgres123 postgres:14.3-alpine
 	sleep 5
-	go run -mod=mod wren/db/main.go
+	cd wren && go run -mod=mod db/main.go
 	docker stop migrate_postgres
 
 # fixes the migration checksum file (atlas.sum) after any manual changes are applied to the migration files
@@ -32,8 +32,8 @@ ent/update-schema:
 
 # removes all previously generated protobuf code from the repo
 proto/clean:
-	@ find wren/gen/ -type f ! -name '*.pb.ent.go' ! -name '.gitignore' -delete
-	@ echo 'checks = ["inherit", "-ST1012"]' > wren/gen/staticcheck.conf
+	@ find gen/proto/go -type f ! -name '*.pb.ent.go' ! -name '.gitignore' ! -name 'go.*' -delete
+	@ echo 'checks = ["inherit", "-ST1012"]' > gen/proto/go/staticcheck.conf
 
 # use this varible with `$(call buf_docker_fn,<path>,<additional_docker_flags>)`
 # where `<path>` is the desired path from the root of the repo for the buf call
@@ -84,7 +84,7 @@ test/int/run-api-postgres-s3:
 
 wren/build:
 	cp NOTICE wren/
-	go build wren/main.go
+	cd wren && go build main.go
 
 wren/lint:
 	go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -92,11 +92,11 @@ wren/lint:
 
 wren/run:
 	cp NOTICE wren/
-	go run wren/main.go
+	cd wren && go run main.go
 
 wren/test:
 	cp NOTICE wren/
-	go test ./wren/...
+	cd wren && go test ./...
 
 .PHONY: sparrow/run sparrow/run-release
 sparrow/run:
