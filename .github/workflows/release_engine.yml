@@ -90,13 +90,15 @@ jobs:
           go-version: "1.19"
           cache: true
           cache-dependency-path: go.sum
+        working-directory: wren
 
       - name: Wren - Generate Protobufs
         run: buf generate
         working-directory: proto
 
       - name: Wren - Generate Ent
-        run: go generate ./wren/ent
+        run: go generate ./ent
+        working-directory: wren
 
       - name: Wren - Copy NOTICE
         run: cp NOTICE ./wren/
@@ -111,13 +113,14 @@ jobs:
       - name: Wren - Build
         run: |
           mkdir release/
-          go build -ldflags="-w -s" -o release/wren${{ matrix.exe }} wren/main.go
+          go build -ldflags="-w -s" -o release/wren${{ matrix.exe }} main.go
         env:
           GOARCH: ${{ matrix.goarch }}
           GOOS: ${{ matrix.goos }}
           CGO_ENABLED: 1
           CXX: ${{ matrix.cxx }}
           CC: ${{ matrix.cc }}
+        working-directory: wren
 
       - name: Sparrow - Install toolchain
         id: toolchain

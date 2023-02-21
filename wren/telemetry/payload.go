@@ -19,7 +19,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/kaskada/kaskada-ai/wren/utils"
+	"github.com/kaskada-ai/kaskada/wren/utils"
 )
 
 type serverPayloadReporter struct {

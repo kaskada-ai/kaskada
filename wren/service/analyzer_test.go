@@ -8,10 +8,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/schema"
-	pb "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	"github.com/kaskada/kaskada-ai/wren/internal"
+	pb "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/schema"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 )
 
 const (

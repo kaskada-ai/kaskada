@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/kaskada/kaskada-ai/wren/internal"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 )
 
 const (

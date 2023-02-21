@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	. "github.com/kaskada/kaskada-ai/tests/integration/api/matchers"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
 )
 
 var _ = Describe("Queries V1", Ordered, func() {

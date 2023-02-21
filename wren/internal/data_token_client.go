@@ -7,10 +7,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/datatoken"
-	"github.com/kaskada/kaskada-ai/wren/ent/dataversion"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/datatoken"
+	"github.com/kaskada-ai/kaskada/wren/ent/dataversion"
 )
 
 type dataTokenClient struct {

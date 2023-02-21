@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent"
 )
 
 var expectedNextVersionID = int64(-1)

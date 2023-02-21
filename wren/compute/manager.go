@@ -22,16 +22,16 @@ import (
 	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	"github.com/kaskada/kaskada-ai/wren/auth"
-	"github.com/kaskada/kaskada-ai/wren/client"
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/kaskadafile"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	v2alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v2alpha"
-	"github.com/kaskada/kaskada-ai/wren/internal"
-	"github.com/kaskada/kaskada-ai/wren/store"
-	"github.com/kaskada/kaskada-ai/wren/utils"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	v2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
+	"github.com/kaskada-ai/kaskada/wren/auth"
+	"github.com/kaskada-ai/kaskada/wren/client"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
+	"github.com/kaskada-ai/kaskada/wren/internal"
+	"github.com/kaskada-ai/kaskada/wren/store"
+	"github.com/kaskada-ai/kaskada/wren/utils"
 )
 
 const (

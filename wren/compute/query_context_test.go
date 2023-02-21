@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kaskada/kaskada-ai/wren/internal"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 )
 
 func TestGetTableIDs(t *testing.T) {

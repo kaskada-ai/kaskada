@@ -48,10 +48,10 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 
-	"github.com/kaskada/kaskada-ai/tests/integration/api/helpers"
-	. "github.com/kaskada/kaskada-ai/tests/integration/api/matchers"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/tests/integration/api/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	"github.com/kaskada-ai/kaskada/wren/ent"
 )
 
 var (
@@ -282,7 +282,7 @@ func convertDetails(errStatus *status.Status) []string {
 		// to make sure they are included in the build:
 		//
 		// "google.golang.org/genproto/googleapis/rpc/errdetails"
-		// "github.com/kaskada/kaskada-ai/kaskada/gen/kaskada/kaskada/v1alpha"
+		// "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 		details = append(details, detail.String())
 	}
 	return details

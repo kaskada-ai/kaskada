@@ -27,16 +27,16 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/kaskada/kaskada-ai/wren/auth"
-	"github.com/kaskada/kaskada-ai/wren/client"
-	"github.com/kaskada/kaskada-ai/wren/compute"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	v2alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v2alpha"
-	"github.com/kaskada/kaskada-ai/wren/internal"
-	"github.com/kaskada/kaskada-ai/wren/service"
-	"github.com/kaskada/kaskada-ai/wren/store"
-	"github.com/kaskada/kaskada-ai/wren/telemetry"
-	"github.com/kaskada/kaskada-ai/wren/utils"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	v2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
+	"github.com/kaskada-ai/kaskada/wren/auth"
+	"github.com/kaskada-ai/kaskada/wren/client"
+	"github.com/kaskada-ai/kaskada/wren/compute"
+	"github.com/kaskada-ai/kaskada/wren/internal"
+	"github.com/kaskada-ai/kaskada/wren/service"
+	"github.com/kaskada-ai/kaskada/wren/store"
+	"github.com/kaskada-ai/kaskada/wren/telemetry"
+	"github.com/kaskada-ai/kaskada/wren/utils"
 )
 
 var (
@@ -191,7 +191,7 @@ func main() {
 	authFunc := auth.ClientIDHeaderAuthFunc(*defaultClientID, ownerClient)
 
 	// populate parallize config
-	// see: https://github.com/kaskada/kaskada-ai/issues/69
+	// see: https://github.com/kaskada-ai/kaskada/issues/69
 	var parallelizeConfig *utils.ParallelizeConfig
 	if entConfig.DriverName() == "sqlite3" {
 		if *prepareParallelizeFactor > 1 || *queryParallelizeFactor > 1 {

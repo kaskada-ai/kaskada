@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	. "github.com/kaskada/kaskada-ai/tests/integration/api/matchers"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
 )
 
 var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"), Label("redis-ai"), func() {
