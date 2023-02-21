@@ -29,9 +29,6 @@ message FlightRecordHeader {
   // Build information about the Sparrow Binary.
   BuildInfo sparrow_build_info = 3;
 
-  // TODO: Include the plan in the Flight Record (ideally as a proto)?
-  // This would allow interpreting it in a self-contained way.
-
   message BuildInfo {
     string sparrow_version = 1;
     string github_ref = 2;
