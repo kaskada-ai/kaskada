@@ -6,12 +6,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/materialization"
-	"github.com/kaskada/kaskada-ai/wren/ent/materializationdependency"
-	"github.com/kaskada/kaskada-ai/wren/ent/predicate"
-	"github.com/kaskada/kaskada-ai/wren/ent/schema"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
+	"github.com/kaskada-ai/kaskada/wren/ent/materializationdependency"
+	"github.com/kaskada-ai/kaskada/wren/ent/predicate"
+	"github.com/kaskada-ai/kaskada/wren/ent/schema"
 )
 
 type materializationClient struct {

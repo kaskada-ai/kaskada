@@ -14,12 +14,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/kaskada/kaskada-ai/wren/client"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/kaskadafile"
-	"github.com/kaskada/kaskada-ai/wren/ent/migrate"
-	_ "github.com/kaskada/kaskada-ai/wren/ent/runtime"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/client"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
+	"github.com/kaskada-ai/kaskada/wren/ent/migrate"
+	_ "github.com/kaskada-ai/kaskada/wren/ent/runtime"
 )
 
 var (
@@ -102,7 +102,7 @@ func testAddingFilesToTable(tableClient KaskadaTableClient, owner *ent.Owner, fi
 			URI:        "s3://bucket/file",
 			Identifier: file,
 			Schema:     nil,
-			FileType: kaskadafile.TypeParquet,
+			FileType:   kaskadafile.TypeParquet,
 		})
 	}
 

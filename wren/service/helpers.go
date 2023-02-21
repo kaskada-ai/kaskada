@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
 )
 
 func wrapErrorWithStatus(err error, subLogger zerolog.Logger) error {

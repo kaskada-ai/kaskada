@@ -7,10 +7,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/kaskadaquery"
-	"github.com/kaskada/kaskada-ai/wren/ent/predicate"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/kaskadaquery"
+	"github.com/kaskada-ai/kaskada/wren/ent/predicate"
 )
 
 func NewKaskadaQueryClient(entClient *ent.Client) KaskadaQueryClient {

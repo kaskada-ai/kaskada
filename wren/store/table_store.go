@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/kaskada/kaskada-ai/wren/client"
-	"github.com/kaskada/kaskada-ai/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/client"
+	"github.com/kaskada-ai/kaskada/wren/ent"
 )
 
 // TableStore is a wrapper around the store

@@ -9,7 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent"
 )
 
 const (

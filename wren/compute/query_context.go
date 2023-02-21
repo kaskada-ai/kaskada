@@ -8,9 +8,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	"github.com/kaskada/kaskada-ai/wren/internal"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 )
 
 type QueryContext struct {

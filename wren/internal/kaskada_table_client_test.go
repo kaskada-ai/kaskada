@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/kaskadafile"
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	"github.com/kaskada/kaskada-ai/wren/property"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
+	"github.com/kaskada-ai/kaskada/wren/property"
 )
 
 var _ = Describe("KaskadaTableClient", func() {

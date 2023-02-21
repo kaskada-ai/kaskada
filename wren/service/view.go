@@ -10,13 +10,13 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/kaskada/kaskada-ai/wren/auth"
-	"github.com/kaskada/kaskada-ai/wren/compute"
-	"github.com/kaskada/kaskada-ai/wren/customerrors"
-	"github.com/kaskada/kaskada-ai/wren/ent"
-	"github.com/kaskada/kaskada-ai/wren/ent/schema"
-	pb "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	"github.com/kaskada/kaskada-ai/wren/internal"
+	pb "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/auth"
+	"github.com/kaskada-ai/kaskada/wren/compute"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
+	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/schema"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 )
 
 type ViewService interface {

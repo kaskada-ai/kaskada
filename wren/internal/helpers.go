@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	"github.com/kaskada/kaskada-ai/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent"
 )
 
 // rollback calls to tx.Rollback and wraps the given error
