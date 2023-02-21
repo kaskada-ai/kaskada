@@ -197,24 +197,25 @@ def get_properties(obj):
         dict of {str : Any}: A nested set of keys and values with structure matching the protobuf input.
     """
     results = {}
-    for field in obj.ListFields():
-        name = field[0].name
-        field_type = get_classname(type(field[1]))
-        prop_value = field[1]
-        if field_type in (int, float, bool):
-            results[name] = prop_value
-        elif field_type == "str":
-            if prop_value != "":
+    if isinstance(obj, Message):
+        for field in obj.ListFields():
+            name = field[0].name
+            field_type = get_classname(type(field[1]))
+            prop_value = field[1]
+            if field_type in (int, float, bool):
                 results[name] = prop_value
-        elif field_type == "google._upb._message.RepeatedCompositeContainer":
-            if len(prop_value) > 0:
-                results[name] = [get_properties(sub_obj) for sub_obj in prop_value]
-        elif field_type == "google.protobuf.timestamp_pb2.Timestamp":
-            results[name] = get_datetime(prop_value).isoformat()
-        elif field_type.startswith("pandas."):
-            results[name] = prop_value
-        elif isinstance(prop_value, Message):
-            results[name] = get_properties(prop_value)
-        else:
-            results[name] = prop_value
+            elif field_type == "str":
+                if prop_value != "":
+                    results[name] = prop_value
+            elif field_type == "google._upb._message.RepeatedCompositeContainer":
+                if len(prop_value) > 0:
+                    results[name] = [get_properties(sub_obj) for sub_obj in prop_value]
+            elif field_type == "google.protobuf.timestamp_pb2.Timestamp":
+                results[name] = get_datetime(prop_value).isoformat()
+            elif field_type.startswith("pandas."):
+                results[name] = prop_value
+            elif isinstance(prop_value, Message):
+                results[name] = get_properties(prop_value)
+            else:
+                results[name] = prop_value
     return results
