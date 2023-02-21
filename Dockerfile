@@ -70,16 +70,20 @@ RUN cargo build --bin sparrow-main
 FROM golang:1.19 AS wren-build
 
 RUN mkdir -p /builds/kaskada/wren
+RUN mkdir -p /builds/kaskada/gen/proto/go
 WORKDIR /builds/kaskada/wren
 
 # Fetch dependencies.
-COPY ./go.mod /builds/kaskada/
-COPY ./go.sum /builds/kaskada/
+COPY ./wren/go.mod /builds/kaskada/wren/
+COPY ./wren/go.sum /builds/kaskada/wren/
+COPY ./gen/proto/go/go.mod /builds/kaskada/gen/proto/go/
+COPY ./gen/proto/go/go.sum /builds/kaskada/gen/proto/go/
 RUN go mod download
 
 #compile minimal executable
 COPY NOTICE /builds/kaskada/wren/
 COPY ./wren /builds/kaskada/wren
+COPY ./gen/proto/go /builds/kaskada/gen/proto/go
 RUN go build -ldflags="-w -s" -o /go/bin/wren main.go
 
 ###############################################################################

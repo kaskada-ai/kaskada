@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	v1alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v1alpha"
-	v2alpha "github.com/kaskada/kaskada-ai/wren/gen/kaskada/kaskada/v2alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	v2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
 )
 
 func Test_addRequestDetailsToResponse(t *testing.T) {

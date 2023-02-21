@@ -13,7 +13,7 @@ import (
 	"github.com/kouhin/envflag"
 	_ "github.com/lib/pq"
 
-	"github.com/kaskada/kaskada-ai/wren/ent/migrate"
+	"github.com/kaskada-ai/kaskada/wren/ent/migrate"
 )
 
 var (
