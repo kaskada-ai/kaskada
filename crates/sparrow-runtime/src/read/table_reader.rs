@@ -13,10 +13,7 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_compiler::TableInfo;
 use sparrow_core::TableSchema;
-use sparrow_qfr::kaskada::sparrow::v1alpha::flight_record::{
-    EventType, GatherBatchesMetrics, MergeBatchesMetrics, Metrics, ReceiveBatchMetrics,
-};
-use sparrow_qfr::{FlightRecorder, Timed};
+use sparrow_qfr::{FlightRecorder, TimedTask};
 use tokio_stream::StreamExt;
 use tracing::info;
 
@@ -100,7 +97,7 @@ pub fn table_reader(
         while let Some(mut next_input) = active.pop() {
             let index = next_input.index;
 
-            let next_batch = Timed::future(next_input.next_batch(&projected_schema, max_event_timestamp.clone()))
+            let next_batch = TimedTask::future(next_input.next_batch(&projected_schema, max_event_timestamp.clone()))
                 .await
                 .with_computed_metrics_ok(|input| {
                     input.as_ref().map(|input| Metrics::ReceiveBatch(ReceiveBatchMetrics {
@@ -118,7 +115,7 @@ pub fn table_reader(
             }
 
             let active_len = active.len() as u32;
-            let next_output = Timed::sync(|| gatherer.add_batch(index, next_batch))
+            let next_output = TimedTask::sync(|| gatherer.add_batch(index, next_batch))
                 .with_computed_metrics_ok(|result| result.as_ref().map(|next_output|
                     Metrics::GatherBatches(GatherBatchesMetrics {
                         min_time: next_output.min_time_inclusive,
@@ -295,7 +292,7 @@ fn merge_next_output(
     // Number of output rows (for metrics reporting)
     let mut num_input_rows = Vec::with_capacity(gathered.batches.len());
 
-    Timed::sync(|| {
+    TimedTask::sync(|| {
         // NOTE: The gathered batches are already totally ordered
         // (verified by debug assertions in `Batch`).
         let inputs: Vec<_> = gathered

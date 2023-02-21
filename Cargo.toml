@@ -55,6 +55,7 @@ hashbrown = { version = "0.13.2", features = ["serde"] }
 hex = "0.4.3"
 indoc = "1.0.8"
 insta = { version = "1.26.0", features = ["ron", "yaml", "json"] }
+inventory = "0.3.3"
 itertools = "0.10.5"
 lalrpop = "0.19.8"
 lalrpop-util = "0.19.8"
@@ -86,6 +87,7 @@ sha2 = "0.10.6"
 similar = "2.2.1"
 similar-asserts = "1.4.2"
 smallvec = { version = "1.10.0", features = ["union", "serde"] }
+static_assertions = "1.1.0"
 static_init = "1.0.3"
 strum = "0.24.1"
 strum_macros = "0.24.3"

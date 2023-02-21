@@ -19,10 +19,20 @@ pub mod kaskada {
 
 pub const QFR_VERSION: u32 = 1;
 
-mod io;
+mod activation;
+mod activity;
+mod factory;
+pub mod io;
+mod macros;
+mod metrics;
 mod recorder;
+mod registration;
 mod timer;
 
-pub use io::*;
+pub use activity::*;
+pub use factory::*;
+pub use macros::*;
+pub use metrics::*;
 pub use recorder::*;
+pub use registration::*;
 pub use timer::*;

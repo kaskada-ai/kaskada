@@ -185,8 +185,8 @@ impl ScanOperation {
             table_info,
             &requested_slice,
             projected_columns,
-            // ,TODO: Fix flight recorder
-            FlightRecorder::disabled_for_test(),
+            // TODO: Fix flight recorder
+            FlightRecorder::disabled(),
             context.max_event_in_snapshot,
             None,
         )

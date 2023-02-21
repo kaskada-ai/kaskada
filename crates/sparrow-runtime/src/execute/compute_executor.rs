@@ -11,8 +11,9 @@ use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
+use sparrow_qfr::io::FlightRecordWriter;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
-use sparrow_qfr::{FlightRecordWriter, FlightRecorderFactory};
+use sparrow_qfr::FlightRecorderFactory;
 use tempfile::TempDir;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
@@ -352,7 +353,7 @@ async fn join(
 
 /// Create a flight recorder if the runtime options indicate.
 #[allow(dead_code)]
-fn create_flight_recorder(
+async fn create_flight_recorder(
     spawner: &mut ComputeTaskSpawner,
     runtime_options: &RuntimeOptions,
     flight_record_header: FlightRecordHeader,
@@ -372,9 +373,9 @@ fn create_flight_recorder(
                         .into_report()
                         .change_context(Internal("unable to write flight recorder header"))?;
 
-                while let Some(next_batch) = receiver.recv().await {
+                while let Some(next_record) = receiver.recv().await {
                     writer
-                        .write_batch(next_batch)
+                        .write(next_record)
                         .unwrap_or_else(|e| error!("Failed to write flight records: {:?}", e));
                 }
 
@@ -384,7 +385,7 @@ fn create_flight_recorder(
                 Ok(())
             },
         );
-        Ok(FlightRecorderFactory::new(sender))
+        Ok(FlightRecorderFactory::new(sender).await)
     } else {
         Ok(FlightRecorderFactory::new_disabled())
     }

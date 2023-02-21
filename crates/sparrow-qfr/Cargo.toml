@@ -16,6 +16,7 @@ error-stack.workspace = true
 fallible-iterator.workspace = true
 futures.workspace = true
 hashbrown.workspace = true
+inventory.workspace = true
 itertools.workspace = true
 pin-project.workspace = true
 prost.workspace = true
@@ -29,6 +30,8 @@ tonic-build.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+serde_yaml.workspace = true
+static_assertions.workspace = true
 tempfile.workspace = true
 
 [lib]
