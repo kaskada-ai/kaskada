@@ -52,7 +52,7 @@ Apache-2.0 github.com/prometheus/client_golang/prometheus https://github.com/pro
 Apache-2.0 github.com/prometheus/client_model/go https://github.com/prometheus/client_model/blob/v0.3.0/LICENSE
 Apache-2.0 github.com/prometheus/common https://github.com/prometheus/common/blob/v0.37.0/LICENSE
 Apache-2.0 github.com/prometheus/procfs https://github.com/prometheus/procfs/blob/v0.8.0/LICENSE
-Apache-2.0 github.com/kaskada-ai/kaskada/wren https://github.com/kaskada/kaskada-ai/blob/HEAD/LICENSE
+Apache-2.0 github.com/kaskada-ai/kaskada/wren https://github.com/kaskada-ai/kaskada/blob/HEAD/LICENSE
 Apache-2.0 google.golang.org/genproto https://github.com/googleapis/go-genproto/blob/1bc688fe9f3e/LICENSE
 Apache-2.0 google.golang.org/grpc https://github.com/grpc/grpc-go/blob/v1.50.1/LICENSE
 Apache-2.0 go.opencensus.io https://github.com/census-instrumentation/opencensus-go/blob/v0.23.0/LICENSE

@@ -191,7 +191,7 @@ func main() {
 	authFunc := auth.ClientIDHeaderAuthFunc(*defaultClientID, ownerClient)
 
 	// populate parallize config
-	// see: https://github.com/kaskada/kaskada-ai/issues/69
+	// see: https://github.com/kaskada-ai/kaskada/issues/69
 	var parallelizeConfig *utils.ParallelizeConfig
 	if entConfig.DriverName() == "sqlite3" {
 		if *prepareParallelizeFactor > 1 || *queryParallelizeFactor > 1 {
