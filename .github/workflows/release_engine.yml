@@ -19,8 +19,7 @@ permissions:
   pull-requests: read
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE: ghcr.io/${{ github.repository_owner}}/engine
 
 name: Engine Release
 jobs:
@@ -182,7 +181,7 @@ jobs:
           context: .
           file: release.Dockerfile
           push: true
-          tags: ghcr.io/kaskada-ai/engine:${{ needs.release_engine_draft.version }},ghcr.io/kaskada-ai/kengine:latest
+          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.version }},${{ env.IMAGE }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine
             org.opencontainers.image.description=The kaskada engine
