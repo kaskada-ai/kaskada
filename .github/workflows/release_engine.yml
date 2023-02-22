@@ -173,6 +173,11 @@ jobs:
           ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
           WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
 
+      - name: Current Date
+        id: current_date
+        run: |
+          echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
+        shell: bash
 
       - name: Build and push Docker images
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -188,7 +193,7 @@ jobs:
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.version=${{ needs.release_engine_draft.version }}
-            org.opencontainers.image.created=${{ $(date --rfc-3339=date) }}
+            org.opencontainers.image.created=${{ steps.current_date.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
 
