@@ -185,7 +185,7 @@ jobs:
           tags: ghcr.io/kaskada-ai/engine:${{ needs.release_engine_draft.version }},ghcr.io/kaskada-ai/kengine:latest
           labels: |
             org.opencontainers.image.title=kaskada engine
-            org.opencontainers.image.description=The kaskada enigne
+            org.opencontainers.image.description=The kaskada engine
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.version=${{ needs.release_engine_draft.version }}
