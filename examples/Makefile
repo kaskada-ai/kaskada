@@ -6,7 +6,7 @@ build/clean:
 
 build/wren:
 	cd ../; cp NOTICE wren/; make proto/generate; make ent/generate;
-	go build -o ~/.cache/kaskada/bin/kaskada-manager  ../wren/main.go
+	cd ../wren; go build -o ~/.cache/kaskada/bin/kaskada-manager  main.go
 
 build/crates:
 	cargo build --bin sparrow-main --release -p sparrow-main
