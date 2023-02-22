@@ -631,7 +631,7 @@ def try_init():
         for key in mods:
             if key.endswith("_grpc"):
                 continue
-            if key.startswith("kaskada."):
+            if key.startswith("kaskada.kaskada"):
                 for cls in inspect.getmembers(mods[key], inspect.isclass):
                     classname = get_classname(cls[1])
                     if (
