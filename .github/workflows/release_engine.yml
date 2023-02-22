@@ -195,7 +195,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
         with:
           context: .
-          file: release.Dockerfile
+          file: Dockerfile.release
           push: true
           tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE }}:latest
           labels: |
