@@ -93,7 +93,7 @@ jobs:
         with:
           go-version: "1.19"
           cache: true
-          cache-dependency-path: go.sum
+          cache-dependency-path: wren/go.sum
 
       - name: Wren - Generate Protobufs
         run: buf generate
