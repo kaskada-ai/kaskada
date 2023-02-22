@@ -39,7 +39,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/engine@v')
         run: |
           echo "version=${GITHUB_REF_NAME#engine@}" | tee -a "$GITHUB_OUTPUT"
-          echo "tag=${GITHUB_REF_NAME#}" | tee -a "GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF_NAME#}" | tee -a "$GITHUB_OUTPUT"
       # Run the release drafter to update the release notes for this tag.
       - name: Draft Engine release
         id: draft_release
@@ -57,10 +57,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Diagnostics
         run: |
-          echo "Release Version: ${{ steps.determine_version.version }}"
-          echo "Release ID: ${{ steps.draft_release.id }}"
-          echo "Release Tag: ${{ steps.draft_release.tag_name }}"
-          echo "Release URL: ${{ steps.draft_release.html_url }}"
+          echo Release Version: ${{ steps.determine_version.version }}
+          echo Release ID: ${{ steps.draft_release.id }}
+          echo Release Tag: ${{ steps.draft_release.tag_name }}
+          echo Release URL: ${{ steps.draft_release.html_url }}
 
   release_engine_build:
     name: Engine Release Build
