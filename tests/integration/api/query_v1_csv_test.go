@@ -11,7 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 gRPC with csv", Ordered, func() {
@@ -32,7 +33,7 @@ var _ = Describe("Query V1 gRPC with csv", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -53,7 +54,7 @@ var _ = Describe("Query V1 gRPC with csv", Ordered, func() {
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
-		res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.csv")
+		res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.csv")
 		Expect(res.DataTokenId).ShouldNot(BeEmpty())
 		firstDataTokenId = res.DataTokenId
 
@@ -90,7 +91,7 @@ min_amount: query_v1_test_csv.amount | min(),
 	Context("When the table schema is created correctly", Ordered, func() {
 		Describe("Confirm reading CSV files works", func() {
 			It("should load the csv data into a string slice", func() {
-				results := downloadCSV("/../../testdata/purchases/purchases_part3.csv")
+				results := helpers.DownloadCSV("/../../testdata/purchases/purchases_part3.csv")
 				Expect(results).Should(HaveLen(4))
 				headerRow := results[0]
 				firstRow := results[1]
@@ -112,7 +113,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(Equal(1))
 
@@ -137,7 +138,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -180,7 +181,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				firstResults = downloadCSV(resultUrls[0])
+				firstResults = helpers.DownloadCSV(resultUrls[0])
 
 				Expect(firstResults).Should(HaveLen(11)) //header row + 10 data rows
 				Expect(firstResults[10]).Should(ContainElements("2020-01-05T00:00:00.000000000+00:00", "patrick", "5000", "3"))
@@ -189,7 +190,7 @@ min_amount: query_v1_test_csv.amount | min(),
 
 		Describe("Load the second file into the table", func() {
 			It("Should work without error and return a dataToken", func() {
-				res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.csv")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.csv")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				secondDataTokenId = res.DataTokenId
 				Expect(secondDataTokenId).ShouldNot(Equal(firstDataTokenId))
@@ -202,7 +203,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -239,7 +240,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadCSV(resultUrls[0])
+				secondResults = helpers.DownloadCSV(resultUrls[0])
 
 				Expect(secondResults).Should(HaveLen(16)) // header row + 15 rows
 				Expect(secondResults[10]).Should(ContainElements("2020-01-05T00:00:00.000000000+00:00", "patrick", "5000", "3"))
@@ -257,7 +258,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -288,7 +289,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadCSV(resultUrls[0])
+				results := helpers.DownloadCSV(resultUrls[0])
 				Expect(results).Should(BeEquivalentTo(firstResults))
 			})
 		})
@@ -302,7 +303,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -333,7 +334,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadCSV(resultUrls[0])
+				results := helpers.DownloadCSV(resultUrls[0])
 				Expect(results).Should(BeEquivalentTo(secondResults))
 			})
 		})
@@ -346,7 +347,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -382,7 +383,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadCSV(resultUrls[0])
+				results := helpers.DownloadCSV(resultUrls[0])
 				Expect(results).Should(HaveLen(4)) // header row + 3 rows
 				Expect(results[1]).Should(ContainElements("2020-01-08T00:00:00.000000000+00:00", "karen", "9", "2"))
 				Expect(results[2]).Should(ContainElements("2020-01-07T00:00:00.000000000+00:00", "spongebob", "34", "7"))

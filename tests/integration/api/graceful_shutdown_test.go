@@ -14,7 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = PDescribe("Graceful Shutdown test", Ordered, Label("redis"), Label("redis-ai"), func() {
@@ -59,7 +60,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 	restartKaskada := func() {
 		Eventually(func(g Gomega) {
 			if kaskadaIsDown {
-				logLn("Trying to restart kaskada....")
+				helpers.LogLn("Trying to restart kaskada....")
 				cmd := exec.Command("docker", "start", "kaskada")
 				err := cmd.Run()
 				g.Expect(err).ShouldNot(HaveOccurred(), "Unable to start kaskada")
@@ -68,7 +69,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 			}
 
 			//get connection to kaskada
-			ctx, cancel, conn = getContextCancelConnection(20)
+			ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
 			ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 			// get a grpc client for the table service
@@ -112,7 +113,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		// load the first file into the table
-		loadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
 	})
 
 	AfterAll(func() {
@@ -146,14 +147,14 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				res, err := getMergedCreateQueryResponse(stream)
+				res, err := helpers.GetMergedCreateQueryResponse(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(res.GetFileResults()).ShouldNot(BeNil())
 				Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 				resultsUrl := res.GetFileResults().Paths[0]
-				results := downloadParquet(resultsUrl)
+				results := helpers.DownloadParquet(resultsUrl)
 
 				Expect(len(results)).Should(Equal(100000))
 				Expect(results).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
@@ -216,7 +217,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 			It("Should work without error", func() {
 				go terminateKaskada()
 
-				loadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part2.parquet")
+				helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part2.parquet")
 			})
 
 			It("Should upload new results to redis before terminating", func() {
