@@ -115,8 +115,8 @@ jobs:
 
       - name: Wren - Build
         run: |
-          mkdir release/
-          go build -ldflags="-w -s" -o release/wren${{ matrix.exe }} main.go
+          mkdir ../release/
+          go build -ldflags="-w -s" -o ../release/wren${{ matrix.exe }} main.go
         env:
           GOARCH: ${{ matrix.goarch }}
           GOOS: ${{ matrix.goos }}
