@@ -26,11 +26,11 @@ jobs:
   release_engine_draft:
     name: Engine Release Draft
     outputs:
-      version: ${{ steps.determine_version.version }}
-      release_id: ${{ steps.draft_release.id }}
-      release_tag: ${{ steps.draft_release.tag_name }}
-      release_url: ${{ steps.draft_release.html_url }}
-      upload_url: ${{ steps.draft_release.upload_url }}
+      version: ${{ steps.determine_version.outputs.version }}
+      release_id: ${{ steps.draft_release.outputs.id }}
+      release_tag: ${{ steps.draft_release.outputs.tag_name }}
+      release_url: ${{ steps.draft_release.outputs.html_url }}
+      upload_url: ${{ steps.draft_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:
       # Determine the version being released (if tagged).
@@ -48,8 +48,8 @@ jobs:
         with:
           config-name: release-drafter-engine.yml
           disable-autolabeler: true
-          tag: ${{ steps.determine_version.tag }}
-          version: ${{ steps.determine_version.version }}
+          tag: ${{ github.ref_name }}
+          version: ${{ steps.determine_version.outputs.version }}
           # Set commitish to the sha, otherwise it falls back on the branch.
           # This should be the sha matching the tag.
           commitish: ${{ github.sha }}
@@ -57,10 +57,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Diagnostics
         run: |
-          echo Release Version: ${{ steps.determine_version.version }}
-          echo Release ID: ${{ steps.draft_release.id }}
-          echo Release Tag: ${{ steps.draft_release.tag_name }}
-          echo Release URL: ${{ steps.draft_release.html_url }}
+          echo Release Input Version: ${{ steps.determine_version.outputs.version }}
+          echo Release ID: ${{ steps.draft_release.outputs.id }}
+          echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
+          echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
 
   release_engine_build:
     name: Engine Release Build
