@@ -49,7 +49,10 @@ jobs:
           config-name: release-drafter-engine.yml
           disable-autolabeler: true
           tag: ${{ steps.determine_version.tag }}
-          # version: ${{ steps.determine_version.version }}
+          version: ${{ steps.determine_version.version }}
+          # Set commitish to the sha, otherwise it falls back on the branch.
+          # This should be the sha matching the tag.
+          commitish: ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Diagnostics
