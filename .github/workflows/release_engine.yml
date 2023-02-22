@@ -37,7 +37,9 @@ jobs:
       - name: Determine version
         id: determine_version
         if: startsWith(github.ref, 'refs/tags/engine@v')
-        run: echo "version=${GITHUB_REF_NAME#engine@}" | tee -a "$GITHUB_OUTPUT"
+        run: |
+          echo "version=${GITHUB_REF_NAME#engine@}" | tee -a "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF_NAME#}" | tee -a "GITHUB_OUTPUT"
       # Run the release drafter to update the release notes for this tag.
       - name: Draft Engine release
         id: draft_release
@@ -46,10 +48,16 @@ jobs:
         with:
           config-name: release-drafter-engine.yml
           disable-autolabeler: true
-          tag: ${{ github.ref_name }}
-          version: ${{ steps.determine_version.version }}
+          tag: ${{ steps.determine_version.tag }}
+          # version: ${{ steps.determine_version.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Diagnostics
+        run: |
+          echo "Release Version: ${{ steps.determine_version.version }}"
+          echo "Release ID: ${{ steps.draft_release.id }}"
+          echo "Release Tag: ${{ steps.draft_release.tag_name }}"
+          echo "Release URL: ${{ steps.draft_release.html_url }}"
 
   release_engine_build:
     name: Engine Release Build
