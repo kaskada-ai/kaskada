@@ -197,14 +197,14 @@ jobs:
           context: .
           file: release.Dockerfile
           push: true
-          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.version }},${{ env.IMAGE }}:latest
+          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine
             org.opencontainers.image.description=The kaskada engine
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{ needs.release_engine_draft.version }}
-            org.opencontainers.image.created=${{ steps.current_date.created }}
+            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
 
