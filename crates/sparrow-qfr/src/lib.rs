@@ -19,10 +19,11 @@ pub mod kaskada {
 
 pub const QFR_VERSION: u32 = 1;
 
-mod io;
+mod factory;
+pub mod io;
 mod recorder;
 mod timer;
 
-pub use io::*;
+pub use factory::*;
 pub use recorder::*;
 pub use timer::*;

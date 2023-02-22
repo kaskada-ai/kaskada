@@ -6,45 +6,6 @@ use crate::kaskada::sparrow::v1alpha::flight_record::{EventType, Metrics};
 use crate::kaskada::sparrow::v1alpha::{FlightRecord, ThreadId};
 use crate::Times;
 
-#[derive(Clone)]
-pub struct FlightRecorderFactory {
-    /// The time at which the trace started.
-    ///
-    /// All instants reported relative this.
-    trace_start: Instant,
-    state: State,
-}
-
-impl FlightRecorderFactory {
-    pub fn new(sender: tokio::sync::mpsc::Sender<Vec<FlightRecord>>) -> Self {
-        Self {
-            trace_start: Instant::now(),
-            state: State::Active(sender),
-        }
-    }
-
-    pub fn new_disabled() -> Self {
-        Self {
-            trace_start: Instant::now(),
-            state: State::Disabled,
-        }
-    }
-
-    pub fn create_for_thread(&self, thread_id: ThreadId) -> FlightRecorder {
-        let mut recorder = FlightRecorder {
-            trace_start: self.trace_start,
-            buffer: Vec::with_capacity(BUFFER_SIZE),
-            state: self.state.clone(),
-            thread_id,
-        };
-
-        // Record the start event.
-        recorder.record_event(EventType::Start, 0, None);
-
-        recorder
-    }
-}
-
 /// Sends batches of flight records to the FlightRecordWriter.
 ///
 /// Buffering some events locally before sending a batch minimizes
@@ -60,7 +21,7 @@ pub struct FlightRecorder {
 }
 
 #[derive(Clone)]
-enum State {
+pub(crate) enum State {
     Disabled,
     Active(tokio::sync::mpsc::Sender<Vec<FlightRecord>>),
     Finished,
@@ -73,6 +34,15 @@ enum State {
 const BUFFER_SIZE: usize = 128;
 
 impl FlightRecorder {
+    pub(crate) fn new(trace_start: Instant, state: State, thread_id: ThreadId) -> Self {
+        Self {
+            trace_start,
+            buffer: Vec::with_capacity(BUFFER_SIZE),
+            state,
+            thread_id,
+        }
+    }
+
     /// Create a disabled flight recorder.
     pub fn disabled_for_test() -> Self {
         Self {

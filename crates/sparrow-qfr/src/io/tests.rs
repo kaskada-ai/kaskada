@@ -1,12 +1,12 @@
 use fallible_iterator::FallibleIterator;
 use tempfile::NamedTempFile;
 
+use super::{FlightRecordReader, FlightRecordWriter};
 use crate::kaskada::sparrow::v1alpha::flight_record::execute_pass_metrics::Cause;
 use crate::kaskada::sparrow::v1alpha::flight_record::{EventType, ExecutePassMetrics, Metrics};
 use crate::kaskada::sparrow::v1alpha::flight_record_header::BuildInfo;
 use crate::kaskada::sparrow::v1alpha::thread_id::ThreadKind;
 use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordHeader, ThreadId};
-use crate::{FlightRecordReader, FlightRecordWriter};
 
 #[test]
 fn round_trip_small() {
