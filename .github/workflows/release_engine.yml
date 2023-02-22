@@ -11,7 +11,7 @@ on:
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: engine-release
   cancel-in-progress: true
 
 permissions:

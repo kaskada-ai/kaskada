@@ -8,17 +8,15 @@ on:
       - main
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
-
 permissions:
   contents: write
   pull-requests: read
 
 jobs:
-  main:
+  engine_draft:
     runs-on: ubuntu-latest
+    concurrency:
+      group: engine-release
     steps:
       - name: Draft Engine release
         uses: release-drafter/release-drafter@v5
@@ -27,7 +25,11 @@ jobs:
           disable-autolabeler: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+  python_draft:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: python-release
+    steps:
       - name: Draft Python release
         uses: release-drafter/release-drafter@v5
         with:
