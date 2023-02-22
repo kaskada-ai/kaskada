@@ -19,8 +19,7 @@ permissions:
   pull-requests: read
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE: ghcr.io/${{ github.repository_owner}}/engine
 
 name: Engine Release
 jobs:
@@ -38,7 +37,7 @@ jobs:
       - name: Determine version
         id: determine_version
         if: startsWith(github.ref, 'refs/tags/engine@v')
-        run: echo "version=${GITHUB_REF_NAME#engine@}" | tee -a $GITHUB_OUTPUT
+        run: echo "version=${GITHUB_REF_NAME#engine@}" | tee -a "$GITHUB_OUTPUT"
       # Run the release drafter to update the release notes for this tag.
       - name: Draft Engine release
         id: draft_release
@@ -174,12 +173,6 @@ jobs:
           ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
           WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: docker_meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push Docker images
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -188,10 +181,16 @@ jobs:
           context: .
           file: release.Dockerfile
           push: true
-          tags: ${{ needs.release_engine_draft.version }},${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
-
-  # TODO: Run integration tests on each (as many of?) the released artifacts as possible).
+          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.version }},${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.title=kaskada engine
+            org.opencontainers.image.description=The kaskada engine
+            org.opencontainers.image.url=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{ needs.release_engine_draft.version }}
+            org.opencontainers.image.created=${{ $(date --rfc-3339=date) }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
 
   release_engine_release:
     name: Create and upload engine release
