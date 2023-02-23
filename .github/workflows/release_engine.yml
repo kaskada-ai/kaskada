@@ -20,6 +20,8 @@ permissions:
   pull-requests: read
   # For pushing Docker images to ghcr.io.
   packages: write
+  # For creating the release announcement.
+  discussions: write
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner}}/engine
