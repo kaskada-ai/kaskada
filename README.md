@@ -52,7 +52,7 @@ Run `cargo build --release -p sparrow-main` to build a release (optimized) binar
 ### Running integration tests
 
 * run `make test/int/docker-up` in one terminal window to get the Kaskada service and dependencies up
-* run `make test/int/run-api` in another terminal window to run the API integration tests
+* run `make test/int/run-api` in another terminal window to run the manager integration tests
 
 After making code changes, `ctrl-c` in the services window and restart it.
 
