@@ -21,13 +21,15 @@ These features were chosen to make Kaskada a perfect fit for Feature Engineering
 ### Setup Environment
 #### Mac OS
 * Install [LLVM/Clang](https://clang.llvm.org/get_started.html) via the XCode tools.
-* Install protoc `brew install protobuf`
-* Install golang `brew install golang`
+* Install protoc: `brew install protobuf`
+* Install golang: `brew install golang`
 * Install [Docker](https://docs.docker.com/desktop/install/mac-install/)
+* Increase open file limit: `echo 'ulimit -n 4096' >> ~/.zshrc`
 
 #### Linux (Debian-based)
 * `apt install clang lld libssl-dev pkg-config protobuf-compiler`
 * Install [Docker](https://docs.docker.com/engine/install/ubuntu/)
+* Increase open file limit: `echo 'ulimit -n 4096' >> ~/.bashrc`
 
 #### All platforms: install Rust
 * Install Rust using [rustup](https://www.rust-lang.org/tools/install).
