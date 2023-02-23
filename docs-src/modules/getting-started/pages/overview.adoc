@@ -118,7 +118,7 @@ As a first simple feature, we describe the amount of time a user as spent losing
 
 [cols="1m,2m,4m"]
 |===
-| time, entity, result
+| time | entity | result
 
 | 2:30
 | Alice
@@ -162,7 +162,7 @@ We can construct a set of examples associated with this prediction time by obser
 
 [cols="1m,2m,4m"]
 |===
-| time, entity, result
+| time | entity | result
 
 | 3:46
 | Bob
@@ -192,7 +192,7 @@ We want to give the user some time to see the upgrade offer, decide to accept it
 
 [cols="1m,2m,4m"]
 |===
-| time, entity, result
+| time | entity | result
 
 | 4:46
 | Bob
@@ -223,7 +223,7 @@ The final step is to see if a purchase happened after the prediction was made. T
 
 [cols="1m,2m,4m"]
 |===
-| time, entity, result
+| time | entity | result
 
 | 4:46
 | Bob
