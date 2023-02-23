@@ -1,8 +1,8 @@
 == Overview
 
-Kaskada is a query engine for event-based data designed for building & operating real-time ML at scale.
+Kaskada is a query engine for event-based data, designed for building & operating real-time ML at scale.
 
-== What is real-time AI/ML?
+== What is real-time ML?
 
 Real-time ML is making predictions based on recent events - reacting to what's happening now, 
 rather than what happened yesterday. 
@@ -12,7 +12,7 @@ Real-time models can be difficult to build.
 Models must be trained from examples that each capture specific instants in time, computed over historical datasets spanning months or years.
 Once a model is trained those same features must be kept up-to-date as new events arrive.
 
-== How does Kaskada help build real-time AI/ML?
+== How does Kaskada help build real-time ML?
 
 Let's start with an example - imagine we're trying to build a real-time model for a mobile game. 
 We want to predict an outcome, for example, if a user will pay for an upgrade.
@@ -32,15 +32,15 @@ image::event-context.png[Events in time]
 
 Visualizing events chronologically allows us to understand the context of each event, and the story of what's happening.
 
-* The first player likes to brag about his victories
-* The game was too hard for the second player
-* The third player pays for upgrades when she gets frustrated.
+* The first player likes to brag about their victories 
+* The game was too hard for the second player 
+* The third player pays for upgrades when they get frustrated.
 
 We'd like to capture this type of time-based insight as feature values we can use to train a model.
 We can do this by drawing the result of feature computations as a timeline showing how the feature's value changes as each event is observed.
 This timeline allows us to “observe” the value of the feature at any point in time, giving us a framework for training real-time ML models:
 
-image::framework.png[Real-time AI/ML framework]
+image::framework.png[Real-time ML framework]
 
 1. Start with raw events and compute feature timelines
 2. Observe features at the points in time a prediction would be made to build a training example
@@ -111,7 +111,7 @@ As a first simple feature, we describe the amount of time a user as spent losing
 
 [source,IPython,highlight=1]
 ----
-{ loss_dur:<1> sum(GameVictory.duration)<2> }
+{ loss_dur: sum(GameVictory.duration) } <1> <2>
 ----
 <1> Construct a record containing a single field named `loss_dur`
 <2> Compute the sum of each victory event's duration field
@@ -154,7 +154,7 @@ We can construct a set of examples associated with this prediction time by obser
 [source,IPython,highlight=2]
 ----
 { loss_dur: sum(GameVictory.duration) } <1>
-   <2> | when(count(GameDefeat, window=since(GameVictory)) == 2) <3>
+   | when(count(GameDefeat, window=since(GameVictory)) == 2) <2> <3>
 ----
 <1> The feature record we created previously
 <2> Build a sequence of operations using the pipe operator
@@ -184,7 +184,7 @@ We want to give the user some time to see the upgrade offer, decide to accept it
 ----
 { loss_dur: sum(GameVictory.duration) }
     | when(count(GameDefeat, window=since(GameVictory)) == 2) <1>
-   <2> | shift_to(time_of($input) | add_time(hours(1))) <3>
+    | shift_to(time_of($input) | add_time(hours(1))) <2> <3>
 ----
 <1> The examples we created previously
 <2> The `$input` reference is a way to use the left-hand-side of the pipe from within the right-hand-side
@@ -236,7 +236,7 @@ The final step is to see if a purchase happened after the prediction was made. T
 
 We're done! The result of this query is a training dataset ready to be used as input to a model algorithm. To review the process so far:
 
-image::framework.png[Real-time AI/ML framework]
+image::framework.png[Real-time ML framework]
 
 1. We computed the time spent in loosing games from the events we collected events about our friend here
 2. We generated training examples each time the user lost twice in a row
