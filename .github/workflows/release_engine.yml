@@ -171,9 +171,9 @@ jobs:
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
         run: |
-          mv release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
+          cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
-          mv release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
+          cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
           gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
         shell: bash
         env:
