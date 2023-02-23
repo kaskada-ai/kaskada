@@ -5,7 +5,7 @@ import (
 	"io"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -35,7 +35,8 @@ func (c queryClient) Query(request *apiv1alpha.CreateQueryRequest) (*apiv1alpha.
 
 	queryStream, err := c.client.CreateQuery(c.ctx, request)
 	if err != nil {
-		return nil, errors.Wrap(err, "initiating query stream")
+		log.Debug().Err(err).Msg("issue creating query")
+		return nil, err
 	}
 	resp := &apiv1alpha.CreateQueryResponse{}
 	for {
@@ -47,7 +48,8 @@ func (c queryClient) Query(request *apiv1alpha.CreateQueryRequest) (*apiv1alpha.
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "query response")
+			log.Debug().Err(err).Msg("issue getting query response")
+			return nil, err
 		}
 		proto.Merge(resp, streamResp)
 	}

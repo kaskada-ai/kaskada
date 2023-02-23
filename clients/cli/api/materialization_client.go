@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -32,7 +32,8 @@ func NewMaterializationServiceClient(ctx context.Context, conn *grpc.ClientConn)
 func (c materializationClient) List() ([]*apiv1alpha.Materialization, error) {
 	resp, err := c.client.ListMaterializations(c.ctx, &apiv1alpha.ListMaterializationsRequest{})
 	if err != nil {
-		return nil, errors.Wrap(err, "listing materializations")
+		log.Debug().Err(err).Msg("issue listing materializations")
+		return nil, err
 	}
 	// TODO: Pagination
 	return clearOutputOnlyList(resp.Materializations), nil
@@ -41,15 +42,23 @@ func (c materializationClient) List() ([]*apiv1alpha.Materialization, error) {
 func (c materializationClient) Get(name string) (*apiv1alpha.Materialization, error) {
 	resp, err := c.client.GetMaterialization(c.ctx, &apiv1alpha.GetMaterializationRequest{MaterializationName: name})
 	if err != nil {
-		return nil, errors.Wrapf(err, "getting materialization: `%s`", name)
+		log.Debug().Err(err).Str("name", name).Msg("issue getting materialization")
+		return nil, err
 	}
 	return clearOutputOnly(resp.Materialization), nil
 }
 
 func (c materializationClient) Create(item *apiv1alpha.Materialization) error {
-	_, err := c.client.CreateMaterialization(c.ctx, &apiv1alpha.CreateMaterializationRequest{Materialization: item})
+	mat, err := c.client.CreateMaterialization(c.ctx, &apiv1alpha.CreateMaterializationRequest{Materialization: item})
 	if err != nil {
-		return errors.Wrapf(err, "creating materialization: `%s`", item.MaterializationName)
+		log.Debug().Err(err).Str("name", item.MaterializationName).Msg("issue creating materialization")
+		return err
+	}
+	if mat.Analysis != nil && mat.Analysis.FenlDiagnostics != nil && mat.Analysis.FenlDiagnostics.NumErrors > 0 {
+		for _, diag := range mat.Analysis.FenlDiagnostics.FenlDiagnostics {
+			log.Error().Msg(diag.Formatted)
+			return fmt.Errorf("found %d errors in materialization creation", mat.Analysis.FenlDiagnostics.NumErrors)
+		}
 	}
 	return nil
 }
@@ -57,7 +66,8 @@ func (c materializationClient) Create(item *apiv1alpha.Materialization) error {
 func (c materializationClient) Delete(name string) error {
 	_, err := c.client.DeleteMaterialization(c.ctx, &apiv1alpha.DeleteMaterializationRequest{MaterializationName: name})
 	if err != nil {
-		return errors.Wrapf(err, "deleting materialization: `%s`", name)
+		log.Debug().Err(err).Str("name", name).Msg("issue deleting materialization")
+		return err
 	}
 	return nil
 }

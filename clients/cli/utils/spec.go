@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/goccy/go-yaml"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -14,15 +14,18 @@ func ProtoToYaml(proto protoreflect.ProtoMessage) ([]byte, error) {
 	// Convert to a json first to drop all the null and empty fields in an unordered map
 	jsonSpec, err := protojson.Marshal(proto)
 	if err != nil {
-		return nil, errors.Wrap(err, "converting spec to json")
+		log.Debug().Err(err).Msg("issue converting spec to json")
+		return nil, err
 	}
 	var v interface{}
 	if err := yaml.UnmarshalWithOptions(jsonSpec, &v, yaml.UseOrderedMap()); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal from json bytes")
+		log.Debug().Err(err).Msg("failed to unmarshal from json bytes")
+		return nil, err
 	}
 	yamlSpec, err := yaml.MarshalWithOptions(v, yaml.UseLiteralStyleIfMultiline(true))
 	if err != nil {
-		return nil, errors.Wrap(err, "converting spec to yaml")
+		log.Debug().Err(err).Msg("issue converting spec to yaml")
+		return nil, err
 	}
 	return yamlSpec, nil
 }
@@ -31,13 +34,15 @@ func ProtoToYaml(proto protoreflect.ProtoMessage) ([]byte, error) {
 func YamlToSpec(yamlData []byte) (*apiv1alpha.Spec, error) {
 	jsonSpec, err := yaml.YAMLToJSON(yamlData)
 	if err != nil {
-		return nil, errors.Wrap(err, "converting yaml to json")
+		log.Debug().Err(err).Msg("issue converting yaml to json")
+		return nil, err
 	}
 
 	var spec apiv1alpha.Spec
 	err = protojson.Unmarshal(jsonSpec, &spec)
 	if err != nil {
-		return nil, errors.Wrap(err, "converting json to spec")
+		log.Debug().Err(err).Msg("issue converting json to spec")
+		return nil, err
 	}
 	return &spec, nil
 }

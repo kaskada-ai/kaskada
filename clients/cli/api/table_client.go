@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -32,7 +32,8 @@ func NewTableServiceClient(ctx context.Context, conn *grpc.ClientConn) TableClie
 func (c tableClient) List() ([]*apiv1alpha.Table, error) {
 	resp, err := c.client.ListTables(c.ctx, &apiv1alpha.ListTablesRequest{})
 	if err != nil {
-		return nil, errors.Wrap(err, "listing tables")
+		log.Debug().Err(err).Msg("issue listing tables")
+		return nil, err
 	}
 	// TODO: Pagination
 	return clearOutputOnlyList(resp.Tables), nil
@@ -41,7 +42,8 @@ func (c tableClient) List() ([]*apiv1alpha.Table, error) {
 func (c tableClient) Get(name string) (*apiv1alpha.Table, error) {
 	resp, err := c.client.GetTable(c.ctx, &apiv1alpha.GetTableRequest{TableName: name})
 	if err != nil {
-		return nil, errors.Wrapf(err, "getting table: `%s`", name)
+		log.Debug().Err(err).Str("name", name).Msg("issue getting table")
+		return nil, err
 	}
 	return clearOutputOnly(resp.Table), nil
 }
@@ -49,7 +51,8 @@ func (c tableClient) Get(name string) (*apiv1alpha.Table, error) {
 func (c tableClient) Create(item *apiv1alpha.Table) error {
 	_, err := c.client.CreateTable(c.ctx, &apiv1alpha.CreateTableRequest{Table: item})
 	if err != nil {
-		return errors.Wrapf(err, "creating table: `%s`", item.TableName)
+		log.Debug().Err(err).Str("name", item.TableName).Msg("issue creating table")
+		return err
 	}
 	return nil
 }
@@ -57,7 +60,8 @@ func (c tableClient) Create(item *apiv1alpha.Table) error {
 func (c tableClient) Delete(name string) error {
 	_, err := c.client.DeleteTable(c.ctx, &apiv1alpha.DeleteTableRequest{TableName: name, Force: true})
 	if err != nil {
-		return errors.Wrapf(err, "deleting table: `%s`", name)
+		log.Debug().Err(err).Str("name", name).Msg("issue deleting table")
+		return err
 	}
 	return nil
 }

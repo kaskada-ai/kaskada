@@ -1,0 +1,31 @@
+tables:
+- tableName: sync_export_test
+  timeColumnName: purchase_time
+  entityKeyColumnName: customer_id
+  subsortColumnName: subsort_id
+  tableSource:
+    kaskada: {}
+views:
+- viewName: min_max_view_get
+  expression: |-
+    {
+    time: sync_export_test.purchase_time,
+    entity: sync_export_test.customer_id,
+    max_amount: sync_export_test.amount | max(),
+    min_amount: sync_export_test.amount | min(),
+    }
+materializations:
+- materializationName: min_max_mat_get
+  query: |-
+    {
+    time: sync_export_test.purchase_time,
+    entity: sync_export_test.customer_id,
+    max_amount: sync_export_test.amount | max(),
+    min_amount: sync_export_test.amount | min(),
+    }
+  destination:
+    objectStore:
+      format: FILE_FORMAT_CSV
+      outputPrefixUri: test
+  slice: {}
+

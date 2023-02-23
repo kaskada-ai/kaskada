@@ -22,13 +22,13 @@ import (
 func init() {
 	queryCmd.AddCommand(queryRunCmd)
 
-	queryRunCmd.Flags().String("response-as", "parquet", "(Optional) How to encode the results.  Either 'parquet' or 'redis-bulk'.  If 'redis-bulk', the record type must include a field named 'key' which is used as the AI.TENSORSET key and all other fields must be numeric.")
+	queryRunCmd.Flags().String("response-as", "parquet", "(Optional) How to encode the results.  Either 'parquet' or 'csv'.")
 	queryRunCmd.Flags().String("data-token", "", "(Optional) A token to run queries against. Enables repeatable queries.")
-	queryRunCmd.Flags().String("result-behavior", "all-results", "(Optional) Determines how results are returned.  Either 'all-results' or 'final-results'.  Note, if 'response-as' is set to 'redis-bulk', this is ignored and 'final-results' is always used.")
+	queryRunCmd.Flags().String("result-behavior", "all-results", "(Optional) Determines how results are returned.  Either 'all-results' or 'final-results'.")
 	queryRunCmd.Flags().Int64("preview-rows", 0, "(Optional) Produces a preview of the results with at least this many rows.")
 	queryRunCmd.Flags().Bool("dry-run", false, "(Optional) If this is `true`, then the query is validated and if there are no errors, the resultant schema is returned. No actual computation of results is performed.")
 	queryRunCmd.Flags().Bool("experimental-features", false, "(Optional) If this is `true`, then experimental features are allowed.  Data returned when using this flag is not guaranteed to be correct.")
-	queryRunCmd.Flags().Int64("changed-since-time", 0, "(Optional) Unix timestamp bound (inclusive) after which results will be output. If 'response-behavior' is 'all-results', this will include rows for changes (events and ticks) after this time (inclusive). If it is 'final-results, this will include a final result for any entity that would be included in the changed results.")
+	queryRunCmd.Flags().Int64("changed-since-time", 0, "(Optional) Unix timestamp bound (inclusive) after which results will be output. If 'response-behavior' is 'all-results', this will include rows for changes (events and ticks) after this time (inclusive). If it is 'final-results', this will include a final result for any entity that would be included in the changed results.")
 
 	viper.BindPFlag("response_as", queryRunCmd.Flags().Lookup("response-as"))
 	viper.BindPFlag("data_token", queryRunCmd.Flags().Lookup("data-token"))

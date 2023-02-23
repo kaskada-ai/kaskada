@@ -10,12 +10,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	prodApiServer    = "api.kaskada.com:50051"
-	prodAuthAudience = "https://api.prod.kaskada.com"
-	prodAuthUrl      = "https://prod-kaskada.us.auth0.com/oauth/token"
-)
-
 var (
 	cfgFile string
 )
@@ -51,32 +45,19 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cli.yaml)")
-	rootCmd.PersistentFlags().String("kaskada-api-server", prodApiServer, "Kaskada API Server")
-	rootCmd.PersistentFlags().String("kaskada-auth-audience", prodAuthAudience, "Kaskada Auth Audience")
-	rootCmd.PersistentFlags().String("kaskada-auth-url", prodAuthUrl, "Kaskada Auth Url")
+	rootCmd.PersistentFlags().String("kaskada-api-server", "", "Kaskada API Server")
 	rootCmd.PersistentFlags().String("kaskada-client-id", "", "Kaskada Client ID")
-	rootCmd.PersistentFlags().String("kaskada-client-secret", "", "Kaskada Client Secret")
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "get debug log output")
 	rootCmd.PersistentFlags().Bool("use-tls", true, "Use TLS when connecting to the Kaskada API")
 
-	rootCmd.PersistentFlags().MarkHidden("kaskada-auth-audience")
-	rootCmd.PersistentFlags().MarkHidden("kaskada-auth-url")
-	rootCmd.PersistentFlags().MarkHidden("kaskada-api-server")
-	rootCmd.PersistentFlags().MarkHidden("use-tls")
-
-	viper.BindPFlag("kaskada-auth-audience", rootCmd.PersistentFlags().Lookup("kaskada-auth-audience"))
-	viper.BindPFlag("kaskada-auth-url", rootCmd.PersistentFlags().Lookup("kaskada-auth-url"))
 	viper.BindPFlag("kaskada-api-server", rootCmd.PersistentFlags().Lookup("kaskada-api-server"))
 	viper.BindPFlag("kaskada-client-id", rootCmd.PersistentFlags().Lookup("kaskada-client-id"))
-	viper.BindPFlag("kaskada-client-secret", rootCmd.PersistentFlags().Lookup("kaskada-client-secret"))
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 	viper.BindPFlag("use-tls", rootCmd.PersistentFlags().Lookup("use-tls"))
 
-	viper.SetDefault("kaskada-api-server", prodApiServer)
-	viper.SetDefault("kaskada-auth-audience", prodAuthAudience)
-	viper.SetDefault("kaskada-auth-url", prodAuthUrl)
+	viper.SetDefault("kaskada-api-server", "localhost:50051")
 	viper.SetDefault("debug", false)
-	viper.SetDefault("use-tls", true)
+	viper.SetDefault("use-tls", false)
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
