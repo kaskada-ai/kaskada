@@ -25,12 +25,14 @@ Kaskada is a compute engine for building real-time ML models from event data, an
 === Temporal computation
 ////
 
-Temporal computation makes it easy to build training datasets from raw events, where each example reflects a different point in time so that you can train real-time models without temporal leakage or time-consume data collection jobs.
+_Temporal computation_ makes it easy to build training datasets from raw events where each example reflects a different point in time.
+These examples canb be used to train real-time models without temporal leakage or time-consume data collection jobs.
 
 Let's start with an example - imagine we're trying to build a real-time model for a game of some sort. 
 We want to predict an outcome, for example, user will pay for an upgrade.
 We're collecting a events about users in various ways and storing them for later analysis.
 
+.An example event
 image::event.png[Example event]
 
 These events describe what our users are doing - when they win, when they lose, when they buy things, when they they talk to each other.
