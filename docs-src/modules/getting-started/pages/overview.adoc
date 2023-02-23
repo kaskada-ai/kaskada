@@ -1,6 +1,6 @@
 == Overview
 
-Kaskada is the engine for real-time ML.
+Kaskada is a query engine for event-based data designed for building & operating real-time ML at scale.
 
 == What is real-time AI/ML?
 
@@ -13,64 +13,46 @@ Models must be trained from examples that each capture specific instants in time
 Once a model is trained those same features must be kept up-to-date as new events arrive.
 
 == How does Kaskada help build real-time AI/ML?
-////
-NOTE: Add this back in when there's more content for the later 2 sections
 
-Kaskada is a compute engine for building real-time ML models from event data, and it provides three key pieces of functionality, which we'll look at in sequence.
+Let's start with an example - imagine we're trying to build a real-time model for a mobile game. 
+We want to predict an outcome, for example, if a user will pay for an upgrade.
 
-1. Temporal computation - a way of easily building training data where each example reflects a different point in time
-2. Interactive exploration - a set of ML-focused optimizations that speed up the process of iterating on feature definitions and modeling contexts to find a model that works
-3. Unified batch and incremental execution - a way to use the same features for both training a model from historical data and serving features in real-time.
+=== A framework for training real-time ML models
 
-=== Temporal computation
-////
-
-_Temporal computation_ makes it easy to build training datasets from raw events where each example reflects a different point in time.
-These examples canb be used to train real-time models without temporal leakage or time-consume data collection jobs.
-
-Let's start with an example - imagine we're trying to build a real-time model for a game of some sort. 
-We want to predict an outcome, for example, user will pay for an upgrade.
-We're collecting a events about users in various ways and storing them for later analysis.
+We're collecting and storing events about what users are doing.
 
 .An example event
 image::event.png[Example event]
 
-These events describe what our users are doing - when they win, when they lose, when they buy things, when they they talk to each other.
-We can't make predictions without training a model and we can't train a model without building a bunch of training examples.
-An event by itself  doesn't tell us much - usable insights require aggregation across time and users.
-
-When building AI/ML using batch techniques we might map, filter, and reduce those events to generate some information about each user.
-This tells us something about the current differences between users, but it doesn't tell us much about why they're different. 
-To get at "why", we need a different way of thinking about our data - look what happens when we visualize  events in order, per user.
+These events describe when users win, when they lose, when they buy things, when they they talk to each other.
+To make predictions we must train a model using examples composed of input features and target labels.
+Each example must be computed from the events we're collecting.
 
 image::event-context.png[Events in time]
 
-Now we can think about how these events played out in relation to each other.
-We can start to understand the context of each event, and the  story of what's happening.
-This is how we can understand causation and behavior.
+Visualizing events chronologically allows us to understand the context of each event, and the story of what's happening.
 
-The first player likes to brag, the game was too hard for the second player, the third player buys upgrades when she gets frustrated.
-This is the value of real-time ML - these stories play out over the span of minutes and hours, not days and weeks.
+* The first player likes to brag about his victories
+* The game was too hard for the second player
+* The third player pays for upgrades when she gets frustrated.
 
-Our goal is to capture this type of insight as feature values we can use to train a model.
-Think back the the aggregations we were looked at earlier - we can draw the result of an aggregation as a timeline showing how the result of the operation changes as each event is observed.
-
-This step function allows us to “observe” the value of the aggregation at any point in time. 
-This perspective - capturing the time axis of computations - is really powerful.
-
-Thinking about timelines gives us a framework for training real-time ML models:
+We'd like to capture this type of time-based insight as feature values we can use to train a model.
+We can do this by drawing the result of feature computations as a timeline showing how the feature's value changes as each event is observed.
+This timeline allows us to “observe” the value of the feature at any point in time, giving us a framework for training real-time ML models:
 
 image::framework.png[Real-time AI/ML framework]
 
 1. Start with raw events and compute feature timelines
 2. Observe features at the points in time a prediction would be made to build a training example
-3. Shift each example forward in time until the predicted outcome can be observe
+3. Move each example forward in time until the predicted outcome can be observed
 4. Compute the correct target value and append it to the example
 
-Kaskada treats events as rows in tables. 
+Implementing each of these four steps allows us to compute a set of training examples where each example captures the value of our model's input features at a specific point in time as well as the model's target label at a (potentially different) point in time.
+
+Let's explore how Kaskada allows us to implement this framework for our example problem. Kaskada treats events as rows in tables - we'll focus on two tables describing the result of users playing our game, `GameVictory` and `GameDefeat`.
 
 .`GameVictory` events
-[cols="1m,2m,4m", width=45%, stripes=even]
+[cols="1m,2m,4m", stripes=even]
 |===
 | time | entity | value
 
@@ -96,7 +78,7 @@ Kaskada treats events as rows in tables.
 |===
 
 .`GameDefeat` events
-[cols="1m,2m,4m", width=45%, stripes=even]
+[cols="1m,2m,4m", stripes=even]
 |===
 | time | entity | value
 
@@ -121,66 +103,138 @@ Kaskada treats events as rows in tables.
 | {duration: 5s}
 |===
 
-For example, at 2:30 Alice won a game after playing for 10 seconds. 
-At 2:35 Bob lost a game.
 
-We want to predict if a user will pay for an upgrade.
-The first step is to compute features from events. 
-As a first simple feature, let's describe the amount of time a user as spent losing at the game - it's reasonable to expect that users who lose a lot will be motivated to pay for upgrades.
+=== Step 1: Define features
+
+We want to predict if a user will pay for an upgrade - step one is to compute features from events. 
+As a first simple feature, we describe the amount of time a user as spent losing at the game - users who lose a lot are probably more likely to pay for upgrades.
 
 [source,IPython,highlight=1]
 ----
-{ loss_dur: sum(GameVictory.duration) }
+{ loss_dur:<1> sum(GameVictory.duration)<2> }
 ----
+<1> Construct a record containing a single field named `loss_dur`
+<2> Compute the sum of each victory event's duration field
 
-In this example we construct a record containing a single feature “loss_dur”, whose value is the sum of each victory event's duration field.
+[cols="1m,2m,4m"]
+|===
+| time, entity, result
+
+| 2:30
+| Alice
+| { loss_dur: 10s }
+
+| 3:58
+| Bob
+| { loss_dur: 23s }
+
+| 4:25
+| Bob
+| { loss_dur: 31s }
+
+| 5:05
+| Alice
+| { loss_dur: 63s }
+
+| 10:01
+| Alice
+| { loss_dur: 106s }
+|===
 
 Notice that the result is a timeline describing the step function of how this feature has changed over time. We can “observe” the value of this step function at any time, regardless of the times at which the original events occurred.
 
-Another thing to notice is that these results are automatically grouped by user. We didm't have to explicitly group by user because tables in Kaskada specify an "entity" associated with each row. 
-Automatically aggregating per-entity reduces the amount boilerplate code you have to write relative to SQL.
+Another thing to notice is that these results are automatically grouped by user. We didn't have to explicitly group by user because tables in Kaskada specify an "entity" associated with each row. 
 
-Moving on to the second step - observing our feature at the times a prediction would have been made.
+=== Step 2: Define prediction times
+
+The second step is to observe our feature at the times a prediction would have been made.
 Let's assume that the game designers want to offer an upgrade any time a user loses the game twice in a row.
 We can construct a set of examples associated with this prediction time by observing our feature `when` the user loses twice in a row.
 
 [source,IPython,highlight=2]
 ----
-{ loss_dur: sum(GameVictory.duration) }
-    | when(count(GameDefeat, window=since(GameVictory)) == 2)
+{ loss_dur: sum(GameVictory.duration) } <1>
+   <2> | when(count(GameDefeat, window=since(GameVictory)) == 2) <3>
 ----
+<1> The feature record we created previously
+<2> Build a sequence of operations using the pipe operator
+<3> You can think of this query as walking over our events chronologically, counting how many `GameDefeat` events have bene seen since the most recent `GameVictory` event
 
-This starts to build a pipeline of operations using the pipe operator `|`.
-Think of this query as walking over our events chronologically - at each event it updates an internal counter and produces an output. 
+[cols="1m,2m,4m"]
+|===
+| time, entity, result
+
+| 3:46
+| Bob
+| { loss_dur: 23s }
+
+| 8:35
+| Alice
+| { loss_dur: 63s }
+|===
+
+This query gives us a set of examples, each containing input features computed at the specific times we would like to make a prediction.
+
+=== Step 3: Shift examples
 
 The third step is to move each example to the time when the outcome we're predicting can be observed. 
-We want to give the user some time to see the upgrade offer, decide to accept it, and pay - but we don’t want to give them forever.
-Let's check to see if they accepted an hour after we make the offer.
+We want to give the user some time to see the upgrade offer, decide to accept it, and pay - let's check to see if they accepted an hour after we make the offer.
 
 [source,IPython,highlight=3]
 ----
 { loss_dur: sum(GameVictory.duration) }
-    | when(count(GameDefeat, window=since(GameVictory)) == 2)
-    | shift_to(time_of($input) | add_time(hours(1)))
+    | when(count(GameDefeat, window=since(GameVictory)) == 2) <1>
+   <2> | shift_to(time_of($input) | add_time(hours(1))) <3>
 ----
+<1> The examples we created previously
+<2> The `$input` reference is a way to use the left-hand-side of the pipe from within the right-hand-side
+<3> Shift the results of the last step forward in time by one hour - visually you could imagine dragging the examples forward in the timeline by one hour
 
-Here we've shifted the results of the last step forward in time by one hour.  Visually you could imagine dragging that timeline to the right by one hour. This code continues the use of chaining - the `$input` reference is just a way to use the LHS of the pipe from within the RHS
+[cols="1m,2m,4m"]
+|===
+| time, entity, result
 
-The final step is to see if a purchase happened after the prediction was made. This will be our target value and we'll add it to the record that contains our feature.
+| 4:46
+| Bob
+| { loss_dur: 23s }
+
+| 9:35
+| Alice
+| { loss_dur: 63s }
+|===
+
+Our training examples have now moved to the point in time when the label we want to predict can be observed. 
+Notice that the values in the time column are an hour later than the previous step.
+
+=== Step 4: Label examples
+
+The final step is to see if a purchase happened after the prediction was made. This will be our target value and we'll add it to the records that currently contain our feature.
 
 [source,IPython,highlight=4]
 ----
 { loss_dur: sum(GameVictory.duration) }
     | when(count(GameDefeat, window=since(GameVictory)) == 2)
-    | shift_to(time_of($input) | add_time(hours(1)))
-    | extend({target: time_of($input) - time_of(last(Purchase)) < hours(1)})
+    | shift_to(time_of($input) | add_time(hours(1))) <1>
+    | extend({target: time_of($input) - time_of(last(Purchase)) < hours(1)}) <2> <3>
 ----
+<1> The examples we shifted forward in time previously.
+<2> The `time_of` function lets you access the time associated with each row as a value.
+<3> Compare the time of each example to the time of the most recent purchase to see if that purchase was more than an hour ago.
 
-We know a purchase occurred in the last hour if the time of the most recent purchase is less than an hour from the time of each shifted example.
+[cols="1m,2m,4m"]
+|===
+| time, entity, result
 
-In this code we use the `time_of` function to operate on each row's time as a value, then use the `extend` function to add a new field to the example record.
+| 4:46
+| Bob
+| { loss_dur: 23s, target: true }
 
-To review the process so far:
+| 9:35
+| Alice
+| { loss_dur: 63s, target: false }
+|===
+
+We're done! The result of this query is a training dataset ready to be used as input to a model algorithm. To review the process so far:
 
 image::framework.png[Real-time AI/ML framework]
 
@@ -188,3 +242,17 @@ image::framework.png[Real-time AI/ML framework]
 2. We generated training examples each time the user lost twice in a row
 3. We shifted those examples forward in time one hour
 4. Finally, we computed the target value by checking for purchases since the prediction was made.
+
+== Next Steps
+
+This was a quick introduction to how Kaskada organizes the process of training real-time AI/ML models, but this is just the beginning.
+
+// TODO: Link to top-level "Getting Started" guide
+xref:getting-started:hello-loading-data.adoc[Continue reading about Kaskada's features] to learn more about how Kaskada's temporal query capabilitites, how the compute engine supports interactive exploration of features and model contexts, and how the features used to train a model can be used in real-time without modification.
+
+// TODO: Link to top-level "Installing" guide
+xref:getting-started:hello-client-setup.adoc[Install Kaskada locally] to begin exploring Kaskada yourself
+
+xref:fenl:language-guide.adoc[Learn more about Kaskada's query language] to get a feel for the type of features and temporal operations Kaskada supports
+
+// TODO: Use-case examples 
