@@ -11,12 +11,17 @@ on:
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: engine-release
   cancel-in-progress: true
 
 permissions:
+  # For deploying release artifacts.
   contents: write
   pull-requests: read
+  # For pushing Docker images to ghcr.io.
+  packages: write
+  # For creating the release announcement.
+  discussions: write
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner}}/engine
@@ -171,9 +176,9 @@ jobs:
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
         run: |
-          mv release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
+          cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
-          mv release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
+          cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
           gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
         shell: bash
         env:
@@ -190,21 +195,33 @@ jobs:
           echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
         shell: bash
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        if: ${{ startsWith(github.ref, 'refs/tags/engine@v') && matrix.target == 'x86_64-unknown-linux-gnu' }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        if: ${{ startsWith(github.ref, 'refs/tags/engine@v') && matrix.target == 'x86_64-unknown-linux-gnu' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker images
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        if: startsWith(github.ref, 'refs/tags/engine@v') && ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        uses: docker/build-push-action@v4
+        if: ${{ startsWith(github.ref, 'refs/tags/engine@v') && matrix.target == 'x86_64-unknown-linux-gnu' }}
         with:
           context: .
-          file: release.Dockerfile
+          file: Dockerfile.release
           push: true
-          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.version }},${{ env.IMAGE }}:latest
+          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine
             org.opencontainers.image.description=The kaskada engine
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{ needs.release_engine_draft.version }}
-            org.opencontainers.image.created=${{ steps.current_date.created }}
+            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
 
