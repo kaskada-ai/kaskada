@@ -278,10 +278,9 @@ def get_view_html_and_schema_df(obj: view_pb.View):
     appendHtmlObjTableRowIfAttrExists(details, obj, "view_name")
     appendHtmlObjTableRowIfAttrExists(details, obj, "expression")
     schema_df = None
-    if obj.HasField("result_type"):
-        result_type, schema_df = get_result_type_and_schema_df(obj)
-        if result_type is not None and result_type != "":
-            details.appendChild(html_obj_table_row("result_type", result_type))
+    result_type, schema_df = get_result_type_and_schema_df(obj.result_type)
+    if result_type is not None and result_type != "":
+        details.appendChild(html_obj_table_row("result_type", result_type))
 
     appendTimes(details, obj)
     return details, schema_df
