@@ -26,7 +26,7 @@ class LocalRelease(object):
 
 
 class ReleaseClient(object):
-    ORGANIZATION = "riptano"
+    ORGANIZATION = "kaskada-ai"
     REPO_NAME = "kaskada"
     # In case the repository is private, an authorized access token is required.
     GITHUB_ACCESS_TOKEN_ENV = "GITHUB_ACCESS_TOKEN"
