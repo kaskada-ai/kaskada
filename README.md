@@ -24,10 +24,14 @@ These features were chosen to make Kaskada a perfect fit for Feature Engineering
 * Install protoc `brew install protobuf`
 * Install golang `brew install golang`
 * Install [Docker](https://docs.docker.com/desktop/install/mac-install/)
+* Install Python (3.8.16) via [pyenv](https://github.com/pyenv/pyenv)
+  * `brew install pyenv`
+  * `pyenv install 3.8.16`
 
 #### Linux (Debian-based)
 * `apt install clang lld libssl-dev pkg-config protobuf-compiler`
 * Install [Docker](https://docs.docker.com/engine/install/ubuntu/)
+* Install [Python 3.8.16](https://www.python.org/downloads/release/python-3816/)
 
 #### All platforms: install Rust
 * Install Rust using [rustup](https://www.rust-lang.org/tools/install).
@@ -45,6 +49,15 @@ Run `cargo build --release -p sparrow-main` to build a release (optimized) binar
 * ensure docker is running locally
 * run `make proto/generate` and `make ent/generate`.  See the `./wren/README.md` for more info on those.
 * run `make wren/test`
+
+### Testing & Building the Python Client
+
+* Verify that Python 3.8.16 is installed locally (other versions may be compatible too): `python --version`
+* Install Poetry: `pip install poetry`
+* Run `make python/setup` to install the dependencies with poetry.
+* Run `make python/test` to run the tests.
+* Run `make python/build` to build the wheel.
+* Run `make python/install` to build the wheel and install it locally.
 
 ### Configurations
 * `TMPDIR` - The compute engine uses temporary files as part of computation. By default, this uses the default temporary file directory (platform dependent). See: [tempfile::NamedTempFile](https://docs.rs/tempfile/1.1.2/tempfile/struct.NamedTempFile.html). To set the temporary path directory, set the `TMPDIR` environment variable. See: [std::env::temp_dir](https://doc.rust-lang.org/std/env/fn.temp_dir.html).

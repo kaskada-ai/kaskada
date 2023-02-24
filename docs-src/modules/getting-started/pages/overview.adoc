@@ -109,9 +109,10 @@ Let's explore how Kaskada allows us to implement this framework for our example 
 We want to predict if a user will pay for an upgrade - step one is to compute features from events. 
 As a first simple feature, we describe the amount of time a user as spent losing at the game - users who lose a lot are probably more likely to pay for upgrades.
 
-[source,IPython,highlight=1]
+[source,IPython]
 ----
-{ loss_dur: sum(GameVictory.duration) } <1> <2>
+let features = { <1>
+  loss_duration: sum(GameVictory.duration) } <2>
 ----
 <1> Construct a record containing a single field named `loss_dur`
 <2> Compute the sum of each victory event's duration field
@@ -151,10 +152,13 @@ The second step is to observe our feature at the times a prediction would have b
 Let's assume that the game designers want to offer an upgrade any time a user loses the game twice in a row.
 We can construct a set of examples associated with this prediction time by observing our feature `when` the user loses twice in a row.
 
-[source,IPython,highlight=2]
+[source,IPython]
 ----
-{ loss_dur: sum(GameVictory.duration) } <1>
-   | when(count(GameDefeat, window=since(GameVictory)) == 2) <2> <3>
+let features = { 
+  loss_duration: sum(GameVictory.duration) }
+
+let examples = features <1>
+  | when(count(GameDefeat, window=since(GameVictory)) == 2) <2> <3>
 ----
 <1> The feature record we created previously
 <2> Build a sequence of operations using the pipe operator
@@ -180,15 +184,17 @@ This query gives us a set of examples, each containing input features computed a
 The third step is to move each example to the time when the outcome we're predicting can be observed. 
 We want to give the user some time to see the upgrade offer, decide to accept it, and pay - let's check to see if they accepted an hour after we make the offer.
 
-[source,IPython,highlight=3]
+[source,IPython]
 ----
-{ loss_dur: sum(GameVictory.duration) }
-    | when(count(GameDefeat, window=since(GameVictory)) == 2) <1>
-    | shift_to(time_of($input) | add_time(hours(1))) <2> <3>
+let features = { 
+  loss_duration: sum(GameVictory.duration) }
+
+let examples = features
+  | when(count(GameDefeat, window=since(GameVictory)) == 2) <1>
+  | shift_by(hours(1)) <2>
 ----
 <1> The examples we created previously
-<2> The `$input` reference is a way to use the left-hand-side of the pipe from within the right-hand-side
-<3> Shift the results of the last step forward in time by one hour - visually you could imagine dragging the examples forward in the timeline by one hour
+<2> Shift the results of the last step forward in time by one hour - visually you could imagine dragging the examples forward in the timeline by one hour
 
 [cols="1m,2m,4m"]
 |===
@@ -210,16 +216,23 @@ Notice that the values in the time column are an hour later than the previous st
 
 The final step is to see if a purchase happened after the prediction was made. This will be our target value and we'll add it to the records that currently contain our feature.
 
-[source,IPython,highlight=4]
+[source,IPython]
 ----
-{ loss_dur: sum(GameVictory.duration) }
-    | when(count(GameDefeat, window=since(GameVictory)) == 2)
-    | shift_to(time_of($input) | add_time(hours(1))) <1>
-    | extend({target: time_of($input) - time_of(last(Purchase)) < hours(1)}) <2> <3>
+let features = { 
+  loss_duration: sum(GameVictory.duration),
+  purchase_count: count(Purchase) } <1>
+
+let example = features 
+  | when(count(GameDefeat, window=since(GameVictory)) == 2)
+  | shift_by(hours(1))
+	
+let target = count(Purchase) > example.purchase_count <2>
+
+in extend(example, {target}) <3>
 ----
-<1> The examples we shifted forward in time previously.
-<2> The `time_of` function lets you access the time associated with each row as a value.
-<3> Compare the time of each example to the time of the most recent purchase to see if that purchase was more than an hour ago.
+<1> Capture purchase count as a feature
+<2> Compare purchase count at prediction and label time.
+<3> Append the target value to each example
 
 [cols="1m,2m,4m"]
 |===
