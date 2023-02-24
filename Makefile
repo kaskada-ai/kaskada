@@ -120,3 +120,16 @@ docker/release: wren/build
 	cp target/debug/sparrow-main release
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile.release .
 	rm -fr release
+
+python/setup:
+	cd clients/python && poetry install
+
+python/test:
+	cd clients/python && poetry run poe test
+
+python/build:
+	cd clients/python && poetry build
+
+python/install: python/build
+	pip install clients/python/dist/*.whl;
+	
