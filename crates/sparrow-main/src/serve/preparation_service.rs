@@ -58,7 +58,7 @@ impl PreparationService for PreparationServiceImpl {
     }
 }
 
-async fn prepare_data(
+pub async fn prepare_data(
     s3: S3Helper,
     request: tonic::Request<PrepareDataRequest>,
 ) -> error_stack::Result<tonic::Response<PrepareDataResponse>, Error> {

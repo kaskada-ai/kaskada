@@ -4,7 +4,7 @@
 mod compute_service;
 mod error_status;
 mod file_service;
-mod preparation_service;
+pub(crate) mod preparation_service;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 pub use error_status::*;
 
