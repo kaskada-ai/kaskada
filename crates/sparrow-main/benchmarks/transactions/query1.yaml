@@ -3,7 +3,7 @@ tables:
       name: Transaction
       uuid: ece50bec-9cdb-11ed-a8fc-0242ac120002
       time_column_name: transaction_date
-      group_column_name: idx
+      group_column_name: msno
       grouping: Transaction
     metadata:
       file_count: 1
@@ -24,19 +24,11 @@ tables:
           - name: membership_expire_date
             data_type:
               kind: !Primitive 24 # TIMESTAMP_NANOSECOND
-          - name: idx
-            data_type:
-              kind: !Primitive 6 # I64
     file_sets:
       - slice_plan:
           table_name: Transaction
-          entity_keys: idx
+          percent: 100
         prepared_files:
-          - path: prepared-Transaction-transactions-100k-0.parquet
-            metadata_path: prepared-Transaction-transactions-100k-0-metadata.parquet
-            min_event_time: 2015-01-01T00:00:00Z
-            max_event_time: 2017-02-28T00:00:00Z
-            num_rows: 288561
 
 
 feature_set:
