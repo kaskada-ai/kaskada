@@ -9,7 +9,7 @@ from IPython.core.magic import Magics, cell_magic, line_cell_magic, magics_class
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
 
 import kaskada.client as client
-import kaskada.compute as compute
+import kaskada.query as query
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
 from fenlmagic.utils import arg_to_response_type
 
@@ -105,7 +105,7 @@ class FenlMagics(Magics):
             limits["preview_rows"] = int(preview_rows)
 
         try:
-            resp = compute.queryV2(
+            resp = query.create_query(
                 query=query,
                 result_behavior="final-results"
                 if test_arg(result_behavior, "final-results")
@@ -129,7 +129,7 @@ class FenlMagics(Magics):
                     )
                     > 0
                 ):
-                    if response_as == compute.ResponseType.FILE_TYPE_PARQUET:
+                    if response_as == query.ResponseType.FILE_TYPE_PARQUET:
                         df = pandas.read_parquet(
                             query_result.query_response.output_to.object_store.output_paths.paths[
                                 0
@@ -137,7 +137,7 @@ class FenlMagics(Magics):
                             engine="pyarrow",
                         )
                         query_result.set_dataframe(df)
-                    elif response_as == compute.ResponseType.FILE_TYPE_CSV:
+                    elif response_as == query.ResponseType.FILE_TYPE_CSV:
                         df = pandas.read_csv(
                             query_result.query_response.output_to.object_store.output_paths.paths[
                                 0

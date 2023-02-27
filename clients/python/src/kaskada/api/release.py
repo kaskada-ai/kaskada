@@ -18,11 +18,11 @@ class LocalRelease(object):
     """Configuration details for a local release. Mostly used for binary paths."""
 
     def __init__(
-        self, download_path: Path, manager_path: Path, engine_path: Path
+        self, download_path: Path, manager_path: Path, compute_path: Path
     ) -> None:
         self._download_path = download_path
         self._manager_path = manager_path
-        self._engine_path = engine_path
+        self._compute_path = compute_path
 
 
 class ReleaseClient(object):
@@ -42,25 +42,25 @@ class ReleaseClient(object):
         self._github = Github(access_token)
 
     def download_latest_release(
-        self, download_path: Path, manager_bin_name: str, engine_bin_name: str
+        self, download_path: Path, manager_bin_name: str, compute_bin_name: str
     ) -> LocalRelease:
-        """Downloads the latest version of the kaskada-manager and kaskada-engine.
+        """Downloads the latest version of the kaskada-manager and kaskada-compute services.
 
         Args:
             download_path (Path): The local download path
             manager_bin_name (str): The name of the manager binary to save in download path
-            engine_bin_name (str): The name of the engine binary to save in download path
+            compute_bin_name (str): The name of the compute binary to save in download path
 
         Raises:
             RuntimeError: unable to get release assets
 
         Returns:
-            Tuple[str, str]: manager path and engine path
+            Tuple[str, str]: manager path and compute path
         """
         manager_name = f"kaskada-manager-{self._platform_details}"
         logger.debug(f"Looking for manager binary name: {manager_name}")
-        engine_name = f"kaskada-engine-{self._platform_details}"
-        logger.debug(f"Looking for engine binary name: {engine_name}")
+        compute_name = f"kaskada-compute-{self._platform_details}"
+        logger.debug(f"Looking for compute binary name: {compute_name}")
         session = requests.Session()
         access_token = os.getenv(self.GITHUB_ACCESS_TOKEN_ENV)
         if access_token is not None:
@@ -75,7 +75,7 @@ class ReleaseClient(object):
         logger.debug(f"Download path: {download_path}")
         assets = latest_release.get_assets()
 
-        manager_path, engine_path = (None, None)
+        manager_path, compute_path = (None, None)
         for asset in assets:
             url = f"{self.ASSETS_API_ENDPOINT}/{asset.id}"
             if asset.name == manager_name:
@@ -86,20 +86,20 @@ class ReleaseClient(object):
                     asset.name,
                     file_size=asset.size,
                 )
-            elif asset.name == engine_name:
-                engine_path = self.__download(
+            elif asset.name == compute_name:
+                compute_path = self.__download(
                     session,
                     url,
-                    download_path / engine_bin_name,
+                    download_path / compute_bin_name,
                     asset.name,
                     file_size=asset.size,
                 )
 
         if manager_path is None:
             raise RuntimeError(f"unable to download manager binary: {manager_name}")
-        if engine_path is None:
-            raise RuntimeError(f"unable to download engine binary: {engine_name}")
-        return LocalRelease(download_path, manager_path, engine_path)
+        if compute_path is None:
+            raise RuntimeError(f"unable to download compute binary: {compute_name}")
+        return LocalRelease(download_path, manager_path, compute_path)
 
     def __download(
         self,
