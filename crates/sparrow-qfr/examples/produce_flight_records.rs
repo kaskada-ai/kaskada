@@ -55,12 +55,16 @@ async fn produce_records() -> tokio::sync::mpsc::Receiver<FlightRecord> {
     activation.finish();
 
     // Time some synchronous code with nesting.
+    // We should see:
+    // 1. An outer block containing the time spent in MERGING (inclusive of time)
+    //    spent in GATHER, and
+    // 2. An inner block, containing the time spent exclusively in GATHER.
     let recorder2 = factory.create_recorder("Shift Thread".to_owned()).await;
     {
         let mut _outer = MERGING.start(&recorder2);
         std::thread::sleep(Duration::from_millis(500));
         {
-            let mut _inner = MERGING.start(&recorder2);
+            let mut _inner = GATHER.start(&recorder2);
             std::thread::sleep(Duration::from_millis(750));
         }
     }

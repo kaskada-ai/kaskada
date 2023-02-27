@@ -56,9 +56,8 @@ message FlightRecord {
 
   message RegisterMetric {
     uint32 metric_id = 1;
-    MetricKind kind = 2;
-
-    string label = 3;
+    string label = 2;
+    MetricKind kind = 3;
 
     // string description = 4;
     // string units = 5;
@@ -66,13 +65,13 @@ message FlightRecord {
     enum MetricKind {
       METRIC_KIND_UNSPECIFIED = 0;
 
-      METRIC_KIND_U64_GAUGE = 1;
-      METRIC_KIND_I64_GAUGE = 2;
-      METRIC_KIND_F64_GAUGE = 3;
+      METRIC_KIND_U64_GAUGE = 10;
+      METRIC_KIND_I64_GAUGE = 11;
+      METRIC_KIND_F64_GAUGE = 12;
 
-      METRIC_KIND_U64_COUNTER = 4;
-      METRIC_KIND_I64_COUNTER = 5;
-      METRIC_KIND_F64_COUNTER = 6;
+      METRIC_KIND_U64_COUNTER = 20;
+      METRIC_KIND_I64_COUNTER = 21;
+      METRIC_KIND_F64_COUNTER = 22;
     }
   }
 
@@ -85,7 +84,7 @@ message FlightRecord {
 
     // Wall clock time spent executing this event.
     //
-    // This should be `0` for events point-wise events.
+    // This should be `0` for point-wise events.
     uint64 wall_duration_us = 4;
 
     // CPU time spent executing this event.
