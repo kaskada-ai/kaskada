@@ -4,19 +4,25 @@ use futures::StreamExt;
 use itertools::Itertools;
 
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecord;
-use sparrow_qfr::{activity, gauge, Activity, FlightRecorderFactory, Gauge};
+use sparrow_qfr::{
+    activity, gauge, Activity, FlightRecorderFactory, Gauge, Registration, Registrations,
+};
 
 const NUM_OUTPUTS: Gauge<u64> = gauge!("num_outputs");
-inventory::submit!(NUM_OUTPUTS.registration());
-
 const MERGING: Activity = activity!("merging");
-inventory::submit!(MERGING.registration());
-
 const GATHER: Activity = activity!("gather", MERGING);
-inventory::submit!(GATHER.registration());
-
 const MERGE: Activity = activity!("merge", MERGING);
-inventory::submit!(MERGE.registration());
+
+static REGISTRATION: Registration = Registration::new(|| {
+    let mut r = Registrations::default();
+    r.add(NUM_OUTPUTS);
+    r.add(MERGING);
+    r.add(GATHER);
+    r.add(MERGE);
+    r
+});
+
+inventory::submit!(&REGISTRATION);
 
 /// This example shows how to produce flight records directly.
 #[tokio::main]

@@ -1,7 +1,9 @@
 use futures::Future;
 
 use crate::activation::Activation;
-use crate::{FlightRecorder, Metrics, Registration, TimedTask};
+use crate::kaskada::sparrow::v1alpha::flight_record::{Record, RegisterActivity};
+use crate::kaskada::sparrow::v1alpha::FlightRecord;
+use crate::{FlightRecorder, Metrics, TimedTask, ToRegistration};
 
 /// An activity represents something that one or more threads do.
 ///
@@ -39,9 +41,17 @@ impl Activity {
         // DO NOT SUBMIT: Lifetime so we can borrow flight recorder?
         TimedTask::new(recorder.clone(), self.activity_id, fut)
     }
+}
 
-    pub const fn registration(self) -> Registration {
-        Registration::Activity(self)
+impl ToRegistration for Activity {
+    fn to_registration(&self) -> crate::kaskada::sparrow::v1alpha::FlightRecord {
+        FlightRecord {
+            record: Some(Record::RegisterActivity(RegisterActivity {
+                activity_id: self.activity_id,
+                label: self.label.to_owned(),
+                parent_activity_id: self.parent_activity_id,
+            })),
+        }
     }
 }
 

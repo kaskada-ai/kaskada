@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
 use crate::kaskada::sparrow::v1alpha::flight_record::register_metric::MetricKind;
-use crate::kaskada::sparrow::v1alpha::{metric_value, MetricValue};
-use crate::Registration;
+use crate::kaskada::sparrow::v1alpha::flight_record::{Record, RegisterMetric};
+use crate::kaskada::sparrow::v1alpha::{metric_value, FlightRecord, MetricValue};
+use crate::ToRegistration;
 
 /// Trait for values that can be encoded as metric values.
 pub trait IntoMetricValue {
@@ -103,14 +104,6 @@ where
         }
     }
 
-    pub const fn registration(self) -> Registration {
-        Registration::Metric {
-            metric_id: self.metric_id,
-            label: self.label,
-            kind: K::KIND,
-        }
-    }
-
     pub(super) fn value(&self, value: T) -> MetricValue {
         MetricValue {
             metric_id: self.metric_id,
@@ -121,3 +114,19 @@ where
 
 pub type Gauge<T> = Metric<T, GaugeKind>;
 pub type Counter<T> = Metric<T, CounterKind>;
+
+impl<T, K> ToRegistration for Metric<T, K>
+where
+    T: IntoMetricValue,
+    K: MetricKindTrait<T>,
+{
+    fn to_registration(&self) -> crate::kaskada::sparrow::v1alpha::FlightRecord {
+        FlightRecord {
+            record: Some(Record::RegisterMetric(RegisterMetric {
+                metric_id: self.metric_id,
+                kind: K::KIND as i32,
+                label: self.label.to_owned(),
+            })),
+        }
+    }
+}

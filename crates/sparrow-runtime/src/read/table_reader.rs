@@ -13,7 +13,7 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_compiler::TableInfo;
 use sparrow_core::TableSchema;
-use sparrow_qfr::{activity, gauge, Activity, FlightRecorder, Gauge};
+use sparrow_qfr::{activity, gauge, Activity, FlightRecorder, Gauge, Registration, Registrations};
 use tokio_stream::StreamExt;
 use tracing::info;
 
@@ -24,24 +24,32 @@ use crate::read::parquet_stream::{self, new_parquet_stream};
 use crate::Batch;
 
 const READ_TABLE: Activity = activity!("table_reader.read_file");
-inventory::submit!(READ_TABLE.registration());
 const GATHER_TABLE_BATCHES: Activity = activity!("table_reader.gather");
-inventory::submit!(GATHER_TABLE_BATCHES.registration());
 const MERGE_TABLE_BATCHES: Activity = activity!("table_reader.merge");
-inventory::submit!(MERGE_TABLE_BATCHES.registration());
 
 const MIN_BATCH_TIME: Gauge<i64> = gauge!("min_time_in_batch");
-inventory::submit!(MIN_BATCH_TIME.registration());
 const MAX_BATCH_TIME: Gauge<i64> = gauge!("max_time_in_batch");
-inventory::submit!(MAX_BATCH_TIME.registration());
 const NUM_INPUT_ROWS: Gauge<usize> = gauge!("num_input_rows");
-inventory::submit!(NUM_INPUT_ROWS.registration());
 const NUM_OUTPUT_ROWS: Gauge<usize> = gauge!("num_output_rows");
-inventory::submit!(NUM_OUTPUT_ROWS.registration());
 const ACTIVE_SOURCES: Gauge<usize> = gauge!("active_files");
-inventory::submit!(ACTIVE_SOURCES.registration());
 const REMAINING_FILES: Gauge<usize> = gauge!("remaining_files");
-inventory::submit!(REMAINING_FILES.registration());
+
+static REGISTRATION: Registration = Registration::new(|| {
+    let mut r = Registrations::default();
+    r.add(READ_TABLE);
+    r.add(GATHER_TABLE_BATCHES);
+    r.add(MERGE_TABLE_BATCHES);
+
+    r.add(MIN_BATCH_TIME);
+    r.add(MAX_BATCH_TIME);
+    r.add(NUM_INPUT_ROWS);
+    r.add(NUM_OUTPUT_ROWS);
+    r.add(ACTIVE_SOURCES);
+    r.add(REMAINING_FILES);
+    r
+});
+
+inventory::submit!(&REGISTRATION);
 
 /// Create a stream that reads the contents of the given table.
 pub fn table_reader(

@@ -4062,6 +4062,7 @@ dependencies = [
  "insta",
  "inventory",
  "itertools",
+ "once_cell",
  "pin-project",
  "prost",
  "prost-types",
