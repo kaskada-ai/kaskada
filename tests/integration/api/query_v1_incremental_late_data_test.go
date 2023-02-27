@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Incremental query V1 with late data", Ordered, func() {
@@ -35,7 +36,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(20)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -75,7 +76,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 		}
 
 		// load data into the table
-		res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part3.parquet")
+		res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part3.parquet")
 		Expect(res.DataTokenId).ShouldNot(BeEmpty())
 		firstDataTokenId = res.DataTokenId
 	})
@@ -96,7 +97,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -137,7 +138,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 					}
 				}
 				Expect(len(resultUrls)).Should(Equal(1))
-				firstResults = downloadParquet(resultUrls[0])
+				firstResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(firstResults).Should(HaveLen(1))
 				Expect(firstResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1610409600000000000)),
@@ -150,7 +151,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 
 		Describe("Load the second file with late date into the table", func() {
 			It("Should work without error and return a dataToken", func() {
-				res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part4_late.parquet")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part4_late.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				secondDataTokenId = res.DataTokenId
 				Expect(secondDataTokenId).ShouldNot(Equal(firstDataTokenId))
@@ -167,7 +168,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -202,7 +203,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadParquet(resultUrls[0])
+				secondResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(secondResults).Should(HaveLen(1))
 				Expect(secondResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1611273600000000000)),

@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 gRPC with dataTokens", Ordered, func() {
@@ -33,7 +34,7 @@ var _ = Describe("Query V1 gRPC with dataTokens", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -54,7 +55,7 @@ var _ = Describe("Query V1 gRPC with dataTokens", Ordered, func() {
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
-		res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+		res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 		Expect(res.DataTokenId).ShouldNot(BeEmpty())
 		firstDataTokenId = res.DataTokenId
 
@@ -97,7 +98,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(Equal(1))
 
@@ -122,7 +123,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -165,7 +166,7 @@ min_amount: query_v1_test.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				firstResults = downloadParquet(resultUrls[0])
+				firstResults = helpers.DownloadParquet(resultUrls[0])
 
 				Expect(firstResults).Should(HaveLen(10))
 				Expect(firstResults[9]).Should(MatchFields(IgnoreExtras, Fields{
@@ -179,7 +180,7 @@ min_amount: query_v1_test.amount | min(),
 
 		Describe("Load the second file into the table", func() {
 			It("Should work without error and return a dataToken", func() {
-				res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				secondDataTokenId = res.DataTokenId
 				Expect(secondDataTokenId).ShouldNot(Equal(firstDataTokenId))
@@ -192,7 +193,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -229,7 +230,7 @@ min_amount: query_v1_test.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadParquet(resultUrls[0])
+				secondResults = helpers.DownloadParquet(resultUrls[0])
 
 				Expect(secondResults).Should(HaveLen(15))
 				Expect(secondResults[9]).Should(MatchFields(IgnoreExtras, Fields{
@@ -257,7 +258,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -288,7 +289,7 @@ min_amount: query_v1_test.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadParquet(resultUrls[0])
+				results := helpers.DownloadParquet(resultUrls[0])
 				Expect(results).Should(BeEquivalentTo(firstResults))
 			})
 		})
@@ -302,7 +303,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -333,7 +334,7 @@ min_amount: query_v1_test.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadParquet(resultUrls[0])
+				results := helpers.DownloadParquet(resultUrls[0])
 				Expect(results).Should(BeEquivalentTo(secondResults))
 			})
 		})
@@ -346,7 +347,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -382,7 +383,7 @@ min_amount: query_v1_test.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadParquet(resultUrls[0])
+				results := helpers.DownloadParquet(resultUrls[0])
 				Expect(results).Should(HaveLen(3))
 				Expect(results).Should(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package kaskada.kaskada.v1alpha;
+
+import "kaskada/kaskada/v1alpha/materialization_service.proto";
+import "kaskada/kaskada/v1alpha/query_service.proto";
+import "kaskada/kaskada/v1alpha/table_service.proto";
+import "kaskada/kaskada/v1alpha/view_service.proto";
+
+message Spec {
+  repeated Table tables = 1;
+  repeated View views = 2;
+  repeated Query queries = 3;
+  repeated Materialization materializations = 4;
+}

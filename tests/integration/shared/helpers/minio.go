@@ -1,12 +1,3 @@
-/*
-Copyright (C) 2022 Kaskada Inc. All rights reserved.
-
-This package cannot be used, copied or distributed without the express
-written permission of Kaskada Inc.
-
-For licensing inquiries, please contact us at info@kaskada.com.
-*/
-
 package helpers
 
 import (

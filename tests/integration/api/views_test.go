@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Views", Ordered, func() {
@@ -26,7 +27,7 @@ var _ = Describe("Views", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get the required grpc clients
@@ -60,7 +61,7 @@ min_amount: purchases_views_test.amount | min(),
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
-		loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 	})
 
 	AfterAll(func() {
