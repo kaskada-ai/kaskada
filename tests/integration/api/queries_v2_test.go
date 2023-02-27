@@ -15,7 +15,8 @@ import (
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	v2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Queries V2", Ordered, func() {
@@ -30,7 +31,7 @@ var _ = Describe("Queries V2", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table service
@@ -61,7 +62,7 @@ var _ = Describe("Queries V2", Ordered, func() {
 		}
 		createResponse, err := tableClient.CreateTable(ctx, createTableRequest)
 		Expect(err).ShouldNot(HaveOccurredGrpc())
-		loadTestFileIntoTable(ctx, conn, createResponse.Table, "purchases/purchases_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, createResponse.Table, "purchases/purchases_part1.parquet")
 	})
 
 	AfterAll(func() {

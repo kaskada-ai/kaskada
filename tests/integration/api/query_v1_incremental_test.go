@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 with incremental", Ordered, func() {
@@ -34,7 +35,7 @@ var _ = Describe("Query V1 with incremental", Ordered, func() {
 
 	BeforeEach(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(20)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -88,7 +89,7 @@ min_amount: purchases_incremental.amount | min(),
 
 		Describe("Load the first file into the table", func() {
 			It("Should work without error and return a dataToken", func() {
-				res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				VerifyRequestDetails(res.RequestDetails)
 				firstDataTokenId = res.DataTokenId
@@ -101,7 +102,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 				var firstResponse, secondResponse, thirdResponse, lastResponse *v1alpha.CreateQueryResponse
@@ -139,7 +140,7 @@ min_amount: purchases_incremental.amount | min(),
 					}
 				}
 				Expect(len(resultUrls)).Should(Equal(1))
-				firstResults = downloadParquet(resultUrls[0])
+				firstResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(firstResults).Should(HaveLen(2))
 				Expect(firstResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1578182400000000000)),
@@ -152,7 +153,7 @@ min_amount: purchases_incremental.amount | min(),
 
 		Describe("Load the second file into the table", func() {
 			It("Should work without error and return a dataToken", func() {
-				res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				secondDataTokenId = res.DataTokenId
 				Expect(secondDataTokenId).ShouldNot(Equal(firstDataTokenId))
@@ -170,7 +171,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -206,7 +207,7 @@ min_amount: purchases_incremental.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadParquet(resultUrls[0])
+				secondResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(secondResults).Should(HaveLen(3))
 				Expect(secondResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1578441600000000000)),
@@ -235,7 +236,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -271,7 +272,7 @@ min_amount: purchases_incremental.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadParquet(resultUrls[0])
+				secondResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(secondResults).Should(HaveLen(3))
 				Expect(secondResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1578441600000000000)),
@@ -299,7 +300,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -334,7 +335,7 @@ min_amount: purchases_incremental.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadParquet(resultUrls[0])
+				secondResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(secondResults).Should(HaveLen(3))
 				Expect(secondResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1578441600000000000)),
@@ -367,7 +368,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 
 				// Load in just the first file
-				res := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				VerifyRequestDetails(res.RequestDetails)
 				firstDataTokenId = res.DataTokenId
@@ -377,7 +378,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -421,7 +422,7 @@ min_amount: purchases_incremental.amount | min(),
 				// The results should be equivalent to the results produced with just the
 				// first file. If using just the table name to find snapshots, the full
 				// snapshot with both files would've been used to produce results.
-				firstResults = downloadParquet(resultUrls[0])
+				firstResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(firstResults).Should(HaveLen(2))
 				Expect(firstResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1578182400000000000)),
@@ -451,12 +452,12 @@ min_amount: purchases_incremental.amount | min(),
 				_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table_non_incremental})
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 
-				res := loadTestFileIntoTable(ctx, conn, table_non_incremental, "purchases/purchases_part1.parquet")
+				res := helpers.LoadTestFileIntoTable(ctx, conn, table_non_incremental, "purchases/purchases_part1.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				VerifyRequestDetails(res.RequestDetails)
 				firstDataTokenId = res.DataTokenId
 
-				res = loadTestFileIntoTable(ctx, conn, table_non_incremental, "purchases/purchases_part2.parquet")
+				res = helpers.LoadTestFileIntoTable(ctx, conn, table_non_incremental, "purchases/purchases_part2.parquet")
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				VerifyRequestDetails(res.RequestDetails)
 				secondDataTokenId = res.DataTokenId
@@ -485,7 +486,7 @@ min_amount: purchases_incremental.amount | min(),
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -520,7 +521,7 @@ min_amount: purchases_incremental.amount | min(),
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				secondResults = downloadParquet(resultUrls[0])
+				secondResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(secondResults).Should(HaveLen(3))
 				Expect(secondResults[0]).Should(MatchFields(IgnoreExtras, Fields{
 					"Time":       PointTo(BeEquivalentTo(1578441600000000000)),

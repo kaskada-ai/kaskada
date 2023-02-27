@@ -11,7 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"), Label("redis-ai"), func() {
@@ -28,7 +29,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -51,7 +52,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 		}
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
-		loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 
 		// define a query to run on the table
 		createQueryRequest = &v1alpha.CreateQueryRequest{
@@ -90,7 +91,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.GetRedisAI()).ShouldNot(BeNil())
@@ -116,7 +117,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 
 	Describe("Load the second file into the table", func() {
 		It("Should work without error", func() {
-			loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
+			helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
 		})
 	})
 
@@ -126,7 +127,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.GetRedisAI()).ShouldNot(BeNil())
