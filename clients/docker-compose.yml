@@ -5,8 +5,21 @@ services:
     build:
       dockerfile: Dockerfile.poetry
     container_name: push-python
-    command: ["publish", "--build"]
+    command: ["poetry", "publish", "--build"]
     environment:
       - POETRY_PYPI_TOKEN_PYPI=$POETRY_PYPI_TOKEN_PYPI
+    volumes:
+      - ./python:/src
+
+  format-python:
+    build:
+      dockerfile: Dockerfile.poetry
+    container_name: format-python
+    command:
+      - /bin/sh
+      - -c
+      - |
+        poetry install
+        poetry run poe format
     volumes:
       - ./python:/src

@@ -22,6 +22,7 @@ class ResponseType(Enum):
     FILE_TYPE_PARQUET = 1
     FILE_TYPE_CSV = 2
 
+
 def create_query(
     query: str,
     result_behavior: str = "all-results",
@@ -116,7 +117,9 @@ def create_query(
         in_ipython = kaskada.formatters.in_ipython()
         if in_ipython:
             from IPython.display import clear_output, display
-        responses = client.query_stub.CreateQuery(request, metadata=client.get_metadata())
+        responses = client.query_stub.CreateQuery(
+            request, metadata=client.get_metadata()
+        )
         for resp in responses:
             response.MergeFrom(resp)
             logger.debug(f"Query Response: {response}")
