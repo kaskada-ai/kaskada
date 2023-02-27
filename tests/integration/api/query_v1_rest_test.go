@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 )
 
 var _ = PDescribe("Query V1 REST", Ordered, func() {
@@ -60,7 +61,7 @@ var _ = PDescribe("Query V1 REST", Ordered, func() {
 
 		loadReq := loadRequestJson{
 			TableName:      table.TableName,
-			ParquetFileUri: getFileURI("purchases_part1.parquet"),
+			ParquetFileUri: helpers.GetFileURI("purchases_part1.parquet"),
 		}
 
 		jsonBody, err = json.Marshal(loadReq)

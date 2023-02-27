@@ -14,7 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Tables", Ordered, func() {
@@ -34,7 +35,7 @@ var _ = Describe("Tables", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table service
@@ -196,7 +197,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      getFileURI(fileName),
+						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
 			})
@@ -258,7 +259,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      getFileURI(fileName),
+						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
 			})
@@ -280,7 +281,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      getFileURI(fileName),
+						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
 			})
@@ -326,7 +327,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      getFileURI(fileName),
+						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
 			})
@@ -474,7 +475,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      getFileURI(fileName),
+						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
 			})
