@@ -123,3 +123,10 @@ impl<Fut: Future> Future for TimedTask<Fut> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static_assertions::assert_impl_all!(Metrics: Send, Sync);
+}

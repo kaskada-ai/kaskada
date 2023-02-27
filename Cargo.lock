@@ -4102,6 +4102,7 @@ dependencies = [
  "half 2.2.1",
  "hashbrown 0.13.2",
  "insta",
+ "inventory",
  "itertools",
  "num-traits",
  "owning_ref",

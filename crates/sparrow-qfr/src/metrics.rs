@@ -14,10 +14,25 @@ impl IntoMetricValue for u64 {
         metric_value::Value::U64Value(self)
     }
 }
+impl IntoMetricValue for usize {
+    fn into_metric_value(self) -> metric_value::Value {
+        metric_value::Value::U64Value(self as u64)
+    }
+}
+impl IntoMetricValue for u32 {
+    fn into_metric_value(self) -> metric_value::Value {
+        metric_value::Value::U64Value(self as u64)
+    }
+}
 
 impl IntoMetricValue for i64 {
     fn into_metric_value(self) -> metric_value::Value {
         metric_value::Value::I64Value(self)
+    }
+}
+impl IntoMetricValue for i32 {
+    fn into_metric_value(self) -> metric_value::Value {
+        metric_value::Value::I64Value(self as i64)
     }
 }
 
@@ -38,7 +53,16 @@ pub struct GaugeKind;
 impl MetricKindTrait<u64> for GaugeKind {
     const KIND: MetricKind = MetricKind::U64Gauge;
 }
+impl MetricKindTrait<usize> for GaugeKind {
+    const KIND: MetricKind = MetricKind::U64Gauge;
+}
+impl MetricKindTrait<u32> for GaugeKind {
+    const KIND: MetricKind = MetricKind::U64Gauge;
+}
 impl MetricKindTrait<i64> for GaugeKind {
+    const KIND: MetricKind = MetricKind::I64Gauge;
+}
+impl MetricKindTrait<i32> for GaugeKind {
     const KIND: MetricKind = MetricKind::I64Gauge;
 }
 impl MetricKindTrait<f64> for GaugeKind {

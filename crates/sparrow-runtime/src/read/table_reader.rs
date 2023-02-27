@@ -13,7 +13,7 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_compiler::TableInfo;
 use sparrow_core::TableSchema;
-use sparrow_qfr::{FlightRecorder, TimedTask};
+use sparrow_qfr::{activity, gauge, Activity, FlightRecorder, Gauge};
 use tokio_stream::StreamExt;
 use tracing::info;
 
@@ -22,6 +22,26 @@ use crate::merge::{homogeneous_merge, GatheredBatches, Gatherer};
 use crate::min_heap::{HasPriority, MinHeap};
 use crate::read::parquet_stream::{self, new_parquet_stream};
 use crate::Batch;
+
+const READ_TABLE: Activity = activity!("table_reader.read_file");
+inventory::submit!(READ_TABLE.registration());
+const GATHER_TABLE_BATCHES: Activity = activity!("table_reader.gather");
+inventory::submit!(GATHER_TABLE_BATCHES.registration());
+const MERGE_TABLE_BATCHES: Activity = activity!("table_reader.merge");
+inventory::submit!(MERGE_TABLE_BATCHES.registration());
+
+const MIN_BATCH_TIME: Gauge<i64> = gauge!("min_time_in_batch");
+inventory::submit!(MIN_BATCH_TIME.registration());
+const MAX_BATCH_TIME: Gauge<i64> = gauge!("max_time_in_batch");
+inventory::submit!(MAX_BATCH_TIME.registration());
+const NUM_INPUT_ROWS: Gauge<usize> = gauge!("num_input_rows");
+inventory::submit!(NUM_INPUT_ROWS.registration());
+const NUM_OUTPUT_ROWS: Gauge<usize> = gauge!("num_output_rows");
+inventory::submit!(NUM_OUTPUT_ROWS.registration());
+const ACTIVE_SOURCES: Gauge<usize> = gauge!("active_files");
+inventory::submit!(ACTIVE_SOURCES.registration());
+const REMAINING_FILES: Gauge<usize> = gauge!("remaining_files");
+inventory::submit!(REMAINING_FILES.registration());
 
 /// Create a stream that reads the contents of the given table.
 pub fn table_reader(
@@ -92,42 +112,45 @@ pub fn table_reader(
         let projected_schema = projected_schema(schema, &projected_columns)?;
         let projected_schema_ref = projected_schema.schema_ref();
 
-        let mut flight_recorder = flight_recorder;
-
         while let Some(mut next_input) = active.pop() {
             let index = next_input.index;
 
-            let next_batch = TimedTask::future(next_input.next_batch(&projected_schema, max_event_timestamp.clone()))
-                .await
-                .with_computed_metrics_ok(|input| {
-                    input.as_ref().map(|input| Metrics::ReceiveBatch(ReceiveBatchMetrics {
-                        min_time: input.lower_bound.time,
-                        max_time: input.upper_bound.time,
-                        num_rows: input.num_rows() as u32,
-                    }))
-                })
-                .record(&mut flight_recorder, EventType::InputReadTableFile, index)
-                .change_context(Error::Internal)?;
+            let next_batch = READ_TABLE.instrument::<error_stack::Result<_, Error>, _>(&flight_recorder, |metrics| {
+                // Weird syntax because we can't easily say "move metrics but not projected schema".
+                // This may get easier with async closures https://github.com/rust-lang/rust/issues/62290.
+                let input = next_input.next_batch(&projected_schema, max_event_timestamp.clone());
+                async move {
+                    let input = input.await?;
+
+                    if let Some(input) = &input {
+                        metrics.report_metric(MIN_BATCH_TIME, input.lower_bound.time);
+                        metrics.report_metric(MAX_BATCH_TIME, input.upper_bound.time);
+                        metrics.report_metric(NUM_INPUT_ROWS, input.num_rows());
+                    }
+
+                    Ok(input)
+                }
+            }).await?;
 
             if next_batch.is_some() {
                 // If we got a batch, the input is still active.
                 active.push(next_input);
             }
 
-            let active_len = active.len() as u32;
-            let next_output = TimedTask::sync(|| gatherer.add_batch(index, next_batch))
-                .with_computed_metrics_ok(|result| result.as_ref().map(|next_output|
-                    Metrics::GatherBatches(GatherBatchesMetrics {
-                        min_time: next_output.min_time_inclusive,
-                        max_time: next_output.max_time_inclusive,
-                        active_sources: active_len,
-                        remaining_sources: gatherer.remaining_sources() as u32,
-                    })))
-                .record(&mut flight_recorder, EventType::InputReadTableFile, index)
-                .into_report().change_context(Error::Internal)?;
+            let active_len = active.len();
+
+            let mut activation = GATHER_TABLE_BATCHES.start(&flight_recorder);
+            let next_output = gatherer.add_batch(index, next_batch).into_report().change_context(Error::Internal)?;
+            if let Some(next_output) = &next_output {
+                activation.report_metric(MIN_BATCH_TIME, next_output.min_time_inclusive);
+                activation.report_metric(MAX_BATCH_TIME, next_output.max_time_inclusive);
+            }
+            activation.report_metric(ACTIVE_SOURCES, active_len);
+            activation.report_metric(REMAINING_FILES, gatherer.remaining_sources());
+            activation.finish();
 
             if let Some(next_output) = next_output {
-                let batch = merge_next_output(&table_name, &mut flight_recorder, projected_schema_ref, next_output)
+                let batch = merge_next_output(&table_name, &flight_recorder, projected_schema_ref, next_output)
                      .into_report()
                      .change_context(Error::Internal)?;
                 if batch.num_rows() > 0 {
@@ -285,42 +308,38 @@ fn projected_schema(
 
 fn merge_next_output(
     table_name: &str,
-    flight_recorder: &mut FlightRecorder,
+    flight_recorder: &FlightRecorder,
     projected_schema: &SchemaRef,
     gathered: GatheredBatches<Batch>,
 ) -> anyhow::Result<RecordBatch> {
-    // Number of output rows (for metrics reporting)
-    let mut num_input_rows = Vec::with_capacity(gathered.batches.len());
+    let mut activation = MERGE_TABLE_BATCHES.start(flight_recorder);
 
-    TimedTask::sync(|| {
-        // NOTE: The gathered batches are already totally ordered
-        // (verified by debug assertions in `Batch`).
-        let inputs: Vec<_> = gathered
-            .batches
-            .into_iter()
-            .map(|input_batches| -> anyhow::Result<RecordBatch> {
-                // Each `input_batches` is a set of batches from a single input file.
-                // Collect and concatenate the non-empty batches.
-                let input_batches: Vec<_> =
-                    input_batches.into_iter().map(|input| input.data).collect();
-                let input_batch = arrow::compute::concat_batches(projected_schema, &input_batches)?;
-                Ok(input_batch)
-            })
-            .try_collect()?;
+    // NOTE: The gathered batches are already totally ordered
+    // (verified by debug assertions in `Batch`).
+    let inputs: Vec<_> = gathered
+        .batches
+        .into_iter()
+        .map(|input_batches| -> anyhow::Result<RecordBatch> {
+            // Each `input_batches` is a set of batches from a single input file.
+            // Collect and concatenate the non-empty batches.
+            let input_batches: Vec<_> = input_batches.into_iter().map(|input| input.data).collect();
+            let input_batch = arrow::compute::concat_batches(projected_schema, &input_batches)?;
+            Ok(input_batch)
+        })
+        .try_collect()?;
 
-        num_input_rows.extend(inputs.iter().map(|input| input.num_rows() as u32));
-        let merged_batch = homogeneous_merge(projected_schema, inputs)
-            .with_context(|| format!("merging batches for '{table_name}'"))?;
-        Ok(merged_batch)
-    })
-    .with_computed_metrics_ok(|result| {
-        Some(Metrics::MergeBatches(MergeBatchesMetrics {
-            num_input_rows,
-            num_rows: result.num_rows() as u32,
-        }))
-    })
-    .record(flight_recorder, EventType::InputMergeTableBatches, 0)
+    let num_input_rows = inputs.iter().map(|input| input.num_rows()).sum();
+    let merged_batch = homogeneous_merge(projected_schema, inputs)
+        .with_context(|| format!("merging batches for '{table_name}'"))?;
+
+    // Ideally, the number of input rows would be reported per-source. But this
+    // would require reporting a vector, which is not currently supported by metrics.
+    // So we just report the total number of input rows across all inputs.
+    activation.report_metric(NUM_INPUT_ROWS, num_input_rows);
+    activation.report_metric(NUM_OUTPUT_ROWS, merged_batch.num_rows());
+    Ok(merged_batch)
 }
+
 struct ActiveInput {
     /// The minimum possible time of the first row in the next batch from this
     /// input.
@@ -771,7 +790,7 @@ mod tests {
             table_info,
             &None,
             None,
-            FlightRecorder::disabled_for_test(),
+            FlightRecorder::disabled(),
             max_time_processed,
             max_event_time,
         )?

@@ -31,7 +31,7 @@ impl Activity {
         Activation::new(self, recorder)
     }
 
-    pub fn instrument<Fut: Future>(
+    pub fn instrument<T, Fut: Future<Output = T>>(
         &'static self,
         recorder: &FlightRecorder,
         fut: impl FnOnce(Metrics) -> Fut,
