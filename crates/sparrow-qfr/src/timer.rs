@@ -1,5 +1,5 @@
-use std::cell::RefCell;
-use std::sync::Arc;
+use std::ops::DerefMut;
+use std::sync::{Arc, Mutex};
 use std::task::Poll;
 use std::time::Duration;
 
@@ -13,11 +13,11 @@ use crate::kaskada::sparrow::v1alpha::MetricValue;
 use crate::{FlightRecorder, IntoMetricValue, Metric, MetricKindTrait};
 
 #[derive(Default, Clone, Debug)]
-pub struct Metrics(Arc<RefCell<Vec<MetricValue>>>);
+pub struct Metrics(Arc<Mutex<Vec<MetricValue>>>);
 
 impl Metrics {
     fn take_metrics(self) -> Vec<MetricValue> {
-        self.0.take()
+        std::mem::take(self.0.lock().expect("get lock").deref_mut())
     }
 
     pub fn report_metric<T, K>(&self, metric: Metric<T, K>, value: T)
@@ -26,7 +26,7 @@ impl Metrics {
         K: MetricKindTrait<T>,
     {
         let metric = metric.value(value);
-        self.0.borrow_mut().push(metric)
+        self.0.lock().expect("get lock").push(metric);
     }
 }
 

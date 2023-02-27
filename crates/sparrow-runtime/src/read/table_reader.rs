@@ -138,16 +138,13 @@ pub fn table_reader(
             }
 
             let active_len = active.len();
-
-            let mut activation = GATHER_TABLE_BATCHES.start(&flight_recorder);
-            let next_output = gatherer.add_batch(index, next_batch).into_report().change_context(Error::Internal)?;
-            if let Some(next_output) = &next_output {
-                activation.report_metric(MIN_BATCH_TIME, next_output.min_time_inclusive);
-                activation.report_metric(MAX_BATCH_TIME, next_output.max_time_inclusive);
-            }
-            activation.report_metric(ACTIVE_SOURCES, active_len);
-            activation.report_metric(REMAINING_FILES, gatherer.remaining_sources());
-            activation.finish();
+            let next_output = gather_next_output(
+                &flight_recorder,
+                &mut gatherer,
+                index,
+                next_batch,
+                active_len
+            )?;
 
             if let Some(next_output) = next_output {
                 let batch = merge_next_output(&table_name, &flight_recorder, projected_schema_ref, next_output)
@@ -159,6 +156,27 @@ pub fn table_reader(
             }
         }
     })
+}
+
+fn gather_next_output(
+    flight_recorder: &FlightRecorder,
+    gatherer: &mut Gatherer<Batch>,
+    index: usize,
+    next_batch: Option<Batch>,
+    active_len: usize,
+) -> error_stack::Result<Option<GatheredBatches<Batch>>, Error> {
+    let mut activation = GATHER_TABLE_BATCHES.start(flight_recorder);
+    let next_output = gatherer
+        .add_batch(index, next_batch)
+        .into_report()
+        .change_context(Error::Internal)?;
+    if let Some(next_output) = &next_output {
+        activation.report_metric(MIN_BATCH_TIME, next_output.min_time_inclusive);
+        activation.report_metric(MAX_BATCH_TIME, next_output.max_time_inclusive);
+    }
+    activation.report_metric(ACTIVE_SOURCES, active_len);
+    activation.report_metric(REMAINING_FILES, gatherer.remaining_sources());
+    Ok(next_output)
 }
 
 #[derive(derive_more::Display, Debug)]
