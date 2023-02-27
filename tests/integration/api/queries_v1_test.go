@@ -13,7 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Queries V1", Ordered, func() {
@@ -29,7 +30,7 @@ var _ = Describe("Queries V1", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table service
@@ -49,7 +50,7 @@ var _ = Describe("Queries V1", Ordered, func() {
 		}
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
-		uploadRes := loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+		uploadRes := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 		Expect(uploadRes).ShouldNot(BeNil())
 	})
 
@@ -84,7 +85,7 @@ var _ = Describe("Queries V1", Ordered, func() {
 			stream, err := queryClient.CreateQuery(ctx, query)
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
-			queryResponses, err := getCreateQueryResponses(stream)
+			queryResponses, err := helpers.GetCreateQueryResponses(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 

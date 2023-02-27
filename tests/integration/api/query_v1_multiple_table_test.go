@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 gRPC with multiple tables", Ordered, func() {
@@ -29,7 +30,7 @@ var _ = Describe("Query V1 gRPC with multiple tables", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -62,8 +63,8 @@ var _ = Describe("Query V1 gRPC with multiple tables", Ordered, func() {
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		//load data into the tables
-		loadTestFileIntoTable(ctx, conn, memberTable, "transactions/members.parquet")
-		loadTestFileIntoTable(ctx, conn, transactionTable, "transactions/transactions_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, memberTable, "transactions/members.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, transactionTable, "transactions/transactions_part1.parquet")
 
 		// define a query to run on the table
 		query := &v1alpha.Query{
@@ -114,7 +115,7 @@ member_name : membership.name
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(Equal(1))
 
@@ -139,7 +140,7 @@ member_name : membership.name
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(stream).ShouldNot(BeNil())
 
-				queryResponses, err := getCreateQueryResponses(stream)
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
@@ -182,7 +183,7 @@ member_name : membership.name
 				}
 
 				Expect(len(resultUrls)).Should(Equal(1))
-				results := downloadParquet(resultUrls[0])
+				results := helpers.DownloadParquet(resultUrls[0])
 
 				Expect(results).Should(HaveLen(32699))
 				Expect(results[30005]).Should(MatchFields(IgnoreExtras, Fields{

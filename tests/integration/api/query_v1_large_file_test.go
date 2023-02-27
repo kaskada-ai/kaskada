@@ -10,7 +10,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 with large-ish files", Ordered, func() {
@@ -38,7 +39,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(120)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(120)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -58,7 +59,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		// load the data files
-		loadTestFilesIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
 	})
 
 	AfterAll(func() {
@@ -85,7 +86,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(res).ShouldNot(BeNil())
@@ -94,7 +95,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
 			Expect(len(results)).Should(Equal(dataSetSize))
 		})
@@ -118,7 +119,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			VerifyRequestDetails(res.RequestDetails)
@@ -126,7 +127,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
 			Expect(len(results)).Should(BeNumerically("<", dataSetSize))
 		})
@@ -150,7 +151,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			VerifyRequestDetails(res.RequestDetails)
@@ -158,7 +159,7 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
 			Expect(len(results)).Should(Equal(dataSetSize))
 		})
