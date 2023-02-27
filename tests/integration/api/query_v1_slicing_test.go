@@ -11,7 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 with slicing", Ordered, func() {
@@ -38,7 +39,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(120)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(120)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -58,7 +59,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		// load the data files
-		loadTestFilesIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part1.parquet")
 	})
 
 	AfterAll(func() {
@@ -85,7 +86,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
@@ -93,9 +94,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
-			logLn(fmt.Sprintf("Result set size, with no slice plan: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with no slice plan: %d", len(results)))
 			rowCount = len(results)
 
 		})
@@ -122,7 +123,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
@@ -130,9 +131,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
-			logLn(fmt.Sprintf("Result set size, with 100%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 100%% slice: %d", len(results)))
 
 			Expect(len(results)).Should(Equal(rowCount))
 		})
@@ -159,7 +160,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
@@ -167,9 +168,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
-			logLn(fmt.Sprintf("Result set size, with 10%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 10%% slice: %d", len(results)))
 
 			Expect(len(results)).Should(BeNumerically("~", 5000, 250))
 		})
@@ -196,7 +197,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(stream).ShouldNot(BeNil())
 
-			res, err := getMergedCreateQueryResponse(stream)
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
@@ -204,9 +205,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
 
 			resultsUrl := res.GetFileResults().Paths[0]
-			results := downloadParquet(resultsUrl)
+			results := helpers.DownloadParquet(resultsUrl)
 
-			logLn(fmt.Sprintf("Result set size, with 0.1%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 0.1%% slice: %d", len(results)))
 
 			Expect(len(results)).Should(BeNumerically("~", 50, 25))
 		})

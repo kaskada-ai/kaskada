@@ -70,6 +70,10 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		SliceRequest:   request.Query.Slice,
 		ResultBehavior: request.Query.ResultBehavior,
 	}
+	if queryRequest.ResultBehavior == v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED {
+		queryRequest.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
+	}
+
 	queryOptions := compute.QueryOptions{
 		IsFormula:      false,
 		IsExperimental: false,

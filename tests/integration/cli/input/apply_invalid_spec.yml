@@ -1,0 +1,8 @@
+views:
+- viewName: invalid_view_apply
+  expression: |-
+    {
+    time: sync_apply_test.purchase_time,
+    entity: sync_apply_test.customer_id,
+    avg_amount: sync_apply_test.amount | avg(),
+    }
