@@ -77,12 +77,12 @@ mod tests {
             tx,
         };
 
-        tokio::time::advance(Duration::from_millis(500)).await;
+        tokio::time::advance(Duration::from_micros(500_000)).await;
         {
             let _activation = ACTIVITY.start(&recorder);
-            tokio::time::advance(Duration::from_millis(1000)).await;
+            tokio::time::advance(Duration::from_micros(1_000_000)).await;
         }
-        tokio::time::advance(Duration::from_millis(2000)).await;
+        tokio::time::advance(Duration::from_micros(2_000_000)).await;
 
         let activity = get_activity_record(rx).await;
         assert_eq!(activity.activity_id, ACTIVITY.activity_id);
@@ -103,11 +103,11 @@ mod tests {
             tx,
         };
 
-        tokio::time::advance(Duration::from_millis(500)).await;
+        tokio::time::advance(Duration::from_micros(500_000)).await;
         let activation = ACTIVITY.start(&recorder);
-        tokio::time::advance(Duration::from_millis(1000)).await;
+        tokio::time::advance(Duration::from_micros(1_000_000)).await;
         activation.finish();
-        tokio::time::advance(Duration::from_millis(2000)).await;
+        tokio::time::advance(Duration::from_micros(2_000_000)).await;
 
         let activity = get_activity_record(rx).await;
         assert_eq!(activity.activity_id, ACTIVITY.activity_id);
@@ -128,9 +128,9 @@ mod tests {
             tx,
         };
 
-        tokio::time::advance(Duration::from_millis(500)).await;
+        tokio::time::advance(Duration::from_micros(500_000)).await;
         let mut activation = ACTIVITY.start(&recorder);
-        tokio::time::advance(Duration::from_millis(1000)).await;
+        tokio::time::advance(Duration::from_micros(1_000_000)).await;
         let metric = GAUGE.value(57);
         activation.report_metric(GAUGE, 57);
         activation.finish();
@@ -154,15 +154,15 @@ mod tests {
             tx,
         };
 
-        tokio::time::advance(Duration::from_millis(500)).await;
+        tokio::time::advance(Duration::from_micros(500_000)).await;
         let result = ACTIVITY
             .instrument(&recorder, |_| async {
-                tokio::time::advance(Duration::from_millis(1000)).await;
+                tokio::time::advance(Duration::from_micros(1_000_000)).await;
                 59
             })
             .await;
         assert_eq!(result, 59);
-        tokio::time::advance(Duration::from_millis(1000)).await;
+        tokio::time::advance(Duration::from_micros(1_000_000)).await;
 
         let activity = get_activity_record(rx).await;
         assert_eq!(activity.activity_id, ACTIVITY.activity_id);
@@ -183,16 +183,16 @@ mod tests {
             tx,
         };
 
-        tokio::time::advance(Duration::from_millis(500)).await;
+        tokio::time::advance(Duration::from_micros(500_000)).await;
         let result = ACTIVITY
             .instrument(&recorder, |metrics| async move {
-                tokio::time::advance(Duration::from_millis(1000)).await;
+                tokio::time::advance(Duration::from_micros(1_000_000)).await;
                 metrics.report_metric(GAUGE, 523);
                 59
             })
             .await;
         assert_eq!(result, 59);
-        tokio::time::advance(Duration::from_millis(1000)).await;
+        tokio::time::advance(Duration::from_micros(1_000_000)).await;
 
         let activity = get_activity_record(rx).await;
         assert_eq!(activity.activity_id, ACTIVITY.activity_id);

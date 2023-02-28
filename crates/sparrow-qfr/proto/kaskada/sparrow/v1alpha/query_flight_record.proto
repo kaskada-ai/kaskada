@@ -31,9 +31,26 @@ message FlightRecordHeader {
 
 message FlightRecord {
   oneof record {
-    RegisterThread register_thread = 1;
+    // Register an activity.
+    //
+    // The set of activities are static within the query engine, and correspond
+    // to any task that may be instrumented during the execution of a query. Not
+    // all activities need to be reported by any given query.
     RegisterActivity register_activity = 2;
+
+    // Register an metric.
+    //
+    // Metrics may be reported as part of an activity (see ReportActivity) or
+    // at the top level during execution (see ReportMetrics).
+    //
+    // The set of metrics are static within the query engine, and correspond
+    // to any value that may be reported during the execution of a query. Not
+    // all metrics need to be reported for any given query.
     RegisterMetric register_metric = 3;
+
+    // Register an execution thread.
+    // This is sent for each computation thread spawned for a specific query.
+    RegisterThread register_thread = 1;
     ReportActivity report_activity = 4;
     ReportMetrics report_metrics = 5;
   }
