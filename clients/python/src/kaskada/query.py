@@ -24,7 +24,7 @@ class ResponseType(Enum):
 
 
 def create_query(
-    query: str,
+    expression: str,
     result_behavior: str = "all-results",
     response_as: ResponseType = ResponseType.FILE_TYPE_PARQUET,
     data_token_id: Optional[str] = None,
@@ -40,23 +40,23 @@ def create_query(
     Performs a query
 
     Args:
-        query (str): The query to perform
+        expression (str): A Fenl expression to compute
         result_behavior (str, optional):
             Determines which results are returned. Either "all-results" (default), or "final-results" which returns
             only the final values for each entity.
         responsed_as (ResponseType):
             Determines how the response is returned.  Either "parquet" (default) or "csv".
         data_token_id (str, optional):
-            Enables repeatable queries. Queries performed against the same dataToken are always ran the same input data.
+            Enables repeatable queries. Queries performed against the same dataToken are always run against the same input data.
         dry_run(bool, optional):
             When `True`, the query is validated and if there are no errors, the resultant schema is returned.
             No actual computation of results is performed.
         changed_since_time (datetime.datetime, optional):
-            Configure the inclusive datetime after which results will be output.
+            Time bound (inclusive) after which results will be output.
         limits (pb.QueryRequest.Limits, optional):
             Configure limits on the output set.
         slice_filter (SliceFilter, optional):
-            Enables slice filter. Currently, only slice entity percent filters are supported. Defaults to None.
+            How to slice the input data for the query
         experimental (bool):
             When `True`, then experimental features are allowed. Data returned when using this flag is not
             guaranteed to be correct. Default to False
@@ -82,7 +82,7 @@ def create_query(
         }
 
         query_request = {
-            "expression": query,
+            "expression": expression,
             "data_token_id": data_token_id,
             "changed_since_time": change_since_time,
             "final_result_time": final_result_time,

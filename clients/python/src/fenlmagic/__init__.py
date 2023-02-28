@@ -7,6 +7,7 @@ import pandas
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics, cell_magic, line_cell_magic, magics_class
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
+from google.protobuf import wrappers_pb2 as wrappers
 
 import kaskada.client as client
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
@@ -87,38 +88,41 @@ class FenlMagics(Magics):
 
         args = parse_argstring(self.fenl, arg)
         dry_run = test_arg(clean_arg(str(args.dry_run)), "true")
-        experimental = test_arg(clean_arg(str(args.experimental)), "true")
         render_dataframe = test_arg(clean_arg(str(args.dataframe)), "true")
         response_as = arg_to_response_type(clean_arg(args.output))
-        result_behavior = clean_arg(args.result_behavior)
         preview_rows = clean_arg(args.preview_rows)
         var = clean_arg(args.var)
-        final_result_time = clean_arg(args.final_time)
+
+        result_behavior = "final-results" if test_arg(clean_arg(args.result_behavior), "final-results") else "all-results"
 
         if cell is None:
-            query = arg
+            expression = arg
         else:
-            query = cell.strip()
+            expression = cell.strip()
 
         limits = {}
         if preview_rows:
             limits["preview_rows"] = int(preview_rows)
 
+        data_token_id = clean_arg(args.data_token)
+        data_token_id = wrappers.StringValue(value=data_token_id) if data_token_id else None
+
+        print("boops")
+
         try:
             resp = query.create_query(
-                query=query,
-                result_behavior="final-results"
-                if test_arg(result_behavior, "final-results")
-                else "all-results",
+                expression=expression,
+                result_behavior=result_behavior,
                 dry_run=dry_run,
-                experimental=experimental,
-                data_token_id=clean_arg(args.data_token),
+                experimental=test_arg(clean_arg(str(args.experimental)), "true"),
+                data_token_id=data_token_id,
                 changed_since_time=clean_arg(args.changed_since_time),
-                final_result_time=final_result_time,
+                final_result_time=clean_arg(args.final_time),
                 limits=query_pb.Query.Limits(**limits),
                 response_as=response_as,
                 client=self.client,
             )
+            print("resp exists")
             query_result = QueryResult(query, resp)
 
             if not dry_run and render_dataframe:

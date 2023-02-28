@@ -659,6 +659,7 @@ def try_init():
 
         # the following types don't normally exist when the library first loads
         html_formatter.for_type(
+            # TODO: find the new class name for this
             "kaskada.kaskada.v1alpha.compute_service_pb2.Metrics",
             query_metrics_html_formatter,
         )
@@ -677,7 +678,9 @@ def try_init():
             generic_object_html_formatter,
         )
         html_formatter.for_type(
-            "kaskada.compute.EntityPercentFilter", entity_filter_html_formatter
+            # TODO: find the new class name for this
+            "kaskada.compute.EntityPercentFilter",
+            entity_filter_html_formatter,
         )
         html_formatter.for_type(
             "fenlmagic.QueryResult", fenlmagic_query_result_html_formatter

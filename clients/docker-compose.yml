@@ -23,3 +23,16 @@ services:
         poetry run poe format
     volumes:
       - ./python:/src
+
+  test-python:
+    build:
+      dockerfile: Dockerfile.poetry
+    container_name: test-python
+    command:
+      - /bin/sh
+      - -c
+      - |
+        poetry install
+        poetry run poe test
+    volumes:
+      - ./python:/src
