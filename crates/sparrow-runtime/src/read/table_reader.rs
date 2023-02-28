@@ -23,9 +23,9 @@ use crate::min_heap::{HasPriority, MinHeap};
 use crate::read::parquet_stream::{self, new_parquet_stream};
 use crate::Batch;
 
-const READ_TABLE: Activity = activity!("table_reader.read_file");
-const GATHER_TABLE_BATCHES: Activity = activity!("table_reader.gather");
-const MERGE_TABLE_BATCHES: Activity = activity!("table_reader.merge");
+const READ_TABLE: Activity = activity!("scan.read_file");
+const GATHER_TABLE_BATCHES: Activity = activity!("scan.gather");
+const MERGE_TABLE_BATCHES: Activity = activity!("scan.merge");
 
 const MIN_BATCH_TIME: Gauge<i64> = gauge!("min_time_in_batch");
 const MAX_BATCH_TIME: Gauge<i64> = gauge!("max_time_in_batch");
