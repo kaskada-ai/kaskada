@@ -26,4 +26,5 @@ output_to:
   destination:
     !ObjectStore
       format: 1 # FILE_FORMAT_PARQUET
-      output_prefix_uri: file:///home/jonathan/kaskada/crates/sparrow-main/benchmarks/transactions
+      output_prefix_uri: file:///Users/jonathan/Projects/kaskada/crates/sparrow-main/benchmarks/transactions/out
+
