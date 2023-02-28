@@ -88,7 +88,10 @@ jobs:
         with:
           # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
           cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
-
+      - name: OS Configuration
+        run: | 
+          sudo prlimit --pid $$ --nofile=500000:500000
+          ulimit -a
       - name: Cargo Test (Compile)
         if: needs.rust_skip.outputs.should_skip != 'true'
         uses: actions-rs/cargo@v1
