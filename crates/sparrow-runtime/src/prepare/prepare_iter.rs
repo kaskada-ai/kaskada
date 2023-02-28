@@ -231,8 +231,8 @@ impl PrepareMetadata {
             arrow::compute::concat_batches(&self.metadata_schema, &self.metadata_batches)
                 .into_report()
                 .change_context(Error::Internal);
-        self.previous_keys = HashSet::new();
-        self.metadata_batches = vec![];
+        self.previous_keys.clear();
+        self.metadata_batches.clear();
         metadata
     }
 }
