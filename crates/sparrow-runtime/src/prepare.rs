@@ -283,7 +283,7 @@ fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
         .change_context(Error::CreateParquetReader)
 }
 
-const BATCH_SIZE: usize = 100_000;
+const BATCH_SIZE: usize = 1_000_000;
 
 fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
     config: &TableConfig,

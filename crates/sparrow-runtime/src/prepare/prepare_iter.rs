@@ -188,7 +188,7 @@ impl PrepareIter {
         let batch = RecordBatch::try_new(self.prepared_schema.clone(), prepared_columns.clone())
             .into_report()
             .change_context(Error::Internal)?;
-        let metadata = self.metadata.get_metadata()?;
+        let metadata = self.metadata.get_flush_metadata()?;
         Ok((batch, metadata))
     }
 }
@@ -226,10 +226,14 @@ impl PrepareMetadata {
         Ok(())
     }
 
-    fn get_metadata(&mut self) -> error_stack::Result<RecordBatch, Error> {
-        arrow::compute::concat_batches(&self.metadata_schema, &self.metadata_batches)
-            .into_report()
-            .change_context(Error::Internal)
+    fn get_flush_metadata(&mut self) -> error_stack::Result<RecordBatch, Error> {
+        let metadata =
+            arrow::compute::concat_batches(&self.metadata_schema, &self.metadata_batches)
+                .into_report()
+                .change_context(Error::Internal);
+        self.previous_keys.clear();
+        self.metadata_batches.clear();
+        metadata
     }
 }
 
@@ -683,7 +687,9 @@ mod tests {
         let batch = RecordBatch::try_new(schema, vec![Arc::new(data)]).unwrap();
         let mut metadata = PrepareMetadata::new(DataType::Utf8.clone());
         behavior.get_result(&mut metadata, &batch).unwrap();
-        assert_eq!(metadata.get_metadata().unwrap().num_rows(), 3);
+        assert_eq!(metadata.get_flush_metadata().unwrap().num_rows(), 3);
+        assert!(metadata.previous_keys.is_empty());
+        assert!(metadata.metadata_batches.is_empty());
     }
     #[test]
     fn test_entity_key_mapping_int() {
@@ -696,6 +702,8 @@ mod tests {
         let batch = RecordBatch::try_new(schema, vec![Arc::new(data)]).unwrap();
         let mut metadata = PrepareMetadata::new(DataType::UInt64.clone());
         behavior.get_result(&mut metadata, &batch).unwrap();
-        assert_eq!(metadata.get_metadata().unwrap().num_rows(), 3);
+        assert_eq!(metadata.get_flush_metadata().unwrap().num_rows(), 3);
+        assert!(metadata.previous_keys.is_empty());
+        assert!(metadata.metadata_batches.is_empty());
     }
 }
