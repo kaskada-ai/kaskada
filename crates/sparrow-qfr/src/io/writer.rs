@@ -41,7 +41,7 @@ impl<W: std::io::Write> FlightRecordWriter<W> {
 
         if self.buffer.capacity() > capacity {
             warn!(
-                "Buffer for flight recordsgrew from {} to {} bytes",
+                "Buffer for flight records grew from {} to {} bytes",
                 capacity,
                 self.buffer.capacity()
             );

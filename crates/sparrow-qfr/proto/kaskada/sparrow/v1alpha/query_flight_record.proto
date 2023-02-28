@@ -38,7 +38,7 @@ message FlightRecord {
     // all activities need to be reported by any given query.
     RegisterActivity register_activity = 2;
 
-    // Register an metric.
+    // Register a metric.
     //
     // Metrics may be reported as part of an activity (see ReportActivity) or
     // at the top level during execution (see ReportMetrics).

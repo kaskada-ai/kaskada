@@ -37,6 +37,11 @@ pub use unique_id;
 
 /// Macro to create a gauge metric.
 ///
+/// Gauge metrics report a value for each activity or at each point in time that
+/// replaces the previously reported value. The number of output rows in the
+/// current batch of processing or the number of entities currently in the
+/// system.
+///
 /// ```rust
 /// const NUM_OUTPUT_ROWS: Gauge<u64> = gauge!("num_output_rows");
 /// ```
@@ -48,10 +53,10 @@ macro_rules! gauge {
 }
 pub use gauge;
 
-/// Macro to create a gauge metric.
+/// Macro to create a counter metric.
 ///
 /// ```rust
-/// const NUM_OUTPUT_ROWS: Counter<u64> = counter!("num_output_rows");
+/// const NUM_ENTITIES: Counter<u64> = counter!("num_entities");
 /// ```
 #[macro_export]
 macro_rules! counter {
