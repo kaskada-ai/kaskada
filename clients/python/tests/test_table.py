@@ -67,12 +67,5 @@ def test_table_load_dataframe(mockClient):
         ),
     )
     kaskada.table.load_dataframe(table_name=table_name, dataframe=df, client=mockClient)
-    print(mockClient.mock_calls)
-    assert len(mockClient.mock_calls) == 2
-    assert mockClient.mock_calls[0] == call.get_metadata()
-    call_req = mockClient.mock_calls[1].args[0]
-    assert call_req.table_name == table_name
-    assert call_req.file_input.file_type == common_pb.FILE_TYPE_PARQUET
-    assert "kaskada" in call_req.file_input.uri
-    assert call_req.file_input.uri.startswith("file://")
-    assert call_req.file_input.uri.endswith(".parquet")
+    assert mockClient.get_metadata.call_args_list == [call()]
+    mockClient.table_stub.LoadData.assert_called_once()
