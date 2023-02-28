@@ -554,8 +554,7 @@ impl KeyedBatch {
 }
 
 /// An input column needed within the merge operation.
-#[derive(Debug)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct MergeInputColumn {
     side: MergeSide,
     index: usize,
@@ -563,8 +562,7 @@ struct MergeInputColumn {
     spread: Spread,
 }
 
-#[derive(Debug)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 enum MergeSide {
     Left,
     Right,

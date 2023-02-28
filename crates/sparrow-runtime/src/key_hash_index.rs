@@ -34,7 +34,10 @@ pub struct KeyHashIndex {
 impl std::fmt::Debug for KeyHashIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("KeyHashIndex")
-            .field("key_hash_to_index", &format!("{} entries", self.key_hash_to_index.len()))
+            .field(
+                "key_hash_to_index",
+                &format!("{} entries", self.key_hash_to_index.len()),
+            )
             .finish()
     }
 }

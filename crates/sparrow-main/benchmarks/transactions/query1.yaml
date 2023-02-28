@@ -1,36 +1,3 @@
-tables:
-  - config:
-      name: Transaction
-      uuid: ece50bec-9cdb-11ed-a8fc-0242ac120002
-      time_column_name: transaction_date
-      group_column_name: msno
-      grouping: Transaction
-    metadata:
-      file_count: 1
-      schema:
-        fields:
-          - name: msno
-            data_type:
-              kind: !Primitive 14 # STRING
-          - name: payment_method_id
-            data_type:
-              kind: !Primitive 6 # I64
-          - name: payment_plan_days
-            data_type:
-              kind: !Primitive 6 # I64
-          - name: transaction_date
-            data_type:
-              kind: !Primitive 24 # TIMESTAMP_NANOSECOND
-          - name: membership_expire_date
-            data_type:
-              kind: !Primitive 24 # TIMESTAMP_NANOSECOND
-    file_sets:
-      - slice_plan:
-          table_name: Transaction
-          percent: 100
-        prepared_files:
-
-
 feature_set:
   query: >
     let meaningful_txns = Transaction | if(Transaction.payment_plan_days > 0)

@@ -9,9 +9,9 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use fallible_iterator::FallibleIterator;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
+use serde_yaml;
 use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig};
-use serde_yaml;
 
 mod error;
 mod prepare_iter;
