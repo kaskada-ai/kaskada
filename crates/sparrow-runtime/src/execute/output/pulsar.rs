@@ -28,7 +28,7 @@ pub enum Error {
         to: DataType,
     },
     #[cfg(not(feature = "avro"))]
-    UnspecifiedType,
+    AvroNotEnabled,
     #[cfg(feature = "avro")]
     AvroSchemaConversion,
 }
@@ -205,7 +205,7 @@ fn get_output_schema(schema: SchemaRef) -> error_stack::Result<SchemaRef, Error>
 
 #[cfg(not(feature = "avro"))]
 fn format_schema(_schema: SchemaRef) -> error_stack::Result<String, Error> {
-    error_stack::bail!(Error::UnspecifiedType)
+    error_stack::bail!(Error::AvroNotEnabled)
 }
 
 #[cfg(feature = "avro")]
