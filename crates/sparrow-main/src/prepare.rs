@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use error_stack::{IntoReport, ResultExt};
-use sparrow_api::kaskada::v1alpha::{file_path, FilePath, PrepareDataRequest, SlicePlan};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use sparrow_api::kaskada::v1alpha::{FilePath, PrepareDataRequest, SlicePlan};
 
 use sparrow_runtime::s3::S3Helper;
 
@@ -48,6 +48,8 @@ pub enum Error {
     Preparing,
     #[display(fmt = "canonicalize paths")]
     Canonicalize,
+    #[display(fmt = "unrecognized input format")]
+    UnrecognizedInputFormat,
 }
 
 impl error_stack::Context for Error {}
@@ -113,13 +115,9 @@ impl PrepareCommand {
             .change_context(Error::Canonicalize)
             .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
 
-        // given the input path, we need to create a file path corresponding to its extension.
-        // non-CSV files are assumed to be Parquet.
-        let input_string = input.as_os_str().to_string_lossy().to_string();
-        let file_path = match std::path::Path::new(&input_string).extension() {
-            Some(ext) if ext == "csv" => file_path::Path::CsvPath(input_string),
-            _ => file_path::Path::ParquetPath(input_string),
-        };
+        let file_path = FilePath::try_from_local(input.as_path())
+            .into_report()
+            .change_context(Error::UnrecognizedInputFormat)?;
 
         let sp = SlicePlan {
             table_name: config.name.clone(),
