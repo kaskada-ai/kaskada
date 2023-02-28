@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 
 import google.protobuf.wrappers_pb2 as wrappers
 import grpc
+import pandas as pd
 
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
@@ -223,3 +224,41 @@ def load(
         handleGrpcError(e)
     except Exception as e:
         handleException(e)
+
+
+def load_dataframe(
+    table_name: str,
+    dataframe: pd.DataFrame,
+    client: Optional[Client] = None,
+    engine: str = "pyarrow",
+) -> table_pb.LoadDataResponse:
+    """
+    Loads a dataframe to a table.
+
+    This converts the dataframe to a Parquet file first, and then loads that file.
+    If your dataframe was loaded from a Parquet file (or other supported format),
+    it would be better to load that directly with :func:`~kaskada.table.load`
+
+    Args:
+        table_name (str): The name of the target table
+        dataframe (pd.DataFrame): The target dataframe to load
+        client (Optional[Client], optional): The Kaskada Client. Defaults to None.
+        engine (str, optional): The engine to convert the dataframe to parquet. Defaults to 'pyarrow'.
+
+    Returns:
+        table_pb.LoadDataResponse: Response from the API.
+    """
+    import tempfile
+
+    temp_file = tempfile.NamedTemporaryFile(
+        prefix="kaskada_", suffix=".parquet", delete=False
+    )
+    logger.debug(f"Created temporary file at: {temp_file.name}")
+    dataframe.to_parquet(
+        path=temp_file,
+        engine=engine,
+        allow_truncated_timestamps=True,
+        use_deprecated_int96_timestamps=True,
+    )
+    temp_file.close()
+    return load(table_name=table_name, file=temp_file.name, client=client)
