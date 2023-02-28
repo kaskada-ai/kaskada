@@ -1,8 +1,5 @@
-mod reader;
-mod writer;
+pub mod reader;
+pub mod writer;
 
 #[cfg(test)]
 mod tests;
-
-pub use reader::*;
-pub use writer::*;
