@@ -33,9 +33,9 @@ impl Metrics {
 #[pin_project(project = TimedTaskProj, project_replace = TimedTaskProjReplace)]
 #[derive(Debug)]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
-pub enum TimedTask<Fut> {
+pub enum TimedTask<'a, Fut> {
     Incomplete {
-        recorder: FlightRecorder,
+        recorder: &'a FlightRecorder,
         activity_id: u32,
         wall_start: Instant,
         cpu_elapsed: Duration,
@@ -46,9 +46,9 @@ pub enum TimedTask<Fut> {
     Complete,
 }
 
-impl<Fut: Future> TimedTask<Fut> {
+impl<'a, Fut: Future> TimedTask<'a, Fut> {
     pub(super) fn new(
-        recorder: FlightRecorder,
+        recorder: &'a FlightRecorder,
         activity_id: u32,
         fut: impl FnOnce(Metrics) -> Fut,
     ) -> Self {
@@ -65,13 +65,13 @@ impl<Fut: Future> TimedTask<Fut> {
     }
 }
 
-impl<Fut: Future> FusedFuture for TimedTask<Fut> {
+impl<'a, Fut: Future> FusedFuture for TimedTask<'a, Fut> {
     fn is_terminated(&self) -> bool {
         matches!(self, Self::Complete)
     }
 }
 
-impl<Fut: Future> Future for TimedTask<Fut> {
+impl<'a, Fut: Future> Future for TimedTask<'a, Fut> {
     type Output = Fut::Output;
 
     fn poll(

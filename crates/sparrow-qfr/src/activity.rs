@@ -33,13 +33,12 @@ impl Activity {
         Activation::new(self, recorder)
     }
 
-    pub fn instrument<T, Fut: Future<Output = T>>(
+    pub fn instrument<'a, T, Fut: Future<Output = T>>(
         &'static self,
-        recorder: &FlightRecorder,
+        recorder: &'a FlightRecorder,
         fut: impl FnOnce(Metrics) -> Fut,
-    ) -> TimedTask<Fut> {
-        // DO NOT SUBMIT: Lifetime so we can borrow flight recorder?
-        TimedTask::new(recorder.clone(), self.activity_id, fut)
+    ) -> TimedTask<'a, Fut> {
+        TimedTask::new(recorder, self.activity_id, fut)
     }
 }
 
