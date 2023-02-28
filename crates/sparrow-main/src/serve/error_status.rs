@@ -87,7 +87,7 @@ fn report(code: tonic::Code, message: &str, error: &dyn std::fmt::Debug) {
         }
         _ => {
             // Other codes are treated as errors.
-            error!("Returinng status code {code:?} with message {message}:\n{error:?}")
+            error!("Returning status code {code:?} with message {message}:\n{error:?}")
         }
     }
 }
