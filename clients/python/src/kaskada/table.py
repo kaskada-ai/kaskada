@@ -232,7 +232,12 @@ def load_dataframe(
     client: Optional[Client] = None,
     engine: str = "pyarrow",
 ) -> table_pb.LoadDataResponse:
-    """Loads a dataframe to a table (by converting it to a parquet file locally first)
+    """
+    Loads a dataframe to a table.
+
+    This converts the dataframe to a Parquet file first, and then loads that file.
+    If your dataframe was loaded from a Parquet file (or other supported format),
+    it would be better to load that directly with :func:`~kaskada.table.load`
 
     Args:
         table_name (str): The name of the target table
@@ -241,7 +246,7 @@ def load_dataframe(
         engine (str, optional): The engine to convert the dataframe to parquet. Defaults to 'pyarrow'.
 
     Returns:
-        table_pb.LoadDataResponse: _description_
+        table_pb.LoadDataResponse: Response from the API.
     """
     import tempfile
 
