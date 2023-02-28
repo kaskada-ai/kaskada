@@ -5,10 +5,11 @@ version 2. Additionally, it expects the following:
 should be of integer type and contain a nano-second unix timestamp.
 * All rows within the dataset must be sorted by `time_column`,
 ascending.
-* The combination of the `time_column` and the `subsort_column` should
-guarantee that each row is unique.
+* The combination of the `group_column` (entity id), `time_column` 
+and `subsort_column` should guarantee that each row is unique.
 ** An easy way to do this is to use add an index column to your dataset,
-that contains the row index, and set this as the `subsort_column`.
+that contains the row index, and set this as the `subsort_column`. If
+this is not necessary, the subsort column is optional.
 
 Below are some code examples to help you get your data into the proper
 format:
