@@ -1,3 +1,5 @@
+= Working with Records
+
 https://docs.kaskada.com/docs/data-model#records[Records] allow one or
 more values into a single record. Each value is part of a named field
 within the record.

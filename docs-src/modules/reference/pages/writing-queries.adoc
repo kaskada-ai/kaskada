@@ -1,8 +1,8 @@
-== Writing Queries
+= Writing Queries
 
 The following sections will help with writing queries.
 
-=== Records
+== Records
 
 All queries need to specify a record. A record is simply a set of named
 expressions inside squiggly brackets.
@@ -23,7 +23,7 @@ An example record:
 This record has 4 fields, `time`, `entity`, `max_amount` and
 `min_amount`
 
-=== Querying with Python
+== Querying with Python
 
 Using python directly is one way to write queries.
 
@@ -41,7 +41,7 @@ pandas.read_parquet(response_parquet)
 
 This returns a dataframe with the results of the query.
 
-==== Optional Parameters (with Python)
+=== Optional Parameters (with Python)
 
 When querying directly from python, the following optional parameters
 are available:
@@ -61,7 +61,7 @@ final values for each entity.
 the same data token always run on the same input data.
 * *limits*: Configures limits on the output set.
 
-=== Querying with fenlmagic
+== Querying with fenlmagic
 
 Using the fenlmagic IPython extension makes iterating on queries easier.
 
@@ -90,7 +90,7 @@ block's contents:
 
 This returns a dataframe with the results of the query.
 
-==== Optional Parameters (with fenlmagic)
+=== Optional Parameters (with fenlmagic)
 
 When querying using fenlmagic, the following optional parameters are
 available:

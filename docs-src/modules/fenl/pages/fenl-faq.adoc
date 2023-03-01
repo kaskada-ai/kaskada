@@ -1,3 +1,5 @@
+= Fenl FAQ
+
 == Choosing between `when` and `if`
 
 Fenl provides two predication functions:

@@ -1,3 +1,5 @@
+= Aggregation and Windowing 
+
 Temporal computation is most important when dealing with aggregations,
 because aggregations incorporate values associated with _different_
 times.

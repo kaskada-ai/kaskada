@@ -1,3 +1,5 @@
+= Views 
+
 Fenl expressions can be shared and re-used by creating a _view_. A view
 is a named expression. In subsequent Fenl expressions, the view's name
 is synonymous with the view's expression. Views are persisted in the

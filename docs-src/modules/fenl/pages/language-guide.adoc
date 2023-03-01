@@ -1,3 +1,5 @@
+= Fenl Language Quide
+
 == What is Fenl?
 
 Fenl is a declarative query language for feature engineering. It allows

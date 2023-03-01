@@ -1,3 +1,5 @@
+= File Formats
+
 The Kaskada compute engine expects uploaded file data to be parquet
 version 2. Additionally, it expects the following:
 

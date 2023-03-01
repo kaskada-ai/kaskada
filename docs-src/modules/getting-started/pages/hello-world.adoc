@@ -1,3 +1,5 @@
+= Quick Start
+
 This quick start is intended to get you comfortable working with Kaskada
 quickly.
 

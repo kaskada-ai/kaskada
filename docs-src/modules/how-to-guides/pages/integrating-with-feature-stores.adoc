@@ -1,4 +1,4 @@
-== Online Feature Stores
+= Online Feature Stores
 
 Models being used in production often have strict latency and freshness
 requirements — real-time models in particular. Feature engines address
@@ -6,7 +6,7 @@ the freshness, while feature stores address latency. Kaskada's feature
 engine keeps real-time features fresh and integrates with several
 existing data stores for low-latency key retrieval.
 
-=== AWS DynamoDB
+== AWS DynamoDB
 
 DynamoDB is a hosted key-value store that provides consistent
 low-latency query responses and elastic scalability.
@@ -44,7 +44,7 @@ with table.batch_writer() as bw:
         bw.put_item(Item=record)
 ----
 
-=== Redis
+== Redis
 
 Redis is an OpenSource in-memory data-structure store. The RedisAI
 module provides support for tensor data structures and allows applying a

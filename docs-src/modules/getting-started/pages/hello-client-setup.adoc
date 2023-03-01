@@ -1,3 +1,5 @@
+= Installation
+
 To use Kaskada within a Jupyter notebook you'll need to have the following pieces of software installed 
 
 . https://realpython.com/installing-python/[Python] (version 3.6 and above) 
@@ -126,7 +128,11 @@ Now let's create a new code cell in our notebook and add the following code insi
 kaskada.table.load('transactions', 'transactions_part1.parquet')
 ----
 
-TODO: get the output from the notebook here so that the reader knows what to expect on success 
+Once the data load is complete you should see something similar to the following. 
+
+.Sample output from data load
+image::load-table-output.png[Sample output from data load]
+
 
 ==== Enable the Kaskada magic command and run a query 
 
@@ -155,7 +161,10 @@ In a new code cell input the following commands and run this cell.
 transactions
 ----
 
-TODO: add expected output from the query 
+The result of the query should look similar to the following. 
+
+.Sample output querying the transactions table.
+image::query-output.png[Sample output from querying the transactions table]
 
 Congratulations, you now have Kaskada locally installed and you can start loading and querying your data using Kaskada inside a Jupyter notebook. 
 

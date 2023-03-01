@@ -1,3 +1,5 @@
+= Client Installation 
+
 == Python Client
 
 The Kaskada Python client can be installed using `pip`
@@ -7,7 +9,7 @@ The Kaskada Python client can be installed using `pip`
 pip install kaskada 
 ----
 
-This will download and install the latest Kaskada library.
+This will download and install the latest stable Kaskada library.
 
 == IPython (Jupyter) Extension
 
@@ -23,10 +25,9 @@ example using `pip`:
 pip install fenlmagic
 ----
 
-____
-ℹ️ Info Make sure to install this package in the same environment
-IPython will be running in.
-____
+
+NOTE: Make sure to install this package in the same environment IPython will be running in.
+
 
 Inside an IPython session (for example a Jupyter notebook) the extension
 can be loaded using the magic command `%load_ext`:
