@@ -21,43 +21,27 @@ message FlightRecordHeader {
   // Build information about the Sparrow Binary.
   BuildInfo sparrow_build_info = 3;
 
+  // Register activities that may be reported during the query.
+  //
+  // This includes the set of all activities which may be produced by any query.
+  // Not all activities will be reported by any specific query.
+  repeated RegisterActivity activities = 4;
+
+  // Register metrics that may be reported during the query.
+  //
+  // Metrics may be reported as part of an activity (see ReportActivity) or
+  // at the top level during execution (see ReportMetrics).
+  //
+  // The set of metrics are static within the query engine, and correspond
+  // to any value that may be reported during the execution of a query. Not
+  // all metrics need to be reported for any given query.
+  repeated RegisterMetric metrics = 5;
+
   message BuildInfo {
     string sparrow_version = 1;
     string github_ref = 2;
     string github_sha = 3;
     string github_workflow = 4;
-  }
-}
-
-message FlightRecord {
-  oneof record {
-    // Register an activity.
-    //
-    // The set of activities are static within the query engine, and correspond
-    // to any task that may be instrumented during the execution of a query. Not
-    // all activities need to be reported by any given query.
-    RegisterActivity register_activity = 2;
-
-    // Register a metric.
-    //
-    // Metrics may be reported as part of an activity (see ReportActivity) or
-    // at the top level during execution (see ReportMetrics).
-    //
-    // The set of metrics are static within the query engine, and correspond
-    // to any value that may be reported during the execution of a query. Not
-    // all metrics need to be reported for any given query.
-    RegisterMetric register_metric = 3;
-
-    // Register an execution thread.
-    // This is sent for each computation thread spawned for a specific query.
-    RegisterThread register_thread = 1;
-    ReportActivity report_activity = 4;
-    ReportMetrics report_metrics = 5;
-  }
-
-  message RegisterThread {
-    uint32 thread_id = 1;
-    string label = 2;
   }
 
   message RegisterActivity {
@@ -90,6 +74,25 @@ message FlightRecord {
       METRIC_KIND_I64_COUNTER = 21;
       METRIC_KIND_F64_COUNTER = 22;
     }
+  }
+}
+
+message FlightRecord {
+  oneof record {
+    // Register an execution thread.
+    // This is sent for each computation thread spawned for a specific query.
+    RegisterThread register_thread = 1;
+
+    /// Report an activity execution during the query.
+    ReportActivity report_activity = 2;
+
+    /// Report a top-level metric.
+    ReportMetrics report_metrics = 3;
+  }
+
+  message RegisterThread {
+    uint32 thread_id = 1;
+    string label = 2;
   }
 
   message ReportActivity {

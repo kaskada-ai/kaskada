@@ -157,18 +157,16 @@ async fn execute_impl(
     let flight_record_local_path = flight_record_tempfile.as_ref().map(|t| t.path().to_owned());
 
     let build_info = BuildInfo::default();
-    let flight_record_header = FlightRecordHeader {
-        version: sparrow_qfr::QFR_VERSION,
-        // TODO: Set the actual request ID.
-        // TODO: Add the query time.
-        request_id: "todo_set_request_id".to_owned(),
-        sparrow_build_info: Some(flight_record_header::BuildInfo {
+    let flight_record_header = FlightRecordHeader::with_registrations(
+        // Set the actual request ID.
+        "todo_set_request_id".to_owned(),
+        flight_record_header::BuildInfo {
             sparrow_version: build_info.sparrow_version.to_owned(),
             github_ref: build_info.github_ref.to_owned(),
             github_sha: build_info.github_sha.to_owned(),
             github_workflow: build_info.github_workflow.to_owned(),
-        }),
-    };
+        },
+    );
 
     let progress_stream = sparrow_runtime::execute::execute(
         request,

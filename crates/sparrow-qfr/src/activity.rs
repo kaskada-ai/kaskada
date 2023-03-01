@@ -1,9 +1,7 @@
 use futures::Future;
 
 use crate::activation::Activation;
-use crate::kaskada::sparrow::v1alpha::flight_record::{Record, RegisterActivity};
-use crate::kaskada::sparrow::v1alpha::FlightRecord;
-use crate::{FlightRecorder, Metrics, TimedTask, ToRegistration};
+use crate::{FlightRecorder, Metrics, TimedTask};
 
 /// An activity represents something that one or more threads do.
 ///
@@ -39,18 +37,6 @@ impl Activity {
         fut: impl FnOnce(Metrics) -> Fut,
     ) -> TimedTask<'a, Fut> {
         TimedTask::new(recorder, self.activity_id, fut)
-    }
-}
-
-impl ToRegistration for Activity {
-    fn to_registration(&self) -> crate::kaskada::sparrow::v1alpha::FlightRecord {
-        FlightRecord {
-            record: Some(Record::RegisterActivity(RegisterActivity {
-                activity_id: self.activity_id,
-                label: self.label.to_owned(),
-                parent_activity_id: self.parent_activity_id,
-            })),
-        }
     }
 }
 

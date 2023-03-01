@@ -3,9 +3,11 @@ use std::time::Duration;
 use futures::StreamExt;
 use itertools::Itertools;
 
-use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecord;
+use sparrow_qfr::kaskada::sparrow::v1alpha::flight_record_header::BuildInfo;
+use sparrow_qfr::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordHeader};
 use sparrow_qfr::{
-    activity, gauge, Activity, FlightRecorderFactory, Gauge, Registration, Registrations,
+    activity, gauge, Activity, FlightRecorderFactory, Gauge, PushRegistration, Registration,
+    Registrations,
 };
 
 const NUM_OUTPUTS: Gauge<u64> = gauge!("num_outputs");
@@ -31,6 +33,19 @@ async fn main() {
     let records: Vec<_> = tokio_stream::wrappers::ReceiverStream::new(rx)
         .collect()
         .await;
+
+    println!(
+        "Header:{:?}",
+        FlightRecordHeader::with_registrations(
+            "the_request_id".to_owned(),
+            BuildInfo {
+                sparrow_version: "sparrow_version0.1.0".to_owned(),
+                github_ref: "some ref".to_owned(),
+                github_sha: "some sha".to_owned(),
+                github_workflow: "the workflow".to_owned(),
+            }
+        )
+    );
 
     println!(
         "Records:\n{}",
