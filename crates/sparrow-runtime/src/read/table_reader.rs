@@ -13,7 +13,9 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_compiler::TableInfo;
 use sparrow_core::TableSchema;
-use sparrow_qfr::{activity, gauge, Activity, FlightRecorder, Gauge, Registration, Registrations};
+use sparrow_qfr::{
+    activity, gauge, Activity, FlightRecorder, Gauge, PushRegistration, Registration, Registrations,
+};
 use tokio_stream::StreamExt;
 use tracing::info;
 
