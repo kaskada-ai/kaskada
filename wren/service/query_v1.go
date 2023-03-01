@@ -397,7 +397,7 @@ func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Qu
 		case v1alpha.FileType_FILE_TYPE_PARQUET:
 		case v1alpha.FileType_FILE_TYPE_CSV:
 		default:
-			subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown response_as file_type, defaulting to 'ObjectStore->Parquet'")
+			subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown output file_type, defaulting to 'ObjectStore->Parquet'")
 			query.OutputTo = &v1alpha.OutputTo{
 				Destination: &v1alpha.OutputTo_ObjectStore{
 					ObjectStore: &v1alpha.ObjectStoreDestination{
@@ -410,7 +410,7 @@ func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Qu
 		query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS
 		return fmt.Errorf("query output type %s is only valid for materializations", kind)
 	default:
-		subLogger.Warn().Interface("kind", kind).Msg("unknown response_as, defaulting to 'ObjectStore->Parquet'")
+		subLogger.Warn().Interface("kind", kind).Msg("unknown output, defaulting to 'ObjectStore->Parquet'")
 		query.OutputTo = &v1alpha.OutputTo{
 			Destination: &v1alpha.OutputTo_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
