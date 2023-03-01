@@ -1,7 +1,7 @@
 _extends: kaskada:.github/release-drafter.yml
 
 name-template: Engine $RESOLVED_VERSION
-tag-template: engine@$RESOLVED_VERSION
+tag-template: engine@v$RESOLVED_VERSION
 tag-prefix: engine@
 
 # Only include PRs with one of these labels
