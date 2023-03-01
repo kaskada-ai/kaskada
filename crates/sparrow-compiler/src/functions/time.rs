@@ -55,7 +55,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("shift_by(delta: timedelta, value: any) -> any")
         .with_implementation(Implementation::new_fenl_rewrite(
-            "value | shift_to(add_time(delta, time_of(value)))",
+            "shift_to(add_time(delta, time_of(value)), value)",
         ))
         .with_is_new(Implementation::new_pattern(
             "(transform ?value_is_new (shift_to (add_time ?delta_value (time_of ?value_value))))",
