@@ -5,6 +5,7 @@ import pytest
 
 import kaskada.client
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
+import kaskada.kaskada.v1alpha.destinations_pb2 as destinations_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
 import kaskada.query
 
@@ -31,7 +32,11 @@ def test_create_query_with_defaults(mockClient):
     expected_request = query_pb.CreateQueryRequest(
         query=query_pb.Query(
             expression=expression,
-            as_files=common_pb.AsFiles(file_type=common_pb.FILE_TYPE_PARQUET),
+            output_to={
+                "object_store": destinations_pb.ObjectStoreDestination(
+                    file_type=common_pb.FILE_TYPE_PARQUET
+                )
+            },
             result_behavior="RESULT_BEHAVIOR_ALL_RESULTS",
         ),
         query_options=query_pb.QueryOptions(presign_results=True),

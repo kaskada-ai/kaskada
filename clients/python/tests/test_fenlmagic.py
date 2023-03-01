@@ -6,6 +6,7 @@ from google.protobuf import timestamp_pb2, wrappers_pb2
 import fenlmagic
 import kaskada.client
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
+import kaskada.kaskada.v1alpha.destinations_pb2 as destinations_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
 
 
@@ -16,7 +17,11 @@ def test_fenl_with_defaults(mockClient):
     expected_request = query_pb.CreateQueryRequest(
         query=query_pb.Query(
             expression=expression,
-            as_files=common_pb.AsFiles(file_type=common_pb.FILE_TYPE_PARQUET),
+            output_to={
+                "object_store": destinations_pb.ObjectStoreDestination(
+                    file_type=common_pb.FILE_TYPE_PARQUET
+                )
+            },
             result_behavior="RESULT_BEHAVIOR_ALL_RESULTS",
             limits=query_pb.Query.Limits(),
         ),
@@ -39,7 +44,11 @@ def test_fenl_with_all_args(mockClient):
     expected_request = query_pb.CreateQueryRequest(
         query=query_pb.Query(
             expression=expression,
-            as_files=common_pb.AsFiles(file_type=common_pb.FILE_TYPE_CSV),
+            output_to={
+                "object_store": destinations_pb.ObjectStoreDestination(
+                    file_type=common_pb.FILE_TYPE_CSV
+                )
+            },
             changed_since_time=timestamp_pb2.Timestamp(
                 seconds=1641049220, nanos=21000000
             ),
