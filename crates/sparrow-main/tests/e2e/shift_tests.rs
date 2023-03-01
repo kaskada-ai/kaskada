@@ -34,6 +34,45 @@ fn shift_data_fixture() -> DataFixture {
 }
 
 #[tokio::test]
+async fn test_shift_by_months() {
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_by(months(5)) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,i64
+    1997-05-20T00:39:57.000000000,0,3650215962958587783,A,57
+    1997-05-20T00:39:58.000000000,1,11753611437813598533,B,58
+    1997-05-20T00:39:59.000000000,2,3650215962958587783,A,59
+    1997-05-20T00:40:00.000000000,3,11753611437813598533,B,
+    1997-05-20T00:40:01.000000000,4,3650215962958587783,A,
+    1997-05-20T00:40:02.000000000,5,3650215962958587783,A,2
+    "###)
+}
+
+#[tokio::test]
+async fn test_shift_by_seconds() {
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_by(seconds(5)) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,i64
+    1996-12-20T00:40:02.000000000,0,3650215962958587783,A,57
+    1996-12-20T00:40:03.000000000,1,11753611437813598533,B,58
+    1996-12-20T00:40:04.000000000,2,3650215962958587783,A,59
+    1996-12-20T00:40:05.000000000,3,11753611437813598533,B,
+    1996-12-20T00:40:06.000000000,4,3650215962958587783,A,
+    1996-12-20T00:40:07.000000000,5,3650215962958587783,A,2
+    "###)
+}
+
+#[tokio::test]
+async fn test_shift_to_plus_seconds() {
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_to(add_time(seconds(5), time_of($input))) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,i64
+    1996-12-20T00:40:02.000000000,0,3650215962958587783,A,57
+    1996-12-20T00:40:03.000000000,1,11753611437813598533,B,58
+    1996-12-20T00:40:04.000000000,2,3650215962958587783,A,59
+    1996-12-20T00:40:05.000000000,3,11753611437813598533,B,
+    1996-12-20T00:40:06.000000000,4,3650215962958587783,A,
+    1996-12-20T00:40:07.000000000,5,3650215962958587783,A,2
+    "###)
+}
+
+#[tokio::test]
 async fn test_shift_until_data_i64() {
     insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64
