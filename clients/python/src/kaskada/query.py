@@ -17,6 +17,68 @@ from kaskada.utils import get_timestamp, handleException, handleGrpcError
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+class QueryResource(object):
+    CURRENT_DATA_TOKEN = ""
+
+    def __init__(self, query: query_pb.Query):
+        self.query = query
+
+    def to_query_request(self):
+        result = {
+            "query_id": self.query.query_id,
+            "expression": self.query.expression,
+            "data_token_id": self.query.data_token_id,
+            "changed_since_time": self.query.changed_since_time,
+            "final_result_time": self.query.final_result_time,
+            "limits": self.query.limits,
+            "result_behavior": self.query.result_behavior,
+        }
+        if isinstance(self.query, Message):
+            if self.query.HasField("output_to"):
+                result["output_to"] = self.query.output_to
+
+        return result
+
+    def run(
+        self,
+        data_token=None,
+        dry_run=False,
+        experimental_features=False,
+        client: Optional[Client] = None,
+    ):
+        try:
+            client = get_client(client)
+            query_options = {
+                "dry_run": dry_run,
+                "experimental_features": experimental_features,
+                "stream_metrics": False,
+                "presign_results": True,
+            }
+            query_request = self.to_query_request()
+            in_ipython = kaskada.formatters.in_ipython()
+            if in_ipython:
+                query_options["stream_metrics"] = True
+            if data_token is not None:
+                query_request["data_token_id"] = {"value": data_token}
+            request_args = {
+                "query": query_request,
+                "query_options": query_options,
+            }
+            request = query_pb.CreateQueryRequest(**request_args)
+            logger.debug(f"Create Query Request: {request}")
+            return execute_create_query(request, client)
+        except grpc.RpcError as e:
+            handleGrpcError(e)
+        except Exception as e:
+            handleException(e)
+
+    def run_with_latest(self, dry_run=False, experimental_features=False):
+        return self.run(
+            data_token=QueryResource.CURRENT_DATA_TOKEN,
+            dry_run=dry_run,
+            experimental_features=experimental_features,
+        )
+
 
 class ResponseType(Enum):
     FILE_TYPE_PARQUET = 1
@@ -112,30 +174,30 @@ def create_query(
         request_args = {"query": query_request, "query_options": query_options}
         request = query_pb.CreateQueryRequest(**request_args)
         logger.debug(f"Query Request: {request}")
-
-        response = query_pb.CreateQueryResponse()
-        in_ipython = kaskada.formatters.in_ipython()
-        if in_ipython:
-            from IPython.display import clear_output, display
-        responses = client.query_stub.CreateQuery(
-            request, metadata=client.get_metadata()
-        )
-        for resp in responses:
-            response.MergeFrom(resp)
-            logger.debug(f"Query Response: {response}")
-            if in_ipython:
-                clear_output(wait=True)
-                display(response)
-
-        if in_ipython:
-            clear_output(wait=True)
-        return response
-
+        return execute_create_query(request, client)
     except grpc.RpcError as exec:
         handleGrpcError(exec)
     except Exception as exec:
         handleException(exec)
 
+def execute_create_query(request: query_pb.CreateQueryRequest, client: Client
+) -> query_pb.CreateQueryResponse:
+    """Executes a create query request using the streaming request format"""
+    response = query_pb.CreateQueryResponse()
+    in_ipython = kaskada.formatters.in_ipython()
+    if in_ipython:
+        from IPython.display import clear_output, display
+    responses = client.query_stub.CreateQuery(request, metadata=client.get_metadata())
+    for resp in responses:
+        response.MergeFrom(resp)
+        logger.debug(f"Query Response: {response}")
+        if in_ipython:
+            clear_output(wait=True)
+            display(response)
+
+    if in_ipython:
+        clear_output(wait=True)
+    return response
 
 def get_query(query_id: str, client: Optional[Client] = None):
     """
@@ -155,7 +217,8 @@ def get_query(query_id: str, client: Optional[Client] = None):
             query_id=query_id,
         )
         logger.debug(f"Get Query Request: {req}")
-        return client.query_stub.GetQuery(req, metadata=client.get_metadata())
+        resp = client.query_stub.GetQuery(req, metadata=client.get_metadata())
+        return QueryResource(resp.query)
     except grpc.RpcError as e:
         handleGrpcError(e)
     except Exception as e:

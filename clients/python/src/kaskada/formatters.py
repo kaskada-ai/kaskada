@@ -160,6 +160,26 @@ def generic_response_html_formatter(obj):
     )
 
 
+def query_resource_response_html_formatter(obj):
+    output_custom_css_and_javascript_if_output_wrapped_in_iframe()
+
+    details = table(_class="kda_table")
+    query_details = shared.get_query_html(obj.query)
+    details.appendChild(html_table_row("query", query_details))
+
+    appendChildIfNotNone(details, shared.get_request_details_table_row_if_exists(obj))
+
+    return str(
+        tab_panel(
+            [
+                ("Details", details),
+                ("Raw", shared.get_raw_html(obj.query)),
+            ],
+            title_to_set_active="Details",
+        )
+    )
+
+
 # handles Table, View, Materialization, and other generic objects
 def generic_object_html_formatter(obj):
     output_custom_css_and_javascript_if_output_wrapped_in_iframe()
@@ -684,6 +704,9 @@ def try_init():
         )
         html_formatter.for_type(
             "fenlmagic.QueryResult", fenlmagic_query_result_html_formatter
+        )
+        html_formatter.for_type(
+            "kaskada.query.QueryResource", query_resource_response_html_formatter
         )
 
         # additional non-kaskada types we want to assign formatters to

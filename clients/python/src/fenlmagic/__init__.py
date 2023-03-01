@@ -19,9 +19,9 @@ class QueryResult(object):
     dataframe: pandas.DataFrame = None
 
     def __init__(
-        self, query: str, query_response: query_pb.CreateQueryResponse  # type: ignore[valid-type]
+        self, expression: str, query_response: query_pb.CreateQueryResponse  # type: ignore[valid-type]
     ):
-        self.query = query
+        self.expression = expression
         self.query_response = query_response
 
     def set_dataframe(self, dataframe: pandas.DataFrame):
@@ -107,8 +107,6 @@ class FenlMagics(Magics):
         data_token_id = clean_arg(args.data_token)
         data_token_id = wrappers.StringValue(value=data_token_id) if data_token_id else None
 
-        print("boops")
-
         try:
             resp = query.create_query(
                 expression=expression,
@@ -122,8 +120,7 @@ class FenlMagics(Magics):
                 response_as=response_as,
                 client=self.client,
             )
-            print("resp exists")
-            query_result = QueryResult(query, resp)
+            query_result = QueryResult(expression, resp)
 
             if not dry_run and render_dataframe:
                 # TODO: figure out how to support reading from multiple parquet paths
