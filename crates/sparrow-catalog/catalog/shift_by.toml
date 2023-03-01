@@ -1,0 +1,44 @@
+name = 'shift_by'
+signature = 'shift_by(delta: timedelta, value: any) -> any'
+short_doc = 'Produces the current `value` shifted forward by the given `delta`.'
+long_doc = '''
+### Parameters
+* delta: The time delta to shift the value by. See other
+  [time functions](#time-functions) for how to create `timedelta`s.
+* value: The values to be shifted.
+
+### Results
+For each row, shifts the `value` forward by the given `delta`.
+For rows where either `value` or `delta` is `null`, nothing is shifted forward.
+
+If multiple values for the same entity key are shifted to the same time, all
+of them will be emitted in the order they originally appeared.
+
+New `subsort` IDs will be assigned to each row.
+'''
+tags = ['time']
+
+[[examples]]
+name = 'Shift By'
+description = '''
+This example uses `shift_by` to shift values from `Input` forward by 1 month.
+'''
+full_expression = 'Input | shift_by(months(1))'
+input_csv = '''
+time,key,date,n
+1996-03-21T00:00:00-00:00,Ben,1996-08-19T00:00:00-00:00,1
+1996-04-21T00:00:00-00:00,Ryan,1996-07-20T00:00:00-00:00,2
+1996-05-21T00:00:00-00:00,Ryan,1996-07-22T00:00:00-00:00,3
+1996-06-21T00:00:00-00:00,Ryan,1996-05-22T00:00:00-00:00,4
+1996-07-21T00:00:00-00:00,Ben,1996-07-22T00:00:00-00:00,5
+1996-08-21T00:00:00-00:00,Ben,1996-08-22T00:00:00-00:00,6
+'''
+output_csv = '''
+time,key,date,n
+1996-03-21T00:00:00-00:00,Ben,1996-08-19T00:00:00-00:00,1
+1996-04-21T00:00:00-00:00,Ryan,1996-07-20T00:00:00-00:00,2
+1996-05-21T00:00:00-00:00,Ryan,1996-07-22T00:00:00-00:00,3
+1996-06-21T00:00:00-00:00,Ryan,1996-05-22T00:00:00-00:00,4
+1996-07-21T00:00:00-00:00,Ben,1996-07-22T00:00:00-00:00,5
+1996-08-21T00:00:00-00:00,Ben,1996-08-22T00:00:00-00:00,6
+'''

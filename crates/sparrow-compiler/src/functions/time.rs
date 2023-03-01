@@ -51,6 +51,17 @@ pub(super) fn register(registry: &mut Registry) {
         ))
         .with_time_domain_check(TimeDomainCheck::ShiftTo);
 
+    // Shift by is a macro expansion of shift to, hence it shared the same time domain check
+    registry
+        .register("shift_by(delta: timedelta, value: any) -> any")
+        .with_implementation(Implementation::new_fenl_rewrite(
+            "value | shift_to(add_time(delta, time_of(value)))",
+        ))
+        .with_is_new(Implementation::new_pattern(
+            "(transform ?value_is_new (shift_to (add_time ?delta_value (time_of ?value_value))))",
+        ))
+        .with_time_domain_check(TimeDomainCheck::ShiftTo);
+
     registry
         .register("days(days: i64) -> interval_days")
         .with_implementation(Implementation::Instruction(InstOp::Days));
