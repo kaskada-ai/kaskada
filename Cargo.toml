@@ -1,6 +1,5 @@
 [workspace]
 members = ["crates/*"]
-exclude = []
 
 [workspace.package]
 authors = ["Kaskada Developers"]
