@@ -3,7 +3,7 @@ version 2. Additionally, it expects the following:
 
 * The `time_column` (and all other date-time columns in your dataset)
 should be of integer type and contain a nano-second unix timestamp.
-* All rows within the dataset must be sorted by `time_column`,
+* All rows within the dataset must be sorted by the `time_column`,
 ascending.
 * The combination of the `group_column` (entity id), `time_column` 
 and `subsort_column` should guarantee that each row is unique.
