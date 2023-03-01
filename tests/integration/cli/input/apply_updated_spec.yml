@@ -1,0 +1,37 @@
+tables:
+- tableName: sync_apply_test
+  timeColumnName: purchase_time
+  entityKeyColumnName: customer_id
+  subsortColumnName: subsort_id
+  tableSource:
+    kaskada: {}
+views:
+- viewName: min_max_view_apply
+  expression: |-
+    {
+    time: sync_apply_test.purchase_time,
+    entity: sync_apply_test.customer_id,
+    max_amount: sync_apply_test.amount | max(),
+    min_amount: sync_apply_test.amount | min(),
+    }
+- viewName: avg_view_apply
+  expression: |-
+    {
+    time: sync_apply_test.purchase_time,
+    entity: sync_apply_test.customer_id,
+    avg_amount: sync_apply_test.amount | mean(),
+    }
+materializations:
+- materializationName: min_max_mat_apply
+  query: |-
+    {
+    time: sync_apply_test.purchase_time,
+    entity: sync_apply_test.customer_id,
+    max_amount: sync_apply_test.amount | max(),
+    min_amount: sync_apply_test.amount | min(),
+    }
+  destination:
+    objectStore:
+      format: FILE_FORMAT_PARQUET
+      outputPrefixUri: test
+  slice: {}

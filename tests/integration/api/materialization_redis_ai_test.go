@@ -11,7 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = PDescribe("Materialization with redis AI upload", Ordered, Label("redis"), Label("redis-ai"), func() {
@@ -28,7 +29,7 @@ var _ = PDescribe("Materialization with redis AI upload", Ordered, Label("redis"
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & materialization services
@@ -55,7 +56,7 @@ var _ = PDescribe("Materialization with redis AI upload", Ordered, Label("redis"
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		// load data into the table
-		loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 	})
 
 	AfterAll(func() {
@@ -122,7 +123,7 @@ min_amount: mat_redis_ai.amount | min(),
 
 	Describe("Load the second file into the table", func() {
 		It("Should work without error", func() {
-			loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
+			helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
 		})
 
 		It("Should upload results to redis", func() {

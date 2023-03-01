@@ -14,7 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	. "github.com/kaskada-ai/kaskada/tests/integration/api/matchers"
+	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
+	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
 var _ = Describe("Query V1 when Sparrow panics", func() {
@@ -31,7 +32,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		}
 
 		//get connection to wren
-		ctx, cancel, conn = getContextCancelConnection(30)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(30)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services
@@ -51,7 +52,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		}
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
-		loadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 	})
 
 	AfterEach(func() {
@@ -76,7 +77,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 		Expect(stream).ShouldNot(BeNil())
 
-		res, err := getMergedCreateQueryResponse(stream)
+		res, err := helpers.GetMergedCreateQueryResponse(stream)
 		Expect(err).Should(HaveOccurred())
 		Expect(res).Should(BeNil())
 
@@ -101,7 +102,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 		Expect(stream).ShouldNot(BeNil())
 
-		res, err := getMergedCreateQueryResponse(stream)
+		res, err := helpers.GetMergedCreateQueryResponse(stream)
 		Expect(err).Should(HaveOccurred())
 		Expect(res).Should(BeNil())
 
@@ -130,7 +131,7 @@ min_amount: query_v1_panic.amount | min(),
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 		Expect(stream).ShouldNot(BeNil())
 
-		res, err = getMergedCreateQueryResponse(stream)
+		res, err = helpers.GetMergedCreateQueryResponse(stream)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		VerifyRequestDetails(res.RequestDetails)
@@ -145,7 +146,7 @@ min_amount: query_v1_panic.amount | min(),
 		))
 
 		resultsUrl := res.GetFileResults().Paths[0]
-		firstResults := downloadParquet(resultsUrl)
+		firstResults := helpers.DownloadParquet(resultsUrl)
 
 		Expect(firstResults).Should(HaveLen(10))
 		Expect(firstResults[9]).Should(MatchFields(IgnoreExtras, Fields{
