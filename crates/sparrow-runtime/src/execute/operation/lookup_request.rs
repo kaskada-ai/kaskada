@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use arrow::array::{
     Array, ArrayBuilder, ArrayData, ArrayRef, Int32BufferBuilder, ListArray,
     TimestampNanosecondArray, UInt32Array, UInt64Array,
@@ -20,7 +19,7 @@ use super::BoxedOperation;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::Error;
+use crate::execute::{invalid_operation, Error};
 use crate::Batch;
 
 pub(super) struct LookupRequestOperation {
@@ -80,29 +79,38 @@ impl LookupRequestOperation {
         operation: operation_plan::LookupRequestOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
-        let input_channel = input_channels.into_iter().exactly_one()?;
-        anyhow::ensure!(
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
+
+        error_stack::ensure!(
             input_columns.len() == 1,
-            "Lookup should have one input column"
+            crate::execute::error::invalid_operation!("lookup should have one input column")
         );
-        anyhow::ensure!(
+        error_stack::ensure!(
             // Column 0 = time, 1 = subsort, 2 = key hash, which is the only
             // column lookup requests should input from.
             input_columns[0].input_ref.input_column == 2,
-            "First input to lookup request should be for key hashes but was {}",
-            input_columns[0].input_ref.input_column
+            crate::execute::error::invalid_operation!(format!(
+                "first input to lookup request should be for key hashes but was {}",
+                input_columns[0].input_ref.input_column
+            ))
         );
 
         let foreign_key_column = operation
             .foreign_key_hash
-            .context("missing foreign_key_hash")?
+            .ok_or(invalid_operation!("missing foreign_key_hash"))?
             .input_column as usize;
 
         Ok(Box::new(Self {
             foreign_key_column,
             input_stream: ReceiverStream::new(input_channel),
-            helper: SingleConsumerHelper::try_new(operation.primary_operation, input_columns)?,
+            helper: SingleConsumerHelper::try_new(operation.primary_operation, input_columns)
+                .into_report()
+                .change_context(Error::internal_msg("error creating single consumer helper"))?,
         }))
     }
 

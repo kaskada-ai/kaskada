@@ -15,7 +15,7 @@ use super::BoxedOperation;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::Error;
+use crate::execute::{invalid_operation, Error};
 use crate::Batch;
 
 pub(super) struct LookupResponseOperation {
@@ -76,8 +76,12 @@ impl LookupResponseOperation {
         operation: operation_plan::LookupResponseOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
-        let input_channel = input_channels.into_iter().exactly_one()?;
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
 
         // Lookup responses don't perform any interpolation of inputs, so they are
         // effectively `Null`. We should make sure that the subsort, key_hash,
@@ -85,13 +89,15 @@ impl LookupResponseOperation {
 
         let requesting_key_hash_column = operation
             .requesting_key_hash
-            .context("missing requesting_key_hash")?
+            .ok_or(invalid_operation!("missing requesting_key_hash"))?
             .input_column as usize;
 
         Ok(Box::new(Self {
             requesting_key_hash_column,
             input_stream: ReceiverStream::new(input_channel),
-            helper: SingleConsumerHelper::try_new(operation.foreign_operation, input_columns)?,
+            helper: SingleConsumerHelper::try_new(operation.foreign_operation, input_columns)
+                .into_report()
+                .change_context(Error::internal_msg("error creating single consumer helper"))?,
         }))
     }
 

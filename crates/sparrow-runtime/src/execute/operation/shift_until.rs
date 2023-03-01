@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::Context;
 use arrow::array::{Array, BooleanArray, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
 use arrow::datatypes::{Field, Schema, SchemaRef, TimeUnit, TimestampNanosecondType, UInt64Type};
 use arrow::record_batch::RecordBatch;
@@ -19,7 +18,7 @@ use super::BoxedOperation;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::Error;
+use crate::execute::{invalid_operation, Error};
 use crate::key_hash_index::KeyHashIndex;
 use crate::Batch;
 
@@ -48,7 +47,7 @@ impl ShiftUntilOperation {
         operation: operation_plan::ShiftUntilOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
         let mut pending_schema_fields = vec![Field::new(
             "entity_hash",
             arrow::datatypes::DataType::UInt64,
@@ -73,17 +72,23 @@ impl ShiftUntilOperation {
 
         let retained_schema = Arc::new(Schema::new(pending_schema_fields));
         let outgoing_schema = Arc::new(Schema::new(outgoing_schema_fields));
-        let input_channel = input_channels.into_iter().exactly_one()?;
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
 
         let condition_input_column = operation
             .condition
-            .context("missing condition")?
+            .ok_or(invalid_operation!("missing condition"))?
             .input_column as usize;
 
         Ok(Box::new(Self {
             condition_input_column,
             incoming_stream: ReceiverStream::new(input_channel),
-            helper: SingleConsumerHelper::try_new(operation.input, input_columns)?,
+            helper: SingleConsumerHelper::try_new(operation.input, input_columns)
+                .into_report()
+                .change_context(Error::internal_msg("error creating single consumer helper"))?,
             retained_schema,
             outgoing_schema,
             pending: vec![],

@@ -49,10 +49,10 @@ impl ComputeExecutor {
     /// Spawns the compute tasks using the new operation based executor.
     pub fn try_spawn(
         mut context: OperationContext,
-        output_to: v1alpha::execute_request::OutputTo,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
+        output_to: v1alpha::OutputTo,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
@@ -82,8 +82,8 @@ impl ComputeExecutor {
                 &context,
                 runtime_options.limits.clone(),
                 futures::StreamExt::boxed(tokio_stream::wrappers::ReceiverStream::new(output_rx)),
-                output_to,
                 context.progress_updates_tx.clone(),
+                output_to,
             )
             .change_context(Internal("error writing output"))?
             .map_err(|e| e.change_context(Internal("error writing output"))),

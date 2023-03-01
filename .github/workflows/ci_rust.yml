@@ -115,6 +115,7 @@ jobs:
         if: needs.rust_skip.outputs.should_skip != 'true'
         with:
           command: build
+          args:  --all-features
 
       - name: Cargo Clippy
         uses: actions-rs/clippy-check@v1
@@ -125,6 +126,7 @@ jobs:
           # flags to ensure vscode, etc. reports warnings. But, specifying them in the
           # CI protects against cases where we forgot to do that.
           args: >
+            --all-features
             -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
             -Dclippy::mod_module_files
             -Dclippy::print-stdout

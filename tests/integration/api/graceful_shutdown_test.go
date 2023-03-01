@@ -135,11 +135,16 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 		Describe("Start a query, and then send a termination signal to Kaskada", func() {
 			It("should return query results before exiting", func() {
 				go terminateKaskada()
+				destination := &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
+				}
 
 				stream, err := queryClient.CreateQuery(ctx, &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
 						Expression:     query,
-						ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+						OutputTo:       &v1alpha.OutputTo{Destination: destination},
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
 				})
@@ -150,10 +155,10 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				res, err := helpers.GetMergedCreateQueryResponse(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(res.GetFileResults()).ShouldNot(BeNil())
-				Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+				Expect(res.GetOutputTo()).ShouldNot(BeNil())
+				Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-				resultsUrl := res.GetFileResults().Paths[0]
+				resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 				results := helpers.DownloadParquet(resultsUrl)
 
 				Expect(len(results)).Should(Equal(100000))

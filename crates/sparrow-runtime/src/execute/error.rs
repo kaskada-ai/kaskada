@@ -22,6 +22,10 @@ pub enum Error {
     GetNextInput,
     #[display(fmt = "failed to pre-process next input for operation")]
     PreprocessNextInput,
+    #[display(fmt = "feature '{feature}' is not enabled")]
+    FeatureNotEnabled { feature: &'static str },
+    #[display(fmt = "output '{output}' is not supported")]
+    UnsupportedOutput { output: &'static str },
 }
 
 macro_rules! invalid_operation {

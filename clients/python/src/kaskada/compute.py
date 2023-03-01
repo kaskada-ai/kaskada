@@ -7,6 +7,7 @@ from typing import List, Optional, Union
 import grpc
 
 import kaskada.formatters
+import kaskada.kaskada.v1alpha.destinations_pb2 as destinations_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
 from kaskada.client import KASKADA_DEFAULT_SLICE, Client, get_client
 from kaskada.slice_filters import SliceFilter
@@ -96,7 +97,9 @@ def queryV2(
         else:
             query_request["result_behavior"] = "RESULT_BEHAVIOR_ALL_RESULTS"
 
-        query_request["as_files"] = {"file_type": response_as.name}
+        destination_args = {"file_type": response_as.name}
+        destination = destinations_pb.ObjectStoreDestination(**destination_args)
+        query_request["output_to"] = {"object_store": destination}
 
         if slice_filter is not None:
             query_request["slice"] = slice_filter.to_request()

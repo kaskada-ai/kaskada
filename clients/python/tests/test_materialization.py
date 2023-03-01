@@ -1,14 +1,16 @@
 from typing import Any, Dict
 from unittest.mock import patch
+from uuid import UUID
 
 import pytest
 
 import kaskada.kaskada.v1alpha.materialization_service_pb2 as material_pb
 from kaskada.materialization import (
     Destination,
-    FileFormat,
+    FileType,
     MaterializationView,
     ObjectStoreDestination,
+    PulsarDestination,
     RedisDestination,
     create_materialization,
     delete_materialization,
@@ -37,27 +39,67 @@ def test_redis_destination_to_request():
 
 
 def test_object_store_destination_to_request():
-    csv_file = FileFormat.FILE_FORMAT_CSV
+    csv_file = FileType.FILE_TYPE_CSV
     output_prefix = "my_prefix"
     csv_object_store = ObjectStoreDestination(csv_file, output_prefix)
     assert csv_object_store.to_request() == {
-        "format": "FILE_FORMAT_CSV",
+        "file_type": "FILE_TYPE_CSV",
         "output_prefix_uri": output_prefix,
     }
 
-    parquet_file = FileFormat.FILE_FORMAT_PARQUET
+    parquet_file = FileType.FILE_TYPE_PARQUET
     parquet_object_store = ObjectStoreDestination(parquet_file, output_prefix)
     assert parquet_object_store.to_request() == {
-        "format": "FILE_FORMAT_PARQUET",
+        "file_type": "FILE_TYPE_PARQUET",
         "output_prefix_uri": output_prefix,
     }
 
-    unspecified_file = FileFormat.FILE_FORMAT_UNSPECIFIED
+    unspecified_file = FileType.FILE_TYPE_UNSPECIFIED
     unspecified_object_store = ObjectStoreDestination(unspecified_file, output_prefix)
     assert unspecified_object_store.to_request() == {
-        "format": "FILE_FORMAT_UNSPECIFIED",
+        "file_type": "FILE_TYPE_UNSPECIFIED",
         "output_prefix_uri": output_prefix,
     }
+
+
+def test_pulsar_destination_to_request():
+    tenant = "tenant"
+    namespace = "namespace"
+    topic_name = "name"
+    broker_service_url = "pulsar://127.0.0.1:6650"
+
+    pulsar = PulsarDestination(tenant, namespace, topic_name, broker_service_url)
+    assert pulsar.to_request() == {
+        "tenant": "tenant",
+        "namespace": "namespace",
+        "topic_name": "name",
+        "broker_service_url": "pulsar://127.0.0.1:6650",
+    }
+
+    pulsar_defaults = PulsarDestination()
+    request_defaults = pulsar_defaults.to_request()
+    try:
+        uuid_obj = UUID(request_defaults["topic_name"], version=4)
+    except ValueError:
+        assert False, "expected default name as uuid"
+
+    assert request_defaults["tenant"] == "public"
+    assert request_defaults["namespace"] == "default"
+    assert request_defaults["broker_service_url"] == "pulsar://127.0.0.1:6650"
+
+
+def test_pulsar_generates_unique_uuids():
+    pulsar1 = PulsarDestination()
+    topic1 = pulsar1.to_request()["topic_name"]
+
+    pulsar2 = PulsarDestination()
+    topic2 = pulsar2.to_request()["topic_name"]
+
+    pulsar_whitespace = PulsarDestination(topic_name="   ")
+    topic_whitespace = pulsar_whitespace.to_request()["topic_name"]
+    assert not len(topic_whitespace.strip()) == 0
+
+    assert topic1 != topic2 != topic_whitespace
 
 
 def test_materialization_view_constructor():
@@ -133,7 +175,7 @@ materialization_name: "my_awkward_tacos"
   }
   destination {
     object_store {
-      format: FILE_FORMAT_CSV
+      file_type: FILE_TYPE_CSV
       output_prefix_uri: "prefix"
     }
   }
@@ -151,7 +193,7 @@ materialization_name: "my_awkward_tacos"
 def test_create_materialization_object_store_destination(mockClient):
     name = "my_awkward_tacos"
     query = "last(tacos)"
-    destination = ObjectStoreDestination(FileFormat.FILE_FORMAT_CSV, "prefix")
+    destination = ObjectStoreDestination(FileType.FILE_TYPE_CSV, "prefix")
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
 
@@ -165,7 +207,7 @@ def test_create_materialization_object_store_destination(mockClient):
                 ],
                 "destination": {
                     "object_store": {
-                        "format": "FILE_FORMAT_CSV",
+                        "file_type": "FILE_TYPE_CSV",
                         "output_prefix_uri": "prefix",
                     }
                 },
@@ -185,7 +227,7 @@ def test_create_materialization_object_store_destination(mockClient):
 def test_create_materialization_object_store_parquet_destination(mockClient):
     name = "my_awkward_tacos"
     query = "last(tacos)"
-    destination = ObjectStoreDestination(FileFormat.FILE_FORMAT_PARQUET, "prefix")
+    destination = ObjectStoreDestination(FileType.FILE_TYPE_PARQUET, "prefix")
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
 

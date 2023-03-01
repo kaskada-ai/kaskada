@@ -11,8 +11,9 @@ use arrow::datatypes::{
 };
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use error_stack::{IntoReportCompat, ResultExt};
 use futures::StreamExt;
+
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sparrow_api::kaskada::v1alpha::operation_plan;
@@ -193,8 +194,12 @@ impl TickOperation {
         operation: operation_plan::TickOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
-        let input_channel = input_channels.into_iter().exactly_one()?;
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
         let input_stream = tokio_stream::wrappers::ReceiverStream::new(input_channel).boxed();
 
         debug_assert!(

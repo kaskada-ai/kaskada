@@ -154,10 +154,9 @@ impl BatchCommand {
                         )
                     })
                     .try_filter_map(|next| async move {
-                        match next.output_paths {
+                        match next.output_paths() {
                             None => Ok(None),
-                            Some(paths) if paths.paths.is_empty() => Ok(None),
-                            Some(paths) => Ok(Some(paths.paths)),
+                            Some(output_paths) => Ok(Some(output_paths)),
                         }
                     })
                     .try_collect()
