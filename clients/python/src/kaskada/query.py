@@ -17,6 +17,7 @@ from kaskada.utils import get_timestamp, handleException, handleGrpcError
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class QueryResource(object):
     CURRENT_DATA_TOKEN = ""
 
@@ -180,7 +181,9 @@ def create_query(
     except Exception as exec:
         handleException(exec)
 
-def execute_create_query(request: query_pb.CreateQueryRequest, client: Client
+
+def execute_create_query(
+    request: query_pb.CreateQueryRequest, client: Client
 ) -> query_pb.CreateQueryResponse:
     """Executes a create query request using the streaming request format"""
     response = query_pb.CreateQueryResponse()
@@ -198,6 +201,7 @@ def execute_create_query(request: query_pb.CreateQueryRequest, client: Client
     if in_ipython:
         clear_output(wait=True)
     return response
+
 
 def get_query(query_id: str, client: Optional[Client] = None):
     """

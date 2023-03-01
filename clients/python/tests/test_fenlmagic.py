@@ -1,12 +1,13 @@
 from pathlib import Path
 from unittest.mock import patch
-from google.protobuf import timestamp_pb2
-from google.protobuf import wrappers_pb2
 
+from google.protobuf import timestamp_pb2, wrappers_pb2
+
+import fenlmagic
 import kaskada.client
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
-import fenlmagic
+
 
 @patch("kaskada.client.Client")
 def test_fenl_with_defaults(mockClient):
@@ -29,6 +30,7 @@ def test_fenl_with_defaults(mockClient):
         expected_request, metadata=mockClient.get_metadata()
     )
 
+
 @patch("kaskada.client.Client")
 def test_fenl_with_all_args(mockClient):
     expression = "test_with_args"
@@ -38,15 +40,19 @@ def test_fenl_with_all_args(mockClient):
         query=query_pb.Query(
             expression=expression,
             as_files=common_pb.AsFiles(file_type=common_pb.FILE_TYPE_CSV),
-            changed_since_time=timestamp_pb2.Timestamp(seconds=1641049220, nanos=21000000),
-            final_result_time=timestamp_pb2.Timestamp(seconds=1672585220, nanos=36000000), 
+            changed_since_time=timestamp_pb2.Timestamp(
+                seconds=1641049220, nanos=21000000
+            ),
+            final_result_time=timestamp_pb2.Timestamp(
+                seconds=1672585220, nanos=36000000
+            ),
             result_behavior="RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME",
             limits=query_pb.Query.Limits(preview_rows=42),
-            data_token_id=wrappers_pb2.StringValue(value="data_token_arg")
+            data_token_id=wrappers_pb2.StringValue(value="data_token_arg"),
         ),
         query_options=query_pb.QueryOptions(
             dry_run=True,
-            experimental_features=True, 
+            experimental_features=True,
             presign_results=True,
         ),
     )

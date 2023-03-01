@@ -4,10 +4,10 @@ import os
 
 import IPython
 import pandas
+from google.protobuf import wrappers_pb2 as wrappers
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics, cell_magic, line_cell_magic, magics_class
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
-from google.protobuf import wrappers_pb2 as wrappers
 
 import kaskada.client as client
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
@@ -93,7 +93,11 @@ class FenlMagics(Magics):
         preview_rows = clean_arg(args.preview_rows)
         var = clean_arg(args.var)
 
-        result_behavior = "final-results" if test_arg(clean_arg(args.result_behavior), "final-results") else "all-results"
+        result_behavior = (
+            "final-results"
+            if test_arg(clean_arg(args.result_behavior), "final-results")
+            else "all-results"
+        )
 
         if cell is None:
             expression = arg
@@ -105,7 +109,9 @@ class FenlMagics(Magics):
             limits["preview_rows"] = int(preview_rows)
 
         data_token_id = clean_arg(args.data_token)
-        data_token_id = wrappers.StringValue(value=data_token_id) if data_token_id else None
+        data_token_id = (
+            wrappers.StringValue(value=data_token_id) if data_token_id else None
+        )
 
         try:
             resp = query.create_query(
