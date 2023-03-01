@@ -158,7 +158,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --target ${{ matrix.target }} -p sparrow-main
+          args: --release --all-features --target ${{ matrix.target }} -p sparrow-main
 
       - name: Organize engine artifacts
         run: |

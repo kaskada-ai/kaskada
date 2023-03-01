@@ -1,7 +1,9 @@
 #![allow(clippy::derive_partial_eq_without_eq)] // stop clippy erroring on generated code from tonic (proto)
 use itertools::Itertools;
 
+use crate::kaskada::v1alpha::object_store_destination::ResultPaths;
 use crate::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
+use crate::kaskada::v1alpha::output_to::Destination;
 
 tonic::include_proto!("kaskada.kaskada.v1alpha");
 
@@ -24,6 +26,40 @@ impl ComputeTable {
 
     pub fn config(&self) -> &TableConfig {
         self.config.as_ref().expect("tables should have a config")
+    }
+}
+
+impl ExecuteResponse {
+    /// Returns an owned vec of the output paths for this execution.
+    //
+    /// Returns `None` if not an `ObjectStoreOutput`.
+    pub fn output_paths(&self) -> Option<Vec<String>> {
+        match &self.output_to {
+            Some(output) => match &output.destination {
+                Some(Destination::ObjectStore(store)) => store
+                    .output_paths
+                    .as_ref()
+                    .map(|output_paths| output_paths.paths.clone()),
+                Some(_) | None => None,
+            },
+            None => None,
+        }
+    }
+
+    /// Returns a mutable reference to the output paths.
+    ///
+    /// Returns `None` if not an `ObjectStoreOutput`.
+    pub fn output_paths_mut(&mut self) -> Option<&mut ResultPaths> {
+        match &mut self.output_to {
+            Some(output) => match &mut output.destination {
+                Some(Destination::ObjectStore(store)) => match &mut store.output_paths {
+                    Some(output_path) => Some(output_path),
+                    None => None,
+                },
+                Some(_) | None => None,
+            },
+            None => None,
+        }
     }
 }
 

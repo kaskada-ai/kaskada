@@ -55,14 +55,22 @@ var queryRunCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info().Msg("starting query run")
 
-		responseAsFiles := &apiv1alpha.AsFiles{}
+		outputTo := &apiv1alpha.OutputTo{}
 
 		responseAs := viper.GetString("response_as")
 		switch responseAs {
 		case "csv":
-			responseAsFiles.FileType = apiv1alpha.FileType_FILE_TYPE_CSV
+			outputTo.Destination = &apiv1alpha.OutputTo_ObjectStore{
+				ObjectStore: &apiv1alpha.ObjectStoreDestination{
+					FileType: apiv1alpha.FileType_FILE_TYPE_CSV,
+				},
+			}
 		case "parquet":
-			responseAsFiles.FileType = apiv1alpha.FileType_FILE_TYPE_PARQUET
+			outputTo.Destination = &apiv1alpha.OutputTo_ObjectStore{
+				ObjectStore: &apiv1alpha.ObjectStoreDestination{
+					FileType: apiv1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 		default:
 			logAndQuitIfErrorExists(fmt.Errorf("'response-as' must be 'csv' or 'parquet'"))
 		}
@@ -70,9 +78,7 @@ var queryRunCmd = &cobra.Command{
 		queryReq := &apiv1alpha.CreateQueryRequest{
 			Query: &apiv1alpha.Query{
 				Expression: args[0],
-				ResponseAs: &apiv1alpha.Query_AsFiles{
-					AsFiles: responseAsFiles,
-				},
+				OutputTo:   outputTo,
 			},
 			QueryOptions: &apiv1alpha.QueryOptions{
 				DryRun:               viper.GetBool("dry_run"),

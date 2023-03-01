@@ -2,7 +2,7 @@ use derive_more::Display;
 use prost::Message;
 use tracing::warn;
 
-use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordBatch, FlightRecordHeader};
+use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordHeader};
 
 pub struct FlightRecordWriter<W: std::io::Write> {
     buffer: Vec<u8>,
@@ -29,8 +29,8 @@ impl<W: std::io::Write> FlightRecordWriter<W> {
         Ok(writer)
     }
 
-    pub fn write_batch(&mut self, records: Vec<FlightRecord>) -> Result<(), Error> {
-        self.write_message(FlightRecordBatch { records })
+    pub fn write(&mut self, record: FlightRecord) -> Result<(), Error> {
+        self.write_message(record)
     }
 
     fn write_message(&mut self, message: impl Message) -> Result<(), Error> {

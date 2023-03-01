@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
-use sparrow_api::kaskada::v1alpha::execute_request::OutputTo;
+use sparrow_api::kaskada::v1alpha::OutputTo;
 use sparrow_api::kaskada::v1alpha::{ComputeTable, FeatureSet};
 
 /// A serializable description of the details needed to execute a query.

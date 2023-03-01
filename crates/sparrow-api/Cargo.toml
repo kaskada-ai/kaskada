@@ -27,6 +27,7 @@ serde.workspace = true
 serde_yaml.workspace = true
 sparrow-core = { path = "../sparrow-core" }
 sparrow-syntax = { path = "../sparrow-syntax" }
+tempfile.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tonic.workspace = true

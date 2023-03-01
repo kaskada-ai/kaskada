@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	apiv2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
 	"github.com/kaskada-ai/kaskada/wren/auth"
 	"github.com/kaskada-ai/kaskada/wren/compute"
@@ -107,10 +108,12 @@ func (q *queryV2Service) createQuery(ctx context.Context, owner *ent.Owner, requ
 		}
 	}
 
-	if queryConfig.Destination == nil {
-		queryConfig.Destination = &apiv2alpha.Destination{
-			AsFiles: &apiv1alpha.AsFiles{
-				FileType: apiv1alpha.FileType_FILE_TYPE_PARQUET,
+	if queryConfig.OutputTo == nil {
+		queryConfig.OutputTo = &v1alpha.OutputTo{
+			Destination: &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
 			},
 		}
 	}
@@ -316,9 +319,10 @@ func (q *queryV2Service) getProtoFromDB(ctx context.Context, query *ent.KaskadaQ
 		Metrics: query.Metrics,
 	}
 
-	if query.Config.Destination.AsFiles != nil {
+	switch kind := query.Config.OutputTo.Destination.(type) {
+	case *v1alpha.OutputTo_ObjectStore:
 		responseQuery.Results.Output.FileResults = &apiv1alpha.FileResults{
-			FileType: query.Config.Destination.AsFiles.FileType,
+			FileType: kind.ObjectStore.FileType,
 			Paths:    []string{},
 		}
 	}

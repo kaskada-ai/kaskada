@@ -10,7 +10,7 @@ General purpose functions and structs for working with Arrow.
 """
 
 [features]
-default = []
+default = ["avro"]
 avro = ["avro-schema"]
 
 # This crate should not depend on any other Sparrow crates.

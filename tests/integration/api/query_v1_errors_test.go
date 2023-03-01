@@ -59,10 +59,17 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 	Context("When the table schema is created correctly", func() {
 		Describe("Reference an invalid field", func() {
 			It("should return an invalid argument error", func() {
+				outputTo := &v1alpha.OutputTo{}
+				outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
+				}
+
 				createQueryRequest := &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
 						Expression:     "sum(query_v1_errors.Tacos)",
-						ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+						OutputTo:       outputTo,
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
 				}
@@ -77,7 +84,7 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 
 				Expect(res).ShouldNot(BeNil())
 				Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-				Expect(res.GetFileResults()).Should(BeNil())
+				Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
 
 				Expect(res.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_FAILURE))
 
@@ -95,10 +102,17 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 
 		Describe("Reference an invalid field, with dry-run", func() {
 			It("should return an invalid argument error", func() {
+				outputTo := &v1alpha.OutputTo{}
+				outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
+				}
+
 				createQueryRequest := &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
 						Expression:     "sum(query_v1_errors.Tacos)",
-						ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+						OutputTo:       outputTo,
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
 					QueryOptions: &v1alpha.QueryOptions{
@@ -116,7 +130,7 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 
 				Expect(res).ShouldNot(BeNil())
 				Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-				Expect(res.GetFileResults()).Should(BeNil())
+				Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
 
 				Expect(res.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_ANALYSIS))
 

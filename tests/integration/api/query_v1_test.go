@@ -60,6 +60,12 @@ var _ = Describe("Query V1 gRPC with dataTokens", Ordered, func() {
 		firstDataTokenId = res.DataTokenId
 
 		// define a query to run on the table
+		outputTo := &v1alpha.OutputTo{}
+		outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+			ObjectStore: &v1alpha.ObjectStoreDestination{
+				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+			},
+		}
 		query := &v1alpha.Query{
 			Expression: `
 {
@@ -68,7 +74,7 @@ entity: query_v1_test.customer_id,
 max_amount: query_v1_test.amount | max(),
 min_amount: query_v1_test.amount | min(),
 }`,
-			ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+			OutputTo:       outputTo,
 			ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 		}
 		queryOptions := &v1alpha.QueryOptions{
@@ -107,7 +113,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(firstResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_ANALYSIS))
 				VerifyRequestDetails(firstResponse.RequestDetails)
 				Expect(firstResponse.Config.DataTokenId).ShouldNot(BeEmpty())
-				Expect(firstResponse.GetFileResults()).Should(BeNil())
+				Expect(firstResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
 					primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND),
 					primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
@@ -160,8 +166,8 @@ min_amount: query_v1_test.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -224,8 +230,8 @@ min_amount: query_v1_test.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -283,8 +289,8 @@ min_amount: query_v1_test.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -328,8 +334,8 @@ min_amount: query_v1_test.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -377,8 +383,8 @@ min_amount: query_v1_test.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 

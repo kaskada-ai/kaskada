@@ -74,10 +74,16 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 	Describe("Run the query with no slice plan", func() {
 		It("should return the full set of query results", func() {
 			// define a query to run on the table
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 				},
 			}
@@ -90,10 +96,10 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			helpers.LogLn(fmt.Sprintf("Result set size, with no slice plan: %d", len(results)))
@@ -104,10 +110,16 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 
 	Describe("Run the query with a 100% slice", func() {
 		It("should return the full set of query results", func() {
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					Slice: &v1alpha.SliceRequest{
 						Slice: &v1alpha.SliceRequest_Percent{
@@ -127,10 +139,10 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			helpers.LogLn(fmt.Sprintf("Result set size, with 100%% slice: %d", len(results)))
@@ -141,10 +153,16 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 
 	Describe("Run the query with a 10% slice", func() {
 		It("should return about 10% of the results", func() {
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					Slice: &v1alpha.SliceRequest{
 						Slice: &v1alpha.SliceRequest_Percent{
@@ -164,10 +182,10 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			helpers.LogLn(fmt.Sprintf("Result set size, with 10%% slice: %d", len(results)))
@@ -178,10 +196,16 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 
 	Describe("Run the query with a 0.1% slice", func() {
 		It("should return about 0.1% of the results", func() {
+			outputTo := &v1alpha.OutputTo{}
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
 			createQueryRequest := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     expression,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					Slice: &v1alpha.SliceRequest{
 						Slice: &v1alpha.SliceRequest_Percent{
@@ -201,10 +225,10 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
 			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
-			Expect(res.GetFileResults()).ShouldNot(BeNil())
-			Expect(res.GetFileResults().Paths).Should(HaveLen(1))
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-			resultsUrl := res.GetFileResults().Paths[0]
+			resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
 			helpers.LogLn(fmt.Sprintf("Result set size, with 0.1%% slice: %d", len(results)))

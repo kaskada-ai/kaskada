@@ -29,6 +29,7 @@ func (Materialization) Fields() []ent.Field {
 		field.Bytes("schema").GoType(&v1alpha.Schema{}).Immutable(),
 		field.Bytes("slice_request").GoType(&v1alpha.SliceRequest{}).Immutable(),
 		field.Bytes("analysis").GoType(&v1alpha.Analysis{}).Immutable(),
+		field.Int64("data_version_id"),
 	}
 }
 

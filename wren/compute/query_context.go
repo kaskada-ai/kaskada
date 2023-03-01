@@ -22,7 +22,7 @@ type QueryContext struct {
 	dataToken        *ent.DataToken
 	finalResultTime  *timestamppb.Timestamp
 	limits           *v1alpha.ExecuteRequest_Limits
-	outputTo         *v1alpha.ExecuteRequest_OutputTo
+	outputTo         *v1alpha.OutputTo
 
 	// is the dataToken the "current" one?
 	isCurrentDataToken bool
@@ -31,7 +31,7 @@ type QueryContext struct {
 	sliceTableMap map[uuid.UUID]*internal.SliceTable
 }
 
-func GetNewQueryContext(ctx context.Context, owner *ent.Owner, changedSinceTime *timestamppb.Timestamp, compileResp *v1alpha.CompileResponse, dataToken *ent.DataToken, finalResultTime *timestamppb.Timestamp, isCurrentDataToken bool, limits *v1alpha.ExecuteRequest_Limits, sliceTableMap map[uuid.UUID]*internal.SliceTable, outputTo *v1alpha.ExecuteRequest_OutputTo) (*QueryContext, context.CancelFunc) {
+func GetNewQueryContext(ctx context.Context, owner *ent.Owner, changedSinceTime *timestamppb.Timestamp, compileResp *v1alpha.CompileResponse, dataToken *ent.DataToken, finalResultTime *timestamppb.Timestamp, isCurrentDataToken bool, limits *v1alpha.ExecuteRequest_Limits, outputTo *v1alpha.OutputTo, sliceRequest *v1alpha.SliceRequest, sliceTableMap map[uuid.UUID]*internal.SliceTable) (*QueryContext, context.CancelFunc) {
 	queryContext, queryContextCancel := context.WithCancel(ctx)
 
 	return &QueryContext{

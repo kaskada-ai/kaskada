@@ -381,52 +381,35 @@ fn create_operation(
         }
         operation_plan::Operator::Merge(merge_operation) => {
             MergeOperation::create(merge_operation, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::Select(select_operation) => {
             SelectOperation::create(select_operation, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::WithKey(with_key_operation) => WithKeyOperation::create(
             context,
             with_key_operation,
             incoming_channels,
             input_columns,
-        )
-        .into_report()
-        .change_context(Error::internal_msg("unable to create operation")),
+        ),
         operation_plan::Operator::Tick(tick_operation) => {
             if matches!(tick_operation.behavior(), TickBehavior::Finished) {
                 FinalTickOperation::create(incoming_channels, input_columns)
-                    .into_report()
-                    .change_context(Error::internal_msg("unable to create operation"))
             } else {
                 TickOperation::create(tick_operation, incoming_channels, input_columns)
-                    .into_report()
-                    .change_context(Error::internal_msg("unable to create operation"))
             }
         }
         operation_plan::Operator::LookupRequest(lookup_request) => {
             LookupRequestOperation::create(lookup_request, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::LookupResponse(lookup_response) => {
             LookupResponseOperation::create(lookup_response, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::ShiftTo(shift_to) => {
             shift_to::create(shift_to, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
         operation_plan::Operator::ShiftUntil(shift_until) => {
             ShiftUntilOperation::create(shift_until, incoming_channels, input_columns)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create operation"))
         }
     }
+    .change_context(Error::internal_msg("unable to create operation"))
 }

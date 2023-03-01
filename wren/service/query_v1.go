@@ -62,7 +62,10 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		return wrapErrorWithStatus(err, subLogger)
 	}
 
-	outputTo, err := q.validateResponseAs(ctx, request.Query)
+	err := q.validateOutputTo(ctx, request.Query)
+	if err != nil {
+		return wrapErrorWithStatus(err, subLogger)
+	}
 
 	queryRequest := compute.QueryRequest{
 		Query:          request.Query.Expression,
@@ -226,12 +229,29 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}
 	responseStream.Send(q.addMetricsIfRequested(request, computeResponse, metrics))
 
+	outputTo := &v1alpha.OutputTo{}
+	if request.Query.OutputTo != nil {
+		outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
+		switch kind := request.Query.OutputTo.Destination.(type) {
+		case *v1alpha.OutputTo_ObjectStore:
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType:        kind.ObjectStore.FileType,
+					OutputPrefixUri: outputURI,
+				},
+			}
+		default:
+			subLogger.Error().Interface("kind", kind).Msg("unsupported output")
+			return status.Errorf(codes.Unimplemented, "output %s is not supported for queries", kind)
+		}
+	}
+
 	// while compute is on-going:
 	// * check to make sure we have heard from the compute engine in the secondsBeforeCancelingCompute window
 	// * send progress messages every progressReportingSeconds interval
 	computeTimerContext, computeTimerContextCancel := context.WithCancel(ctx)
 	defer computeTimerContextCancel()
-	queryContext, queryContextCancel := compute.GetNewQueryContext(ctx, owner, request.Query.ChangedSinceTime, compileResponse.ComputeResponse, dataToken, request.Query.FinalResultTime, dataTokenId == "", limits, tables, outputTo)
+	queryContext, queryContextCancel := compute.GetNewQueryContext(ctx, owner, request.Query.ChangedSinceTime, compileResponse.ComputeResponse, dataToken, request.Query.FinalResultTime, dataTokenId == "", limits, outputTo, request.Query.Slice, tables)
 	defer queryContextCancel()
 	go func(ctx context.Context) {
 		for {
@@ -262,7 +282,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 
 	success := true
 	for {
-		// if compute cancled, exit with failure
+		// if compute canceled, exit with failure
 		if queryContext.Cancelled() {
 			subLogger.Warn().Msg("streaming query heartbeat missing, ending query")
 			success = false
@@ -285,7 +305,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		}
 
 		// otherwise process compute response message...
-		log.Debug().Interface("computeResponse", computeResponse).Msg("recieved response from compute")
+		log.Debug().Interface("computeResponse", computeResponse).Msg("received response from compute")
 		lastComputeRespnseTime = time.Now()
 		queryResponse := &v1alpha.CreateQueryResponse{
 			State: v1alpha.CreateQueryResponse_STATE_COMPUTING,
@@ -293,45 +313,46 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 
 		switch computeResponse.State {
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_INITIAL:
-			subLogger.Info().Msg("recieved initial message from execute request")
+			subLogger.Info().Msg("received initial message from execute request")
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_RUNNING:
 			subLogger.Info().Interface("progress", computeResponse.Progress).Msg("received progress from execute request")
-			//TODO: set query progress metrics here after sparrow starts reporting progress info
+			// TODO: set query progress metrics here after sparrow starts reporting progress info
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_FINAL:
-			subLogger.Info().Bool("query_done", computeResponse.IsQueryDone).Msg("recieved final message from execute request")
+			subLogger.Info().Bool("query_done", computeResponse.IsQueryDone).Msg("received final message from execute request")
 		default:
 			subLogger.Error().Str("state", computeResponse.State.String()).Msg("unexpected long query state")
 		}
 
-		if computeResponse.OutputPaths != nil {
-			switch kind := request.Query.ResponseAs.(type) {
-			case *v1alpha.Query_AsFiles:
+		if computeResponse.OutputTo != nil {
+			switch kind := request.Query.OutputTo.Destination.(type) {
+			case *v1alpha.OutputTo_ObjectStore:
 				outputPaths := []string{}
-				for _, outputPath := range computeResponse.OutputPaths.Paths {
-					outputPaths = append(outputPaths, compute.ConvertURIForManager(outputPath))
-				}
+				outputPaths = append(outputPaths, computeResponse.OutputTo.GetObjectStore().GetOutputPaths().Paths...)
 
 				if request.QueryOptions != nil && request.QueryOptions.PresignResults {
 					outputPaths, err = q.presignResults(ctx, owner, outputPaths)
+					if err != nil {
+						return fmt.Errorf("error signing results")
+					}
 				}
 
-				queryResponse.Results = &v1alpha.CreateQueryResponse_FileResults{
-					FileResults: &v1alpha.FileResults{
-						FileType: kind.AsFiles.FileType,
-						Paths:    outputPaths,
+				outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
+				queryResponse.OutputTo = &v1alpha.OutputTo{
+					Destination: &v1alpha.OutputTo_ObjectStore{
+						ObjectStore: &v1alpha.ObjectStoreDestination{
+							FileType:        kind.ObjectStore.FileType,
+							OutputPrefixUri: outputURI,
+							OutputPaths: &v1alpha.ObjectStoreDestination_ResultPaths{
+								Paths: outputPaths,
+							},
+						},
 					},
 				}
 
-				metrics.OutputFiles += int64(len(computeResponse.OutputPaths.Paths))
-			case *v1alpha.Query_RedisAI_:
-				return fmt.Errorf("query output type %s is not implemented", kind)
+				metrics.OutputFiles += int64(len(computeResponse.OutputTo.GetObjectStore().GetOutputPaths().Paths))
 			default:
-				subLogger.Error().Interface("kind", kind).Msg("unknown response_as")
-			}
-			if err != nil {
-				subLogger.Warn().Err(err).Msg("issue processing results")
-				success = false
-				break
+				subLogger.Error().Interface("kind", kind).Msg("unknown output type")
+				return fmt.Errorf("query output type %s is not supported", kind)
 			}
 		}
 
@@ -367,40 +388,38 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	return nil
 }
 
-// this validates the ResponseAs section of the createQuery request, and returns an OutputTo struct to be used in compute.
-// Note: if the destination is a file, only the file-type is set here. the output path is determined later in the
-// compute-manger code.
-func (q *queryV1Service) validateResponseAs(ctx context.Context, query *v1alpha.Query) (*v1alpha.ExecuteRequest_OutputTo, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.validateResponseAs").Logger()
-
-	defaultOutputTo := &v1alpha.ExecuteRequest_OutputTo{
-		Destination: &v1alpha.ExecuteRequest_OutputTo_ObjectStore{
-			ObjectStore: &v1alpha.ObjectStoreDestination{Format: v1alpha.ObjectStoreDestination_FILE_FORMAT_PARQUET},
-		},
-	}
-
-	switch kind := query.ResponseAs.(type) {
-	case *v1alpha.Query_AsFiles:
-		switch kind.AsFiles.FileType {
-		case v1alpha.FileType_FILE_TYPE_CSV:
-			return &v1alpha.ExecuteRequest_OutputTo{
-				Destination: &v1alpha.ExecuteRequest_OutputTo_ObjectStore{
-					ObjectStore: &v1alpha.ObjectStoreDestination{Format: v1alpha.ObjectStoreDestination_FILE_FORMAT_CSV},
-				},
-			}, nil
+// validates the OutputTo field of the query, defaulting if unspecified or unknown.
+func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Query) error {
+	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.validateOutputTo").Logger()
+	switch kind := query.OutputTo.Destination.(type) {
+	case *v1alpha.OutputTo_ObjectStore:
+		switch kind.ObjectStore.FileType {
 		case v1alpha.FileType_FILE_TYPE_PARQUET:
-			return defaultOutputTo, nil
+		case v1alpha.FileType_FILE_TYPE_CSV:
 		default:
-			subLogger.Warn().Interface("kind", kind).Interface("type", kind.AsFiles.FileType).Msg("unknown response_as.file_type, defaulting to 'AsFiles->Parquet'")
-			return defaultOutputTo, nil
+			subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown response_as file_type, defaulting to 'ObjectStore->Parquet'")
+			query.OutputTo = &v1alpha.OutputTo{
+				Destination: &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
+				},
+			}
 		}
-	case *v1alpha.Query_RedisAI_:
+	case *v1alpha.OutputTo_Pulsar, *v1alpha.OutputTo_Redis:
 		query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS
-		return nil, fmt.Errorf("query output type %s is not implemented", kind)
+		return fmt.Errorf("query output type %s is only valid for materializations", kind)
 	default:
-		subLogger.Warn().Interface("kind", kind).Msg("unknown response_as, defaulting to 'AsFiles->Parquet'")
-		return defaultOutputTo, nil
+		subLogger.Warn().Interface("kind", kind).Msg("unknown response_as, defaulting to 'ObjectStore->Parquet'")
+		query.OutputTo = &v1alpha.OutputTo{
+			Destination: &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			},
+		}
 	}
+	return nil
 }
 
 func (q *queryV1Service) validateSliceRequest(sliceRequest *v1alpha.SliceRequest) error {

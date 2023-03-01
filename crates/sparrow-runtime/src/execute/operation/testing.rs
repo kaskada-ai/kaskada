@@ -241,6 +241,7 @@ pub(super) async fn run_operation_json(
     executor.add_consumer(sender);
 
     let s3_helper = S3Helper::new().await;
+
     // Channel for the output stats.
     let (progress_updates_tx, _) = tokio::sync::mpsc::channel(29);
     let mut context = OperationContext {

@@ -1,5 +1,12 @@
 use std::sync::Arc;
 
+use super::BoxedOperation;
+use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
+use crate::execute::operation::expression_executor::InputColumn;
+use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
+use crate::execute::operation::{InputBatch, Operation, OperationContext};
+use crate::execute::{invalid_operation, Error};
+use crate::Batch;
 use anyhow::Context;
 use async_trait::async_trait;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -9,14 +16,6 @@ use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_core::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
-
-use super::BoxedOperation;
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
-use crate::execute::operation::expression_executor::InputColumn;
-use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
-use crate::execute::operation::{InputBatch, Operation, OperationContext};
-use crate::execute::Error;
-use crate::Batch;
 
 pub(super) struct WithKeyOperation {
     new_key_input_index: usize,
@@ -59,7 +58,6 @@ impl Operation for WithKeyOperation {
                     .change_context(Error::internal())?;
             }
         }
-
         Ok(())
     }
 }
@@ -74,16 +72,25 @@ impl WithKeyOperation {
         operation: operation_plan::WithKeyOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
-        let input_channel = input_channels.into_iter().exactly_one()?;
-        let new_key_input_index =
-            operation.new_key.context("missing new key")?.input_column as usize;
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
+        let input_channel = input_channels
+            .into_iter()
+            .exactly_one()
+            .into_report()
+            .change_context(Error::internal_msg("expected one channel"))?;
+
+        let new_key_input_index = operation
+            .new_key
+            .ok_or(invalid_operation!("missing new key"))?
+            .input_column as usize;
         let is_primary_grouping = context.primary_grouping() == operation.grouping;
 
         Ok(Box::new(Self {
             new_key_input_index,
             input_stream: ReceiverStream::new(input_channel),
-            helper: SingleConsumerHelper::try_new(operation.input, input_columns)?,
+            helper: SingleConsumerHelper::try_new(operation.input, input_columns)
+                .into_report()
+                .change_context(Error::internal_msg("error creating single consumer helper"))?,
             key_hash_inverse: context.key_hash_inverse.clone(),
             is_primary_grouping,
         }))

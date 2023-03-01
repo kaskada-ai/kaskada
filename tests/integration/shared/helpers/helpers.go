@@ -321,22 +321,26 @@ func GetMergedCreateQueryResponse(stream v1alpha.QueryService_CreateQueryClient)
 		if queryResponse.RequestDetails != nil {
 			mergedResponse.RequestDetails = queryResponse.RequestDetails
 		}
-		if queryResponse.GetRedisAI() != nil {
-			mergedResponse.Results = &v1alpha.CreateQueryResponse_RedisAI_{
-				RedisAI: queryResponse.GetRedisAI(),
+		if queryResponse.GetOutputTo().GetRedis() != nil {
+			mergedResponse.OutputTo = &v1alpha.OutputTo{
+				Destination: &v1alpha.OutputTo_Redis{Redis: queryResponse.GetOutputTo().GetRedis()},
 			}
 		}
-		if queryResponse.GetFileResults() != nil {
-			newPaths := queryResponse.GetFileResults().Paths
+		if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths() != nil {
+			newPaths := queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().Paths
 			existingPaths := []string{}
 
-			if mergedResponse.GetFileResults() != nil {
-				existingPaths = mergedResponse.GetFileResults().Paths
+			if mergedResponse.GetOutputTo().GetObjectStore().GetOutputPaths() != nil {
+				existingPaths = mergedResponse.GetOutputTo().GetObjectStore().GetOutputPaths().Paths
 			}
-			mergedResponse.Results = &v1alpha.CreateQueryResponse_FileResults{
-				FileResults: &v1alpha.FileResults{
-					FileType: queryResponse.GetFileResults().FileType,
-					Paths:    append(existingPaths, newPaths...),
+			mergedResponse.OutputTo = &v1alpha.OutputTo{
+				Destination: &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: queryResponse.GetOutputTo().GetObjectStore().FileType,
+						OutputPaths: &v1alpha.ObjectStoreDestination_ResultPaths{
+							Paths: append(existingPaths, newPaths...),
+						},
+					},
 				},
 			}
 		}

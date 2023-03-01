@@ -454,7 +454,7 @@ func (c *kaskadaTableClient) GetBestComputeSnapshot(ctx context.Context, owner *
 	minTimeInNewFiles := mostRecentSnapshot.MaxEventTime
 
 	for _, slice := range slices {
-		minTime, err := getMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster, slice, mostRecentSnapshot.DataVersionID)
+		minTime, err := c.GetMinTimeOfNewPreparedFiles(ctx, prepareCacheBuster, slice, mostRecentSnapshot.DataVersionID)
 		if ent.IsNotFound(err) {
 			continue
 		}
@@ -507,7 +507,7 @@ func getNewestSnapshot(ctx context.Context, owner *ent.Owner, snapshotCacheBuste
 	return newestSnapshot, nil
 }
 
-func getMinTimeOfNewPreparedFiles(ctx context.Context, prepareCacheBuster int32, sliceInfo *SliceInfo, dataVersion int64) (*int64, error) {
+func (c *kaskadaTableClient) GetMinTimeOfNewPreparedFiles(ctx context.Context, prepareCacheBuster int32, sliceInfo *SliceInfo, dataVersion int64) (*int64, error) {
 	subLogger := log.Ctx(ctx).With().
 		Str("method", "kaskadaTableClient.getMinTimeOfNewPreparedFiles").
 		Str("table_name", sliceInfo.KaskadaTable.Name).

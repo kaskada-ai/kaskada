@@ -56,6 +56,13 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		// define a basic (single-pass) query to run on the table
+		outputTo := &v1alpha.OutputTo{}
+		outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+			ObjectStore: &v1alpha.ObjectStoreDestination{
+				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+			},
+		}
+
 		query := &v1alpha.Query{
 			Expression: `
 						{
@@ -64,7 +71,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 						max_amount: purchases_late_data.amount | max(),
 						min_amount: purchases_late_data.amount | min(),
 						}`,
-			ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+			OutputTo:       outputTo,
 			ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS,
 		}
 		queryOptions := &v1alpha.QueryOptions{
@@ -133,8 +140,8 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 				Expect(len(resultUrls)).Should(Equal(1))
@@ -197,8 +204,8 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 

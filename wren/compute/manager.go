@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"math"
 	"path"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/runtime/protoiface"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
@@ -369,15 +371,13 @@ func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenI
 	}
 }
 
+func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {
+	subPath := path.Join("results", owner.ID.String(), base64.RawURLEncoding.EncodeToString(planHash))
+	return m.store.GetDataPathURI(subPath)
+}
+
 func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeService_ExecuteClient, error) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.InitiateQuery").Logger()
-
-	// if files are being returned, set the results path for the query
-	switch destination := queryContext.outputTo.Destination.(type) {
-	case *v1alpha.ExecuteRequest_OutputTo_ObjectStore:
-		subPath := path.Join("results", queryContext.owner.ID.String(), base64.RawURLEncoding.EncodeToString(queryContext.compileResp.PlanHash.Hash))
-		destination.ObjectStore.OutputPrefixUri = m.store.GetDataPathURI(subPath)
-	}
 
 	executeRequest := &v1alpha.ExecuteRequest{
 		ChangedSince:    queryContext.changedSinceTime,
@@ -456,16 +456,24 @@ func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryRes
 			subLogger.Warn().Err(err).Msg("issue receiving execute response")
 			return result, customerrors.NewComputeError(reMapSparrowError(queryContext.ctx, err))
 		}
-		if res.OutputPaths != nil {
-			result.Paths = append(result.Paths, res.OutputPaths.Paths...)
+
+		// Note: this does nothing visible to the user at the moment, as
+		// running materializations are currently opaque to the user.
+		// Eventually, we'll want to provide useful metadata for all destination types.
+		if res.OutputTo != nil {
+			switch kind := res.OutputTo.Destination.(type) {
+			case *v1alpha.OutputTo_ObjectStore:
+				result.Paths = append(result.Paths, kind.ObjectStore.OutputPaths.Paths...)
+			}
 		}
+
 		switch res.State {
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_INITIAL:
-			subLogger.Info().Msg("recieved initial message from execute request")
+			subLogger.Info().Msg("received initial message from execute request")
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_RUNNING:
 			subLogger.Info().Interface("progress", res.Progress).Msg("received progress from execute request")
 		case v1alpha.LongQueryState_LONG_QUERY_STATE_FINAL:
-			subLogger.Info().Bool("query_done", res.IsQueryDone).Msg("recieved final message from execute request")
+			subLogger.Info().Bool("query_done", res.IsQueryDone).Msg("received final message from execute request")
 		default:
 			subLogger.Error().Str("state", res.State.String()).Msg("unexpected long query state")
 		}
@@ -488,13 +496,12 @@ func (m *Manager) SaveComputeSnapshots(queryContext *QueryContext, computeSnapsh
 
 // Runs all saved materializations on current data inside a go-routine that attempts to finish before shutdown
 func (m *Manager) RunMaterializations(requestCtx context.Context, owner *ent.Owner) {
-	// do nothing for now since materialization output is disabled
-	// m.errGroup.Go(func() error { return m.processMaterializations(requestCtx, owner) })
+	m.errGroup.Go(func() error { return m.processMaterializations(requestCtx, owner) })
 }
 
 // Runs all saved materializations on current data
 // Note: any errors returned from this method will cause wren to start its safe-shutdown routine
-// so be careful to only return errors that truly warrent a shutdown.
+// so be careful to only return errors that truly warrant a shutdown.
 func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent.Owner) error {
 	ctx, cancel, err := auth.NewBackgroundContextWithAPIClient(requestCtx)
 	if err != nil {
@@ -520,10 +527,13 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 	for _, materialization := range materializations {
 		matLogger := subLogger.With().Str("materialization_name", materialization.Name).Logger()
 
-		// TODO: changed_since time should be computed from file metadata.
-		// By default, all entities will be included in the materialization, regardless of
-		// whether their feature values have updated.
-		compileResp, err := m.CompileQuery(ctx, owner, materialization.Expression, materialization.WithViews.Views, false, false, materialization.SliceRequest, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
+		prepareCacheBuster, err := m.getPrepareCacheBuster(ctx)
+		if err != nil {
+			matLogger.Error().Err(err).Msg("issue getting current prepare cache buster")
+		}
+
+		isExperimental := false
+		compileResp, err := m.CompileQuery(ctx, owner, materialization.Expression, materialization.WithViews.Views, false, isExperimental, materialization.SliceRequest, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
 		if err != nil {
 			matLogger.Error().Err(err).Msg("analyzing materialization")
 			return nil
@@ -540,17 +550,81 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			return nil
 		}
 
-		//TODO: get an "actual" outputTo config from the materialization definition.
-		outputTo := &v1alpha.ExecuteRequest_OutputTo{
-			Destination: &v1alpha.ExecuteRequest_OutputTo_Redis{},
+		outputTo := &v1alpha.OutputTo{}
+		switch kind := materialization.Destination.Destination.(type) {
+		case *v1alpha.Materialization_Destination_ObjectStore:
+			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to object store")
+			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType:        kind.ObjectStore.GetFileType(),
+					OutputPrefixUri: kind.ObjectStore.GetOutputPrefixUri(),
+				},
+			}
+		case *v1alpha.Materialization_Destination_Pulsar:
+			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to pulsar")
+			outputTo.Destination = &v1alpha.OutputTo_Pulsar{
+				Pulsar: &v1alpha.PulsarDestination{
+					Tenant:           kind.Pulsar.GetTenant(),
+					Namespace:        kind.Pulsar.GetNamespace(),
+					TopicName:        kind.Pulsar.GetTopicName(),
+					BrokerServiceUrl: kind.Pulsar.GetBrokerServiceUrl(),
+				},
+			}
+		case *v1alpha.Materialization_Destination_Redis:
+			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializing to redis")
+			outputTo.Destination = &v1alpha.OutputTo_Redis{
+				// TODO: Support redis destination
+				Redis: &v1alpha.RedisDestination{},
+			}
+		default:
+			matLogger.Error().Interface("type", kind).Str("when", "pre-compute").Msg("materialization output type not implemented")
+			return fmt.Errorf("materialization output type %s is not implemented", kind)
 		}
 
-		queryContext, queryContextCancel := GetNewQueryContext(ctx, owner, nil, compileResp, dataToken, nil, true, nil, tables, outputTo)
+		queryContext, _ := GetNewQueryContext(ctx, owner, nil, compileResp, dataToken, nil, true, nil, outputTo, materialization.SliceRequest, tables)
+
+		dataVersionID := materialization.DataVersionID
+		var minTimeInNewFiles int64 = math.MaxInt64
+		for _, slice := range queryContext.GetSlices() {
+			minTime, err := m.kaskadaTableClient.GetMinTimeOfNewPreparedFiles(ctx, *prepareCacheBuster, slice, dataVersionID)
+			if ent.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("could not get min time of new files for slice %s. Not materializing results", slice)
+			}
+
+			if *minTime < minTimeInNewFiles {
+				minTimeInNewFiles = *minTime
+			}
+		}
+
+		// Interpret the int64 (as nanos since epoch) as a proto timestamp
+		changedSinceTime := &timestamppb.Timestamp{
+			Seconds: minTimeInNewFiles / 1_000_000_000,
+			Nanos:   (int32)(minTimeInNewFiles % 1_000_000_000),
+		}
+
+		// Remakes the query context with the changed since time.
+		//
+		// Not a great pattern, since we're recreating the context. If we're able
+		// to pull out the relevant code that converts `SlicePlans` to `SliceInfo`
+		// for the table client to get the min time of files, we can clean this up.
+		queryContext, queryContextCancel := GetNewQueryContext(ctx, owner, changedSinceTime, compileResp, dataToken, nil, true, nil, outputTo, materialization.SliceRequest, tables)
 		defer queryContextCancel()
 
 		err = m.computeMaterialization(materialization, queryContext)
 		if err != nil {
 			matLogger.Error().Err(err).Str("name", materialization.Name).Msg("error computing materialization")
+			return nil
+		}
+
+		// Update materializations that have run with the current data version id, so on
+		// subsequent runs only the updated values will be produced.
+		_, err = m.materializationClient.UpdateMaterializationDataVersion(ctx, owner, materialization.ID, queryContext.dataToken.DataVersionID)
+
+		if err != nil {
+			matLogger.Error().Err(err).Str("name", materialization.Name).Int64("previousDataVersion", dataVersionID).Int64("newDataVersion", queryContext.dataToken.DataVersionID).Msg("error updating materialization with new data version")
 			return nil
 		}
 	}
@@ -560,39 +634,14 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 
 func (m *Manager) computeMaterialization(materialization *ent.Materialization, queryContext *QueryContext) error {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.computeMaterialization").Str("materialization", materialization.Name).Logger()
-	switch kind := materialization.Destination.Destination.(type) {
-	//case *v1alpha.Materialization_Destination_RedisAI:
-	default:
-		subLogger.Error().Interface("type", kind).Str("when", "pre-compute").Msg("materialization output type not implemented")
-		return fmt.Errorf("materialization output type %s is not implemented", kind)
+	_, err := m.runMaterializationQuery(queryContext)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("invalid compute backend response")
+		return err
 	}
 
-	/*
-		queryResult, err := m.runMaterializationQuery(queryContext)
-		if err != nil {
-			subLogger.Error().Err(err).Msg("invalid compute backend response")
-			return err
-		}
-
-		switch kind := materialization.Destination.Destination.(type) {
-		case *v1alpha.Materialization_Destination_RedisAI:
-			redisAI := materialization.Destination.GetRedisAI()
-			redisConfig := redis.RedisConfig{
-				Host: redisAI.Host,
-				Port: redisAI.Port,
-				DB:   redisAI.Db,
-			}
-			return m.UploadResultsToRedisAI(queryContext.ctx, *queryContext.owner, queryResult.Paths, redisConfig)
-		default:
-			subLogger.Error().Interface("type", kind).Str("when", "post-compute").Msg("materialization output type not implemented")
-			return fmt.Errorf("materialization output type %s is not implemented", kind)
-		}
-
-		subLogger.Info().Msg("successfully exported materialization")
-
-
-		return nil
-	*/
+	subLogger.Info().Msg("successfully exported materialization")
+	return nil
 }
 
 func reMapSparrowError(ctx context.Context, err error) error {
