@@ -6,7 +6,7 @@ use fallible_iterator::FallibleIterator;
 use prost::bytes::Bytes;
 use prost::Message;
 
-use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordBatch, FlightRecordHeader};
+use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordHeader};
 
 pub struct FlightRecordReader {
     header: FlightRecordHeader,
@@ -34,16 +34,12 @@ impl FlightRecordReader {
         &self.header
     }
 
-    pub fn events(
+    pub fn records(
         &self,
     ) -> Result<impl FallibleIterator<Item = FlightRecord, Error = Error>, Error> {
         let reader = DelimitedProtoReader::try_open_offset(&self.path, self.event_position)?;
         let reader = FlightRecordEventReader(reader);
-        Ok(reader.flat_map(|batch| {
-            let records = batch.records.into_iter();
-            let records = fallible_iterator::convert(records.map(Ok));
-            Ok(records)
-        }))
+        Ok(reader)
     }
 }
 
@@ -110,16 +106,16 @@ struct FlightRecordEventReader<R: std::io::Read>(DelimitedProtoReader<R>);
 
 #[derive(Debug)]
 pub enum Error {
-    ProstDecodeError(prost::DecodeError),
-    IoError(std::io::Error),
+    ProstDecode(prost::DecodeError),
+    Io(std::io::Error),
     MissingHeader,
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::ProstDecodeError(e) => write!(f, "Error decoding flight record: {e}"),
-            Error::IoError(e) => write!(f, "I/O Error: {e}"),
+            Error::ProstDecode(e) => write!(f, "Error decoding flight record: {e}"),
+            Error::Io(e) => write!(f, "I/O Error: {e}"),
             Error::MissingHeader => write!(f, "Missing Header"),
         }
     }
@@ -128,7 +124,7 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {}
 
 impl<R: std::io::Read> FallibleIterator for FlightRecordEventReader<R> {
-    type Item = FlightRecordBatch;
+    type Item = FlightRecord;
 
     type Error = Error;
 
@@ -139,12 +135,12 @@ impl<R: std::io::Read> FallibleIterator for FlightRecordEventReader<R> {
 
 impl From<prost::DecodeError> for Error {
     fn from(err: prost::DecodeError) -> Self {
-        Error::ProstDecodeError(err)
+        Error::ProstDecode(err)
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        Error::IoError(err)
+        Error::Io(err)
     }
 }

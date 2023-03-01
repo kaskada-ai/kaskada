@@ -41,6 +41,7 @@ fallible-iterator.workspace = true
 futures.workspace = true
 half.workspace = true
 hashbrown.workspace = true
+inventory.workspace = true
 itertools.workspace = true
 num-traits.workspace = true
 owning_ref.workspace = true
