@@ -25,7 +25,6 @@ env:
   # See https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Workflow.
   # Speeds up CI builds, which won't have previous results anyway.
   CARGO_INCREMENTAL: 0
-  ACTION_RUNNER_DEBUG: true
 
 # TODO: Consider using `skip-duplicate-actions` to only run if there are changes.
 # TODO: Matrix for multi-platform tests.
@@ -83,12 +82,12 @@ jobs:
       # cache the `main` branch, which would provide caching for cases where the
       # dependencies of crates haven't changed. See
       # https://github.com/Swatinem/rust-cache/issues/95.
-#      - name: Cache Rust Dependencies
-#        if: needs.rust_skip.outputs.should_skip != 'true'
-#        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
-#        with:
-#          # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
-#          cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
+      - name: Cache Rust Dependencies
+        if: needs.rust_skip.outputs.should_skip != 'true'
+        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        with:
+          # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
+          cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
 
       - name: Cargo Test (Compile)
         if: needs.rust_skip.outputs.should_skip != 'true'
@@ -102,7 +101,7 @@ jobs:
         if: needs.rust_skip.outputs.should_skip != 'true'
         with:
           command: test
-          args:  --all-features -- --nocapture --quiet
+          args:  --all-features -- --nocapture --quiet --test-threads=1
 
       # Run a build. The earlier test compile won't have built the executables.
       # This makes sure we have artifacts available for later integration tests
