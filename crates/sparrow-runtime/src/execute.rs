@@ -26,6 +26,8 @@ mod operation;
 mod output;
 mod progress_reporter;
 mod spawner;
+pub(crate) mod pulsar_schema;
+pub(crate) mod pulsar_reader;
 
 pub use compute_executor::*;
 pub use error::*;

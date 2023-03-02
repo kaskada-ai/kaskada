@@ -79,6 +79,7 @@ pub(crate) async fn get_source_metadata(
         .as_ref()
         .context(context_code!(Code::InvalidArgument, "Missing source_path"))?;
 
+    // download remote files to a tempfile, if necessary
     let download_file = NamedTempFile::new()?;
     let download_file_path = download_file.into_temp_path();
     let source = match source {
@@ -103,6 +104,7 @@ pub(crate) async fn get_source_metadata(
             }
         }
         file_path::Path::CsvData(data) => file_path::Path::CsvData(data.to_string()),
+        file_path::Path::PulsarUri(uri) => file_path::Path::PulsarUri(uri.to_string()),
     };
 
     let metadata = RawMetadata::try_from(&source)?;
