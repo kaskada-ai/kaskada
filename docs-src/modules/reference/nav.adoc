@@ -1,6 +1,4 @@
 * Reference 
-*** xref:client-authentication.adoc[Client Authentication]
-*** xref:client-credentials.adoc[Client Credentials]
 *** xref:client-installation.adoc[Client Installation] 
 *** xref:expected-file-format.adoc[Expected File Format]
 *** xref:tables.adoc[Working with Tables]

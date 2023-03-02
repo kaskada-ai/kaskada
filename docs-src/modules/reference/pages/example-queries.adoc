@@ -1,3 +1,5 @@
+= Example Queries
+
 The following examples will cover some of the common optional parameters
 used when writing queries.
 
@@ -7,7 +9,7 @@ First, we create two tables and load some data. The _purchases_ table
 contains a small amount of data loaded from 2 files. The _transactions_
 table contains 50000 rows of data loaded from a single file.
 
-[rouce,python]
+[source,python]
 ----
 from kaskada import table as kt
 

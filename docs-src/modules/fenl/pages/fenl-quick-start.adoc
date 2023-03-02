@@ -1,3 +1,5 @@
+= Fenl Quick Start
+
 Let's walk through an example of using Fenl to build features for a
 simple fraud detection model.
 

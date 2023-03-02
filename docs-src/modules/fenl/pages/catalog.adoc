@@ -1,3 +1,5 @@
+= Fenl Catalog
+
 == Functions
 
 [cols="<,<",options="header",]

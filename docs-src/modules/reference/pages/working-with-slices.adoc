@@ -1,3 +1,5 @@
+= Working with Slices
+
 _This document assumes the client is authenticated._
 
 Kaskada offers the ability to interact with slices of datasets. A

@@ -1,3 +1,5 @@
+= Continuity 
+
 Fenl expressions are either _discrete_ or _continuous_. Discrete
 expressions describe values that are only meaningful at specific times.
 Continuous expressions describe values that are meaningful over ranges

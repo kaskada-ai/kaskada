@@ -1,3 +1,5 @@
+= Data Model 
+
 == Types
 
 Fenl operates on typed values. Fenl's type system describes several

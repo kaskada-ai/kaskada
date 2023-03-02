@@ -1,3 +1,5 @@
+= Syntax 
+
 Fenl is composed of _expressions_. Every Fenl expression describes a
 stream of values. Expressions may be composed to form new expressions.
 

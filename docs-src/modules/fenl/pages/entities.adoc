@@ -1,3 +1,6 @@
+= Enities 
+
+
 Entities are how Kaskada organizes data for use in feature engineering.
 They describe the particular objects that are being represented in the
 system.

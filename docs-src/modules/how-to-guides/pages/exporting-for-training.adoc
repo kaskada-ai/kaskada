@@ -1,4 +1,4 @@
-== Example Modeling Problem
+= Example Modeling Problem
 
 We'll begin by laying out a simple modeling problem, based on the
 xref:fenl:fenl-quick-start.adoc[Fenl Quickstart] guide. The goal will be to build a
@@ -6,7 +6,7 @@ model predicting if a given purchase will result in a fraud report
 within the next 30 days given two event tables; a `Purchase` table and a
 `FraudReport` table.
 
-=== Setup
+== Setup
 
 [source,python]
 ----

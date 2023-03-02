@@ -1,3 +1,6 @@
+= Working with Materializations
+
+
 The results of a Fenl query can be written to an external data store and
 kept up to date as the data underlying the query changes using
 materializations. A materialization is similar to a query, except that
