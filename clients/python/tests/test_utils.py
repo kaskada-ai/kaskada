@@ -1,16 +1,16 @@
 import pytest
 
 import fenlmagic.utils as utils
-import kaskada.compute as compute
+import kaskada.query as query
 
 
 def test_arg_to_response_type():
     csv_type = "csv"
-    expected = compute.ResponseType.FILE_TYPE_CSV
+    expected = query.ResponseType.FILE_TYPE_CSV
     assert utils.arg_to_response_type(csv_type) == expected
 
     parquet_type = "parquet"
-    expected = compute.ResponseType.FILE_TYPE_PARQUET
+    expected = query.ResponseType.FILE_TYPE_PARQUET
     assert utils.arg_to_response_type(parquet_type) == expected
 
     with pytest.raises(Exception):

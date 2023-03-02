@@ -239,7 +239,12 @@ def test_create_materialization_object_store_parquet_destination(mockClient):
                 "with_views": [
                     {"name": "my_second_view", "expression": "last(awkward)"}
                 ],
-                "destination": {"object_store": destination.to_request()},
+                "destination": {
+                    "object_store": {
+                        "file_type": "FILE_TYPE_PARQUET",
+                        "output_prefix_uri": "prefix",
+                    }
+                },
                 "slice": slice_filter.to_request(),
             }
         }

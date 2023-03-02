@@ -44,7 +44,7 @@ class ReleaseClient(object):
     def download_latest_release(
         self, download_path: Path, manager_bin_name: str, engine_bin_name: str
     ) -> LocalRelease:
-        """Downloads the latest version of the kaskada-manager and kaskada-engine.
+        """Downloads the latest version of the kaskada-manager and kaskada-engine services.
 
         Args:
             download_path (Path): The local download path

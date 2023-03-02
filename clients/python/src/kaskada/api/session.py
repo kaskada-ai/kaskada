@@ -22,25 +22,25 @@ class Session:
         is_secure: bool,
         name: str,
         client_id: Optional[str] = None,
-        api_process: Optional[Popen] = None,
-        compute_process: Optional[Popen] = None,
+        manager_process: Optional[Popen] = None,
+        engine_process: Optional[Popen] = None,
     ) -> None:
         self._endpoint = endpoint
         self._is_secure = is_secure
         self._name = name
         self._client_id = client_id
         self._client = self.connect()
-        self._api_process = api_process
-        self._compute_process = compute_process
+        self._manager_process = manager_process
+        self._engine_process = engine_process
 
     def __del__(self):
-        if self._api_process is not None:
-            logger.info("Stopping Kaskada Manager server")
-            self._api_process.kill()
+        if self._manager_process is not None:
+            logger.info("Stopping Kaskada Manager service")
+            self._manager_process.kill()
 
-        if self._compute_process is not None:
-            logger.info("Stopping Kaskada Engine server")
-            self._compute_process.kill()
+        if self._engine_process is not None:
+            logger.info("Stopping Kaskada Engine service")
+            self._engine_process.kill()
 
     def connect(self):
         attempt = 0
@@ -55,7 +55,7 @@ class Session:
             time.sleep(1.5**attempt)
         if is_valid_session == False:
             raise ConnectionError(
-                "unable to connect to API or Compute engine after {} attempts".format(
+                "unable to connect to Manager or Engine after {} attempts".format(
                     attempt
                 )
             )
@@ -160,28 +160,28 @@ class LocalBuilder(Builder):
         return bin_path
 
     def __start(self):
-        api_binary_path = (
+        manager_binary_path = (
             self.__get_binary_path() / self.KASKADA_MANAGER_BIN_NAME_DEFAULT
         )
-        api_log_path = self.__get_log_path("api_logs.txt")
-        compute_binary_path = (
+        manager_log_path = self.__get_log_path("manager_logs.txt")
+        engine_binary_path = (
             self.__get_binary_path() / self.KASKADA_ENGINE_BIN_NAME_DEFAULT
         )
-        compute_log_path = self.__get_log_path("compute_logs.txt")
-        compute_params = "serve"
+        engine_log_path = self.__get_log_path("engine_logs.txt")
+        engine_params = "serve"
 
         # TODO: Verify the logging output (stdout/stderr)
-        api_cmd = "{} > {} 2>&1".format(api_binary_path, api_log_path)
-        logger.debug(f"Manager start command: {api_cmd}")
-        compute_cmd = "{} {} > {} 2>&1".format(
-            compute_binary_path, compute_params, compute_log_path
+        manager_cmd = "{} > {} 2>&1".format(manager_binary_path, manager_log_path)
+        logger.debug(f"Manager start command: {manager_cmd}")
+        engine_cmd = "{} {} > {} 2>&1".format(
+            engine_binary_path, engine_params, engine_log_path
         )
-        logger.debug(f"Compute start command: {compute_cmd}")
+        logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
-        api_process = api_utils.run_subprocess(api_cmd)
-        logger.info("Initializing compute process")
-        compute_process = api_utils.run_subprocess(compute_cmd)
-        return (api_process, compute_process)
+        manager_process = api_utils.run_subprocess(manager_cmd)
+        logger.info("Initializing engine process")
+        engine_process = api_utils.run_subprocess(engine_cmd)
+        return (manager_process, engine_process)
 
     def __download_latest_release(self):
         """Downloads the latest release version to the binary path."""
@@ -195,7 +195,7 @@ class LocalBuilder(Builder):
         )
         logger.debug(f"Download Path: {local_release._download_path}")
         logger.debug(f"Manager Path: {local_release._manager_path}")
-        logger.debug(f"Engine Path: {local_release._manager_path}")
+        logger.debug(f"Engine Path: {local_release._engine_path}")
         # Update the binary path to the path downloaded and saved to by the latest release downloader.
         self.bin_path(
             local_release._download_path.absolute().relative_to(
@@ -213,7 +213,7 @@ class LocalBuilder(Builder):
         """
         if self._download:
             self.__download_latest_release()
-        api_process, compute_process = self.__start()
+        manager_process, engine_process = self.__start()
         if self._endpoint is None:
             raise ValueError("endpoint was not set")
         if self._is_secure is None:
@@ -224,8 +224,8 @@ class LocalBuilder(Builder):
             self._is_secure,
             self._name,
             client_id=self._client_id,
-            api_process=api_process,
-            compute_process=compute_process,
+            manager_process=manager_process,
+            engine_process=engine_process,
         )
 
 
