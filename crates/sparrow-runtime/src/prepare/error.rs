@@ -12,6 +12,8 @@ pub enum Error {
     CreateParquetReader,
     #[display(fmt = "failed to create CSV file reader")]
     CreateCsvReader,
+    #[display(fmt = "failed to create Pulsar reader")]
+    CreatePulsarReader,
     #[display(fmt = "reading batch")]
     ReadingBatch,
     #[display(fmt = "slicing batch")]

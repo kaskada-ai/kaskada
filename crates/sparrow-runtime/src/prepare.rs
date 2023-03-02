@@ -5,10 +5,13 @@ use std::io::{BufReader, Cursor};
 use std::path::Path;
 
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use avro_schema::read::fallible_streaming_iterator::FallibleStreamingIterator;
+use error_stack::{FutureExt, IntoReport, IntoReportCompat, ResultExt};
 use fallible_iterator::FallibleIterator;
+use futures::executor::block_on;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
+use pulsar::{Consumer, DeserializeMessage, Pulsar, TokioExecutor};
 use serde_yaml;
 use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig};
@@ -20,9 +23,11 @@ mod slice_preparer;
 pub use error::*;
 pub use prepare_iter::*;
 use tracing::Instrument;
+use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 
 use crate::s3::{S3Helper, S3Object};
 use crate::{PreparedMetadata, RawMetadata};
+use crate::execute::pulsar_reader::PulsarReader;
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 
@@ -56,9 +61,24 @@ pub fn prepared_batches(
             let reader = BufReader::new(content);
             reader_from_csv(config, reader, prepare_hash, slice)?
         }
+        file_path::Path::PulsarUri(uri) => {
+            reader_from_pulsar(config, uri, prepare_hash, slice)?
+        }
     };
 
     Ok(prepare_iter)
+}
+
+fn reader_from_pulsar(config: &TableConfig, uri: &String, prepare_hash: u64, slice: &Option<Slice>) -> error_stack::Result<PrepareIter, Error> {
+    let raw_metadata = RawMetadata::try_from_pulsar(uri)
+        .into_report()
+        .change_context(Error::CreatePulsarReader)?;
+
+    let consumer = block_on(crate::execute::pulsar_reader::pulsar_consumer(uri, raw_metadata.raw_schema.clone()))?;
+    let reader = PulsarReader::new(raw_metadata.table_schema.clone(), consumer);
+    PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
+        .into_report()
+        .change_context(Error::CreatePulsarReader)
 }
 
 /// Prepare the given file and return the list of prepared files.
@@ -239,6 +259,13 @@ fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
             std::io::copy(&mut file, &mut hasher).unwrap();
             let hash = hasher.finalize();
 
+            data_encoding::HEXUPPER.encode(&hash)
+        }
+        file_path::Path::PulsarUri(uri) => {
+            // TODO fix this to use the contents of the pulsar topic
+            let mut hasher = sha2::Sha224::new();
+            hasher.update(uri);
+            let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
         }
     };
