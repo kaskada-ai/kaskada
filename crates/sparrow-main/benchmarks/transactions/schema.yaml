@@ -20,10 +20,10 @@ tables:
               kind: !Primitive 6 # I64
           - name: transaction_date
             data_type:
-              kind: !Primitive 24 # TIMESTAMP_NANOSECOND
+              kind: !Primitive 22 # TIMESTAMP_MILLISECOND
           - name: membership_expire_date
             data_type:
-              kind: !Primitive 24 # TIMESTAMP_NANOSECOND
+              kind: !Primitive 22 # TIMESTAMP_MILLISECOND
     file_sets:
       - slice_plan:
           table_name: Transaction
