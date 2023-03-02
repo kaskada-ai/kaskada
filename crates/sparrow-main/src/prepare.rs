@@ -1,9 +1,12 @@
 use std::path::PathBuf;
 
-use error_stack::{IntoReport, ResultExt};
-use sparrow_api::kaskada::v1alpha::file_path;
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use sparrow_api::kaskada::v1alpha::{FilePath, PrepareDataRequest, SlicePlan};
+
+use sparrow_runtime::s3::S3Helper;
 
 use crate::batch::{Script, ScriptPath};
+use crate::serve;
 
 /// Options for the Prepare command.
 #[derive(clap::Args, Debug)]
@@ -45,6 +48,8 @@ pub enum Error {
     Preparing,
     #[display(fmt = "canonicalize paths")]
     Canonicalize,
+    #[display(fmt = "unrecognized input format")]
+    UnrecognizedInputFormat,
 }
 
 impl error_stack::Context for Error {}
@@ -73,7 +78,7 @@ impl std::fmt::Display for LabeledPath {
 
 impl PrepareCommand {
     #[allow(clippy::print_stdout)]
-    pub fn execute(self) -> error_stack::Result<(), Error> {
+    pub async fn execute(self) -> error_stack::Result<(), Error> {
         println!("Preparing files: {self:?}");
 
         let script = Script::try_from(&self.query)
@@ -110,19 +115,34 @@ impl PrepareCommand {
             .change_context(Error::Canonicalize)
             .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
 
-        let file_path =
-            file_path::Path::ParquetPath(input.as_os_str().to_string_lossy().to_string());
+        let file_path = FilePath::try_from_local(input.as_path())
+            .into_report()
+            .change_context(Error::UnrecognizedInputFormat)?;
 
-        let _files = sparrow_runtime::prepare::prepare_file(
-            &file_path,
-            &self.output_path,
-            &file_prefix,
-            &config,
-            &None,
-        )
-        .change_context(Error::Preparing)
-        .attach_printable_lazy(|| ScriptPath(self.query.clone()))
-        .attach_printable_lazy(|| TableName(self.table.clone()))?;
+        let sp = SlicePlan {
+            table_name: config.name.clone(),
+            slice: table.file_sets[0]
+                .slice_plan
+                .clone()
+                .ok_or(Error::MissingTableConfig)?
+                .slice,
+        };
+
+        let pdr = PrepareDataRequest {
+            file_path: Some(FilePath {
+                path: Some(file_path),
+            }),
+            config: Some(config),
+            output_path_prefix: self.output_path.to_string_lossy().to_string(),
+            file_prefix: file_prefix.to_string(),
+            slice_plan: Some(sp),
+        };
+        serve::preparation_service::prepare_data(S3Helper::new().await, tonic::Request::new(pdr))
+            .await
+            .change_context(Error::Preparing)
+            .attach_printable_lazy(|| ScriptPath(self.query.clone()))
+            .attach_printable_lazy(|| TableName(self.table.clone()))?;
+
         Ok(())
     }
 }

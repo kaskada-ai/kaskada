@@ -9,7 +9,7 @@
 )]
 
 use clap::{command, Parser};
-use error_stack::ResultExt;
+use error_stack::{FutureExt, ResultExt};
 use opentelemetry::global;
 use sparrow_main::tracing_setup::{setup_tracing, TracingOptions};
 use sparrow_main::{BatchCommand, PrepareCommand, ServeCommand};
@@ -82,7 +82,7 @@ async fn main_body(options: SparrowOptions) -> error_stack::Result<(), Error> {
     match options.command {
         Command::Serve(serve) => serve.execute().await.change_context(Error)?,
         Command::Batch(batch) => batch.execute().await.change_context(Error)?,
-        Command::Prepare(prepare) => prepare.execute().change_context(Error)?,
+        Command::Prepare(prepare) => prepare.execute().change_context(Error).await?,
         Command::License => {
             println!("{NOTICE}");
         }
