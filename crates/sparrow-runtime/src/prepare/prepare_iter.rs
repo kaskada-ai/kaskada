@@ -67,6 +67,7 @@ impl std::fmt::Debug for PrepareIter {
     }
 }
 
+// TODO does using table_schema instead of raw_schema break something else?
 impl PrepareIter {
     pub fn try_new(
         reader: impl Iterator<Item = Result<RecordBatch, ArrowError>> + 'static,
@@ -83,14 +84,14 @@ impl PrepareIter {
         // Add column behaviors for each of the 3 key columns.
         let mut columns = Vec::with_capacity(prepared_schema.fields().len());
         columns.push(ColumnBehavior::try_new_cast(
-            &raw_metadata.raw_schema,
+            &raw_metadata.table_schema,
             &config.time_column_name,
             &TimestampNanosecondType::DATA_TYPE,
             false,
         )?);
         if let Some(subsort_column_name) = &config.subsort_column_name {
             columns.push(ColumnBehavior::try_new_subsort(
-                &raw_metadata.raw_schema,
+                &raw_metadata.table_schema,
                 subsort_column_name,
             )?);
         } else {
@@ -98,7 +99,7 @@ impl PrepareIter {
         }
 
         columns.push(ColumnBehavior::try_new_entity_key(
-            &raw_metadata.raw_schema,
+            &raw_metadata.table_schema,
             &config.group_column_name,
             false,
         )?);
@@ -108,21 +109,21 @@ impl PrepareIter {
         // See https://github.com/riptano/kaskada/issues/90
         for field in raw_metadata.table_schema.fields() {
             columns.push(ColumnBehavior::try_cast_or_reference_or_null(
-                &raw_metadata.raw_schema,
+                &raw_metadata.table_schema,
                 field,
             )?);
         }
 
         // we've already checked that the group column exists so we can just unwrap it here
         let (source_index, field) = raw_metadata
-            .raw_schema
+            .table_schema
             .column_with_name(&config.group_column_name)
             .unwrap();
         let slice_preparer =
             SlicePreparer::try_new(source_index, field.data_type().clone(), slice)?;
 
         let (_, entity_key_column) = raw_metadata
-            .raw_schema
+            .table_schema
             .column_with_name(&config.group_column_name)
             .with_context(|| "")?;
 
@@ -281,7 +282,7 @@ impl ColumnBehavior {
             .with_context(|| {
                 context_code!(
                     tonic::Code::Internal,
-                    "Required column '{}' not present in schema {:?}",
+                    "column to cast '{}' not present in schema {:?}",
                     source_name,
                     source_schema
                 )
@@ -328,7 +329,7 @@ impl ColumnBehavior {
             .with_context(|| {
                 context_code!(
                     tonic::Code::Internal,
-                    "Required column '{}' not present in schema {:?}",
+                    "subsort column '{}' not present in schema {:?}",
                     source_name,
                     source_schema
                 )
@@ -383,7 +384,7 @@ impl ColumnBehavior {
             .with_context(|| {
                 context_code!(
                     tonic::Code::Internal,
-                    "Required column '{}' not present in schema {:?}",
+                    "entity key column '{}' not present in schema {:?}",
                     source_name,
                     source_schema
                 )

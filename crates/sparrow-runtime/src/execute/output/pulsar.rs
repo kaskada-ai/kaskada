@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use arrow::datatypes::{ArrowPrimitiveType, DataType, Schema, SchemaRef, TimestampMicrosecondType};
+use arrow::datatypes::{ArrowPrimitiveType, DataType, SchemaRef, TimestampMicrosecondType};
 use arrow::record_batch::RecordBatch;
 use futures::stream::BoxStream;
 use futures::StreamExt;
@@ -12,6 +10,7 @@ use crate::execute::progress_reporter::ProgressUpdate;
 use error_stack::{IntoReport, ResultExt};
 
 use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
+use crate::execute::pulsar_schema;
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
@@ -27,10 +26,7 @@ pub enum Error {
         from: DataType,
         to: DataType,
     },
-    #[cfg(not(feature = "avro"))]
-    AvroNotEnabled,
-    #[cfg(feature = "avro")]
-    AvroSchemaConversion,
+    SchemaSerialization,
 }
 
 impl error_stack::Context for Error {}
@@ -64,8 +60,8 @@ pub(super) async fn write(
     };
 
     let topic_url = format_topic_url(&pulsar)?;
-    let output_schema = get_output_schema(schema)?;
-    let formatted_schema = format_schema(output_schema.clone())?;
+    let output_schema = pulsar_schema::get_output_schema(schema).change_context(Error::SchemaSerialization)?;
+    let formatted_schema = pulsar_schema::format_schema(output_schema.clone()).change_context(Error::SchemaSerialization)?;
 
     tracing::info!("Creating pulsar topic {topic_url} with schema: {formatted_schema}");
     // Note: Pulsar works natively in Avro - move towards serializing
@@ -186,43 +182,6 @@ fn get_output_batch(
     Ok(RecordBatch::try_new(output_schema, output_columns).unwrap())
 }
 
-fn get_output_schema(schema: SchemaRef) -> error_stack::Result<SchemaRef, Error> {
-    let fields = schema.fields();
-
-    // Avro does not support certain types that we use internally for the implicit columns.
-    // For the `_time` (timestamp_ns) column, we cast to timestamp_us, sacrificing nano precision.
-    // (Optionally, we could provide a separate column composed of the nanos as a separate i64).
-    // The `_subsort` and `_key_hash` columns are dropped.
-    let time_us = arrow::datatypes::Field::new("_time", TimestampMicrosecondType::DATA_TYPE, false);
-    let mut new_fields = vec![time_us];
-    fields
-        .iter()
-        .skip(3) // Skip the `_time`, `_subsort`, and `_key_hash` fields
-        .for_each(|f| new_fields.push(f.clone()));
-
-    Ok(Arc::new(Schema::new(new_fields)))
-}
-
-#[cfg(not(feature = "avro"))]
-fn format_schema(_schema: SchemaRef) -> error_stack::Result<String, Error> {
-    error_stack::bail!(Error::AvroNotEnabled)
-}
-
-#[cfg(feature = "avro")]
-fn format_schema(schema: SchemaRef) -> error_stack::Result<String, Error> {
-    let avro_schema = sparrow_arrow::avro::to_avro_schema(&schema)
-        .change_context(Error::AvroSchemaConversion)
-        .attach_printable_lazy(|| {
-            format!("failed to convert arrow schema to avro schema {schema}")
-        })?;
-    serde_json::to_string(&avro_schema)
-        .into_report()
-        .change_context(Error::JsonSerialization)
-        .attach_printable_lazy(|| {
-            format!("failed to serialize avro schema to json string: {avro_schema:?}")
-        })
-}
-
 pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<String, Error> {
     let tenant = if pulsar.tenant.trim().is_empty() {
         DEFAULT_PULSAR_TENANT
@@ -244,5 +203,9 @@ pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<Strin
         &pulsar.topic_name
     };
 
-    Ok(format!("persistent://{tenant}/{namespace}/{name}"))
+    Ok(format_topic_url_str(tenant, namespace, name))
+}
+
+pub fn format_topic_url_str(tenant: &str, namespace: &str, name: &String) -> String {
+    format!("persistent://{tenant}/{namespace}/{name}")
 }

@@ -87,6 +87,8 @@ pub async fn prepare_data(
         }
     );
 
+    // download remote file locally, if necessary.
+    // TODO this is redundant with the download in get_source_metadata
     let download_file = NamedTempFile::new().unwrap();
     let download_file_path = download_file.into_temp_path();
     let (is_s3_object, path) = match path {
@@ -119,6 +121,7 @@ pub async fn prepare_data(
             }
         }
         file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string())),
+        file_path::Path::PulsarUri(uri) => (false, file_path::Path::PulsarUri(uri.to_string())),
     };
 
     let (prepared_metadata, prepared_files) = prepare_file(
