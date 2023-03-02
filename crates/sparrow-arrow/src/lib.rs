@@ -7,8 +7,8 @@
     clippy::print_stderr,
     clippy::undocumented_unsafe_blocks
 )]
-
 pub mod attachments;
+
 #[cfg(feature = "avro")]
 pub mod avro;
 

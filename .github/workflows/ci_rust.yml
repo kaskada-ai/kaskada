@@ -101,7 +101,11 @@ jobs:
         if: needs.rust_skip.outputs.should_skip != 'true'
         with:
           command: test
-          args:  --all-features -- --nocapture --quiet
+          # Using a single thread to run tests to avoid hitting limitations on runner.
+          # We should investigate cpu/memory usage and upgrade runner size accordingly
+          # and/or reduce cpu/memory usage in our tests.
+          # https://github.com/actions/runner-images/issues/6680
+          args:  --all-features -- --nocapture --quiet --test-threads=1
 
       # Run a build. The earlier test compile won't have built the executables.
       # This makes sure we have artifacts available for later integration tests
@@ -111,6 +115,7 @@ jobs:
         if: needs.rust_skip.outputs.should_skip != 'true'
         with:
           command: build
+          args:  --all-features
 
       - name: Cargo Clippy
         uses: actions-rs/clippy-check@v1
@@ -121,6 +126,7 @@ jobs:
           # flags to ensure vscode, etc. reports warnings. But, specifying them in the
           # CI protects against cases where we forgot to do that.
           args: >
+            --all-features
             -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
             -Dclippy::mod_module_files
             -Dclippy::print-stdout

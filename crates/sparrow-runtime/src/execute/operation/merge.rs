@@ -130,11 +130,12 @@ impl MergeOperation {
         merge_operation: operation_plan::MergeOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-    ) -> anyhow::Result<BoxedOperation> {
+    ) -> error_stack::Result<BoxedOperation, super::Error> {
         let (left_rx, right_rx) = input_channels
             .into_iter()
             .collect_tuple()
-            .context("expected 2 input channels for merge operation")?;
+            .ok_or(Error::internal_msg("expected 2 input channels"))
+            .into_report()?;
 
         let left_stream = ReceiverStream::new(left_rx);
         let right_stream = ReceiverStream::new(right_rx);
@@ -158,18 +159,16 @@ impl MergeOperation {
                 } else if requested_operation == right_operation {
                     MergeSide::Right
                 } else {
-                    anyhow::bail!(
-                        "Expected input to be from left({left_operation}) or \
-                         right({right_operation}) but was {requested_operation}",
-                    )
+                    error_stack::bail!(Error::internal_msg(
+                        "Expected input to be from left({left_operation}) or right({right_operation}) but was {requested_operation}"
+                    ));
                 };
-
                 let spread = match input_column.input_ref.interpolation() {
                     Interpolation::Unspecified => {
-                        anyhow::bail!("Unspecified interpolation")
+                        error_stack::bail!(Error::internal_msg("Unspecified interpolation"))
                     }
-                    Interpolation::Null => Spread::try_new(false, &input_column.data_type)?,
-                    Interpolation::AsOf => Spread::try_new(true, &input_column.data_type)?,
+                    Interpolation::Null => Spread::try_new(false, &input_column.data_type).into_report().change_context(Error::internal_msg("spead failure"))?,
+                    Interpolation::AsOf => Spread::try_new(true, &input_column.data_type).into_report().change_context(Error::internal_msg("spread failure"))?,
                 };
                 Ok(MergeInputColumn {
                     side,

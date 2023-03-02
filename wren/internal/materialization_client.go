@@ -55,6 +55,7 @@ func (c *materializationClient) CreateMaterialization(ctx context.Context, owner
 		SetSchema(newMaterialization.Schema).
 		SetSliceRequest(newMaterialization.SliceRequest).
 		SetAnalysis(newMaterialization.Analysis).
+		SetDataVersionID(newMaterialization.DataVersionID).
 		Save(ctx)
 
 	if err != nil {
@@ -125,6 +126,7 @@ func (c *materializationClient) GetMaterialization(ctx context.Context, owner *e
 		Logger()
 
 	materialization, err := owner.QueryMaterializations().Where(materialization.ID(id)).First(ctx)
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, customerrors.NewNotFoundError("materialization")
@@ -226,4 +228,22 @@ func (c *materializationClient) ListMaterializations(ctx context.Context, owner 
 		return nil, err
 	}
 	return materializations, nil
+}
+
+func (c *materializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.UpdateMaterialization").Logger()
+
+	materialization, err := c.GetMaterialization(ctx, owner, id)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue getting materialization")
+		return nil, err
+	}
+
+	updated_materialization, err := materialization.Update().SetDataVersionID(newDataVersion).Save(ctx)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue updating materialization data version")
+		return nil, err
+	}
+
+	return updated_materialization, nil
 }

@@ -66,6 +66,12 @@ var _ = Describe("Query V1 with incremental", Ordered, func() {
 				_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				// define a basic (single-pass) query to run on the table
+				outputTo := &v1alpha.OutputTo{}
+				outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
+				}
 				query := &v1alpha.Query{
 					Expression: `
 {
@@ -74,7 +80,7 @@ entity: purchases_incremental.customer_id,
 max_amount: purchases_incremental.amount | max(),
 min_amount: purchases_incremental.amount | min(),
 }`,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS,
 				}
 				queryOptions := &v1alpha.QueryOptions{
@@ -135,10 +141,11 @@ min_amount: purchases_incremental.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
+
 				Expect(len(resultUrls)).Should(Equal(1))
 				firstResults = helpers.DownloadParquet(resultUrls[0])
 				Expect(firstResults).Should(HaveLen(2))
@@ -201,8 +208,8 @@ min_amount: purchases_incremental.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -266,8 +273,8 @@ min_amount: purchases_incremental.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -329,8 +336,8 @@ min_amount: purchases_incremental.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 
@@ -413,8 +420,8 @@ min_amount: purchases_incremental.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 				Expect(len(resultUrls)).Should(Equal(1))
@@ -464,6 +471,12 @@ min_amount: purchases_incremental.amount | min(),
 			})
 
 			It("Should run the query and get same results as incremental", func() {
+				outputTo := &v1alpha.OutputTo{}
+				outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+					ObjectStore: &v1alpha.ObjectStoreDestination{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+					},
+				}
 				query := &v1alpha.Query{
 					Expression: `
 					{
@@ -472,7 +485,7 @@ min_amount: purchases_incremental.amount | min(),
 					max_amount: purchases_non_incremental.amount | max(),
 					min_amount: purchases_non_incremental.amount | min(),
 					}`,
-					ResponseAs:     &v1alpha.Query_AsFiles{AsFiles: &v1alpha.AsFiles{FileType: v1alpha.FileType_FILE_TYPE_PARQUET}},
+					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS,
 				}
 				queryOptions := &v1alpha.QueryOptions{
@@ -515,8 +528,8 @@ min_amount: purchases_incremental.amount | min(),
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetFileResults() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetFileResults().GetPaths()...)
+					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 

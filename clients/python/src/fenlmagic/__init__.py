@@ -29,7 +29,6 @@ class QueryResult(object):
 
 @magics_class
 class FenlMagics(Magics):
-
     client = None
 
     def __init__(self, shell, client):
@@ -124,16 +123,25 @@ class FenlMagics(Magics):
 
             if not dry_run and render_dataframe:
                 # TODO: figure out how to support reading from multiple parquet paths
-                if len(query_result.query_response.file_results.paths) > 0:
+                if (
+                    len(
+                        query_result.query_response.output_to.object_store.output_paths.paths
+                    )
+                    > 0
+                ):
                     if response_as == compute.ResponseType.FILE_TYPE_PARQUET:
                         df = pandas.read_parquet(
-                            query_result.query_response.file_results.paths[0],
+                            query_result.query_response.output_to.object_store.output_paths.paths[
+                                0
+                            ],
                             engine="pyarrow",
                         )
                         query_result.set_dataframe(df)
                     elif response_as == compute.ResponseType.FILE_TYPE_CSV:
                         df = pandas.read_csv(
-                            query_result.query_response.file_results.paths[0],
+                            query_result.query_response.output_to.object_store.output_paths.paths[
+                                0
+                            ],
                         )
                         query_result.set_dataframe(df)
 

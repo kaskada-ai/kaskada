@@ -8,6 +8,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/destinations.proto";
 import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
 import "kaskada/kaskada/v1alpha/view_service.proto";
@@ -25,23 +26,11 @@ message Query {
   string expression = 2 [(validate.rules).string.min_len = 1];
 
   // Configures how the query results should be returned.
-  oneof response_as {
-    option (validate.required) = true;
-    // Returns results as files.
-    AsFiles as_files = 101;
+  OutputTo output_to = 104;
 
-    // Writes the results directly to a RedisAI instance.
-    //
-    // Uses a series of AI.TENSORSET operations
-    //
-    // The query expression's type must be a record.
-    // The record type must include a field named 'key'.
-    // The value of the 'key' field is used as the AI.TENSORSET key.
-    // All other fields must be numeric.
-    //
-    // See https://redis.io/topics/protocol
-    RedisAI redis_a_i = 102;
-  }
+  // Modified output from one_of to `OutputTo` message.
+  // Updated on Feb.24.2023
+  reserved 101, 102, 103;
 
   // Optional. A token to run queries against. Enables repeatable queries.
   //
@@ -59,16 +48,16 @@ message Query {
   //
   // TODO: More thorough docs.
   repeated View views = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Determines how results are returned.
-  //
-  // Note that for response_as -> RedisBulkResponse or RedisAI, this
-  // setting is ignored, and `RESULT_BEHAVIOR_FINAL_RESULTS` is always
-  // used.
   ResultBehavior result_behavior = 5;
+
   // Configure limits on the output set.
   Limits limits = 6;
+
   // How to slice the input data for the query
   SliceRequest slice = 7;
+
   // Time bound (inclusive) after which results will be output.
   //
   // All results will include rows for changes (events and ticks) after this time (inclusive).
@@ -94,23 +83,6 @@ message Query {
     //    [2, 0] - tuple vectors:        [[1,2], [3,4], [5,6]]
     //    [0, 2] - two row vectors:      [[1,2,3], [4,5,6]]
     repeated int32 shape = 1;
-  }
-
-  message RedisAI {
-    // The RedisAI database number to write to
-    int32 db = 1 [(validate.rules).int32 = {
-      gte: 0,
-      lte: 15
-    }];
-
-    // The RedisAI instance hostname
-    string host = 2 [(validate.rules).string.min_len = 1];
-
-    // The RedisAI instance port
-    int32 port = 3 [(validate.rules).int32 = {
-      gt: 0,
-      lte: 65535
-    }];
   }
 
   enum ResultBehavior {
@@ -194,15 +166,11 @@ message CreateQueryResponse {
   // each result represents a different subset of the results. All
   // results in any messge in the response stream should be
   // collected and used to represent the complete output.
-  oneof results {
-    // Files containing the query results.
-    //
-    // Returned when "AsFiles" is provided as the response_as
-    // format.
-    FileResults file_results = 101;
+  OutputTo output_to = 104;
 
-    RedisAI redis_a_i = 102;
-  }
+  // Modified output from one_of to `OutputTo` message.
+  // Removed on Feb.24.2023
+  reserved 101, 102, 103;
 
   enum State {
     STATE_UNSPECIFIED = 0;
@@ -251,8 +219,6 @@ message CreateQueryResponse {
     // The number of output rows produced so far.
     int64 produced_output_rows = 6;
   }
-
-  message RedisAI {}
 }
 
 message GetQueryRequest {

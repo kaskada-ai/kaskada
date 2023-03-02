@@ -6,11 +6,10 @@ use arrow::record_batch::RecordBatch;
 use derive_more::Display;
 use error_stack::{IntoReport, IntoReportCompat, Result, ResultExt};
 use futures::stream::BoxStream;
+use sparrow_api::kaskada::v1alpha::output_to;
+use sparrow_api::kaskada::v1alpha::{FileType, ObjectStoreDestination};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
-
-use sparrow_api::kaskada::v1alpha::object_store_destination::FileFormat;
-use sparrow_api::kaskada::v1alpha::ObjectStoreDestination;
 
 use crate::{
     execute::progress_reporter::ProgressUpdate,
@@ -20,6 +19,7 @@ use crate::{
 #[derive(Debug, Display)]
 pub enum Error {
     MalformedUri,
+    ProgressUpdateFailure,
     UnspecifiedFormat,
     LocalWriteFailure,
     UploadFailure,
@@ -35,7 +35,16 @@ pub(super) async fn write(
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     batches: BoxStream<'static, RecordBatch>,
 ) -> Result<(), Error> {
-    let format = object_store.format();
+    // Inform tracker of destination type
+    progress_updates_tx
+        .send(ProgressUpdate::Destination {
+            destination: output_to::Destination::ObjectStore(object_store.clone()),
+        })
+        .await
+        .into_report()
+        .change_context(Error::ProgressUpdateFailure)?;
+
+    let format = object_store.file_type();
     let output_prefix = object_store.output_prefix_uri;
     if is_s3_path(&output_prefix) {
         // TODO: This is currently a hacky way of uploading the file to S3. We first
@@ -52,7 +61,7 @@ pub(super) async fn write(
         // the appropriate client here.
         let s3_client = S3Helper::new().await;
 
-        let tmp_output_file_name = output_file_name(format);
+        let tmp_output_file_name = output_file_name(format)?;
         let tmp_output_file = create_tempfile(&tmp_output_file_name)?;
         let tmp_output_path = tmp_output_file.path().to_owned();
 
@@ -83,9 +92,8 @@ pub(super) async fn write(
             .try_send(ProgressUpdate::FilesProduced {
                 paths: vec![output_path],
             })
-            .unwrap_or_else(|e| {
-                tracing::error!("Failed to send progress update: {e}");
-            });
+            .into_report()
+            .change_context(Error::ProgressUpdateFailure)?
     } else {
         // Assumes local storage otherwise now
         let output_prefix = output_prefix
@@ -93,9 +101,7 @@ pub(super) async fn write(
             .ok_or(Error::UnsupportedUri)
             .into_report()
             .attach_printable_lazy(|| {
-                format!(
-                "unsupported output prefix uri {output_prefix}, expected local file (file:///...)"
-            )
+                format!("unsupported output prefix uri {output_prefix}, expected local file (file:///...)")
             })?;
 
         if !output_prefix.starts_with('/') {
@@ -114,7 +120,7 @@ pub(super) async fn write(
                 .attach_printable_lazy(|| format!("unable to create path {output_path:?}"))?;
         }
 
-        output_path.push(output_file_name(format));
+        output_path.push(output_file_name(format)?);
         let output_file = File::create(output_path.clone())
             .into_report()
             .change_context(Error::LocalWriteFailure)
@@ -138,9 +144,8 @@ pub(super) async fn write(
             .try_send(ProgressUpdate::FilesProduced {
                 paths: vec![output_uri],
             })
-            .unwrap_or_else(|e| {
-                tracing::error!("Failed to send progress update: {e}");
-            });
+            .into_report()
+            .change_context(Error::ProgressUpdateFailure)?
     };
 
     Ok(())
@@ -149,13 +154,13 @@ pub(super) async fn write(
 /// Writes the stream of result batches to the given local File.
 async fn write_to_file(
     local_output_file: &File,
-    format: FileFormat,
+    format: FileType,
     schema: SchemaRef,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     batches: BoxStream<'static, RecordBatch>,
-) -> Result<(), Error> {
+) -> error_stack::Result<(), Error> {
     match format {
-        FileFormat::Csv => {
+        FileType::Csv => {
             crate::execute::output::csv::write_csv(
                 local_output_file,
                 schema,
@@ -164,7 +169,7 @@ async fn write_to_file(
             )
             .await?
         }
-        FileFormat::Parquet => {
+        FileType::Parquet => {
             crate::execute::output::parquet::write_parquet(
                 local_output_file,
                 schema,
@@ -173,19 +178,19 @@ async fn write_to_file(
             )
             .await?;
         }
-        FileFormat::Unspecified => return Err(Error::UnspecifiedFormat.into()),
+        FileType::Unspecified => error_stack::bail!(Error::UnspecifiedFormat),
     };
     Ok(())
 }
 
-fn output_file_name(format: FileFormat) -> String {
+fn output_file_name(format: FileType) -> error_stack::Result<String, Error> {
     // Generate a UUID for the destination.
     let extension = match format {
-        FileFormat::Csv => "csv",
-        FileFormat::Parquet => "parquet",
-        FileFormat::Unspecified => panic!("Unspecified output file format"),
+        FileType::Csv => "csv",
+        FileType::Parquet => "parquet",
+        FileType::Unspecified => error_stack::bail!(Error::UnspecifiedFormat),
     };
-    format!("{}.{}", Uuid::new_v4().as_hyphenated(), extension)
+    Ok(format!("{}.{}", Uuid::new_v4().as_hyphenated(), extension))
 }
 
 fn create_tempfile(file_name: &str) -> Result<NamedTempFile, Error> {

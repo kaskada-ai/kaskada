@@ -4,12 +4,12 @@ use error_stack::{IntoReportCompat, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::execute_request::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::execute_request::OutputTo;
-use sparrow_api::kaskada::v1alpha::object_store_destination::FileFormat;
+use sparrow_api::kaskada::v1alpha::output_to::Destination;
+use sparrow_api::kaskada::v1alpha::OutputTo;
 use sparrow_api::kaskada::v1alpha::{
     compute_table, file_path, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet,
-    FenlDiagnostics, ObjectStoreDestination, PerEntityBehavior, TableConfig, TableMetadata,
+    FenlDiagnostics, FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig,
+    TableMetadata,
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
@@ -87,7 +87,8 @@ pub(super) async fn execute_example(
 
     let destination = ObjectStoreDestination {
         output_prefix_uri: format!("file:///{}", tempdir.path().display()),
-        format: FileFormat::Csv.into(),
+        file_type: FileType::Csv.into(),
+        output_paths: None,
     };
     let output_to = OutputTo {
         destination: Some(Destination::ObjectStore(destination)),
@@ -111,7 +112,7 @@ pub(super) async fn execute_example(
     .change_context(Error::ExecuteQuery)?;
 
     let output_paths = stream
-        .map_ok(|item| item.output_paths.unwrap_or_default().paths)
+        .map_ok(|item| item.output_paths().unwrap_or_default())
         .try_concat()
         .await
         .unwrap();
@@ -121,7 +122,6 @@ pub(super) async fn execute_example(
         1,
         "Expected one output, but got {output_paths:?}"
     );
-
     assert!(
         output_paths[0].starts_with("file:///"),
         "expected local file prefix"

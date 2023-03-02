@@ -1,12 +1,11 @@
 use fallible_iterator::FallibleIterator;
 use tempfile::NamedTempFile;
 
-use crate::kaskada::sparrow::v1alpha::flight_record::execute_pass_metrics::Cause;
-use crate::kaskada::sparrow::v1alpha::flight_record::{EventType, ExecutePassMetrics, Metrics};
-use crate::kaskada::sparrow::v1alpha::flight_record_header::BuildInfo;
-use crate::kaskada::sparrow::v1alpha::thread_id::ThreadKind;
-use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordHeader, ThreadId};
-use crate::{FlightRecordReader, FlightRecordWriter};
+use super::{FlightRecordReader, FlightRecordWriter};
+use crate::kaskada::sparrow::v1alpha::flight_record::ReportActivity;
+use crate::kaskada::sparrow::v1alpha::flight_record_header::{BuildInfo, RegisterActivity};
+use crate::kaskada::sparrow::v1alpha::metric_value::Value;
+use crate::kaskada::sparrow::v1alpha::{FlightRecord, FlightRecordHeader, MetricValue};
 
 #[test]
 fn round_trip_small() {
@@ -21,69 +20,68 @@ fn round_trip_small() {
             github_sha: "sha".to_owned(),
             github_workflow: "workflow".to_owned(),
         }),
+        activities: vec![
+            RegisterActivity {
+                activity_id: 57,
+                label: "hello".to_owned(),
+                parent_activity_id: None,
+            },
+            RegisterActivity {
+                activity_id: 58,
+                label: "world".to_owned(),
+                parent_activity_id: Some(57),
+            },
+        ],
+        metrics: vec![],
     };
 
     let record1 = FlightRecord {
-        thread_id: Some(ThreadId {
-            pass_id: 5000,
-            kind: ThreadKind::Merge as i32,
-            thread_id: 0,
-        }),
-        event_type: EventType::ExecutePass as i32,
-        index: 5,
-        wall_timestamp_us: 573,
-        wall_duration_us: 200,
-        cpu_duration_us: 180,
-        metrics: None,
+        record: Some(
+            crate::kaskada::sparrow::v1alpha::flight_record::Record::ReportActivity(
+                ReportActivity {
+                    activity_id: 58,
+                    thread_id: 18,
+                    wall_timestamp_us: 1000,
+                    wall_duration_us: 8710,
+                    cpu_duration_us: 879_791_878,
+                    metrics: vec![MetricValue {
+                        metric_id: 987,
+                        value: Some(Value::I64Value(18)),
+                    }],
+                },
+            ),
+        ),
     };
 
     let record2 = FlightRecord {
-        thread_id: Some(ThreadId {
-            pass_id: 5010,
-            kind: ThreadKind::Merge as i32,
-            thread_id: 0,
-        }),
-        event_type: EventType::MergeReceiveInput as i32,
-        index: 8,
-        wall_timestamp_us: 878,
-        wall_duration_us: 240,
-        cpu_duration_us: 1880,
-        metrics: Some(Metrics::ExecutePass(ExecutePassMetrics {
-            num_rows: 5000,
-            num_cumulative_entities: 8000,
-            cause: Cause::Inputs as i32,
-        })),
-    };
-
-    let record3 = FlightRecord {
-        thread_id: Some(ThreadId {
-            pass_id: 5000,
-            kind: ThreadKind::SinkProcessor as i32,
-            thread_id: 10,
-        }),
-        event_type: EventType::ExecutePassInstruction as i32,
-        index: 13,
-        wall_timestamp_us: 588,
-        wall_duration_us: 240,
-        cpu_duration_us: 1880,
-        metrics: None,
+        record: Some(
+            crate::kaskada::sparrow::v1alpha::flight_record::Record::ReportActivity(
+                ReportActivity {
+                    activity_id: 59,
+                    thread_id: 18,
+                    wall_timestamp_us: 1000,
+                    wall_duration_us: 87920,
+                    cpu_duration_us: 879_797_878,
+                    metrics: vec![MetricValue {
+                        metric_id: 987,
+                        value: Some(Value::I64Value(18)),
+                    }],
+                },
+            ),
+        ),
     };
 
     // Write some records.
     let mut writer = FlightRecordWriter::try_new(file.reopen().unwrap(), header.clone()).unwrap();
-    writer
-        .write_batch(vec![record1.clone(), record2.clone()])
-        .unwrap();
-
-    writer.write_batch(vec![record3.clone()]).unwrap();
+    writer.write(record1.clone()).unwrap();
+    writer.write(record2.clone()).unwrap();
     writer.flush().unwrap();
 
     let reader = FlightRecordReader::try_new(file.path()).unwrap();
     assert_eq!(reader.header(), &header);
 
-    let records = reader.events().unwrap();
-    let records: Vec<_> = records.collect().unwrap();
-    assert_eq!(records, vec![record1, record2, record3]);
+    let records: Vec<_> = reader.records().unwrap().collect().unwrap();
+    assert_eq!(records, vec![record1, record2]);
 
     file.close().unwrap();
 }
