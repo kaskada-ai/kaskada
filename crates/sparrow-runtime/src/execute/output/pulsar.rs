@@ -244,5 +244,5 @@ pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<Strin
         &pulsar.topic_name
     };
 
-    Ok(format!("persistent://{tenant}/{namespace}/topic-{name}"))
+    Ok(format!("persistent://{tenant}/{namespace}/{name}"))
 }

@@ -56,7 +56,6 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.CreateQuery").Logger()
 	owner := auth.APIOwnerFromContext(ctx)
 
-
 	if err := q.validateSliceRequest(request.Query.Slice); err != nil {
 		subLogger.Debug().Msg("returning from validateSliceRequest")
 		return wrapErrorWithStatus(err, subLogger)

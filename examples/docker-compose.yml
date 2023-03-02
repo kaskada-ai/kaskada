@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  ping:
+    image: briceburg/ping-pong
+    container_name: ping
+    hostname: ping
+    ports:
+      - "7777:80"
+    networks:
+      - demo
+    platform: linux/amd64
+ 
+  jupyter:
+    container_name: jupyter-kaskada
+    build: 
+      dockerfile: Dockerfile
+    command: ["jupyter", "notebook"]
+    networks:
+      - demo
+    ports:
+      - "8888:8888"
+    platform: linux/amd64
+
+  pulsar:
+    image: apachepulsar/pulsar:2.11.0
+    container_name: pulsar
+    hostname: pulsar
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    networks:
+      - demo
+    command: ["bin/pulsar", "standalone"]
+    platform: linux/amd64
+         
+networks:
+  demo:
+    name: demo
+    driver: bridge
+ 
