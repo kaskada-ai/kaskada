@@ -25,6 +25,6 @@ feature_set:
 output_to:
   destination:
     !ObjectStore
-      format: 1 # FILE_FORMAT_PARQUET
+      file_type: 1 # FILE_TYPE_PARQUET
       output_prefix_uri: file:///Users/jonathan/Projects/kaskada/crates/sparrow-main/benchmarks/transactions/out
 
