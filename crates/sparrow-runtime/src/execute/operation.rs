@@ -51,7 +51,6 @@ use sparrow_compiler::DataContext;
 use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use tokio::task::JoinHandle;
-use tokio::time::Instant;
 use tracing::Instrument;
 
 use self::final_tick::FinalTickOperation;
@@ -215,7 +214,7 @@ impl OperationExecutor {
 
         Ok(async move {
             if let Some(store) = &compute_store {
-                let _span = tracing::info_span!("Restoring state").entered();
+                let _span = tracing::debug_span!("Restoring state").entered();
                 expression_executor
                     .restore(operation_index, store.as_ref())
                     .into_report()
@@ -225,16 +224,13 @@ impl OperationExecutor {
                     .into_report()
                     .change_context(Error::internal())?;
             } else {
-                tracing::info!("No state to restore");
+                tracing::debug!("No state to restore");
             }
 
             let operation_handle: JoinHandle<error_stack::Result<_, Error>> = tokio::spawn(
                 async move {
-                    tracing::debug!("Begin operation {:?}", operation);
-                    let start = Instant::now();
+                    tracing::debug!("Full operation is {:?}", operation);
                     operation.execute(send).await?;
-                    let elapsed = start.elapsed();
-                    tracing::debug!("End operation after {:?}: {:?}", elapsed, operation);
                     Ok(operation)
                 }
                 .in_current_span(),
@@ -244,7 +240,6 @@ impl OperationExecutor {
             // But, expressions such as aggregations require sequential processing.
             // We could attempt to determine whether we needed to execute sequentially...
             // but for now it is easier to just have the single path.
-            tracing::info!("Starting operation");
             'operation: while let Some(input) = recv.recv().await {
                 #[cfg(debug_assertions)]
                 input
@@ -284,7 +279,7 @@ impl OperationExecutor {
                 // way of "forwarding" elements to multiple downstream channels.
                 for consumer in consumers.iter() {
                     if (consumer.send(output.clone()).await).is_err() {
-                        tracing::info!("Downstream receiver closed; breaking");
+                        tracing::debug!("Downstream receiver closed; breaking");
                         operation_handle.abort();
                         break 'operation;
                     }
@@ -324,14 +319,11 @@ impl OperationExecutor {
                     let report = Report::new(Error::internal()).attach_printable(join_error);
                     return Err(report);
                 }
-                Ok(operation_result) => {
-                    tracing::info!("Execution complete");
-                    operation_result.change_context(Error::internal())?
-                }
+                Ok(operation_result) => operation_result.change_context(Error::internal())?,
             };
 
             if let Some(store) = &compute_store {
-                let _span = tracing::info_span!("Saving state").entered();
+                let _span = tracing::debug_span!("Saving state").entered();
                 expression_executor
                     .store(operation_index, store.as_ref())
                     .into_report()
@@ -341,7 +333,7 @@ impl OperationExecutor {
                     .into_report()
                     .change_context(Error::internal())?;
             } else {
-                tracing::info!("No state store; nothing to save");
+                tracing::debug!("No state store; nothing to save");
             }
 
             let key_hash_handle: JoinHandle<anyhow::Result<_>> = tokio::spawn(

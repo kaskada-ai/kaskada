@@ -12,7 +12,6 @@ use sparrow_instructions::{ComputeStore, StoreKey};
 use sparrow_plan::GroupId;
 use tempfile::NamedTempFile;
 
-
 use crate::s3::{self, S3Helper, S3Object};
 
 /// Stores the mapping from key hash u64 to the position in the keys array.
