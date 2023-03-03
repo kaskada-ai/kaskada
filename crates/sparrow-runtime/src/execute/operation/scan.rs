@@ -35,7 +35,7 @@ impl std::fmt::Debug for ScanOperation {
         f.debug_struct("ScanOperation")
             .field("projected_schema", &self.projected_schema)
             .field("key_hash_index", &self.key_hash_index)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

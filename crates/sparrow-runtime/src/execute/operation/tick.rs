@@ -71,9 +71,9 @@ impl std::fmt::Debug for TickOperation {
         f.debug_struct("TickOperation")
             .field("next_tick", &self.next_tick)
             .field("current_time", &self.current_time)
-            .field("key_hashes", &self.key_hashes)
+            .field("key_hashes", &format!("{} entries", self.key_hashes.len()))
             .field("behavior", &self.behavior)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
