@@ -56,15 +56,18 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.CreateQuery").Logger()
 	owner := auth.APIOwnerFromContext(ctx)
 
-	metrics := &v1alpha.CreateQueryResponse_Metrics{}
+
 	if err := q.validateSliceRequest(request.Query.Slice); err != nil {
 		subLogger.Debug().Msg("returning from validateSliceRequest")
 		return wrapErrorWithStatus(err, subLogger)
 	}
 
-	err := q.validateOutputTo(ctx, request.Query)
-	if err != nil {
+	if err := q.validateOutputTo(ctx, request.Query); err != nil {
 		return wrapErrorWithStatus(err, subLogger)
+	}
+
+	if request.Query.ResultBehavior == v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED {
+		request.Query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
 	}
 
 	queryRequest := compute.QueryRequest{
@@ -72,9 +75,6 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		RequestViews:   make([]*v1alpha.WithView, 0),
 		SliceRequest:   request.Query.Slice,
 		ResultBehavior: request.Query.ResultBehavior,
-	}
-	if queryRequest.ResultBehavior == v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED {
-		queryRequest.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
 	}
 
 	queryOptions := compute.QueryOptions{
@@ -145,6 +145,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		FenlDiagnostics: compileResponse.ComputeResponse.FenlDiagnostics,
 	}
 
+	metrics := &v1alpha.CreateQueryResponse_Metrics{}
 	if request.QueryOptions != nil && request.QueryOptions.DryRun {
 		analysisResponse.Metrics = metrics
 		responseStream.Send(analysisResponse)
@@ -391,34 +392,33 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 // validates the OutputTo field of the query, defaulting if unspecified or unknown.
 func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Query) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.validateOutputTo").Logger()
-	switch kind := query.OutputTo.Destination.(type) {
-	case *v1alpha.OutputTo_ObjectStore:
-		switch kind.ObjectStore.FileType {
-		case v1alpha.FileType_FILE_TYPE_PARQUET:
-		case v1alpha.FileType_FILE_TYPE_CSV:
-		default:
-			subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown response_as file_type, defaulting to 'ObjectStore->Parquet'")
-			query.OutputTo = &v1alpha.OutputTo{
-				Destination: &v1alpha.OutputTo_ObjectStore{
-					ObjectStore: &v1alpha.ObjectStoreDestination{
-						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-					},
-				},
+	if query.OutputTo == nil {
+		subLogger.Warn().Msg("mssing output_to, defaulting to 'ObjectStore->Parquet'")
+	} else {
+		switch kind := query.OutputTo.Destination.(type) {
+		case *v1alpha.OutputTo_ObjectStore:
+			switch kind.ObjectStore.FileType {
+			case v1alpha.FileType_FILE_TYPE_PARQUET, v1alpha.FileType_FILE_TYPE_CSV:
+				return nil
+			default:
+				subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown output_to file_type, defaulting to 'ObjectStore->Parquet'")
 			}
-		}
-	case *v1alpha.OutputTo_Pulsar, *v1alpha.OutputTo_Redis:
-		query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS
-		return fmt.Errorf("query output type %s is only valid for materializations", kind)
-	default:
-		subLogger.Warn().Interface("kind", kind).Msg("unknown response_as, defaulting to 'ObjectStore->Parquet'")
-		query.OutputTo = &v1alpha.OutputTo{
-			Destination: &v1alpha.OutputTo_ObjectStore{
-				ObjectStore: &v1alpha.ObjectStoreDestination{
-					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-				},
-			},
+		case *v1alpha.OutputTo_Pulsar, *v1alpha.OutputTo_Redis:
+			return fmt.Errorf("query output type: %s is only valid for materializations", kind)
+		default:
+			subLogger.Warn().Interface("kind", kind).Msg("unknown output_to, defaulting to 'ObjectStore->Parquet'")
 		}
 	}
+
+	// set default if haven't yet returned from this method
+	query.OutputTo = &v1alpha.OutputTo{
+		Destination: &v1alpha.OutputTo_ObjectStore{
+			ObjectStore: &v1alpha.ObjectStoreDestination{
+				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+			},
+		},
+	}
+
 	return nil
 }
 
