@@ -25,3 +25,17 @@ To perform static type analysis (mypy): `$ poetry run poe types`
 
 #### Lint Task
 To run the linter (pylint): `$ poetry run poe lint`
+
+## Using the Client from Jupyter
+
+#### Install Jupyter
+To install Jupyter: `$ pip install notebook`
+
+#### Build the Client
+To build the client: `$ poetry build`
+
+#### Install the Client
+To install the client: `$ pip install dist/*.whl`
+
+#### Open a Jupyter Notebook
+To open a notebook: `$ jupyter notebook`

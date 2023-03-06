@@ -120,6 +120,9 @@ def generic_response_html_formatter(obj):
     elif hasattr(obj, "query"):
         query_details = shared.get_query_html(obj.query)
         details.appendChild(html_table_row("query", query_details))
+    elif hasattr(obj, "expression"):
+        expression_details = shared.get_query_html(obj.expression)
+        details.appendChild(html_table_row("expression", expression_details))
     elif hasattr(obj, "view") and obj.HasField("view"):
         view_details, schema_df = shared.get_view_html_and_schema_df(obj.view)
         details.appendChild(html_table_row("view", view_details))
@@ -442,10 +445,10 @@ def fenlmagic_query_result_html_formatter(obj):
 
     has_errors, content = get_query_response_content(obj.query_response)
     details_table = content["Details"]
-    details_table.appendChild(html_obj_table_row("query", obj.query))
+    details_table.appendChild(html_obj_table_row("expression", obj.expression))
 
     raw = {
-        "query": obj.query,
+        "expression": obj.expression,
         "query_response": obj.query_response,
     }
 
