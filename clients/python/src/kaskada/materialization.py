@@ -128,7 +128,7 @@ class MaterializationView(object):
 
 def create_materialization(
     name: str,
-    query: str,
+    expression: str,
     destination: Destination,
     views: List[MaterializationView],
     slice_filter: SliceFilter = None,
@@ -141,7 +141,7 @@ def create_materialization(
 
         materialization = {
             "materialization_name": name,
-            "query": query,
+            "expression": expression,
             "with_views": to_with_views(views),
             "slice": slice_request,
         }
