@@ -217,8 +217,10 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	// from new files, so setting it to 0 ensures we evaluate all files
 	// to find the earliest event time.
 	var dataVersionID int64 = 0
+	var materializationVersion uint64 = 0
 	newMaterialization := &ent.Materialization{
 		Name:          request.Materialization.MaterializationName,
+		Version:       materializationVersion,
 		Expression:    request.Materialization.Query,
 		WithViews:     &v1alpha.WithViews{Views: request.Materialization.WithViews},
 		Destination:   request.Materialization.Destination,
