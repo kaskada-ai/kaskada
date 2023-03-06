@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, PrimitiveArray, UInt64Array};
 use arrow::datatypes::{DataType, UInt64Type};
+
 use hashbrown::HashMap;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_compiler::DataContext;
@@ -22,6 +23,17 @@ pub struct KeyHashInverse {
     key_hash_to_indices: HashMap<u64, usize>,
     #[serde(with = "sparrow_arrow::serde::array_ref")]
     key: ArrayRef,
+}
+
+impl std::fmt::Debug for KeyHashInverse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyHashInverse")
+            .field(
+                "key_hash_to_indices",
+                &format!("{} entries", self.key_hash_to_indices.len()),
+            )
+            .finish_non_exhaustive()
+    }
 }
 
 impl KeyHashInverse {
@@ -157,6 +169,23 @@ impl KeyHashInverse {
 pub struct ThreadSafeKeyHashInverse {
     key_map: tokio::sync::RwLock<KeyHashInverse>,
     pub key_type: DataType,
+}
+
+impl std::fmt::Debug for ThreadSafeKeyHashInverse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.key_map.try_read() {
+            Ok(khi) => f
+                .debug_struct("ThreadSafeKeyHashInverse")
+                .field("key_type", &self.key_type)
+                .field("key_map", &khi)
+                .finish(),
+            Err(_) => f
+                .debug_struct("ThreadSafeKeyHashInverse")
+                .field("key_type", &self.key_type)
+                .field("key_map", &"locked")
+                .finish(),
+        }
+    }
 }
 
 impl ThreadSafeKeyHashInverse {

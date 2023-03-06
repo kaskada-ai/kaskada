@@ -47,6 +47,8 @@ pub async fn execute(
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let plan = request.plan.ok_or(Error::MissingField("plan"))?;
 
+    let output_to = request.output_to.ok_or(Error::MissingField("output_to"))?;
+
     let changed_since_time = request.changed_since.unwrap_or(Timestamp {
         seconds: 0,
         nanos: 0,
@@ -199,7 +201,6 @@ pub async fn execute(
         flight_record_path: None,
     };
 
-    let output_to = request.output_to.ok_or(Error::internal_msg("output to"))?;
     let compute_executor = ComputeExecutor::try_spawn(
         context,
         &late_bindings,

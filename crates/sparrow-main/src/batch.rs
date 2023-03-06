@@ -12,9 +12,7 @@ use tracing::{info, info_span};
 
 mod script;
 
-pub(crate) use script::{Script, ScriptPath};
-
-use crate::batch::script::MakeAbsolute;
+pub(crate) use script::{Schema, Script, ScriptPath};
 
 /// Options for the Batch command.
 #[derive(clap::Args, Debug)]
@@ -35,15 +33,23 @@ pub struct BatchCommand {
     #[arg(long, action)]
     pub compile_only: bool,
 
+    /// File containing the schema definitions for the script.
+    #[arg(long)]
+    pub schema: PathBuf,
+
     /// Input file containing the script to run.
+    #[arg(long)]
     pub script: PathBuf,
 
     /// Output directory to write the output to.
+    #[arg(long, default_value = ".")]
     pub output_dir: PathBuf,
 }
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
+    #[display(fmt = "invalid schema")]
+    InvalidSchema,
     #[display(fmt = "invalid script")]
     InvalidScript,
     #[display(fmt = "script must be a file")]
@@ -75,22 +81,18 @@ impl BatchCommand {
 
         error_stack::ensure!(self.script.is_file(), Error::ScriptIsNotFile);
 
-        let script_path = self
-            .script
-            .canonicalize()
-            .into_report()
-            .change_context(Error::Canonicalizing)?;
-        let mut script = Script::try_from(&self.script)
+        let script = Script::try_from(&self.script)
             .change_context(Error::InvalidScript)
             .attach_printable_lazy(|| ScriptPath(self.script.clone()))?;
+        let schema = Schema::try_from(&self.schema)
+            .change_context(Error::InvalidSchema)
+            .attach_printable_lazy(|| ScriptPath(self.schema.clone()))?;
 
-        script.make_absolute(script_path.parent().ok_or(Error::ScriptNotInDirectory)?);
-
-        let tables = script.tables.clone();
+        let tables = schema.tables.clone();
         let output_to = script.output_to.clone();
         let compile_result = sparrow_compiler::compile_proto(
             CompileRequest {
-                tables: script.tables,
+                tables: schema.tables,
                 feature_set: Some(script.feature_set),
                 slice_request: self.compiler_options.slice_request,
                 expression_kind: ExpressionKind::Complete as i32,

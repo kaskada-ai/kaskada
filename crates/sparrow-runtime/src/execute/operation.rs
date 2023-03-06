@@ -34,6 +34,7 @@ mod tick;
 mod tick_producer;
 mod with_key;
 
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -103,7 +104,7 @@ impl OperationContext {
 /// Each operation may define how they send the next input batch.
 /// This also allows operations to store internal state.
 #[async_trait]
-trait Operation: Send {
+trait Operation: Send + Debug {
     fn restore_from(
         &mut self,
         operation_index: u8,
@@ -213,7 +214,7 @@ impl OperationExecutor {
 
         Ok(async move {
             if let Some(store) = &compute_store {
-                let _span = tracing::info_span!("Restoring state").entered();
+                let _span = tracing::debug_span!("Restoring state").entered();
                 expression_executor
                     .restore(operation_index, store.as_ref())
                     .into_report()
@@ -223,11 +224,12 @@ impl OperationExecutor {
                     .into_report()
                     .change_context(Error::internal())?;
             } else {
-                tracing::info!("No state to restore");
+                tracing::debug!("No state to restore");
             }
 
             let operation_handle: JoinHandle<error_stack::Result<_, Error>> = tokio::spawn(
                 async move {
+                    tracing::debug!("Full operation is {:?}", operation);
                     operation.execute(send).await?;
                     Ok(operation)
                 }
@@ -238,7 +240,6 @@ impl OperationExecutor {
             // But, expressions such as aggregations require sequential processing.
             // We could attempt to determine whether we needed to execute sequentially...
             // but for now it is easier to just have the single path.
-            tracing::info!("Starting operation");
             'operation: while let Some(input) = recv.recv().await {
                 #[cfg(debug_assertions)]
                 input
@@ -278,7 +279,7 @@ impl OperationExecutor {
                 // way of "forwarding" elements to multiple downstream channels.
                 for consumer in consumers.iter() {
                     if (consumer.send(output.clone()).await).is_err() {
-                        tracing::info!("Downstream receiver closed; breaking");
+                        tracing::debug!("Downstream receiver closed; breaking");
                         operation_handle.abort();
                         break 'operation;
                     }
@@ -318,14 +319,11 @@ impl OperationExecutor {
                     let report = Report::new(Error::internal()).attach_printable(join_error);
                     return Err(report);
                 }
-                Ok(operation_result) => {
-                    tracing::info!("Execution complete");
-                    operation_result.change_context(Error::internal())?
-                }
+                Ok(operation_result) => operation_result.change_context(Error::internal())?,
             };
 
             if let Some(store) = &compute_store {
-                let _span = tracing::info_span!("Saving state").entered();
+                let _span = tracing::debug_span!("Saving state").entered();
                 expression_executor
                     .store(operation_index, store.as_ref())
                     .into_report()
@@ -335,7 +333,7 @@ impl OperationExecutor {
                     .into_report()
                     .change_context(Error::internal())?;
             } else {
-                tracing::info!("No state store; nothing to save");
+                tracing::debug!("No state store; nothing to save");
             }
 
             let key_hash_handle: JoinHandle<anyhow::Result<_>> = tokio::spawn(

@@ -4,7 +4,7 @@ expression: output
 ---
 Prepare a file for use as part of a table
 
-Usage: sparrow-main prepare [OPTIONS] --query <QUERY> --table <TABLE> <INPUT>
+Usage: sparrow-main prepare [OPTIONS] --schema <SCHEMA> --table <TABLE> <INPUT>
 
 Arguments:
   <INPUT>
@@ -19,15 +19,13 @@ Options:
       --file-prefix <FILE_PREFIX>
           Prefix for the output file names
 
-      --query <QUERY>
-          Path to the query that will be executed.
-          
-          This path is used to read the actual query and extract the table config.
+      --schema <SCHEMA>
+          Path to the serialized schema
 
       --table <TABLE>
           The name of the table being prepared.
           
-          This must exist within the tables in the query.
+          This must be defined in the schema.
 
   -h, --help
           Print help (see a summary with '-h')
