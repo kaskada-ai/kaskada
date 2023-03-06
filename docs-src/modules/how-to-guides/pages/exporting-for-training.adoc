@@ -95,7 +95,7 @@ from kaskada import view
 
 view.create_view(
     view_name = "Examples",
-    expression = examples,
+    expression = examples.query,
 )
 ----
 
@@ -113,20 +113,8 @@ Begin by limiting the examples to the training time range.
 %%fenl
 
 Examples 
-  | when time_of($input) > ("2020-01-01T00:00:00Z" as timestamp_ns)
+  | when(time_of($input) > ("2020-01-01T00:00:00Z" as timestamp_ns))
     and time_of($input) <= ("2020-02-03T00:00:00Z" as timestamp_ns))
-----
-
-[source,python]
-----
-training_resp = compute.query(
-  query = """
-  Examples 
-    | when(time_of($input) > ("2020-01-01T00:00:00Z" as timestamp_ns)
-      and time_of($input) <= ("2020-02-03T00:00:00Z" as timestamp_ns))
-  """,
-)
-training = pandas.read_parquet(training_resp.parquet.path, engine = "pyarrow")
 ----
 
 Next we limit the examples to different time bounds to produce a
@@ -134,23 +122,11 @@ validation dataset.
 
 [source,IPython]
 ----
-%%fenl
+%%fenl --var training
 
 Examples 
-  | when time_of($input) > ("2020-02-03T00:00:00Z" as timestamp_ns)
+  | when(time_of($input) > ("2020-02-03T00:00:00Z" as timestamp_ns))
     and time_of($input) <= ("2020-04-12T00:00:00Z" as timestamp_ns))
-----
-
-[source,python]
-----
-validation_resp = compute.query(
-  query = """
-  Examples 
-    | when time_of($input) > ("2020-02-03T00:00:00Z" as timestamp_ns)
-    and time_of($input) <= ("2020-04-01T00:00:00Z" as timestamp_ns))
-  """,
-)
-validation = pandas.read_parquet(validation_resp.parquet.path, engine = "pyarrow")
 ----
 
 We're finally ready to train a model. This shows a simple linear
@@ -161,9 +137,9 @@ regression model.
 from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
 
-X_train = training.drop(['_time', '_subsort', '_key_hash', 'entity', 'target'], axis = 1)
+X_train = training.dataframe.drop(['_time', '_subsort', '_key', '_key_hash', 'entity', 'target'], axis = 1)
 y_train = training['target']
-X_validation = validation.drop(['_time', '_subsort', '_key_hash', 'entity', 'target'], axis = 1)
+X_validation = validation.drop(['_time', '_subsort', '_key', '_key_hash', 'entity', 'target'], axis = 1)
 y_validation = validation['target']
 
 scaler = preprocessing.StandardScaler().fit(X_train)
