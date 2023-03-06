@@ -562,10 +562,7 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			// Append the materialization version to the output prefix so result files
 			// for specific datatokens are grouped together.
 			outputPrefixUri := kind.ObjectStore.GetOutputPrefixUri()
-			if !strings.HasSuffix(outputPrefixUri, "/") {
-				outputPrefixUri = outputPrefixUri + "/"
-			}
-			outputPrefixUri = outputPrefixUri + strconv.FormatUint(materialization.Version, 10)
+			outputPrefixUri = path.Join(outputPrefixUri, strconv.FormatUint(materialization.Version, 10))
 
 			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
