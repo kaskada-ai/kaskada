@@ -93,11 +93,20 @@ class FenlMagics(Magics):
         preview_rows = clean_arg(args.preview_rows)
         var = clean_arg(args.var)
 
+        final_result_time = clean_arg(args.final_time)
         result_behavior = (
             "final-results"
             if test_arg(clean_arg(args.result_behavior), "final-results")
             else "all-results"
         )
+
+        # Assert the result behaviors are valid
+        if final_result_time is not None and result_behavior == "all-results":
+            raise UsageError(
+                '--final-time must be used with result-behavior "final-results"'
+            )
+        if final_result_time is not None:
+            result_behavior = "final-results"
 
         if cell is None:
             expression = arg

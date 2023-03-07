@@ -112,7 +112,6 @@ impl FinalTickOperation {
     }
 
     fn update_internal_state(&mut self, incoming: &Batch) -> error_stack::Result<(), super::Error> {
-        // Tick after all input batches are processed
         if incoming.num_rows() > 0 {
             let key_hash_array: &UInt64Array =
                 downcast_primitive_array(incoming.column(2).as_ref())

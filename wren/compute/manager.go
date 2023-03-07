@@ -85,7 +85,6 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
-
 	switch resultBehavior {
 	case v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_UNSPECIFIED
@@ -96,7 +95,7 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
-		subLogger.Error().Str("resultBehavior", resultBehavior.String()).Msg("unexpeted resultBehavior")
+		subLogger.Error().Str("resultBehavior", resultBehavior.String()).Msg("unexpected resultBehavior")
 		return nil, fmt.Errorf("unexpected resultBehavior: %s", resultBehavior.String())
 	}
 
@@ -180,7 +179,7 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 	case *v2alpha.ResultBehavior_FinalResultsAtTime:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
-		subLogger.Error().Str("resultBehavior", fmt.Sprintf("%T", config.ResultBehavior.ResultBehavior)).Msg("unexpeted resultBehavior")
+		subLogger.Error().Str("resultBehavior", fmt.Sprintf("%T", config.ResultBehavior.ResultBehavior)).Msg("unexpected resultBehavior")
 		return nil, customerrors.NewInternalError("unexpected resultBehavior")
 	}
 
@@ -200,7 +199,7 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 				},
 			}
 		default:
-			subLogger.Error().Str("sliceRequest", fmt.Sprintf("%T", config.Slice.Slice)).Msg("unexpeted sliceRequest")
+			subLogger.Error().Str("sliceRequest", fmt.Sprintf("%T", config.Slice.Slice)).Msg("unexpected sliceRequest")
 			return nil, customerrors.NewInternalError("unexpected sliceRequest")
 		}
 	}
@@ -289,7 +288,7 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
-		subLogger.Error().Str("resultBehavior", request.ResultBehavior.String()).Msg("unexpeted resultBehavior")
+		subLogger.Error().Str("resultBehavior", request.ResultBehavior.String()).Msg("unexpected resultBehavior")
 		return nil, fmt.Errorf("unexpected resultBehavior: %s", request.ResultBehavior.String())
 	}
 

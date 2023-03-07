@@ -177,14 +177,11 @@ impl Operation for TickOperation {
 
         // Process the remaining incoming batches.
         while let Some(incoming) = self.input_stream.next().await {
-            tracing::info!("FRAZ - Tick receiving batch: {:?}", incoming);
             self.handle_incoming_batch(incoming, &sender)
                 .await
                 .into_report()
                 .change_context(Error::internal())?;
         }
-
-        tracing::info!("--------------------------FRAZ TICK OPREATION IS DONE----------------");
 
         // Once we're done with incoming batches, see if we need to
         // process one last tick at the current upper bound.
