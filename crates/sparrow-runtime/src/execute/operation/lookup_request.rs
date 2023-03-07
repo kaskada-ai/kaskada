@@ -22,6 +22,7 @@ use crate::execute::operation::{InputBatch, Operation};
 use crate::execute::{invalid_operation, Error};
 use crate::Batch;
 
+#[derive(Debug)]
 pub(super) struct LookupRequestOperation {
     foreign_key_column: usize,
 

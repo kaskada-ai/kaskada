@@ -29,6 +29,7 @@ use crate::Batch;
 ///
 /// This operation stores rows until such time the predicate evaluates to true
 /// for a key associated with a stored row.
+#[derive(Debug)]
 pub(super) struct ShiftUntilOperation {
     condition_input_column: usize,
     incoming_stream: ReceiverStream<Batch>,

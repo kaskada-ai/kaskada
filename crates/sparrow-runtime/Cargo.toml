@@ -49,6 +49,7 @@ parquet.workspace = true
 pin-project.workspace = true
 prost-wkt-types.workspace = true
 serde.workspace = true
+serde_yaml.workspace = true
 sha2.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }

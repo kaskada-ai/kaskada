@@ -9,6 +9,7 @@ use futures::stream::BoxStream;
 use sparrow_api::kaskada::v1alpha::output_to;
 use sparrow_api::kaskada::v1alpha::{FileType, ObjectStoreDestination};
 use tempfile::NamedTempFile;
+use tokio::time::Instant;
 use uuid::Uuid;
 
 use crate::{
@@ -44,6 +45,7 @@ pub(super) async fn write(
         .into_report()
         .change_context(Error::ProgressUpdateFailure)?;
 
+    let start = Instant::now();
     let format = object_store.file_type();
     let output_prefix = object_store.output_prefix_uri;
     if is_s3_path(&output_prefix) {
@@ -147,6 +149,8 @@ pub(super) async fn write(
             .into_report()
             .change_context(Error::ProgressUpdateFailure)?
     };
+    let elapsed = start.elapsed();
+    tracing::debug!("Write took {:?}", elapsed);
 
     Ok(())
 }

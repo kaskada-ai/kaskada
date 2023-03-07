@@ -1,0 +1,36 @@
+tables:
+  - config:
+      name: Transaction
+      uuid: ece50bec-9cdb-11ed-a8fc-0242ac120002
+      time_column_name: transaction_date
+      group_column_name: msno
+      grouping: Transaction
+    metadata:
+      file_count: 1
+      schema:
+        fields:
+          - name: msno
+            data_type:
+              kind: !Primitive 14 # STRING
+          - name: payment_method_id
+            data_type:
+              kind: !Primitive 6 # I64
+          - name: payment_plan_days
+            data_type:
+              kind: !Primitive 6 # I64
+          - name: transaction_date
+            data_type:
+              kind: !Primitive 22 # TIMESTAMP_MILLISECOND
+          - name: membership_expire_date
+            data_type:
+              kind: !Primitive 22 # TIMESTAMP_MILLISECOND
+    file_sets:
+      - slice_plan:
+          table_name: Transaction
+          percent: 100
+        prepared_files:
+          - path: prepared/prepared-Transaction-transactions-0.parquet
+            metadata_path: prepared/prepared-Transaction-transactions-0-metadata.parquet
+            min_event_time: 2015-01-01T00:00:00Z
+            max_event_time: 2016-03-21T00:00:00Z
+            num_rows: 10773873

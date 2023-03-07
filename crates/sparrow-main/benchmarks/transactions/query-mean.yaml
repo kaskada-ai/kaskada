@@ -1,0 +1,11 @@
+feature_set:
+  query: >
+    {
+      mean_payment_days: Transaction.payment_plan_days | mean()
+    }
+
+output_to:
+  destination:
+    !ObjectStore
+      file_type: 1 # FILE_TYPE_PARQUET
+      output_prefix_uri: file:///Users/jonathan/Projects/kaskada/crates/sparrow-main/benchmarks/transactions/out

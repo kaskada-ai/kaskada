@@ -17,6 +17,7 @@ use sparrow_core::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
 
+#[derive(Debug)]
 pub(super) struct WithKeyOperation {
     new_key_input_index: usize,
     /// The input stream of batches.

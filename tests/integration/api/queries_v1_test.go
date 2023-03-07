@@ -73,20 +73,11 @@ var _ = Describe("Queries V1", Ordered, func() {
 
 	Context("When a query resource is created", func() {
 		queryId := ""
-		It("should create a query resource", func() {
-			destination := &v1alpha.OutputTo_ObjectStore{
-				ObjectStore: &v1alpha.ObjectStoreDestination{
-					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-				},
-			}
-
+		It("should create a query resource with default values", func() {
 			query := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
 					Expression:     tableName,
-					OutputTo:       &v1alpha.OutputTo{Destination: destination},
-					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 				},
-				QueryOptions: &v1alpha.QueryOptions{},
 			}
 			stream, err := queryClient.CreateQuery(ctx, query)
 			Expect(err).ShouldNot(HaveOccurredGrpc())
@@ -117,6 +108,8 @@ var _ = Describe("Queries V1", Ordered, func() {
 			})
 			Expect(err).Should(BeNil())
 			Expect(res.Query.QueryId).Should(Equal(queryUUID.String()))
+			Expect(res.Query.OutputTo.GetObjectStore().FileType).Should(Equal(v1alpha.FileType_FILE_TYPE_PARQUET))
+			Expect(res.Query.ResultBehavior).Should(Equal(v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS))
 		})
 		It("should list the queries with newly created resource", func() {
 			res, err := queryClient.ListQueries(ctx, &v1alpha.ListQueriesRequest{})

@@ -5,7 +5,7 @@ use sparrow_api::kaskada::v1alpha::{FilePath, PrepareDataRequest, SlicePlan};
 
 use sparrow_runtime::s3::S3Helper;
 
-use crate::batch::{Script, ScriptPath};
+use crate::batch::{Schema, ScriptPath};
 use crate::serve;
 
 /// Options for the Prepare command.
@@ -23,23 +23,21 @@ pub struct PrepareCommand {
     #[arg(long)]
     pub file_prefix: Option<String>,
 
-    /// Path to the query that will be executed.
-    ///
-    /// This path is used to read the actual query and extract the table config.
+    /// Path to the serialized schema.
     #[arg(long)]
-    pub query: PathBuf,
+    pub schema: PathBuf,
 
     /// The name of the table being prepared.
     ///
-    /// This must exist within the tables in the query.
+    /// This must be defined in the schema.
     #[arg(long)]
     pub table: String,
 }
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
-    #[display(fmt = "invalid script")]
-    InvalidScript,
+    #[display(fmt = "invalid schema")]
+    InvalidSchema,
     #[display(fmt = "missing table")]
     MissingTable,
     #[display(fmt = "missing table config")]
@@ -81,20 +79,20 @@ impl PrepareCommand {
     pub async fn execute(self) -> error_stack::Result<(), Error> {
         println!("Preparing files: {self:?}");
 
-        let script = Script::try_from(&self.query)
-            .attach_printable_lazy(|| ScriptPath(self.query.clone()))
-            .change_context(Error::InvalidScript)?;
-        let table = script
+        let schema = Schema::try_from(&self.schema)
+            .attach_printable_lazy(|| ScriptPath(self.schema.clone()))
+            .change_context(Error::InvalidSchema)?;
+        let table = schema
             .tables
             .into_iter()
             .find(|table| self.table == table.name())
             .ok_or(error_stack::report!(Error::MissingTable))
-            .attach_printable_lazy(|| ScriptPath(self.query.clone()))
+            .attach_printable_lazy(|| ScriptPath(self.schema.clone()))
             .attach_printable_lazy(|| TableName(self.table.clone()))?;
         let config = table
             .config
             .ok_or(error_stack::report!(Error::MissingTableConfig))
-            .attach_printable_lazy(|| ScriptPath(self.query.clone()))
+            .attach_printable_lazy(|| ScriptPath(self.schema.clone()))
             .attach_printable_lazy(|| TableName(self.table.clone()))?;
         let file_prefix = if let Some(prefix) = &self.file_prefix {
             prefix.to_owned()
@@ -140,7 +138,7 @@ impl PrepareCommand {
         serve::preparation_service::prepare_data(S3Helper::new().await, tonic::Request::new(pdr))
             .await
             .change_context(Error::Preparing)
-            .attach_printable_lazy(|| ScriptPath(self.query.clone()))
+            .attach_printable_lazy(|| ScriptPath(self.schema.clone()))
             .attach_printable_lazy(|| TableName(self.table.clone()))?;
 
         Ok(())

@@ -9,6 +9,7 @@ use crate::key_hash_index::KeyHashIndex;
 use crate::Batch;
 
 /// Helper for simple operations that consume one input stream.
+#[derive(Debug)]
 pub(super) struct SingleConsumerHelper {
     pub incoming_columns: Vec<usize>,
     key_index_state: KeyHashIndex,

@@ -26,6 +26,7 @@ use crate::execute::operation::{InputBatch, Operation};
 use crate::Batch;
 
 /// Implementation of Shift To for a literal.
+#[derive(Debug)]
 struct ShiftToLiteralOperation {
     /// The timestamp nanos to shift to.
     timestamp: i64,
@@ -59,6 +60,7 @@ struct ShiftToLiteralOperation {
 /// row-level encoding) in RocksDB keyed by time, so we could later iterate over
 /// a specific time range. We may be able to use the Data Fusion row-based
 /// format for this: https://github.com/apache/arrow-datafusion/blob/master/datafusion/row/src/lib.rs.
+#[derive(Debug)]
 struct ShiftToColumnOperation {
     shift_time_column: usize,
     /// The pending data for the shift.
