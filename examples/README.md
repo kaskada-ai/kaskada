@@ -1,6 +1,6 @@
 # Kaskada Examples
 
-This directory contains different examples of using Kaskada. These examples should work on the latest release of Kaskada and the latest Kaskada python client. The intent is to ensure these examples are kept up to date and are working reference points for users.
+This directory contains different examples of using Kaskada. The included examples should work with the latest [release of Kaskada](https://github.com/kaskada-ai/kaskada/releases) and the latest Python Client [released to PyPi](https://pypi.org/project/kaskada/#history). However, there are some examples that may be pending/in-development (see section below). The intent is to ensure these examples are kept up to date and are working reference points for users.
 
 
 ## In Development Examples
