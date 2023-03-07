@@ -10,6 +10,9 @@ within the next 30 days given two event tables; a `Purchase` table and a
 
 [source,python]
 ----
+from kaskada import table
+import pandas
+
 table.create_table(
   table_name = "Purchase",
   time_column_name = "purchase_time",
@@ -22,10 +25,11 @@ table.create_table(
   entity_key_column_name = "customer_id",
   subsort_column_name = "subsort_id",
 )
+
 purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk"
 purchases = pandas.read_parquet(purchases_url)
-table.upload_dataframe("Purchase", purchases)
-table.upload_dataframe("PurchaseByCustomer", purchases)
+table.load_dataframe("Purchase", purchases)
+table.load_dataframe("PurchaseByCustomer", purchases)
 
 table.create_table(
   table_name = "FraudReport",
@@ -35,7 +39,7 @@ table.create_table(
 )
 frauds_url = "https://drive.google.com/uc?export=download&id=1WXRW1zt1EEPcbrw4nw9rCdhTqlatxTSR"
 frauds = pandas.read_parquet(frauds_url)
-table.upload_dataframe("FraudReport", frauds)
+table.load_dataframe("FraudReport", frauds)
 ----
 
 == Feature Definitions
@@ -55,7 +59,7 @@ to the time interval 2015-2020.
 .Usage
 ====
 The fenlmagic extension is designed to make it easy to
-interactively explore your dataset. When you're ready time to train
+interactively explore your dataset. When you're ready to train a
 model we recommend using the Python client. The python client exposes
 the full functionality of the Kaskada API and is better-suited to tasks
 such as managing Views, Tables, and making multiple queries with

@@ -104,10 +104,10 @@ purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-e
 purchases = pandas.read_parquet(purchases_url)
 
 # Upload the dataframe's contents to the Purchase table
-table.upload_dataframe("Purchase", purchases)
+table.load_dataframe("Purchase", purchases)
 ----
 
-The result of running `upload_dataframe` returns a `data_token_id`. The
+The result of running `load_dataframe` returns a `data_token_id`. The
 data token ID is a unique reference to the data currently stored in the
 system.
 
