@@ -231,7 +231,7 @@ func (c *materializationClient) ListMaterializations(ctx context.Context, owner 
 	return materializations, nil
 }
 
-func (c *materializationClient) UpdateDataVersion(ctx context.Context, owner *ent.Owner, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
+func (c *materializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.UpdateDateVersion").Logger()
 
 	updated_materialization, err := materialization.Update().SetDataVersionID(newDataVersion).Save(ctx)

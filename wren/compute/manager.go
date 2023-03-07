@@ -562,7 +562,7 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			// Append the materialization version to the output prefix so result files
 			// for specific datatokens are grouped together.
 			outputPrefixUri := kind.ObjectStore.GetOutputPrefixUri()
-			outputPrefixUri = path.Join(outputPrefixUri, strconv.FormatUint(materialization.Version, 10))
+			outputPrefixUri = path.Join(outputPrefixUri, strconv.FormatInt(materialization.Version, 10))
 
 			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
@@ -631,13 +631,13 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 
 		// Update materializations that have run with the current data version id, so on
 		// subsequent runs only the updated values will be produced.
-		_, err = m.materializationClient.UpdateDataVersion(ctx, owner, materialization.ID, queryContext.dataToken.DataVersionID)
+		_, err = m.materializationClient.UpdateDataVersion(ctx, materialization, queryContext.dataToken.DataVersionID)
 		if err != nil {
 			matLogger.Error().Err(err).Str("name", materialization.Name).Int64("previousDataVersion", dataVersionID).Int64("newDataVersion", queryContext.dataToken.DataVersionID).Msg("error updating materialization with new data version")
 			return nil
 		}
 		// Update the version for this materialization.
-		_, err = m.materializationClient.IncrementVersion(ctx, owner, materialization.ID)
+		_, err = m.materializationClient.IncrementVersion(ctx, materialization)
 		if err != nil {
 			matLogger.Error().Err(err).Str("name", materialization.Name).Msg("error updating materialization version")
 			return nil

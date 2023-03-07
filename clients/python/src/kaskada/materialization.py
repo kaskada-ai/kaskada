@@ -224,21 +224,24 @@ def to_with_views(views: List[MaterializationView]) -> List[material_pb.WithView
         with_views.append(material_pb.WithView(name=v._name, expression=v._expression))
     return with_views
 
+
 def format_output_prefix_uri(arg: str) -> str:
     """
     Formats the given arg to the expected pattern.
     Accepts "file:///path" and "/path" formats.
-     
+
     Args:
         arg (str): the input path or uri
     Returns:
         str: file uri formatted as `file:///path`
     """
     if arg is not None:
-        if not arg.startswith('file:///') and not arg.startswith('/'):
-            raise ValueError("output_prefix_uri must be a file uri or absolute path. Try prefixing with \"file:///\"")
+        if not arg.startswith("file:///") and not arg.startswith("/"):
+            raise ValueError(
+                'output_prefix_uri must be a file uri or absolute path. Try prefixing with "file:///"'
+            )
 
-        if arg.startswith('/'):
+        if arg.startswith("/"):
             return "file://" + arg
 
     return arg

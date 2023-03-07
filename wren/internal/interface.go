@@ -85,8 +85,8 @@ type MaterializationClient interface {
 	GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error)
 	GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error)
 	ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error)
-	UpdateDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error)
-	IncrementVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID) (*ent.Materialization, error)
+	UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error)
+	IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error)
 }
 
 // MaterializationClientProvider creates MaterializationClients

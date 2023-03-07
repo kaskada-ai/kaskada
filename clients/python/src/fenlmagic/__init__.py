@@ -199,4 +199,3 @@ def test_arg(arg: str, val: str) -> bool:
     """
     if arg is not None and val is not None:
         return arg.replace("_", "-").lower() == val.replace("_", "-").lower()
-

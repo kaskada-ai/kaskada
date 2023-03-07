@@ -69,20 +69,28 @@ def test_object_store_destination_to_request():
         "output_prefix_uri": output_prefix,
     }
 
+
 def test_object_store_destination_fails_for_invalid_output_uri():
     csv_file = FileType.FILE_TYPE_CSV
     output_prefix = "my_prefix"
     csv_object_store = ObjectStoreDestination(csv_file, output_prefix)
     with pytest.raises(ValueError) as value_exc:
-        csv_object_store.to_request() 
-    assert "output_prefix_uri must be a file uri or absolute path. Try prefixing with \"file:///\"" in str(value_exc.value)
+        csv_object_store.to_request()
+    assert (
+        'output_prefix_uri must be a file uri or absolute path. Try prefixing with "file:///"'
+        in str(value_exc.value)
+    )
 
     parquet_file = FileType.FILE_TYPE_PARQUET
     output_prefix = "file://my_prefix"
     parquet_object_store = ObjectStoreDestination(parquet_file, output_prefix)
     with pytest.raises(ValueError) as value_exc:
-        parquet_object_store.to_request() 
-    assert "output_prefix_uri must be a file uri or absolute path. Try prefixing with \"file:///\"" in str(value_exc.value)
+        parquet_object_store.to_request()
+    assert (
+        'output_prefix_uri must be a file uri or absolute path. Try prefixing with "file:///"'
+        in str(value_exc.value)
+    )
+
 
 def test_pulsar_destination_to_request():
     tenant = "tenant"
@@ -214,7 +222,7 @@ materialization_name: "my_awkward_tacos"
 @patch("kaskada.client.Client")
 def test_create_materialization_object_store_destination(mockClient):
     name = "my_awkward_tacos"
-    query = "last(tacos)"
+    expression = "last(tacos)"
     destination = ObjectStoreDestination(FileType.FILE_TYPE_CSV, "file:///prefix")
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
@@ -223,7 +231,7 @@ def test_create_materialization_object_store_destination(mockClient):
         **{
             "materialization": {
                 "materialization_name": name,
-                "query": query,
+                "expression": expression,
                 "with_views": [
                     {"name": "my_second_view", "expression": "last(awkward)"}
                 ],
@@ -238,7 +246,12 @@ def test_create_materialization_object_store_destination(mockClient):
         }
     )
     create_materialization(
-        name, query, destination, views, slice_filter=slice_filter, client=mockClient
+        name,
+        expression,
+        destination,
+        views,
+        slice_filter=slice_filter,
+        client=mockClient,
     )
     mockClient.materialization_stub.CreateMaterialization.assert_called_with(
         expected_request, metadata=mockClient.get_metadata()
@@ -248,7 +261,7 @@ def test_create_materialization_object_store_destination(mockClient):
 @patch("kaskada.client.Client")
 def test_create_materialization_object_store_parquet_destination(mockClient):
     name = "my_awkward_tacos"
-    query = "last(tacos)"
+    expression = "last(tacos)"
     destination = ObjectStoreDestination(FileType.FILE_TYPE_PARQUET, "/prefix")
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
@@ -257,7 +270,7 @@ def test_create_materialization_object_store_parquet_destination(mockClient):
         **{
             "materialization": {
                 "materialization_name": name,
-                "query": query,
+                "expression": expression,
                 "with_views": [
                     {"name": "my_second_view", "expression": "last(awkward)"}
                 ],
@@ -272,7 +285,12 @@ def test_create_materialization_object_store_parquet_destination(mockClient):
         }
     )
     create_materialization(
-        name, query, destination, views, slice_filter=slice_filter, client=mockClient
+        name,
+        expression,
+        destination,
+        views,
+        slice_filter=slice_filter,
+        client=mockClient,
     )
     mockClient.materialization_stub.CreateMaterialization.assert_called_with(
         expected_request, metadata=mockClient.get_metadata()
@@ -296,7 +314,7 @@ def test_create_materialization_redis_destination(mockClient):
     redis_destination = RedisDestination(**params)
 
     name = "my_awkward_tacos"
-    query = "last(tacos)"
+    expression = "last(tacos)"
     destination = redis_destination
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
@@ -305,7 +323,7 @@ def test_create_materialization_redis_destination(mockClient):
         **{
             "materialization": {
                 "materialization_name": name,
-                "query": query,
+                "expression": expression,
                 "with_views": [
                     {"name": "my_second_view", "expression": "last(awkward)"}
                 ],
@@ -315,7 +333,12 @@ def test_create_materialization_redis_destination(mockClient):
         }
     )
     create_materialization(
-        name, query, destination, views, slice_filter=slice_filter, client=mockClient
+        name,
+        expression,
+        destination,
+        views,
+        slice_filter=slice_filter,
+        client=mockClient,
     )
     mockClient.materialization_stub.CreateMaterialization.assert_called_with(
         expected_request, metadata=mockClient.get_metadata()
