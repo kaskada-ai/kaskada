@@ -207,8 +207,7 @@ async fn test_sum_i64_final_at_time() {
 #[tokio::test]
 async fn test_sum_i64_all_filtered_final_at_time() {
     let datetime = NaiveDateTime::new(date_for_test(1970, 12, 20), time_for_test(0, 39, 58));
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m) }").with_final_results_at_time(datetime).run_to_csv(&i64_data_fixture()).await.unwrap(), @"_time,_subsort,_key_hash,_key,sum_field
-");
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m) }").with_final_results_at_time(datetime).run_to_csv(&i64_data_fixture()).await.unwrap(), @"");
 }
 
 fn shift_data_fixture_at_time() -> DataFixture {
