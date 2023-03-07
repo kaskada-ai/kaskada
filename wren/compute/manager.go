@@ -286,7 +286,8 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_ALL
 	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL
-
+	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
+		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
 		subLogger.Error().Str("resultBehavior", request.ResultBehavior.String()).Msg("unexpeted resultBehavior")
 		return nil, fmt.Errorf("unexpected resultBehavior: %s", request.ResultBehavior.String())
