@@ -402,6 +402,7 @@ mod tests {
             key_hash_inverse,
             max_event_in_snapshot: None,
             progress_updates_tx,
+            output_at_time: None,
         };
 
         executor

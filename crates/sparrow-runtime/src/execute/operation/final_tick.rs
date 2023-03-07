@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -9,9 +10,10 @@ use arrow::datatypes::{
     ArrowPrimitiveType, DataType, Field, Schema, SchemaRef, TimestampNanosecondType,
 };
 use async_trait::async_trait;
+use chrono::NaiveDateTime;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::StreamExt;
-use itertools::Itertools;
+use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sparrow_core::{downcast_primitive_array, KeyTriple};
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
@@ -19,7 +21,7 @@ use static_init::dynamic;
 
 use super::expression_executor::InputColumn;
 use super::sorted_key_hash_map::SortedKeyHashMap;
-use super::{BoxedOperation, Operation};
+use super::{BoxedOperation, Operation, OperationContext};
 use crate::execute::operation::InputBatch;
 use crate::Batch;
 
@@ -36,8 +38,14 @@ static TICK_SCHEMA: SchemaRef = Arc::new(Schema::new(vec![
 
 /// Holds state necessary to produce the final tick batch.
 ///
-/// This operation is responsible for producing a single final tick
-/// at the end of time.
+/// This operation is responsible for producing a final tick at the
+/// time of the last input + 1ns. The reason the ns is added is because
+/// of ordering constraints. For example, say that at the final time T, entities
+/// [A,G] were input and produced. The final tick then enumerates all entities,
+/// which include the set [A,B,C,G]. However, our ordering requires entities
+/// be ordered in time. Because we've already produced entity G at time T,
+/// we panic when attempting to produce entities [A,B,C] again at T.
+///
 /// Note this is separated from [TickOperation] to reduce complexity, at the
 /// cost of some duplicated code. Likely could create a `TickOperation` trait
 /// with shared code, and pass a `dyn TickOperation` around to reduce
@@ -54,6 +62,10 @@ pub(super) struct FinalTickOperation {
     /// The final tick occurs at the time plus 1ns once it has
     /// stopped receiving incoming batches.
     current_time: i64,
+
+    /// If this is set, the final tick should occur at this time.
+    /// If not, the final tick should occur at the last input time + 1ns.
+    tick_at: Option<NaiveDateTime>,
 }
 
 impl std::fmt::Debug for FinalTickOperation {
@@ -69,11 +81,13 @@ impl std::fmt::Debug for FinalTickOperation {
 #[derive(Serialize, Deserialize)]
 struct FinalTickOperationState {
     current_time: i64,
+    tick_at: Option<NaiveDateTime>,
 }
 
 impl FinalTickOperation {
     /// Create the stream of input batches for a tick operation.
     pub(super) fn create(
+        context: &mut OperationContext,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
     ) -> error_stack::Result<BoxedOperation, super::Error> {
@@ -93,7 +107,49 @@ impl FinalTickOperation {
             input_stream,
             key_hashes: SortedKeyHashMap::new(),
             current_time: 0,
+            tick_at: context.output_at_time,
         }))
+    }
+
+    fn update_internal_state(&mut self, incoming: &Batch) -> error_stack::Result<(), super::Error> {
+        // Tick after all input batches are processed
+        if incoming.num_rows() > 0 {
+            let key_hash_array: &UInt64Array =
+                downcast_primitive_array(incoming.column(2).as_ref())
+                    .into_report()
+                    .change_context(Error::internal())?;
+            self.key_hashes
+                .get_or_update_indices(key_hash_array)
+                .into_report()
+                .change_context(Error::internal())?;
+        }
+        self.current_time = incoming.upper_bound.time;
+        Ok(())
+    }
+
+    /// Returns the new entities discovered in the batch and their earliest
+    /// times.
+    ///
+    /// Does not mutate the state's known entities.
+    fn discover_entities(
+        &self,
+        batch: &Batch,
+    ) -> error_stack::Result<BTreeMap<u64, i64>, super::Error> {
+        let mut discovered = BTreeMap::new();
+        let keys: &UInt64Array = downcast_primitive_array(batch.column(2).as_ref())
+            .into_report()
+            .change_context(Error::internal_msg("downcasting key hash"))?;
+        let time: &TimestampNanosecondArray = downcast_primitive_array(batch.column(0).as_ref())
+            .into_report()
+            .change_context(Error::internal_msg("downcasting time"))?;
+        for (key_hash, time) in izip!(keys, time) {
+            let key_hash = key_hash.expect("non-null key");
+            let time = time.expect("non-null time");
+            if !self.key_hashes.contains_key(key_hash) {
+                discovered.entry(key_hash).or_insert(time);
+            }
+        }
+        Ok(discovered)
     }
 }
 
@@ -108,7 +164,10 @@ impl Operation for FinalTickOperation {
             .restore_from(operation_index, compute_store)?;
         let state = compute_store
             .get(&StoreKey::new_tick_state(operation_index))?
-            .unwrap_or(FinalTickOperationState { current_time: 0 });
+            .unwrap_or(FinalTickOperationState {
+                current_time: 0,
+                tick_at: self.tick_at,
+            });
         self.current_time = state.current_time;
 
         Ok(())
@@ -118,6 +177,7 @@ impl Operation for FinalTickOperation {
         self.key_hashes.store_to(operation_index, compute_store)?;
         let state = FinalTickOperationState {
             current_time: self.current_time,
+            tick_at: self.tick_at,
         };
         compute_store.put(&StoreKey::new_tick_state(operation_index), &state)?;
         Ok(())
@@ -127,17 +187,32 @@ impl Operation for FinalTickOperation {
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,
     ) -> error_stack::Result<(), super::Error> {
-        while let Some(incoming) = self.input_stream.next().await {
-            let key_hash_array: &UInt64Array =
-                downcast_primitive_array(incoming.column(2).as_ref())
+        'outer: while let Some(incoming) = self.input_stream.next().await {
+            if let Some(tick_at) = self.tick_at {
+                let upper_bound = incoming
+                    .upper_bound_as_date()
                     .into_report()
-                    .change_context(Error::internal())?;
-            self.key_hashes
-                .get_or_update_indices(key_hash_array)
-                .into_report()
-                .change_context(Error::internal())?;
+                    .change_context(Error::internal_msg("converting upper bound to date"))?;
+                if upper_bound >= tick_at {
+                    // Since we know we only produce a single batch from this operation before
+                    // exiting, we know that we haven't yet produced a tick batch here.
+                    // Add entities before the tick time to the known key hashes.
+                    let discovered_entities = self.discover_entities(&incoming)?;
+                    let keys_before_tick = discovered_entities
+                        .iter()
+                        .filter(|(_, t)| **t <= tick_at.timestamp_nanos())
+                        .map(|(k, _)| *k);
+                    self.key_hashes.extend(keys_before_tick);
 
-            self.current_time = incoming.upper_bound.time;
+                    break 'outer;
+                } else {
+                    self.update_internal_state(&incoming)?
+                }
+            } else {
+                self.update_internal_state(&incoming)?
+            }
+
+            // Send an empty batch with bounds to allow downstream consumers to progress
             let empty_batch = InputBatch::new_empty(
                 TICK_SCHEMA.clone(),
                 incoming.lower_bound,
@@ -152,11 +227,11 @@ impl Operation for FinalTickOperation {
         }
 
         if !self.key_hashes.is_empty() {
-            let final_tick_time = self.current_time + 1;
-            send_tick_batch(final_tick_time, &self.key_hashes, &sender)
-                .await
-                .into_report()
-                .change_context(Error::internal())?;
+            if let Some(tick_at) = self.tick_at {
+                send_tick_batch(tick_at.timestamp_nanos() + 1, &self.key_hashes, &sender).await?;
+            } else {
+                send_tick_batch(self.current_time + 1, &self.key_hashes, &sender).await?;
+            }
         }
 
         Ok(())
@@ -168,8 +243,11 @@ async fn send_tick_batch(
     tick_nanos: i64,
     key_hashes: &SortedKeyHashMap,
     sender: &tokio::sync::mpsc::Sender<InputBatch>,
-) -> anyhow::Result<()> {
-    anyhow::ensure!(key_hashes.len() > 0);
+) -> error_stack::Result<(), super::Error> {
+    error_stack::ensure!(
+        !key_hashes.is_empty(),
+        crate::execute::error::invalid_operation!("key hashes should be non-zero")
+    );
 
     let key_chunks = futures::stream::iter(key_hashes.keys()).chunks(MAX_TICK_ROWS);
     let value_chunks = futures::stream::iter(key_hashes.values()).chunks(MAX_TICK_ROWS);
@@ -225,7 +303,11 @@ async fn send_tick_batch(
             upper_bound,
         };
 
-        sender.send(input_batch).await?
+        sender
+            .send(input_batch)
+            .await
+            .into_report()
+            .change_context(Error::internal_msg("sending tick batch"))?
     }
     Ok(())
 }
@@ -268,6 +350,7 @@ mod tests {
             input_stream,
             current_time: 0,
             key_hashes: SortedKeyHashMap::new(),
+            tick_at: None,
         }
     }
 
@@ -372,6 +455,7 @@ mod tests {
                 input_stream: Box::pin(futures::stream::iter(vec![])),
                 current_time: current1,
                 key_hashes: keys1.clone(),
+                tick_at: None,
             };
             original_operation.store_to(0, &store).unwrap();
 
@@ -379,6 +463,7 @@ mod tests {
                 input_stream: Box::pin(futures::stream::iter(vec![])),
                 current_time: 0,
                 key_hashes: SortedKeyHashMap::new(),
+                tick_at: None,
             };
             restored_operation.restore_from(0, &store).unwrap();
 

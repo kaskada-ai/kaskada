@@ -199,8 +199,8 @@ async fn test_sum_i64_final_at_time() {
     let datetime = NaiveDateTime::new(date_for_test(1996, 12, 20), time_for_test(0, 39, 58));
     insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m) }").with_final_results_at_time(datetime).run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
-    1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,5
-    1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,24
+    1996-12-20T00:39:58.000000001,18446744073709551615,3650215962958587783,A,5
+    1996-12-20T00:39:58.000000001,18446744073709551615,11753611437813598533,B,24
     "###);
 }
 
@@ -256,6 +256,17 @@ async fn test_last_timestamp_ns_changed_since_with_final_at_time() {
     let final_time = NaiveDateTime::new(date_for_test(2000, 1, 1), time_for_test(0, 0, 0));
     insta::assert_snapshot!(QueryFixture::new("{ last: last(Times.n) }").with_changed_since(changed_since).with_final_results_at_time(final_time).run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
-    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,8
+    2000-01-01T00:00:00.000000001,18446744073709551615,11753611437813598533,B,8
+    "###);
+}
+
+#[tokio::test]
+async fn test_final_at_time_past_input_times() {
+    // Expect rows to be produced at the final time, even if it's past the input times
+    let final_time = NaiveDateTime::new(date_for_test(2020, 1, 1), time_for_test(0, 0, 0));
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Times.n) }").with_final_results_at_time(final_time).run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,last
+    2020-01-01T00:00:00.000000001,18446744073709551615,3650215962958587783,A,2
+    2020-01-01T00:00:00.000000001,18446744073709551615,11753611437813598533,B,23
     "###);
 }
