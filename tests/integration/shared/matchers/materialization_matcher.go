@@ -40,8 +40,8 @@ func (matcher *materializationMatcher) Match(actual interface{}) (success bool, 
 	//	return false, fmt.Errorf("expected Destination: %s does not match actual Destination: %s", expectedMaterialization.Destination, actualMaterialization.Destination)
 	//case expectedMaterialization.CreateTime != actualMaterialization.CreateTime:
 	//	return false, fmt.Errorf("expected CreateTime: %s does not match actual CreateTime: %s", expectedMaterialization.CreateTime, actualMaterialization.CreateTime)
-	case expectedMaterialization.Query != actualMaterialization.Query:
-		return false, fmt.Errorf("expected Query: %s does not match actual Query: %s", expectedMaterialization.Query, actualMaterialization.Query)
+	case expectedMaterialization.Expression != actualMaterialization.Expression:
+		return false, fmt.Errorf("expected Query: %s does not match actual Query: %s", expectedMaterialization.Expression, actualMaterialization.Expression)
 	//case expectedMaterialization.Analysis != actualMaterialization.Analysis:
 	//	return false, fmt.Errorf("expected Analysis: %s does not match actual Analysis: %s", expectedMaterialization.Analysis, actualMaterialization.Analysis)
 	//case expectedMaterialization.Slice != actualMaterialization.Slice:

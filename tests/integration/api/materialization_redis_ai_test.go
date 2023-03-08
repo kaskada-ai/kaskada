@@ -76,7 +76,7 @@ var _ = PDescribe("Materialization with redis AI upload", Ordered, Label("redis"
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "purchase_min_and_max",
-					Query: `
+					Expression: `
 {
 time: mat_redis_ai.purchase_time,
 key: mat_redis_ai.customer_id,
