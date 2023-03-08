@@ -19,25 +19,16 @@ permissions:
 
 jobs:
   build_wren:
-    name: Build wren
-    runs-on: ubuntu-latest
-    steps:
-      - name: Build Wren (calls reusable_wren_ci.yml)
-        uses: ./.github/workflows/reusable_ci_wren.yml
+    name: Build wren 
+    uses: ./.github/workflows/reusable_ci_wren.yml
 
   build_sparrow:
     name: Build sparrow (rust)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Build Sparrow (reusable_calls rust_ci.yml)
-        uses: ./.github/workflows/reusable_ci_rust.yml
+    uses: ./.github/workflows/reusable_ci_rust.yml
 
   build_integration_test_binary:
     name: Build binary of integration tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Build Integration Tests binary (calls ci_integration_tests.yml)
-        uses: ./.github/workflows/ci_integration_tests.yml
+    uses: ./.github/workflows/ci_integration_tests.yml
 
   collect_all_artifacts:
     name: Collects or binary artifacts needed to run integration tests
