@@ -1,3 +1,4 @@
 * How-To Guides
+*** xref:training-realtime-ml-models.adoc[Training real-time ML models] 
 *** xref:exporting-for-training.adoc[Exporting Features] 
 *** xref:integrating-with-feature-stores.adoc[Serving Features]

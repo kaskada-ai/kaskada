@@ -1,5 +1,4 @@
 * Getting Started  
-** xref:overview.adoc[Overview]
 ** xref:hello-world.adoc[Hello World] 
 *** xref:hello-client-setup.adoc[Client Setup] 
 *** xref:hello-loading-data.adoc[Loading Data] 
