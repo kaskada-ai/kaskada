@@ -150,7 +150,7 @@ impl Operation for TickOperation {
     ) -> error_stack::Result<(), Error> {
         // Get the first batch to initialize the tick streams.
         //
-        // Note that when restoring from state, the tick iter is initialized
+        // Note that when restoring from state, the tick iter may be initialized
         // prior to receiving a batch. This check ensures we don't overwrite the
         // tick iter with incorrect bounds.
         if self.tick_iter.is_none() {
@@ -185,14 +185,11 @@ impl Operation for TickOperation {
 
         // Once we're done with incoming batches, see if we need to
         // process one last tick at the current upper bound.
-        if self.next_tick.timestamp_nanos() == self.current_time {
-            // Need to process one more tick
-            if !self.key_hashes.is_empty() {
-                send_tick_batch(self.next_tick, &self.key_hashes, &sender)
-                    .await
-                    .into_report()
-                    .change_context(Error::internal())?;
-            }
+        if self.next_tick.timestamp_nanos() == self.current_time && !self.key_hashes.is_empty() {
+            send_tick_batch(self.next_tick, &self.key_hashes, &sender)
+                .await
+                .into_report()
+                .change_context(Error::internal())?;
         }
 
         Ok(())
