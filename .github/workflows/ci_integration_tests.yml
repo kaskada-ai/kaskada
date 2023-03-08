@@ -1,0 +1,104 @@
+# TODO: Use Makefile provided in CI (might have to move to docker builds in CI or drop docker in Makefile)
+# TODO: Move ent generation out of build jon. Tried but something was off with cacing and builds would fail
+on:
+  # pull_request:
+  #   branches: [ main ]
+  # push:
+  #   branches: [ main ]
+  # merge_group:
+  #   branches: [ main ]
+  workflow_call:
+  workflow_dispatch:
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+name: Integration Tests Build Binary CI
+
+jobs:
+  integration_tests_skip:
+    name: Integration Tests Skip Duplicates
+    continue-on-error: true # Uncomment once integration is finished
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "never"
+          skip_after_successful_duplicate: "true"
+          paths: '["wren/**", "proto/**/*.proto", "crates/**", "Cargo.lock", "Cargo.toml", tests/integration/**]'
+          do_not_skip: '["workflow_dispatch", "schedule"]'
+
+  integration_tests_build:
+    name: Build Integration Tests
+    needs: [integration_tests_skip]
+    if: needs.integration_tests_skip.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install Buf
+        uses: bufbuild/buf-setup-action@v1.12.0
+        with:
+          version: "1.10.0"
+          buf_user: ${{ secrets.BUF_USER }}
+          buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Protos
+        run: buf generate
+        working-directory: proto
+
+      - name: Install GoLang
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.19"
+          cache: true
+          cache-dependency-path: wren/go.sum
+
+      - name: Generate ent
+        run: go generate ./ent
+        working-directory: wren
+
+      - name: Copy NOTICE
+        run: cp NOTICE ./wren/
+
+      - name: Install ginkgo
+        run: go install github.com/onsi/ginkgo/v2/ginkgo
+
+      - name: Build Unit Tests
+        run: go build ./...
+        working-directory: tests/integration/api/
+
+      - name: Fetch Integration Test Binary Artifact (if skipping)
+        id: download-artifact
+        if: needs.integration_tests_skip.outputs.should_skip == 'true'
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{needs.integration_tests_skip.outputs.run_id}}
+          name: integration-tests-binary
+          # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
+          # Required, if the artifact is from a different repo
+          # Required, if the repo is private a Personal Access Token with `repo` scope is needed
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          path: ci-bin/
+
+      - name: Upload Integration Tests Binary Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-tests-binary
+          retention-days: 5
+          path: tests/integration/api/

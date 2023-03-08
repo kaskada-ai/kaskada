@@ -1,0 +1,65 @@
+name: Engine Workflow (wren + sparrow) build, unit and integration test
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  # Used by clippy action to report lint errors.
+  checks: write
+  contents: read
+
+jobs:
+  build_wren:
+    name: Build wren
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Wren (calls reusable_wren_ci.yml)
+        uses: ./.github/workflows/reusable_ci_wren.yml
+
+  build_sparrow:
+    name: Build sparrow (rust)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Sparrow (reusable_calls rust_ci.yml)
+        uses: ./.github/workflows/reusable_ci_rust.yml
+
+  build_integration_test_binary:
+    name: Build binary of integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Integration Tests binary (calls ci_integration_tests.yml)
+        uses: ./.github/workflows/ci_integration_tests.yml
+
+  collect_all_artifacts:
+    name: Collects or binary artifacts needed to run integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get wren binary
+        uses: actions/download-artifact@v3
+        with:
+          name: wren-binary
+          path: ci-bin
+
+      - name: Get Sparrow binary
+        uses: actions/download-artifact@v3
+        with: 
+          name: engine-debug
+          path: ci-bin/
+
+      - name: Get Integration Tests Binary
+        uses: actions/download-artifact@v3
+        with:
+          name: integration-tests-binary
+          path: ci-bin/
+
+      - name: List contents of ci-bin/
+        run: ls -lR ci-bin/
