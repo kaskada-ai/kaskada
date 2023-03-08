@@ -66,6 +66,17 @@ pub(super) struct TickOperation {
     behavior: TickBehavior,
 }
 
+impl std::fmt::Debug for TickOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TickOperation")
+            .field("next_tick", &self.next_tick)
+            .field("current_time", &self.current_time)
+            .field("key_hashes", &format!("{} entries", self.key_hashes.len()))
+            .field("behavior", &self.behavior)
+            .finish_non_exhaustive()
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct TickOperationState {
     next_tick: NaiveDateTime,

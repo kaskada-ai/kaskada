@@ -30,6 +30,15 @@ pub(super) struct ScanOperation {
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
 }
 
+impl std::fmt::Debug for ScanOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ScanOperation")
+            .field("projected_schema", &self.projected_schema)
+            .field("key_hash_index", &self.key_hash_index)
+            .finish_non_exhaustive()
+    }
+}
+
 #[async_trait]
 impl Operation for ScanOperation {
     fn restore_from(

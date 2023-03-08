@@ -23,6 +23,7 @@ use crate::key_hash_index::KeyHashIndex;
 use crate::merge::{binary_merge, BinaryMergeInput};
 use crate::Batch;
 
+#[derive(Debug)]
 pub(super) struct MergeOperation {
     /// Indices (and side) of columns needed within the merge operation.
     input_columns: Vec<MergeInputColumn>,
@@ -553,7 +554,7 @@ impl KeyedBatch {
 }
 
 /// An input column needed within the merge operation.
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct MergeInputColumn {
     side: MergeSide,
     index: usize,
@@ -561,7 +562,7 @@ struct MergeInputColumn {
     spread: Spread,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 enum MergeSide {
     Left,
     Right,

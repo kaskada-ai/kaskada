@@ -23,12 +23,23 @@ use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
 ///    instance, if anything is buffered between the first pass and the
 ///    second then all entities discovered by the first pass will be
 ///    discovered by the second.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct KeyHashIndex {
     /// Map from key hash to dense integers. This allows instruction executors
     /// to use vectors with integer keys for storing per-key values.
     // TODO: Consider an `IntMap` to make the index lookup faster.
     key_hash_to_index: HashMap<u64, u32, ahash::RandomState>,
+}
+
+impl std::fmt::Debug for KeyHashIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyHashIndex")
+            .field(
+                "key_hash_to_index",
+                &format!("{} entries", self.key_hash_to_index.len()),
+            )
+            .finish()
+    }
 }
 
 impl KeyHashIndex {

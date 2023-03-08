@@ -551,6 +551,10 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		}
 
 		outputTo := &v1alpha.OutputTo{}
+		if materialization.Destination == nil {
+			matLogger.Error().Str("materialization", materialization.Name).Msg("materialization has no destination")
+			return nil
+		}
 		switch kind := materialization.Destination.Destination.(type) {
 		case *v1alpha.Materialization_Destination_ObjectStore:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to object store")

@@ -4,14 +4,7 @@ expression: output
 ---
 Run Sparrow in batch-mode on a specific script
 
-Usage: sparrow-main batch [OPTIONS] <SCRIPT> <OUTPUT_DIR>
-
-Arguments:
-  <SCRIPT>
-          Input file containing the script to run
-
-  <OUTPUT_DIR>
-          Output directory to write the output to
+Usage: sparrow-main batch [OPTIONS] --schema <SCHEMA> --script <SCRIPT>
 
 Options:
       --store-initial-dfg <STORE_INITIAL_DFG>
@@ -65,6 +58,17 @@ Options:
 
       --compile-only
           Only compile (and output the plan/etc. if requested)
+
+      --schema <SCHEMA>
+          File containing the schema definitions for the script
+
+      --script <SCRIPT>
+          Input file containing the script to run
+
+      --output-dir <OUTPUT_DIR>
+          Output directory to write the output to
+          
+          [default: .]
 
   -h, --help
           Print help (see a summary with '-h')

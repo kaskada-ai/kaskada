@@ -18,6 +18,7 @@ use crate::execute::operation::{InputBatch, Operation};
 use crate::execute::{invalid_operation, Error};
 use crate::Batch;
 
+#[derive(Debug)]
 pub(super) struct LookupResponseOperation {
     requesting_key_hash_column: usize,
     /// The input stream of batches.

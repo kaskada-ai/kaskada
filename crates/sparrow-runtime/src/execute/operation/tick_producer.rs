@@ -240,6 +240,16 @@ pub(super) struct TickIter {
     end_exclusive: NaiveDateTime,
 }
 
+impl std::fmt::Debug for TickIter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TickIter")
+            .field("producers", &format!("{} entries", self.producers.len()))
+            .field("pending", &format!("{} entries", self.pending.len()))
+            .field("end_exclusive", &self.end_exclusive)
+            .finish()
+    }
+}
+
 impl HasPriority for (NaiveDateTime, usize) {
     type Priority = NaiveDateTime;
 
