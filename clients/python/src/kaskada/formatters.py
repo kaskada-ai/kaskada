@@ -167,7 +167,7 @@ def query_resource_response_html_formatter(obj):
     output_custom_css_and_javascript_if_output_wrapped_in_iframe()
 
     details = table(_class="kda_table")
-    query_details = shared.get_query_html(obj.query)
+    query_details = shared.get_query_html(obj.expression)
     details.appendChild(html_table_row("query", query_details))
 
     appendChildIfNotNone(details, shared.get_request_details_table_row_if_exists(obj))
@@ -176,7 +176,7 @@ def query_resource_response_html_formatter(obj):
         tab_panel(
             [
                 ("Details", details),
-                ("Raw", shared.get_raw_html(obj.query)),
+                ("Raw", shared.get_raw_html(obj.expression)),
             ],
             title_to_set_active="Details",
         )
