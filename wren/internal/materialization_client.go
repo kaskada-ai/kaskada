@@ -56,6 +56,7 @@ func (c *materializationClient) CreateMaterialization(ctx context.Context, owner
 		SetSliceRequest(newMaterialization.SliceRequest).
 		SetAnalysis(newMaterialization.Analysis).
 		SetDataVersionID(newMaterialization.DataVersionID).
+		SetVersion(newMaterialization.Version).
 		Save(ctx)
 
 	if err != nil {
@@ -230,18 +231,24 @@ func (c *materializationClient) ListMaterializations(ctx context.Context, owner 
 	return materializations, nil
 }
 
-func (c *materializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.UpdateMaterialization").Logger()
-
-	materialization, err := c.GetMaterialization(ctx, owner, id)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting materialization")
-		return nil, err
-	}
+func (c *materializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.UpdateDateVersion").Logger()
 
 	updated_materialization, err := materialization.Update().SetDataVersionID(newDataVersion).Save(ctx)
 	if err != nil {
-		subLogger.Error().Err(err).Msg("issue updating materialization data version")
+		subLogger.Error().Err(err).Msg("issue updating materialization data version id")
+		return nil, err
+	}
+
+	return updated_materialization, nil
+}
+
+func (c *materializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.IncrementVersion").Logger()
+
+	updated_materialization, err := materialization.Update().SetVersion(materialization.Version + 1).Save(ctx)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue updating materialization version")
 		return nil, err
 	}
 
