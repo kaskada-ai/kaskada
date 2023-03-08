@@ -99,7 +99,7 @@ min_amount: purchases_mat_test.amount | min(),
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "maxAmount",
-					Query:               maxAmount,
+					Expression:               maxAmount,
 					Destination:         destination,
 					Slice:               &v1alpha.SliceRequest{},
 				},
@@ -121,7 +121,7 @@ min_amount: purchases_mat_test.amount | min(),
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "maxAmount",
-					Query:               maxAmount,
+					Expression:               maxAmount,
 					Destination:         destination,
 					Slice:               &v1alpha.SliceRequest{},
 				},
@@ -144,7 +144,7 @@ min_amount: purchases_mat_test.amount | min(),
 			res, err := matClient.GetMaterialization(ctx, &v1alpha.GetMaterializationRequest{MaterializationName: "maxAmount"})
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(res).ShouldNot(BeNil())
-			Expect(res.Materialization.Query).Should(Equal(maxAmount))
+			Expect(res.Materialization.Expression).Should(Equal(maxAmount))
 		})
 	})
 
@@ -153,7 +153,7 @@ min_amount: purchases_mat_test.amount | min(),
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "minAmount",
-					Query:               minAmount,
+					Expression:               minAmount,
 					Destination:         destination,
 					Slice:               &v1alpha.SliceRequest{},
 				},
