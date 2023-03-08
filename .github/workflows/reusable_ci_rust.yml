@@ -47,8 +47,8 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto"]'
-          do_not_skip: '["workflow_dispatch", "schedule", "workflow_call"]'
+          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto", ".github/workflows/reusable_ci_rust.yml"]'
+          do_not_skip: '["workflow_dispatch", "schedule"]'
 
   rust_check:
     name: Rust Checks
@@ -107,7 +107,7 @@ jobs:
           # We should investigate cpu/memory usage and upgrade runner size accordingly
           # and/or reduce cpu/memory usage in our tests.
           # https://github.com/actions/runner-images/issues/6680
-          args:  --all-features -- --nocapture --quiet --test-threads=1
+          args: --all-features -- --nocapture --quiet --test-threads=1
 
       # Run a build. The earlier test compile won't have built the executables.
       # This makes sure we have artifacts available for later integration tests
@@ -117,7 +117,7 @@ jobs:
         if: needs.rust_skip.outputs.should_skip != 'true'
         with:
           command: build
-          args:  --all-features
+          args: --all-features
 
       - name: Cargo Clippy
         uses: actions-rs/clippy-check@v1
