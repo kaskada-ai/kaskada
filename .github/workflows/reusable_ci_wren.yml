@@ -38,8 +38,8 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["wren/**", "proto/**/*.proto"]'
-          do_not_skip: '["workflow_dispatch", "schedule", "workflow_call"]'
+          paths: '["wren/**", "proto/**/*.proto", ".github/workflows/reusable_ci_wren.yml"]'
+          do_not_skip: '["workflow_dispatch", "schedule"]'
 
   wren_build_and_test:
     name: Build and Unit Test Wren
@@ -96,7 +96,6 @@ jobs:
           # Required, if the repo is private a Personal Access Token with `repo` scope is needed
           github_token: ${{secrets.GITHUB_TOKEN}}
           path: wren/
-
 
       - name: Upload Wren Artifacts
         uses: actions/upload-artifact@v3
