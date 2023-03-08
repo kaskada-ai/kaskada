@@ -11,6 +11,7 @@ There may be some examples that are demonstrate functionality not officially ava
 
 ```python 
 from kaskada.api.session import LocalBuilder
+# download(False) skips the fetch of the latest 
 session = LocalBuilder().download(False).build()
 ```
 
