@@ -39,7 +39,7 @@ jobs:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
           paths: '["wren/**", "proto/**/*.proto"]'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          do_not_skip: '["workflow_dispatch", "schedule", "workflow_call"]'
 
   wren_build_and_test:
     name: Build and Unit Test Wren

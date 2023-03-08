@@ -39,7 +39,7 @@ jobs:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
           paths: '["wren/**", "proto/**/*.proto", "crates/**", "Cargo.lock", "Cargo.toml", tests/integration/**]'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          do_not_skip: '["workflow_dispatch", "schedule", "workflow_call"]'
 
   integration_tests_build:
     name: Build Integration Tests
