@@ -31,7 +31,7 @@ jobs:
     uses: ./.github/workflows/ci_integration_tests.yml
 
   collect_all_artifacts:
-    name: Collects or binary artifacts needed to run integration tests
+    name: Collects all binary artifacts needed to run integration tests
     runs-on: ubuntu-latest
     needs: [build_wren, build_sparrow, build_integration_test_binary]
     steps:
