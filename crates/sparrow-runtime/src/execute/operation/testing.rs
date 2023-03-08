@@ -206,6 +206,7 @@ pub(super) async fn run_operation(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
+        output_at_time: None,
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())
@@ -256,6 +257,7 @@ pub(super) async fn run_operation_json(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
+        output_at_time: None,
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())
