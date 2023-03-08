@@ -77,12 +77,6 @@ request_details {
 }
 ----
 
-Note that the response also includes a `request_id`. A `request_id` is
-returned from all requests, whether they succeed or error. When
-contacting support for an issue, if you include the `request_id`, the
-tech can look up additional details about your request, and help get to
-the root cause faster.
-
 == Loading Data
 
 Now that we've created a table, we're ready to load some data into it.
