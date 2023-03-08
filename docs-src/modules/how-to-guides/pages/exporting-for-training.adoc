@@ -12,6 +12,7 @@ within the next 30 days given two event tables; a `Purchase` table and a
 ----
 from kaskada import table
 import pandas
+import requests
 
 table.create_table(
   table_name = "Purchase",
@@ -27,9 +28,10 @@ table.create_table(
 )
 
 purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk"
-purchases = pandas.read_parquet(purchases_url)
-table.load_dataframe("Purchase", purchases)
-table.load_dataframe("PurchaseByCustomer", purchases)
+r = requests.get(purchases_url, allow_redirects=True)
+open('purchases.parquet', 'wb').write(r.content)
+table.load('Purchase', 'purchases.parquet')
+table.load('PurchaseByCustomer', 'purchases.parquet')
 
 table.create_table(
   table_name = "FraudReport",
@@ -37,9 +39,11 @@ table.create_table(
   entity_key_column_name = "purchase_id",
   subsort_column_name = "subsort_id",
 )
+
 frauds_url = "https://drive.google.com/uc?export=download&id=1WXRW1zt1EEPcbrw4nw9rCdhTqlatxTSR"
-frauds = pandas.read_parquet(frauds_url)
-table.load_dataframe("FraudReport", frauds)
+f = requests.get(frauds_url, allow_redirects=True)
+open('frauds.parquet', 'wb').write(r.content)
+table.load('FraudReporting', 'frauds.parquet')
 ----
 
 == Feature Definitions
