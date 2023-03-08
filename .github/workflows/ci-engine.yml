@@ -62,4 +62,5 @@ jobs:
           path: ci-bin/
 
       - name: List contents of ci-bin/
+        shell: bash
         run: ls -lR ci-bin/
