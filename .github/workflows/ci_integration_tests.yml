@@ -77,9 +77,9 @@ jobs:
         run: cp NOTICE ./wren/
 
       - name: Install ginkgo
-        run: go install github.com/onsi/ginkgo/v2/ginkgo
+        run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.8.1 # check with go.mod in tests/integration/api
 
-      - name: Build Unit Tests
+      - name: Build Integration Tests
         run: go build ./...
         working-directory: tests/integration/api/
 
