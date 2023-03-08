@@ -339,6 +339,14 @@ func (*errorListMaterializationClient) UpdateMaterializationDataVersion(ctx cont
 	panic("unimplemented")
 }
 
+func (*errorListMaterializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
+func (*errorListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
 type emptyListMaterializationClient struct{}
 
 func (*emptyListMaterializationClient) CreateMaterialization(ctx context.Context, owner *ent.Owner, newMaterialization *ent.Materialization, dependencies []*ent.MaterializationDependency) (*ent.Materialization, error) {
@@ -374,6 +382,14 @@ func (*emptyListMaterializationClient) ListMaterializations(ctx context.Context,
 }
 
 func (*emptyListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
+func (*emptyListMaterializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
+func (*emptyListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	panic("unimplemented")
 }
 
@@ -420,5 +436,13 @@ func (*singleListMaterializationClient) ListMaterializations(ctx context.Context
 }
 
 func (*singleListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
+func (*singleListMaterializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
+func (*singleListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	panic("unimplemented")
 }
