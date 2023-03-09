@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -29,6 +31,7 @@ func init() {
 	queryRunCmd.Flags().Bool("dry-run", false, "(Optional) If this is `true`, then the query is validated and if there are no errors, the resultant schema is returned. No actual computation of results is performed.")
 	queryRunCmd.Flags().Bool("experimental-features", false, "(Optional) If this is `true`, then experimental features are allowed.  Data returned when using this flag is not guaranteed to be correct.")
 	queryRunCmd.Flags().Int64("changed-since-time", 0, "(Optional) Unix timestamp bound (inclusive) after which results will be output. If 'response-behavior' is 'all-results', this will include rows for changes (events and ticks) after this time (inclusive). If it is 'final-results', this will include a final result for any entity that would be included in the changed results.")
+	queryRunCmd.Flags().Bool("stdout", false, "(Optional) If this is `true`, output results are sent to STDOUT")
 
 	viper.BindPFlag("response_as", queryRunCmd.Flags().Lookup("response-as"))
 	viper.BindPFlag("data_token", queryRunCmd.Flags().Lookup("data-token"))
@@ -37,11 +40,12 @@ func init() {
 	viper.BindPFlag("dry_run", queryRunCmd.Flags().Lookup("dry-run"))
 	viper.BindPFlag("experimental_features", queryRunCmd.Flags().Lookup("experimental-features"))
 	viper.BindPFlag("changed_since_time", queryRunCmd.Flags().Lookup("changed-since-time"))
+	viper.BindPFlag("stdout", queryRunCmd.Flags().Lookup("stdout"))
 }
 
 // queryRunCmd represents the queryRun command
 var queryRunCmd = &cobra.Command{
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Use:   "run \"query-text\"",
 	Short: "executes a query on kaskada",
 	/*
@@ -75,9 +79,17 @@ var queryRunCmd = &cobra.Command{
 			logAndQuitIfErrorExists(fmt.Errorf("'response-as' must be 'csv' or 'parquet'"))
 		}
 
+		var expression string
+		if len(args) == 0 {
+			stdin, err := io.ReadAll(os.Stdin)
+			logAndQuitIfErrorExists(err)
+			expression = string(stdin)
+		} else {
+			expression = args[0]
+		}
 		queryReq := &apiv1alpha.CreateQueryRequest{
 			Query: &apiv1alpha.Query{
-				Expression: args[0],
+				Expression: expression,
 				OutputTo:   outputTo,
 			},
 			QueryOptions: &apiv1alpha.QueryOptions{
@@ -118,14 +130,28 @@ var queryRunCmd = &cobra.Command{
 
 		logAndQuitIfErrorExists(err)
 
-		jsonBytes, err := protojson.Marshal(resp)
+		if viper.GetBool("stdout") && resp.OutputTo != nil {
 
-		logAndQuitIfErrorExists(err)
+			switch outputTo := resp.OutputTo.Destination.(type) {
+			case *apiv1alpha.OutputTo_ObjectStore:
+				for _, path := range outputTo.ObjectStore.OutputPaths.Paths {
+					f, err := os.Open(strings.TrimPrefix(path, `file://`))
+					logAndQuitIfErrorExists(err)
 
-		var out bytes.Buffer
-		json.Indent(&out, jsonBytes, "", "\t")
-		out.WriteString("\n")
-		out.WriteTo(os.Stdout)
+					_, err = io.Copy(os.Stdout, f)
+					logAndQuitIfErrorExists(err)
+				}
+			}
+		} else {
+			jsonBytes, err := protojson.Marshal(resp)
+
+			logAndQuitIfErrorExists(err)
+
+			var out bytes.Buffer
+			json.Indent(&out, jsonBytes, "", "\t")
+			out.WriteString("\n")
+			out.WriteTo(os.Stdout)
+		}
 
 		log.Info().Msg("Success!")
 	},

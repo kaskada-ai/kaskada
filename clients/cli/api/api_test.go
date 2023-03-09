@@ -400,6 +400,10 @@ func (*mockMaterializationClient) List() ([]*apiv1alpha.Materialization, error) 
 
 type mockTableClient struct{}
 
+func (*mockTableClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	return nil
+}
+
 // Create implements TableClient
 func (*mockTableClient) Create(item *apiv1alpha.Table) error {
 	return nil
