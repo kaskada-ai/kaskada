@@ -1,38 +1,44 @@
-= Client Installation 
+= Installing Kaskada
 
-== Python Client
+== Using Kaskada with Python
 
-The Kaskada Python client can be installed using `pip`
-
-[source,bash]
+.Installing Kaskada using pip
+[,shell]
 ----
 pip install kaskada 
 ----
 
-This will download and install the latest stable Kaskada library.
+[NOTE]
+.Pip and pip3 
+====
+Depending on you Python installation and configuration you may have `pip3` instead of `pip` available in your terminal. 
+If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 install kaskada`
+====
 
-== IPython (Jupyter) Extension
+Kaskada is now installed. Kaskada can be used locally by creating a local session.
+
+.Creating a local Kaskada session in Python
+[.python]
+----
+from kaskada.api.session import LocalBuilder
+session = LocalBuilder().build()
+----
+
+Creating a local session will download and run the Kaskada service, and configure the client to use the local endpoint.
+
+
+== Using Kaskada with IPython (Jupyter)
 
 IPython is an interactive Python runtime used by Jupyter and other
 notebooks to evaluate Python code blocks. IPython supports "magic
 extensions" for customizing how code blocks are interpreted. Kaskada
-provides a magic extension that simplifies querying Kaskada. To use the
-extension you must first install the `fenlmagic` python package, for
-example using `pip`:
+provides a magic extension that simplifies querying Kaskada. 
 
-[source,bash]
-----
-pip install fenlmagic
-----
+Kaskada's python library includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks. 
+We need to enable these customizations first before we can use them. 
 
-
-NOTE: Make sure to install this package in the same environment IPython will be running in.
-
-
-Inside an IPython session (for example a Jupyter notebook) the extension
-can be loaded using the magic command `%load_ext`:
-
-[source,ipython]
+.Enable fenlmagic in this notebook 
+[,python]
 ----
 %load_ext fenlmagic
 ----

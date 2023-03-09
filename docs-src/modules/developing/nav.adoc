@@ -1,0 +1,7 @@
+* Reference 
+*** xref:tables.adoc[Working with Tables]
+*** xref:writing-queries.adoc[Writing Queries] 
+*** xref:example-queries.adoc[Examples Queries]
+*** xref:working-with-slices.adoc[Working with Slices] 
+*** xref:views.adoc[Working with Views] 
+*** xref:working-with-materializations.adoc[Working with Materializations] 

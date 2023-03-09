@@ -4,4 +4,4 @@ Welcome to the Kaskada technical docs. You'll find comprehensive guides and docu
 to help you start working with Kaskada as quickly as possible, as well as support if you get stuck.
 
 
-xref:hello-world.adoc[Let's jump right in!] 
+xref:getting-started:hello-world.adoc[Let's jump right in!] 
