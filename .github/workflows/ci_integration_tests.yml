@@ -101,4 +101,4 @@ jobs:
         with:
           name: integration-tests-binary
           retention-days: 5
-          path: tests/integration/api/
+          path: tests/integration/api/api.test
