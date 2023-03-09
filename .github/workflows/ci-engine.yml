@@ -70,7 +70,6 @@ jobs:
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-
       - name: Check outputs
         run: echo ${{ steps.vars.outputs.sha_short }}
 
@@ -91,16 +90,14 @@ jobs:
             org.opencontainers.image.revision=${{ env.GITHUB_REF_NAME}}-${{ env.GITHUB_SHA }}
             org.opencontainers.image.licenses=Apache-2.0
 
-
-  container_name: 
+  container_name:
     runs-on: ubuntu-latest
-    outputs: 
+    outputs:
       image: ${{ steps.set_image.outputs.image }}
     steps:
-      - name: Output Docker Container Name 
+      - name: Output Docker Container Name
         id: docker-container-name
-        run: echo "::set-output name=image::${{IMAGE}}"
-
+        run: echo "::set-output name=image::${{ env.IMAGE }}:${{ env.GITHUB_SHA }}"
 
   run_integ_tests:
     name: Run the service and integ tests
