@@ -77,7 +77,7 @@ jobs:
         run: cp NOTICE ./wren/
 
       - name: Build
-        run: go build -o wren main.go
+        run: go build -o wren-binary main.go
         working-directory: wren
 
       - name: Unit Tests
@@ -102,4 +102,4 @@ jobs:
         with:
           name: wren-binary
           retention-days: 5
-          path: wren/
+          path: wren/wren-binary

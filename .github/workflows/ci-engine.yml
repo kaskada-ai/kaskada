@@ -39,19 +39,19 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: wren-binary
-          path: ci-bin
+          path: ci-bin/wren/
 
       - name: Get Sparrow binary
         uses: actions/download-artifact@v3
         with:
           name: engine-debug
-          path: ci-bin/
+          path: ci-bin/engine/
 
       - name: Get Integration Tests Binary
         uses: actions/download-artifact@v3
         with:
           name: integration-tests-binary
-          path: ci-bin/
+          path: ci-bin/integ-tests/
 
       - name: List contents of ci-bin/
         shell: bash
