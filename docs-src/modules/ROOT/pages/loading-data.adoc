@@ -104,7 +104,7 @@ The file is added to the table.
 == Inspecting the Table's Contents
 
 To verify the file was loaded as expected you can use the table list
-endpoint to see all the tables defined for your user and the files
+method (`list_tables`) to see all the tables defined for your user and the files
 loaded into each:
 
 [source,python]
