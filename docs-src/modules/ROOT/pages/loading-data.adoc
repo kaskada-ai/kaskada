@@ -138,39 +138,12 @@ tables {
 After executing this block, all tables that have been defined are
 returned.
 
-== File Formats
+== File Format
 
 The Kaskada compute engine expects uploaded file data to be either CSV or parquet version 2. 
 
 Additionally, it expects the following:
 
 * The `time_column` (and all other date-time columns in your dataset)
-should be of integer type and contain a nano-second unix timestamp.
+should be a type that can be xref:fenl:data-model.adoc#type-coercion[cast] to a xref:fenl:data-model.adoc#scalars[timestamp], for example an integer or RFC3330-formatted string.
 * If `subsort_id` is user-defined, the combination of the `group_column` (entity id), `time_column` and `subsort_column` should guarantee that each row is unique.  
-
-Below are some code examples to help you get your data into the proper
-format:
-
-=== Requirements
-
-The below samples utilize pandas and pyarrow.
-
-[source, ipython]
-----
-!pip install pandas
-!pip install pyarrow
-
-import pandas as pd
-----
-
-=== Parsing date-time strings
-
-The time values in CSV files may need to be converted explicitly.
-
-Below is some helper code using pandas data frames to perform the
-conversion.
-
-[source,python]
-----
-df = pd.read_csv('<path_to_the_input_file.csv>' parse_dates=[<time column>])
-----
