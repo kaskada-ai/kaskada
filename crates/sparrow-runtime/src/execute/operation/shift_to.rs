@@ -525,7 +525,14 @@ impl ShiftToColumnOperation {
             lower_bound.subsort = 0;
             let mut upper_bound = prefix.upper_bound;
             upper_bound.time = cmp::min(incoming_upper_bound_time, upper_bound.time);
-            upper_bound.subsort = prefix.time.len() as u64; // u64::MAX;
+
+            let upper_subsort = if prefix.time.len() == 0 {
+                0
+            } else {
+                // 0-indexed, so sub 1
+                prefix.time.len() as u64 - 1
+            };
+            upper_bound.subsort = upper_subsort;
 
             let prefix = InputBatch {
                 time: prefix.time,
