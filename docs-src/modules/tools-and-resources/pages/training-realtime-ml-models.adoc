@@ -253,17 +253,3 @@ image::framework.png[Real-time ML framework]
 2. We generated training examples each time the a user lost twice in a row
 3. We shifted those examples forward in time one hour
 4. Finally, we computed the target value by checking for purchases since the prediction was made.
-
-== Next Steps
-
-This was a quick introduction to how Kaskada organizes the process of training real-time AI/ML models, but this is just the beginning.
-
-// TODO: Link to top-level "Getting Started" guide
-xref:getting-started:hello-loading-data.adoc[Continue reading about Kaskada's features] to learn more about how Kaskada's temporal query capabilitites, how the compute engine supports interactive exploration of features and model contexts, and how the features used to train a model can be used in real-time without modification.
-
-// TODO: Link to top-level "Installing" guide
-xref:getting-started:hello-client-setup.adoc[Install Kaskada locally] to begin exploring Kaskada yourself.
-
-xref:fenl:language-guide.adoc[Learn more about Kaskada's query language] to get a feel for the type of features and temporal operations Kaskada supports.
-
-// TODO: Use-case examples 

@@ -1,6 +1,7 @@
 name: kaskada
 title: Kaskada Documentation
 version: true
+start_page: getting-started:installation.adoc
 
 nav:
   - modules/getting-started/nav.adoc
