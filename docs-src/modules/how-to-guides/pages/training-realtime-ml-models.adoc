@@ -1,7 +1,4 @@
-= Overview
-
-
-Kaskada is a query engine for event-based data, designed for building & operating real-time ML at scale.
+= Training real-time ML models
 
 == What is real-time ML?
 
