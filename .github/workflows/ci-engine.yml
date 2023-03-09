@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Output Docker Container Name
         id: docker-container-name
-        run: echo "::set-output name=image::${{ env.IMAGE }}:${{ env.GITHUB_SHA }}"
+        run: echo "::set-output name=image::${{ env.IMAGE }}:${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}"
 
   run_integ_tests:
     name: Run the service and integ tests
