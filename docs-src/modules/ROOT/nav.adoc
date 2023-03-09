@@ -1,4 +1,5 @@
-
+* xref:installing.adoc[Installing]
+* xref:loading-data.adoc[Loading Data]
 
 // * Tutorials 
 // *** https://colab.research.google.com/drive/1gPshkDfMQEb_DJ6qalGJVai-Uj0oV7zO?usp=sharing[Hello World Notebook (Collab)]

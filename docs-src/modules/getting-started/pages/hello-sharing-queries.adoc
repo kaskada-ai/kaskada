@@ -126,4 +126,4 @@ Views are useful any time you need to share or re-use expressions:
 * Common business logic
 * Final feature vectors
 
-For more help with views, see xref:reference:views.adoc[Reference - Working with Views]
+For more help with views, see xref:developing:views.adoc[Reference - Working with Views]

@@ -95,5 +95,5 @@ df_explore = _
 df_explore.dataframe.columns
 ----
 
-For more help writing queries, see xref:reference:writing-queries.adoc[Reference -
+For more help writing queries, see xref:developing:writing-queries.adoc[Reference -
 Writing Queries]
