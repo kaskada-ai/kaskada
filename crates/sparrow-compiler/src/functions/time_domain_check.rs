@@ -1,3 +1,4 @@
+
 use sparrow_syntax::{Located, Location};
 
 use crate::time_domain::{combine_time_domains, TimeDomain};
@@ -11,12 +12,14 @@ use crate::{AstDfgRef, DataContext, DiagnosticCollector};
 /// Special cases exist for `ShiftTo` and `ShiftUntil` as described below. These
 /// are subject to change. It may be better to use a closure to allow defining
 /// the special behaviors as part of each function.
+#[derive(Default)]
 pub(super) enum TimeDomainCheck {
     /// The function requires the arguments to be compatible, and returns
     /// the resulting time domain.
     ///
     /// This is the default option for functions that don't configure
     /// time domain checking.
+    #[default]
     Compatible,
     /// The function is an aggregation.
     ///
@@ -42,12 +45,6 @@ pub(super) enum TimeDomainCheck {
     /// The time domain is a literal.
     #[allow(dead_code)]
     Literal,
-}
-
-impl Default for TimeDomainCheck {
-    fn default() -> Self {
-        TimeDomainCheck::Compatible
-    }
 }
 
 impl TimeDomainCheck {
