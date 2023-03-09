@@ -79,7 +79,7 @@ jobs:
           context: .
           file: tests/integration/docker/Dockerfile.integration
           push: true
-          tags: ${{ env.IMAGE }}:${{ steps.vars.outputs.sha_short }}, ${{ env.IMAGE }}:${{ env.GITHUB_REF_NAME }}_${{ steps.vars.outputs.sha_short }},${{ env.IMAGE }}:${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}
+          tags: ${{ env.IMAGE }}:${{ env.GITHUB_REF_NAME }}_${{ steps.vars.outputs.sha_short }},${{ env.IMAGE }}:${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}
           labels: |
             org.opencontainers.image.title=kaskada integration test image
             org.opencontainers.image.description=The kaskada image for integration testing
