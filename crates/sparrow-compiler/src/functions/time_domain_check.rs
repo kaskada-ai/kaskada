@@ -1,4 +1,3 @@
-
 use sparrow_syntax::{Located, Location};
 
 use crate::time_domain::{combine_time_domains, TimeDomain};
