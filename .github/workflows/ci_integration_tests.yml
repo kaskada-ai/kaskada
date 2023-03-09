@@ -80,7 +80,7 @@ jobs:
         run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.8.1 # check with go.mod in tests/integration/api
 
       - name: Build Integration Tests
-        run: go build ./...
+        run: ginkgo build ./...
         working-directory: tests/integration/api/
 
       - name: Fetch Integration Test Binary Artifact (if skipping)
