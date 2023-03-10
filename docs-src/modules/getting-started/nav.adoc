@@ -1,4 +1,3 @@
 * Getting Started  
-** xref:installation.adoc[] 
-** xref:loading-data.adoc[] 
-** xref:querying-data.adoc[] 
+** xref:hello-world-jupyter.adoc[]
+** xref:hello-world-cli.adoc[]

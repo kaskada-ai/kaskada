@@ -1,0 +1,363 @@
+= What Is Kaskada?
+
+Understanding and reacting to the world in real-time is increasingly important, but doing so requires understanding what is happening _now_ in the context of what happened in the past. 
+It's not enough to know that something just happend - we need the ability to understand if that thing is unusal, how it relates to what happened previously, and how it relates to other things that are happening at the same time.
+
+Getting to this type of contextual real-time insight has historically been difficult, as it required bringing together hard-to-integrate tools and methodologies.
+
+Kaskada was designed to bridge the gap between historical/analytic workloads and real-time stream processing by building on a new abstraction: the timeline. With Kaskada, you can efficiently analyze historical trends in your events or react as they happen in real-time. 
+Kaskada's timeline-based query languge lets you use the same query, unchanged, in either batch or streaming mode. 
+
+== What are Timelines?
+
+Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about behavior, and is built on the idea of a timeline
+
+A timeline describes how a value changes over time. In the same way that SQL queries transform tables and graph queries transform nodes and edges, Kaskada queries transforms timelines into a result timeline. In comparison to a timeseries which is defined at fixed, periodic times (ie, every minute), a timeline is defined at arbitrary times.
+
+Timelines simplify reasoning about time, change, and behavior. Timelines support SQL’s aggregations but extend them with sequential operations provided by complex event processing (CEP) systems.
+
+== Current Challenges
+
+Let's imagine you have two tables containing different kinds of events.
+
+One table contains an event for each time a user visits your web page:
+
+.Pageview table
+[%autowidth]
+|===
+| time | user
+
+| 8:20 | Alice
+| 9:45 | Alice
+| 2:10 | Alice
+| 8:52 | Alice
+|===
+
+Another table contains an event for each time a user makes a purchase:
+
+.Purchase table
+[%autowidth]
+|===
+| time | user | amount
+
+| 7:02 | Alice | $3.99
+| 10:47 | Alice | $5.00
+|===
+
+We can do a lot with these tables! SQL provides many ways to transform, filter, and aggregate these events.
+But what if we want to answer questions that depend on time and order? We might want to know how a result changes over time, or aggregate over time-based groups, or detect when a condition is first met.
+
+Many of these things are _possible_ with SQL, but they're not always simple. Reasoning about time using abstractions designed for tables forces you to carefully reflect temporal logic in your query code, for example to see how a simple sum changes over time you might write:
+
+[source,SQL]
+----
+SELECT sum(amount) OVER (PARTITION BY customer_id ORDER BY timestamp)
+FROM Purchase
+----
+
+This uses a slightly arcane (and inconsistently supported) feature of SQL: windowed aggregations. 
+Queries like this get complex and unreadable quickly, because you're fighting against the abstractions. 
+
+For example, if you wanted to know how many times each user had visited your website since the last time they purchased something, you'd need to write something like this:
+
+[source,SQL]
+----
+WITH last_purchase AS(
+    SELECT user_id, max(timestamp) FROM purchase GROUP BY user_id
+)
+
+SELECT user_id, count(*)
+FROM pageview
+JOIN last_purchase ON pageview.user_id = last_purchase.user_id
+WHERE pageview.timestamp > last_purchase.timestamp
+GROUP BY user_id
+----
+
+If you wanted to know how that value has changed over time you'd need to re-write the query from scratch, and the result would be too long to show in this quick introduction.
+
+Many time and sequence related questions end up being surprisingly hard to answer with SQL. This is where timelines can make your life much easier.
+
+== The solution offered by timelines
+
+Rather than thinking of each event as a row in a table, we can think of it as a point along a timeline.
+
+[stream_viz,name=purchase]
+....
+[
+    {
+        "label": "Purchase",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 0, "v": "{amount: 2.31}"},
+                {"t": 2, "v": "{amount: 1.99}"},
+                {"t": 6, "v": "{amount: 5.00}"},
+                {"t": 10, "v": "{amount: 7.89}"}
+            ]
+        ]
+    }
+]
+....
+
+Kaskada provides many ways of transforming timelines, for example we can compute the simple sum we saw earlier:
+
+[source,fenl]
+----
+Purchase.amount | sum()
+----
+
+[stream_viz,name=purchase-sum]
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 1, "v": "2.31"},
+                {"t": 2, "v": "1.99"},
+                {"t": 6, "v": "5.00"},
+                {"t": 10, "v": "7.89"}
+            ]
+        ]
+    },
+    {
+        "label": "Purchase.amount | sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 1, "v": "2.31"},
+                {"t": 2, "v": "4.20"},
+                {"t": 6, "v": "9.20"},
+                {"t": 10, "v": "18.09"}
+            ]
+        ]
+    }
+]
+....
+
+Aggregating a timeline produces a new timeline - rather than computing a single answer, the timeline describes how the result of the aggregation changes over time. 
+
+Since the value of a timeline is specific to a point in time, we can easily describe aggregations in a temporal context.
+See how easy it is to describe the earlier example of counting page views since the last purchase:
+
+[source,fenl]
+----
+Pageview
+| count(since(Purchase))
+----
+
+[stream_viz,name=pageview-since-purchase]
+....
+[
+    {
+        "label": "Pageview",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": ""},
+                {"t": 6, "v": ""}
+            ]
+        ]
+    },
+    {
+        "label": "Purchase",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 1, "v": ""},
+                {"t": 10, "v": ""}
+            ]
+        ]
+    },
+    {
+        "label": "Pageview | count(since(Purchase))",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 1, "v": "0"},
+                {"t": 2, "v": "1"},
+                {"t": 6, "v": "2"},
+                {"t": 10, "v": "0"}
+            ]
+        ]
+    }
+]
+....
+
+This timeline describes the result of a query at every point in time, so we can easily observe its value at specific points in time without making any changes to the query:
+
+[source,fenl]
+----
+Pageview
+| count(since(Purchase))
+| when(daily())
+----
+
+[stream_viz,name=daily-pageview-since-purchase]
+....
+[
+
+    {
+        "label": "Pageview | count(since(Purchase))",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 1, "v": "0"},
+                {"t": 2, "v": "1"},
+                {"t": 6, "v": "2"},
+                {"t": 10, "v": "0"}
+            ]
+        ]
+    },
+    {
+        "label": "| when(daily())",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2.5, "v": "1"},
+                {"t": 5, "v": "1"},
+                {"t": 7.5, "v": "2"},
+                {"t": 10, "v": "0"}
+            ]
+        ]
+    }
+]
+....
+
+
+Taking this a step further, we can re-aggregate the previous result. Here we compute the average of each day's pageview-since-purchase count:
+
+[source,fenl]
+----
+Pageview
+| count(since(Purchase))
+| when(daily())
+| mean()
+----
+
+[stream_viz,name=mean-daily-pageview-since-purchase]
+....
+[
+    {
+        "label": "Pageview | count(since(Purchase)) | when(daily())",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2.5, "v": "1"},
+                {"t": 5, "v": "1"},
+                {"t": 7.5, "v": "2"},
+                {"t": 10, "v": "0"}
+            ]
+        ]
+    },
+    {
+        "label": "| mean()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2.5, "v": "1.0"},
+                {"t": 5, "v": "1.0"},
+                {"t": 7.5, "v": "1.33"},
+                {"t": 10, "v": "0.74"}
+            ]
+        ]
+    }
+]
+....
+
+
+Finally, we're not limited to only thinking about a single point in time.
+By shifting timelines relative to each other we can easily describe how values change over time, for example how the previous result has changed hour-over-hour:
+
+[source,fenl]
+----
+let daily_average = Pageview
+| count(since(Purchase))
+| when(daily())
+| mean() 
+
+in daily_average - (daily_average | shift_by(hours(1)))
+----
+
+[stream_viz,name=wow]
+....
+[
+    {
+        "label": "daily_average",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2.5, "v": "1.0"},
+                {"t": 5, "v": "1.0"},
+                {"t": 7.5, "v": "1.33"},
+                {"t": 10, "v": "0.74"}
+            ]
+        ]
+    },
+    {
+        "label": "daily_average | shift_by(days(7))",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 3, "v": "1.0"},
+                {"t": 5.5, "v": "1.0"},
+                {"t": 8, "v": "1.33"}
+            ]
+        ]
+    },
+    {
+        "label": "daily_average - (daily_average | shift_by(days(7)))",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 3, "v": "0.0"},
+                {"t": 5, "v": "0.0"},
+                {"t": 5.5, "v": "0.0"},
+                {"t": 7.5, "v": "0.0"},
+                {"t": 8, "v": "0.33"},
+                {"t": 10, "v": "-0.59"}
+            ]
+        ]
+    }
+]
+....
+
+Writing these simple-seeming queries with SQL would have been _much_ harder, more verbose, and less maintainable.
+Aligning our mental model with the problem being solved makes reasoning about time and behavior much easier.
+
+== The shift away from technology-specific solutions
+
+A big reason for the power and persistence of SQL is that it's a declarative language - you write what you want, not how to compute it.
+This allows you to focus on understanding your data, whithout having to think about query implementation details.
+
+Unfortunately, the rise of stream-based data processing has forced developers to spend a lot of time thinking about implementation details.
+SQL queries written against OLAP offline data stores often aren't supported by streaming data processors.
+While some real-time systems support "streaming SQL", streams and tables are very different things and much of the power of stream processing is lost in translation.
+
+How a computation is described shouldn't depend on where events are stored - streaming vs batch is an implementation detail.
+By building Kaskada's query language on timelines, it brings the abstractions of streaming to bulk storage, rather than the other way around.
+
+Kaskada allows developers to focus on solving problems with event data by raising the abstraction level used to describe queries. 
+
+== Why Kaskada?
+
+Kaskada was built to be performant and easy to use and operate.
+
+We chose to build Kaskad in Rust becasue of it's performance, safety, lack of garbage collection, and because it compiles to a self-contained binary.
+We leverage the excellent Rust Arrow library to provide high-performance columnar execution.
+Columnar execution works well for event processing because it takes advantage of modern CPU optimizations like SIMD, branch prediction, and caching.
+
+Computation is implemented as a single, chronological pass over the input events, so you can compute over datasets that are significantly larger than available memory. 
+Internally, events are stored on disk as Parquet files.
+We find that most computations are bottlenecked on IO, so using an efficient columnar file format lets us selectively read the columns and row ranges needed to produce a result.
+
+The result is a modern event processing engine that installs in seconds without any external dependencies and computes quickly and efficiently.
+
+== Next Steps
+
+To get started, you can follow one of our "Hello World" examples.
+These examples will guide you through installing Kaskada and making your first query.
+
+* Hello world xref:getting-started:hello-world-cli.adoc[using the command line]
+* Hello world xref:getting-started:hello-world-jupyter.adoc[using Python Jupyter]
