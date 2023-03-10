@@ -88,7 +88,7 @@ jobs:
           context: .
           file: Dockerfile.integration
           push: true
-          tags: ${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ steps.vars.outputs.sha_short }},${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}
+          tags: ${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ steps.vars.outputs.sha_short }}v,${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}v
           labels: |
             org.opencontainers.image.title=kaskada integration test image
             org.opencontainers.image.description=The kaskada image for integration testing
@@ -96,7 +96,7 @@ jobs:
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.version=${{  steps.vars.outputs.sha_short }}
             org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
-            org.opencontainers.image.revision=${{ env.GITHUB_REF_NAME}}-${{ env.GITHUB_SHA }}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
 
   container_name:
@@ -106,7 +106,7 @@ jobs:
     steps:
       - name: Output Docker Container Name
         id: docker-container-name
-        run: echo "name=image::${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}" >> $GITHUB_OUTPUT
+        run: echo "name=image::${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_SHA }}v" >> $GITHUB_OUTPUT
 
   run_integ_tests:
     name: Run the service and integ tests
