@@ -154,4 +154,6 @@ jobs:
 
       - name: Run Integration tests
         shell: bash
-        run: ./ci-bin/integ-tests/api.test
+        run: |
+          chmod a+x ./ci-bin/integ-tests/api.test
+          ./ci-bin/integ-tests/api.test
