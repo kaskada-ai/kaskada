@@ -80,9 +80,6 @@ jobs:
       - name: Check outputs
         run: echo ${{ steps.vars.outputs.sha_short }}
 
-      - name: Checkout sources
-        uses: actions/checkout@v3
-
       - name: Build and push Docker images
         uses: docker/build-push-action@v4
         with:
