@@ -1,13 +1,13 @@
 import operator
 import pprint
-import pandas as pd
-
 from typing import Optional
+
+import pandas as pd
 from domonic.html import pre, table, td, th, tr
 from domonic.utils import Utils
 
-import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
+import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
 
 from .formatters_helpers import (
     appendChildren,
@@ -189,6 +189,7 @@ def get_table_source_pulsar(obj: table_pb.Table.PulsarSource) -> table:
     appendHtmlObjTableRowIfAttrExists(pulsar, obj, "topic")
     return pulsar
 
+
 def get_table_html_and_schema_df(obj: table_pb.Table):
     schema_df = get_schema_dataframe(obj)
     details = table(_class="kda_table")
@@ -211,6 +212,7 @@ def get_table_html_and_schema_df(obj: table_pb.Table):
         details.appendChild(html_obj_table_row("schema", "(see Schema tab)"))
     appendTimes(details, obj)
     return details, schema_df
+
 
 def get_query_html(obj):
     details = table(_class="kda_table")
