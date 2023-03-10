@@ -1,19 +1,12 @@
 = Querying Data
 
-[WARNING]
-.Setup Required
-====
-The following examples assume you've already completed
-xref::hello-loading-data.adoc[Loading Data].
-====
-
 == Writing Queries
 
 You can write queries in a number of ways with Kaskada. Here we start
 with fenlmagic because these queries are not persistent. As you are
 iterating in Jupyter it can be helpful to build up your feature and time
 selection as you go, once you'd like to persist a query, check out our
-article on xref::hello-sharing-queries.adoc[Sharing Queries].
+article on xref:developing:views.adoc[Sharing Queries].
 
 You can make Fenl queries by prefixing a query block with `%%fenl`. The
 query results will be computed and returned as a Pandas dataframe. The
@@ -95,5 +88,5 @@ df_explore = _
 df_explore.dataframe.columns
 ----
 
-For more help writing queries, see xref:reference:writing-queries.adoc[Reference -
+For more help writing queries, see xref:developing:queries.adoc[Reference -
 Writing Queries]

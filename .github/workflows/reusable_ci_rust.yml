@@ -1,17 +1,19 @@
 on:
-  pull_request:
-    branches: [ main ]
-  push:
-    branches: [ main ]
-  merge_group:
-    branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  # push:
+  #   branches: [ main ]
+  # merge_group:
+  #   branches: [ main ]
+  workflow_call:
+  workflow_dispatch:
 
 # In cases of concurrent workflows running (consecutive pushes to PR)
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 
 permissions:
   actions: write
@@ -19,7 +21,7 @@ permissions:
   checks: write
   contents: read
 
-name: Rust CI
+name: Reusable Rust CI
 
 env:
   # See https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Workflow.
@@ -34,7 +36,7 @@ jobs:
   rust_skip:
     name: Rust Skip Duplicates
     continue-on-error: true # Uncomment once integration is finished
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
@@ -45,12 +47,12 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto"]'
+          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto", ".github/workflows/reusable_ci_rust.yml"]'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
   rust_check:
     name: Rust Checks
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [rust_skip]
     steps:
       - name: Checkout sources
@@ -105,7 +107,7 @@ jobs:
           # We should investigate cpu/memory usage and upgrade runner size accordingly
           # and/or reduce cpu/memory usage in our tests.
           # https://github.com/actions/runner-images/issues/6680
-          args:  --all-features -- --nocapture --quiet --test-threads=1
+          args: --all-features -- --nocapture --quiet --test-threads=1
 
       # Run a build. The earlier test compile won't have built the executables.
       # This makes sure we have artifacts available for later integration tests
@@ -115,7 +117,7 @@ jobs:
         if: needs.rust_skip.outputs.should_skip != 'true'
         with:
           command: build
-          args:  --all-features
+          args: --all-features
 
       - name: Cargo Clippy
         uses: actions-rs/clippy-check@v1
@@ -172,7 +174,7 @@ jobs:
   # that waiting to determine if we *should* skip it would be a waste.
   rust_format:
     name: Rust Format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -197,7 +199,7 @@ jobs:
   # that waiting to determine if we *should* skip it would be a waste.
   rust_audit:
     name: Rust Audits
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     # Audits don't need a toolchain or any of the dependencies, so we don't cache.
     # Restoring the cache takes 2m. Running `cargo deny` takes 10s.

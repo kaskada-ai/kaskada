@@ -116,6 +116,8 @@ def create_query(
             No actual computation of results is performed.
         changed_since_time (datetime.datetime, optional):
             Time bound (inclusive) after which results will be output.
+        final_result_time (Union[str, datetime.datetime], optional):
+            Time bound (inclusive) at which results will be output.
         limits (pb.QueryRequest.Limits, optional):
             Configure limits on the output set.
         slice_filter (SliceFilter, optional):
