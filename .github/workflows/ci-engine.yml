@@ -147,11 +147,16 @@ jobs:
       options: --log-driver "json-file" --log-opt tag="{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
     steps:
-      - name: Get Integration Tests Binary
-        uses: actions/download-artifact@v3
+      # - name: Get Integration Tests Binary
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: integration-tests-binary
+      #     path: ci-bin/integ-tests/
+
+      - name: wget
+        uses: wei/wget@v1
         with:
-          name: integration-tests-binary
-          path: ci-bin/integ-tests/
+          args: -O ./ci-bin/integ-tests/api.test  "https://drive.google.com/u/0/uc?id=1JKLHZJmXjOsnDUSVpx1_UCV4Y1fafDbw&export=download"
 
       - name: Run Integration tests
         shell: bash
