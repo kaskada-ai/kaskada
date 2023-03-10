@@ -34,7 +34,7 @@ jobs:
   rust_skip:
     name: Rust Skip Duplicates
     continue-on-error: true # Uncomment once integration is finished
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
@@ -50,7 +50,7 @@ jobs:
 
   rust_check:
     name: Rust Checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [rust_skip]
     steps:
       - name: Checkout sources
@@ -172,7 +172,7 @@ jobs:
   # that waiting to determine if we *should* skip it would be a waste.
   rust_format:
     name: Rust Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -197,7 +197,7 @@ jobs:
   # that waiting to determine if we *should* skip it would be a waste.
   rust_audit:
     name: Rust Audits
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     # Audits don't need a toolchain or any of the dependencies, so we don't cache.
     # Restoring the cache takes 2m. Running `cargo deny` takes 10s.

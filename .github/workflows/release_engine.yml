@@ -84,7 +84,7 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             goos: linux
             goarch: amd64
-            host: ubuntu-latest
+            host: ubuntu-20.04
           - target: x86_64-pc-windows-msvc
             goos: windows
             goarch: amd64
