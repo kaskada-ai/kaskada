@@ -53,6 +53,10 @@ jobs:
           name: engine-debug
           path: ci-bin/engine/
 
+      - name: List files in ci-bin/
+        shell: bash
+        run: ls -lR ./ci-bin/
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
