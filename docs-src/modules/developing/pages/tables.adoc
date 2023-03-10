@@ -3,6 +3,103 @@
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
 
+== Managing tables with the CLI
+
+The CLI manages Kaskada resources declaratively by managing spec files.
+A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== The format of tables in a spec file.
+
+Tables are described in a spec file as a list of table objects under the `tables` key:
+
+[source,yaml]
+----
+tables:
+  - table_id: 14c4...ba56 <1>
+    table_name: GamePlay <2>
+    entity_key_column_name: entity_id <3>
+    time_column_name: event_at <4>
+    grouping_id: User <5>
+    subsort_column_name: offset <5>
+
+  - table_id: dd61...70e9
+    table_name: Purchase
+    entity_key_column_name: entity_id
+    time_column_name: event_at
+    grouping_id: User
+----
+<1> A unique identifier for the table. This value is assigned by the manager and is read-only.
+<2> A name used to refer to the contents of the table in queries.
+<3> The name of the entity key column within the table.
+<4> The name of the time column within the table.
+<5> An optional name of the subsort column within the table.
+
+
+=== Exporting the current tables as a spec file.
+
+You can export all the tables currently defined using the CLI.
+
+[source,bash]
+----
+cli sync export --all
+----
+
+The export result is shown below
+
+[source,yaml]
+----
+tables:
+  - table_id: 14c4...ba56
+    table_name: GamePlay
+    entity_key_column_name: entity_id
+    time_column_name: event_at
+    grouping_id: User
+    subsort_column_name: offset
+views:
+    # ...
+----
+
+Alternately, if you know a specific table you'd like to export you can specify it explicitly.
+
+[source,bash]
+----
+cli sync export --table Purchase
+----
+
+=== Updating Kaskada to reflect the contents of a spec file
+
+To change a table with the CLI, you first modify the table in a spec file, then "apply" the spec file with the CLI.
+When a spec file is applied, the CLI inspects all of the server's resources and all of the resources
+defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
+Applying a spec can create new tables, change a tables's mutable fields, or delete tables.
+
+[WARNING]
+.Table updates are destructive
+====
+Tables are currently immutable. 
+When the CLI updates a table, it does so by deleting the table and re-creating it.
+When this happens, all data previously loaded into the table is lost.
+====
+
+Before applying a spec file, it's a good idea to see what changes will be made. 
+You can see these changes by creating an apply plan.
+
+[source,bash]
+----
+cli sync plan --file spec.yaml
+----
+
+Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
+
+You can apply a spec file using the CLI.
+
+[source,bash]
+----
+cli sync apply --file spec.yaml
+----
+
+== Managing tables with Python
+
 All methods on this page use the `table` module. Be sure to import it
 before running any method:
 
@@ -10,8 +107,6 @@ before running any method:
 ----
 from kaskada import table
 ----
-
-== Table Methods
 
 === Creating a Table
 
@@ -93,7 +188,7 @@ table.delete_table("Purchase")
 
 [WARNING]
 ====
-Note that deleting a table also deletes any files uploaded to it.
+Note that deleting a table also deletes any events uploaded to it.
 ====
 
 A failed precondition error is returned if another view and/or
@@ -107,101 +202,3 @@ functioning incorrectly.
 ----
 table.delete_table("Purchase", force=True)
 ----
-
-== Uploading Data
-
-[NOTE]
-.Going Deeper 
-====
-Under the hood, file uploads are a multi-part process.
-The first step is to create a staged file that requests an upload URL
-from the API. The Python client library will upload files to the upload
-URL through an HTTP PUT request. Then an additional API call is
-performed to load the staged file to a table where additional validation
-is performed.
-====
-
-=== From a Remote file or Dataframe
-
-Data can be loaded from a dataframe into a Kaskada table. Remote files
-can be read into a dataframe and then uploaded to Kaskada.
-
-[source,python]
-----
-import pandas
-
-# A sample Parquet file provided by Kaskada for testing
-purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk"
-
-# Read the file into a Pandas Dataframe
-purchases = pandas.read_parquet(purchases_url)
-
-# Upload the dataframe's contents to the Purchase table
-table.load_dataframe("Purchase", purchases)
-----
-
-The contents of the dataframe are transferred to Kaskada and added to
-the Purchase table.
-
-=== From Amazon S3
-
-Data can be loaded directly from Amazon S3 into a Kaskada table. Loading
-from S3 requires the following:
-
-* AWS Access Key - The access key with READ permissions to the bucket
-and path (optional).
-* AWS Secret Access Key - The secret key associated with the access key
-(optional).
-* Path - The path to the object. One of the following:
-** https://s3.Region.amazonaws.com/bucket-name/key-name[Virtual Hosted
-Path] - E.g.
-https://s3.Region.amazonaws.com/bucket-name/key-name.parquet
-** Region, Bucket, Key
-
-[NOTE]
-.Security and Credentials
-====
- Kaskada does not store the provided
-credentials in any manner. The API only has access to the credentials
-throughout the load data call. If no access credentials are provided,
-the object must have public read permissions.
-====
-
-[source,python]
-----
-from kaskada import table
-
-TABLE_NAME = 'Purchase'
-
-EXTERNAL_AWS_ACCESS_KEY = '<AWS_ACCESS_KEY'
-EXTERNAL_AWS_SECRET_KEY = '<AWS_SECRET_KEY>'
-S3_PATH = 'events/2022/purchases.parquet'
-BUCKET = 'production.company'
-REGION = 'us-west-2'
-
-table.upload_from_s3(
-    TABLE_NAME,
-    access_key=EXTERNAL_AWS_ACCESS_KEY, 
-    secret=EXTERNAL_AWS_SECRET_KEY, 
-    bucket=BUCKET,
-    key=S3_PATH, 
-    region=REGION
-)
-----
-
-The contents of the parquet object in S3 are transferred to Kaskada and
-added to the Purchase table.
-
-=== From a Local File
-
-Local files can be uploaded directly to Kaskada without converting them
-to a dataframe. However, the files must be in a specific format. See
-xref:reference:expected-file-format[Expected File Format] for details.
-
-[source,python]
-----
-fullPathToFile = "/content/drive/place/thing/purchases.parquet"
-table.upload_file("Purchases", fullPathToFile)
-----
-
-This uploads the contents of the file to the Purchases table.

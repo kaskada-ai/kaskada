@@ -81,6 +81,14 @@ When a spec file is applied, the CLI inspects all of the server's resources and 
 defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
 Applying a spec can create new views, change a view's mutable fields, or delete views.
 
+[WARNING]
+.View updates are destructive
+====
+Vies are current immutable. 
+When the CLI updates a view, it does so by deleting the view and re-creating it.
+When this happens, the view may be temporarily unavailable to queries.
+====
+
 Before applying a spec file, it's a good idea to see what changes will be made. 
 You can see these changes by creating an apply plan.
 
@@ -115,16 +123,6 @@ name. In this case, we're interested in some purchase statistics for
 each user. This definition depends on business logic and might require
 some iteration to get just right.
 
-[TIP]
-.Idiomatic Kaskada
-====
-We like to use CamelCase for view names. This is
-the same naming convention as we use for tables, and helps to
-communicate that we're referring to a persistent resource in the Kaskada
-system, as opposed to a temporary local value created as part of a
-query.
-====
-
 [source,python]
 ----
 view.create_view(
@@ -137,6 +135,18 @@ view.create_view(
     }"
 )
 ----
+
+This creates a view names `PurchaseStats`.
+
+[TIP]
+.Idiomatic Kaskada
+====
+We like to use CamelCase for view names. This is
+the same naming convention as we use for tables, and helps to
+communicate that we're referring to a persistent resource in the Kaskada
+system, as opposed to a temporary local value created as part of a
+query.
+====
 
 If you're using IPython/Jupyter, you can create a view from the contents of a `%%fenl` block using the `--var` argument
 
