@@ -1,5 +1,4 @@
 * Getting Started  
-** xref:hello-world.adoc[] 
-** xref:hello-client-setup.adoc[] 
-** xref:hello-querying-data.adoc[] 
-** xref:hello-sharing-queries.adoc[] 
+** xref:installation.adoc[] 
+** xref:loading-data.adoc[] 
+** xref:querying-data.adoc[] 

@@ -1,7 +1,0 @@
-= Kaskada Technical Docs 
-
-Welcome to the Kaskada technical docs. You'll find comprehensive guides and documentation 
-to help you start working with Kaskada as quickly as possible, as well as support if you get stuck.
-
-
-xref:getting-started:hello-world.adoc[Let's jump right in!] 
