@@ -81,7 +81,7 @@ impl ShiftUntilOperation {
 
         let condition_input_column = operation
             .condition
-            .ok_or(invalid_operation!("missing condition"))?
+            .ok_or_else(|| invalid_operation!("missing condition"))?
             .input_column as usize;
 
         Ok(Box::new(Self {
