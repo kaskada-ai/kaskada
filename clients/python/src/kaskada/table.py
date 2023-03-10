@@ -166,6 +166,8 @@ def create_table(
                         "topic": source._topic,
                     }
                 }
+            else:
+                raise ValueError("invalid table source provided")
 
         req = table_pb.CreateTableRequest(table=table_pb.Table(**table_args))
         logger.debug(f"Create Tables Request: {req}")
