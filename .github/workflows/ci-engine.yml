@@ -142,8 +142,8 @@ jobs:
         - 8080:8080
         - 50051:50051
       volumes:
-        - tests/integration/data:/data
-        - testdata:/testdata
+        - "./tests/integration/data:/data"
+        - "./testdata:/testdata"
       options: --log-driver "json-file" --log-opt tag="{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
     steps:
