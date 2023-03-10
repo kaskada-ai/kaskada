@@ -105,7 +105,7 @@ pub(super) fn create(
         Time::Literal(timestamp) => {
             let timestamp =
                 NaiveDateTime::from_timestamp_opt(timestamp.seconds, timestamp.nanos as u32)
-                    .ok_or_esle(|| invalid_operation!("invalid literal timestamp"))?;
+                    .ok_or_else(|| invalid_operation!("invalid literal timestamp"))?;
             let timestamp = timestamp.timestamp_nanos();
             ShiftToLiteralOperation::try_new(timestamp, incoming_stream, helper)
                 .into_report()
