@@ -1,0 +1,132 @@
+= Frequently Asked Questions
+
+== How hard is it to learn the query language?
+
+We didn't make the decision to implement a novel query language lightly.
+We know that learning a new language takes time and working with new abstractions can be frustrating; in fact we've tried _repeatedly_ to find ways to build on existing languages rather than implement our own.
+What we've found is that fundamental abstractions _matter_.
+
+SQL _really_ wants to reason about static tables - you can translate streams or graphs or timeseries into a tabular representation, but tables are https://en.wikipedia.org/wiki/Leaky_abstraction[leaky abstractions] for many of these applications.
+There's a reason that https://tinkerpop.apache.org/gremlin.html[Gremlin] is popular for graphs and https://prometheus.io/docs/prometheus/latest/querying/basics/[PromQL] for timeseries - these query languages use fundamental abstractions that are aligned with the data being queried.
+
+We believe that most appropriate abstraction for reasoning about event data is the _timeline_, and we built our query language around this idea. 
+
+* Timelines capture the richness of a raw event feed without leaking implementation details such as "bulk vs streaming". 
+* Timelines are more general than timeseries but are compatible with timeseries operations. 
+* Timelines are less general than tables because they model time explicitly. While this limits the kinds of data you can work with, it allows for much more natural expressions of sequential and temporal relationships.
+* Timelines have a familiar and useful http://worrydream.com/refs/Brooks-NoSilverBullet.pdf["geometric abstraction"] that helps you reason about time visually.
+
+We've tried very hard to implement a simple, familiar query syntax with intuitive, predicable semantics, and to provide extensive documentation and example code.
+We're always looking for ways to improve - if you see things that are confusing or unexpected we'd love to hear about it.
+Start a https://github.com/kaskada-ai/kaskada/discussions[GitHub discussion] and let's improve Kaskada together!
+
+== How scalable is Kaskada?
+
+Event processors must choose between optimizing for throughput or latency, but the tradeoff is asymmetric - improving p90 end-to-end latency by a minute can require design choices that reduce throughput by multiple orders of magnitude.
+
+Modern CPU's and GPU's are much more efficient when applying the same operation repeatedly, so compute efficiency increases as the batches you compute over get larger.
+In a real-time system, however, working with larger batches means spending more time buffering, which means increased end-to-end latency.
+
+One of Kaskada's design goals is to provide interactive results over large _historical_ event sets.
+This ability is critical to understanding the historical context of a computation or "bootstrapping" new real-time computations.
+
+To support these type of bulk/OLAP workloads, Kaskada is built using the https://arrow.apache.org/[Apache Arrow] library for columnar computation.
+Columnar compute is difficult to "tack on" to an event processor after-the-fact; it's a foundational design decision that has implications throughout the engine's implementation.
+
+By builing on Arrow, Kaskada optimizes for throughput over latency.
+We believe that end-to-end latencies measured in 100's of milliseconds are sufficient for most real-time applications, and that sacrificing single-digit latencies is an acceptable tradeoff for https://www.infoworld.com/article/3678300/how-vectorization-improves-database-performance.html[orders-of-magnitude] improvements in bulk efficiency.
+
+Another important tradeoff Kaskada makes is to focus on single-process performance.
+In the early days of "Big Data", commodity hardware came with a single core and 2Gb of RAM.
+The only way to implement a computation over terabyte-sized datasets was to distribute it across multiple machines.
+
+Recent compute engines are increaslingly de-emphasizing distributed execution in favor of high-performance on a single physical instance. 
+To quote from an excellent article from https://duckdb.org/[DuckDB]'s Jordan Tigani titled https://motherduck.com/blog/big-data-is-dead/[Big Data is Dead]:
+
+[quote,Jordan Tigani,Big Data is Dead]
+____
+Today, however, a standard instance on AWS uses a physical server with 64 cores and 256 GB of RAM. That’s two orders of magnitude more RAM. If you’re willing to spend a little bit more for a memory-optimized instance, you can get another two orders of magnitude of RAM. How many workloads need more than 24TB of RAM or 445 CPU cores?
+____
+
+Currently, Kaskada takes a hybrid approach to distributed execution. 
+Distributed workers can be used when initially loading data. 
+Data loading is expensive becuse it involves sorting events chronologically.
+Kaskada currently exeuctes each query in a single process. 
+Fully-distributed execution is on our roadmap, however we find that "vertical scaling" is sufficient for the vast majority of use cases.
+
+== How do Timelines relate to Timeseries?
+
+Timeseries databases are a popular way to work with temporal data. 
+A timeseries captures a series of values, each associated with a different time.
+In most cases, the series corresponds to a standard interval, for example seconds or minutes.
+Having a pre-defined series is useful for some operations, for example it is easier to reason about time intervals in which nothing happened than it would be with standard SQL.
+
+The downside to starting with a standard interval is that in some cases your source data doesn't conform to the timeseries format - timeseries are often generated by counting event occurrences in each time interval.
+Information is often lost in the transformation from instantaneous events into windowed aggregations.
+
+Timelines are similar to timeseries - both capture values associated with different times.
+The difference is that a timeline describes an arbitrary number of values and doesn't depend on a standard interval. 
+In this sense, a timeseries is a special-case of a timeline.
+
+Kaskada provides operations for transforming a timeline into a time series.
+For example, to transform an event timeline `Purchase` into a daily event-count timeseries:
+
+[source,Fenl]
+----
+Purchase | count(since(daily()))
+----
+
+== What are some examples of "event data"?
+
+An "event" is any fact about the world associated with a specific time.
+Events record simple observations, for example:
+
+[quote]
+____
+Alice purchased a tennis ball on Thursday, 16-Mar-23 16:54:04 UTC.
+____
+
+Events are powerful because they're _facts_; they don't change over time.
+Alice may cancel her purchase, or return the tennis ball for a refund, but this doesn't change the fact of her original purchase.
+
+Events are produced in many different ways:
+
+* User clicks, swipes, page-views, and form interactions
+* Application logs
+* Callbacks from external services
+* Change Data Capture (CDC) events from mutable data stores
+* The output of streaming compute jobs
+
+By collecting events as they occur, applications can react to changes in the world as they happen.
+
+== Why would I want to compute directly from events?
+
+Events are often treated as "raw" data in need of pre-processing before they can be usedd. 
+You might be accustomed to working with data that's been through a number of ETL operations to noramlize, filter, and aggreagte the raw events into an easier to use set of tables.
+This type of data processing can help ensure consistent business logic and minimize the time required to start working with "correct" data.
+
+Unfortunately, this practice can have some downsides:
+
+* Pre-aggregation often produces results with less granular time resolution than the original data, and many real-time data applications depend on this granularity. It's often important to know what happend in the the past few minutes or seconds - knowing what happened yesterday isn't good enough.
+* ETL and pre-processing pipelines often end up making decisions about what is and isn't important. These decisions reflect priorities at time the pipeline is created, but can end up making it difficult to iterate and build new solutions. 
+* Working with "cleaned" tables usually means collaborating by sharing large datasets. The challenge comes when you need to understand the _meaning_ of that data. Semantics often get lost when sharing a bucket of bits rather than the business logic used to generate it.
+
+Kaskada is designed to allow practitioners to describe the full set of cleaning operations needed to transform raw events into actionable data. Collaboration through code-sharing makes it easier to understand how outputs are defined, and makes it easier to iterate on those definitions.
+
+
+
+// == How can I implement point-in-time lookups using Timelines?
+
+// == What data sources can Kaskada integrate with?
+
+// == How do you handle versioning of views?
+
+// == How does Kaskada compare to X?
+
+// === Dataflow-based compute engines like Flink, Spark Streaming or Cloud Dataflow
+
+// === OLAP compute engines like Snowflake or Trino/Presto
+
+// === CEP engines like JBOSS Drools or EsperTech
+
+// == How does Kaskada intgrate with machine learning feature stores?
