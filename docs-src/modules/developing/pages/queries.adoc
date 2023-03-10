@@ -5,7 +5,7 @@ The following sections will help with writing queries.
 == Records
 
 All queries need to specify a record. A record is simply a set of named
-expressions inside squiggly brackets.
+expressions inside squiggly (curly) brackets, i.e., `{ }`.
 
 An example record:
 
@@ -32,7 +32,12 @@ Using python directly is one way to write queries.
 import pandas
 from kaskada import compute
 
-query = "{ time: Purchase.purchase_time, entity: Purchase.customer_id, max_amount: last(Purchase.amount) | max(), min_amount: Purchase.amount | min()}"
+query = """{ 
+  time: Purchase.purchase_time, 
+  entity: Purchase.customer_id, 
+  max_amount: last(Purchase.amount) | max(), 
+  min_amount: Purchase.amount | min()
+}"""
 
 response_parquet = compute.query(query=query).parquet.path
 
@@ -364,7 +369,7 @@ request_details {
 |14 |kk_006 |2020-01-08 00:00:00 |patrick |krusty_krab |9 |4
 |===
 
-* use `final-results` (default) to return only the most recent event for
+* use `final-results` to return only the most recent event for
 each entity
 
 [source,ipython]
@@ -391,8 +396,7 @@ request_details {
 
 === Using `--preview-rows`
 
-`--preview-rows`: Produces a preview of the data with at least this many
-rows.
+`--preview-rows`: Produces a preview of the data with approximately this many rows.
 
 * Setting a limit allows you to quickly iterate on features and verify
 your results before running them over your full dataset

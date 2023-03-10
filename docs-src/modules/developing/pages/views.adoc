@@ -77,7 +77,7 @@ cli sync export --view PurchaseStats
 === Updating Kaskada to reflect the contents of a spec file
 
 To change a view with the CLI, you first modify the view in a spec file, then "apply" the spec file with the CLI.
-When a spec file is applied, the CLI inspects all of the server's resoruces and all of the resources
+When a spec file is applied, the CLI inspects all of the server's resources and all of the resources
 defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
 Applying a spec can create new views, change a view's mutable fields, or delete views.
 
@@ -100,7 +100,7 @@ cli sync apply --file spec.yaml
 
 == Managing views with Python
 
-All methods in this section use from the `view` object. Be sure to import
+All methods in this section are from the `view` object. Be sure to import
 it before running any method:
 
 [source,python]
