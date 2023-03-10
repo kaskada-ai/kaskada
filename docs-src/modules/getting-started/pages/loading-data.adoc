@@ -1,12 +1,5 @@
 = Loading Data 
 
-[WARNING]
-.Setup Required
-====
-The following examples assume you've already completed
-xref::hello-client-setup.adoc[Client Setup].
-====
-
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
 
@@ -84,7 +77,7 @@ Now that we've created a table, we're ready to load some data into it.
 Data can be loaded into a table in multiple ways. In this example we'll
 load the contents of a Pandas dataframe into the table. To learn about
 the different ways data can be loaded into a table, see the
-xref:reference:tables.adoc#uploading-data["Uploading Data"
+xref:developing:tables.adoc#uploading-data["Uploading Data"
 section of the "Working with Data"] page.
 
 [source,python]
@@ -155,5 +148,5 @@ request_details {
 After executing this block, all tables that have been defined are
 returned.
 
-For more help with tables and loading data, see xref:reference:tables.adoc[Reference -
+For more help with tables and loading data, see xref:developing:tables.adoc[Reference -
 Working with Tables]

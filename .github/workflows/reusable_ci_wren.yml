@@ -1,31 +1,33 @@
 # TODO: Use Makefile provided in CI (might have to move to docker builds in CI or drop docker in Makefile)
 # TODO: Move ent generation out of build jon. Tried but something was off with cacing and builds would fail
 on:
-  pull_request:
-    branches: [ main ]
-  push:
-    branches: [ main ]
-  merge_group:
-    branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  # push:
+  #   branches: [ main ]
+  # merge_group:
+  #   branches: [ main ]
+  workflow_call:
+  workflow_dispatch:
 
 # In cases of concurrent workflows running (consecutive pushes to PR)
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 
 permissions:
   actions: write
   contents: read
 
-name: Wren CI
+name: Reusable Wren CI
 
 jobs:
   wren_skip:
     name: Wren Skip Duplicates
     continue-on-error: true # Uncomment once integration is finished
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
@@ -36,14 +38,14 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["wren/**", "proto/**/*.proto"]'
+          paths: '["wren/**", "proto/**/*.proto", ".github/workflows/reusable_ci_wren.yml"]'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
   wren_build_and_test:
     name: Build and Unit Test Wren
     needs: [wren_skip]
     if: needs.wren_skip.outputs.should_skip != 'true'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -75,9 +77,29 @@ jobs:
         run: cp NOTICE ./wren/
 
       - name: Build
-        run: go build main.go
+        run: go build -o wren-binary main.go
         working-directory: wren
 
       - name: Unit Tests
         run: go test ./...
         working-directory: wren
+
+      - name: Fetch Artifacts (if skipping)
+        id: download-artifact
+        if: needs.wren_skip.outputs.should_skip == 'true'
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{needs.wren_skip.outputs.run_id}}
+          name: wren-binary
+          # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
+          # Required, if the artifact is from a different repo
+          # Required, if the repo is private a Personal Access Token with `repo` scope is needed
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          path: wren/
+
+      - name: Upload Wren Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: wren-binary
+          retention-days: 5
+          path: wren/wren-binary

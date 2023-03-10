@@ -1,0 +1,2 @@
+* Integrating
+** xref:integrating-with-feature-stores.adoc[]

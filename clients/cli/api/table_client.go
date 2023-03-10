@@ -20,6 +20,7 @@ type TableClient interface {
 	Get(name string) (*apiv1alpha.Table, error)
 	Create(item *apiv1alpha.Table) error
 	Delete(name string) error
+	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
 }
 
 func NewTableServiceClient(ctx context.Context, conn *grpc.ClientConn) TableClient {
@@ -61,6 +62,15 @@ func (c tableClient) Delete(name string) error {
 	_, err := c.client.DeleteTable(c.ctx, &apiv1alpha.DeleteTableRequest{TableName: name, Force: true})
 	if err != nil {
 		log.Debug().Err(err).Str("name", name).Msg("issue deleting table")
+		return err
+	}
+	return nil
+}
+
+func (c tableClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	_, err := c.client.LoadData(c.ctx, &apiv1alpha.LoadDataRequest{TableName: name, SourceData: &apiv1alpha.LoadDataRequest_FileInput{fileInput}})
+	if err != nil {
+		log.Debug().Err(err).Msg("issue loading data")
 		return err
 	}
 	return nil

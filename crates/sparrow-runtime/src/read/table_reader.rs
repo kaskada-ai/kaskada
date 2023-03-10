@@ -9,7 +9,6 @@ use futures::stream::BoxStream;
 use futures::Stream;
 use hashbrown::HashSet;
 use itertools::Itertools;
-use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_compiler::TableInfo;
 use sparrow_core::TableSchema;
@@ -61,7 +60,7 @@ pub fn table_reader(
     projected_columns: Option<Vec<String>>,
     flight_recorder: FlightRecorder,
     max_event_in_snapshot: Option<NaiveDateTime>,
-    max_event_timestamp: Option<Timestamp>,
+    upper_bound_opt: Option<NaiveDateTime>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<Batch, Error>> + 'static, Error> {
     let data_handles = select_prepared_files(
         data_manager,
@@ -128,7 +127,7 @@ pub fn table_reader(
             let next_batch = READ_TABLE.instrument::<error_stack::Result<_, Error>, _>(&flight_recorder, |metrics| {
                 // Weird syntax because we can't easily say "move metrics but not projected schema".
                 // This may get easier with async closures https://github.com/rust-lang/rust/issues/62290.
-                let input = next_input.next_batch(&projected_schema, max_event_timestamp.clone());
+                let input = next_input.next_batch(&projected_schema, upper_bound_opt.clone());
                 async move {
                     let input = input.await?;
 
@@ -395,7 +394,7 @@ impl ActiveInput {
     async fn next_batch(
         &mut self,
         projected_schema: &TableSchema,
-        max_event_timestamp: Option<Timestamp>,
+        upper_bound_opt: Option<NaiveDateTime>,
     ) -> error_stack::Result<Option<Batch>, Error> {
         if self.stream.is_none() {
             let stream = new_parquet_stream(self.data_handle.as_ref(), projected_schema)
@@ -430,40 +429,37 @@ impl ActiveInput {
 
             self.min_next_time = next.upper_bound.time;
 
-            // We want to filter out all events that occur after a specific max
-            // event timestamp provided.
+            // Filter out all events after a timestamp, if provided.
             //
-            // If there is no filter max event timestamp, all events are
-            // included.
-            match max_event_timestamp {
-                Some(_max_event_timestamp) => {
-                    //     let times = next.times()?;
-                    //     let timestamp = NaiveDateTime::from_timestamp(
-                    //         max_event_timestamp.seconds,
-                    //         max_event_timestamp.nanos as u32,
-                    //     );
-                    //     let timestamp = timestamp.timestamp_nanos();
-                    //     // Slice the data such that all data is less than or equal the upper
-                    // bound     let length = match
-                    // times.binary_search(&timestamp) {         Ok(mut length)
-                    // => {             while times.get(length) ==
-                    // Some(&timestamp) {                 length += 1
-                    //             }
-                    //             length
-                    //         }
-                    //         Err(length) => length,
-                    //     };
+            // This allows users to supply a specific timestamp to produce outputs at.
+            // While the query should filter out rows past this timestamp, sparrow can
+            // pre-emptively stop reading at this time to avoid doing unnecessary work.
+            match upper_bound_opt {
+                Some(upper_bound) => {
+                    let times = next.times().into_report().change_context(Error::Internal)?;
+                    let ts_nanos = upper_bound.timestamp_nanos();
 
-                    //     if length == 0 {
-                    //         Ok(None)
-                    //     } else {
-                    //         let slice = next.data().slice(0, length);
-                    //         let batch = Batch::try_new_from_batch(slice)?;
-                    //         self.min_next_time = batch.upper_bound_as_time().timestamp_nanos();
-                    //         Ok(Some(batch))
-                    //     }
-                    // TODO: Re-enable final at time
-                    error_stack::bail!(Error::Unsupported("Final at time"))
+                    // Slice the data such that all data is less than or equal to the upper bound
+                    let length = match times.binary_search(&ts_nanos) {
+                        Ok(mut length) => {
+                            while times.get(length) == Some(&ts_nanos) {
+                                length += 1
+                            }
+                            length
+                        }
+                        Err(length) => length,
+                    };
+
+                    if length == 0 {
+                        Ok(None)
+                    } else {
+                        let slice = next.data().slice(0, length);
+                        let batch = Batch::try_new_from_batch(slice)
+                            .into_report()
+                            .change_context(Error::Internal)?;
+                        self.min_next_time = batch.upper_bound.time;
+                        Ok(Some(batch))
+                    }
                 }
                 None => {
                     error_stack::ensure!(
@@ -505,6 +501,7 @@ mod tests {
     use arrow::record_batch::RecordBatch;
     use chrono::NaiveDateTime;
     use futures::TryStreamExt;
+    use prost_wkt_types::Timestamp;
     use sparrow_api::kaskada::v1alpha::{
         compute_table, ComputeTable, PreparedFile, TableConfig, TableMetadata,
     };
@@ -812,6 +809,12 @@ mod tests {
             .unwrap();
         let table_info = data_context.table_info(table_id).unwrap();
 
+        let upper_bound_opt = if let Some(ts) = max_event_time {
+            NaiveDateTime::from_timestamp_opt(ts.seconds, ts.nanos as u32)
+        } else {
+            None
+        };
+
         let mut data_manager = DataManager::new(S3Helper::new().await);
         let actual: Vec<_> = table_reader(
             &mut data_manager,
@@ -820,7 +823,7 @@ mod tests {
             None,
             FlightRecorder::disabled(),
             max_time_processed,
-            max_event_time,
+            upper_bound_opt,
         )?
         .try_collect()
         .await?;
