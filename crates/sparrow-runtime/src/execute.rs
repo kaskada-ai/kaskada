@@ -185,7 +185,7 @@ pub async fn execute(
     let output_datetime = if let Some(t) = output_at_time {
         Some(
             NaiveDateTime::from_timestamp_opt(t.seconds, t.nanos as u32)
-                .ok_or(Error::internal_msg("expected valid timestamp"))?,
+                .ok_or_else(|| Error::internal_msg("expected valid timestamp"))?,
         )
     } else {
         None

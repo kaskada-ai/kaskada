@@ -174,7 +174,7 @@ impl OperationExecutor {
 
         let operator = operation
             .operator
-            .ok_or(Error::internal_msg("missing operator"))?;
+            .ok_or_else(|| Error::internal_msg("missing operator"))?;
 
         let operation_label = operator.label();
 
