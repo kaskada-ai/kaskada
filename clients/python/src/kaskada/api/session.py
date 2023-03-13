@@ -6,7 +6,7 @@ import uuid
 from abc import ABC
 from pathlib import Path
 from subprocess import Popen
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import kaskada.client
 from kaskada.api import api_utils, release
@@ -122,7 +122,7 @@ class LocalBuilder(Builder):
         )
         self.endpoint(endpoint, is_secure)
         self._download = True
-        self._manager_configs = {}
+        self._manager_configs: Dict[str, Any] = {}
 
     def path(self, path: str):
         self._path = path
