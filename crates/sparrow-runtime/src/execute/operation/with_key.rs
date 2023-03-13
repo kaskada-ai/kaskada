@@ -82,7 +82,7 @@ impl WithKeyOperation {
 
         let new_key_input_index = operation
             .new_key
-            .ok_or(invalid_operation!("missing new key"))?
+            .ok_or_else(|| invalid_operation!("missing new key"))?
             .input_column as usize;
         let is_primary_grouping = context.primary_grouping() == operation.grouping;
 
