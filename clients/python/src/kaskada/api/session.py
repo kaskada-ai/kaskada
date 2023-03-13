@@ -122,6 +122,7 @@ class LocalBuilder(Builder):
         )
         self.endpoint(endpoint, is_secure)
         self._download = True
+        self._manager_configs = {}
 
     def path(self, path: str):
         self._path = path
@@ -138,6 +139,20 @@ class LocalBuilder(Builder):
     def download(self, download: bool):
         self._download = download
         return self
+
+    def manager_rest_port(self, port: int):
+        self._manager_configs["-rest-port"] = port
+        return self
+
+    def manager_grpc_port(self, port: int):
+        self._manager_configs["-grpc-port"] = port
+        return self
+
+    def __get_manager_configs_as_args(self):
+        configs = []
+        for key, value in self._manager_configs.items():
+            configs.append(f"{key}={value}")
+        return configs
 
     def __get_log_path(self, file_name: str) -> Path:
         if self._path is None:
@@ -175,10 +190,9 @@ class LocalBuilder(Builder):
         engine_std_err, engine_std_out = self.__get_std_paths("engine")
         engine_command = "serve"
 
-        # TODO: Verify the logging output (stdout/stderr)
-        manager_cmd = [str(manager_binary_path)]
+        manager_cmd = [str(manager_binary_path)] + self.__get_manager_configs_as_args()
         logger.debug(f"Manager start command: {manager_cmd}")
-        engine_cmd = [f"{engine_binary_path} {engine_command}"]
+        engine_cmd = [engine_binary_path, engine_command]
         logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
         manager_process = api_utils.run_subprocess(
