@@ -2,10 +2,14 @@ import platform
 import socket
 import subprocess
 from contextlib import closing
+from pathlib import Path
+from typing import List
 
 
-def run_subprocess(cmd: str):
-    return subprocess.Popen(cmd, shell=True)
+def run_subprocess(cmd: List[str], stderr: Path, stdout: Path):
+    return subprocess.Popen(
+        cmd, shell=True, stderr=open(stderr, "w"), stdout=open(stdout, "w")
+    )
 
 
 def check_socket(endpoint: str) -> bool:

@@ -6,7 +6,7 @@ import uuid
 from abc import ABC
 from pathlib import Path
 from subprocess import Popen
-from typing import Optional
+from typing import Optional, Tuple
 
 import kaskada.client
 from kaskada.api import api_utils, release
@@ -150,6 +150,11 @@ class LocalBuilder(Builder):
         log_path.mkdir(parents=True, exist_ok=True)
         return log_path / file_name
 
+    def __get_std_paths(self, prefix: str) -> Tuple[Path, Path]:
+        stderr = self.__get_log_path(f"{prefix}_stderr.txt")
+        stdout = self.__get_log_path(f"{prefix}_stdout.txt")
+        return (stderr, stdout)
+
     def __get_binary_path(self) -> Path:
         if self._path is None:
             raise ValueError("no path provided and KASKADA_PATH was not set")
@@ -163,24 +168,26 @@ class LocalBuilder(Builder):
         manager_binary_path = (
             self.__get_binary_path() / self.KASKADA_MANAGER_BIN_NAME_DEFAULT
         )
-        manager_log_path = self.__get_log_path("manager_logs.txt")
+        manager_std_err, manager_std_out = self.__get_std_paths("manager")
         engine_binary_path = (
             self.__get_binary_path() / self.KASKADA_ENGINE_BIN_NAME_DEFAULT
         )
-        engine_log_path = self.__get_log_path("engine_logs.txt")
-        engine_params = "serve"
+        engine_std_err, engine_std_out = self.__get_std_paths("engine")
+        engine_command = "serve"
 
         # TODO: Verify the logging output (stdout/stderr)
-        manager_cmd = "{} > {} 2>&1".format(manager_binary_path, manager_log_path)
+        manager_cmd = [str(manager_binary_path)]
         logger.debug(f"Manager start command: {manager_cmd}")
-        engine_cmd = "{} {} > {} 2>&1".format(
-            engine_binary_path, engine_params, engine_log_path
-        )
+        engine_cmd = [f"{engine_binary_path} {engine_command}"]
         logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
-        manager_process = api_utils.run_subprocess(manager_cmd)
+        manager_process = api_utils.run_subprocess(
+            manager_cmd, manager_std_err, manager_std_out
+        )
         logger.info("Initializing engine process")
-        engine_process = api_utils.run_subprocess(engine_cmd)
+        engine_process = api_utils.run_subprocess(
+            engine_cmd, engine_std_err, engine_std_out
+        )
         return (manager_process, engine_process)
 
     def __download_latest_release(self):
