@@ -42,6 +42,8 @@ def test_local_builder_defaults():
     assert builder._path == session.LocalBuilder.KASKADA_PATH_DEFAULT
     assert builder._bin_path == session.LocalBuilder.KASKADA_BIN_PATH_DEFAULT
     assert builder._log_path == session.LocalBuilder.KASKADA_LOG_PATH_DEFAULT
+    assert builder._download == True
+    assert builder._manager_configs == {}
 
 
 def test_local_builder_set_path_sets_path():
@@ -72,3 +74,15 @@ def test_local_builder_no_bin_path_throws_exception_build():
     path = None
     with pytest.raises(ValueError):
         builder = session.LocalBuilder().bin_path(path).download(False).build()
+
+
+def test_local_builder_set_manager_rest_port_sets_config():
+    port = 12345
+    builder = session.LocalBuilder().manager_rest_port(port=port)
+    assert builder._manager_configs["-rest-port"] == port
+
+
+def test_local_builder_set_manager_port_sets_config():
+    port = 12345
+    builder = session.LocalBuilder().manager_grpc_port(port=port)
+    assert builder._manager_configs["-grpc-port"] == port
