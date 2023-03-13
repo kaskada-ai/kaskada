@@ -88,7 +88,6 @@ message Table {
     // Pulsar topic to read from
     string topic = 2;
   }
-
 }
 
 message ListTablesRequest {
