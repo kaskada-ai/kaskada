@@ -7,16 +7,20 @@ use arrow::{
     datatypes::{DataType, Field, Schema, SchemaRef},
     record_batch::RecordBatch,
 };
-use arrow::array::{ArrayData, BinaryArray, Float32Array, Int32Array, ListArray, NullArray, StructArray, TimestampMicrosecondArray, TimestampMillisecondArray, UnionArray};
+use arrow::array::{ArrayData, ArrowPrimitiveType, BinaryArray, Date32Array, Date64Array, Float16Array, Float32Array, Int16Array, Int32Array, Int8Array, ListArray, NullArray, PrimitiveArray, PrimitiveBuilder, StructArray, TimestampMicrosecondArray, TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray, UInt16Array, UInt32Array, UInt64Array, UInt8Array, UnionArray};
+use arrow::datatypes::{Float64Type, Int32Type, Int64Type, TimestampMillisecondType, TimeUnit};
 use avro_rs::types::{Record, Value};
-use error_stack::{FutureExt, IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{FutureExt, IntoReport, IntoReportCompat, Report, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::executor::block_on;
 use pulsar::{Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor};
+use pulsar::consumer::InitialPosition;
+use pulsar::error::ConsumerError;
 use sha2::digest::generic_array::arr;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
 use tracing::log::logger;
+use sparrow_core::ScalarValue;
 use crate::prepare::Error;
 
 pub struct AvroWrapper {
@@ -45,117 +49,6 @@ impl From<error_stack::Report<DeserializeError>> for DeserializeErrorWrapper {
     }
 }
 
-impl PulsarReader {
-    pub fn new(schema: SchemaRef, consumer: Consumer<AvroWrapper, TokioExecutor>) -> Self {
-        PulsarReader {
-            schema,
-            consumer
-        }
-    }
-
-    // TODO this returns one record batch per message, which is not what we want
-    // TODO using ArrowError is not a great fit but that is what PrepareIter requires
-    async fn next_async(&mut self) -> Option<Result<RecordBatch, ArrowError>> {
-        tracing::debug!("reading pulsar message");
-        // // read the next entry from the pulsar consumer
-        // let next_result = timeout(Duration::from_micros(1), self.consumer.next())
-        //     .await;
-        // if next_result.is_err() {
-        //     // timed out
-        //     return None;
-        // }
-        // let next = next_result.unwrap();
-        let next = self.consumer.next().await;
-        tracing::debug!("got a message");
-        match next {
-            Some(Ok(msg)) => {
-                self.consumer.ack(&msg).await.ok()?;
-                tracing::debug!("acked message");
-                let result: error_stack::Result<AvroWrapper, DeserializeError> = msg.deserialize();
-                let aw = match result {
-                    Ok(aw) => aw,
-                    Err(e) => {
-                        // TODO is there a better way to do this?
-                        let wrapped_error = DeserializeErrorWrapper::from(e);
-                        tracing::debug!("error deserializing message: {:#?}", wrapped_error);
-                        return Some(Err(ArrowError::from_external_error(Box::new(wrapped_error))));
-                    }
-                };
-                // Convert the Avro value to Arrow arrays
-                match avro_to_arrow(&aw.value) {
-                    Ok(arrow_data) => {
-                        tracing::debug!("success converting avro to arrow: {:#?}", arrow_data);
-                        Some(RecordBatch::try_new(
-                            self.schema.clone(),
-                            arrow_data))
-                    }
-                    Err(e) => {
-                        tracing::debug!("error converting avro to arrow: {:#?}", e);
-                        Some(Err(ArrowError::from_external_error(Box::new(e))))
-                    }
-                }
-            },
-            Some(Err(e)) => {
-                tracing::debug!("error reading message: {:#?}", e);
-                Some(Err(ArrowError::from_external_error(Box::new(e))))
-            },
-            None => None
-        }
-    }
-}
-
-impl Iterator for PulsarReader {
-    type Item = Result<RecordBatch, ArrowError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        block_on(self.next_async())
-    }
-}
-
-fn avro_to_arrow_primitive(value: &Value) -> Result<ArrayRef, ArrowError> {
-    match value {
-        Value::Null => Ok(Arc::new(NullArray::new(1))),
-        Value::Boolean(b) => Ok(Arc::new(BooleanArray::from(vec![*b]))),
-        Value::Int(i) => Ok(Arc::new(Int32Array::from(vec![*i]))),
-        Value::Long(l) => Ok(Arc::new(Int64Array::from(vec![*l]))),
-        Value::Float(f) => Ok(Arc::new(Float32Array::from(vec![*f]))),
-        Value::Double(d) => Ok(Arc::new(Float64Array::from(vec![*d]))),
-        Value::Bytes(b) => Ok(Arc::new(BinaryArray::from(vec![b.as_slice()]))),
-        Value::String(s) => Ok(Arc::new(StringArray::from(vec![s.as_str()]))),
-        Value::TimestampMillis(t) => Ok(Arc::new(TimestampMillisecondArray::from(vec![*t]))),
-        Value::TimestampMicros(t) => Ok(Arc::new(TimestampMicrosecondArray::from(vec![*t]))),
-        _ => Err(ArrowError::InvalidArgumentError(format!("{:?} not a primitive type", value)))
-    }
-}
-
-fn avro_to_arrow(value: &Value) -> Result<Vec<ArrayRef>, ArrowError> {
-    match value {
-        Value::Null | Value::Boolean(_) | Value::Int(_) | Value::Long(_) | Value::Float(_) | Value::Double(_) | Value::Bytes(_) | Value::String(_) => {
-            Ok(vec![avro_to_arrow_primitive(value)?])
-        }
-        Value::Array(items) => {
-            todo!()
-        }
-        Value::Map(items) => {
-            todo!()
-        }
-        Value::Fixed(_, _) => unimplemented!(),
-        Value::Union(items) => {
-            todo!()
-        }
-        Value::Record(r) => {
-            // call avro_to_arrow_primitive on each value in the record
-            let values = r.iter().try_fold(Vec::new(), |mut acc, (_name, value)| -> Result<Vec<ArrayRef>, ArrowError> {
-                let arrow_array = avro_to_arrow_primitive(value)?;
-                acc.push(arrow_array);
-                Ok(acc)
-            })?;
-            Ok(values)
-        }
-        _ => unimplemented!(),
-    }
-}
-
 #[derive(derive_more::Display, Debug)]
 pub enum DeserializeError {
     #[display(fmt = "error reading Avro record")]
@@ -169,6 +62,16 @@ impl error_stack::Context for DeserializeError {}
 impl DeserializeMessage for AvroWrapper {
     type Output = error_stack::Result<AvroWrapper, DeserializeError>;
 
+    // TODO 1 the "normal" way to serialize binary Avro records is to include the entire
+    // schema with each message, which is super inefficient for many common scenarios.
+    // We follow the "normal" path here, but should we look at reading and writing
+    // raw records using our own copy of the schema instead?
+    //
+    // TODO 2 for historical reasons, CDC encodes its messages as KeyValue pairs
+    // where both key and value are Avro records.  See
+    // https://github.com/datastax/astra-streaming-examples/blob/master/java/astra-cdc/javaexamples/consumers/CDCConsumer.java#L45
+    // It is not clear to me how to support both normal Avro records, and this kind of
+    // KeyValue encoding.  For now, we support the former but not the latter.
     fn deserialize_message(payload: &Payload) -> Self::Output {
         // let mut decoder = ZlibDecoder::new(&payload.data[..]);
         // let mut decoded = Vec::new();
@@ -192,9 +95,174 @@ impl DeserializeMessage for AvroWrapper {
     }
 }
 
-// todo de-duplicate this from output::pulsar
-pub fn format_topic_url_str(tenant: &str, namespace: &str, name: &str) -> String {
-    format!("persistent://{tenant}/{namespace}/topic-{name}")
+impl PulsarReader {
+    pub fn new(schema: SchemaRef, consumer: Consumer<AvroWrapper, TokioExecutor>) -> Self {
+        PulsarReader {
+            schema,
+            consumer
+        }
+    }
+
+    async fn next_async(&mut self) -> Option<Result<RecordBatch, ArrowError>> {
+        self.next_result_async().await.transpose()
+    }
+
+    // using ArrowError is not a great fit but that is what PrepareIter requires
+    async fn next_result_async(&mut self) -> Result<Option<RecordBatch>, ArrowError> {
+        tracing::debug!("reading pulsar messages");
+        let max_batch_size = 100000; // TODO make this adaptive based on the size of the messages
+        let mut avro_values = Vec::with_capacity(max_batch_size);
+        while avro_values.len() < max_batch_size {
+            // read the next entry from the pulsar consumer
+            // TODO this is fragile since tokio has no idea what is going on inside the consumer,
+            // so it's entirely possible to time out while actively reading messages from the broker.
+            // experimentally, 1ms is not reliable, but 10ms seems to work.
+            let next_result = timeout(Duration::from_millis(10), self.consumer.try_next())
+                .await;
+            if next_result.is_err() {
+                tracing::trace!("timed out reading next message");
+                break;
+            }
+            let msg = next_result.unwrap()
+                .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
+            tracing::trace!("got a message");
+
+            match msg {
+                Some(msg) => {
+                    self.consumer.ack(&msg).await
+                        .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
+                    tracing::debug!("acked message");
+                    let result: error_stack::Result<AvroWrapper, DeserializeError> = msg.deserialize();
+                    let aw = match result {
+                        Ok(aw) => aw,
+                        Err(e) => {
+                            let wrapped_error = DeserializeErrorWrapper::from(e);
+                            tracing::debug!("error deserializing message: {:#?}", wrapped_error);
+                            return Err(ArrowError::from_external_error(Box::new(wrapped_error)));
+                        }
+                    };
+                    match aw.value {
+                        Value::Record(fields) => {
+                            let x = Box::new(fields);
+                            avro_values.push(x);
+                        },
+                        _ => {
+                            tracing::debug!("expected a record but got {:?}", aw.value);
+                            let e = Report::from(DeserializeError::BadRecord);
+                            return Err(ArrowError::from_external_error(Box::new(DeserializeErrorWrapper::from(e))));
+                        }
+                    }
+                },
+                None => {
+                    // try_next will return None if the stream is closed, which shouldn't
+                    // happen in the pulsar scenario.  maybe if the broker shuts down?
+                    tracing::debug!("read None from consumer -- not sure how this happens");
+                },
+            }
+        }
+
+        match avro_values.len() {
+            0 => Ok(None),
+            _ => {
+                let arrow_data = avro_to_arrow(avro_values)
+                    .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
+                RecordBatch::try_new(self.schema.clone(), arrow_data).map(Some)
+            }
+        }
+    }
+}
+
+impl Iterator for PulsarReader {
+    type Item = Result<RecordBatch, ArrowError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        block_on(self.next_async())
+    }
+}
+
+fn avro_to_arrow(values: Vec<Box<Vec<(String, Value)>>>) -> Result<Vec<ArrayRef>, ArrowError> {
+    (0 .. values[0].len()).map(|i| avro_to_arrow_field(&values, i)).collect()
+}
+
+fn build_avro_primitive_array<T>(
+    values: &Vec<Box<Vec<(String, Value)>>>,
+    field_index: usize,
+) -> Result<ArrayRef, ArrowError>
+    where
+        T: ArrowPrimitiveType + AvroParser,
+{
+    values
+        .iter()
+        .enumerate()
+        .map(|(row_index, row)| {
+            let (_, value) = &row[field_index];
+            if let Value::Null = value {
+                return Ok(None);
+            }
+            let parsed = T::parse_avro_value(value);
+
+            match parsed {
+                Some(e) => Ok(Some(e)),
+                None => Err(ArrowError::ParseError(format!(
+                    "Error while parsing value {:?} for column {} at line {}",
+                    value,
+                    field_index,
+                    row_index
+                ))),
+            }
+        })
+        .collect::<Result<PrimitiveArray<T>, ArrowError>>()
+        .map(|e| Arc::new(e) as ArrayRef)
+}
+
+pub trait AvroParser: ArrowPrimitiveType {
+    fn parse_avro_value(value: &Value) -> Option<Self::Native>;
+}
+
+impl AvroParser for Int32Type {
+    fn parse_avro_value(value: &Value) -> Option<Self::Native> {
+        match value {
+            Value::Int(i) => Some(*i),
+            _ => None,
+        }
+    }
+}
+
+impl AvroParser for Float64Type {
+    fn parse_avro_value(value: &Value) -> Option<Self::Native> {
+        match value {
+            Value::Double(d) => Some(*d),
+            _ => None,
+        }
+    }
+}
+
+impl AvroParser for TimestampMillisecondType {
+    fn parse_avro_value(value: &Value) -> Option<Self::Native> {
+        match value {
+            Value::TimestampMillis(t) => Some(*t),
+            _ => None,
+        }
+    }
+}
+
+fn avro_to_arrow_field(
+    values: &Vec<Box<Vec<(String, Value)>>>,
+    field_index: usize,
+) -> Result<ArrayRef, ArrowError> {
+    let t = TimestampMillisecondType::DATA_TYPE;
+    // Infer the Arrow type based on the Avro type of the first value in the column.
+    let (_, first_value) = &values[0][field_index];
+    match first_value {
+        Value::Int(_) => build_avro_primitive_array::<Int32Type>(&values, field_index),
+        Value::Double(_) => build_avro_primitive_array::<Float64Type>(&values, field_index),
+        Value::TimestampMillis(_) => build_avro_primitive_array::<TimestampMillisecondType>(&values, field_index),
+        _ => Err(ArrowError::ParseError(format!(
+            "Unsupported Avro type {:?} for column {:?}",
+            first_value,
+            field_index
+        ))),
+    }
 }
 
 pub(crate) async fn pulsar_consumer(uri: &String, schema: SchemaRef) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
@@ -209,7 +277,7 @@ pub(crate) async fn pulsar_consumer(uri: &String, schema: SchemaRef) -> error_st
     let tenant = path_segments.next().unwrap();
     let namespace = path_segments.next().unwrap();
     let topic = path_segments.next().unwrap();
-    let topic_url = format_topic_url_str(tenant, namespace, topic);
+    let topic_url = format!("persistent://{tenant}/{namespace}/{topic}");
 
     let client = Pulsar::builder(broker_url, TokioExecutor)
         .build()
@@ -225,15 +293,19 @@ pub(crate) async fn pulsar_consumer(uri: &String, schema: SchemaRef) -> error_st
     };
 
     // create a pulsar client that can read arbitrary avro Values
+    let options = ConsumerOptions::default()
+        .with_schema(pulsar_schema)
+        .with_initial_position(InitialPosition::Earliest);
     let consumer: Consumer<AvroWrapper, TokioExecutor> = client
         .consumer()
-        .with_options(ConsumerOptions::default().with_schema(pulsar_schema))
+        .with_options(options)
         // TODO figure out how to get tenant + namespace in here
         // .with_topic(topic_url)
         .with_topic(topic)
         .with_consumer_name("sparrow-consumer")
         .with_subscription_type(SubType::Exclusive)
-        .with_subscription("sparrow-subscription")
+        // TODO generate and persist subscription ID
+        .with_subscription("sparrow-subscription-8")
         .build()
         .await
         .into_report()
