@@ -76,10 +76,18 @@ message Table {
     oneof source {
       // By default, all tables are assumed to be Kaskada internal tables.
       KaskadaSource kaskada = 1;
+      // An optional source of a Pulsar Source to read from a topic;
+      PulsarSource pulsar = 2;
     }
   }
 
   message KaskadaSource {}
+  message PulsarSource {
+    // The Pulsar protocol connection URL
+    string protocol_url = 1;
+    // Pulsar topic to read from
+    string topic = 2;
+  }
 }
 
 message ListTablesRequest {
