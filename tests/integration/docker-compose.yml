@@ -46,7 +46,7 @@ services:
     networks:
       - integration
     ports:
-      - "8080:8080"
+      - "3365:3365"
       - "50051:50051"
     volumes:
       - ./data:/data
