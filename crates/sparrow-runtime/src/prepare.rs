@@ -262,7 +262,10 @@ fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
             data_encoding::HEXUPPER.encode(&hash)
         }
         file_path::Path::PulsarUri(uri) => {
-            // TODO fix this to use the contents of the pulsar topic
+            // TODO not sure what the right approach is here, we definitely don't want
+            // to read the entire contents of the topic twice. (that's what the file
+            // approaches do above, but reading from the broker would be much less
+            // performant.)
             let mut hasher = sha2::Sha224::new();
             hasher.update(uri);
             let hash = hasher.finalize();
