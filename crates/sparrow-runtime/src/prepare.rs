@@ -22,12 +22,12 @@ mod slice_preparer;
 
 pub use error::*;
 pub use prepare_iter::*;
-use tracing::Instrument;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
+use tracing::Instrument;
 
+use crate::execute::pulsar_reader::PulsarReader;
 use crate::s3::{S3Helper, S3Object};
 use crate::{PreparedMetadata, RawMetadata};
-use crate::execute::pulsar_reader::PulsarReader;
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 
@@ -61,20 +61,26 @@ pub fn prepared_batches(
             let reader = BufReader::new(content);
             reader_from_csv(config, reader, prepare_hash, slice)?
         }
-        file_path::Path::PulsarUri(uri) => {
-            reader_from_pulsar(config, uri, prepare_hash, slice)?
-        }
+        file_path::Path::PulsarUri(uri) => reader_from_pulsar(config, uri, prepare_hash, slice)?,
     };
 
     Ok(prepare_iter)
 }
 
-fn reader_from_pulsar(config: &TableConfig, uri: &String, prepare_hash: u64, slice: &Option<Slice>) -> error_stack::Result<PrepareIter, Error> {
+fn reader_from_pulsar(
+    config: &TableConfig,
+    uri: &String,
+    prepare_hash: u64,
+    slice: &Option<Slice>,
+) -> error_stack::Result<PrepareIter, Error> {
     let raw_metadata = RawMetadata::try_from_pulsar(uri)
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
-    let consumer = block_on(crate::execute::pulsar_reader::pulsar_consumer(uri, raw_metadata.raw_schema.clone()))?;
+    let consumer = block_on(crate::execute::pulsar_reader::pulsar_consumer(
+        uri,
+        raw_metadata.raw_schema.clone(),
+    ))?;
     let reader = PulsarReader::new(raw_metadata.table_schema.clone(), consumer);
     PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
