@@ -1,27 +1,35 @@
-use std::io::Cursor;
-use std::sync::Arc;
-use std::time::Duration;
+use crate::prepare::Error;
+use arrow::array::{
+    ArrayData, ArrowPrimitiveType, BinaryArray, Date32Array, Date64Array, Float16Array,
+    Float32Array, Int16Array, Int32Array, Int8Array, ListArray, NullArray, PrimitiveArray,
+    PrimitiveBuilder, StructArray, TimestampMicrosecondArray, TimestampMillisecondArray,
+    TimestampNanosecondArray, TimestampSecondArray, UInt16Array, UInt32Array, UInt64Array,
+    UInt8Array, UnionArray,
+};
+use arrow::datatypes::{Float64Type, Int32Type, Int64Type, TimeUnit, TimestampMillisecondType};
 use arrow::error::ArrowError;
 use arrow::{
     array::{Array, ArrayRef, BooleanArray, Float64Array, Int64Array, StringArray},
     datatypes::{DataType, Field, Schema, SchemaRef},
     record_batch::RecordBatch,
 };
-use arrow::array::{ArrayData, ArrowPrimitiveType, BinaryArray, Date32Array, Date64Array, Float16Array, Float32Array, Int16Array, Int32Array, Int8Array, ListArray, NullArray, PrimitiveArray, PrimitiveBuilder, StructArray, TimestampMicrosecondArray, TimestampMillisecondArray, TimestampNanosecondArray, TimestampSecondArray, UInt16Array, UInt32Array, UInt64Array, UInt8Array, UnionArray};
-use arrow::datatypes::{Float64Type, Int32Type, Int64Type, TimestampMillisecondType, TimeUnit};
 use avro_rs::types::{Record, Value};
 use error_stack::{FutureExt, IntoReport, IntoReportCompat, Report, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::executor::block_on;
-use pulsar::{Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor};
 use pulsar::consumer::InitialPosition;
 use pulsar::error::ConsumerError;
+use pulsar::{
+    Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor,
+};
 use sha2::digest::generic_array::arr;
+use sparrow_core::ScalarValue;
+use std::io::Cursor;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
 use tracing::log::logger;
-use sparrow_core::ScalarValue;
-use crate::prepare::Error;
 
 pub struct AvroWrapper {
     value: Value,
@@ -29,7 +37,7 @@ pub struct AvroWrapper {
 
 pub struct PulsarReader {
     schema: SchemaRef,
-    consumer: Consumer<AvroWrapper, TokioExecutor>
+    consumer: Consumer<AvroWrapper, TokioExecutor>,
 }
 
 #[derive(Debug)]
@@ -83,24 +91,28 @@ impl DeserializeMessage for AvroWrapper {
             .into_report()
             .change_context(DeserializeError::Avro)?;
         let mut iter = reader.into_iter();
-        let value = iter.next().unwrap()
+        let value = iter
+            .next()
+            .unwrap()
             .into_report()
             .change_context(DeserializeError::Avro)?;
         let mut fields = match value {
             Value::Record(record) => record,
             _ => error_stack::bail!(DeserializeError::BadRecord),
         };
-        fields.push(("_publish_time".to_string(), Value::TimestampMillis(payload.metadata.publish_time as i64)));
-        Ok(AvroWrapper { value: Value::Record(fields) })
+        fields.push((
+            "_publish_time".to_string(),
+            Value::TimestampMillis(payload.metadata.publish_time as i64),
+        ));
+        Ok(AvroWrapper {
+            value: Value::Record(fields),
+        })
     }
 }
 
 impl PulsarReader {
     pub fn new(schema: SchemaRef, consumer: Consumer<AvroWrapper, TokioExecutor>) -> Self {
-        PulsarReader {
-            schema,
-            consumer
-        }
+        PulsarReader { schema, consumer }
     }
 
     async fn next_async(&mut self) -> Option<Result<RecordBatch, ArrowError>> {
@@ -117,22 +129,25 @@ impl PulsarReader {
             // TODO this is fragile since tokio has no idea what is going on inside the consumer,
             // so it's entirely possible to time out while actively reading messages from the broker.
             // experimentally, 1ms is not reliable, but 10ms seems to work.
-            let next_result = timeout(Duration::from_millis(10), self.consumer.try_next())
-                .await;
+            let next_result = timeout(Duration::from_millis(10), self.consumer.try_next()).await;
             if next_result.is_err() {
                 tracing::trace!("timed out reading next message");
                 break;
             }
-            let msg = next_result.unwrap()
+            let msg = next_result
+                .unwrap()
                 .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
             tracing::trace!("got a message");
 
             match msg {
                 Some(msg) => {
-                    self.consumer.ack(&msg).await
+                    self.consumer
+                        .ack(&msg)
+                        .await
                         .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
                     tracing::debug!("acked message");
-                    let result: error_stack::Result<AvroWrapper, DeserializeError> = msg.deserialize();
+                    let result: error_stack::Result<AvroWrapper, DeserializeError> =
+                        msg.deserialize();
                     let aw = match result {
                         Ok(aw) => aw,
                         Err(e) => {
@@ -145,19 +160,21 @@ impl PulsarReader {
                         Value::Record(fields) => {
                             let x = Box::new(fields);
                             avro_values.push(x);
-                        },
+                        }
                         _ => {
                             tracing::debug!("expected a record but got {:?}", aw.value);
                             let e = Report::from(DeserializeError::BadRecord);
-                            return Err(ArrowError::from_external_error(Box::new(DeserializeErrorWrapper::from(e))));
+                            return Err(ArrowError::from_external_error(Box::new(
+                                DeserializeErrorWrapper::from(e),
+                            )));
                         }
                     }
-                },
+                }
                 None => {
                     // try_next will return None if the stream is closed, which shouldn't
                     // happen in the pulsar scenario.  maybe if the broker shuts down?
                     tracing::debug!("read None from consumer -- not sure how this happens");
-                },
+                }
             }
         }
 
@@ -181,15 +198,17 @@ impl Iterator for PulsarReader {
 }
 
 fn avro_to_arrow(values: Vec<Box<Vec<(String, Value)>>>) -> Result<Vec<ArrayRef>, ArrowError> {
-    (0 .. values[0].len()).map(|i| avro_to_arrow_field(&values, i)).collect()
+    (0..values[0].len())
+        .map(|i| avro_to_arrow_field(&values, i))
+        .collect()
 }
 
 fn build_avro_primitive_array<T>(
     values: &Vec<Box<Vec<(String, Value)>>>,
     field_index: usize,
 ) -> Result<ArrayRef, ArrowError>
-    where
-        T: ArrowPrimitiveType + AvroParser,
+where
+    T: ArrowPrimitiveType + AvroParser,
 {
     values
         .iter()
@@ -205,9 +224,7 @@ fn build_avro_primitive_array<T>(
                 Some(e) => Ok(Some(e)),
                 None => Err(ArrowError::ParseError(format!(
                     "Error while parsing value {:?} for column {} at line {}",
-                    value,
-                    field_index,
-                    row_index
+                    value, field_index, row_index
                 ))),
             }
         })
@@ -256,16 +273,20 @@ fn avro_to_arrow_field(
     match first_value {
         Value::Int(_) => build_avro_primitive_array::<Int32Type>(&values, field_index),
         Value::Double(_) => build_avro_primitive_array::<Float64Type>(&values, field_index),
-        Value::TimestampMillis(_) => build_avro_primitive_array::<TimestampMillisecondType>(&values, field_index),
+        Value::TimestampMillis(_) => {
+            build_avro_primitive_array::<TimestampMillisecondType>(&values, field_index)
+        }
         _ => Err(ArrowError::ParseError(format!(
             "Unsupported Avro type {:?} for column {:?}",
-            first_value,
-            field_index
+            first_value, field_index
         ))),
     }
 }
 
-pub(crate) async fn pulsar_consumer(uri: &String, schema: SchemaRef) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
+pub(crate) async fn pulsar_consumer(
+    uri: &String,
+    schema: SchemaRef,
+) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
     let url = url::Url::parse(uri)
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
@@ -285,7 +306,8 @@ pub(crate) async fn pulsar_consumer(uri: &String, schema: SchemaRef) -> error_st
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
-    let formatted_schema = crate::execute::pulsar_schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
+    let formatted_schema = crate::execute::pulsar_schema::format_schema(schema)
+        .change_context(Error::CreatePulsarReader)?;
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),

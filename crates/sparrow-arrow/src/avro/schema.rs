@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use super::Error;
 use arrow::datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit};
 use avro_schema::schema::{
@@ -6,6 +5,7 @@ use avro_schema::schema::{
 };
 use error_stack::ResultExt;
 use itertools::Itertools;
+use std::collections::HashMap;
 
 #[derive(derive_more::Display, Debug)]
 #[display(fmt = "in field '{_0}'")]
@@ -106,26 +106,30 @@ fn type_to_schema_non_nullable(
 pub fn from_avro_schema(avro_schema: &AvroSchema) -> error_stack::Result<Schema, Error> {
     let mut names: HashMap<&str, usize> = HashMap::new();
     let fields = match avro_schema {
-        AvroSchema::Record(record) => {
-            record
-                .fields
-                .iter()
-                .map(|field| avro_to_arrow(field, &mut names))
-                .collect::<Result<Vec<_>, _>>()?
-        }
+        AvroSchema::Record(record) => record
+            .fields
+            .iter()
+            .map(|field| avro_to_arrow(field, &mut names))
+            .collect::<Result<Vec<_>, _>>()?,
         _ => error_stack::bail!(Error::UnsupportedAvro(avro_schema.clone())),
     };
     Ok(Schema::new(fields))
 }
 
-fn avro_to_arrow(field: &AvroField, names: &mut HashMap<&str, usize>) -> error_stack::Result<Field, Error> {
+fn avro_to_arrow(
+    field: &AvroField,
+    names: &mut HashMap<&str, usize>,
+) -> error_stack::Result<Field, Error> {
     let name = field.name.as_str();
     let (data_type, nullable) = schema_to_type(&field.schema, names)?;
     Ok(Field::new(name, data_type, nullable))
 }
 
 /// returns (DataType, is_nullable)
-fn schema_to_type(schema: &AvroSchema, names: &mut HashMap<&str, usize>) -> error_stack::Result<(DataType, bool), Error> {
+fn schema_to_type(
+    schema: &AvroSchema,
+    names: &mut HashMap<&str, usize>,
+) -> error_stack::Result<(DataType, bool), Error> {
     Ok(match schema {
         AvroSchema::Null => (DataType::Null, false),
         AvroSchema::Boolean => (DataType::Boolean, false),
@@ -135,9 +139,15 @@ fn schema_to_type(schema: &AvroSchema, names: &mut HashMap<&str, usize>) -> erro
         AvroSchema::Double => (DataType::Float64, false),
         AvroSchema::Int(Some(IntLogical::Date)) => (DataType::Date32, false),
         AvroSchema::Int(Some(IntLogical::Time)) => (DataType::Time32(TimeUnit::Millisecond), false),
-        AvroSchema::Long(Some(LongLogical::Time)) => (DataType::Time64(TimeUnit::Microsecond), false),
-        AvroSchema::Long(Some(LongLogical::LocalTimestampMillis)) => (DataType::Timestamp(TimeUnit::Millisecond, None), false),
-        AvroSchema::Long(Some(LongLogical::LocalTimestampMicros)) => (DataType::Timestamp(TimeUnit::Microsecond, None), false),
+        AvroSchema::Long(Some(LongLogical::Time)) => {
+            (DataType::Time64(TimeUnit::Microsecond), false)
+        }
+        AvroSchema::Long(Some(LongLogical::LocalTimestampMillis)) => {
+            (DataType::Timestamp(TimeUnit::Millisecond, None), false)
+        }
+        AvroSchema::Long(Some(LongLogical::LocalTimestampMicros)) => {
+            (DataType::Timestamp(TimeUnit::Microsecond, None), false)
+        }
         AvroSchema::Bytes(None) => (DataType::Binary, false),
         AvroSchema::String(None) => (DataType::Utf8, false),
         AvroSchema::Fixed(fixed) => (DataType::FixedSizeBinary(fixed.size as i32), false),
@@ -154,7 +164,10 @@ fn schema_to_type(schema: &AvroSchema, names: &mut HashMap<&str, usize>) -> erro
     })
 }
 
-fn record_to_type(record: &Record, names: &mut HashMap<&str, usize>) -> error_stack::Result<DataType, Error> {
+fn record_to_type(
+    record: &Record,
+    names: &mut HashMap<&str, usize>,
+) -> error_stack::Result<DataType, Error> {
     let fields = record
         .fields
         .iter()
@@ -166,8 +179,8 @@ fn record_to_type(record: &Record, names: &mut HashMap<&str, usize>) -> error_st
 #[cfg(test)]
 mod tests {
     use super::to_avro_schema;
-    use arrow::datatypes::{DataType, Field, Schema};
     use crate::avro::from_avro_schema;
+    use arrow::datatypes::{DataType, Field, Schema};
 
     #[test]
     fn test_simple_struct_to_avro() {
@@ -177,7 +190,6 @@ mod tests {
     }
 
     fn simple_arrow_schema() -> Schema {
-        
         Schema::new(vec![
             Field::new("a", DataType::Int64, true),
             Field::new("b", DataType::Float64, false),
@@ -193,7 +205,6 @@ mod tests {
     }
 
     fn nested_arrow_schema() -> Schema {
-        
         Schema::new(vec![
             Field::new("a", DataType::Int64, true),
             Field::new("b", DataType::Float64, false),
