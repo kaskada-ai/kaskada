@@ -1,35 +1,27 @@
 use crate::prepare::Error;
-use arrow::array::{
-    ArrayData, ArrowPrimitiveType, BinaryArray, Date32Array, Date64Array, Float16Array,
-    Float32Array, Int16Array, Int32Array, Int8Array, ListArray, NullArray, PrimitiveArray,
-    PrimitiveBuilder, StructArray, TimestampMicrosecondArray, TimestampMillisecondArray,
-    TimestampNanosecondArray, TimestampSecondArray, UInt16Array, UInt32Array, UInt64Array,
-    UInt8Array, UnionArray,
-};
-use arrow::datatypes::{Float64Type, Int32Type, Int64Type, TimeUnit, TimestampMillisecondType};
+use arrow::array::{ArrowPrimitiveType, PrimitiveArray};
+use arrow::datatypes::{Float64Type, Int32Type, TimestampMillisecondType};
 use arrow::error::ArrowError;
 use arrow::{
-    array::{Array, ArrayRef, BooleanArray, Float64Array, Int64Array, StringArray},
-    datatypes::{DataType, Field, Schema, SchemaRef},
+    array::{Array, ArrayRef},
+    datatypes::SchemaRef,
     record_batch::RecordBatch,
 };
-use avro_rs::types::{Record, Value};
+use avro_rs::types::Value;
 use error_stack::{FutureExt, IntoReport, IntoReportCompat, Report, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::executor::block_on;
 use pulsar::consumer::InitialPosition;
-use pulsar::error::ConsumerError;
+
 use pulsar::{
     Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor,
 };
-use sha2::digest::generic_array::arr;
-use sparrow_core::ScalarValue;
+
 use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
-use tracing::log::logger;
 
 pub struct AvroWrapper {
     value: Value,
@@ -267,7 +259,7 @@ fn avro_to_arrow_field(
     values: &Vec<Box<Vec<(String, Value)>>>,
     field_index: usize,
 ) -> Result<ArrayRef, ArrowError> {
-    let t = TimestampMillisecondType::DATA_TYPE;
+    let _t = TimestampMillisecondType::DATA_TYPE;
     // Infer the Arrow type based on the Avro type of the first value in the column.
     let (_, first_value) = &values[0][field_index];
     match first_value {
@@ -298,7 +290,7 @@ pub(crate) async fn pulsar_consumer(
     let tenant = path_segments.next().unwrap();
     let namespace = path_segments.next().unwrap();
     let topic = path_segments.next().unwrap();
-    let topic_url = format!("persistent://{tenant}/{namespace}/{topic}");
+    let _topic_url = format!("persistent://{tenant}/{namespace}/{topic}");
 
     let client = Pulsar::builder(broker_url, TokioExecutor)
         .build()

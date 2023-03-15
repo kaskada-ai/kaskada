@@ -11,7 +11,7 @@ use fallible_iterator::FallibleIterator;
 use futures::executor::block_on;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
-use pulsar::{Consumer, DeserializeMessage, Pulsar, TokioExecutor};
+
 use serde_yaml;
 use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig};

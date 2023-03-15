@@ -122,7 +122,7 @@ impl PrepareCommand {
                 .change_context(Error::UnrecognizedInputFormat)?
         };
 
-        if table.file_sets.len() < 1 {
+        if table.file_sets.is_empty() {
             return Err(error_stack::report!(Error::MissingTableConfig)
                 .attach("At least one file_sets is required"));
         }
