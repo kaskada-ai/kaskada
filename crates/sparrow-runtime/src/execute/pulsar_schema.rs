@@ -1,6 +1,6 @@
 use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
-use avro_schema::schema::Record;
+
 use error_stack::{FutureExt, IntoReport, Result, ResultExt};
 use futures::executor::block_on;
 use serde;
@@ -81,7 +81,7 @@ struct SchemaResponse {
 // we can't use the pulsar client because the schema is not exposed there in the Rust client.
 async fn get_pulsar_schema_async(
     host: &str,
-    port: u16,
+    _port: u16,
     tenant: &str,
     namespace: &str,
     topic: &str,
