@@ -3,16 +3,12 @@ use std::io::{BufReader, Cursor};
 use std::sync::Arc;
 
 use arrow::array::ArrowPrimitiveType;
-use arrow::datatypes::{
-    DataType, Field, Schema, SchemaRef, TimestampMicrosecondType, TimestampMillisecondType,
-};
-use arrow::json;
-use avro_rs::types::Value::TimestampMillis;
-use futures::executor::block_on;
+use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMillisecondType};
+
 use futures::TryFutureExt;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::file_path::Path;
-use tonic::codegen::http::request;
+
 use tracing::info;
 
 use crate::execute::pulsar_schema;
