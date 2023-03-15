@@ -1,10 +1,10 @@
-use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
-use std::sync::Arc;
 use arrow::array::ArrowPrimitiveType;
+use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
 use avro_schema::schema::Record;
 use error_stack::{FutureExt, IntoReport, Result, ResultExt};
 use futures::executor::block_on;
 use serde;
+use std::sync::Arc;
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
@@ -79,14 +79,27 @@ struct SchemaResponse {
 
 // retrieve the schema for the given topic via the admin api, with a REST call.
 // we can't use the pulsar client because the schema is not exposed there in the Rust client.
-async fn get_pulsar_schema_async(host: &str, port: u16, tenant: &str, namespace: &str, topic: &str) -> Result<Schema, Error> {
+async fn get_pulsar_schema_async(
+    host: &str,
+    port: u16,
+    tenant: &str,
+    namespace: &str,
+    topic: &str,
+) -> Result<Schema, Error> {
     // TODO fix hardcoded admin port
-    let url = format!("http://{}:8080/admin/v2/schemas/{}/{}/{}/schema", host, tenant, namespace, topic);
+    let url = format!(
+        "http://{}:8080/admin/v2/schemas/{}/{}/{}/schema",
+        host, tenant, namespace, topic
+    );
     let client = reqwest::Client::new();
-    let text = client.get(&url).send().await
+    let text = client
+        .get(&url)
+        .send()
+        .await
         .into_report()
         .change_context(Error::SchemaRequest)?
-        .text().await
+        .text()
+        .await
         .into_report()
         .change_context(Error::SchemaRequest)?;
 
@@ -95,13 +108,22 @@ async fn get_pulsar_schema_async(host: &str, port: u16, tenant: &str, namespace:
         .change_context(Error::AvroSchemaConversion)
         .attach_printable_lazy(|| format!("from_str({:?} failed", &text))?;
     if schema_response.schema_type != "AVRO" {
-        return Err(Error::UnsupportedSchema.into()).attach_printable_lazy(|| format!("schema type {:?}", schema_response.schema_type));
+        return Err(Error::UnsupportedSchema.into())
+            .attach_printable_lazy(|| format!("schema type {:?}", schema_response.schema_type));
     }
     let schema = schema_from_formatted(&schema_response.data)?;
 
     Ok(schema)
 }
 
-pub fn get_pulsar_schema(host: &str, port: u16, tenant: &str, namespace: &str, topic: &str) -> Result<Schema, Error> {
-    block_on(get_pulsar_schema_async(host, port, tenant, namespace, topic))
+pub fn get_pulsar_schema(
+    host: &str,
+    port: u16,
+    tenant: &str,
+    namespace: &str,
+    topic: &str,
+) -> Result<Schema, Error> {
+    block_on(get_pulsar_schema_async(
+        host, port, tenant, namespace, topic,
+    ))
 }

@@ -107,24 +107,24 @@ impl PrepareCommand {
         };
 
         // if input starts with "pulsar://" then turn it into a PulsarUri instance of FilePath
-        let file_path =
-            if self.input.starts_with("pulsar://") {
-                file_path::Path::PulsarUri(self.input.to_string_lossy().to_string())
-            } else {
-                let input = self
-                    .input
-                    .canonicalize()
-                    .into_report()
-                    .change_context(Error::Canonicalize)
-                    .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
+        let file_path = if self.input.starts_with("pulsar://") {
+            file_path::Path::PulsarUri(self.input.to_string_lossy().to_string())
+        } else {
+            let input = self
+                .input
+                .canonicalize()
+                .into_report()
+                .change_context(Error::Canonicalize)
+                .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
 
-                FilePath::try_from_local(input.as_path())
-                    .into_report()
-                    .change_context(Error::UnrecognizedInputFormat)?
-            };
+            FilePath::try_from_local(input.as_path())
+                .into_report()
+                .change_context(Error::UnrecognizedInputFormat)?
+        };
 
         if table.file_sets.len() < 1 {
-            return Err(error_stack::report!(Error::MissingTableConfig).attach("At least one file_sets is required"));
+            return Err(error_stack::report!(Error::MissingTableConfig)
+                .attach("At least one file_sets is required"));
         }
         let sp = SlicePlan {
             table_name: config.name.clone(),

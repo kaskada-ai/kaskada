@@ -2,15 +2,17 @@ use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::sync::Arc;
 
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMicrosecondType, TimestampMillisecondType};
 use arrow::array::ArrowPrimitiveType;
+use arrow::datatypes::{
+    DataType, Field, Schema, SchemaRef, TimestampMicrosecondType, TimestampMillisecondType,
+};
 use arrow::json;
 use avro_rs::types::Value::TimestampMillis;
 use futures::executor::block_on;
 use futures::TryFutureExt;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use tonic::codegen::http::request;
 use sparrow_api::kaskada::v1alpha::file_path::Path;
+use tonic::codegen::http::request;
 use tracing::info;
 
 use crate::execute::pulsar_schema;
@@ -42,9 +44,7 @@ impl RawMetadata {
                 let string_reader = BufReader::new(Cursor::new(content));
                 Self::try_from_csv(string_reader)
             }
-            Path::PulsarUri(uri) => {
-                Self::try_from_pulsar(uri)
-            }
+            Path::PulsarUri(uri) => Self::try_from_pulsar(uri),
         }
     }
 
