@@ -14,26 +14,20 @@ Tables are described in a spec file as a list of table objects under the `tables
 
 [source,yaml]
 ----
-tables:
-  - table_id: 14c4...ba56 <1>
-    table_name: GamePlay <2>
-    entity_key_column_name: entity_id <3>
-    time_column_name: event_at <4>
-    grouping_id: User <5>
-    subsort_column_name: offset <5>
-
-  - table_id: dd61...70e9
-    table_name: Purchase
-    entity_key_column_name: entity_id
-    time_column_name: event_at
-    grouping_id: User
+- tableName: GamePlay
+  timeColumnName: event_at
+  entityKeyColumnName: entity_key
+  subsortColumnName: offset
+  groupingId: User
+  tableSource:
+    kaskada: {}
+- tableName: Purchase
+  timeColumnName: event_at
+  entityKeyColumnName: entity_id
+  groupingId: User
+  tableSource:
+    kaskada: {}
 ----
-<1> A unique identifier for the table. This value is assigned by the manager and is read-only.
-<2> A name used to refer to the contents of the table in queries.
-<3> The name of the entity key column within the table.
-<4> The name of the time column within the table.
-<5> An optional name of the subsort column within the table.
-
 
 === Exporting the current tables as a spec file.
 
@@ -49,12 +43,19 @@ The export result is shown below
 [source,yaml]
 ----
 tables:
-  - table_id: 14c4...ba56
-    table_name: GamePlay
-    entity_key_column_name: entity_id
-    time_column_name: event_at
-    grouping_id: User
-    subsort_column_name: offset
+- tableName: GamePlay
+  timeColumnName: event_at
+  entityKeyColumnName: entity_key
+  subsortColumnName: offset
+  groupingId: User
+  tableSource:
+    kaskada: {}
+- tableName: Purchase
+  timeColumnName: event_at
+  entityKeyColumnName: entity_id
+  groupingId: User
+  tableSource:
+    kaskada: {}
 views:
     # ...
 ----
@@ -64,6 +65,17 @@ Alternately, if you know a specific table you'd like to export you can specify i
 [source,bash]
 ----
 cli sync export --table Purchase
+----
+
+[source,yaml]
+----
+tables:
+- tableName: Purchase
+  timeColumnName: event_at
+  entityKeyColumnName: entity_id
+  groupingId: User
+  tableSource:
+    kaskada: {}
 ----
 
 === Updating Kaskada to reflect the contents of a spec file
@@ -87,6 +99,11 @@ You can see these changes by creating an apply plan.
 [source,bash]
 ----
 cli sync plan --file spec.yaml
+
+# > 2:18PM INF starting plan
+# > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=Purchase
+# > 2:18PM INF Success!
 ----
 
 Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
@@ -96,6 +113,13 @@ You can apply a spec file using the CLI.
 [source,bash]
 ----
 cli sync apply --file spec.yaml
+
+# > 2:25PM INF starting apply
+# > 2:25PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:25PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=Purchase
+# > 2:25PM INF created resource with provided spec kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:25PM INF created resource with provided spec kind=*kaskadav1alpha.Table name=Purchase
+# > 2:25PM INF Success!
 ----
 
 == Managing tables with Python
