@@ -55,6 +55,12 @@ jobs:
           name: engine-debug
           path: ci-bin/engine/
 
+      - name: Get Integration Tests binary
+        uses: actions/download-artifact@v3
+        with:
+          name: integration-tests-binary
+          path: ci-bin/integ-tests/
+
       - name: List files in ci-bin/
         shell: bash
         run: ls -lR ./ci-bin/
@@ -112,66 +118,63 @@ jobs:
     name: Run the service and integ tests
     runs-on: ubuntu-latest
     needs: [build_integ_test_docker_container, container_name]
-    services:
-      kaskada-service:
-        image: ${{ needs.container_name.outputs.image }}
-        #image: ghcr.io/kaskada-ai/engine-integration-tests:v__6ef52e0v
-        credentials:
-          username: ${{ github.actor }}
-          password: ${{ secrets.github_token }}
-        env:
-          # for sparrow
-          SPARROW_GRPC_ADDR: 0.0.0.0:50052
-          SPARROW_LOG_FILTER: "egg::=warn,sparrow_=info,info"
-          # for wren
-          DB_DIALECT: "sqlite"
-          DB_PATH: "/data/kaskada.db"
-          DB_IN_MEMORY: "false"
-          DEBUG: "true"
-          ENV: docker-compose
-          FILE_SERVICE_HOST: localhost
-          FILE_SERVICE_PORT: "50052"
-          OBJECT_STORE_TYPE: "local"
-          OBJECT_STORE_PATH: "/data"
-          PREPARE_SERVICE_HOST: localhost
-          PREPARE_SERVICE_PORT: "50052"
-          QUERY_SERVICE_HOST: localhost
-          QUERY_SERVICE_PORT: "50052"
-          # for both
-          TMPDIR: "/data/tmp"
-        ports:
-          - 8080:8080
-          - 50051:50051
-        options: --log-driver "json-file" --log-opt tag="{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
-
+    container:
+      image: ${{ needs.container_name.outputs.image }}
+      env:
+        # for sparrow
+        SPARROW_GRPC_ADDR: 0.0.0.0:50052
+        SPARROW_LOG_FILTER: "egg::=warn,sparrow_=info,info"
+        # for wren
+        DB_DIALECT: "sqlite"
+        DB_PATH: "/data/kaskada.db"
+        DB_IN_MEMORY: "false"
+        DEBUG: "true"
+        ENV: docker-compose
+        FILE_SERVICE_HOST: localhost
+        FILE_SERVICE_PORT: "50052"
+        OBJECT_STORE_TYPE: "local"
+        OBJECT_STORE_PATH: "/data"
+        PREPARE_SERVICE_HOST: localhost
+        PREPARE_SERVICE_PORT: "50052"
+        QUERY_SERVICE_HOST: localhost
+        QUERY_SERVICE_PORT: "50052"
+        # for both
+        TMPDIR: "/data/tmp"
     steps:
-      - name: Get Integration Tests Binary
-        uses: actions/download-artifact@v3
-        with:
-          name: integration-tests-binary
-          path: ci-bin/integ-tests/
+      - name: Checkout sources
+        uses: actions/checkout@v3
 
-      # - name: LS Before
-      #   shell: bash
-      #   run: |
-      #     cd ci-bin/integ-tests
-      #     ls -lR
-      #     which wget
-
-      # - name: wget
-      #   uses: wei/wget@v1
-      #   with:
-      #     args: -O api.test "https://drive.google.com/u/0/uc?id=1JKLHZJmXjOsnDUSVpx1_UCV4Y1fafDbw&export=download"
-
-      # - name: LS Before
-      #   shell: bash
-      #   run: |
-      #     cd ci-bin/integ-tests
-      #     ls -lR
-
-      - name: Run Integration tests
+      - name: Run integ tests
         shell: bash
-        run: |
-          chmod a+x ./ci-bin/integ-tests/api.test
-          export LOCAL=true
-          ./ci-bin/integ-tests/api.test
+        run: /run-integ.sh; sleep 10; cd /integ-test-run; ./api-test
+    # services:
+    #   kaskada-service:
+    #     image: ${{ needs.container_name.outputs.image }}
+    #     #image: ghcr.io/kaskada-ai/engine-integration-tests:v__6ef52e0v
+    #     credentials:
+    #       username: ${{ github.actor }}
+    #       password: ${{ secrets.github_token }}
+    #     env:
+    #       # for sparrow
+    #       SPARROW_GRPC_ADDR: 0.0.0.0:50052
+    #       SPARROW_LOG_FILTER: "egg::=warn,sparrow_=info,info"
+    #       # for wren
+    #       DB_DIALECT: "sqlite"
+    #       DB_PATH: "/data/kaskada.db"
+    #       DB_IN_MEMORY: "false"
+    #       DEBUG: "true"
+    #       ENV: docker-compose
+    #       FILE_SERVICE_HOST: localhost
+    #       FILE_SERVICE_PORT: "50052"
+    #       OBJECT_STORE_TYPE: "local"
+    #       OBJECT_STORE_PATH: "/data"
+    #       PREPARE_SERVICE_HOST: localhost
+    #       PREPARE_SERVICE_PORT: "50052"
+    #       QUERY_SERVICE_HOST: localhost
+    #       QUERY_SERVICE_PORT: "50052"
+    #       # for both
+    #       TMPDIR: "/data/tmp"
+    #     ports:
+    #       - 8080:8080
+    #       - 50051:50051
+    #     options: --log-driver "json-file" --log-opt tag="{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
