@@ -28,6 +28,7 @@ mod progress_reporter;
 pub(crate) mod pulsar_reader;
 pub(crate) mod pulsar_schema;
 mod spawner;
+mod avro_arrow;
 
 pub use compute_executor::*;
 pub use error::*;
