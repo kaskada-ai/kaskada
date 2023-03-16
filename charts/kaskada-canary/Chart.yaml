@@ -1,0 +1,18 @@
+apiVersion: v2
+name: kaskada-canary
+description: Kaskada is a query engine for event-based (timestamped) data.
+type: application
+version: 0.0.1
+appVersion: 0.1.0
+keywords:
+  - kubernetes
+  - kaskada
+home: https://github.com/kaskada-ai/kaskada
+icon: https://github.com/kaskada-ai/kaskada/raw/main/img/kaskada.png
+sources:
+  - https://github.com/kaskada-ai/kaskada/
+maintainers:
+  - name: ericpinzur
+    email: eric.pinzur@datastax.com
+annotations:
+
