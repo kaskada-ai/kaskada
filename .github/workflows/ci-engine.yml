@@ -140,6 +140,7 @@ jobs:
         QUERY_SERVICE_PORT: "50052"
         # for both
         TMPDIR: "/data/tmp"
+        LOCAL: true
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
