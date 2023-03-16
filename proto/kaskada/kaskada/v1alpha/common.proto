@@ -124,15 +124,6 @@ message PreparedFile {
   string metadata_path = 5;
 }
 
-// used internally in wren
-message PreparedFileMetadata {
-  // the path of the original raw file that was prepared
-  string raw_file_path = 1;
-
-  // the prepared files
-  repeated PreparedFile prepared_files = 2;
-}
-
 // The plan for how to slice the data.
 //
 // The internal representation of a slice plan is for communication between Sparrow and Wren

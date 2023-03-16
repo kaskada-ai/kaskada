@@ -3,42 +3,53 @@ package kaskada.kaskada.v1alpha;
 
 import "kaskada/kaskada/v1alpha/common.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
+import "kaskada/kaskada/v1alpha/sources.proto";
 
-message FileMetadata {
-  // The schema of the file.
+message SourceMetadata {
+  // The schema of the source.
   Schema schema = 1;
 }
 
 message GetMetadataRequest {
-  // The source of information for the files.
-  repeated FilePath file_paths = 1;
+
+  // 2023-03-16
+  // repeated FilePath file_paths
+  reserved 1;
+
+  oneof source {
+    // A file source
+    FilePath file_path = 2;
+    // A pulsar source
+    PulsarSource puslar_source = 3;
+  }
 }
 
 message GetMetadataResponse {
-  // The metadata for each of the source files.
-  //
-  // Each source file will have a matching entry here, in the same order
-  // as the request.
-  repeated FileMetadata file_metadatas = 1;
+  // 2023-03-16
+  // repeated SourceMetadata source_metadatas
+  reserved 1;
+
+  // The metadata for the source.
+  SourceMetadata source_metadata = 2;
 }
 
 message MergeMetadataRequest {
   TableMetadata table_metadata = 1;
 
-  repeated FileMetadata new_file_metadata = 2;
+  repeated SourceMetadata new_source_metadata = 2;
 }
 
 message MergeMetadataResponse {
   TableMetadata merged_table_metadata = 1;
 
-  // The result of merging for each of the files in the request.
-  repeated FileMergeResult new_file_results = 2;
+  // The result of merging for each of the sources in the request.
+  repeated SourceMergeResult new_source_results = 2;
 
-  message FileMergeResult {
-    // True if this file was successfully merged.
+  message SourceMergeResult {
+    // True if this source was successfully merged.
     bool compatible = 1;
 
-    // TODO: For incompatible files, add explanations?
+    // TODO: For incompatible sources, add explanations?
   }
 }
 
