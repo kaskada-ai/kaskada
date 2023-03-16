@@ -163,7 +163,7 @@ jobs:
           sleep 10
           pwd
           cd /integ-test-run/
-          ./api-test
+          ./api.test
     # services:
     #   kaskada-service:
     #     image: ${{ needs.container_name.outputs.image }}
