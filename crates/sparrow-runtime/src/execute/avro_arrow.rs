@@ -4,14 +4,14 @@ use arrow::error::ArrowError;
 use arrow::datatypes::{Float64Type, Int32Type, TimestampMillisecondType};
 use std::sync::Arc;
 
-pub fn avro_to_arrow(values: Vec<Box<Vec<(String, Value)>>>) -> Result<Vec<ArrayRef>, ArrowError> {
+pub fn avro_to_arrow(values: Vec<Vec<(String, Value)>>) -> Result<Vec<ArrayRef>, ArrowError> {
     (0..values[0].len())
         .map(|i| avro_to_arrow_field(&values, i))
         .collect()
 }
 
 fn build_avro_primitive_array<T>(
-    values: &Vec<Box<Vec<(String, Value)>>>,
+    values: &&Vec<Vec<(String, Value)>>,
     field_index: usize,
 ) -> Result<ArrayRef, ArrowError>
 where
@@ -71,7 +71,7 @@ impl AvroParser for TimestampMillisecondType {
 }
 
 fn avro_to_arrow_field(
-    values: &Vec<Box<Vec<(String, Value)>>>,
+    values: &Vec<Vec<(String, Value)>>,
     field_index: usize,
 ) -> Result<ArrayRef, ArrowError> {
     let _t = TimestampMillisecondType::DATA_TYPE;
