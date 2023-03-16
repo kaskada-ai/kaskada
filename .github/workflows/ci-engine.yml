@@ -161,7 +161,8 @@ jobs:
           chmod a+x /integ-test-run/api.test
           /run-integ.sh 
           sleep 10
-          cd /integ-test-run
+          pwd
+          cd /integ-test-run/
           ./api-test
     # services:
     #   kaskada-service:
