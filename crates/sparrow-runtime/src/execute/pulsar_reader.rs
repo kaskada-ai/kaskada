@@ -151,8 +151,7 @@ impl PulsarReader {
                     };
                     match aw.value {
                         Value::Record(fields) => {
-                            let x = Box::new(fields);
-                            avro_values.push(x);
+                            avro_values.push(fields);
                         }
                         _ => {
                             tracing::debug!("expected a record but got {:?}", aw.value);
