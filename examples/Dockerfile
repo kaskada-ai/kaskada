@@ -17,7 +17,7 @@ WORKDIR ${HOME}
 RUN pip install pulsar-client
 
 # Install the kaskada python client
-RUN pip install kaskada==0.1.1a7
+RUN pip install kaskada==0.1.1a8
 
 # # Copy over the sample notebook and dataset
 COPY --chown=jovyan --chmod=755 ["./Materialize_to_Pulsar.ipynb", "./Materialize_to_Pulsar.ipynb"]

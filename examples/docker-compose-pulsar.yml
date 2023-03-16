@@ -3,7 +3,7 @@ version: '3'
 services:
   jupyter:
     container_name: jupyter-kaskada
-    image: jfrazier312/frazier-test-pulsar-container:0.0.2
+    image: jfrazier312/frazier-test-pulsar-container:0.0.3
     command: ["jupyter", "notebook"]
     networks:
       - demo
