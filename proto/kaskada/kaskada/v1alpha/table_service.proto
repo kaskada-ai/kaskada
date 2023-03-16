@@ -8,6 +8,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
+import "kaskada/kaskada/v1alpha/sources.proto";
 import "validate/validate.proto";
 
 message Table {
@@ -79,14 +80,6 @@ message Table {
       // An optional source of a Pulsar Source to read from a topic;
       PulsarSource pulsar = 2;
     }
-  }
-
-  message KaskadaSource {}
-  message PulsarSource {
-    // The Pulsar protocol connection URL
-    string protocol_url = 1;
-    // Pulsar topic to read from
-    string topic = 2;
   }
 }
 
