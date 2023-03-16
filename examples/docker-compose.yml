@@ -1,20 +1,9 @@
 version: '3'
 
 services:
-  ping:
-    image: briceburg/ping-pong
-    container_name: ping
-    hostname: ping
-    ports:
-      - "7777:80"
-    networks:
-      - demo
-    platform: linux/amd64
- 
   jupyter:
     container_name: jupyter-kaskada
-    build: 
-      dockerfile: Dockerfile
+    image: jfrazier312/frazier-test-pulsar-container:0.0.2
     command: ["jupyter", "notebook"]
     networks:
       - demo
