@@ -16,7 +16,8 @@ RUN mkdir /integ-test-run
 COPY ./ci-bin/engine/sparrow-main /bin/sparrow-main
 COPY ./ci-bin/wren/wren-binary /bin/wren
 COPY ./ci-bin/integ-tests/api.test /integ-test-run/api.test
-
-
 COPY ./testdata/ /testdata
 COPY ./run-integ.sh run-integ.sh
+
+RUN chmod a+x  /bin/sparrow-main /bin/wren /integ-test-run/api.test /run-integ.sh
+
