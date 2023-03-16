@@ -2,12 +2,15 @@ syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/sources.proto";
 
 message PrepareDataRequest {
   // The source of information for the prepare data
-  //
-  // Note: Version 1 - Allow only 1 file
-  FilePath file_path = 1;
+  oneof source_data {
+    FilePath file_path = 1;
+
+    PulsarConfig pulsar_config = 6;
+  }
 
   // General configuration of the table
   TableConfig config = 2;
@@ -25,6 +28,14 @@ message PrepareDataRequest {
   //
   // If no slice plan is provided, then the full file is prepared.
   SlicePlan slice_plan = 5;
+
+  message PulsarConfig {
+    PulsarSource pulsar_source = 1;
+
+    // a unique-id for this source to use when 
+    // subscribing to the pulsar broker.
+    string subscription_id = 2;
+  }
 }
 
 message PrepareDataResponse {

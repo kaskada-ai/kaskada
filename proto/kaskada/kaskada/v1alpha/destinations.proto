@@ -113,4 +113,7 @@ message PulsarDestination {
   //
   // This field is populated in the output response.
   string topic_url = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // A token to use when authenticating to the broker
+  string token = 6;
 }
