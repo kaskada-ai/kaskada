@@ -2,82 +2,63 @@
 
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
+The xref:developing:tables.adoc[Tables] section of the reference docs has more information about managing tables.
 
-== Creating a Table
-
-When creating a table, you must provide some information about how each
-row should be interpreted. You must describe:
-
-* A field containing the time associated with each row
-(`time_column_name`). The time should refer to when the event occurred.
-* An initial xref:fenl:entities[entity] key associated with each row
-(`entity_key_column_name`). The entity should identify a _thing_ in the
-world that each event is associated with. Don't worry too much about
-picking the "right" value here - it's easy to change the entity key in
-Fenl.
-
-Additionally, you may describe:
-
-* A subsort column associated with each row (`subsort_column_name`).
-This value is used to order rows associated with the same time value.
-
-[source,python]
-----
-from kaskada import table
-
-table.create_table(
-  table_name = "Purchase",
-  time_column_name = "purchase_time",
-  entity_key_column_name = "customer_id",
-)
-----
-
-This creates a table named `Purchase`. Any data loaded into this table
-must have a timestamp field named `purchase_time`, and a field named
-`customer_id`.
-
-[TIP]
-.Idiomatic Kaskada
-====
-We like to use CamelCase to name tables because it
-helps distinguish data sources from transformed values and function
-names.
-====
-
-The response from the `create_table` is a `table` object with contents
-similar to:
-
-[source,json]
-----
-table {
-  table_id: "76b***2e5"
-  table_name: "Purchase"
-  time_column_name: "purchase_time"
-  entity_key_column_name: "customer_id"
-  create_time {
-    seconds: 1634250064
-    nanos: 422017488
-  }
-  update_time {
-    seconds: 1634250064
-    nanos: 422017488
-  }
-}
-----
-
-== Loading Data
-
-Now that we've created a table, we're ready to load some data into it.
+== File Format
 
 Any data loaded into a table must include all columns used in the table definition.
 The full schema of a table is inferred from the data loaded into it.
 At the moment, all data loaded into a table must have the same schema.
 
-Data can be loaded into a table in multiple ways. In this example we'll
-load the contents of a Pandas dataframe into the table. 
+The Kaskada compute engine expects uploaded file data to be either CSV or parquet version 2. 
+
+Additionally, it expects the following:
+
+* The `time_column` (and all other date-time columns in your dataset)
+should be a type that can be xref:fenl:data-model.adoc#type-coercion[cast] to a xref:fenl:data-model.adoc#scalars[timestamp], for example an integer or RFC3330-formatted string.
+* If `subsort_id` is user-defined, the combination of the `group_column` (entity id), `time_column` and `subsort_column` should guarantee that each row is unique.  
+
+== Loading data with the CLI
+
+Files can be loaded into a table using the CLI.
+When loading files with the CLI, the given path must be local to the Kaskada service.
+
+The file must be encoded as either CSV or Parquet version 2.
+
+[source,bash]
+----
+cli load \
+  --table Purchase \
+  --file-type csv \
+  --file-path file://path/to/purchases.csv
+----
+
+
+== Loading data with Python
+
+Data can be loaded into a table in multiple ways, depending on where it is located.
+
+=== From a Local File
+
+Local files can be uploaded directly to Kaskada without converting them
+to a dataframe. However, the files must be in a specific format. See
+xref:reference:expected-file-format[Expected File Format] for details.
 
 [source,python]
 ----
+from kaskada import table
+
+fullPathToFile = "/content/drive/place/thing/purchases.parquet"
+table.upload_file("Purchases", fullPathToFile)
+----
+
+This uploads the contents of the file to the Purchases table.
+
+=== From a Pandas dataframe
+
+[source,python]
+----
+from kaskada import table
 import pandas
 
 # A sample Parquet file provided by Kaskada for testing
@@ -101,49 +82,53 @@ data_token_id: "aa2***a6b9"
 
 The file is added to the table.
 
-== Inspecting the Table's Contents
+//// 
+=== From Amazon S3
 
-To verify the file was loaded as expected you can use the table list
-method (`list_tables`) to see all the tables defined for your user and the files
-loaded into each:
+Data can be loaded directly from Amazon S3 into a Kaskada table. Loading
+from S3 requires the following:
+
+* AWS Access Key - The access key with READ permissions to the bucket
+and path (optional).
+* AWS Secret Access Key - The secret key associated with the access key
+(optional).
+* Path - The path to the object. One of the following:
+** https://s3.Region.amazonaws.com/bucket-name/key-name[Virtual Hosted
+Path] - E.g.
+https://s3.Region.amazonaws.com/bucket-name/key-name.parquet
+** Region, Bucket, Key
+
+[NOTE]
+.Security and Credentials
+====
+ Kaskada does not store the provided
+credentials in any manner. The API only has access to the credentials
+throughout the load data call. If no access credentials are provided,
+the object must have public read permissions.
+====
 
 [source,python]
 ----
-table.list_tables()
+from kaskada import table
+
+TABLE_NAME = 'Purchase'
+
+EXTERNAL_AWS_ACCESS_KEY = '<AWS_ACCESS_KEY'
+EXTERNAL_AWS_SECRET_KEY = '<AWS_SECRET_KEY>'
+S3_PATH = 'events/2022/purchases.parquet'
+BUCKET = 'production.company'
+REGION = 'us-west-2'
+
+table.upload_from_s3(
+    TABLE_NAME,
+    access_key=EXTERNAL_AWS_ACCESS_KEY, 
+    secret=EXTERNAL_AWS_SECRET_KEY, 
+    bucket=BUCKET,
+    key=S3_PATH, 
+    region=REGION
+)
 ----
 
-`list_tables` shows all the tables accessible by the user and returns a
-`list` of `table`. The table created above is shown here:
-
-[source,json]
-----
-tables {
-  table_id: "76b***2e5"
-  table_name: "Purchase"
-  time_column_name: "purchase_time"
-  entity_key_column_name: "customer_id"
-  subsort_column_name: "subsort_id"
-  create_time {
-    seconds: 1634067588
-    nanos: 312567086
-  }
-  update_time {
-    seconds: 1634067603
-    nanos: 70745776
-  }
-  version: 1
-}
-----
-
-After executing this block, all tables that have been defined are
-returned.
-
-== File Format
-
-The Kaskada compute engine expects uploaded file data to be either CSV or parquet version 2. 
-
-Additionally, it expects the following:
-
-* The `time_column` (and all other date-time columns in your dataset)
-should be a type that can be xref:fenl:data-model.adoc#type-coercion[cast] to a xref:fenl:data-model.adoc#scalars[timestamp], for example an integer or RFC3330-formatted string.
-* If `subsort_id` is user-defined, the combination of the `group_column` (entity id), `time_column` and `subsort_column` should guarantee that each row is unique.  
+The contents of the parquet object in S3 are transferred to Kaskada and
+added to the Purchase table.
+////
