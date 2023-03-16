@@ -154,7 +154,15 @@ jobs:
 
       - name: Run integ tests
         shell: bash
-        run: /run-integ.sh; sleep 10; cd /integ-test-run; ./api-test
+        run: |
+          chmod a+x /bin/sparrow-main
+          chmod a+x /bin/wren
+          chmod a+x /run-integ.sh
+          chmod a+x /integ-test-run/api.test
+          /run-integ.sh 
+          sleep 10
+          cd /integ-test-run
+          ./api-test
     # services:
     #   kaskada-service:
     #     image: ${{ needs.container_name.outputs.image }}
