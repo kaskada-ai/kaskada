@@ -860,8 +860,8 @@ func (m *Manager) getComputeSnapshotDataURI(owner *ent.Owner, snapshotCacheBuste
 	return ConvertURIForCompute(m.store.GetDataPathURI(subPath))
 }
 
-func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetFileSchema").Str("uri", fileInput.GetURI()).Str("type", fileInput.GetExtension()).Logger()
+func (m *Manager) GetSourceSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetSourceSchema").Str("uri", fileInput.GetURI()).Str("type", fileInput.GetExtension()).Logger()
 	// Send the metadata request to the FileService
 
 	var filePath *v1alpha.FilePath
@@ -878,22 +878,24 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 
 	fileClient := m.computeClients.FileServiceClient(ctx)
 	metadataReq := &v1alpha.GetMetadataRequest{
-		FilePaths: []*v1alpha.FilePath{filePath},
+		Source: &v1alpha.GetMetadataRequest_FilePath{
+			FilePath: filePath,
+		},
 	}
 
 	subLogger.Debug().Interface("request", metadataReq).Msg("sending get_metadata request to file service")
 	metadataRes, err := fileClient.GetMetadata(ctx, metadataReq)
 	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting file schema from file_service")
+		subLogger.Error().Err(err).Msg("issue getting schema from file_service")
 		return nil, err
 	}
 
-	if len(metadataRes.FileMetadatas) != 1 {
-		subLogger.Error().Int("response_count", len(metadataRes.FileMetadatas)).Msg("issue getting file schema from file_service")
-		return nil, fmt.Errorf("issue getting file schema from file_service")
+	if metadataRes.SourceMetadata == nil {
+		subLogger.Error().Msg("issue getting schema from file_service")
+		return nil, fmt.Errorf("issue getting schema from file_service")
 	}
 
-	return metadataRes.FileMetadatas[0].Schema, nil
+	return metadataRes.SourceMetadata.Schema, nil
 }
 
 func ConvertURIForCompute(URI string) string {

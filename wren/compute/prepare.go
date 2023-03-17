@@ -169,7 +169,9 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		// Send the preparation request to the prepare client
 		prepareClient := m.computeClients.PrepareServiceClient(ctx)
 		prepareReq := &v1alpha.PrepareDataRequest{
-			FilePath:         filePath,
+			SourceData: &v1alpha.PrepareDataRequest_FilePath{
+				FilePath: filePath,
+			},
 			Config:           computeTable.Config,
 			OutputPathPrefix: ConvertURIForCompute(prepareOutputURI),
 			FilePrefix:       prepareFilePrefix,

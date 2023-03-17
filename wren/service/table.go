@@ -330,7 +330,7 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.KaskadaTable, fileInput internal.FileInput) (*v1alpha.Schema, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "table.validateFileSchema").Logger()
 
-	fileSchema, err := t.computeManager.GetFileSchema(ctx, fileInput)
+	fileSchema, err := t.computeManager.GetSourceSchema(ctx, fileInput)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "getting schema for file: %s", fileInput)
 	}
