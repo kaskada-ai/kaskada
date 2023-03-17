@@ -5,7 +5,7 @@
 To use Kaskada on the command line, you'll need to install three components:
 
 * The Kaskada command-line executable
-* The Kaskada manager, which serves Kaskada API
+* The Kaskada manager, which serves the Kaskada API
 * The Kaskada engine, which executes queries
 
 Each of these are available as pre-compiled binaries in the xref:url:https://github.com/kaskada-ai/kaskada/releases[Releases] section of Kaskada's Github repository.
@@ -33,7 +33,7 @@ You can remove the block placed on the file when it was downloaded with the foll
 
 [source,shell]
 ----
-xattr -dr com.apple.quarantine <path to file>/my-binary-amd64
+xattr -dr com.apple.quarantine <path to file>
 ----
 ====
 
@@ -158,7 +158,7 @@ curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBh
     --file-path file://purchase.parquet
 ----
 
-The file is added to the table.
+The file's content is added to the table.
 
 For more help with tables and loading data, see xref:developing:tables.adoc[Reference -
 Working with Tables]
@@ -192,7 +192,7 @@ EOS
 ----
 
 As you begin to better understand your data you can start using
-aggregations over your data such as the max() function:
+aggregations over your data such as the `max()` function:
 
 [source,shell]
 ----

@@ -199,7 +199,7 @@ purchases = pandas.read_parquet(purchases_url)
 table.load_dataframe("Purchase", purchases)
 ----
 
-The result of running `load_dataframe` returns a `data_token_id`. The
+The result of running `load_dataframe` is a `data_token_id`. The
 data token ID is a unique reference to the data currently stored in the
 system.
 
@@ -211,7 +211,7 @@ request_details {
 }
 ----
 
-The file is transferred to Kaskada and added to the table.
+The file is transferred to Kaskada and it's content added to the table.
 
 === Inspecting the Table's Contents
 
@@ -291,7 +291,7 @@ Purchase | when(Purchase.customer_id == "patrick")
 ----
 
 As you begin to better understand your data you can start using
-aggregations over your data such as the max() function:
+aggregations over your data such as the `max()` function:
 
 [source,IPython]
 ----
