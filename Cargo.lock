@@ -4169,7 +4169,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-api"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4200,7 +4200,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-arrow"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "arrow",
  "avro-schema",
@@ -4214,7 +4214,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-catalog"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "arrow",
  "clap 4.1.1",
@@ -4251,7 +4251,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-compiler"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "ahash 0.8.2",
  "anyhow",
@@ -4302,7 +4302,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-core"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4321,7 +4321,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-instructions"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4357,7 +4357,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-kernels"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "ahash 0.8.2",
  "anyhow",
@@ -4376,7 +4376,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-main"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "ahash 0.8.2",
  "anyhow",
@@ -4435,7 +4435,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-plan"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4457,7 +4457,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "cpu-time",
  "derive_more",
@@ -4483,7 +4483,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-runtime"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "ahash 0.8.2",
  "anyhow",
@@ -4549,7 +4549,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-syntax"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4575,7 +4575,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-testing"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "arrow-array",
  "arrow-csv",
