@@ -92,25 +92,33 @@ message PulsarDestination {
   // Defaults to "pulsar://127.0.0.1:6650".
   string broker_service_url = 1;
 
+  // Authentication plugin to use.
+  // e.g. "org.apache.pulsar.client.impl.auth.AuthenticationToken"
+  string auth_plugin = 2;
+
+  // Authentication parameters.
+  // e.g. "token:xxx"
+  string auth_params = 3;
+
   // The topic tenant within the instance.
   //
   // Defaults to "public".
-  string tenant = 2;
+  string tenant = 4;
 
   // The administrative unit of topics, which acts as a grouping
   // mechanism for related topics.
   //
   // Defaults to "default".
-  string namespace = 3;
+  string namespace = 5;
 
   // The final part of the topic url.
   //
   // Defaults to a randomly generated uuid.
-  string topic_name = 4;
+  string topic_name = 6;
 
   // The full topic url.
   // e.g. "persistent://{tenant}/{namespace}/{topic_name}"
   //
   // This field is populated in the output response.
-  string topic_url = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string topic_url = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
