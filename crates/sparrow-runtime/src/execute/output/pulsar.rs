@@ -4,7 +4,9 @@ use arrow::datatypes::{ArrowPrimitiveType, DataType, Schema, SchemaRef, Timestam
 use arrow::record_batch::RecordBatch;
 use futures::stream::BoxStream;
 use futures::StreamExt;
+use pulsar::authentication::token::TokenAuthentication;
 use pulsar::compression::Compression;
+use pulsar::Authentication;
 use sparrow_api::kaskada::v1alpha::output_to;
 use sparrow_api::kaskada::v1alpha::PulsarDestination;
 
@@ -15,6 +17,9 @@ use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
+    PulsarAuth {
+        context: String,
+    },
     PulsarTopicCreation {
         context: String,
     },
@@ -86,7 +91,46 @@ pub(super) async fn write(
         .into_report()
         .change_context(Error::ProgressUpdate)?;
 
+    // Currently, we only support auth with jwt tokens
+    // https://pulsar.apache.org/docs/2.4.0/security-token-client/
+    error_stack::ensure!(
+        pulsar.auth_plugin == "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+        Error::PulsarAuth {
+            context: format!("unsupported auth plugin: {}", pulsar.auth_plugin)
+        }
+    );
+    // Additionally, only the string format is supported
+    let auth_token = if let Some(token) = pulsar.auth_params.strip_prefix("token:") {
+        token
+    } else {
+        error_stack::bail!(Error::PulsarAuth {
+            context: format!(
+                "expected \"token:\" style prefix. Saw {}",
+                pulsar.auth_params
+            )
+        })
+    };
+
+    // Disregarding the borrow check error where you can't mutate values out of an `rc<_>`, I don't really
+    // understand why we'd create the `TokenAuth` struct if it returns an `rc<dyn Authentication>`, since we
+    // can't then get an owned instance of the `Authentication` to pass to `with_auth`...
+    // let pulsar_auth = TokenAuthentication::new(auth_token.to_owned());
+    // let pulsar_auth =
+    //     Authentication {
+    //         name: pulsar_auth.auth_method_name(),
+    //         data: pulsar_auth.auth_data().await.into_report().change_context(
+    //             Error::PulsarAuth {
+    //                 context: "token conversion".to_owned(),
+    //             },
+    //         )?,
+    //     };
+    let pulsar_auth = Authentication {
+        name: "token".to_owned(),
+        data: auth_token.as_bytes().to_vec(),
+    };
+
     let client = Pulsar::builder(broker_url, TokioExecutor)
+        .with_auth(pulsar_auth)
         .build()
         .await
         .into_report()
@@ -95,7 +139,7 @@ pub(super) async fn write(
     let mut producer = client
         .producer()
         .with_topic(topic_url.clone())
-        .with_name("producer")
+        .with_name("sparrow-producer")
         .with_options(producer::ProducerOptions {
             schema: Some(schema),
             batch_size: Some(BATCH_SIZE),
@@ -244,5 +288,9 @@ pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<Strin
         &pulsar.topic_name
     };
 
-    Ok(format!("persistent://{tenant}/{namespace}/{name}"))
+    Ok(format_topic_url_str(tenant, namespace, name))
+}
+
+pub fn format_topic_url_str(tenant: &str, namespace: &str, name: &String) -> String {
+    format!("persistent://{tenant}/{namespace}/{name}")
 }
