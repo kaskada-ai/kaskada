@@ -27,7 +27,7 @@ avro-rs = "0.13.0"
 avro-schema = "0.3.0"
 aws-config = "0.11.0"
 aws-sdk-s3 = "0.11.0"
-pulsar = { version = "5.0.2", default-features = false, features = ["async-std-runtime", "tokio-runtime", "lz4"] }
+pulsar = { version = "5.1.0", default-features = false, features = ["async-std-runtime", "tokio-runtime", "lz4", "oauth2"] }
 aws-types = "0.11.0"
 bigdecimal = "0.3.0"
 bincode = "1.3.3"
