@@ -11,37 +11,29 @@ spec:
     matchLabels:
       {{- include "kaskada-canary.selectorLabels" . | nindent 6 }}
   strategy:
-    {{- toYaml .Values.deploymentStrategy | nindent 4 }}
+    type: Recreate
   template:
     metadata:
       labels:
         {{- include "kaskada-canary.selectorLabels" . | nindent 8 }}
-      {{- with .Values.podLabels }}
+        {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- if or .Values.secretConfiguration.enabled .Values.podAnnotations }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
       annotations:
-        {{- if .Values.secretConfiguration.enabled }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-        {{- end }}
-        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "kaskada-canary.serviceAccountName" . }}
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       containers:
         - name: engine
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.env }}
           env:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- include "kaskada-canary.s3Env" . | nindent 12 }}
+            {{- range $key, $value := .Values.extraEnv }}
+            - name: {{ $key }}
+              value:  {{ $value }}
+            {{- end }}
           command: ["/bin/sparrow-main", "serve"]
           ports:
             - name: grpc
@@ -51,30 +43,34 @@ spec:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
-          {{- if or .Values.secretConfiguration.enabled .Values.extraVolumeMounts }}
-          volumeMounts:
-            {{- if .Values.secretConfiguration.enabled }}
-            - name: secrets
-              mountPath: {{ tpl .Values.secretConfiguration.mountPath $ }}
-            {{- with .Values.secretConfiguration.subPath }}
-              subPath: {{ tpl . $ }}
-            {{- end }}
-            {{- end }}
-            {{- with .Values.extraVolumeMounts }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-          {{- end }}
-          {{- with .Values.engineResources }}
+          {{- with .Values.resources.engine }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          volumeMounts:
+            - mountPath: "/tmp"
+              name: kaskada-canary-tmp
         - name: manager
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.env }}
           env:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            - name: DB_DIALECT
+              value: sqlite
+            - name: DB_PATH
+              value: /data/kaskada.db
+            - name: DB_IN_MEMORY
+              value: "false"
+            - name: OBJECT_STORE_BUCKET
+              value: {{ .Values.storage.objectStore.bucket }}
+            - name: OBJECT_STORE_PATH
+              value: {{ .Values.storage.objectStore.path }}
+            - name: OBJECT_STORE_TYPE 
+              value: {{ .Values.storage.objectStore.type }}
+            {{- include "kaskada-canary.s3Env" . | nindent 12 }}
+            {{- range $key, $value := .Values.extraEnv }}
+            - name: {{ $key }}
+              value:  {{ $value }}
+            {{- end }}
           command: [ "/bin/wren" ]
           ports:
             - name: grpc
@@ -87,31 +83,36 @@ spec:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
-          {{- with .Values.managerResources }}
+          {{- with .Values.resources.manager }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if or .Values.secretConfiguration.enabled .Values.extraVolumes }}
+          volumeMounts:
+            - mountPath: "/data"
+              name: kaskada-canary-db
       volumes:
-        {{- if .Values.secretConfiguration.enabled }}
-        - name: secrets
-          secret:
-            secretName: {{ include "kaskada.fullname" . }}
-        {{- end }}
-        {{- with .Values.extraVolumes }}
+        - name: kaskada-canary-db
+          persistentVolumeClaim:
+            claimName: kaskada-canary-db
+        - name: kaskada-canary-tmp
+          ephemeral:
+            volumeClaimTemplate:
+              metadata:
+                labels:
+                  type: kaskada-canary-tmp
+              spec:
+                accessModes: [ "ReadWriteOnce" ]
+                storageClassName: {{ .Values.storage.tmpData.storageClassName }}
+                resources:
+                  requests:
+                    storage: {{ .Values.storage.tmpData.storage }}
+      serviceAccountName: {{ include "kaskada-canary.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
         {{- toYaml . | nindent 8 }}
-        {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.topologySpreadConstraints }}
-      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.tolerations }}

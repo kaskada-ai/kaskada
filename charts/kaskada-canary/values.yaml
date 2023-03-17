@@ -13,39 +13,46 @@ namespace:
   # If not set, `.Release.Namespace` is used
   name: null
 
-# -- Image pull secrets for Docker images
-imagePullSecrets: []
+# -- Labels to apply to all resources
+commonLabels: {}
 
 image:
   # -- Docker image repository
   repository: ghcr.io/kaskada-ai/engine
-  # -- Overrides the image tag whose default is the chart's appVersion
-  tag: v0.4.1
+  # -- Overrides the image tag whose 
+  # default is the chart's appVersion
+  tag: null
   # -- Docker image pull policy
   pullPolicy: IfNotPresent
 
-# -- Common annotations for all pods
+# -- Image pull secrets for Docker images
+imagePullSecrets: []
+
+# -- Annotations to add to the pod
 podAnnotations: {}
 
-# -- Common labels for all pods
+# -- Labels to add to the pod
 podLabels: {}
 
-# -- The number of old ReplicaSets to retain to allow rollback
-revisionHistoryLimit: 10
 
 ## Expose the kaskada-canary service to be accessed from outside the cluster (LoadBalancer service).
 ## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
 ## ref: http://kubernetes.io/docs/user-guide/services/
 ##
 service:
-  enabled: true
+  # -- Specifies whether a Service should be created
+  create: true
+  # -- The type of service to create
   type: ClusterIP
+  # -- The port for exposing the gRPC service
   grpcPort: 50051
+  # -- The port for exposing the REST service
   restPort: 3365
-  ## Service annotations. Can be templated.
+  # -- Annotations to add to the service
   annotations: {}
+  # -- Labels to add to the service
   labels: {}
-  # Adds the appProtocol field to the service. This allows to work with istio protocol selection. Ex: "http" or "tcp"
+  # -- Adds the appProtocol field to the service. This allows to work with istio protocol selection. Ex: "http" or "tcp"
   appProtocol: ""
 
 serviceAccount:
@@ -61,57 +68,60 @@ serviceAccount:
   # -- Set this toggle to false to opt out of automounting API credentials for the service account
   automountServiceAccountToken: true
 
-
-extraEnv: []
-# -- Environment variables from secrets or configmaps to add to the canary pods
-extraEnvFrom: []
-# -- Resource requests and limits for the canary
-resources: {}
-
-
-# -- Volume mounts to add to the containers
-extraVolumeMounts: []
-# -- Volumes to add to the containers
-extraVolumes: []
-
-# labels to apply to all resources
-commonLabels: {}
-
-affinity: {}
-# -- Node selector for canary pods
+# -- Node selector for the pod
 nodeSelector: {}
-# -- Tolerations for canary pods
+# -- Tolerations for the pod
 tolerations: []
 
-engineResources:
-  limits:
-    cpu: 2
-    memory: 8Gi
-  requests:
-    cpu: 500m
-    memory: 2Gi
+resources:
+  # -- Resource requests and limits for the engine container
+  engine: {}
+  # -- Resource requests and limits for the manager container
+  manager: {}
 
-managerResources:
-  limits:
-    cpu: 250m
-    memory: 250Mi
-  requests:
-    cpu: 100m
-    memory: 100Mi
+storage:
+  # -- Configures the primary storage for the kaskada service
+  objectStore:
+    # -- The name of the bucket or container to use for storing data
+    bucket: null
+    # -- The bucket path prefix to use for storing data
+    path: /
+    # -- The type of object storage to use for the service. Either `s3`, `gcs`, or `azure`
+    type: null
+    s3:
+      # -- The region where the S3 bucket exists
+      region: null
+      # -- An AWS secret access key that has permisison to write to the bucket & prefix
+      secretAccessKey: null
+      # -- An AWS access key id that has permisison to write to the bucket & path
+      accessKeyId: null
+    gcs:
+      # -- A json token to authenticate with the service account to write to the bucket & prefix
+      jsonToken: null
+      # -- A GCS service account id that has permission to write to the bucket & prefix
+      serviceAccountId: null
+    azure:
+      # -- An account name that has permission to write to the container & blob
+      accountName: null
+      # -- An account key that has permission to write to the container & blob
+      accountKey: null
+  # -- Configures the database storage for the kaskada service
+  dbData:
+    # -- The size of the database volume
+    storage: 10Gi
+    # -- The type of storage used to provision the persisted database volume
+    storageClassName:
+  # -- Configures temporary storage for the kaskada service
+  tmpData:
+    # -- The size of the temporary volume
+    storage: 100Gi
+    # -- The type of storage used to provision the temporary volume
+    storageClassName:
+
+# -- ABOVE CONFIRMED AND DOCUMENTED
+
+logging:
+  level: info
+  format: json
 
 
-logLevel: info
-logFormat: json
-
-secretConfiguration:
-  enabled: false
-  mountPath: ""
-  subPath: ""
-  data: {}
-    # credentials: |
-    #   [default]
-    #   aws_access_key_id = $SECRET_ACCESS_KEY
-    #   aws_secret_access_key = $SECRET_ACCESS_KEY
-
-deploymentStrategy:
-  type: Recreate

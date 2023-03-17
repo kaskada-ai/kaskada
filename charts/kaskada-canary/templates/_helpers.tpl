@@ -40,6 +40,9 @@ helm.sh/chart: {{ include "kaskada-canary.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.commonLabels }}
+{{- toYaml . }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -66,4 +69,32 @@ Create the name of the service account to use
 {{- else -}}
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Shared env vars for s3 object store
+*/}}
+{{- define "kaskada-canary.s3Env" -}}
+{{- if (eq .Values.storage.objectStore.type "s3") }}
+{{- if .Values.storage.objectStore.s3.accessKeyId }}
+- name: AWS_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "kaskada-canary.fullname" . }}
+      key: AWS_ACCESS_KEY_ID
+{{- end }}
+{{- if .Values.storage.objectStore.s3.secretAccessKey }}
+- name: AWS_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "kaskada-canary.fullname" . }}
+      key: AWS_SECRET_ACCESS_KEY
+{{- end }}
+{{- if .Values.storage.objectStore.s3.region }}
+- name: AWS_REGION
+  value:  {{ .Values.storage.objectStore.s3.region }}
+- name: AWS_DEFAULT_REGION
+  value:  {{ .Values.storage.objectStore.s3.region }}
+{{- end }}
+{{- end }}
 {{- end -}}

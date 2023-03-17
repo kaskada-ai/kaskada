@@ -1,4 +1,4 @@
-{{- if .Values.service.enabled }}
+{{- if .Values.service.create }}
 {{- $root := . }}
 apiVersion: v1
 kind: Service
