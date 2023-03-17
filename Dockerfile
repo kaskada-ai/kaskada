@@ -27,12 +27,7 @@ RUN cargo install sccache
 RUN echo "[build]\nrustc-wrapper = \"/usr/local/cargo/bin/sccache\""
 
 FROM rust-sysdeps as rust-prepare
-RUN cargo install grcov \
-    && RUST_BACKTRACE=full cargo install cargo-deny
-
 FROM rust-sysdeps as rust-builder
-COPY --from=rust-prepare /usr/local/cargo/bin/grcov /usr/local/cargo/bin/grcov
-COPY --from=rust-prepare /usr/local/cargo/bin/cargo-deny /usr/local/cargo/bin/cargo-deny
 COPY --from=rust-prepare /usr/local/cargo/bin/sccache /usr/local/cargo/bin/sccache
 
 ###############################################################################
