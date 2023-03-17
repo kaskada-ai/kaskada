@@ -150,7 +150,7 @@ query.
 
 If you're using IPython/Jupyter, you can create a view from the contents of a `%%fenl` block using the `--var` argument
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl --var purchase_stats
 {

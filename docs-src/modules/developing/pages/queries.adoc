@@ -9,7 +9,7 @@ expressions inside squiggly (curly) brackets, i.e., `{ }`.
 
 An example record:
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 {
@@ -82,7 +82,7 @@ query results will be computed and returned as a Pandas dataframe. The
 query content starts on the next line and includes the rest of the code
 block's contents:
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 {
@@ -123,7 +123,7 @@ operate on views or a combination of tables and views.
 Here's an example of using a view to filter the values produced by an
 expression using a table.
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 {
