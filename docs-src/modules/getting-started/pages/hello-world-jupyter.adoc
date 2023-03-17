@@ -274,26 +274,22 @@ block's contents.
 Let's start by looking at the Purchase table without any filters, this
 query will return all of the columns and rows contained in a table:
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 Purchase
 ----
 
-Note: this table is intentionally small so that you can get to know
-queries with Kaskada. When you upload your own data, you may want to
-filter down the results so that you can see just a relevant sample:
-
-[source,IPython]
+[NOTE]
 ----
-%%fenl
-Purchase | when(Purchase.customer_id == "patrick")
+This table is intentionally small so that you can get to know
+queries with Kaskada.
 ----
 
 As you begin to better understand your data you can start using
 aggregations over your data such as the `max()` function:
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 {
@@ -324,7 +320,7 @@ the below query. In order to debug your features, we recommend including
 the time and the entity with each query so that you can walk through the
 results in time:
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 {
@@ -335,10 +331,13 @@ results in time:
 }
 ----
 
-Tip: the result of a previous cell in Jupyter is available to be saved
+[TIP]
+----
+The result of a previous cell in Jupyter is available to be saved
 by setting a variable to the result temporarily stored as `_`. You can
 then interact with these results at a typical dataframe such as
 displaying the columns or plotting a histogram:
+----
 
 [source,IPython]
 ----

@@ -70,7 +70,7 @@ such as managing Views, Tables, and making multiple queries with
 different query variables.
 ====
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl --var examples
 
@@ -116,7 +116,7 @@ training locally.
 
 Begin by limiting the examples to the training time range.
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl
 
@@ -128,7 +128,7 @@ Examples
 Next we limit the examples to different time bounds to produce a
 validation dataset.
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl --var training
 

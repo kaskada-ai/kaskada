@@ -31,6 +31,7 @@ One table contains an event for each time a user visits your web page:
 | 9:45 | Alice
 | 2:10 | Alice
 | 8:52 | Alice
+| 11:03 | Bob
 |===
 
 Another table contains an event for each time a user makes a purchase:
