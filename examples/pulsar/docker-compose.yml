@@ -2,9 +2,8 @@ version: '3'
 
 services:
   jupyter:
-    container_name: jupyter-kaskada
-      #image: ghcr.io/kaskada-ai/kaskada-jupyter:v0.0.1
-    image: jfrazier312/frazier-test-pulsar-container:0.0.5
+    container_name: kaskada-jupyter
+    image: ghcr.io/kaskada-ai/kaskada-jupyter:v0.0.1
     command: ["jupyter", "notebook"]
     volumes:
       - ./notebooks:/home/jovyan/notebooks
