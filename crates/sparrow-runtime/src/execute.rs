@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use chrono::NaiveDateTime;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::Stream;
 use prost_wkt_types::Timestamp;
@@ -69,16 +70,17 @@ pub async fn execute(
         None,
     ));
 
-    let query_final_time = request.final_result_time.unwrap_or(Timestamp {
-        seconds: 0,
-        nanos: 0,
-    });
-
-    late_bindings[LateBoundValue::FinalAtTime] = Some(ScalarValue::timestamp(
-        query_final_time.seconds,
-        query_final_time.nanos,
-        None,
-    ));
+    let output_at_time = if let Some(output_at_time) = request.final_result_time {
+        late_bindings[LateBoundValue::FinalAtTime] = Some(ScalarValue::timestamp(
+            output_at_time.seconds,
+            output_at_time.nanos,
+            None,
+        ));
+        Some(output_at_time)
+    } else {
+        late_bindings[LateBoundValue::FinalAtTime] = None;
+        None
+    };
 
     let mut data_context = DataContext::try_from_tables(request.tables.to_vec())
         .into_report()
@@ -139,7 +141,9 @@ pub async fn execute(
                     nanos: i32::MAX,
                 }
             }
-            PerEntityBehavior::FinalAtTime => query_final_time.clone(),
+            PerEntityBehavior::FinalAtTime => {
+                output_at_time.as_ref().expect("final at time").clone()
+            }
         };
 
         Some(
@@ -181,6 +185,15 @@ pub async fn execute(
     let (progress_updates_tx, progress_updates_rx) =
         tokio::sync::mpsc::channel(29.max(plan.operations.len() * 2));
 
+    let output_datetime = if let Some(t) = output_at_time {
+        Some(
+            NaiveDateTime::from_timestamp_opt(t.seconds, t.nanos as u32)
+                .ok_or_else(|| Error::internal_msg("expected valid timestamp"))?,
+        )
+    } else {
+        None
+    };
+
     // We use the plan hash for validating the snapshot is as expected.
     // Rather than accepting it as input (which could lead to us getting
     // a correct hash but an incorrect plan) we re-hash the plan.
@@ -193,6 +206,7 @@ pub async fn execute(
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
+        output_at_time: output_datetime,
     };
 
     // Start executing the query. We pass the response channel to the

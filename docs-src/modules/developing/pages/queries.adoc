@@ -1,0 +1,425 @@
+= Queries
+
+The following sections will help with writing queries.
+
+== Records
+
+All queries need to specify a record. A record is simply a set of named
+expressions inside squiggly (curly) brackets, i.e., `{ }`.
+
+An example record:
+
+[source,Fenl]
+----
+%%fenl
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+This record has 4 fields, `time`, `entity`, `max_amount` and
+`min_amount`
+
+== Querying with Python
+
+Using python directly is one way to write queries.
+
+[source,python]
+----
+import pandas
+from kaskada import compute
+
+query = """{ 
+  time: Purchase.purchase_time, 
+  entity: Purchase.customer_id, 
+  max_amount: last(Purchase.amount) | max(), 
+  min_amount: Purchase.amount | min()
+}"""
+
+response_parquet = compute.query(query=query).parquet.path
+
+pandas.read_parquet(response_parquet)
+----
+
+This returns a dataframe with the results of the query.
+
+=== Optional Parameters (with Python)
+
+When querying directly from python, the following optional parameters
+are available:
+
+* *with_tables*: A list of tables to use in the query, in addition to
+the tables stored in the system.
+* *with_views*: A list of views to use in the query, in addition to the
+views stored in the system.
+* *result_behavior*: Determines which results are returned. Either
+`"all-results"` _(default)_, or `"final-results"` which returns only the
+final values for each entity.
+* *response_as*: Determines how the response is returned. Either
+`"parquet"` _(default)_ or `"redis-bulk"`.
+** If `"redis-bulk"`, result_behavior is assumed to be
+`"final-results"`.
+* *data_token_id*: Enables repeatable queries. Queries performed against
+the same data token always run on the same input data.
+* *limits*: Configures limits on the output set.
+
+== Querying with fenlmagic
+
+Using the fenlmagic IPython extension makes iterating on queries easier.
+
+[NOTE]
+====
+The fenlmagic IPython extension is optional and isn't required
+to use Kaskada. Feel free to use whichever client interface fits your
+workflow.
+====
+
+You can make Fenl queries by prefixing a query block with `%%fenl`. The
+query results will be computed and returned as a Pandas dataframe. The
+query content starts on the next line and includes the rest of the code
+block's contents:
+
+[source,Fenl]
+----
+%%fenl
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+This returns a dataframe with the results of the query.
+
+=== Optional Parameters (with fenlmagic)
+
+When querying using fenlmagic, the following optional parameters are
+available:
+
+* *--result-behavior*: Determines which results are returned. Either
+`all-results` _(default)_, or `final-results` which returns only the
+final values for each entity.
+* *--output*: Output format for the query results. One of `df` dataframe
+_(default)_, `json`, `parquet` or `redis-bulk`.
+** If `redis-bulk`, --result-behavior is assumed to be `final-results`.
+* *--data-token*: Enables repeatable queries. Queries performed against
+the same data token always run on the same input data.
+* *--preview-rows*: Produces a preview of the data with at least this
+many rows.
+* *--var*: Assigns the body to a local variable with the given name.
+
+Example use of some of these options can be found in the next section:
+xref:reference:example-queries[Example Queries]
+
+=== Tables and Views
+
+Most basic queries operate against tables. However, queries can also
+operate on views or a combination of tables and views.
+
+Here's an example of using a view to filter the values produced by an
+expression using a table.
+
+[source,Fenl]
+----
+%%fenl
+{
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  total_purchases: Purchase.amount | sum(),
+} | when(PurchaseStats.max_amount > 100)
+----
+
+Views may reference other views, so we could give this expression a name
+and create a view for it as well if we wanted to.
+
+Views are useful any time you need to share or re-use expressions:
+
+* Cleaning operations
+* Common business logic
+* Final feature vectors
+
+For more help with tables and views, see xref:reference:tables[Working with Tables]
+and xref:reference:views[Working with Views].
+
+== Example Queries
+
+The following examples will cover some of the common optional parameters
+used when writing queries.
+
+=== Prerequisite: Table Setup
+
+First, we create two tables and load some data. The _purchases_ table
+contains a small amount of data loaded from 2 files. The _transactions_
+table contains 50000 rows of data loaded from a single file.
+
+[source,python]
+----
+from kaskada import table as kt
+
+def indent(text, amount, ch=' '):
+        padding = amount * ch
+        return ''.join(padding+line for line in str(text).splitlines(True))
+
+t_purchases = kt.create_table(
+    table_name =             "purchases",
+    time_column_name =       "purchase_time",
+    entity_key_column_name = "customer_id",
+    subsort_column_name =    "subsort_id",
+)
+file_purchases1 = kt.upload_file(table="purchases", file_path="purchases_part1.parquet")
+file_purchases2 = kt.upload_file(table=t_purchases, file_path="purchases_part2.parquet")
+print(f"SUCCESS: Created Purchases table and uploaded data.")
+print("\t Table Response:")
+print(indent(t_purchases, 2, "\t"))
+print("\t Upload Responses:")
+print(indent(file_purchases1, 2, "\t"))
+print(indent(file_purchases2, 2, "\t"))
+
+t_transactions = kt.create_table(
+    table_name =             "transactions",
+    time_column_name =       "transaction_time",
+    entity_key_column_name = "id",
+    subsort_column_name =    "idx",
+)
+file_transactions1 = kt.upload_file(table=t_transactions, file_path="transactions_part1.parquet")
+print(f"SUCCESS: Created Transactions table and uploaded data.")
+print("\t Table Response:")
+print(indent(t_transactions, 2, "\t"))
+print("\t Upload Response:")
+print(indent(file_transactions1, 2, "\t"))
+----
+
+[source,json]
+----
+SUCCESS: Created Purchases table and uploaded data.
+     Table Response:
+        table {
+          table_id: "56437b49-4749-4d47-ad5e-ef680d34c750"
+          table_name: "purchases"
+          time_column_name: "purchase_time"
+          entity_key_column_name: "customer_id"
+          subsort_column_name: "subsort_id"
+          create_time {
+            seconds: 1638907853
+            nanos: 587268229
+          }
+          update_time {
+            seconds: 1638907853
+            nanos: 587268229
+          }
+        }
+        request_details {
+          request_id: "985a39f0851a50b1c23551660f0925f1"
+        }
+
+     Upload Responses:
+        data_token_id: "bdc9e595-a8a0-448c-9a95-c2e3d886b633"
+        request_details {
+          request_id: "dfcfa0026e4f0a99344329cfd80737ac"
+        }
+
+        data_token_id: "24c83cac-8cf4-4a45-98f0-dac8d5b303a2"
+        request_details {
+          request_id: "f36489c8eb48c8e01fd152bb95da4991"
+        }
+
+SUCCESS: Created Transactions table and uploaded data.
+     Table Response:
+        table {
+          table_id: "24fd3343-1c3d-4ad7-bc67-8b367019afd3"
+          table_name: "transactions"
+          time_column_name: "transaction_date"
+          entity_key_column_name: "msno"
+          subsort_column_name: "idx"
+          create_time {
+            seconds: 1638907856
+            nanos: 680641826
+          }
+          update_time {
+            seconds: 1638907856
+            nanos: 680641826
+          }
+        }
+        request_details {
+          request_id: "62a07d27133bedf8779dea9380e09a07"
+        }
+
+     Upload Response:
+        data_token_id: "7bd4e740-9e63-418e-ba9b-5582db010959"
+        request_details {
+          request_id: "872984a9097bd6c8dd53d88845615f07"
+        }
+----
+
+=== Using `--data-token`
+
+`--data-token`: Enables repeatable queries. Queries performed against
+the same data token always run on the same input data.
+
+* use the data token id returned after loading the first file, and
+results only include rows from the first file
+
+[source,ipython]
+----
+%%fenl --data-token bdc9e595-a8a0-448c-9a95-c2e3d886b633
+purchases
+----
+
+[source,json]
+----
+data_token_id: "bdc9e595-a8a0-448c-9a95-c2e3d886b633"
+request_details {
+  request_id: "3f737ff336666515a54dd29a9c5ace3a"
+}
+----
+
+[cols=">,<,<,<,<,>,>",options="header",]
+|===
+| |id |purchase_time |customer_id |vendor_id |amount |subsort_id
+|0 |cb_001 |2020-01-01 00:00:00 |karen |chum_bucket |9 |0
+|1 |kk_001 |2020-01-01 00:00:00 |patrick |krusty_krab |3 |1
+|2 |cb_002 |2020-01-02 00:00:00 |karen |chum_bucket |2 |2
+|3 |kk_002 |2020-01-02 00:00:00 |patrick |krusty_krab |5 |3
+|4 |cb_003 |2020-01-03 00:00:00 |karen |chum_bucket |4 |4
+|5 |kk_003 |2020-01-03 00:00:00 |patrick |krusty_krab |12 |5
+|6 |cb_004 |2020-01-04 00:00:00 |patrick |chum_bucket |5000 |6
+|7 |cb_005 |2020-01-04 00:00:00 |karen |chum_bucket |3 |7
+|8 |cb_006 |2020-01-05 00:00:00 |karen |chum_bucket |5 |8
+|9 |kk_004 |2020-01-05 00:00:00 |patrick |krusty_krab |9 |9
+|===
+
+* use the data token id returned after loading the second file, and
+results rows from both files
+
+[source,ipython]
+----
+%%fenl --data-token 24c83cac-8cf4-4a45-98f0-dac8d5b303a2
+purchases
+----
+
+[source,json]
+----
+data_token_id: "24c83cac-8cf4-4a45-98f0-dac8d5b303a2"
+request_details {
+  request_id: "3f737ff336666515a54dd29a9c5ace3a"
+}
+----
+
+[cols=">,<,<,<,<,>,>",options="header",]
+|===
+| |id |purchase_time |customer_id |vendor_id |amount |subsort_id
+|0 |cb_001 |2020-01-01 00:00:00 |karen |chum_bucket |9 |0
+|1 |kk_001 |2020-01-01 00:00:00 |patrick |krusty_krab |3 |1
+|2 |cb_002 |2020-01-02 00:00:00 |karen |chum_bucket |2 |2
+|3 |kk_002 |2020-01-02 00:00:00 |patrick |krusty_krab |5 |3
+|4 |cb_003 |2020-01-03 00:00:00 |karen |chum_bucket |4 |4
+|5 |kk_003 |2020-01-03 00:00:00 |patrick |krusty_krab |12 |5
+|6 |cb_004 |2020-01-04 00:00:00 |patrick |chum_bucket |5000 |6
+|7 |cb_005 |2020-01-04 00:00:00 |karen |chum_bucket |3 |7
+|8 |cb_006 |2020-01-05 00:00:00 |karen |chum_bucket |5 |8
+|9 |kk_004 |2020-01-05 00:00:00 |patrick |krusty_krab |9 |9
+|10 |kk_005 |2020-01-06 00:00:00 |patrick |krusty_krab |2 |0
+|11 |wh_001 |2020-01-06 00:00:00 |spongebob |weenie_hut |7 |1
+|12 |cb_007 |2020-01-07 00:00:00 |spongebob |chum_bucket |34 |2
+|13 |wh_002 |2020-01-08 00:00:00 |karen |weenie_hut |8 |3
+|14 |kk_006 |2020-01-08 00:00:00 |patrick |krusty_krab |9 |4
+|===
+
+=== Using `--result-behavior`
+
+`--result-behavior`: Determines which results are returned.
+
+* use `all-results` (default) to return all the results for each entity:
+
+[source,ipython]
+----
+%%fenl --result-behavior all-results
+purchases
+----
+
+[source,json]
+----
+data_token_id: "7bd4e740-9e63-418e-ba9b-5582db010959"
+request_details {
+  request_id: "1badb8b0e220e26cc15b93b234ac3c14"
+}
+----
+
+[cols=">,<,<,<,<,>,>",options="header",]
+|===
+| |id |purchase_time |customer_id |vendor_id |amount |subsort_id
+|0 |cb_001 |2020-01-01 00:00:00 |karen |chum_bucket |9 |0
+|1 |kk_001 |2020-01-01 00:00:00 |patrick |krusty_krab |3 |1
+|2 |cb_002 |2020-01-02 00:00:00 |karen |chum_bucket |2 |2
+|3 |kk_002 |2020-01-02 00:00:00 |patrick |krusty_krab |5 |3
+|4 |cb_003 |2020-01-03 00:00:00 |karen |chum_bucket |4 |4
+|5 |kk_003 |2020-01-03 00:00:00 |patrick |krusty_krab |12 |5
+|6 |cb_004 |2020-01-04 00:00:00 |patrick |chum_bucket |5000 |6
+|7 |cb_005 |2020-01-04 00:00:00 |karen |chum_bucket |3 |7
+|8 |cb_006 |2020-01-05 00:00:00 |karen |chum_bucket |5 |8
+|9 |kk_004 |2020-01-05 00:00:00 |patrick |krusty_krab |9 |9
+|10 |kk_005 |2020-01-06 00:00:00 |patrick |krusty_krab |2 |0
+|11 |wh_001 |2020-01-06 00:00:00 |spongebob |weenie_hut |7 |1
+|12 |cb_007 |2020-01-07 00:00:00 |spongebob |chum_bucket |34 |2
+|13 |wh_002 |2020-01-08 00:00:00 |karen |weenie_hut |8 |3
+|14 |kk_006 |2020-01-08 00:00:00 |patrick |krusty_krab |9 |4
+|===
+
+* use `final-results` to return only the most recent event for
+each entity
+
+[source,ipython]
+----
+%%fenl --result-behavior final-results
+purchases
+----
+
+[source,json]
+----
+data_token_id: "7bd4e740-9e63-418e-ba9b-5582db010959"
+request_details {
+  request_id: "145bc51d9bac47f17fd202e5785e58b7"
+}
+----
+
+[cols=">,<,<,<,<,>,>",options="header",]
+|===
+| |id |purchase_time |customer_id |vendor_id |amount |subsort_id
+|0 |kk_006 |2020-01-08 00:00:00 |patrick |krusty_krab |9 |4
+|1 |wh_002 |2020-01-08 00:00:00 |karen |weenie_hut |8 |3
+|2 |cb_007 |2020-01-07 00:00:00 |spongebob |chum_bucket |34 |2
+|===
+
+=== Using `--preview-rows`
+
+`--preview-rows`: Produces a preview of the data with approximately this many rows.
+
+* Setting a limit allows you to quickly iterate on features and verify
+your results before running them over your full dataset
+* set to `50` on the `transactions` table to return a preview of at
+least 50 rows
+
+[source,ipython]
+----
+%%fenl --preview-rows 50
+transactions
+----
+
+Returns a dataframe of 71599 rows, instead of the full dataset of 100000
+rows.
+
+[NOTE] 
+====
+It may seem odd that many thousands of rows were returned when
+only 50 were requested. This happens because query operates on batches
+and will return the results of all batches processed in order to reach
+the minimum set of rows requested. In this case, compute processed only
+a single batch, but the batch had a size of 71599 rows. Note: Using
+`--preview-rows` with `--result-behavior final-results` will cause the
+full dataset to be processed, as all inputs must be processed to produce
+final results.
+====

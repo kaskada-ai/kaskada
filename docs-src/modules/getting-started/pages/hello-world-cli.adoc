@@ -1,0 +1,242 @@
+= Hello World (CLI)
+
+== Installation
+
+To use Kaskada on the command line, you'll need to install three components:
+
+* The Kaskada command-line executable
+* The Kaskada manager, which serves the Kaskada API
+* The Kaskada engine, which executes queries
+
+Each of these are available as pre-compiled binaries in the xref:url:https://github.com/kaskada-ai/kaskada/releases[Releases] section of Kaskada's Github repository.
+This example assumes you have installed `curl`.
+
+[source,shell]
+----
+VERSION=0.4.1
+ARCH=$(uname -m | awk '{print tolower($0)}')
+OS=$(uname -s | awk '{print tolower($0)}')
+
+curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-cli-$OS-$ARCH" -o kaskada-cli
+curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-engine-$OS-$ARCH" -o kaskada-engine
+curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-manager-$OS-$ARCH" -o kaskada-manager
+
+chmod +x kaskada-*
+----
+
+[TIP]
+.Authorizing applications on OSX
+====
+If you're using OSX, you may need to unblock the applications.
+OSX prevents applications you download from running as a security feature.
+You can remove the block placed on the file when it was downloaded with the following command:
+
+[source,shell]
+----
+xattr -dr com.apple.quarantine <path to file>
+----
+====
+
+You should now be able to run all three components.
+To verify they're installed correctly and executable, try running the following command:
+
+[source,shell]
+----
+./kaskada-cli -h
+----
+
+You should see output similar to the following:
+
+[source,shell]
+----
+A CLI tool for interacting with the Kaskada API
+
+Usage:
+  cli [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  load        A set of commands for loading data into kaskada
+  query       A set of commands for running queries on kaskada
+  sync        A set of commands for interacting with kaskada resources as code
+
+Flags:
+      --config string               config file (default is $HOME/.cli.yaml)
+  -d, --debug                       get debug log output
+  -h, --help                        help for cli
+      --kaskada-api-server string   Kaskada API Server
+      --kaskada-client-id string    Kaskada Client ID
+      --use-tls                     Use TLS when connecting to the Kaskada API (default true)
+----
+
+You can start a local instance of the Kaskada service by running the manager and engine:
+
+[source,shell]
+----
+./kaskada-manager 2>&1 > manager.log 2>&1 &
+./kaskada-engine serve > engine.log 2>&1 &
+----
+
+== Managing resources
+
+The CLI manages Kaskada resources declaratively by managing spec files. 
+A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+We'll begin by creating a table.
+The first step is to create a spec file containing the table's definition.
+
+When creating a table, you must provide some information about how each
+row should be interpreted. You must describe:
+
+* A field containing the time associated with each row
+(`time_column_name`). The time should refer to when the event occurred.
+* An initial xref:fenl:entities[entity] key associated with each row
+(`entity_key_column_name`). The entity should identify a _thing_ in the
+world that each event is associated with. Don't worry too much about
+picking the "right" value here - it's easy to change the entity key in
+Fenl.
+* A subsort column associated with each row (`subsort_column_name`).
+This value is used to order rows associated with the same time value.
+
+For more information about these fields, see:
+xref:how-to-guides:expected-file-format[Expected File Format]
+
+[,yaml]
+.spec.yaml
+----
+tables:
+- tableName: Purchase
+  timeColumnName: purchase_time
+  entityKeyColumnName: customer_id
+  tableSource:
+    kaskada: {}
+----
+
+To create this table, we much sync the state of the Kaskada service with the contents of the file.
+
+[source,shell]
+----
+./kaskada-cli sync apply -f spec.yaml
+
+# > 2:18PM INF starting plan
+# > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=Purchase
+# > 2:18PM INF Success!
+----
+
+This creates a table named `Purchase`. Any data loaded into this table
+must have a timestamp field named `purchase_time`, a field named
+`customer_id`, and a field named `subsort_id`.
+
+[TIP]
+.Idiomatic Kaskada
+====
+We like to use CamelCase to name tables because it
+helps distinguish data sources from transformed values and function
+names.
+====
+
+You've now created your first table! 
+
+== Loading Data
+
+Now that we've created a table, we're ready to load some data into it.
+
+Data can be loaded into a table in multiple ways. In this example we'll
+load the contents of a Parquet file into the table. To learn about
+the different ways data can be loaded into a table, see the
+xref:developing:tables.adoc#uploading-data["Uploading Data"
+section of the "Tables"] page.
+
+[source,shell]
+----
+curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk" -o purchase.parquet
+
+./kaskada-cli load \
+    --table Purchase \
+    --file-path file://purchase.parquet
+----
+
+The file's content is added to the table.
+
+For more help with tables and loading data, see xref:developing:tables.adoc[Reference -
+Working with Tables]
+
+== Querying Data
+
+You can write queries in a number of ways with Kaskada. As you are
+iterating it can be helpful to build up your queries as components
+as you go.  Once you'd like to persist a query, check out our
+article on xref:developing:views.adoc[Sharing Queries].
+
+Let's start by looking at the Purchase table without any filters, this
+query will return all of the columns and rows contained in a table:
+
+[source,shell]
+----
+./kaskada-cli query run --stdout --response-as csv <<EOS
+Purchase
+EOS
+----
+
+Note: this table is intentionally small so that you can get to know
+queries with Kaskada. When you upload your own data, you may want to
+write the results to a file rather than `stdout`:
+
+[source,shell]
+----
+./kaskada-cli query run --response-as csv > results.csv <<EOS
+Purchase | when(Purchase.customer_id == "patrick")
+EOS
+----
+
+As you begin to better understand your data you can start using
+aggregations over your data such as the `max()` function:
+
+[source,shell]
+----
+./kaskada-cli query run --stdout --response-as csv <<EOS
+{
+   max_purchase: Purchase.amount | max(),
+}
+EOS
+----
+
+These results may be surprising if you were expecting a single value,
+this is a feature, not a bug!
+
+Computations in Fenl are temporal: they produce a time-series of values
+describing the full history of a computation's results. Temporal
+computation allows Fenl to capture what an expression's value would have
+been at arbitrary times in the past.
+
+Fenl values can time-travel forward through time. Time travel allows
+combining the result of different computations at different points in
+time. Because values can only travel forward in time, Fenl prevents
+information about the future from "leaking" into the past.
+
+Read more in the xref:fenl:language-guide.adoc[Fenl
+Language Guide]
+
+Now we can start building up more complex queries. To reduce the set of columns
+output in your query, you can define a record with the curly braces
+`{ }` and name the columns with a label shown on the left of the `:` in
+the below query. In order to debug your features, we recommend including
+the time and the entity with each query so that you can walk through the
+results in time:
+
+[source,shell]
+----
+./kaskada-cli query run --stdout --response-as csv <<EOS
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+EOS
+----
+
+For more help writing queries, see xref:developing:queries.adoc[Reference -
+Writing Queries]

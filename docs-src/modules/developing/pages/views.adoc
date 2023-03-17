@@ -1,0 +1,212 @@
+= Views 
+
+Fenl expressions can be shared and re-used by creating a _view_. A view
+is a named expression. In subsequent Fenl expressions, the view's name
+is synonymous with the view's expression. Views are persisted in the
+Kaskada manager and are accessible to any query.
+
+Once you've created a view, you can use the view's name anywhere you could use the view's expression -  the only restriction placed on views is that they must be valid expressions.
+Views may reference other views.
+
+Views are useful any time you need to share or re-use expressions:
+
+* Cleaning operations
+* Common business logic
+* ML feature definitions
+
+
+== Managing views with the CLI
+
+The CLI manages Kaskada resources declaratively by managing spec files.
+A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== The format of views in a spec file.
+
+Views are described in a spec file as a list of view objects under the `views` key:
+
+[source,yaml]
+----
+views:
+    - view_id: 14c4...ba56 <1>
+      view_name: PurchaseStats <2>
+      expression: | <3>
+        {
+            time: Purchase.purchase_time,
+            entity: Purchase.customer_id,
+            max_amount: Purchase.amount | max(),
+            min_amount: Purchase.amount | min(),
+            count: CountPurchase,
+        } 
+    - view_id: dd61...70e9
+      view_name: CountPurchase
+      expression: count(Purchase)
+----
+<1> A unique identifier for the view. This value is assigned by the manager and is read-only.
+<2> A name used to refer to the view in queries.
+<3> The expression to substitute anywhere the view's name is used.
+
+
+=== Exporting the current views as a spec file.
+
+You can export all the views currently defined using the CLI.
+
+[source,bash]
+----
+cli sync export --all
+----
+
+The export result is shown below
+
+[source,yaml]
+----
+tables:
+    # ...
+views:
+    - view_id: dd61...70e9
+      view_name: CountPurchase
+      expression: count(Purchase)
+----
+
+Alternately, if you know a specific view you'd like to export you can specify it explicitly.
+
+[source,bash]
+----
+cli sync export --view PurchaseStats
+----
+
+=== Updating Kaskada to reflect the contents of a spec file
+
+To change a view with the CLI, you first modify the view in a spec file, then "apply" the spec file with the CLI.
+When a spec file is applied, the CLI inspects all of the server's resources and all of the resources
+defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
+Applying a spec can create new views, change a view's mutable fields, or delete views.
+
+[WARNING]
+.View updates are destructive
+====
+Vies are current immutable. 
+When the CLI updates a view, it does so by deleting the view and re-creating it.
+When this happens, the view may be temporarily unavailable to queries.
+====
+
+Before applying a spec file, it's a good idea to see what changes will be made. 
+You can see these changes by creating an apply plan.
+
+[source,bash]
+----
+cli sync plan --file spec.yaml
+----
+
+Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
+
+You can apply a spec file using the CLI.
+
+[source,bash]
+----
+cli sync apply --file spec.yaml
+----
+
+== Managing views with Python
+
+All methods in this section are from the `view` object. Be sure to import
+it before running any method:
+
+[source,python]
+----
+from kaskada import view
+----
+
+=== Creating a View
+
+To create a view, we'll start by describing the expression we'd like to
+name. In this case, we're interested in some purchase statistics for
+each user. This definition depends on business logic and might require
+some iteration to get just right.
+
+[source,python]
+----
+view.create_view(
+    view_name = "PurchaseStats",
+    expression = "{
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+    }"
+)
+----
+
+This creates a view names `PurchaseStats`.
+
+[TIP]
+.Idiomatic Kaskada
+====
+We like to use CamelCase for view names. This is
+the same naming convention as we use for tables, and helps to
+communicate that we're referring to a persistent resource in the Kaskada
+system, as opposed to a temporary local value created as part of a
+query.
+====
+
+If you're using IPython/Jupyter, you can create a view from the contents of a `%%fenl` block using the `--var` argument
+
+[source,Fenl]
+----
+%%fenl --var purchase_stats
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+Adding `--var purchase_stats` to the beginning of the
+magic block causes the extension to assign the query result to the
+variable `purchase_stats` when the block is run.
+
+We can use this variable to create a view using the Python client
+without re-typing the expression:
+
+[source,python]
+----
+view.create_view(
+    view_name = "PurchaseStats",
+    expression = purchase_stats.expression,
+)
+----
+
+=== List Views
+
+The list views method returns all views defined for your user. An
+optional search string can filter the response set.
+
+Here is an example of listing tables:
+
+[source,python]
+----
+view.list_views("Purchase")
+----
+
+=== Get View
+
+You can get a view using its name:
+
+[source,python]
+----
+view.get_view("PurchaseStats")
+----
+
+=== Updating a View
+
+Views are currently immutable. Updating a view requires deleting that
+view and then re-creating it.
+
+=== Deleting a view
+
+You can delete a view using its name:
+
+[source,python]
+----
+view.delete_view("PurchaseStats")
+----

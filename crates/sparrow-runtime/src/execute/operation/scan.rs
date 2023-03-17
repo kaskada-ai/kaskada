@@ -197,7 +197,7 @@ impl ScanOperation {
             // TODO: Fix flight recorder
             FlightRecorder::disabled(),
             context.max_event_in_snapshot,
-            None,
+            context.output_at_time,
         )
         .change_context(Error::internal_msg("failed to create table reader"))?
         .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
@@ -402,6 +402,7 @@ mod tests {
             key_hash_inverse,
             max_event_in_snapshot: None,
             progress_updates_tx,
+            output_at_time: None,
         };
 
         executor

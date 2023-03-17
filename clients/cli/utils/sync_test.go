@@ -69,6 +69,11 @@ func Test_compareResource(t *testing.T) {
 
 type errorGetApiClient struct{}
 
+// LoadFile implements api.ApiClient
+func (*errorGetApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	panic("unimplemented")
+}
+
 // Create implements api.ApiClient
 func (*errorGetApiClient) Create(item protoreflect.ProtoMessage) error {
 	panic("unimplemented")
@@ -96,6 +101,11 @@ func (*errorGetApiClient) Query(*apiv1alpha.CreateQueryRequest) (*apiv1alpha.Cre
 
 type notFoundGetApiClient struct{}
 
+// LoadFile implements api.ApiClient
+func (*notFoundGetApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	panic("unimplemented")
+}
+
 // Create implements api.ApiClient
 func (*notFoundGetApiClient) Create(item protoreflect.ProtoMessage) error {
 	panic("unimplemented")
@@ -122,6 +132,10 @@ func (*notFoundGetApiClient) Query(*apiv1alpha.CreateQueryRequest) (*apiv1alpha.
 }
 
 type getApiClient struct{}
+
+func (*getApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	panic("unimplemented")
+}
 
 // Create implements api.ApiClient
 func (*getApiClient) Create(item protoreflect.ProtoMessage) error {

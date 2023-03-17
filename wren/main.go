@@ -78,7 +78,7 @@ var (
 	queryServiceHost         = flag.String("query-service-host", "localhost", "the hostname of the query service")
 	queryServicePort         = flag.Int("query-service-port", 50052, "the port of the query service")
 	queryServiceUseTLS       = flag.Bool("query-service-use-tls", false, "should TLS be used to connect to the query service")
-	restPort                 = flag.Int("rest-port", 8080, "the port of the REST listener")
+	restPort                 = flag.Int("rest-port", 3365, "the port of the REST listener")
 	safeShutdownSeconds      = flag.Int("safe-shutdown-seconds", 120, "the maximum duration in seconds to try to perform a safe shutdown before killing in-flight requests")
 	serviceName              = flag.String("service-name", "api", "the name of this service")
 

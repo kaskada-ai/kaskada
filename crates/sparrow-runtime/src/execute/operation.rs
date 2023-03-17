@@ -91,6 +91,10 @@ pub(crate) struct OperationContext {
     /// Channel for sending progress updates.
     pub progress_updates_tx:
         tokio::sync::mpsc::Sender<crate::execute::progress_reporter::ProgressUpdate>,
+    /// The time to produce a final tick at.
+    ///
+    /// If set, the user supplied a specific time to produce values at.
+    pub output_at_time: Option<NaiveDateTime>,
 }
 
 impl OperationContext {
@@ -170,7 +174,7 @@ impl OperationExecutor {
 
         let operator = operation
             .operator
-            .ok_or(Error::internal_msg("missing operator"))?;
+            .ok_or_else(|| Error::internal_msg("missing operator"))?;
 
         let operation_label = operator.label();
 
@@ -391,7 +395,7 @@ fn create_operation(
         ),
         operation_plan::Operator::Tick(tick_operation) => {
             if matches!(tick_operation.behavior(), TickBehavior::Finished) {
-                FinalTickOperation::create(incoming_channels, input_columns)
+                FinalTickOperation::create(context, incoming_channels, input_columns)
             } else {
                 TickOperation::create(tick_operation, incoming_channels, input_columns)
             }

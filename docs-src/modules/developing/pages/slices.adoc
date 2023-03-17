@@ -1,4 +1,4 @@
-= Working with Slices
+= Slices
 
 _This document assumes the client is authenticated._
 

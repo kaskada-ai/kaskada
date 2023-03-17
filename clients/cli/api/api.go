@@ -25,6 +25,7 @@ type apiClient struct {
 }
 
 type ApiClient interface {
+	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
 	Create(item protoreflect.ProtoMessage) error
 	Delete(item protoreflect.ProtoMessage) error
 	Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
@@ -40,6 +41,10 @@ func NewApiClient() ApiClient {
 		table:           NewTableServiceClient(ctx, conn),
 		view:            NewViewServiceClient(ctx, conn),
 	}
+}
+
+func (c apiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	return c.table.LoadFile(name, fileInput)
 }
 
 func (c apiClient) Query(req *apiv1alpha.CreateQueryRequest) (*apiv1alpha.CreateQueryResponse, error) {

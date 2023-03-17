@@ -16,6 +16,16 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class TableSource(object):
+    pass
+
+
+class PulsarTableSource(TableSource):
+    def __init__(self, protocol_url: str, topic: str):
+        self._protocol_url = protocol_url
+        self._topic = topic
+
+
 def get_table_name(
     table: Union[
         table_pb.Table, table_pb.CreateTableResponse, table_pb.GetTableResponse, str
@@ -110,6 +120,7 @@ def create_table(
     entity_key_column_name: str,
     subsort_column_name: Optional[str] = None,
     grouping_id: Optional[str] = None,
+    source: Optional[TableSource] = None,
     client: Optional[Client] = None,
 ) -> table_pb.CreateTableResponse:
     """
@@ -126,6 +137,8 @@ def create_table(
             The subsort column. Defaults to None and Kaskada will generate a subsort column for the data.
         grouping_id (str, optional):
             The grouping id. Defaults to None.
+        source (TableSource, optional):
+            A configurable table source. Defaults to None.
         client (Client, optional):
             The Kaskada Client. Defaults to kaskada.KASKADA_DEFAULT_CLIENT.
 
@@ -145,6 +158,17 @@ def create_table(
             table_args["subsort_column_name"] = wrappers.StringValue(
                 value=subsort_column_name
             )
+        if source is not None:
+            if isinstance(source, PulsarTableSource):
+                table_args["table_source"] = {
+                    "pulsar": {
+                        "protocol_url": source._protocol_url,
+                        "topic": source._topic,
+                    }
+                }
+            else:
+                raise ValueError("invalid table source provided")
+
         req = table_pb.CreateTableRequest(table=table_pb.Table(**table_args))
         logger.debug(f"Create Tables Request: {req}")
         return client.table_stub.CreateTable(req, metadata=client.get_metadata())

@@ -185,7 +185,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				res, err := materializationClient.CreateMaterialization(ctx, &v1alpha.CreateMaterializationRequest{
 					Materialization: &v1alpha.Materialization{
 						MaterializationName: "transaction_details",
-						Query:               query,
+						Expression:               query,
 						Destination: &v1alpha.Materialization_Destination{
 							Destination: &v1alpha.Materialization_Destination_Redis{
 								Redis: &v1alpha.RedisDestination{

@@ -103,7 +103,7 @@ impl LookupRequestOperation {
 
         let foreign_key_column = operation
             .foreign_key_hash
-            .ok_or(invalid_operation!("missing foreign_key_hash"))?
+            .ok_or_else(|| invalid_operation!("missing foreign_key_hash"))?
             .input_column as usize;
 
         Ok(Box::new(Self {

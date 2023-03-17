@@ -1,4 +1,6 @@
-= Online Feature Stores
+= Integrating with ML feature stores
+
+== Online Feature Stores
 
 Models being used in production often have strict latency and freshness
 requirements — real-time models in particular. Feature engines address
@@ -6,76 +8,18 @@ the freshness, while feature stores address latency. Kaskada's feature
 engine keeps real-time features fresh and integrates with several
 existing data stores for low-latency key retrieval.
 
-== AWS DynamoDB
+=== Apache Pulsar
 
-DynamoDB is a hosted key-value store that provides consistent
-low-latency query responses and elastic scalability.
-
-Features can be loaded into DynamoDB by exporting features as Parquet
-and using an AWS client to upload each feature vector using the
-batch-write API. To load features into DynamoDB, first construct a query
-describing the feature vectors.
-
-[source,rust]
-----
-%%fenl
-{
-  key: Purchase.customer_id,
-  max_amount: Purchase.amount | max(),
-  min_amount: Purchase.amount | min(),
-}
-----
-
-The dataframe returned by this query can be loaded into DynamoDB using
-the `boto` Python library.
+Apache Pulsar is an open-source distributed streaming platform.
+Feature values can be written to Pulsar in real-time by creating a materialization. 
 
 [source,python]
 ----
-import pandas as pd
-import boto3
-
-df = pd.read_parquet(_)
-
-dynamo = boto3.resource('dynamodb')
-table = dynamo.Table('data-services-dev-testing')
-
-with table.batch_writer() as bw:
-    for i, record in enumerate(df.to_dict("records")):
-        bw.put_item(Item=record)
-----
-
-== Redis
-
-Redis is an OpenSource in-memory data-structure store. The RedisAI
-module provides support for tensor data structures and allows applying a
-variety of trained models to input tensors within the Redis process.
-
-Kaskada can export feature vectors to Redis as tensors. To load features
-into Redis, first construct a query describing the feature vectors. This
-query must produce a record including a field named `key`. All other
-fields in the record must produce numeric values.
-
-[source,rust]
-----
-{
-  key: Purchase.customer_id,
-  max_amount: Purchase.amount | max(),
-  min_amount: Purchase.amount | min(),
-}
-----
-
-The results of a Fenl query can be written to an external data store and
-kept up to date as the data underlying the query changes using
-materializations. A materialization is similar to a query, except that
-the results are updated any time data is added to a table used by the
-query.
-
-[source,python]
-----
-redis_db = 1
-redis_host = "redisai"
-redis_port = 6379
-destination = materialization.RedisAIDestination(redis_db, redis_host, redis_port)
+tenant = "public"
+namespace = "default"
+topic_name = "model_features"
+broker_service_url = "pulsar://127.0.0.1:6650"
+destination = materialization.PulsarDestination(tenant, namespace, topic_name, broker_service_url)
 
 materialization.create_materialization(
     name = "MaterializedFeatures",
@@ -87,6 +31,24 @@ materialization.create_materialization(
     }"
 )
 ----
+
+=== Apache Cassandra
+
+Cassandra is a open source NoSQL distributed database that provides 
+linear scalability and low-latency query results.
+
+Feature values can be written to Cassandra in real-time via Pulsar.
+First, link:Apache%20Pulsar[materialize features into Pulsar].
+Next use the link:https://pulsar.apache.org/docs/2.11.x/io-cassandra-sink/[Cassandra sink connector] to pull messages from Pulsar into Cassandra.
+
+=== Redis
+
+Redis is an OpenSource in-memory data-structure store. 
+
+Feature values can be written to Redis in real-time via Pulsar.
+First, link:Apache%20Pulsar[materialize features into Pulsar].
+Next use the link:https://pulsar.apache.org/docs/2.11.x/io-redis-sink/[Redis sink connector] to pull messages from Pulsar into Redis.
+
 
 == Offline Feature Stores
 
@@ -107,7 +69,7 @@ describing the feature vectors. Query results can be returned as a URL
 identifying the output Parquet file by supplying the output config
 `--output parquet`.
 
-[source,rust]
+[source,fenl]
 ----
 %%fenl --output parquet
 {
@@ -152,7 +114,7 @@ describing the feature vectors. Query results can be returned as a URL
 identifying the output Parquet file by supplying the output config
 `--output parquet`.
 
-[source,rust]
+[source,fenl]
 ----
 %%fenl --output parquet
 {

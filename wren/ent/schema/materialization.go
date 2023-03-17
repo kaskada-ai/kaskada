@@ -20,6 +20,7 @@ type Materialization struct {
 func (Materialization) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+		field.Int64("version"),
 		field.Time("created_at").Default(microsecondNow).Immutable(),
 		field.String("name").Immutable(),
 		field.String("description").Optional(),

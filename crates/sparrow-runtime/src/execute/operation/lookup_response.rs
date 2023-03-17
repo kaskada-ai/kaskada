@@ -90,7 +90,7 @@ impl LookupResponseOperation {
 
         let requesting_key_hash_column = operation
             .requesting_key_hash
-            .ok_or(invalid_operation!("missing requesting_key_hash"))?
+            .ok_or_else(|| invalid_operation!("missing requesting_key_hash"))?
             .input_column as usize;
 
         Ok(Box::new(Self {

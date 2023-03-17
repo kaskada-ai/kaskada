@@ -107,7 +107,7 @@ def create_query(
         result_behavior (str, optional):
             Determines which results are returned. Either "all-results" (default), or "final-results" which returns
             only the final values for each entity.
-        responsed_as (ResponseType):
+        response_as (ResponseType):
             Determines how the response is returned.  Either "parquet" (default) or "csv".
         data_token_id (str, optional):
             Enables repeatable queries. Queries performed against the same dataToken are always run against the same input data.
@@ -116,6 +116,8 @@ def create_query(
             No actual computation of results is performed.
         changed_since_time (datetime.datetime, optional):
             Time bound (inclusive) after which results will be output.
+        final_result_time (Union[str, datetime.datetime], optional):
+            Time bound (inclusive) at which results will be output.
         limits (pb.QueryRequest.Limits, optional):
             Configure limits on the output set.
         slice_filter (SliceFilter, optional):

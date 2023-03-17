@@ -233,6 +233,10 @@ func Test_exportView(t *testing.T) {
 
 type mockApiClient struct{}
 
+func (*mockApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) error {
+	panic("unimplemented")
+}
+
 // Create implements api.ApiClient
 func (*mockApiClient) Create(item protoreflect.ProtoMessage) error {
 	panic("unimplemented")

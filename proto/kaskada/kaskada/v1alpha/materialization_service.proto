@@ -40,8 +40,11 @@ message Materialization {
   // The creation timestamp of the materialization in kaskada
   google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
+  // Previously `query`. Renamed to `expression` on Mar.06.2023 at
+  // python release 0.1.1a6, wren 0.2.0, sparrow 0.2.0
+  reserved 4;
   // A Fenl expression to compute.
-  string query = 4;
+  string expression = 11;
 
   // An optional list of views to use when computing the query results.
   //

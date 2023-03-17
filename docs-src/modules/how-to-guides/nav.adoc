@@ -1,3 +1,0 @@
-* How-To Guides
-*** xref:exporting-for-training.adoc[Exporting Features] 
-*** xref:integrating-with-feature-stores.adoc[Serving Features]

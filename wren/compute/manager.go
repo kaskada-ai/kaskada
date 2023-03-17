@@ -85,7 +85,6 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
-
 	switch resultBehavior {
 	case v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_UNSPECIFIED
@@ -96,7 +95,7 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
-		subLogger.Error().Str("resultBehavior", resultBehavior.String()).Msg("unexpeted resultBehavior")
+		subLogger.Error().Str("resultBehavior", resultBehavior.String()).Msg("unexpected resultBehavior")
 		return nil, fmt.Errorf("unexpected resultBehavior: %s", resultBehavior.String())
 	}
 
@@ -180,7 +179,7 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 	case *v2alpha.ResultBehavior_FinalResultsAtTime:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
-		subLogger.Error().Str("resultBehavior", fmt.Sprintf("%T", config.ResultBehavior.ResultBehavior)).Msg("unexpeted resultBehavior")
+		subLogger.Error().Str("resultBehavior", fmt.Sprintf("%T", config.ResultBehavior.ResultBehavior)).Msg("unexpected resultBehavior")
 		return nil, customerrors.NewInternalError("unexpected resultBehavior")
 	}
 
@@ -200,7 +199,7 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 				},
 			}
 		default:
-			subLogger.Error().Str("sliceRequest", fmt.Sprintf("%T", config.Slice.Slice)).Msg("unexpeted sliceRequest")
+			subLogger.Error().Str("sliceRequest", fmt.Sprintf("%T", config.Slice.Slice)).Msg("unexpected sliceRequest")
 			return nil, customerrors.NewInternalError("unexpected sliceRequest")
 		}
 	}
@@ -286,9 +285,10 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_ALL
 	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS:
 		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL
-
+	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
+		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
 	default:
-		subLogger.Error().Str("resultBehavior", request.ResultBehavior.String()).Msg("unexpeted resultBehavior")
+		subLogger.Error().Str("resultBehavior", request.ResultBehavior.String()).Msg("unexpected resultBehavior")
 		return nil, fmt.Errorf("unexpected resultBehavior: %s", request.ResultBehavior.String())
 	}
 
@@ -558,10 +558,16 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		switch kind := materialization.Destination.Destination.(type) {
 		case *v1alpha.Materialization_Destination_ObjectStore:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to object store")
+
+			// Append the materialization version to the output prefix so result files
+			// for specific datatokens are grouped together.
+			outputPrefixUri := kind.ObjectStore.GetOutputPrefixUri()
+			outputPrefixUri = path.Join(outputPrefixUri, strconv.FormatInt(materialization.Version, 10))
+
 			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType:        kind.ObjectStore.GetFileType(),
-					OutputPrefixUri: kind.ObjectStore.GetOutputPrefixUri(),
+					OutputPrefixUri: outputPrefixUri,
 				},
 			}
 		case *v1alpha.Materialization_Destination_Pulsar:
@@ -625,10 +631,15 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 
 		// Update materializations that have run with the current data version id, so on
 		// subsequent runs only the updated values will be produced.
-		_, err = m.materializationClient.UpdateMaterializationDataVersion(ctx, owner, materialization.ID, queryContext.dataToken.DataVersionID)
-
+		_, err = m.materializationClient.UpdateDataVersion(ctx, materialization, queryContext.dataToken.DataVersionID)
 		if err != nil {
 			matLogger.Error().Err(err).Str("name", materialization.Name).Int64("previousDataVersion", dataVersionID).Int64("newDataVersion", queryContext.dataToken.DataVersionID).Msg("error updating materialization with new data version")
+			return nil
+		}
+		// Update the version for this materialization.
+		_, err = m.materializationClient.IncrementVersion(ctx, materialization)
+		if err != nil {
+			matLogger.Error().Err(err).Str("name", materialization.Name).Msg("error updating materialization version")
 			return nil
 		}
 	}
