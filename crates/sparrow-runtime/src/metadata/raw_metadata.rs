@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::sync::Arc;
+use anyhow::anyhow;
 
 use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMillisecondType};
@@ -10,6 +11,8 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::file_path::Path;
 
 use tracing::info;
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
+use sparrow_api::kaskada::v1alpha::PulsarSource;
 
 use crate::execute::pulsar_schema;
 use crate::metadata::file_from_path;
@@ -26,21 +29,30 @@ pub struct RawMetadata {
 }
 
 impl RawMetadata {
-    pub fn try_from(source_path: &Path) -> anyhow::Result<Self> {
-        match source_path {
-            Path::ParquetPath(path) => {
-                let file = file_from_path(std::path::Path::new(path))?;
-                Self::try_from_parquet(file)
+    pub fn try_from(source: &Source) -> anyhow::Result<Self> {
+        match source {
+            Source::FilePath(fp) => {
+                match &fp.path {
+                    None => anyhow::bail!("missing file_path"),
+                    Some(source_path) => {
+                        match source_path {
+                            Path::ParquetPath(path) => {
+                                let file = file_from_path(std::path::Path::new(&path))?;
+                                Self::try_from_parquet(file)
+                            }
+                            Path::CsvPath(path) => {
+                                let file = file_from_path(std::path::Path::new(&path))?;
+                                Self::try_from_csv(file)
+                            }
+                            Path::CsvData(content) => {
+                                let string_reader = BufReader::new(Cursor::new(content));
+                                Self::try_from_csv(string_reader)
+                            }
+                        }
+                    }
+                }
             }
-            Path::CsvPath(path) => {
-                let file = file_from_path(std::path::Path::new(path))?;
-                Self::try_from_csv(file)
-            }
-            Path::CsvData(content) => {
-                let string_reader = BufReader::new(Cursor::new(content));
-                Self::try_from_csv(string_reader)
-            }
-            Path::PulsarUri(uri) => Self::try_from_pulsar(uri),
+            Source::PuslarSource(ps) => Self::try_from_pulsar(ps)
         }
     }
 
@@ -56,18 +68,13 @@ impl RawMetadata {
     }
 
     /// Create a `RawMetadata` fram a Pulsar topic.
-    pub(crate) fn try_from_pulsar(uri: &String) -> anyhow::Result<Self> {
-        // uri has the format pulsar://host:port/namespace/topic
-        // read host, port, namespace, topic out of uri
-        let url = url::Url::parse(uri)?;
-        let host = url.host_str().unwrap();
-        let port = url.port_or_known_default().unwrap();
-        let mut path_segments = url.path_segments().unwrap();
-        let tenant = path_segments.next().unwrap();
-        let namespace = path_segments.next().unwrap();
-        let topic = path_segments.next().unwrap();
-
-        let raw_schema = pulsar_schema::get_pulsar_schema(host, port, tenant, namespace, topic)
+    pub(crate) fn try_from_pulsar(pulsar_source: &PulsarSource) -> anyhow::Result<Self> {
+        let raw_schema = pulsar_schema::get_pulsar_schema(
+            pulsar_source.admin_service_url.as_str(),
+            pulsar_source.tenant.as_str(),
+            pulsar_source.namespace.as_str(),
+            pulsar_source.topic_name.as_str(),
+        pulsar_source.auth_params.as_str())
             .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
 
         let rm = Self::try_from_raw_schema(Arc::new(raw_schema))?;

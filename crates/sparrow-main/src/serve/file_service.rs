@@ -1,18 +1,20 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
 use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse,
-    MergeMetadataRequest, MergeMetadataResponse,
+    file_path, FilePath, GetMetadataRequest, GetMetadataResponse,
+    MergeMetadataRequest, MergeMetadataResponse, SourceMetadata,
 };
 use sparrow_core::context_code;
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
 use sparrow_runtime::RawMetadata;
 use tempfile::NamedTempFile;
 use tonic::{Code, Response};
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 
 use crate::serve::error_status::IntoStatus;
+use crate::serve::preparation_service;
 
 #[derive(Debug)]
 pub(super) struct FileServiceImpl {
@@ -59,55 +61,22 @@ async fn get_metadata(
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
+    if request.source == None {
+        anyhow!("missing request source");
+    }
 
-    let file_metadatas: Vec<_> = request
-        .file_paths
-        .iter()
-        .map(|source| get_source_metadata(&s3, source))
-        .collect();
-
-    let file_metadatas = try_join_all(file_metadatas).await?;
-    Ok(Response::new(GetMetadataResponse { file_metadatas }))
+    let file_metadata = get_source_metadata(&s3, request.source.unwrap()).await?;
+    Ok(Response::new(GetMetadataResponse { source_metadata: Some(file_metadata) }))
 }
 
 pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
-    source: &FilePath,
-) -> anyhow::Result<FileMetadata> {
-    let source = source
-        .path
-        .as_ref()
-        .context(context_code!(Code::InvalidArgument, "Missing source_path"))?;
+    source: Source,
+) -> anyhow::Result<SourceMetadata> {
+    let (_, local_source) = preparation_service::convert_to_local_source(s3, &source).await
+        .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
 
-    // download remote files to a tempfile, if necessary
-    let download_file = NamedTempFile::new()?;
-    let download_file_path = download_file.into_temp_path();
-    let source = match source {
-        file_path::Path::ParquetPath(path) => {
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path)?;
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await?;
-                file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())
-            } else {
-                file_path::Path::ParquetPath(path.to_string())
-            }
-        }
-        file_path::Path::CsvPath(path) => {
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path)?;
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await?;
-                file_path::Path::CsvPath(download_file_path.to_string_lossy().to_string())
-            } else {
-                file_path::Path::CsvPath(path.to_string())
-            }
-        }
-        file_path::Path::CsvData(data) => file_path::Path::CsvData(data.to_string()),
-        file_path::Path::PulsarUri(uri) => file_path::Path::PulsarUri(uri.to_string()),
-    };
-
-    let metadata = RawMetadata::try_from(&source)?;
+    let metadata = RawMetadata::try_from(&local_source)?;
     let schema = Schema::try_from(metadata.table_schema.as_ref()).with_context(|| {
         format!(
             "Unable to encode schema {:?} for source file {:?}",
@@ -115,7 +84,7 @@ pub(crate) async fn get_source_metadata(
         )
     })?;
 
-    Ok(FileMetadata {
+    Ok(SourceMetadata {
         schema: Some(schema),
     })
 }

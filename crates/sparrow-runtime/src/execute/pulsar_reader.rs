@@ -13,15 +13,14 @@ use fallible_iterator::FallibleIterator;
 use futures::executor::block_on;
 use pulsar::consumer::InitialPosition;
 
-use pulsar::{
-    Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor,
-};
+use pulsar::{Authentication, Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor};
 
 use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
+use sparrow_api::kaskada::v1alpha::prepare_data_request::PulsarConfig;
 use crate::execute::avro_arrow;
 
 pub struct AvroWrapper {
@@ -122,7 +121,7 @@ impl PulsarReader {
             // TODO this is fragile since tokio has no idea what is going on inside the consumer,
             // so it's entirely possible to time out while actively reading messages from the broker.
             // experimentally, 1ms is not reliable, but 10ms seems to work.
-            let next_result = timeout(Duration::from_millis(10), self.consumer.try_next()).await;
+            let next_result = timeout(Duration::from_millis(1000), self.consumer.try_next()).await;
             if next_result.is_err() {
                 tracing::trace!("timed out reading next message");
                 break;
@@ -170,6 +169,7 @@ impl PulsarReader {
             }
         }
 
+        tracing::debug!("read {} messages", avro_values.len());
         match avro_values.len() {
             0 => Ok(None),
             _ => {
@@ -190,23 +190,24 @@ impl Iterator for PulsarReader {
 }
 
 pub(crate) async fn pulsar_consumer(
-    uri: &String,
+    pulsar_config: &PulsarConfig,
     schema: SchemaRef,
 ) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
-    let url = url::Url::parse(uri)
-        .into_report()
+    let ps = pulsar_config.pulsar_source.as_ref().unwrap();
+    // specifying persistent:// or non-persistent:// appears to be optional
+    let topic_url = format!("{}/{}/{}",
+        ps.tenant,
+        ps.namespace,
+        ps.topic_name);
+
+    let auth_token = crate::execute::pulsar_schema::pulsar_auth_token(ps.auth_params.as_str())
         .change_context(Error::CreatePulsarReader)?;
-    let host = url.host_str().unwrap();
-    let port = url.port_or_known_default().unwrap();
-    let broker_url = format!("pulsar://{}:{}", host, port);
-
-    let mut path_segments = url.path_segments().unwrap();
-    let tenant = path_segments.next().unwrap();
-    let namespace = path_segments.next().unwrap();
-    let topic = path_segments.next().unwrap();
-    let _topic_url = format!("persistent://{tenant}/{namespace}/{topic}");
-
-    let client = Pulsar::builder(broker_url, TokioExecutor)
+    let auth = Authentication {
+        name: "token".to_string(),
+        data: auth_token.as_bytes().to_vec(),
+    };
+    let client = Pulsar::builder(&ps.broker_service_url, TokioExecutor)
+        .with_auth(auth)
         .build()
         .await
         .into_report()
@@ -227,10 +228,8 @@ pub(crate) async fn pulsar_consumer(
     let consumer: Consumer<AvroWrapper, TokioExecutor> = client
         .consumer()
         .with_options(options)
-        // TODO figure out how to get tenant + namespace in here
-        // .with_topic(topic_url)
-        .with_topic(topic)
-        .with_consumer_name("sparrow-consumer")
+        .with_topic(topic_url)
+        .with_consumer_name(&pulsar_config.subscription_id)
         .with_subscription_type(SubType::Exclusive)
         // TODO generate and persist subscription ID
         .with_subscription("sparrow-subscription-8")

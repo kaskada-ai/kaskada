@@ -162,6 +162,8 @@ impl ProgressTracker {
             output_to::Destination::Pulsar(pulsar) => Ok(OutputTo {
                 destination: Some(output_to::Destination::Pulsar(PulsarDestination {
                     broker_service_url: pulsar.broker_service_url.clone(),
+                    auth_plugin: pulsar.auth_plugin.clone(),
+                    auth_params: pulsar.auth_params.clone(),
                     tenant: pulsar.tenant.clone(),
                     namespace: pulsar.namespace.clone(),
                     topic_name: pulsar.topic_name.clone(),

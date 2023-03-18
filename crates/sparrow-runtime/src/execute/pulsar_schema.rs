@@ -5,6 +5,7 @@ use error_stack::{FutureExt, IntoReport, Result, ResultExt};
 use futures::executor::block_on;
 use serde;
 use std::sync::Arc;
+use tracing::log::trace;
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
@@ -77,23 +78,48 @@ struct SchemaResponse {
     properties: serde_json::Value,
 }
 
+// auth_params looks like
+// token:xxx
+pub fn pulsar_auth_token(auth_params: &str) -> Result<&str, Error> {
+    // split on the first colon
+    let mut parts = auth_params.splitn(2, ':');
+    // verify first part is "token"
+    let auth_type = parts.next();
+    if auth_type.is_none() {
+        return Err(Error::SchemaRequest.into())
+            .attach_printable("missing auth_type");
+    }
+    let auth_type = auth_type.unwrap();
+    if auth_type != "token" {
+        return Err(Error::SchemaRequest.into())
+            .attach_printable_lazy(|| format!("auth type {:?}", auth_type));
+    }
+    let auth_token = parts.next();
+    if auth_token.is_none() {
+        return Err(Error::SchemaRequest.into())
+            .attach_printable("missing auth token");
+    }
+    Ok(auth_token.unwrap())
+}
+
 // retrieve the schema for the given topic via the admin api, with a REST call.
 // we can't use the pulsar client because the schema is not exposed there in the Rust client.
 async fn get_pulsar_schema_async(
-    host: &str,
-    _port: u16,
+    admin_service_url: &str,
     tenant: &str,
     namespace: &str,
     topic: &str,
+    auth_params: &str
 ) -> Result<Schema, Error> {
-    // TODO fix hardcoded admin port
     let url = format!(
-        "http://{}:8080/admin/v2/schemas/{}/{}/{}/schema",
-        host, tenant, namespace, topic
+        "{}/admin/v2/schemas/{}/{}/{}/schema",
+        admin_service_url, tenant, namespace, topic
     );
+    tracing::debug!("requesting schema from {}", url);
     let client = reqwest::Client::new();
     let text = client
         .get(&url)
+        .header(reqwest::header::AUTHORIZATION, format!("Bearer {}", pulsar_auth_token(auth_params)?))
         .send()
         .await
         .into_report()
@@ -106,7 +132,7 @@ async fn get_pulsar_schema_async(
     let schema_response: SchemaResponse = serde_json::from_str(&text)
         .into_report()
         .change_context(Error::AvroSchemaConversion)
-        .attach_printable_lazy(|| format!("from_str({:?} failed", &text))?;
+        .attach_printable_lazy(|| format!("from_str({:?}) failed", &text))?;
     if schema_response.schema_type != "AVRO" {
         return Err(Error::UnsupportedSchema.into())
             .attach_printable_lazy(|| format!("schema type {:?}", schema_response.schema_type));
@@ -117,13 +143,13 @@ async fn get_pulsar_schema_async(
 }
 
 pub fn get_pulsar_schema(
-    host: &str,
-    port: u16,
+    admin_service_url: &str,
     tenant: &str,
     namespace: &str,
     topic: &str,
+    auth_params: &str
 ) -> Result<Schema, Error> {
     block_on(get_pulsar_schema_async(
-        host, port, tenant, namespace, topic,
+        admin_service_url, tenant, namespace, topic, auth_params
     ))
 }
