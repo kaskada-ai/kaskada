@@ -2,15 +2,14 @@ use std::path::Path;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
-use sparrow_api::kaskada::v1alpha::{
-    file_path, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
-    PrepareDataResponse, PreparedFile,
-};
+use sparrow_api::kaskada::v1alpha::{file_path, FilePath, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest, PrepareDataResponse, PreparedFile, PulsarSource};
 use sparrow_runtime::prepare::{prepare_file, upload_prepared_files_to_s3, Error};
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
 
 use tempfile::NamedTempFile;
 use tonic::Response;
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
 use crate::IntoStatus;
 
@@ -68,14 +67,6 @@ pub async fn prepare_data(
         .config
         .ok_or(Error::MissingField("table_config"))?;
 
-    let file_path = prepare_request
-        .file_path
-        .ok_or(Error::MissingField("file_path"))?;
-    let path = file_path
-        .path
-        .as_ref()
-        .ok_or(Error::MissingField("file_path.path"))?;
-
     let slice_plan = prepare_request
         .slice_plan
         .ok_or(Error::MissingField("slice_plan"))?;
@@ -88,42 +79,7 @@ pub async fn prepare_data(
         }
     );
 
-    // download remote file locally, if necessary.
-    // TODO this is redundant with the download in get_source_metadata
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
-    let (is_s3_object, path) = match path {
-        file_path::Path::ParquetPath(path) => {
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path).unwrap();
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await
-                    .unwrap();
-                (
-                    true,
-                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string()),
-                )
-            } else {
-                (false, file_path::Path::ParquetPath(path.to_string()))
-            }
-        }
-        file_path::Path::CsvPath(path) => {
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path).unwrap();
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await
-                    .unwrap();
-                (
-                    true,
-                    file_path::Path::CsvPath(download_file_path.to_string_lossy().to_string()),
-                )
-            } else {
-                (false, file_path::Path::CsvPath(path.to_string()))
-            }
-        }
-        file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string())),
-        file_path::Path::PulsarUri(uri) => (false, file_path::Path::PulsarUri(uri.to_string())),
-    };
+    let (is_s3_object, source) = convert_to_local_sourcedata(&s3, &prepare_request.source_data).await?;
 
     let temp_dir = tempfile::tempdir()
         .into_report()
@@ -135,8 +91,8 @@ pub async fn prepare_data(
     };
 
     let (prepared_metadata, prepared_files) = prepare_file(
-        &path,
-        Path::new(&output_path),
+        &source,
+        Path::new(&prepare_request.output_path_prefix),
         &prepare_request.file_prefix,
         &table_config,
         &slice_plan.slice,
@@ -158,4 +114,82 @@ pub async fn prepare_data(
         prep_id: CURRENT_PREP_ID,
         prepared_files,
     }))
+}
+
+pub async fn convert_to_local_source(s3: &S3Helper, source: &Source) -> error_stack::Result<(bool, Source), Error> {
+    match source {
+        Source::FilePath(fp) => {
+            match &fp.path {
+                None => error_stack::bail!(Error::MissingField("file_path")),
+                Some(path) => {
+                    let (is_s3, local_path) = maybe_download_file(&s3, path).await;
+                    Ok((is_s3, Source::FilePath(FilePath { path: Some(local_path) })))
+                }
+            }
+        }
+        Source::PuslarSource(_) => {
+            Ok((false, source.clone()))
+        }
+    }
+}
+
+pub async fn convert_to_local_sourcedata(s3: &S3Helper, source_data: &Option<SourceData>) -> error_stack::Result<(bool, SourceData), Error> {
+    match source_data {
+        None => error_stack::bail!(Error::MissingField("source_data")),
+        Some(sd) => {
+            match sd {
+                SourceData::FilePath(fp) => {
+                    match &fp.path {
+                        None => error_stack::bail!(Error::MissingField("file_path")),
+                        Some(path) => {
+                            let (is_s3, local_path) = maybe_download_file(&s3, path).await;
+                            Ok((is_s3, SourceData::FilePath(FilePath { path: Some(local_path) })))
+                        }
+                    }
+                }
+                SourceData::PulsarConfig(_) => {
+                    Ok((false, sd.clone()))
+                }
+            }
+        }
+    }
+}
+
+// download remote file locally, if necessary.
+async fn maybe_download_file(s3: &S3Helper, path: &file_path::Path) -> (bool, file_path::Path) {
+    let download_file = NamedTempFile::new().unwrap();
+    let download_file_path = download_file.into_temp_path();
+    match path {
+        file_path::Path::ParquetPath(path) => {
+            let path = path.as_str();
+            if is_s3_path(path) {
+                let s3_object = S3Object::try_from_uri(path).unwrap();
+                s3.download_s3(s3_object, download_file_path.to_owned())
+                    .await
+                    .unwrap();
+                (
+                    true,
+                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string()),
+                )
+            } else {
+                (false, file_path::Path::ParquetPath(path.to_string()))
+            }
+        }
+        file_path::Path::CsvPath(path) => {
+            let path = path.as_str();
+            if is_s3_path(path) {
+                let s3_object = S3Object::try_from_uri(path).unwrap();
+                s3.download_s3(s3_object, download_file_path.to_owned())
+                    .await
+                    .unwrap();
+                (
+                    true,
+                    file_path::Path::CsvPath(download_file_path.to_string_lossy().to_string()),
+                )
+            } else {
+                (false, file_path::Path::CsvPath(path.to_string()))
+            }
+        }
+        file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string()))
+    }
 }

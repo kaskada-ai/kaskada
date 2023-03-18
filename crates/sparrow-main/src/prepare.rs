@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_api::kaskada::v1alpha::{file_path, FilePath, PrepareDataRequest, SlicePlan};
+use sparrow_api::kaskada::v1alpha::{file_path, FilePath, PrepareDataRequest, PulsarSource, SlicePlan};
+use sparrow_api::kaskada::v1alpha::prepare_data_request::{PulsarConfig, SourceData};
 
 use sparrow_runtime::s3::S3Helper;
 
@@ -106,9 +110,65 @@ impl PrepareCommand {
             format!("prepared-{}-{}", self.table, input_stem)
         };
 
-        // if input starts with "pulsar://" then turn it into a PulsarUri instance of FilePath
-        let file_path = if self.input.starts_with("pulsar://") {
-            file_path::Path::PulsarUri(self.input.to_string_lossy().to_string())
+        // if input is "pulsar" then turn it into a PulsarSource
+        let source_data = if self.input.to_str().unwrap() == "pulsar" {
+            // read webServiceUrl, brokerServiceUrl, authPlugin, authParams from config file
+            // given by env var PULSAR_CONFIG_PATH
+            let fname = std::env::var("PULSAR_CLIENT_CONF")
+                .into_report()
+                .change_context(Error::MissingTableConfig)
+                .attach_printable("missing env var PULSAR_CLIENT_CONF")?;
+            let f = File::open(&fname)
+                .into_report()
+                .change_context(Error::MissingTableConfig)
+                .attach_printable_lazy(|| format!("unable to read file at {:?}", fname))?;
+            let mut config = HashMap::new();
+            for line in BufReader::new(f).lines() {
+                let line = line
+                    .into_report()
+                    .change_context(Error::MissingTableConfig)
+                    .attach_printable_lazy(|| format!("error reading line from {}", fname))?;
+                let mut parts = line.splitn(2, '=');
+                if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+                    config.insert(key.to_string(), value.to_string());
+                } else {
+                    if !line.chars().all(|c| c.is_whitespace()) {
+                        tracing::trace!("ignoring config line {:?}", line);
+                    }
+                }
+            }
+            for key in ["webServiceUrl", "brokerServiceUrl", "authPlugin", "authParams"] {
+                if !config.contains_key(key) {
+                    return Err(error_stack::report!(Error::MissingTableConfig)
+                        .attach_printable(format!("missing config key {:?}", key)));
+                }
+            }
+
+            // fully-qualified topic name
+            let pulsar_tenant = std::env::var("PULSAR_TENANT").unwrap_or("public".to_string());
+            let pulsar_namespace = std::env::var("PULSAR_NAMESPACE").unwrap_or("default".to_string());
+            let pulsar_subscription = std::env::var("PULSAR_SUBSCRIPTION").unwrap_or("subscription-default".to_string());
+            let pulsar_topic = std::env::var("PULSAR_TOPIC")
+                .into_report()
+                .change_context(Error::MissingTableConfig)
+                .attach_printable("missing env var PULSAR_TOPIC")?;
+
+            let pulsar_source = Some(PulsarSource {
+                admin_service_url: config["webServiceUrl"].clone(),
+                broker_service_url: config["brokerServiceUrl"].clone(),
+                auth_plugin: config["authPlugin"].clone(),
+                auth_params: config["authParams"].clone(),
+                tenant: pulsar_tenant,
+                namespace: pulsar_namespace,
+                topic_name: pulsar_topic,
+                ..Default::default()
+            });
+            tracing::debug!("Pulsar source is {:?}", pulsar_source);
+
+            SourceData::PulsarConfig(PulsarConfig {
+                pulsar_source: pulsar_source,
+                subscription_id: pulsar_subscription,
+            })
         } else {
             let input = self
                 .input
@@ -117,14 +177,15 @@ impl PrepareCommand {
                 .change_context(Error::Canonicalize)
                 .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
 
-            FilePath::try_from_local(input.as_path())
+            let file_path = FilePath::try_from_local(input.as_path())
                 .into_report()
-                .change_context(Error::UnrecognizedInputFormat)?
+                .change_context(Error::UnrecognizedInputFormat)?;
+            SourceData::FilePath(FilePath { path: Some(file_path) })
         };
 
         if table.file_sets.is_empty() {
             return Err(error_stack::report!(Error::MissingTableConfig)
-                .attach("At least one file_sets is required"));
+                .attach_printable("At least one file_sets is required"));
         }
         let sp = SlicePlan {
             table_name: config.name.clone(),
@@ -136,9 +197,7 @@ impl PrepareCommand {
         };
 
         let pdr = PrepareDataRequest {
-            file_path: Some(FilePath {
-                path: Some(file_path),
-            }),
+            source_data: Some(source_data),
             config: Some(config),
             output_path_prefix: self.output_path.to_string_lossy().to_string(),
             file_prefix: file_prefix.to_string(),
