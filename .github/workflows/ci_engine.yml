@@ -2,11 +2,11 @@ name: Engine (wren + sparrow) CI
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
   merge_group:
-    branches: [ main ]
+    branches: [main]
   workflow_call:
   workflow_dispatch:
 
@@ -39,7 +39,7 @@ jobs:
 
   build_integration_test_binary:
     name: Build binary of integration tests
-    uses: ./.github/workflows/ci_integration_tests.yml
+    uses: ./.github/workflows/reusable_ci_integration_tests.yml
 
   build_integ_test_docker_image:
     name: Build docker image with binary artifacts for integration tests
