@@ -1,21 +1,15 @@
 # TODO: Use Makefile provided in CI (might have to move to docker builds in CI or drop docker in Makefile)
 # TODO: Move ent generation out of build jon. Tried but something was off with cacing and builds would fail
 on:
-  # pull_request:
-  #   branches: [ main ]
-  # push:
-  #   branches: [ main ]
-  # merge_group:
-  #   branches: [ main ]
   workflow_call:
   workflow_dispatch:
 
 # In cases of concurrent workflows running (consecutive pushes to PR)
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   actions: write
@@ -27,7 +21,7 @@ jobs:
   wren_skip:
     name: Wren Skip Duplicates
     continue-on-error: true # Uncomment once integration is finished
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
@@ -45,7 +39,7 @@ jobs:
     name: Build and Unit Test Wren
     needs: [wren_skip]
     if: needs.wren_skip.outputs.should_skip != 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3

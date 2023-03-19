@@ -21,7 +21,7 @@ permissions:
   actions: write
   contents: read
 
-name: Integration Tests Build Binary CI
+name: Integration Tests 
 
 jobs:
   integration_tests_skip:
