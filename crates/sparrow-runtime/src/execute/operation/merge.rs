@@ -135,7 +135,7 @@ impl MergeOperation {
         let (left_rx, right_rx) = input_channels
             .into_iter()
             .collect_tuple()
-            .ok_or(Error::internal_msg("expected 2 input channels"))
+            .ok_or_else(|| Error::internal_msg("expected 2 input channels"))
             .into_report()?;
 
         let left_stream = ReceiverStream::new(left_rx);

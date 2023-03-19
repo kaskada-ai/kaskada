@@ -28,7 +28,7 @@ logic and might require some iteration to get just right.
 
 ==== Using fenlmagic
 
-[source,IPython]
+[source,Fenl]
 ----
 %%fenl --var purchase_stats
 {

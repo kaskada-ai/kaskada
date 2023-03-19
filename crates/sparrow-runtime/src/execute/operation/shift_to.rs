@@ -86,7 +86,10 @@ pub(super) fn create(
         .into_report()
         .change_context(Error::internal_msg("error creating single consumer helper"))?;
 
-    match operation.time.ok_or(invalid_operation!("missing time"))? {
+    match operation
+        .time
+        .ok_or_else(|| invalid_operation!("missing time"))?
+    {
         Time::Computed(computed) => {
             error_stack::ensure!(
                 computed.producing_operation == operation.input,
@@ -102,7 +105,7 @@ pub(super) fn create(
         Time::Literal(timestamp) => {
             let timestamp =
                 NaiveDateTime::from_timestamp_opt(timestamp.seconds, timestamp.nanos as u32)
-                    .ok_or(invalid_operation!("invalid literal timestamp"))?;
+                    .ok_or_else(|| invalid_operation!("invalid literal timestamp"))?;
             let timestamp = timestamp.timestamp_nanos();
             ShiftToLiteralOperation::try_new(timestamp, incoming_stream, helper)
                 .into_report()
@@ -525,7 +528,14 @@ impl ShiftToColumnOperation {
             lower_bound.subsort = 0;
             let mut upper_bound = prefix.upper_bound;
             upper_bound.time = cmp::min(incoming_upper_bound_time, upper_bound.time);
-            upper_bound.subsort = prefix.time.len() as u64; // u64::MAX;
+
+            let upper_subsort = if prefix.time.len() == 0 {
+                0
+            } else {
+                // 0-indexed, so sub 1
+                prefix.time.len() as u64 - 1
+            };
+            upper_bound.subsort = upper_subsort;
 
             let prefix = InputBatch {
                 time: prefix.time,
