@@ -4482,6 +4482,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-qfr-tool"
+version = "0.1.1"
+dependencies = [
+ "clap 4.1.1",
+ "cpu-time",
+ "derive_more",
+ "error-stack",
+ "fallible-iterator",
+ "hashbrown 0.13.2",
+ "insta",
+ "itertools",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "smallvec",
+ "sparrow-api",
+ "sparrow-compiler",
+ "sparrow-core",
+ "sparrow-plan",
+ "sparrow-qfr",
+ "sparrow-syntax",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
 name = "sparrow-runtime"
 version = "0.4.2"
 dependencies = [

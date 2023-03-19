@@ -10,8 +10,10 @@ Query Flight Recorder for Sparrow queries.
 """
 
 [dependencies]
-anyhow.workspace = true
+clap.workspace = true
 cpu-time.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
 fallible-iterator.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
