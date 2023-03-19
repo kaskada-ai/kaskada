@@ -7,26 +7,30 @@
     clippy::print_stderr
 )]
 
-use structopt::StructOpt;
+use clap::Parser;
 
 mod chrome;
+mod chrome_tracing;
 mod dot;
+mod error;
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "sparrow-qfr", rename_all = "kebab-case")]
+use crate::error::Error;
+
+#[derive(Debug, clap::Parser)]
+#[command(name = "sparrow-qfr", rename_all = "kebab-case", version)]
 pub struct QfrOptions {
-    #[structopt(subcommand)]
+    #[command(subcommand)]
     command: Command,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, clap::Subcommand)]
 enum Command {
     Chrome(chrome::ChromeCommand),
     DotPlan(dot::DotPlanCommand),
 }
 
-fn main() -> anyhow::Result<()> {
-    let options = QfrOptions::from_args();
+fn main() -> error_stack::Result<(), Error> {
+    let options = QfrOptions::parse();
 
     match options.command {
         Command::Chrome(command) => command.run(),

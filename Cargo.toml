@@ -1,9 +1,6 @@
 [workspace]
 members = ["crates/*"]
 
-# TODO(#550): Re-enable sparrow-qfr-tool
-exclude = ["crates/sparrow-qfr-tool"]
-
 [workspace.package]
 authors = ["Kaskada Developers"]
 edition = "2021"
