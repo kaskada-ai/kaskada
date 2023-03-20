@@ -158,6 +158,36 @@ def test_table_load_parquet(mockClient):
 
 
 @patch("kaskada.client.Client")
+def test_table_load_parquet_s3(mockClient):
+    table_name = "test_table"
+    s3_file = "s3://my-bucket/my-prefix/myfile.parquet"
+    expected_request = table_pb.LoadDataRequest(
+        table_name=table_name,
+        file_input=common_pb.FileInput(file_type="FILE_TYPE_PARQUET", uri=s3_file),
+    )
+
+    kaskada.table.load(table_name, s3_file, client=mockClient)
+    mockClient.table_stub.LoadData.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
+def test_table_load_parquet_gcs(mockClient):
+    table_name = "test_table"
+    gcs_file = "gs://my-bucket/my-prefix/myfile.parquet"
+    expected_request = table_pb.LoadDataRequest(
+        table_name=table_name,
+        file_input=common_pb.FileInput(file_type="FILE_TYPE_PARQUET", uri=gcs_file),
+    )
+
+    kaskada.table.load(table_name, gcs_file, client=mockClient)
+    mockClient.table_stub.LoadData.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
 def test_table_load_csv(mockClient):
     table_name = "test_table"
     local_file = "local.csv"
@@ -169,6 +199,21 @@ def test_table_load_csv(mockClient):
     )
 
     kaskada.table.load(table_name, local_file, client=mockClient)
+    mockClient.table_stub.LoadData.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
+def test_table_load_csv_azure(mockClient):
+    table_name = "test_table"
+    azure_file = "https://myaccount.blob.core.windows.net/mycontainer/myblob.csv"
+    expected_request = table_pb.LoadDataRequest(
+        table_name=table_name,
+        file_input=common_pb.FileInput(file_type="FILE_TYPE_CSV", uri=azure_file),
+    )
+
+    kaskada.table.load(table_name, azure_file, client=mockClient)
     mockClient.table_stub.LoadData.assert_called_with(
         expected_request, metadata=mockClient.get_metadata()
     )

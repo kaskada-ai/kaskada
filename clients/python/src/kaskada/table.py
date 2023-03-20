@@ -10,7 +10,7 @@ import pandas as pd
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 from kaskada.client import Client, get_client
-from kaskada.utils import handleException, handleGrpcError
+from kaskada.utils import handleException, handleGrpcError, to_uri
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -217,7 +217,7 @@ def load(
 
     Args:
         table_name (str): The name of the target table
-        file (str): The path to a file (absolute or relative)
+        file (str): The path to a local file (absolute or relative), or a S3 / GCS / Azure Blob URI
         client (Optional[Client], optional): The Kaskada Client. Defaults to None.
 
     Returns:
@@ -239,7 +239,7 @@ def load(
 
         input = common_pb.FileInput(
             file_type=file_type,
-            uri=f"file://{path}",
+            uri=to_uri(file),
         )
         req = table_pb.LoadDataRequest(table_name=table_name, file_input=input)
         logger.debug(f"Load Tables Request: {req}")
