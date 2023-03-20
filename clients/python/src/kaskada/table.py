@@ -10,7 +10,7 @@ import pandas as pd
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 from kaskada.client import Client, get_client
-from kaskada.utils import handleException, handleGrpcError
+from kaskada.utils import handleException, handleGrpcError, to_uri
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -237,16 +237,9 @@ def load(
                 "invalid file type provided. only .parquet or .csv accepted"
             )
 
-        uri = (
-            file
-            if file.startswith("s3://")
-            or file.startswith("gs://")
-            or file.startswith("https://")
-            else f"file://{path}"
-        )
         input = common_pb.FileInput(
             file_type=file_type,
-            uri=uri,
+            uri=to_uri(file),
         )
         req = table_pb.LoadDataRequest(table_name=table_name, file_input=input)
         logger.debug(f"Load Tables Request: {req}")
