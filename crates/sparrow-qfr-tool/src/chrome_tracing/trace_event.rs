@@ -136,7 +136,6 @@ pub(crate) enum EventScope {
     Thread,
 }
 
-
 impl EventScope {
     fn is_default(&self) -> bool {
         self == &Self::default()
