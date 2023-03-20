@@ -127,7 +127,7 @@ pub fn table_reader(
             let next_batch = READ_TABLE.instrument::<error_stack::Result<_, Error>, _>(&flight_recorder, |metrics| {
                 // Weird syntax because we can't easily say "move metrics but not projected schema".
                 // This may get easier with async closures https://github.com/rust-lang/rust/issues/62290.
-                let input = next_input.next_batch(&projected_schema, upper_bound_opt.clone());
+                let input = next_input.next_batch(&projected_schema, upper_bound_opt);
                 async move {
                     let input = input.await?;
 
