@@ -2,35 +2,35 @@
 source: crates/sparrow-main/src/serve/file_service.rs
 expression: result
 ---
-file_metadatas:
-  - schema:
-      fields:
-        - name: anonymousId
-          data_type:
-            kind:
-              Primitive: 14
-        - name: type
-          data_type:
-            kind:
-              Primitive: 14
-        - name: timestamp
-          data_type:
-            kind:
-              Primitive: 14
-        - name: subsort_id
-          data_type:
-            kind:
-              Primitive: 6
-        - name: context_locale
-          data_type:
-            kind:
-              Primitive: 14
-        - name: projectId
-          data_type:
-            kind:
-              Primitive: 14
-        - name: event
-          data_type:
-            kind:
-              Primitive: 14
+source_metadata:
+  schema:
+    fields:
+      - name: anonymousId
+        data_type:
+          kind:
+            Primitive: 14
+      - name: type
+        data_type:
+          kind:
+            Primitive: 14
+      - name: timestamp
+        data_type:
+          kind:
+            Primitive: 14
+      - name: subsort_id
+        data_type:
+          kind:
+            Primitive: 6
+      - name: context_locale
+        data_type:
+          kind:
+            Primitive: 14
+      - name: projectId
+        data_type:
+          kind:
+            Primitive: 14
+      - name: event
+        data_type:
+          kind:
+            Primitive: 14
 
