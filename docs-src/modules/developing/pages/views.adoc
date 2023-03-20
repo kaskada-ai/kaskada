@@ -15,97 +15,6 @@ Views are useful any time you need to share or re-use expressions:
 * ML feature definitions
 
 
-== Managing views with the CLI
-
-The CLI manages Kaskada resources declaratively by managing spec files.
-A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
-
-=== The format of views in a spec file.
-
-Views are described in a spec file as a list of view objects under the `views` key:
-
-[source,yaml]
-----
-views:
-    - view_id: 14c4...ba56 <1>
-      view_name: PurchaseStats <2>
-      expression: | <3>
-        {
-            time: Purchase.purchase_time,
-            entity: Purchase.customer_id,
-            max_amount: Purchase.amount | max(),
-            min_amount: Purchase.amount | min(),
-            count: CountPurchase,
-        } 
-    - view_id: dd61...70e9
-      view_name: CountPurchase
-      expression: count(Purchase)
-----
-<1> A unique identifier for the view. This value is assigned by the manager and is read-only.
-<2> A name used to refer to the view in queries.
-<3> The expression to substitute anywhere the view's name is used.
-
-
-=== Exporting the current views as a spec file.
-
-You can export all the views currently defined using the CLI.
-
-[source,bash]
-----
-cli sync export --all
-----
-
-The export result is shown below
-
-[source,yaml]
-----
-tables:
-    # ...
-views:
-    - view_id: dd61...70e9
-      view_name: CountPurchase
-      expression: count(Purchase)
-----
-
-Alternately, if you know a specific view you'd like to export you can specify it explicitly.
-
-[source,bash]
-----
-cli sync export --view PurchaseStats
-----
-
-=== Updating Kaskada to reflect the contents of a spec file
-
-To change a view with the CLI, you first modify the view in a spec file, then "apply" the spec file with the CLI.
-When a spec file is applied, the CLI inspects all of the server's resources and all of the resources
-defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
-Applying a spec can create new views, change a view's mutable fields, or delete views.
-
-[WARNING]
-.View updates are destructive
-====
-Vies are current immutable. 
-When the CLI updates a view, it does so by deleting the view and re-creating it.
-When this happens, the view may be temporarily unavailable to queries.
-====
-
-Before applying a spec file, it's a good idea to see what changes will be made. 
-You can see these changes by creating an apply plan.
-
-[source,bash]
-----
-cli sync plan --file spec.yaml
-----
-
-Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
-
-You can apply a spec file using the CLI.
-
-[source,bash]
-----
-cli sync apply --file spec.yaml
-----
-
 == Managing views with Python
 
 All methods in this section are from the `view` object. Be sure to import
@@ -209,4 +118,96 @@ You can delete a view using its name:
 [source,python]
 ----
 view.delete_view("PurchaseStats")
+----
+
+
+== Managing views with the CLI
+
+The CLI manages Kaskada resources declaratively by managing spec files.
+A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== The format of views in a spec file.
+
+Views are described in a spec file as a list of view objects under the `views` key:
+
+[source,yaml]
+----
+views:
+    - view_id: 14c4...ba56 <1>
+      view_name: PurchaseStats <2>
+      expression: | <3>
+        {
+            time: Purchase.purchase_time,
+            entity: Purchase.customer_id,
+            max_amount: Purchase.amount | max(),
+            min_amount: Purchase.amount | min(),
+            count: CountPurchase,
+        } 
+    - view_id: dd61...70e9
+      view_name: CountPurchase
+      expression: count(Purchase)
+----
+<1> A unique identifier for the view. This value is assigned by the manager and is read-only.
+<2> A name used to refer to the view in queries.
+<3> The expression to substitute anywhere the view's name is used.
+
+
+=== Exporting the current views as a spec file.
+
+You can export all the views currently defined using the CLI.
+
+[source,bash]
+----
+cli sync export --all
+----
+
+The export result is shown below
+
+[source,yaml]
+----
+tables:
+    # ...
+views:
+    - view_id: dd61...70e9
+      view_name: CountPurchase
+      expression: count(Purchase)
+----
+
+Alternately, if you know a specific view you'd like to export you can specify it explicitly.
+
+[source,bash]
+----
+cli sync export --view PurchaseStats
+----
+
+=== Updating Kaskada to reflect the contents of a spec file
+
+To change a view with the CLI, you first modify the view in a spec file, then "apply" the spec file with the CLI.
+When a spec file is applied, the CLI inspects all of the server's resources and all of the resources
+defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
+Applying a spec can create new views, change a view's mutable fields, or delete views.
+
+[WARNING]
+.View updates are destructive
+====
+Vies are current immutable. 
+When the CLI updates a view, it does so by deleting the view and re-creating it.
+When this happens, the view may be temporarily unavailable to queries.
+====
+
+Before applying a spec file, it's a good idea to see what changes will be made. 
+You can see these changes by creating an apply plan.
+
+[source,bash]
+----
+cli sync plan --file spec.yaml
+----
+
+Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
+
+You can apply a spec file using the CLI.
+
+[source,bash]
+----
+cli sync apply --file spec.yaml
 ----

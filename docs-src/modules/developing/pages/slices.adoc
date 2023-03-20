@@ -1,10 +1,8 @@
 = Slices
 
-_This document assumes the client is authenticated._
-
 Kaskada offers the ability to interact with slices of datasets. A
 *slice* represents a way to filter a large dataset to create a smaller
-dataset. By slicing a vast dataset, queries may access a subset of the
+dataset. By slicing a large dataset, queries may access a subset of the
 data and thus run significantly faster.
 
 Slices preserve the statistical properties of the entire dataset. In
@@ -29,7 +27,7 @@ column in a deterministic and scalable fashion. The filter only runs on
 the new data when adding additional data to the table. Re-computation of
 previous sliced data is not required.
 
-Here is an example of creating an entity key filter:
+Here is an example of creating an entity key filter in Python:
 
 [source,python]
 ----
@@ -69,7 +67,7 @@ Here is an example of setting the slice filter:
 
 [source,python]
 ----
-#entity_filter is created in the example above
+# entity_filter is created in the example above
 kda.set_default_slice(entity_filter)
 ----
 
