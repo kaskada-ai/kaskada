@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 use sparrow_api::kaskada::v1alpha::{FilePath, PrepareDataRequest, SlicePlan};
 
 use sparrow_runtime::s3::S3Helper;
@@ -127,9 +128,9 @@ impl PrepareCommand {
         };
 
         let pdr = PrepareDataRequest {
-            file_path: Some(FilePath {
+            source_data: Some(SourceData::FilePath(FilePath {
                 path: Some(file_path),
-            }),
+            })),
             config: Some(config),
             output_path_prefix: self.output_path.to_string_lossy().to_string(),
             file_prefix: file_prefix.to_string(),

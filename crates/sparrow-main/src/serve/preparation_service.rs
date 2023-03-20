@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 use sparrow_api::kaskada::v1alpha::{
     file_path, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
     PrepareDataResponse, PreparedFile,
@@ -67,9 +68,16 @@ pub async fn prepare_data(
         .config
         .ok_or(Error::MissingField("table_config"))?;
 
-    let file_path = prepare_request
-        .file_path
-        .ok_or(Error::MissingField("file_path"))?;
+    let source_data = prepare_request
+        .source_data
+        .ok_or(Error::MissingField("source_data"))?;
+    let file_path = match source_data {
+        SourceData::FilePath(fp) => fp,
+        SourceData::PulsarConfig(_) => {
+            error_stack::bail!(Error::Internal)
+        }
+    };
+
     let path = file_path
         .path
         .as_ref()

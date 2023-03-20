@@ -20,7 +20,7 @@ message GetMetadataRequest {
     // A file source
     FilePath file_path = 2;
     // A pulsar source
-    PulsarSource puslar_source = 3;
+    PulsarSource pulsar_source = 3;
   }
 }
 

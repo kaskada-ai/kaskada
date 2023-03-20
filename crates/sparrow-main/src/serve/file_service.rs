@@ -1,10 +1,10 @@
 use anyhow::Context;
-use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse,
-    MergeMetadataRequest, MergeMetadataResponse,
+    file_path, FilePath, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
+    MergeMetadataResponse, SourceMetadata,
 };
 use sparrow_core::context_code;
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
@@ -59,21 +59,22 @@ async fn get_metadata(
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
+    let source = request.source.context("source")?;
+    let source: FilePath = match source {
+        Source::FilePath(fp) => fp,
+        Source::PulsarSource(_) => anyhow::bail!("Pulsar source unsupported"),
+    };
+    let source_metadata = get_source_metadata(&s3, &source).await?;
 
-    let file_metadatas: Vec<_> = request
-        .file_paths
-        .iter()
-        .map(|source| get_source_metadata(&s3, source))
-        .collect();
-
-    let file_metadatas = try_join_all(file_metadatas).await?;
-    Ok(Response::new(GetMetadataResponse { file_metadatas }))
+    Ok(Response::new(GetMetadataResponse {
+        source_metadata: Some(source_metadata),
+    }))
 }
 
 pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
     source: &FilePath,
-) -> anyhow::Result<FileMetadata> {
+) -> anyhow::Result<SourceMetadata> {
     let source = source
         .path
         .as_ref()
@@ -113,7 +114,7 @@ pub(crate) async fn get_source_metadata(
         )
     })?;
 
-    Ok(FileMetadata {
+    Ok(SourceMetadata {
         schema: Some(schema),
     })
 }
@@ -135,11 +136,11 @@ mod tests {
         // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
+                source: Some(Source::FilePath(FilePath {
                     path: Some(file_path::Path::ParquetPath(
                         path.canonicalize().unwrap().to_string_lossy().to_string(),
                     )),
-                }],
+                })),
             }))
             .await
             .unwrap()
@@ -160,11 +161,11 @@ mod tests {
         // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
+                source: Some(Source::FilePath(FilePath {
                     path: Some(file_path::Path::CsvPath(
                         path.canonicalize().unwrap().to_string_lossy().to_string(),
                     )),
-                }],
+                })),
             }))
             .await
             .unwrap()
@@ -180,9 +181,9 @@ mod tests {
         let file_service = FileServiceImpl::new(s3_helper);
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
+                source: Some(Source::FilePath(FilePath {
                     path: Some(file_path::Path::CsvData(csv_data.to_string())),
-                }],
+                })),
             }))
             .await
             .unwrap()

@@ -161,6 +161,8 @@ impl ProgressTracker {
             #[cfg(feature = "pulsar")]
             output_to::Destination::Pulsar(pulsar) => Ok(OutputTo {
                 destination: Some(output_to::Destination::Pulsar(PulsarDestination {
+                    auth_params: pulsar.auth_params.to_owned(),
+                    auth_plugin: pulsar.auth_plugin.to_owned(),
                     broker_service_url: pulsar.broker_service_url.clone(),
                     tenant: pulsar.tenant.clone(),
                     namespace: pulsar.namespace.clone(),
