@@ -109,19 +109,6 @@ pub(super) async fn write(
         })
     };
 
-    // Disregarding the borrow check error where you can't mutate values out of an `rc<_>`, I don't really
-    // understand why we'd create the `TokenAuth` struct if it returns an `rc<dyn Authentication>`, since we
-    // can't then get an owned instance of the `Authentication` to pass to `with_auth`...
-    // let pulsar_auth = TokenAuthentication::new(auth_token.to_owned());
-    // let pulsar_auth =
-    //     Authentication {
-    //         name: pulsar_auth.auth_method_name(),
-    //         data: pulsar_auth.auth_data().await.into_report().change_context(
-    //             Error::PulsarAuth {
-    //                 context: "token conversion".to_owned(),
-    //             },
-    //         )?,
-    //     };
     let pulsar_auth = Authentication {
         name: "token".to_owned(),
         data: auth_token.as_bytes().to_vec(),
