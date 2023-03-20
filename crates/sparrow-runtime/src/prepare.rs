@@ -14,7 +14,7 @@ use parquet::arrow::ArrowWriter;
 
 use serde_yaml;
 use sha2::Digest;
-use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig};
+use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig, FilePath};
 
 mod error;
 mod prepare_iter;
@@ -24,6 +24,7 @@ pub use error::*;
 pub use prepare_iter::*;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use tracing::Instrument;
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::prepare_data_request::{PulsarConfig, SourceData};
 
 use crate::execute::pulsar_reader::PulsarReader;
@@ -382,6 +383,14 @@ fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
     PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreateCsvReader)
+}
+
+// TODO can we unify Source and SourceData ?
+pub fn file_sourcedata(path: file_path::Path) -> SourceData {
+    SourceData::FilePath(FilePath { path: Some(path) })
+}
+pub fn file_source(path: file_path::Path) -> Source {
+    Source::FilePath(FilePath { path: Some(path) })
 }
 
 #[cfg(test)]

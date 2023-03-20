@@ -91,6 +91,7 @@ pub(crate) async fn get_source_metadata(
 
 #[cfg(test)]
 mod tests {
+    use sparrow_runtime::prepare::file_source;
     use super::*;
 
     #[tokio::test]
@@ -106,12 +107,9 @@ mod tests {
         // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
-                    path: Some(file_path::Path::ParquetPath(
+                source: Some(file_source(file_path::Path::ParquetPath(
                         path.canonicalize().unwrap().to_string_lossy().to_string(),
-                    )),
-                }],
-            }))
+                ))) }))
             .await
             .unwrap()
             .into_inner();
@@ -131,12 +129,9 @@ mod tests {
         // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
-                    path: Some(file_path::Path::CsvPath(
-                        path.canonicalize().unwrap().to_string_lossy().to_string(),
-                    )),
-                }],
-            }))
+                source: Some(file_source(file_path::Path::CsvPath(
+                    path.canonicalize().unwrap().to_string_lossy().to_string(),
+                ))) }))
             .await
             .unwrap()
             .into_inner();
@@ -151,10 +146,7 @@ mod tests {
         let file_service = FileServiceImpl::new(s3_helper);
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
-                    path: Some(file_path::Path::CsvData(csv_data.to_string())),
-                }],
-            }))
+                source: Some(file_source(file_path::Path::CsvData(csv_data.to_string()))) }))
             .await
             .unwrap()
             .into_inner();

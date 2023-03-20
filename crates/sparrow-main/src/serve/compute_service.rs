@@ -2,10 +2,7 @@ use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeService;
-use sparrow_api::kaskada::v1alpha::{
-    CompileRequest, CompileResponse, ExecuteRequest, ExecuteResponse,
-    GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState,
-};
+use sparrow_api::kaskada::v1alpha::{CompileRequest, CompileResponse, ExecuteRequest, ExecuteResponse, FilePath, GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState};
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
@@ -15,6 +12,9 @@ use tempfile::NamedTempFile;
 use tonic::{Request, Response, Status};
 use tracing::{error, info, Instrument};
 use uuid::Uuid;
+use sparrow_api::kaskada::v1alpha::file_path::Path;
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
 use crate::serve::error_status::IntoStatus;
 use crate::BuildInfo;
@@ -302,7 +302,7 @@ mod tests {
     };
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
-    use sparrow_runtime::prepare::prepared_batches;
+    use sparrow_runtime::prepare::{file_source, file_sourcedata, prepared_batches};
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
     use super::*;
@@ -504,7 +504,7 @@ mod tests {
         };
         let input_path = FilePath::try_from_local(&part1_file_path).unwrap();
         let prepared_batches: Vec<_> = prepared_batches(
-            &input_path,
+            &file_sourcedata(input_path),
             &table,
             &Some(slice_plan::Slice::Percent(slice_plan::PercentSlice {
                 percent: 50.0,
@@ -521,7 +521,7 @@ mod tests {
                 .to_string_lossy()
                 .to_string(),
         );
-        let part1_metadata = RawMetadata::try_from(&input_path).unwrap();
+        let part1_metadata = RawMetadata::try_from(&file_source(input_path)).unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 
         debug_assert_eq!(prepared_batches.len(), 1);

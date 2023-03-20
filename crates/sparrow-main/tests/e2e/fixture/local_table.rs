@@ -2,12 +2,11 @@ use std::fs::File;
 
 use fallible_iterator::FallibleIterator;
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
-use sparrow_api::kaskada::v1alpha::{
-    file_path, ComputeTable, PreparedFile, TableConfig, TableMetadata,
-};
+use sparrow_api::kaskada::v1alpha::{file_path, ComputeTable, PreparedFile, TableConfig, TableMetadata, FilePath};
 use sparrow_runtime::prepare::prepared_batches;
 use sparrow_runtime::PreparedMetadata;
 use tempfile::NamedTempFile;
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
 pub(crate) struct LocalTestTable {
     config: TableConfig,
@@ -64,16 +63,26 @@ impl LocalTestTable {
         }
     }
 
-    pub fn add_source(&mut self, raw_file_path: &file_path::Path) -> anyhow::Result<()> {
+    pub fn add_file_source(&mut self, raw_file_path: &file_path::Path) -> anyhow::Result<()> {
+        tracing::info!("Adding file source: {:?}", raw_file_path);
+        let source_data = sparrow_runtime::prepare::file_sourcedata(raw_file_path.clone());
+        self.add_source(&source_data)
+    }
+
+    pub fn add_source(&mut self, source_data: &SourceData) -> anyhow::Result<()> {
         // Fake prepare the batches and write them to a parquet file..
         //
         // TODO: Simulate the actual interaction with prepare (eg., collect raw files
         // and run prepare in response to analysis).
-        for prepared_batch in prepared_batches(raw_file_path, &self.config, &None)
+        for prepared_batch in prepared_batches(source_data, &self.config, &None)
             .map_err(|e| e.into_error())?
             .iterator()
         {
-            let (prepared_batch, metadata) = prepared_batch.map_err(|e| e.into_error())?;
+            let (prepared_batch, metadata) = prepared_batch.map_err(|e| {
+                // not sure why this gets swallowed up by the test harness
+                tracing::error!("Error preparing batch: {:?}", e);
+                e.into_error()
+            })?;
             let prepared_file = tempfile::Builder::new()
                 .suffix(".parquet")
                 .tempfile()
