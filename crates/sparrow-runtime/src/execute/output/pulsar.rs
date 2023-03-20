@@ -2,7 +2,9 @@ use arrow::datatypes::{ArrowPrimitiveType, DataType, SchemaRef, TimestampMicrose
 use arrow::record_batch::RecordBatch;
 use futures::stream::BoxStream;
 use futures::StreamExt;
+use pulsar::authentication::token::TokenAuthentication;
 use pulsar::compression::Compression;
+use pulsar::Authentication;
 use sparrow_api::kaskada::v1alpha::output_to;
 use sparrow_api::kaskada::v1alpha::PulsarDestination;
 
@@ -14,6 +16,9 @@ use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
+    PulsarAuth {
+        context: String,
+    },
     PulsarTopicCreation {
         context: String,
     },
@@ -84,7 +89,33 @@ pub(super) async fn write(
         .into_report()
         .change_context(Error::ProgressUpdate)?;
 
+    // Currently, we only support auth with jwt tokens
+    // https://pulsar.apache.org/docs/2.4.0/security-token-client/
+    error_stack::ensure!(
+        pulsar.auth_plugin == "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+        Error::PulsarAuth {
+            context: format!("unsupported auth plugin: {}", pulsar.auth_plugin)
+        }
+    );
+    // Additionally, only the string format is supported
+    let auth_token = if let Some(token) = pulsar.auth_params.strip_prefix("token:") {
+        token
+    } else {
+        error_stack::bail!(Error::PulsarAuth {
+            context: format!(
+                "expected \"token:\" style prefix. Saw {}",
+                pulsar.auth_params
+            )
+        })
+    };
+
+    let pulsar_auth = Authentication {
+        name: "token".to_owned(),
+        data: auth_token.as_bytes().to_vec(),
+    };
+
     let client = Pulsar::builder(broker_url, TokioExecutor)
+        .with_auth(pulsar_auth)
         .build()
         .await
         .into_report()
@@ -93,7 +124,7 @@ pub(super) async fn write(
     let mut producer = client
         .producer()
         .with_topic(topic_url.clone())
-        .with_name("producer")
+        .with_name("sparrow-producer")
         .with_options(producer::ProducerOptions {
             schema: Some(schema),
             batch_size: Some(BATCH_SIZE),
@@ -209,5 +240,5 @@ pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<Strin
 }
 
 pub fn format_topic_url_str(tenant: &str, namespace: &str, name: &String) -> String {
-    format!("persistent://{tenant}/{namespace}/topic-{name}")
+    format!("persistent://{tenant}/{namespace}/{name}")
 }
