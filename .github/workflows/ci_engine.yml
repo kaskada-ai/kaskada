@@ -43,7 +43,7 @@ jobs:
 
   build_integ_test_docker_image:
     name: Build docker image with binary artifacts for integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [build_wren, build_sparrow, build_integration_test_binary]
     outputs:
       image-name: ${{ env.IMAGE }}:v_${{ env.GITHUB_REF_NAME }}_${{ steps.vars.outputs.sha_short }}v
