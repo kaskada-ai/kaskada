@@ -121,4 +121,7 @@ message PulsarDestination {
   //
   // This field is populated in the output response.
   string topic_url = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // A custom certificate chain to authenticate the server in TLS connections.
+  string certificate_chain = 9;
 }

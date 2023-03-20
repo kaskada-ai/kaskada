@@ -2,7 +2,6 @@ use arrow::datatypes::{ArrowPrimitiveType, DataType, SchemaRef, TimestampMicrose
 use arrow::record_batch::RecordBatch;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use pulsar::authentication::token::TokenAuthentication;
 use pulsar::compression::Compression;
 use pulsar::Authentication;
 use sparrow_api::kaskada::v1alpha::output_to;
@@ -89,38 +88,7 @@ pub(super) async fn write(
         .into_report()
         .change_context(Error::ProgressUpdate)?;
 
-    // Currently, we only support auth with jwt tokens
-    // https://pulsar.apache.org/docs/2.4.0/security-token-client/
-    error_stack::ensure!(
-        pulsar.auth_plugin == "org.apache.pulsar.client.impl.auth.AuthenticationToken",
-        Error::PulsarAuth {
-            context: format!("unsupported auth plugin: {}", pulsar.auth_plugin)
-        }
-    );
-    // Additionally, only the string format is supported
-    let auth_token = if let Some(token) = pulsar.auth_params.strip_prefix("token:") {
-        token
-    } else {
-        error_stack::bail!(Error::PulsarAuth {
-            context: format!(
-                "expected \"token:\" style prefix. Saw {}",
-                pulsar.auth_params
-            )
-        })
-    };
-
-    let pulsar_auth = Authentication {
-        name: "token".to_owned(),
-        data: auth_token.as_bytes().to_vec(),
-    };
-
-    let client = Pulsar::builder(broker_url, TokioExecutor)
-        .with_auth(pulsar_auth)
-        .build()
-        .await
-        .into_report()
-        .change_context(Error::JsonSerialization)?;
-
+    let client = build_client(broker_url, &pulsar).await?;
     let mut producer = client
         .producer()
         .with_topic(topic_url.clone())
@@ -189,6 +157,61 @@ pub(super) async fn write(
         .change_context(Error::SendingMessage)?;
 
     Ok(())
+}
+
+// Builds the pulsar client
+async fn build_client(
+    broker_url: &str,
+    pulsar: &PulsarDestination,
+) -> error_stack::Result<Pulsar<TokioExecutor>, Error> {
+    let mut client_builder = Pulsar::builder(broker_url, TokioExecutor);
+
+    // Add authorization
+    if !pulsar.auth_plugin.is_empty() {
+        // Currently, we only support auth with jwt tokens
+        // https://pulsar.apache.org/docs/2.4.0/security-token-client/
+        error_stack::ensure!(
+            pulsar.auth_plugin == "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+            Error::PulsarAuth {
+                context: format!("unsupported auth plugin: {}", pulsar.auth_plugin)
+            }
+        );
+        // Additionally, only the string format is supported
+        let auth_token = if let Some(token) = pulsar.auth_params.strip_prefix("token:") {
+            token
+        } else {
+            error_stack::bail!(Error::PulsarAuth {
+                context: format!(
+                    "expected \"token:\" style prefix. Saw {}",
+                    pulsar.auth_params
+                )
+            })
+        };
+
+        let pulsar_auth = Authentication {
+            name: "token".to_owned(),
+            data: auth_token.as_bytes().to_vec(),
+        };
+        client_builder = client_builder.with_auth(pulsar_auth);
+    };
+
+    // Add TLS encryption
+    if !pulsar.certificate_chain.is_empty() {
+        // The default values for the other configs are explicitly show here for
+        // clarity. We can allow the user to configure these if requested.
+        client_builder = client_builder
+            .with_allow_insecure_connection(false)
+            .with_tls_hostname_verification_enabled(true)
+            .with_certificate_chain(pulsar.certificate_chain.as_bytes().to_vec());
+    };
+
+    let client = client_builder
+        .build()
+        .await
+        .into_report()
+        .change_context(Error::JsonSerialization)?;
+
+    Ok(client)
 }
 
 // Drops columns to match the given output schema
