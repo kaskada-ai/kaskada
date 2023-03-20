@@ -217,7 +217,7 @@ def load(
 
     Args:
         table_name (str): The name of the target table
-        file (str): The path to a file (absolute or relative)
+        file (str): The path to a local file (absolute or relative), or a S3 / GCS / Azure Blob URI
         client (Optional[Client], optional): The Kaskada Client. Defaults to None.
 
     Returns:
@@ -237,9 +237,16 @@ def load(
                 "invalid file type provided. only .parquet or .csv accepted"
             )
 
+        uri = (
+            file
+            if file.startswith("s3://")
+            or file.startswith("gs://")
+            or file.startswith("https://")
+            else f"file://{path}"
+        )
         input = common_pb.FileInput(
             file_type=file_type,
-            uri=f"file://{path}",
+            uri=uri,
         )
         req = table_pb.LoadDataRequest(table_name=table_name, file_input=input)
         logger.debug(f"Load Tables Request: {req}")
