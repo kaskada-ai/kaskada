@@ -1,3 +1,4 @@
+use std::env;
 use std::path::Path;
 
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
@@ -121,9 +122,16 @@ pub async fn prepare_data(
         file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string())),
     };
 
+    let temp_dir = env::temp_dir();
+    let output_path = if is_s3_path(&prepare_request.output_path_prefix) {
+        temp_dir.to_str().ok_or(Error::MissingField("temporary directory"))?
+    } else {
+        &prepare_request.output_path_prefix
+    };
+
     let (prepared_metadata, prepared_files) = prepare_file(
         &path,
-        Path::new(&prepare_request.output_path_prefix),
+        Path::new(&output_path),
         &prepare_request.file_prefix,
         &table_config,
         &slice_plan.slice,
