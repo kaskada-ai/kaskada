@@ -1,13 +1,14 @@
 = Frequently Asked Questions
 
-== How hard is it to learn the query language?
+== Why a new query language?
 
-We didn't make the decision to implement a novel query language lightly.
-We know that learning a new language takes time and working with new abstractions can be frustrating; in fact we've tried _repeatedly_ to find ways to build on existing languages rather than implement our own.
+We didn't make the decision to implement a new query language lightly; in fact we've tried _repeatedly_ to find ways to build on existing languages rather than implement our own.
 What we've found is that fundamental abstractions _matter_.
 
-SQL _really_ wants to reason about static tables - you can translate streams or graphs or timeseries into a tabular representation, but tables are https://en.wikipedia.org/wiki/Leaky_abstraction[leaky abstractions] for many of these applications.
-There's a reason that https://tinkerpop.apache.org/gremlin.html[Gremlin] is popular for graphs and https://prometheus.io/docs/prometheus/latest/querying/basics/[PromQL] for timeseries - these query languages use fundamental abstractions that are aligned with the data being queried.
+SQL _really_ wants to reason about static tables.
+Using SQL as the query language forces a lossy conversion from the natural representation to tables.
+There's a reason that https://tinkerpop.apache.org/gremlin.html[Gremlin] is popular for graphs and https://prometheus.io/docs/prometheus/latest/querying/basics/[PromQL] for timeseries.
+These query languages use fundamental abstractions that are aligned with the data being queried.
 
 We believe that most appropriate abstraction for reasoning about event data is the _timeline_, and we built our query language around this idea. 
 
@@ -15,6 +16,8 @@ We believe that most appropriate abstraction for reasoning about event data is t
 * Timelines are more general than timeseries but are compatible with timeseries operations. 
 * Timelines are less general than tables because they model time explicitly. While this limits the kinds of data you can work with, it allows for much more natural expressions of sequential and temporal relationships.
 * Timelines have a familiar and useful http://worrydream.com/refs/Brooks-NoSilverBullet.pdf["geometric abstraction"] that helps you reason about time visually.
+
+== How hard is it to learn the query language?
 
 We've tried very hard to implement a simple, familiar query syntax with intuitive, predicable semantics, and to provide extensive documentation and example code.
 We're always looking for ways to improve - if you see things that are confusing or unexpected we'd love to hear about it.
@@ -33,14 +36,14 @@ This ability is critical to understanding the historical context of a computatio
 To support these type of bulk/OLAP workloads, Kaskada is built using the https://arrow.apache.org/[Apache Arrow] library for columnar computation.
 Columnar compute is difficult to "tack on" to an event processor after-the-fact; it's a foundational design decision that has implications throughout the engine's implementation.
 
-By builing on Arrow, Kaskada optimizes for throughput over latency.
+By building on Arrow, Kaskada optimizes for throughput over latency.
 We believe that end-to-end latencies measured in 100's of milliseconds are sufficient for most real-time applications, and that sacrificing single-digit latencies is an acceptable tradeoff for https://www.infoworld.com/article/3678300/how-vectorization-improves-database-performance.html[orders-of-magnitude] improvements in bulk efficiency.
 
 Another important tradeoff Kaskada makes is to focus on single-process performance.
 In the early days of "Big Data", commodity hardware came with a single core and 2Gb of RAM.
 The only way to implement a computation over terabyte-sized datasets was to distribute it across multiple machines.
 
-Recent compute engines are increaslingly de-emphasizing distributed execution in favor of high-performance on a single physical instance. 
+Recent compute engines are increasingly de-emphasizing distributed execution in favor of high-performance on a single physical instance. 
 To quote from an excellent article from https://duckdb.org/[DuckDB]'s Jordan Tigani titled https://motherduck.com/blog/big-data-is-dead/[Big Data is Dead]:
 
 [quote,Jordan Tigani,Big Data is Dead]
@@ -51,7 +54,7 @@ ____
 Currently, Kaskada takes a hybrid approach to distributed execution. 
 Distributed workers can be used when initially loading data. 
 Data loading is expensive becuse it involves sorting events chronologically.
-Kaskada currently exeuctes each query in a single process. 
+Kaskada currently executes each query in a single process. 
 Fully-distributed execution is on our roadmap, however we find that "vertical scaling" is sufficient for the vast majority of use cases.
 
 == How do Timelines relate to Timeseries?
