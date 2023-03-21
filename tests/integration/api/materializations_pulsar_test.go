@@ -176,7 +176,6 @@ min_amount: pulsar_table.amount | min(),
 			Expect(data.Key).Should(Equal("karen"))
 			Expect(data.MaxAmount).Should(Equal(9))
 			Expect(data.MinAmount).Should(Equal(2))
-
 			consumer.Ack(msg)
 			time.Sleep(1 * time.Second) // add a delay for testing purposes
 
@@ -192,7 +191,21 @@ min_amount: pulsar_table.amount | min(),
 			Expect(data.Key).Should(Equal("patrick"))
 			Expect(data.MaxAmount).Should(Equal(5000))
 			Expect(data.MinAmount).Should(Equal(3))
+			consumer.Ack(msg)
+			time.Sleep(1 * time.Second) // add a delay for testing purposes
 
+			// Verify the third message
+			msg, err = consumer.Receive(context.Background())
+			Expect(err).Should(BeNil())
+			fmt.Printf("\nMessage: %s\n", msg.Payload())
+
+			err = json.Unmarshal(msg.Payload(), &data)
+			Expect(err).Should(BeNil())
+
+			// Verify the message fields
+			Expect(data.Key).Should(Equal("patrick"))
+			Expect(data.MaxAmount).Should(Equal(5000))
+			Expect(data.MinAmount).Should(Equal(3))
 			consumer.Ack(msg)
 		})
 	})
