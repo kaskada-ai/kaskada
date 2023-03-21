@@ -190,7 +190,7 @@ Applying a spec can create new views, change a view's mutable fields, or delete 
 [WARNING]
 .View updates are destructive
 ====
-Vies are current immutable. 
+Vies are currently immutable. 
 When the CLI updates a view, it does so by deleting the view and re-creating it.
 When this happens, the view may be temporarily unavailable to queries.
 ====

@@ -64,7 +64,7 @@ See xref:reference:expected-file-format[Expected File Format] for details.
 
 This loads the contents of the file to the Purchases table.
 
-The result of running `load()` returns a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
+The result of running `load()` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
 
 [source,bash]
 ----
@@ -86,7 +86,7 @@ cli load \
   --file-path file://path/to/purchases.csv
 ----
 
-The result of running `cli load` returns a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
+The result of running `cli load` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
 
 [source,bash]
 ----

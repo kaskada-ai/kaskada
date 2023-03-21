@@ -59,7 +59,7 @@ names.
 === List Tables
 
 The list table method returns all tables defined for your user. An
-optional search string can filter the response set.
+optional search string can filter the results.
 
 Here is an example of listing tables:
 
