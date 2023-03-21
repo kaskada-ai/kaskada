@@ -141,8 +141,8 @@ pub async fn prepare_data(
         upload_prepared_files_to_s3(
             s3,
             &prepared_metadata,
-            &prepare_request.file_prefix,
             &prepare_request.output_path_prefix,
+            &prepare_request.file_prefix,
         )
         .await?
     } else {

@@ -86,6 +86,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
 			}
 
 			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
@@ -128,6 +131,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 							},
 						},
 					},
+				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
 				},
 			}
 
@@ -172,6 +178,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 						},
 					},
 				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
 			}
 
 			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
@@ -214,6 +223,9 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 							},
 						},
 					},
+				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
 				},
 			}
 

@@ -76,6 +76,7 @@ var _ = Describe("Incremental query V1 with late data", Ordered, func() {
 		}
 		queryOptions := &v1alpha.QueryOptions{
 			ExperimentalFeatures: true,
+			PresignResults:       true,
 		}
 		createQueryRequest = &v1alpha.CreateQueryRequest{
 			Query:        query,

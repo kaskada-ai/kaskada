@@ -79,6 +79,7 @@ min_amount: query_v1_test.amount | min(),
 		}
 		queryOptions := &v1alpha.QueryOptions{
 			ExperimentalFeatures: true,
+			PresignResults:       true,
 		}
 		createQueryRequest = &v1alpha.CreateQueryRequest{
 			Query:        query,
