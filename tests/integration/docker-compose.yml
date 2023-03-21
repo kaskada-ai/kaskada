@@ -12,6 +12,18 @@ services:
   #  ports:
   #  - "6379:6379"
 
+  pulsar-integration:
+    image: apachepulsar/pulsar:2.11.0
+    container_name: pulsar-integration
+    hostname: pulsar
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    networks:
+      - integration
+    command: ["bin/pulsar", "standalone"]
+    restart: unless-stopped
+
   kaskada:
     build:
       context: ../../
