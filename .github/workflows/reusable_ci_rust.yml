@@ -1,5 +1,9 @@
 on:
   workflow_call:
+    outputs: 
+      should-skip:
+        description: "True if this workflow inferred that changes do not need to be build, false otherwise"
+        value: ${{ jobs.rust_skip.outputs.should_skip }}
   workflow_dispatch:
 
 permissions:

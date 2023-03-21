@@ -2,6 +2,10 @@
 # TODO: Move ent generation out of build jon. Tried but something was off with cacing and builds would fail
 on:
   workflow_call:
+    outputs:
+      should-skip:
+        description: "True if this workflow inferred that changes do not need to be build, false otherwise"
+        value: ${{ jobs.wren_skip.outputs.should_skip }}
   workflow_dispatch:
 
 permissions:
