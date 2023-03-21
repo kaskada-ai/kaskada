@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -112,54 +113,41 @@ min_amount: pulsar_table.amount | min(),
 		})
 
 		It("Should upload results to pulsar", func() {
-			Eventually(func(g Gomega) {
+			consumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
+				Topic:            topicUrl,
+				SubscriptionName: "my-subscription",
+				Type:             pulsar.Shared,
+			})
+			Expect(err).Should(BeNil())
+			defer consumer.Close()
 
-				consumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
-					Topic:            topicUrl,
-					SubscriptionName: "my-subscription",
-					Type:             pulsar.Shared,
-				})
-				g.Expect(err).Should(BeNil())
-				defer consumer.Close()
+			// Verify the first message
+			var data testSchema
+			msg, err := consumer.Receive(context.Background())
+			Expect(err).Should(BeNil())
 
-				data := testSchema{}
-				for i := 0; i < 2; i++ {
-					msg, err := consumer.Receive(context.Background())
-					g.Expect(err).Should(BeNil())
+			err = json.Unmarshal(msg.Payload(), &data)
+			Expect(err).Should(BeNil())
+			Expect(data.Key).Should(Equal("karen"))
+			Expect(data.MaxAmount).Should(Equal(9))
+			Expect(data.MinAmount).Should(Equal(2))
 
-					fmt.Printf("\n pulsar payload: %s\n", msg.Payload())
+			consumer.Ack(msg)
+			time.Sleep(1 * time.Second) // add a delay for testing purposes
 
-					err = msg.GetSchemaValue(&data)
-					g.Expect(err).Should(BeNil())
+			// Verify the second message
+			msg, err = consumer.Receive(context.Background())
+			Expect(err).Should(BeNil())
 
-					// data, err := schema.Decode(msg.Payload())
-					// g.Expect(err).Should(BeNil())
+			err = json.Unmarshal(msg.Payload(), &data)
+			Expect(err).Should(BeNil())
 
-					// Verify the message fields
-					g.Expect(data.Key).Should(Equal("karen"))
-					g.Expect(data.MaxAmount).Should(Equal(10))
+			// Verify the message fields
+			Expect(data.Key).Should(Equal("patrick"))
+			Expect(data.MaxAmount).Should(Equal(5000))
+			Expect(data.MinAmount).Should(Equal(3))
 
-					consumer.Ack(msg)
-
-					time.Sleep(1 * time.Second) // add a delay for testing purposes
-				}
-
-				// dataType, shape, values, err := pulsarClient.TensorGetValues("karen")
-				// g.Expect(err).ShouldNot(HaveOccurred())
-				// g.Expect(dataType).Should(Equal("INT64"))
-				// g.Expect(shape).Should(Equal([]int64{1, 3}))
-				// g.Expect(values).Should(Equal([]int64{1578182400000000000, 9, 2}))
-
-				// dataType, shape, values, err = redisAIClient.TensorGetValues("patrick")
-				// g.Expect(err).ShouldNot(HaveOccurred())
-				// g.Expect(dataType).Should(Equal("INT64"))
-				// g.Expect(shape).Should(Equal([]int64{1, 3}))
-				// g.Expect(values).Should(Equal([]int64{1578182400000000000, 5000, 3}))
-
-				// _, _, _, err = redisAIClient.TensorGetValues("spongebob")
-				// g.Expect(err).Should(HaveOccurred())
-				// g.Expect(err.Error()).Should(ContainSubstring("tensor key is empty"))
-			}, "30s", "1s").Should(Succeed())
+			consumer.Ack(msg)
 		})
 	})
 
@@ -169,9 +157,43 @@ min_amount: pulsar_table.amount | min(),
 		})
 
 		It("Should upload results to pulsar", func() {
-			Eventually(func(g Gomega) {
-				// hello
-			}, "30s", "1s").Should(Succeed())
+			consumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
+				Topic:            topicUrl,
+				SubscriptionName: "my-subscription",
+				Type:             pulsar.Shared,
+			})
+			Expect(err).Should(BeNil())
+			defer consumer.Close()
+
+			// Verify the first message
+			var data testSchema
+			msg, err := consumer.Receive(context.Background())
+			Expect(err).Should(BeNil())
+			fmt.Printf("\nMessage: %s\n", msg.Payload())
+
+			err = json.Unmarshal(msg.Payload(), &data)
+			Expect(err).Should(BeNil())
+			Expect(data.Key).Should(Equal("karen"))
+			Expect(data.MaxAmount).Should(Equal(9))
+			Expect(data.MinAmount).Should(Equal(2))
+
+			consumer.Ack(msg)
+			time.Sleep(1 * time.Second) // add a delay for testing purposes
+
+			// Verify the second message
+			msg, err = consumer.Receive(context.Background())
+			Expect(err).Should(BeNil())
+			fmt.Printf("\nMessage: %s\n", msg.Payload())
+
+			err = json.Unmarshal(msg.Payload(), &data)
+			Expect(err).Should(BeNil())
+
+			// Verify the message fields
+			Expect(data.Key).Should(Equal("patrick"))
+			Expect(data.MaxAmount).Should(Equal(5000))
+			Expect(data.MinAmount).Should(Equal(3))
+
+			consumer.Ack(msg)
 		})
 	})
 })
