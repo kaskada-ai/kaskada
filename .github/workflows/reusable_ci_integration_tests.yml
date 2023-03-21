@@ -91,7 +91,7 @@ jobs:
           # Required, if the artifact is from a different repo
           # Required, if the repo is private a Personal Access Token with `repo` scope is needed
           github_token: ${{secrets.GITHUB_TOKEN}}
-          path: ci-bin/
+          path: tests/integration/api/
 
       - name: Upload Integration Tests Binary Artifact
         uses: actions/upload-artifact@v3
