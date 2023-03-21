@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,6 +15,13 @@ import (
 	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
+
+type testSchema struct {
+	Time      int    `json:"time"`
+	Key       string `json:"key"`
+	MaxAmount int    `json:"max_amount"`
+	MinAmount int    `json:"min_amount"`
+}
 
 var _ = FDescribe("Materialization with Pulsar upload", Ordered, Label("pulsar"), func() {
 	var (
@@ -118,20 +126,23 @@ min_amount: pulsar_table.amount | min(),
 				// Since we don't know the schema and can't create a struct
 				// to unmarshal data into, we can ask the consumer to auto consume
 				// and decode automatically.
-				schema, err := consumer.Schema()
 				g.Expect(err).Should(BeNil())
 
+				var data *testSchema
 				for i := 0; i < 3; i++ {
 					msg, err := consumer.Receive(context.Background())
 					g.Expect(err).Should(BeNil())
 
-					data, err := schema.Decode(msg.Payload())
+					err = msg.GetSchemaValue(data)
 					g.Expect(err).Should(BeNil())
 
+					// data, err := schema.Decode(msg.Payload())
+					// g.Expect(err).Should(BeNil())
+
 					// Verify the message fields
-					g.Expect(data["time"].(int64)).Should(Equal(1578182400000000000))
-					g.Expect(data["key"].(string)).Should(Equal("karen"))
-					g.Expect(data["max_amount"].(int64)).Should(Equal(10))
+					g.Expect(data.Time).Should(Equal(1578182400000000000))
+					g.Expect(data.Key).Should(Equal("karen"))
+					g.Expect(data.MaxAmount).Should(Equal(10))
 
 					consumer.Ack(msg)
 
