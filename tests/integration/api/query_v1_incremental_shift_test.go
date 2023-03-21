@@ -78,6 +78,7 @@ min_amount: query_v1_inc_shift.amount | min(),
 		}
 		queryOptions := &v1alpha.QueryOptions{
 			ExperimentalFeatures: true,
+			PresignResults:       true,
 		}
 		createQueryRequest = &v1alpha.CreateQueryRequest{
 			Query:        query,
@@ -522,6 +523,7 @@ min_amount: purchases_non_incremental.amount | min(),
 				}
 				queryOptions := &v1alpha.QueryOptions{
 					ExperimentalFeatures: true,
+					PresignResults:       true,
 				}
 				createQueryRequest = &v1alpha.CreateQueryRequest{
 					Query:        query,

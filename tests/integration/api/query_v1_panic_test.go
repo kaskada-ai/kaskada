@@ -77,6 +77,9 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 				OutputTo:       outputTo,
 				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 			},
+			QueryOptions: &v1alpha.QueryOptions{
+				PresignResults: true,
+			},
 		}
 
 		stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
@@ -108,6 +111,9 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 				OutputTo:       outputTo,
 				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 			},
+			QueryOptions: &v1alpha.QueryOptions{
+				PresignResults: true,
+			},
 		}
 
 		stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
@@ -136,6 +142,9 @@ min_amount: query_v1_panic.amount | min(),
 }`,
 				OutputTo:       outputTo,
 				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
+			},
+			QueryOptions: &v1alpha.QueryOptions{
+				PresignResults: true,
 			},
 		}
 

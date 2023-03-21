@@ -121,7 +121,7 @@ pub(crate) enum Event {
 /// The scope of an instant event.
 ///
 /// Controls how tall the the event will be.
-#[derive(Serialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Eq, PartialEq, Debug, Default)]
 #[allow(dead_code)]
 pub(crate) enum EventScope {
     /// The event will be drawn from the top to bottom of the timeline.
@@ -132,13 +132,8 @@ pub(crate) enum EventScope {
     Process,
     /// The event will be the height of a single thread.
     #[serde(rename = "t")]
+    #[default]
     Thread,
-}
-
-impl Default for EventScope {
-    fn default() -> Self {
-        EventScope::Thread
-    }
 }
 
 impl EventScope {

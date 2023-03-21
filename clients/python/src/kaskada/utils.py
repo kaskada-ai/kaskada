@@ -1,6 +1,7 @@
 import datetime
 import re
 import unicodedata
+from pathlib import Path
 from typing import Union
 
 import grpc
@@ -95,6 +96,19 @@ def handleGrpcError(rpc_error: grpc.Call):
         pass
     errorMessage += "\tError Message: {}\n".format(rpc_error.details())
     raise Exception(errorMessage) from None
+
+
+def to_uri(file: str) -> str:
+    # Remote file stores are prefixed appropriately.
+    if (
+        file.startswith("s3://")
+        or file.startswith("gs://")
+        or file.startswith("https://")
+    ):
+        return file
+    # TODO: Verify that the object actually exists locally
+    path = Path(file).absolute()
+    return f"file://{path}"
 
 
 def unpack_details(grpc_detail):
