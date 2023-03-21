@@ -122,17 +122,14 @@ min_amount: pulsar_table.amount | min(),
 				g.Expect(err).Should(BeNil())
 				defer consumer.Close()
 
-				// Since we don't know the schema and can't create a struct
-				// to unmarshal data into, we can ask the consumer to auto consume
-				// and decode automatically.
-				g.Expect(err).Should(BeNil())
-
 				data := testSchema{}
 				for i := 0; i < 2; i++ {
 					msg, err := consumer.Receive(context.Background())
 					g.Expect(err).Should(BeNil())
 
-					err = msg.GetSchemaValue(data)
+					fmt.Printf("\n pulsar payload: %s\n", msg.Payload())
+
+					err = msg.GetSchemaValue(&data)
 					g.Expect(err).Should(BeNil())
 
 					// data, err := schema.Decode(msg.Payload())
