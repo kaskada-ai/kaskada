@@ -2,11 +2,13 @@ use std::fs::File;
 
 use fallible_iterator::FallibleIterator;
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
-use sparrow_api::kaskada::v1alpha::{file_path, ComputeTable, PreparedFile, TableConfig, TableMetadata, FilePath};
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
+use sparrow_api::kaskada::v1alpha::{
+    file_path, ComputeTable, PreparedFile, TableConfig, TableMetadata,
+};
 use sparrow_runtime::prepare::prepared_batches;
 use sparrow_runtime::PreparedMetadata;
 use tempfile::NamedTempFile;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
 pub(crate) struct LocalTestTable {
     config: TableConfig,

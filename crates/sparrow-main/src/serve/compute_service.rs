@@ -2,7 +2,11 @@ use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeService;
-use sparrow_api::kaskada::v1alpha::{CompileRequest, CompileResponse, ExecuteRequest, ExecuteResponse, FilePath, GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState};
+
+use sparrow_api::kaskada::v1alpha::{
+    CompileRequest, CompileResponse, ExecuteRequest, ExecuteResponse,
+    GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState,
+};
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
@@ -12,9 +16,6 @@ use tempfile::NamedTempFile;
 use tonic::{Request, Response, Status};
 use tracing::{error, info, Instrument};
 use uuid::Uuid;
-use sparrow_api::kaskada::v1alpha::file_path::Path;
-use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
 use crate::serve::error_status::IntoStatus;
 use crate::BuildInfo;

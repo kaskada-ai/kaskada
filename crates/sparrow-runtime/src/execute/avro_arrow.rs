@@ -1,7 +1,10 @@
-use avro_rs::types::Value;
 use arrow::array::{ArrayRef, ArrowPrimitiveType, PrimitiveArray, StringBuilder};
+use arrow::datatypes::{
+    Date32Type, Float32Type, Float64Type, Int32Type, Int64Type, TimestampMicrosecondType,
+    TimestampMillisecondType,
+};
 use arrow::error::ArrowError;
-use arrow::datatypes::{Date32Type, Date64Type, DurationSecondType, Float16Type, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type, TimestampMicrosecondType, TimestampMillisecondType, UInt16Type, UInt32Type, UInt64Type, UInt8Type, Utf8Type};
+use avro_rs::types::Value;
 use std::sync::Arc;
 
 pub fn avro_to_arrow(values: Vec<Vec<(String, Value)>>) -> Result<Vec<ArrayRef>, ArrowError> {
@@ -76,12 +79,12 @@ fn avro_to_arrow_field(
         Value::Double(_) => build_avro_primitive_array::<Float64Type>(&values, field_index),
         Value::TimestampMillis(_) => {
             build_avro_primitive_array::<TimestampMillisecondType>(&values, field_index)
-        },
+        }
         Value::TimestampMicros(_) => {
             build_avro_primitive_array::<TimestampMicrosecondType>(&values, field_index)
-        },
+        }
         Value::Date(_) => build_avro_primitive_array::<Date32Type>(&values, field_index),
-        Value::String(_) => build_avro_utf8_array(&values, field_index),
+        Value::String(_) => build_avro_utf8_array(values, field_index),
         _ => Err(ArrowError::ParseError(format!(
             "Unsupported Avro type {:?} for column {:?}",
             first_value, field_index

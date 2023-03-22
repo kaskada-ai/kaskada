@@ -2,14 +2,17 @@ use std::path::Path;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
-use sparrow_api::kaskada::v1alpha::{file_path, FilePath, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest, PrepareDataResponse, PreparedFile, PulsarSource};
+use sparrow_api::kaskada::v1alpha::{
+    file_path, FilePath, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
+    PrepareDataResponse, PreparedFile,
+};
 use sparrow_runtime::prepare::{prepare_file, upload_prepared_files_to_s3, Error};
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
 
-use tempfile::NamedTempFile;
-use tonic::Response;
 use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
+use tempfile::NamedTempFile;
+use tonic::Response;
 
 use crate::IntoStatus;
 
@@ -79,7 +82,8 @@ pub async fn prepare_data(
         }
     );
 
-    let (is_s3_object, source) = convert_to_local_sourcedata(&s3, &prepare_request.source_data).await?;
+    let (is_s3_object, source) =
+        convert_to_local_sourcedata(&s3, &prepare_request.source_data).await?;
 
     let temp_dir = tempfile::tempdir()
         .into_report()
@@ -105,7 +109,7 @@ pub async fn prepare_data(
             &prepare_request.output_path_prefix,
             &prepare_request.file_prefix,
         )
-            .await?
+        .await?
     } else {
         prepared_files
     };
@@ -116,42 +120,48 @@ pub async fn prepare_data(
     }))
 }
 
-pub async fn convert_to_local_source(s3: &S3Helper, source: &Source) -> error_stack::Result<(bool, Source), Error> {
+pub async fn convert_to_local_source(
+    s3: &S3Helper,
+    source: &Source,
+) -> error_stack::Result<(bool, Source), Error> {
     match source {
-        Source::FilePath(fp) => {
-            match &fp.path {
-                None => error_stack::bail!(Error::MissingField("file_path")),
-                Some(path) => {
-                    let (is_s3, local_path) = maybe_download_file(&s3, path).await;
-                    Ok((is_s3, Source::FilePath(FilePath { path: Some(local_path) })))
-                }
+        Source::FilePath(fp) => match &fp.path {
+            None => error_stack::bail!(Error::MissingField("file_path")),
+            Some(path) => {
+                let (is_s3, local_path) = maybe_download_file(s3, path).await;
+                Ok((
+                    is_s3,
+                    Source::FilePath(FilePath {
+                        path: Some(local_path),
+                    }),
+                ))
             }
-        }
-        Source::PuslarSource(_) => {
-            Ok((false, source.clone()))
-        }
+        },
+        Source::PuslarSource(_) => Ok((false, source.clone())),
     }
 }
 
-pub async fn convert_to_local_sourcedata(s3: &S3Helper, source_data: &Option<SourceData>) -> error_stack::Result<(bool, SourceData), Error> {
+pub async fn convert_to_local_sourcedata(
+    s3: &S3Helper,
+    source_data: &Option<SourceData>,
+) -> error_stack::Result<(bool, SourceData), Error> {
     match source_data {
         None => error_stack::bail!(Error::MissingField("source_data")),
-        Some(sd) => {
-            match sd {
-                SourceData::FilePath(fp) => {
-                    match &fp.path {
-                        None => error_stack::bail!(Error::MissingField("file_path")),
-                        Some(path) => {
-                            let (is_s3, local_path) = maybe_download_file(&s3, path).await;
-                            Ok((is_s3, SourceData::FilePath(FilePath { path: Some(local_path) })))
-                        }
-                    }
+        Some(sd) => match sd {
+            SourceData::FilePath(fp) => match &fp.path {
+                None => error_stack::bail!(Error::MissingField("file_path")),
+                Some(path) => {
+                    let (is_s3, local_path) = maybe_download_file(s3, path).await;
+                    Ok((
+                        is_s3,
+                        SourceData::FilePath(FilePath {
+                            path: Some(local_path),
+                        }),
+                    ))
                 }
-                SourceData::PulsarConfig(_) => {
-                    Ok((false, sd.clone()))
-                }
-            }
-        }
+            },
+            SourceData::PulsarConfig(_) => Ok((false, sd.clone())),
+        },
     }
 }
 
@@ -190,6 +200,6 @@ async fn maybe_download_file(s3: &S3Helper, path: &file_path::Path) -> (bool, fi
                 (false, file_path::Path::CsvPath(path.to_string()))
             }
         }
-        file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string()))
+        file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string())),
     }
 }

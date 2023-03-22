@@ -1,11 +1,10 @@
 use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
 
-use error_stack::{FutureExt, IntoReport, Result, ResultExt};
+use error_stack::{IntoReport, Result, ResultExt};
 use futures::executor::block_on;
 use serde;
 use std::sync::Arc;
-use tracing::log::trace;
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
@@ -86,8 +85,7 @@ pub fn pulsar_auth_token(auth_params: &str) -> Result<&str, Error> {
     // verify first part is "token"
     let auth_type = parts.next();
     if auth_type.is_none() {
-        return Err(Error::SchemaRequest.into())
-            .attach_printable("missing auth_type");
+        return Err(Error::SchemaRequest.into()).attach_printable("missing auth_type");
     }
     let auth_type = auth_type.unwrap();
     if auth_type != "token" {
@@ -96,8 +94,7 @@ pub fn pulsar_auth_token(auth_params: &str) -> Result<&str, Error> {
     }
     let auth_token = parts.next();
     if auth_token.is_none() {
-        return Err(Error::SchemaRequest.into())
-            .attach_printable("missing auth token");
+        return Err(Error::SchemaRequest.into()).attach_printable("missing auth token");
     }
     Ok(auth_token.unwrap())
 }
@@ -109,7 +106,7 @@ async fn get_pulsar_schema_async(
     tenant: &str,
     namespace: &str,
     topic: &str,
-    auth_params: &str
+    auth_params: &str,
 ) -> Result<Schema, Error> {
     let url = format!(
         "{}/admin/v2/schemas/{}/{}/{}/schema",
@@ -119,7 +116,10 @@ async fn get_pulsar_schema_async(
     let client = reqwest::Client::new();
     let text = client
         .get(&url)
-        .header(reqwest::header::AUTHORIZATION, format!("Bearer {}", pulsar_auth_token(auth_params)?))
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", pulsar_auth_token(auth_params)?),
+        )
         .send()
         .await
         .into_report()
@@ -147,9 +147,13 @@ pub fn get_pulsar_schema(
     tenant: &str,
     namespace: &str,
     topic: &str,
-    auth_params: &str
+    auth_params: &str,
 ) -> Result<Schema, Error> {
     block_on(get_pulsar_schema_async(
-        admin_service_url, tenant, namespace, topic, auth_params
+        admin_service_url,
+        tenant,
+        namespace,
+        topic,
+        auth_params,
     ))
 }

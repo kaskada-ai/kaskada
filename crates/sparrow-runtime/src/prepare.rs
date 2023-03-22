@@ -5,8 +5,7 @@ use std::io::{BufReader, Cursor};
 use std::path::Path;
 
 use arrow::record_batch::RecordBatch;
-use avro_schema::read::fallible_streaming_iterator::FallibleStreamingIterator;
-use error_stack::{FutureExt, IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::executor::block_on;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
@@ -14,7 +13,7 @@ use parquet::arrow::ArrowWriter;
 
 use serde_yaml;
 use sha2::Digest;
-use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig, FilePath};
+use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, FilePath, PreparedFile, TableConfig};
 
 mod error;
 mod prepare_iter;
@@ -22,10 +21,10 @@ mod slice_preparer;
 
 pub use error::*;
 pub use prepare_iter::*;
-use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
-use tracing::Instrument;
 use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::prepare_data_request::{PulsarConfig, SourceData};
+use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
+use tracing::Instrument;
 
 use crate::execute::pulsar_reader::PulsarReader;
 use crate::s3::{S3Helper, S3Object};
@@ -46,33 +45,29 @@ pub fn prepared_batches(
     let prepare_iter = match source_data {
         SourceData::FilePath(fp) => match &fp.path {
             None => error_stack::bail!(Error::MissingField("file_path")),
-            Some(path) => {
-                match path {
-                    file_path::Path::ParquetPath(source) => {
-                        let reader = open_file(source)?;
-                        let file_size = reader
-                            .metadata()
-                            .into_report()
-                            .change_context(Error::Internal)?
-                            .len();
-                        reader_from_parquet(config, reader, file_size, prepare_hash, slice)?
-                    }
-                    file_path::Path::CsvPath(source) => {
-                        let file = open_file(source)?;
-                        let reader = BufReader::new(file);
-                        reader_from_csv(config, reader, prepare_hash, slice)?
-                    }
-                    file_path::Path::CsvData(content) => {
-                        let content = Cursor::new(content.to_string());
-                        let reader = BufReader::new(content);
-                        reader_from_csv(config, reader, prepare_hash, slice)?
-                    }
+            Some(path) => match path {
+                file_path::Path::ParquetPath(source) => {
+                    let reader = open_file(source)?;
+                    let file_size = reader
+                        .metadata()
+                        .into_report()
+                        .change_context(Error::Internal)?
+                        .len();
+                    reader_from_parquet(config, reader, file_size, prepare_hash, slice)?
                 }
-            }
-        }
-        SourceData::PulsarConfig(pc) => {
-            reader_from_pulsar(config, pc, prepare_hash, slice)?
-        }
+                file_path::Path::CsvPath(source) => {
+                    let file = open_file(source)?;
+                    let reader = BufReader::new(file);
+                    reader_from_csv(config, reader, prepare_hash, slice)?
+                }
+                file_path::Path::CsvData(content) => {
+                    let content = Cursor::new(content.to_string());
+                    let reader = BufReader::new(content);
+                    reader_from_csv(config, reader, prepare_hash, slice)?
+                }
+            },
+        },
+        SourceData::PulsarConfig(pc) => reader_from_pulsar(config, pc, prepare_hash, slice)?,
     };
 
     Ok(prepare_iter)
@@ -87,7 +82,7 @@ fn reader_from_pulsar(
     match pulsar_config.pulsar_source.as_ref() {
         None => error_stack::bail!(Error::MissingField("pulsar_source")),
         Some(ps) => {
-            let raw_metadata = RawMetadata::try_from_pulsar(&ps)
+            let raw_metadata = RawMetadata::try_from_pulsar(ps)
                 .into_report()
                 .change_context(Error::CreatePulsarReader)?;
 
@@ -257,42 +252,38 @@ fn write_batch(
 
 fn get_prepare_hash(source: &SourceData) -> error_stack::Result<u64, Error> {
     let hex_encoding = match source {
-        SourceData::FilePath(fp) => {
-            match &fp.path {
-                None => error_stack::bail!(Error::MissingField("file_path")),
-                Some(path) => {
-                    match path {
-                        file_path::Path::ParquetPath(source) => {
-                            let file = open_file(source)?;
-                            let mut file = BufReader::new(file);
-                            let mut hasher = sha2::Sha224::new();
-                            std::io::copy(&mut file, &mut hasher).unwrap();
-                            let hash = hasher.finalize();
+        SourceData::FilePath(fp) => match &fp.path {
+            None => error_stack::bail!(Error::MissingField("file_path")),
+            Some(path) => match path {
+                file_path::Path::ParquetPath(source) => {
+                    let file = open_file(source)?;
+                    let mut file = BufReader::new(file);
+                    let mut hasher = sha2::Sha224::new();
+                    std::io::copy(&mut file, &mut hasher).unwrap();
+                    let hash = hasher.finalize();
 
-                            data_encoding::HEXUPPER.encode(&hash)
-                        }
-                        file_path::Path::CsvPath(source) => {
-                            let file = open_file(source)?;
-                            let mut file = BufReader::new(file);
-                            let mut hasher = sha2::Sha224::new();
-                            std::io::copy(&mut file, &mut hasher).unwrap();
-                            let hash = hasher.finalize();
-
-                            data_encoding::HEXUPPER.encode(&hash)
-                        }
-                        file_path::Path::CsvData(content) => {
-                            let content = Cursor::new(content.to_string());
-                            let mut file = BufReader::new(content);
-                            let mut hasher = sha2::Sha224::new();
-                            std::io::copy(&mut file, &mut hasher).unwrap();
-                            let hash = hasher.finalize();
-
-                            data_encoding::HEXUPPER.encode(&hash)
-                        }
-                    }
+                    data_encoding::HEXUPPER.encode(&hash)
                 }
-            }
-        }
+                file_path::Path::CsvPath(source) => {
+                    let file = open_file(source)?;
+                    let mut file = BufReader::new(file);
+                    let mut hasher = sha2::Sha224::new();
+                    std::io::copy(&mut file, &mut hasher).unwrap();
+                    let hash = hasher.finalize();
+
+                    data_encoding::HEXUPPER.encode(&hash)
+                }
+                file_path::Path::CsvData(content) => {
+                    let content = Cursor::new(content.to_string());
+                    let mut file = BufReader::new(content);
+                    let mut hasher = sha2::Sha224::new();
+                    std::io::copy(&mut file, &mut hasher).unwrap();
+                    let hash = hasher.finalize();
+
+                    data_encoding::HEXUPPER.encode(&hash)
+                }
+            },
+        },
         SourceData::PulsarConfig(pc) => {
             // TODO not sure what the right approach is here, we definitely don't want
             // to read the entire contents of the topic twice. (that's what the file
@@ -397,9 +388,9 @@ pub fn file_source(path: file_path::Path) -> Source {
 mod tests {
 
     use fallible_iterator::FallibleIterator;
+    use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
     use sparrow_api::kaskada::v1alpha::{file_path, FilePath, TableConfig};
     use uuid::Uuid;
-    use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
     use crate::prepare::{get_batch_size, get_num_files, get_u64_hash, GIGABYTE_IN_BYTES};
 
@@ -477,7 +468,9 @@ mod tests {
                 .to_string_lossy()
                 .to_string(),
         );
-        let source_data = SourceData::FilePath(FilePath { path: Some(input_path) });
+        let source_data = SourceData::FilePath(FilePath {
+            path: Some(input_path),
+        });
 
         let table_config = TableConfig::new(
             "Event",
@@ -508,7 +501,9 @@ mod tests {
                 .to_string_lossy()
                 .to_string(),
         );
-        let source_data = SourceData::FilePath(FilePath { path: Some(input_path) });
+        let source_data = SourceData::FilePath(FilePath {
+            path: Some(input_path),
+        });
 
         let table_config = TableConfig::new(
             "Segment",

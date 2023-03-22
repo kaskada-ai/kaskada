@@ -1,27 +1,24 @@
 use crate::prepare::Error;
-use arrow::array::{ArrowPrimitiveType, PrimitiveArray};
-use arrow::datatypes::{Float64Type, Int32Type, TimestampMillisecondType};
+
 use arrow::error::ArrowError;
-use arrow::{
-    array::{Array, ArrayRef},
-    datatypes::SchemaRef,
-    record_batch::RecordBatch,
-};
+use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
-use error_stack::{FutureExt, IntoReport, IntoReportCompat, Report, ResultExt};
-use fallible_iterator::FallibleIterator;
+use error_stack::{IntoReport, Report, ResultExt};
 use futures::executor::block_on;
 use pulsar::consumer::InitialPosition;
 
-use pulsar::{Authentication, Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType, TokioExecutor};
+use pulsar::{
+    Authentication, Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType,
+    TokioExecutor,
+};
 
+use crate::execute::avro_arrow;
+use sparrow_api::kaskada::v1alpha::prepare_data_request::PulsarConfig;
 use std::io::Cursor;
-use std::sync::Arc;
+
 use std::time::Duration;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::PulsarConfig;
-use crate::execute::avro_arrow;
 
 pub struct AvroWrapper {
     value: Value,
@@ -82,7 +79,7 @@ impl DeserializeMessage for AvroWrapper {
         let reader = avro_rs::Reader::new(cursor)
             .into_report()
             .change_context(DeserializeError::Avro)?;
-        let mut iter = reader.into_iter();
+        let mut iter = reader;
         let value = iter
             .next()
             .unwrap()
@@ -195,10 +192,7 @@ pub(crate) async fn pulsar_consumer(
 ) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
     let ps = pulsar_config.pulsar_source.as_ref().unwrap();
     // specifying persistent:// or non-persistent:// appears to be optional
-    let topic_url = format!("{}/{}/{}",
-        ps.tenant,
-        ps.namespace,
-        ps.topic_name);
+    let topic_url = format!("{}/{}/{}", ps.tenant, ps.namespace, ps.topic_name);
 
     let auth_token = crate::execute::pulsar_schema::pulsar_auth_token(ps.auth_params.as_str())
         .change_context(Error::CreatePulsarReader)?;

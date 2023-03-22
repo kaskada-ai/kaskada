@@ -5,19 +5,19 @@ use fallible_iterator::FallibleIterator;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::{FilePath, OutputTo};
+use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 use sparrow_api::kaskada::v1alpha::{
     compute_table, file_path, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet,
     FenlDiagnostics, FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig,
     TableMetadata,
 };
+use sparrow_api::kaskada::v1alpha::{FilePath, OutputTo};
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::PreparedMetadata;
 use tempfile::NamedTempFile;
 use uuid::Uuid;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
 
 use crate::structs::{ExampleExpression, ExampleTable, FunctionExample};
 
@@ -197,15 +197,14 @@ impl ExampleInputPreparer {
         config: TableConfig,
         input_csv: &str,
     ) -> error_stack::Result<ComputeTable, Error> {
-        let sd = SourceData::FilePath(FilePath { path: Some(file_path::Path::CsvData(input_csv.to_owned())) });
-        let prepared_batches: Vec<_> = sparrow_runtime::prepare::prepared_batches(
-            &sd,
-            &config,
-            &None,
-        )
-        .change_context(Error::PrepareInput)?
-        .collect()
-        .change_context(Error::PrepareInput)?;
+        let sd = SourceData::FilePath(FilePath {
+            path: Some(file_path::Path::CsvData(input_csv.to_owned())),
+        });
+        let prepared_batches: Vec<_> =
+            sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
+                .change_context(Error::PrepareInput)?
+                .collect()
+                .change_context(Error::PrepareInput)?;
 
         let (prepared_batch, metadata) = &prepared_batches[0];
 

@@ -1,18 +1,16 @@
 use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::sync::Arc;
-use anyhow::anyhow;
 
 use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMillisecondType};
 
-use futures::TryFutureExt;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::file_path::Path;
 
-use tracing::info;
 use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::PulsarSource;
+use tracing::info;
 
 use crate::execute::pulsar_schema;
 use crate::metadata::file_from_path;
@@ -31,28 +29,24 @@ pub struct RawMetadata {
 impl RawMetadata {
     pub fn try_from(source: &Source) -> anyhow::Result<Self> {
         match source {
-            Source::FilePath(fp) => {
-                match &fp.path {
-                    None => anyhow::bail!("missing file_path"),
-                    Some(source_path) => {
-                        match source_path {
-                            Path::ParquetPath(path) => {
-                                let file = file_from_path(std::path::Path::new(&path))?;
-                                Self::try_from_parquet(file)
-                            }
-                            Path::CsvPath(path) => {
-                                let file = file_from_path(std::path::Path::new(&path))?;
-                                Self::try_from_csv(file)
-                            }
-                            Path::CsvData(content) => {
-                                let string_reader = BufReader::new(Cursor::new(content));
-                                Self::try_from_csv(string_reader)
-                            }
-                        }
+            Source::FilePath(fp) => match &fp.path {
+                None => anyhow::bail!("missing file_path"),
+                Some(source_path) => match source_path {
+                    Path::ParquetPath(path) => {
+                        let file = file_from_path(std::path::Path::new(&path))?;
+                        Self::try_from_parquet(file)
                     }
-                }
-            }
-            Source::PuslarSource(ps) => Self::try_from_pulsar(ps)
+                    Path::CsvPath(path) => {
+                        let file = file_from_path(std::path::Path::new(&path))?;
+                        Self::try_from_csv(file)
+                    }
+                    Path::CsvData(content) => {
+                        let string_reader = BufReader::new(Cursor::new(content));
+                        Self::try_from_csv(string_reader)
+                    }
+                },
+            },
+            Source::PuslarSource(ps) => Self::try_from_pulsar(ps),
         }
     }
 
@@ -74,8 +68,9 @@ impl RawMetadata {
             pulsar_source.tenant.as_str(),
             pulsar_source.namespace.as_str(),
             pulsar_source.topic_name.as_str(),
-        pulsar_source.auth_params.as_str())
-            .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
+            pulsar_source.auth_params.as_str(),
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
 
         let rm = Self::try_from_raw_schema(Arc::new(raw_schema))?;
         // inject _publish_time field

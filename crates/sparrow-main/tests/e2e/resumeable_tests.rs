@@ -42,7 +42,10 @@ async fn assert_final_incremental_same_as_complete(
 
     // Add the second file
     let csv2 = file_path::Path::CsvData(csv2.to_owned());
-    data_fixture.table_mut("Numbers").add_file_source(&csv2).unwrap();
+    data_fixture
+        .table_mut("Numbers")
+        .add_file_source(&csv2)
+        .unwrap();
 
     let non_persistent_results = non_persistent_query
         .run_to_csv(&data_fixture)
@@ -213,8 +216,14 @@ async fn test_resumeable_with_unordered_file_sets() {
     let csv2 = file_path::Path::CsvData(csv2.to_owned());
 
     data_fixture.table_mut("Numbers").clear();
-    data_fixture.table_mut("Numbers").add_file_source(&csv2).unwrap();
-    data_fixture.table_mut("Numbers").add_file_source(&csv1).unwrap();
+    data_fixture
+        .table_mut("Numbers")
+        .add_file_source(&csv2)
+        .unwrap();
+    data_fixture
+        .table_mut("Numbers")
+        .add_file_source(&csv1)
+        .unwrap();
 
     let persistent_results = persistent_query
         .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))

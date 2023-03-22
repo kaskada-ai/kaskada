@@ -4,8 +4,8 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_api::kaskada::v1alpha::{file_path, FilePath, PrepareDataRequest, PulsarSource, SlicePlan};
 use sparrow_api::kaskada::v1alpha::prepare_data_request::{PulsarConfig, SourceData};
+use sparrow_api::kaskada::v1alpha::{FilePath, PrepareDataRequest, PulsarSource, SlicePlan};
 
 use sparrow_runtime::s3::S3Helper;
 
@@ -131,13 +131,16 @@ impl PrepareCommand {
                 let mut parts = line.splitn(2, '=');
                 if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
                     config.insert(key.to_string(), value.to_string());
-                } else {
-                    if !line.chars().all(|c| c.is_whitespace()) {
-                        tracing::trace!("ignoring config line {:?}", line);
-                    }
+                } else if !line.chars().all(|c| c.is_whitespace()) {
+                    tracing::trace!("ignoring config line {:?}", line);
                 }
             }
-            for key in ["webServiceUrl", "brokerServiceUrl", "authPlugin", "authParams"] {
+            for key in [
+                "webServiceUrl",
+                "brokerServiceUrl",
+                "authPlugin",
+                "authParams",
+            ] {
                 if !config.contains_key(key) {
                     return Err(error_stack::report!(Error::MissingTableConfig)
                         .attach_printable(format!("missing config key {:?}", key)));
@@ -146,8 +149,10 @@ impl PrepareCommand {
 
             // fully-qualified topic name
             let pulsar_tenant = std::env::var("PULSAR_TENANT").unwrap_or("public".to_string());
-            let pulsar_namespace = std::env::var("PULSAR_NAMESPACE").unwrap_or("default".to_string());
-            let pulsar_subscription = std::env::var("PULSAR_SUBSCRIPTION").unwrap_or("subscription-default".to_string());
+            let pulsar_namespace =
+                std::env::var("PULSAR_NAMESPACE").unwrap_or("default".to_string());
+            let pulsar_subscription =
+                std::env::var("PULSAR_SUBSCRIPTION").unwrap_or("subscription-default".to_string());
             let pulsar_topic = std::env::var("PULSAR_TOPIC")
                 .into_report()
                 .change_context(Error::MissingTableConfig)
@@ -166,7 +171,7 @@ impl PrepareCommand {
             tracing::debug!("Pulsar source is {:?}", pulsar_source);
 
             SourceData::PulsarConfig(PulsarConfig {
-                pulsar_source: pulsar_source,
+                pulsar_source,
                 subscription_id: pulsar_subscription,
             })
         } else {
@@ -180,7 +185,9 @@ impl PrepareCommand {
             let file_path = FilePath::try_from_local(input.as_path())
                 .into_report()
                 .change_context(Error::UnrecognizedInputFormat)?;
-            SourceData::FilePath(FilePath { path: Some(file_path) })
+            SourceData::FilePath(FilePath {
+                path: Some(file_path),
+            })
         };
 
         if table.file_sets.is_empty() {

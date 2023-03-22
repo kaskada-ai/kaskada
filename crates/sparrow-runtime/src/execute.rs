@@ -18,6 +18,7 @@ use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
 use crate::RuntimeOptions;
 
+mod avro_arrow;
 mod compute_executor;
 mod error;
 mod input_prefetch;
@@ -28,7 +29,6 @@ mod progress_reporter;
 pub(crate) mod pulsar_reader;
 pub(crate) mod pulsar_schema;
 mod spawner;
-mod avro_arrow;
 
 pub use compute_executor::*;
 pub use error::*;

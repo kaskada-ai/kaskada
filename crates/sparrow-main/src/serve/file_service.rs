@@ -1,17 +1,17 @@
 use anyhow::{anyhow, Context};
-use futures::future::try_join_all;
+
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
+use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, FilePath, GetMetadataRequest, GetMetadataResponse,
-    MergeMetadataRequest, MergeMetadataResponse, SourceMetadata,
+    file_path, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
+    MergeMetadataResponse, SourceMetadata,
 };
-use sparrow_core::context_code;
-use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
+
+use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::RawMetadata;
-use tempfile::NamedTempFile;
-use tonic::{Code, Response};
-use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
+
+use tonic::Response;
 
 use crate::serve::error_status::IntoStatus;
 use crate::serve::preparation_service;
@@ -61,19 +61,22 @@ async fn get_metadata(
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
-    if request.source == None {
-        anyhow!("missing request source");
+    if request.source.is_none() {
+        anyhow::bail!("missing request source");
     }
 
     let file_metadata = get_source_metadata(&s3, request.source.unwrap()).await?;
-    Ok(Response::new(GetMetadataResponse { source_metadata: Some(file_metadata) }))
+    Ok(Response::new(GetMetadataResponse {
+        source_metadata: Some(file_metadata),
+    }))
 }
 
 pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
     source: Source,
 ) -> anyhow::Result<SourceMetadata> {
-    let (_, local_source) = preparation_service::convert_to_local_source(s3, &source).await
+    let (_, local_source) = preparation_service::convert_to_local_source(s3, &source)
+        .await
         .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
 
     let metadata = RawMetadata::try_from(&local_source)?;
@@ -91,8 +94,8 @@ pub(crate) async fn get_source_metadata(
 
 #[cfg(test)]
 mod tests {
-    use sparrow_runtime::prepare::file_source;
     use super::*;
+    use sparrow_runtime::prepare::file_source;
 
     #[tokio::test]
     async fn test_timestamp_with_timezone_gets_metadata() {
@@ -108,8 +111,9 @@ mod tests {
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 source: Some(file_source(file_path::Path::ParquetPath(
-                        path.canonicalize().unwrap().to_string_lossy().to_string(),
-                ))) }))
+                    path.canonicalize().unwrap().to_string_lossy().to_string(),
+                ))),
+            }))
             .await
             .unwrap()
             .into_inner();
@@ -131,7 +135,8 @@ mod tests {
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 source: Some(file_source(file_path::Path::CsvPath(
                     path.canonicalize().unwrap().to_string_lossy().to_string(),
-                ))) }))
+                ))),
+            }))
             .await
             .unwrap()
             .into_inner();
@@ -146,7 +151,8 @@ mod tests {
         let file_service = FileServiceImpl::new(s3_helper);
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                source: Some(file_source(file_path::Path::CsvData(csv_data.to_string()))) }))
+                source: Some(file_source(file_path::Path::CsvData(csv_data.to_string()))),
+            }))
             .await
             .unwrap()
             .into_inner();
