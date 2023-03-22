@@ -578,6 +578,8 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 					Namespace:        kind.Pulsar.GetNamespace(),
 					TopicName:        kind.Pulsar.GetTopicName(),
 					BrokerServiceUrl: kind.Pulsar.GetBrokerServiceUrl(),
+					AuthPlugin:       kind.Pulsar.GetAuthPlugin(),
+					AuthParams:       kind.Pulsar.GetAuthParams(),
 				},
 			}
 		case *v1alpha.Materialization_Destination_Redis:

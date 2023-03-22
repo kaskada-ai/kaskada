@@ -85,6 +85,8 @@ class PulsarDestination(Destination):
         namespace: str = "default",
         topic_name: Optional[str] = None,
         broker_service_url: str = "pulsar://127.0.0.1:6650",
+        auth_plugin: str = "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+        auth_params: str = "",
     ):
         """
         Pulsar Materialization Destination
@@ -94,6 +96,8 @@ class PulsarDestination(Destination):
             namespace (str): pulsar namespace. defaults to "default".
             topic_name (str): final part of topic url. defaults to a randomly generated uuid
             broker_service_url (str): url to connect to pulsar broker. defaults to "pulsar://127.0.0.1:6650"
+            auth_params (str): yeah yeah
+            auth_plugin (str): yeah
         """
         self._tenant = tenant
         self._namespace = namespace
@@ -103,6 +107,8 @@ class PulsarDestination(Destination):
             else str(uuid.uuid4())
         )
         self._broker_service_url = broker_service_url
+        self._auth_plugin = auth_plugin
+        self._auth_params = auth_params
 
     def to_request(self) -> Dict[str, Any]:
         return {
@@ -110,6 +116,8 @@ class PulsarDestination(Destination):
             "namespace": self._namespace,
             "topic_name": self._topic_name,
             "broker_service_url": self._broker_service_url,
+            "auth_plugin": self._auth_plugin,
+            "auth_params": self._auth_params
         }
 
 
