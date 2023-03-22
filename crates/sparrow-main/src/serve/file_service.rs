@@ -41,7 +41,6 @@ impl FileService for FileServiceImpl {
     ) -> Result<tonic::Response<GetMetadataResponse>, tonic::Status> {
         let s3 = self.s3.clone();
         let object_store = self.object_store_registry.clone();
-        // TODO: The async reference copy/clone issue
         match tokio::spawn(get_metadata(s3, object_store, request)).await {
             Ok(result) => result.into_status(),
             Err(panic) => {
