@@ -1,5 +1,9 @@
 on:
   workflow_call:
+    outputs: 
+      should-skip:
+        description: "True if this workflow inferred that changes do not need to be build, false otherwise"
+        value: ${{ jobs.rust_skip.outputs.should_skip }}
   workflow_dispatch:
 
 permissions:
@@ -35,7 +39,7 @@ jobs:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
           paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto", ".github/workflows/reusable_ci_rust.yml"]'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          do_not_skip: '["schedule"]'
 
   rust_check:
     name: Rust Checks
