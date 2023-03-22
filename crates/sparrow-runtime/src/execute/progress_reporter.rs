@@ -169,6 +169,7 @@ impl ProgressTracker {
                     topic_name: pulsar.topic_name.clone(),
                     topic_url: format_topic_url(pulsar)
                         .change_context(Error::MissingField("missing topic name"))?,
+                    certificate_chain: pulsar.certificate_chain.clone(),
                 })),
             }),
             output_to::Destination::Redis(_) => {
