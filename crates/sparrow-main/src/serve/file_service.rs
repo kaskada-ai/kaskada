@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
@@ -8,7 +10,7 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_core::context_code;
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
-use sparrow_runtime::RawMetadata;
+use sparrow_runtime::{RawMetadata, ObjectStoreRegistry};
 use tempfile::NamedTempFile;
 use tonic::{Code, Response};
 
@@ -16,12 +18,13 @@ use crate::serve::error_status::IntoStatus;
 
 #[derive(Debug)]
 pub(super) struct FileServiceImpl {
-    s3: S3Helper,
+    s3: S3Helper, // TODO: Delete the s3 helper.
+    object_store_registry: Arc<ObjectStoreRegistry>,
 }
 
 impl FileServiceImpl {
-    pub fn new(s3: S3Helper) -> Self {
-        Self { s3 }
+    pub fn new(object_store_registry: Arc<ObjectStoreRegistry>, s3: S3Helper) -> Self {
+        Self { object_store_registry, s3 }
     }
 }
 
@@ -129,7 +132,8 @@ mod tests {
         let path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
 
         let s3_helper = S3Helper::new().await;
-        let file_service = FileServiceImpl::new(s3_helper);
+        let object_store_registry = Arc::new(ObjectStoreRegistry::new());
+        let file_service = FileServiceImpl::new(object_store_registry, s3_helper);
 
         // TODO: We may be able to clean this up to test the metadata logic
         // without creating the S3 helper. But for now, this will suffice.
@@ -154,7 +158,8 @@ mod tests {
             sparrow_testing::testdata_path("eventdata/2c889258-d676-4922-9a92-d7e9c60c1dde.csv");
 
         let s3_helper = S3Helper::new().await;
-        let file_service = FileServiceImpl::new(s3_helper);
+        let object_store_registry = Arc::new(ObjectStoreRegistry::new());
+        let file_service = FileServiceImpl::new(object_store_registry, s3_helper);
 
         // TODO: We may be able to clean this up to test the metadata logic
         // without creating the S3 helper. But for now, this will suffice.
@@ -177,7 +182,9 @@ mod tests {
     async fn test_get_metadata_csv_data() {
         let csv_data = "id,name,value,value2\n1,awkward,taco,123\n2,taco,awkward,456\n";
         let s3_helper = S3Helper::new().await;
-        let file_service = FileServiceImpl::new(s3_helper);
+        let object_store_registry = Arc::new(ObjectStoreRegistry::new());
+        let file_service = FileServiceImpl::new(object_store_registry, s3_helper);
+
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {

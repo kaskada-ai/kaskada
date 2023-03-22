@@ -12,7 +12,9 @@ use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeServiceServer;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileServiceServer;
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationServiceServer;
 use sparrow_runtime::s3::{S3Helper, S3Object};
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tonic::transport::Server;
 use tracing::{info, info_span};
 
@@ -58,7 +60,8 @@ impl ServeCommand {
         let _enter = span.enter();
 
         let s3 = S3Helper::new().await;
-        let file_service = FileServiceImpl::new(s3.clone());
+        let object_store_registry = Arc::new(ObjectStoreRegistry::new());
+        let file_service = FileServiceImpl::new(object_store_registry, s3.clone());
 
         // Leak the diagnostic prefix to create a `&'static` reference.
         // This simplifies the lifetime management of the futures.

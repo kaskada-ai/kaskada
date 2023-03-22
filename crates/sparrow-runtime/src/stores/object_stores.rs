@@ -20,6 +20,12 @@ pub struct ObjectStoreRegistry {
 }
 
 impl ObjectStoreRegistry {
+    // TODO: Remove the public constructor
+    pub fn new() -> Self {
+        let object_stores = hashbrown::HashMap::new();
+        ObjectStoreRegistry { object_stores:  RwLock::new(object_stores) }
+    }
+
     pub fn object_store(
         &self,
         key: ObjectStoreKey,
