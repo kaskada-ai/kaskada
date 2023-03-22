@@ -94,6 +94,7 @@ member_name : membership.name
 		}
 		queryOptions := &v1alpha.QueryOptions{
 			ExperimentalFeatures: false,
+			PresignResults:       true,
 		}
 		createQueryRequest = &v1alpha.CreateQueryRequest{
 			Query:        query,

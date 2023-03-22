@@ -147,6 +147,9 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 						OutputTo:       &v1alpha.OutputTo{Destination: destination},
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
+					QueryOptions: &v1alpha.QueryOptions{
+						PresignResults: true,
+					},
 				})
 
 				Expect(err).ShouldNot(HaveOccurredGrpc())

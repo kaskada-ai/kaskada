@@ -1,0 +1,39 @@
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  # For deploying release artifacts.
+  contents: write
+  pull-requests: read
+  # For pushing Docker images to ghcr.io.
+  packages: write
+  # For creating the release announcement.
+  discussions: write
+
+name: Build linux/aarch64
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner}}/build-image-engine
+  TARGET: aarch64-unknown-linux-gnu
+  GOOS: linux
+  GOARCH: arm64
+
+jobs:
+  say_hello: 
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      - name: Current Date
+        id: current_date
+        run: |
+          echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Set outputs
+        id: vars
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "sha_full=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT

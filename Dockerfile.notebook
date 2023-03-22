@@ -1,0 +1,22 @@
+# A general purpose jupyter notebook with kaskada and additional features installed
+FROM jupyter/scipy-notebook:python-3.10.9
+
+# Manually install libssl1.1 - Ubuntu22 has migrated to libssl3, but we use 1.1
+# to be compatible with google colab now.
+USER root
+COPY libssl1.deb /tmp/.
+RUN dpkg -i /tmp/libssl1.deb
+
+# Create user with a home directory
+USER jovyan
+ENV USER jovyan
+ENV HOME /home/jovyan
+
+WORKDIR ${HOME}
+
+# Install the pulsar python client
+RUN pip install pulsar-client
+
+# Install the kaskada python client
+RUN pip install kaskada==0.1.1a8
+

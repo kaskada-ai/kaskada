@@ -1,0 +1,50 @@
+---
+source: crates/sparrow-qfr-tool/src/chrome/tests.rs
+expression: "run_test_ok(activities, metrics, records)"
+---
+{
+  "traceEvents": [
+    {
+      "name": "process_name",
+      "ph": "M",
+      "args": {
+        "name": "operation 0"
+      },
+      "ts": 0,
+      "pid": 11,
+      "tid": 0
+    },
+    {
+      "name": "child2",
+      "ph": "X",
+      "dur": 2573,
+      "tdur": 1172,
+      "sf": 19,
+      "ts": 1000000,
+      "pid": 11,
+      "tid": 0
+    }
+  ],
+  "stackFrames": {
+    "17": {
+      "name": "child1",
+      "parent": 18
+    },
+    "18": {
+      "name": "root"
+    },
+    "19": {
+      "name": "child2",
+      "parent": 18
+    }
+  },
+  "metadata": {
+    "request_id": "request_id",
+    "build_info": {
+      "sparrow_version": "test_version",
+      "github_ref": "",
+      "github_sha": "",
+      "github_workflow": ""
+    }
+  }
+}

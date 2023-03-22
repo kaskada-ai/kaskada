@@ -200,8 +200,8 @@ fn output_file_name(format: FileType) -> error_stack::Result<String, Error> {
 fn create_tempfile(file_name: &str) -> Result<NamedTempFile, Error> {
     tempfile::Builder::new()
         .suffix(&file_name)
-        .tempfile_in("/data")
+        .tempfile()
         .into_report()
         .change_context(Error::LocalWriteFailure)
-        .attach_printable("unable to create temp file in /data")
+        .attach_printable("unable to create temp file")
 }

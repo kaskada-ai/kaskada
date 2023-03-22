@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 
+use error_stack::{IntoReport, ResultExt};
 use fallible_iterator::FallibleIterator;
 use prost::bytes::Bytes;
 use prost::Message;
@@ -15,18 +16,18 @@ pub struct FlightRecordReader {
 }
 
 impl FlightRecordReader {
-    pub fn try_new(path: &std::path::Path) -> Result<Self, Error> {
-        let mut reader = DelimitedProtoReader::try_open(path)?;
+    pub fn try_new(path: &std::path::Path) -> error_stack::Result<Self, Error> {
+        let mut reader = DelimitedProtoReader::try_open(path).change_context(Error::Internal)?;
 
         if let Some(header) = reader.read_message()? {
-            let event_position = reader.stream_position()?;
+            let event_position = reader.stream_position().change_context(Error::Internal)?;
             Ok(Self {
                 header,
                 event_position,
                 path: path.to_path_buf(),
             })
         } else {
-            Err(Error::MissingHeader)
+            error_stack::bail!(Error::MissingHeader)
         }
     }
 
@@ -36,8 +37,12 @@ impl FlightRecordReader {
 
     pub fn records(
         &self,
-    ) -> Result<impl FallibleIterator<Item = FlightRecord, Error = Error>, Error> {
-        let reader = DelimitedProtoReader::try_open_offset(&self.path, self.event_position)?;
+    ) -> error_stack::Result<
+        impl FallibleIterator<Item = FlightRecord, Error = error_stack::Report<Error>>,
+        Error,
+    > {
+        let reader = DelimitedProtoReader::try_open_offset(&self.path, self.event_position)
+            .change_context(Error::Internal)?;
         let reader = FlightRecordEventReader(reader);
         Ok(reader)
     }
@@ -47,28 +52,35 @@ impl FlightRecordReader {
 struct DelimitedProtoReader<R: std::io::Read>(BufReader<R>);
 
 impl DelimitedProtoReader<File> {
-    fn try_open(path: &std::path::Path) -> Result<Self, Error> {
+    fn try_open(path: &std::path::Path) -> error_stack::Result<Self, std::io::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         Ok(Self(reader))
     }
 
-    fn try_open_offset(path: &std::path::Path, offset: u64) -> Result<Self, Error> {
-        let file = File::open(path)?;
+    fn try_open_offset(
+        path: &std::path::Path,
+        offset: u64,
+    ) -> error_stack::Result<Self, std::io::Error> {
+        let file = File::open(path).into_report()?;
         let mut reader = BufReader::new(file);
-        reader.seek(SeekFrom::Start(offset))?;
+        reader.seek(SeekFrom::Start(offset)).into_report()?;
         Ok(Self(reader))
     }
 
-    fn stream_position(&mut self) -> Result<u64, Error> {
+    fn stream_position(&mut self) -> error_stack::Result<u64, std::io::Error> {
         Ok(self.0.stream_position()?)
     }
 }
 
 impl<R: std::io::Read> DelimitedProtoReader<R> {
     /// Reads the given message (if the stream isn't empty).
-    fn read_message<T: Message + Default>(&mut self) -> Result<Option<T>, Error> {
-        let buf = self.0.fill_buf()?;
+    fn read_message<T: Message + Default>(&mut self) -> error_stack::Result<Option<T>, Error> {
+        let buf = self
+            .0
+            .fill_buf()
+            .into_report()
+            .change_context(Error::Internal)?;
         if buf.is_empty() {
             return Ok(None);
         }
@@ -84,8 +96,13 @@ impl<R: std::io::Read> DelimitedProtoReader<R> {
 
             let length = prost::decode_length_delimiter(prost::bytes::Buf::chain(
                 prefix,
-                self.0.fill_buf()?,
-            ))?;
+                self.0
+                    .fill_buf()
+                    .into_report()
+                    .change_context(Error::Internal)?,
+            ))
+            .into_report()
+            .change_context(Error::Internal)?;
             self.0
                 .consume(prost::length_delimiter_len(length) - prefix_len);
             length
@@ -94,9 +111,14 @@ impl<R: std::io::Read> DelimitedProtoReader<R> {
         // We can't naively fill the buffer, since the message may be larger
         // than the buffer size. We may be able to do something conditionally?
         let mut buffer = vec![0; message_length];
-        self.0.read_exact(&mut buffer)?;
+        self.0
+            .read_exact(&mut buffer)
+            .into_report()
+            .change_context(Error::Internal)?;
 
-        let message = T::decode(buffer.as_slice())?;
+        let message = T::decode(buffer.as_slice())
+            .into_report()
+            .change_context(Error::Internal)?;
         Ok(Some(message))
     }
 }
@@ -104,43 +126,22 @@ impl<R: std::io::Read> DelimitedProtoReader<R> {
 #[repr(transparent)]
 struct FlightRecordEventReader<R: std::io::Read>(DelimitedProtoReader<R>);
 
-#[derive(Debug)]
-pub enum Error {
-    ProstDecode(prost::DecodeError),
-    Io(std::io::Error),
-    MissingHeader,
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::ProstDecode(e) => write!(f, "Error decoding flight record: {e}"),
-            Error::Io(e) => write!(f, "I/O Error: {e}"),
-            Error::MissingHeader => write!(f, "Missing Header"),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
 impl<R: std::io::Read> FallibleIterator for FlightRecordEventReader<R> {
     type Item = FlightRecord;
 
-    type Error = Error;
+    type Error = error_stack::Report<Error>;
 
     fn next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
         self.0.read_message::<Self::Item>()
     }
 }
 
-impl From<prost::DecodeError> for Error {
-    fn from(err: prost::DecodeError) -> Self {
-        Error::ProstDecode(err)
-    }
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    #[display(fmt = "internal error reading flight records")]
+    Internal,
+    #[display(fmt = "flight record file missing header")]
+    MissingHeader,
 }
 
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        Error::Io(err)
-    }
-}
+impl error_stack::Context for Error {}

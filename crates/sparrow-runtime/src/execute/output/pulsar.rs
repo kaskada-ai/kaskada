@@ -259,9 +259,5 @@ pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<Strin
         &pulsar.topic_name
     };
 
-    Ok(format_topic_url_str(tenant, namespace, name))
-}
-
-pub fn format_topic_url_str(tenant: &str, namespace: &str, name: &String) -> String {
-    format!("persistent://{tenant}/{namespace}/{name}")
+    Ok(format!("persistent://{tenant}/{namespace}/{name}"))
 }
