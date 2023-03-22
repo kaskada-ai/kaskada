@@ -23,7 +23,9 @@ impl ObjectStoreRegistry {
     // TODO: Remove the public constructor
     pub fn new() -> Self {
         let object_stores = hashbrown::HashMap::new();
-        ObjectStoreRegistry { object_stores:  RwLock::new(object_stores) }
+        ObjectStoreRegistry {
+            object_stores: RwLock::new(object_stores),
+        }
     }
 
     pub fn object_store(
@@ -105,5 +107,53 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
                 .change_context(Error::CreatingObjectStore(key.clone()))?;
             Ok(Arc::new(object_store))
         }
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{
+        stores::{object_store_url::ObjectStoreKey, object_stores::create_object_store},
+        ObjectStoreRegistry,
+    };
+
+    #[test]
+    fn test_create_object_store_local() {
+        let key = ObjectStoreKey::Local;
+        let object_store = create_object_store(&key).unwrap();
+        assert_eq!(object_store.to_string(), "LocalFileSystem(file:///)")
+    }
+
+    #[test]
+    fn test_create_object_store_memory() {
+        let key = ObjectStoreKey::Memory;
+        let object_store = create_object_store(&key).unwrap();
+        assert_eq!(object_store.to_string(), "InMemory")
+    }
+
+    #[test]
+    fn test_create_object_store_aws_builder() {
+        // TODO: Is there a better way to test this? Not sure to test the builder built properly from the key.
+        let key = ObjectStoreKey::Aws {
+            bucket: "test-bucket".to_string(),
+            region: Some("test-region".to_string()),
+            virtual_hosted_style_request: true,
+        };
+        let object_store = create_object_store(&key).unwrap();
+        assert_eq!(object_store.to_string(), "AmazonS3(test-bucket)")
+    }
+
+    #[test]
+    fn test_object_store_registry_creates_if_not_exists() {
+        let object_store_registry = ObjectStoreRegistry::new();
+        let key = ObjectStoreKey::Local;
+        // Verify there is no object store for local first
+        assert!(object_store_registry.get_object_store(&key).is_none());
+        // Call the public method
+        let object_store = object_store_registry.object_store(key.clone());
+        // Verify the result is valid and that
+        assert!(object_store.is_ok());
+        assert!(object_store_registry.get_object_store(&key).is_some());
     }
 }

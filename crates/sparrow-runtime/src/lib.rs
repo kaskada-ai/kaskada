@@ -28,11 +28,11 @@ pub mod execute;
 mod key_hash_index;
 pub mod merge;
 mod metadata;
-pub mod stores;
 mod min_heap;
 pub mod prepare;
 mod read;
 pub mod s3;
+pub mod stores;
 mod util;
 
 use std::path::PathBuf;
@@ -40,8 +40,8 @@ use std::path::PathBuf;
 pub use batch::*;
 pub use metadata::*;
 pub use read::*;
-pub use stores::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
+pub use stores::*;
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct RuntimeOptions {

@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -10,7 +11,7 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_core::context_code;
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
-use sparrow_runtime::{RawMetadata, ObjectStoreRegistry};
+use sparrow_runtime::{ObjectStoreRegistry, ObjectStoreUrl, RawMetadata};
 use tempfile::NamedTempFile;
 use tonic::{Code, Response};
 
@@ -24,7 +25,10 @@ pub(super) struct FileServiceImpl {
 
 impl FileServiceImpl {
     pub fn new(object_store_registry: Arc<ObjectStoreRegistry>, s3: S3Helper) -> Self {
-        Self { object_store_registry, s3 }
+        Self {
+            object_store_registry,
+            s3,
+        }
     }
 }
 
@@ -36,8 +40,9 @@ impl FileService for FileServiceImpl {
         request: tonic::Request<GetMetadataRequest>,
     ) -> Result<tonic::Response<GetMetadataResponse>, tonic::Status> {
         let s3 = self.s3.clone();
-
-        match tokio::spawn(get_metadata(s3, request)).await {
+        let object_store = self.object_store_registry.clone();
+        // TODO: The async reference copy/clone issue
+        match tokio::spawn(get_metadata(s3, object_store, request)).await {
             Ok(result) => result.into_status(),
             Err(panic) => {
                 tracing::error!("Panic during prepare: {panic}");
@@ -59,6 +64,7 @@ impl FileService for FileServiceImpl {
 
 async fn get_metadata(
     s3: S3Helper,
+    object_store_registry: Arc<ObjectStoreRegistry>,
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
@@ -66,7 +72,7 @@ async fn get_metadata(
     let file_metadatas: Vec<_> = request
         .file_paths
         .iter()
-        .map(|source| get_source_metadata(&s3, source))
+        .map(|source| get_source_metadata(&s3, object_store_registry.as_ref(), source))
         .collect();
 
     let file_metadatas = try_join_all(file_metadatas).await?;
@@ -75,6 +81,7 @@ async fn get_metadata(
 
 pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
+    object_store_registry: &ObjectStoreRegistry,
     source: &FilePath,
 ) -> anyhow::Result<FileMetadata> {
     let source = source
@@ -87,9 +94,15 @@ pub(crate) async fn get_source_metadata(
     let source = match source {
         file_path::Path::ParquetPath(path) => {
             if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path)?;
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await?;
+                let object_store_url = ObjectStoreUrl::from_str(path).unwrap(); // TODO: Fix this unwrap.
+                let object_store_key = object_store_url.key().unwrap(); // TODO: Fix this unwrap.
+                let object_store = object_store_registry
+                    .object_store(object_store_key)
+                    .unwrap(); // TODO: Fix this unwrap.
+                object_store_url
+                    .download(object_store, download_file_path.to_owned())
+                    .await
+                    .unwrap();
                 file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())
             } else {
                 file_path::Path::ParquetPath(path.to_string())

@@ -1,7 +1,8 @@
-use std::str::FromStr;
-use serde::Serialize;
+use object_store::ObjectStore;
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 use error_stack::{IntoReport, ResultExt};
+use tokio_util::io::StreamReader;
 use url::Url;
 
 use itertools::Itertools;
@@ -9,7 +10,7 @@ use itertools::Itertools;
 use super::object_stores::Error;
 
 /// A string referring to a file in an object store.
-/// TODO: Debug This.
+/// TODO: Debug this. It doesn't like the serialize on the URL.
 // #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 // #[serde(transparent)]
 #[derive(Debug, Clone)]
@@ -66,6 +67,24 @@ impl ObjectStoreUrl {
                 error_stack::bail!(Error::UrlUnsupportedScheme(self.0.clone()))
             }
         }
+    }
+    pub async fn download(
+        &self,
+        object_store: Arc<dyn ObjectStore>,
+        file_path: PathBuf,
+    ) -> error_stack::Result<(), Error> {
+        let path = self.path()?;
+        // TODO: Update the unwrap await error. Probably need to cast it to error_stack error.
+        let stream = object_store.get(&path).await.unwrap().into_stream();
+        let mut file = tokio::fs::File::create(file_path.clone()).await.unwrap();
+        let mut body = StreamReader::new(stream);
+        let bytes = tokio::io::copy(&mut body, &mut file).await.unwrap();
+        println!(
+            "Successfully downloaded file: {:?} bytes downloaded to {:?}",
+            bytes,
+            file_path.clone()
+        );
+        Ok(())
     }
 }
 
