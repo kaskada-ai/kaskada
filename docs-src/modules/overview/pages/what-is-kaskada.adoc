@@ -1,37 +1,54 @@
 = What Is Kaskada?
 
-Understanding and reacting to the world in real-time is increasingly important, but doing so requires understanding what is happening _now_ in the context of what happened in the past. 
-It's not enough to know that something just happened - we need the ability to understand if what just happened is unusual, how it relates to what happened previously, and how it relates to other things that are happening at the same time.
+Understanding and reacting to the world in real-time requires understanding what is happening _now_ in the context of what happened in the past. 
+You need the ability to understand if what just happened is unusual, how it relates to what happened previously, and how it relates to other things that are happening at the same time.
 
-Getting to this type of contextual real-time insight has historically been difficult, as it required bringing together hard-to-integrate tools and methodologies.
+Getting to this type of contextual real-time insight has historically been difficult, as it required bringing together incompatible tools designed for either bulk or streaming applications. Recent stream-processing frameworks make it easier to work across streams and bulk data sources, but force you to pick one: either you get the power of a low-level API or the convenience of a high-level query languge.
 
-Kaskada was designed to bridge the gap between historical/analytic workloads and real-time stream processing by building on a new abstraction: the timeline. With Kaskada, you can efficiently analyze historical trends in your events or react as they happen in real-time. 
-Kaskada's timeline-based query languge lets you use the same query, unchanged, in either batch or streaming mode. 
+Kaskada provides a single, high-level, declarative query language. The power and convenience of Kaskada's query language come from the fact that it's built from a new abstraction: the timeline. Timelines give you the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc. Any query can be used, unchanged, in either batch or streaming mode. 
 
 == What are Timelines?
 
 Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about real-time streaming behavior, and is built on the idea of a timeline
 
+.Where I was at various times
+[stream_viz,name=my-location]
+....
+[
+    {
+        "label": "My Location",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 1, "v": "Home"},
+                {"t": 3, "v": "Car"},
+                {"t": 4, "v": "Office"},
+                {"t": 9, "v": "Lunch"},
+                {"t": 10, "v": "Office"}
+            ]
+        ]
+    }
+]
+....
+
 A timeline describes how a value changes over time. In the same way that SQL queries transform tables and graph queries transform nodes and edges, Kaskada queries transforms timelines. In comparison to a timeseries which is defined at fixed, periodic times (i.e., every minute), a timeline is defined at arbitrary times.
 
-Timelines simplify reasoning about time, change, and behavior. Timelines support SQL’s aggregations but extend them with sequential operations provided by complex event processing (CEP) systems.
+Timelines simplify reasoning about time, change, and behavior. Timelines support SQL’s aggregations but extend them with sequential operations typically provided by complex event processing (CEP) systems.
 
 == Current Challenges
 
-Let's imagine you have two tables containing different kinds of events.
-
-One table contains an event for each time a user visits your web page:
+Let's imagine you have two tables containing different kinds of events. One table contains an event for each time a user visits your web page:
 
 .Pageview table
 [%autowidth]
 |===
-| time | user
+| time | user | path
 
-| 8:20 | Alice
-| 9:45 | Alice
-| 2:10 | Alice
-| 8:52 | Alice
-| 11:03 | Bob
+| 8:20 | Alice | /index.html
+| 9:45 | Alice | /products.html
+| 2:10 | Alice | /product/1923.html
+| 8:52 | Alice | /checkout.html
+| 11:03 | Bob | index.html
 |===
 
 Another table contains an event for each time a user makes a purchase:
@@ -45,7 +62,7 @@ Another table contains an event for each time a user makes a purchase:
 | 10:47 | Alice | $5.00
 |===
 
-We can do a lot with these tables! SQL provides many ways to transform, filter, and aggregate these events.
+We can do a lot with these tables with SQL - we can transform, filter, and aggregate them.
 But what if we want to answer questions that depend on time and order? We might want to know how a result changes over time, or aggregate over time-based groups, or detect when a condition is first met.
 
 Many of these things are _possible_ with SQL, but they're not always simple and/or easy. Reasoning about time using abstractions designed for tables forces you to carefully reflect temporal logic in your query code, for example to see how a simple sum changes over time you might write:
@@ -86,14 +103,15 @@ Rather than thinking of each event as a row in a table, we can think of it as a 
 ....
 [
     {
-        "label": "Purchase",
+        "label": "Pageview.path",
         "kind": "discrete",
         "data": [
             [
-                {"t": 0, "v": "{amount: 2.31}"},
-                {"t": 2, "v": "{amount: 1.99}"},
-                {"t": 6, "v": "{amount: 5.00}"},
-                {"t": 10, "v": "{amount: 7.89}"}
+                {"t": 0, "v": "/index.html"},
+                {"t": 2, "v": "/products.html"},
+                {"t": 6, "v": "/product/1923.html"},
+                {"t": 8, "v": "/checkout"},
+                {"t": 10, "v": "/index.html"}
             ]
         ]
     }
@@ -137,7 +155,7 @@ Purchase.amount | sum()
 ]
 ....
 
-Aggregating a timeline produces a _new_ timeline - rather than computing a single answer, the timeline describes how the result of the aggregation changes over time. 
+Aggregating a timeline produces a _new_ timeline - rather than computing a single answer, the timeline describes how the result of the aggregation changes over time.
 
 Since the value of a timeline is specific to a point in time, we can easily describe aggregations in a temporal context.
 See how easy it is to describe the earlier example of counting page views since the last purchase:
@@ -359,5 +377,5 @@ The result is a modern event processing engine that installs in seconds without 
 To get started, you can follow one of our "Hello World" examples.
 These examples will guide you through installing Kaskada and making your first query.
 
-* Hello world xref:getting-started:hello-world-cli.adoc[using the command line]
 * Hello world xref:getting-started:hello-world-jupyter.adoc[using Python Jupyter]
+* Hello world xref:getting-started:hello-world-cli.adoc[using the command line]

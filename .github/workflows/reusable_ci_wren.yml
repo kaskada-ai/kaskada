@@ -26,18 +26,19 @@ jobs:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
           paths: '["wren/**", "proto/**/*.proto", ".github/workflows/reusable_ci_wren.yml"]'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          do_not_skip: '["schedule"]'
 
   wren_build_and_test:
     name: Build and Unit Test Wren
     needs: [wren_skip]
-    if: needs.wren_skip.outputs.should_skip != 'true'
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout sources
+        if: needs.wren_skip.outputs.should_skip != 'true'
         uses: actions/checkout@v3
 
       - name: Install Buf
+        if: needs.wren_skip.outputs.should_skip != 'true'
         uses: bufbuild/buf-setup-action@v1.12.0
         with:
           version: "1.10.0"
@@ -46,10 +47,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate Protos
+        if: needs.wren_skip.outputs.should_skip != 'true'
         run: buf generate
         working-directory: proto
 
       - name: Install GoLang
+        if: needs.wren_skip.outputs.should_skip != 'true'
         uses: actions/setup-go@v3
         with:
           go-version: "1.19"
@@ -57,17 +60,21 @@ jobs:
           cache-dependency-path: wren/go.sum
 
       - name: Generate ent
+        if: needs.wren_skip.outputs.should_skip != 'true'
         run: go generate ./ent
         working-directory: wren
 
       - name: Copy NOTICE
+        if: needs.wren_skip.outputs.should_skip != 'true'
         run: cp NOTICE ./wren/
 
       - name: Build
+        if: needs.wren_skip.outputs.should_skip != 'true'
         run: go build -o wren-binary main.go
         working-directory: wren
 
       - name: Unit Tests
+        if: needs.wren_skip.outputs.should_skip != 'true'
         run: go test ./...
         working-directory: wren
 
