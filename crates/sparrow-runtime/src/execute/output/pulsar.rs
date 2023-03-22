@@ -4,7 +4,6 @@ use arrow::datatypes::{ArrowPrimitiveType, DataType, Schema, SchemaRef, Timestam
 use arrow::record_batch::RecordBatch;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use pulsar::authentication::token::TokenAuthentication;
 use pulsar::compression::Compression;
 use pulsar::Authentication;
 use sparrow_api::kaskada::v1alpha::output_to;

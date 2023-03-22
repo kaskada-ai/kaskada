@@ -167,6 +167,8 @@ impl ProgressTracker {
                     topic_name: pulsar.topic_name.clone(),
                     topic_url: format_topic_url(pulsar)
                         .change_context(Error::MissingField("missing topic name"))?,
+                    auth_plugin: pulsar.auth_plugin.clone(),
+                    auth_params: pulsar.auth_params.clone(),
                 })),
             }),
             output_to::Destination::Redis(_) => {
