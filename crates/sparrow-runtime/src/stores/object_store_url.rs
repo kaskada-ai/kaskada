@@ -1,15 +1,18 @@
 use std::str::FromStr;
+use serde::Serialize;
 
 use error_stack::{IntoReport, ResultExt};
 use url::Url;
 
 use itertools::Itertools;
 
-use super::Error;
+use super::object_stores::Error;
 
 /// A string referring to a file in an object store.
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-#[serde(transparent)]
+/// TODO: Debug This.
+// #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+// #[serde(transparent)]
+#[derive(Debug, Clone)]
 #[repr(transparent)]
 pub struct ObjectStoreUrl(Url);
 

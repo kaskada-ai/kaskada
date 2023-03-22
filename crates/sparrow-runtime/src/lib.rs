@@ -28,6 +28,7 @@ pub mod execute;
 mod key_hash_index;
 pub mod merge;
 mod metadata;
+mod stores;
 mod min_heap;
 pub mod prepare;
 mod read;
@@ -39,6 +40,7 @@ use std::path::PathBuf;
 pub use batch::*;
 pub use metadata::*;
 pub use read::*;
+pub use stores::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 
 #[derive(Debug, Default, Clone)]

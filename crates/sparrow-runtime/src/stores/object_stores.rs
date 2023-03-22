@@ -1,5 +1,3 @@
-mod object_store_url;
-
 use std::sync::{Arc, RwLock};
 
 use error_stack::{IntoReport, ResultExt};
@@ -7,9 +5,7 @@ use hashbrown::HashMap;
 use object_store::ObjectStore;
 use url::Url;
 
-pub use object_store_url::ObjectStoreUrl;
-
-use crate::object_stores::object_store_url::ObjectStoreKey;
+use super::object_store_url::ObjectStoreKey;
 
 #[derive(Default)]
 pub struct ObjectStoreRegistry {
