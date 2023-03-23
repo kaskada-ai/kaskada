@@ -25,8 +25,8 @@ jobs:
       - name: Mount points test
         shell: bash
         run: |
-          docker run --entrypoint df ubuntu:20.04
- 
+          docker run --entrypoint="/bin/ls /" ubuntu:20.04
+
   # sparrow_cross_amd64_arm64:
   #   runs-on: ubuntu-20.04
   #   steps:
