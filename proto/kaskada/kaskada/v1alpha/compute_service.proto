@@ -208,9 +208,6 @@ message ExecuteRequest {
   // Only inputs prior to this time are included in the final result at this this time
   google.protobuf.Timestamp final_result_time = 8;
 
-  // Originally used for `should_export_entity_key` but was removed after default behavior set to true.
-  reserved 9;
-
   message Limits {
     // Produces a preview of the data with at least this many rows.
     //
@@ -245,27 +242,22 @@ message ExecuteResponse {
   // Progress information included in every message.
   ProgressInformation progress = 3;
 
-  // Reserved field. Moved `output_paths` to the `Output`.
-  //
-  // Updated on Feb.22.2023.
-  reserved 4;
-
   // Path to the flight record.
   // Currently this is sent only on the final message, after the flight
   // record has been uploaded. It may change in the future to be set
   // earlier if we stream the flight records to the destination.
-  google.protobuf.StringValue flight_record_path = 5;
+  google.protobuf.StringValue flight_record_path = 4;
 
   // Path to the plan yaml.
   // If included, this will be set on one of the earlier responses indicating
   // the path within the diagnostic prefix where the plan yaml has been placed.
-  google.protobuf.StringValue plan_yaml_path = 6;
+  google.protobuf.StringValue plan_yaml_path = 5;
 
   // 0 or more snapshots produced during the computation.
-  repeated ComputeSnapshot compute_snapshots = 7;
+  repeated ComputeSnapshot compute_snapshots = 6;
 
   // Information on where results are produced.
-  OutputTo output_to = 8;
+  Destination destination = 7;
 
   message ProgressInformation {
     // Total input rows to be processed by this query.
