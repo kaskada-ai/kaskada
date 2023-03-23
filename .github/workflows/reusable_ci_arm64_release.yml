@@ -50,7 +50,7 @@ jobs:
       - name: Output Docker Container Name
         id: docker-container-name
         run: |
-          echo "${{ env.IMAGE }}:v_${{ GITHUB_REF_NAME }}_${{ GITHUB_SHA}}v"
+          echo "${{ env.IMAGE }}:v_${{ github.GITHUB_REF_NAME }}_${{ github.GITHUB_SHA}}v"
 
   # test_mount_points:
   #   runs-on: ubuntu-20.04
