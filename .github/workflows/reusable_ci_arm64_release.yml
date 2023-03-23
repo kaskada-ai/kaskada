@@ -19,6 +19,8 @@ name: Build linux/aarch64
 jobs:
   build_cross_docker_image:
     runs-on: ubuntu-20.04
+    outputs:
+      image-name: ${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short}}v
     steps:
       - name: Checkout Code
         uses: actions/checkout@master
@@ -64,6 +66,61 @@ jobs:
         id: docker-container-name
         run: |
           echo "${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short}}v"
+
+  build_wren:
+    needs: [build_cross_docker_image]
+    runs-on:
+      container:
+        image: ${{ needs.build_cross_docker_image.outputs.image-name }}
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@master
+
+        - name: Wren - Install Buf
+          uses: bufbuild/buf-setup-action@v1.12.0
+          with:
+            version: "1.10.0"
+            buf_user: ${{ secrets.BUF_USER }}
+            buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+
+        - name: Wren - Install GoLang
+          uses: actions/setup-go@v3
+          with:
+            go-version: "1.19"
+            cache: true
+            cache-dependency-path: wren/go.sum
+
+        - name: Wren - Generate Protobufs
+          run: buf generate
+          working-directory: proto
+
+        - name: Wren - Generate Ent
+          run: go generate ./ent
+          working-directory: wren
+
+        - name: Wren - Copy NOTICE
+          run: cp NOTICE ./wren/
+
+        - name: Apt Packages (Linux)
+          uses: awalsh128/cache-apt-pkgs-action@latest
+          with:
+            packages: lld
+            version: 1.0
+
+        - name: Wren - Build
+          run: |
+            mkdir ../release/
+            go build -ldflags="-w -s" -o ../release/wren main.go
+          working-directory: wren
+
+        - name: Upload engine artifacts
+          uses: actions/upload-artifact@v3
+          with:
+            name: engine-linux-arm64
+            retention-days: 5
+            path: |
+              release/wren
 
   # test_mount_points:
   #   runs-on: ubuntu-20.04
