@@ -113,6 +113,12 @@ jobs:
           mkdir ../release/
           go build -ldflags="-w -s" -o ../release/wren main.go
         working-directory: wren
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: arm64
+          CC: $CC_aarch64_unknown_linux_gnu
+          CXX: $CXX_aarch64_unknown_linux_gnu
 
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
