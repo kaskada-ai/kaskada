@@ -123,70 +123,55 @@ jobs:
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: engine-linux-arm64
+          name: engine-linux-aarch64
           retention-days: 5
           path: |
             release/wren
 
-  # test_mount_points:
-  #   runs-on: ubuntu-20.04
-  #   # container:
-  #   # image: ubuntu:20.04
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@master
+  sparrow_cross_amd64_arm64:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
 
-  #     - name: Mount points test
-  #       shell: bash
-  #       run: |
-  #         pwd
-  #         ls
-  #         docker run --entrypoint="/bin/ls" ubuntu:20.04
+      - name: Current Date
+        id: current_date
+        run: |
+          echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
+        shell: bash
 
-  # sparrow_cross_amd64_arm64:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@master
+      - name: Install stable toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+          targets: aarch64-unknown-linux-gnu
 
-  #     - name: Current Date
-  #       id: current_date
-  #       run: |
-  #         echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
-  #       shell: bash
+      - name: Apt Packages (Linux)
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: lld
+          version: 1.0
 
-  #     - name: Install stable toolchain
-  #       id: toolchain
-  #       uses: dtolnay/rust-toolchain@master
-  #       with:
-  #         toolchain: stable
-  #         components: clippy
-  #         targets: aarch64-unknown-linux-gnu
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Apt Packages (Linux)
-  #       uses: awalsh128/cache-apt-pkgs-action@latest
-  #       with:
-  #         packages: lld
-  #         version: 1.0
+      - name: Install cross
+        shell: bash
+        run: cargo install cross
 
-  #     - name: Install Protoc
-  #       uses: arduino/setup-protoc@v1
-  #       with:
-  #         repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sparrow - cross build (Release)
+        shell: bash
+        run: |
+          cross  build --release --all-features --target aarch64-unknown-linux-gnu -p sparrow-main
 
-  #     - name: Install cross
-  #       shell: bash
-  #       run: cargo install cross
-
-  #     - name: Sparrow - cross build (Release)
-  #       shell: bash
-  #       run: |
-  #         cross  build --release --all-features --target aarch64-unknown-linux-gnu -p sparrow-main
-
-  #     - name: Upload engine artifacts
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: engine-linux-aarch64
-  #         retention-days: 5
-  #         path: |
-  #           target/aarch64-unknown-linux-gnu/release/sparrow-main
+      - name: Upload engine artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: engine-linux-aarch64
+          retention-days: 5
+          path: |
+            target/aarch64-unknown-linux-gnu/release/sparrow-main
