@@ -1,17 +1,18 @@
 # Image to cross compile our go code from linux/amd64 to linux/arm64
 
+# build on top of the Rust docker image for cross compile 
+# same lib versions same cross compilers 
 FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main 
 
-#install go 
+#Install Go 1.19.7 
 RUN curl -OL https://go.dev/dl/go1.19.7.linux-amd64.tar.gz && \
     tar -C /usr/local/ -xzf go1.19.7.linux-amd64.tar.gz 
 
 ENV PATH="$PATH:/usr/local/go/bin:/root/go/bin"
 
-# RUN go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
-
-# ENV CGO_ENABLED=1 \
-#     GOOS=linux \
-#     GOARCH=arm64 \
-#     CC="$CC_aarch64_unknown_linux_gnu" \
-#     CXX="$CXX_aarch64_unknown_linux_gnu"
+# Install GitHub CLI to allow upload of artifacts to release. 
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt update \
+    && apt install gh -y
