@@ -4,6 +4,7 @@ package kaskada.kaskada.v1alpha;
 
 import "google/api/field_behavior.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/pulsar.proto";
 
 // Describes the destination results are materialized to.
 message Destination {
