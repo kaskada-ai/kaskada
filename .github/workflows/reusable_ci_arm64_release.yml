@@ -16,15 +16,17 @@ name: Build linux/aarch64
 jobs:
   test_mount_points:
     runs-on: ubuntu-20.04
-    container:
-      image: ubuntu:20.04
+    # container:
+    # image: ubuntu:20.04
     steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
       - name: Mount points test
         shell: bash
         run: |
-          df -h 
-          ls /github/workspace/
-
+          docker run --entrypoint df ubuntu:20.04
+ 
   # sparrow_cross_amd64_arm64:
   #   runs-on: ubuntu-20.04
   #   steps:
