@@ -36,13 +36,13 @@ jobs:
           context: .
           file: Dockerfile.go_cross_amd64_to_arm64
           push: true
-          tags: ${{ env.IMAGE }}:v_${{ GITHUB_REF_NAME }}_${{ GITHUB_SHA }}v
+          tags: ${{ env.IMAGE }}:v_${{ github.GITHUB_REF_NAME }}_${{ github.GITHUB_SHA }}v
           labels: |
             org.opencontainers.image.title=kaskada go cross compilation image
             org.opencontainers.image.description=The kaskada go cross compilation image
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{  GITHUB_SHA }}
+            org.opencontainers.image.version=${{  github.GITHUB_SHA }}
             org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
