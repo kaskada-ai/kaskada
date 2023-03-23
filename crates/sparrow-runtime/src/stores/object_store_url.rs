@@ -78,12 +78,7 @@ impl ObjectStoreUrl {
         let stream = object_store.get(&path).await.unwrap().into_stream();
         let mut file = tokio::fs::File::create(file_path.clone()).await.unwrap();
         let mut body = StreamReader::new(stream);
-        let bytes = tokio::io::copy(&mut body, &mut file).await.unwrap();
-        println!(
-            "Successfully downloaded file: {:?} bytes downloaded to {:?}",
-            bytes,
-            file_path.clone()
-        );
+        tokio::io::copy(&mut body, &mut file).await.unwrap();
         Ok(())
     }
 }

@@ -8,7 +8,7 @@ use crate::kaskada::v1alpha::{slice_plan, SlicePlan};
 impl Eq for slice_plan::Slice {}
 
 // We need to use decorum to implement the hash (manually) because of `f64`.
-#[allow(clippy::derived_hash_with_manual_eq)]
+#[allow(clippy::derive_hash_xor_eq)]
 impl std::hash::Hash for slice_plan::Slice {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         core::mem::discriminant(self).hash(state);
