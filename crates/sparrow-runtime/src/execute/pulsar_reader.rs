@@ -3,7 +3,7 @@ use crate::prepare::Error;
 use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
-use error_stack::{IntoReport, Report, ResultExt};
+use error_stack::{IntoReport, ResultExt};
 use futures::executor::block_on;
 use pulsar::consumer::InitialPosition;
 
@@ -50,8 +50,8 @@ impl From<error_stack::Report<DeserializeError>> for DeserializeErrorWrapper {
 pub enum DeserializeError {
     #[display(fmt = "error reading Avro record")]
     Avro,
-    #[display(fmt = "Avro value was not a record")]
-    BadRecord,
+    #[display(fmt = "unsupported Avro value")]
+    UnsupportedType,
 }
 
 impl error_stack::Context for DeserializeError {}
@@ -70,25 +70,24 @@ impl DeserializeMessage for AvroWrapper {
     // It is not clear to me how to support both normal Avro records, and this kind of
     // KeyValue encoding.  For now, we support the former but not the latter.
     fn deserialize_message(payload: &Payload) -> Self::Output {
-        // let mut decoder = ZlibDecoder::new(&payload.data[..]);
-        // let mut decoded = Vec::new();
-        // decoder.read_to_end(&mut decoded)?;
-        // let cursor = Cursor::new(decoded);
-
         let cursor = Cursor::new(&payload.data);
-        let reader = avro_rs::Reader::new(cursor)
+        let mut reader = avro_rs::Reader::new(cursor)
             .into_report()
             .change_context(DeserializeError::Avro)?;
-        let mut iter = reader;
-        let value = iter
+        let value = reader
             .next()
-            .unwrap()
+            .unwrap_or_else(|| {
+                let e = avro_rs::Error::DeserializeValue(format!("{:?}", &payload));
+                Err(e)
+            })
             .into_report()
             .change_context(DeserializeError::Avro)?;
         let mut fields = match value {
             Value::Record(record) => record,
-            _ => error_stack::bail!(DeserializeError::BadRecord),
+            _ => error_stack::bail!(DeserializeError::UnsupportedType),
         };
+        // the Payload data only contains the fields for the user-defined (raw) schema,
+        // so we inject the publish time from the metadata
         fields.push((
             "_publish_time".to_string(),
             Value::TimestampMillis(payload.metadata.publish_time as i64),
@@ -119,14 +118,11 @@ impl PulsarReader {
             // so it's entirely possible to time out while actively reading messages from the broker.
             // experimentally, 1ms is not reliable, but 10ms seems to work.
             let next_result = timeout(Duration::from_millis(1000), self.consumer.try_next()).await;
-            if next_result.is_err() {
+            let Ok(msg) = next_result else {
                 tracing::trace!("timed out reading next message");
                 break;
-            }
-            let msg = next_result
-                .unwrap()
-                .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
-            tracing::trace!("got a message");
+            };
+            let msg = msg.map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
 
             match msg {
                 Some(msg) => {
@@ -134,7 +130,6 @@ impl PulsarReader {
                         .ack(&msg)
                         .await
                         .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
-                    tracing::debug!("acked message");
                     let result: error_stack::Result<AvroWrapper, DeserializeError> =
                         msg.deserialize();
                     let aw = match result {
@@ -150,8 +145,11 @@ impl PulsarReader {
                             avro_values.push(fields);
                         }
                         _ => {
-                            tracing::debug!("expected a record but got {:?}", aw.value);
-                            let e = Report::from(DeserializeError::BadRecord);
+                            let e = error_stack::report!(DeserializeError::UnsupportedType)
+                                .attach_printable(format!(
+                                    "expected a record but got {:?}",
+                                    aw.value
+                                ));
                             return Err(ArrowError::from_external_error(Box::new(
                                 DeserializeErrorWrapper::from(e),
                             )));
@@ -162,6 +160,7 @@ impl PulsarReader {
                     // try_next will return None if the stream is closed, which shouldn't
                     // happen in the pulsar scenario.  maybe if the broker shuts down?
                     tracing::debug!("read None from consumer -- not sure how this happens");
+                    break;
                 }
             }
         }
@@ -223,10 +222,12 @@ pub(crate) async fn pulsar_consumer(
         .consumer()
         .with_options(options)
         .with_topic(topic_url)
-        .with_consumer_name(&pulsar_config.subscription_id)
+        .with_consumer_name(format!(
+            "sparrow consumer for {}",
+            &pulsar_config.subscription_id
+        ))
         .with_subscription_type(SubType::Exclusive)
-        // TODO generate and persist subscription ID
-        .with_subscription("sparrow-subscription-8")
+        .with_subscription(&pulsar_config.subscription_id)
         .build()
         .await
         .into_report()

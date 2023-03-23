@@ -75,7 +75,6 @@ fn avro_to_arrow_field(
     values: &Vec<Vec<(String, Value)>>,
     field_index: usize,
 ) -> Result<ArrayRef, ArrowError> {
-    let _t = TimestampMillisecondType::DATA_TYPE;
     // Infer the Arrow type based on the Avro type of the first value in the column.
     let (_, first_value) = &values[0][field_index];
     match first_value {

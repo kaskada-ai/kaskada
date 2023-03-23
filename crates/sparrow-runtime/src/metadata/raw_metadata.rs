@@ -73,7 +73,8 @@ impl RawMetadata {
         .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
 
         let rm = Self::try_from_raw_schema(Arc::new(raw_schema))?;
-        // inject _publish_time field
+        // inject _publish_time field so that we have a consistent column to sort on
+        // (this will always be our time_column in Pulsar sources)
         let publish_time = Field::new("_publish_time", TimestampMillisecondType::DATA_TYPE, false);
         let mut new_fields = rm.table_schema.fields.clone();
         new_fields.push(publish_time);

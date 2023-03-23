@@ -84,19 +84,18 @@ pub fn pulsar_auth_token(auth_params: &str) -> Result<&str, Error> {
     let mut parts = auth_params.splitn(2, ':');
     // verify first part is "token"
     let auth_type = parts.next();
-    if auth_type.is_none() {
+    let Some(auth_type) = auth_type else {
         return Err(Error::SchemaRequest.into()).attach_printable("missing auth_type");
-    }
-    let auth_type = auth_type.unwrap();
+    };
     if auth_type != "token" {
         return Err(Error::SchemaRequest.into())
             .attach_printable_lazy(|| format!("auth type {:?}", auth_type));
     }
     let auth_token = parts.next();
-    if auth_token.is_none() {
+    let Some(auth_token) = auth_token else {
         return Err(Error::SchemaRequest.into()).attach_printable("missing auth token");
-    }
-    Ok(auth_token.unwrap())
+    };
+    Ok(auth_token)
 }
 
 // retrieve the schema for the given topic via the admin api, with a REST call.

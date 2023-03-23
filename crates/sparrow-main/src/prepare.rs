@@ -111,9 +111,9 @@ impl PrepareCommand {
         };
 
         // if input is "pulsar" then turn it into a PulsarSource
-        let source_data = if self.input.to_str().unwrap() == "pulsar" {
+        let source_data = if self.input.to_str().expect("unable to convert input to str (not utf8)") == "pulsar" {
             // read webServiceUrl, brokerServiceUrl, authPlugin, authParams from config file
-            // given by env var PULSAR_CONFIG_PATH
+            // given by env var PULSAR_CLIENT_CONF
             let fname = std::env::var("PULSAR_CLIENT_CONF")
                 .into_report()
                 .change_context(Error::MissingTableConfig)
@@ -148,11 +148,11 @@ impl PrepareCommand {
             }
 
             // fully-qualified topic name
-            let pulsar_tenant = std::env::var("PULSAR_TENANT").unwrap_or("public".to_string());
+            let pulsar_tenant = std::env::var("PULSAR_TENANT").unwrap_or("public".to_owned());
             let pulsar_namespace =
-                std::env::var("PULSAR_NAMESPACE").unwrap_or("default".to_string());
+                std::env::var("PULSAR_NAMESPACE").unwrap_or("default".to_owned());
             let pulsar_subscription =
-                std::env::var("PULSAR_SUBSCRIPTION").unwrap_or("subscription-default".to_string());
+                std::env::var("PULSAR_SUBSCRIPTION").unwrap_or("subscription-default".to_owned());
             let pulsar_topic = std::env::var("PULSAR_TOPIC")
                 .into_report()
                 .change_context(Error::MissingTableConfig)

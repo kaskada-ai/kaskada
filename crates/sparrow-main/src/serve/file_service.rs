@@ -4,8 +4,8 @@ use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
 use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
 use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
-    MergeMetadataResponse, SourceMetadata,
+    GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest, MergeMetadataResponse,
+    SourceMetadata,
 };
 
 use sparrow_runtime::s3::S3Helper;
@@ -95,6 +95,7 @@ pub(crate) async fn get_source_metadata(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sparrow_api::kaskada::v1alpha::file_path;
     use sparrow_runtime::prepare::file_source;
 
     #[tokio::test]
