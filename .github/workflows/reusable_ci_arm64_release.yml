@@ -23,6 +23,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@master
 
+      - name: Current Date
+        id: current_date
+        run: |
+          echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Set outputs
+        id: vars
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "sha_full=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "branch_name=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -36,21 +49,21 @@ jobs:
           context: .
           file: Dockerfile.go_cross_amd64_to_arm64
           push: true
-          tags: ${{ env.IMAGE }}:v_${{ github.GITHUB_REF_NAME }}_${{ github.GITHUB_SHA }}v
+          tags: ${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short }}v
           labels: |
             org.opencontainers.image.title=kaskada go cross compilation image
             org.opencontainers.image.description=The kaskada go cross compilation image
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{  github.GITHUB_SHA }}
+            org.opencontainers.image.version=${{  steps.vars.outputs.sha_short }}
             org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.vars.outputs.sha_full }}
             org.opencontainers.image.licenses=Apache-2.0
 
       - name: Output Docker Container Name
         id: docker-container-name
         run: |
-          echo "${{ env.IMAGE }}:v_${{ github.GITHUB_REF_NAME }}_${{ github.GITHUB_SHA}}v"
+          echo "${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short}}v"
 
   # test_mount_points:
   #   runs-on: ubuntu-20.04
