@@ -183,7 +183,7 @@ jobs:
           version: 1.0
 
       - name: Install Protoc
-        uses: Noelware/setup-protoc@v1
+        uses: Noelware/setup-protoc@v1.0.2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
