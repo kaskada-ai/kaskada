@@ -20,7 +20,7 @@ jobs:
       - name: Mount points test
         shell: bash
         run: |
-          docker run --entrypoint="touch /github/workspace/EDO_RE_MALAKA" debian:20.04
+          docker run --entrypoint="touch /github/workspace/EDO_RE_MALAKA" ubuntu:20.04
           ls -l EDO_RE_MALAKA
 
   # sparrow_cross_amd64_arm64:
