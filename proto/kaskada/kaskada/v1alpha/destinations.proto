@@ -88,5 +88,5 @@ message RedisDestination {
 }
 
 message PulsarDestination {
-  PulsarConfiguration config = 1;
+  PulsarConfig config = 1;
 }

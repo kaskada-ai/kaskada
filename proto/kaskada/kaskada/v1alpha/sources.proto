@@ -14,5 +14,5 @@ message Source {
 message KaskadaSource {}
 
 message PulsarSource {
-  PulsarConfiguration config = 1;
+  PulsarConfig config = 1;
 }

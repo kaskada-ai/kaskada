@@ -4,7 +4,7 @@ package kaskada.kaskada.v1alpha;
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
-message PulsarConfiguration {
+message PulsarConfig {
   // The Pulsar protocol URL for the cluster.
   //
   // Defaults to "pulsar://127.0.0.1:6650".
@@ -46,7 +46,7 @@ message PulsarConfiguration {
 
 // Configuration for a single source of data from a pulsar topic.
 message PulsarSubscription {
-  PulsarConfiguration config = 1;
+  PulsarConfig config = 1;
 
   // a unique-id for this source to use when
   // subscribing to the pulsar broker.
