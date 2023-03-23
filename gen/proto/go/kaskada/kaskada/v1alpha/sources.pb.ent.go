@@ -7,11 +7,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (x *WithViews) Value() (driver.Value, error) {
+func (x *Source) Value() (driver.Value, error) {
 	return proto.Marshal(x)
 }
 
-func (x *WithViews) Scan(src interface{}) error {
+func (x *Source) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}

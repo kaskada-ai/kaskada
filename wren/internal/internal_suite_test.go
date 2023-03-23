@@ -68,7 +68,7 @@ func testCreateTable(tableClient KaskadaTableClient, owner *ent.Owner, tableName
 		Name:                tableName,
 		EntityKeyColumnName: fmt.Sprintf("%s_key", tableName),
 		TimeColumnName:      fmt.Sprintf("%s_time", tableName),
-		Source:              &v1alpha.Table_TableSource{Source: &v1alpha.Table_TableSource_Kaskada{}},
+		Source:              &v1alpha.Source{Source: &v1alpha.Source_Kaskada{}},
 	})
 
 	Expect(err).ShouldNot(HaveOccurred())
