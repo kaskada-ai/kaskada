@@ -35,8 +35,8 @@ class QueryResource(object):
             "result_behavior": self.query.result_behavior,
         }
         if isinstance(self.query, Message):
-            if self.query.HasField("output_to"):
-                result["output_to"] = self.query.output_to
+            if self.query.HasField("destination"):
+                result["destination"] = self.query.destination
 
         return result
 
@@ -165,7 +165,7 @@ def create_query(
 
         destination_args = {"file_type": response_as.name}
         destination = destinations_pb.ObjectStoreDestination(**destination_args)
-        query_request["output_to"] = {"object_store": destination}
+        query_request["destination"] = {"object_store": destination}
 
         if slice_filter is not None:
             query_request["slice"] = slice_filter.to_request()
