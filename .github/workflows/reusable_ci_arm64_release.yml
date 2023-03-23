@@ -117,8 +117,8 @@ jobs:
           CGO_ENABLED: 1
           GOOS: linux
           GOARCH: arm64
-          CC: $CC_aarch64_unknown_linux_gnu
-          CXX: $CXX_aarch64_unknown_linux_gnu
+          CC: "$CC_aarch64_unknown_linux_gnu"
+          CXX: "$CXX_aarch64_unknown_linux_gnu"
 
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
