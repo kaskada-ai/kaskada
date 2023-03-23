@@ -107,19 +107,24 @@ jobs:
       #   with:
       #     packages: lld
       #     version: 1.0
+      - name: Set outputs
+        id: vars
+        run: |
+          echo "cc=$(echo $CC_aarch64_unknown_linux_gnu)" >> $GITHUB_OUTPUT
+          echo "cxx=$(echo $CXX_aarch64_unknown_linux_gnu)" >> $GITHUB_OUTPUT
 
       - name: Wren - Build
         run: |
           mkdir ../release/
           set
-          CC=$CC_aarch64_unknown_linux_gnu CXX=$CXX_aarch64_unknown_linux_gnu go build -ldflags="-w -s" -o ../release/wren main.go
+          go build -ldflags="-w -s" -o ../release/wren main.go
         working-directory: wren
         env:
           CGO_ENABLED: 1
           GOOS: linux
           GOARCH: arm64
-          # CC: "$CC_aarch64_unknown_linux_gnu"
-          # CXX: "$CXX_aarch64_unknown_linux_gnu"
+          CC: ${{ steps.vars.outputs.cc }}
+          CXX: ${{ steps.vars.outputs.cxx }}
 
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
