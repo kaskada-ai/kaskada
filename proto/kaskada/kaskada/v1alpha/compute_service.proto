@@ -185,7 +185,7 @@ message ExecuteRequest {
   // Describes the destinations that results will be produced to.
   //
   // Note: Can make this a repeated field to support multiple destinations.
-  OutputTo output_to = 3;
+  Destination destination = 3;
 
   Limits limits = 5;
 

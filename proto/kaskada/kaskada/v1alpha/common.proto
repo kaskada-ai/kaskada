@@ -171,7 +171,7 @@ message PulsarConfiguration {
 message PulsarSubscription {
   PulsarConfiguration config = 1;
 
-  // a unique-id for this source to use when 
+  // a unique-id for this source to use when
   // subscribing to the pulsar broker.
   string subscription_id = 2;
 }
