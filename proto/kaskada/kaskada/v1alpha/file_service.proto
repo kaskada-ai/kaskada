@@ -3,7 +3,6 @@ package kaskada.kaskada.v1alpha;
 
 import "kaskada/kaskada/v1alpha/common.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
-import "kaskada/kaskada/v1alpha/sources.proto";
 
 message SourceMetadata {
   // The schema of the source.
@@ -11,26 +10,12 @@ message SourceMetadata {
 }
 
 message GetMetadataRequest {
-
-  // 2023-03-16
-  // repeated FilePath file_paths
-  reserved 1;
-
-  oneof source {
-    // A file source
-    FilePath file_path = 2;
-    // A pulsar source
-    PulsarSource puslar_source = 3;
-  }
+  SourceData source_data = 1;
 }
 
 message GetMetadataResponse {
-  // 2023-03-16
-  // repeated SourceMetadata source_metadatas
-  reserved 1;
-
   // The metadata for the source.
-  SourceMetadata source_metadata = 2;
+  SourceMetadata source_metadata = 1;
 }
 
 message MergeMetadataRequest {

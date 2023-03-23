@@ -1,0 +1,56 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+message PulsarConfig {
+  // The Pulsar protocol URL for the cluster.
+  //
+  // Defaults to "pulsar://127.0.0.1:6650".
+  string broker_service_url = 1;
+
+  // Authentication plugin to use.
+  // e.g. "org.apache.pulsar.client.impl.auth.AuthenticationToken"
+  string auth_plugin = 2;
+
+  // Authentication parameters.
+  // e.g. "token:xxx"
+  string auth_params = 3;
+
+  // A custom certificate chain to authenticate the server in TLS connections.
+  string certificate_chain = 4;
+
+  // The topic tenant within the instance.
+  //
+  // Defaults to "public".
+  string tenant = 5;
+
+  // The administrative unit of topics, which acts as a grouping
+  // mechanism for related topics.
+  //
+  // Defaults to "default".
+  string namespace = 6;
+
+  // The final part of the topic url.
+  //
+  // Defaults to a randomly generated uuid.
+  string topic_name = 7;
+
+  // The full topic url.
+  // e.g. "persistent://{tenant}/{namespace}/{topic_name}"
+  //
+  // This field is populated in the output response.
+  string topic_url = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Configuration for a single source of data from a pulsar topic.
+message PulsarSubscription {
+  PulsarConfig config = 1;
+
+  // a unique-id for this source to use when
+  // subscribing to the pulsar broker.
+  string subscription_id = 2;
+
+  google.protobuf.Timestamp last_publish_time = 3;
+}

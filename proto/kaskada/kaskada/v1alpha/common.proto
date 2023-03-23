@@ -4,11 +4,12 @@ package kaskada.kaskada.v1alpha;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
+import "kaskada/kaskada/v1alpha/pulsar.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
 
 // Configuration for a single source of data in a table.
-message FilePath {
-  oneof path {
+message SourceData {
+  oneof source {
     // Path to a Parquet file to read for the table.
     string parquet_path = 1;
 
@@ -20,6 +21,8 @@ message FilePath {
     // This is analogous to a [`data:`
     // URI](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs).
     string csv_data = 3;
+
+    PulsarSubscription pulsar_subscription = 4;
   }
 }
 

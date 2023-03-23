@@ -62,14 +62,6 @@ message Materialization {
   // How to slice the input data when processing the materialization
   SliceRequest slice = 8;
 
-  message Destination {
-    oneof destination {
-      RedisDestination redis = 1;
-      ObjectStoreDestination object_store = 2;
-      PulsarDestination pulsar = 3;
-    }
-  }
-
   // The result of the analyze step during materialization creation
   Analysis analysis = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
