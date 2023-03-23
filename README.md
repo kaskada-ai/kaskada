@@ -8,13 +8,16 @@
 [![Python Client CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml)
 [![Notebooks CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml)
 
-Kaskada is a query engine for event-based data designed for building & operating real-time ML at scale.
+Kaskada is a unified event processing engine that provides the power of stateful stream processing in a high-level, declarative query language designed specifically for reasoning about events in bulk and in real time.
 
-Kaskada unifies real-time and historical data processing allowing practitioners to deploy real-time queries with access to their full event history and to instantly reconstruct the results a query would have produced at arbitrary, data-dependent times in the past.
+Existing event-processing tools like Spark Streaming or Apache Flink give you multiple APIs - you can choose between a powerful low-level API or a convenient high-level query language like stream-SQL. The high-level APIs are great for usability, but a lot is lost in the translation from streams to tables (this is why they provide both).
 
-Kaskada’s core innovations are a set of time-aware query abstractions, a high-performance compute engine optimized for processing event data, and a flexible execution model supporting both bulk and real-time data processing.
+Kaskada provides a single, high-level, declarative API. Instead of being based on tables, it’s built on the idea of a timeline - the history of how a value changes over time. This starting point eliminates the tradeoff between expressibility and convenience. You get the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc.
 
-These features were chosen to make Kaskada a perfect fit for Feature Engineering on event-based data, as part of Real-Time ML. With Kaskada you can seamlessly move from interactive feature exploration in a notebook to real-time feature serving in production without any changes to your feature definitions.
+Kaskada is built to be a modern event processor - it’s efficient, cloud-native, and easy to use. It uses the Apache Arrow library for high-performance columnar computation. It’s implemented in Rust, which gives you safety and the stability of not having a garbage collector. It’s distributed as a compiled binary without any dependencies to manage - just download it and you’re ready to go. 
+
+Kaskada isn’t ideal for every use case - it’s designed specifically for event processing so it isn’t appropriate for graph data or non-temporal relational data. But for the case of event processing, both in bulk and in real-time, we believe that Kaskada is the best option available right now.
+
 
 ## Development
 
