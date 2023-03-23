@@ -14,6 +14,7 @@ fn main() {
         "../../proto/kaskada/kaskada/v1alpha/destinations.proto",
         "../../proto/kaskada/kaskada/v1alpha/plan.proto",
         "../../proto/kaskada/kaskada/v1alpha/preparation_service.proto",
+        "../../proto/kaskada/kaskada/v1alpha/pulsar.proto",
         "../../proto/kaskada/kaskada/v1alpha/compute_service.proto",
         "../../proto/google/api/field_behavior.proto",
     ];
