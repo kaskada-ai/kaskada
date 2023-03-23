@@ -7,11 +7,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (x *Table_TableSource) Value() (driver.Value, error) {
+func (x *Destination) Value() (driver.Value, error) {
 	return proto.Marshal(x)
 }
 
-func (x *Table_TableSource) Scan(src interface{}) error {
+func (x *Destination) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}

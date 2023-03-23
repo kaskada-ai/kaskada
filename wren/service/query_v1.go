@@ -229,12 +229,12 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}
 	responseStream.Send(q.addMetricsIfRequested(request, computeResponse, metrics))
 
-	outputTo := &v1alpha.OutputTo{}
-	if request.Query.OutputTo != nil {
+	destination := &v1alpha.Destination{}
+	if request.Query.Destination != nil {
 		outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
-		switch kind := request.Query.OutputTo.Destination.(type) {
-		case *v1alpha.OutputTo_ObjectStore:
-			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+		switch kind := request.Query.Destination.Destination.(type) {
+		case *v1alpha.Destination_ObjectStore:
+			destination.Destination = &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType:        kind.ObjectStore.FileType,
 					OutputPrefixUri: outputURI,
@@ -251,7 +251,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	// * send progress messages every progressReportingSeconds interval
 	computeTimerContext, computeTimerContextCancel := context.WithCancel(ctx)
 	defer computeTimerContextCancel()
-	queryContext, queryContextCancel := compute.GetNewQueryContext(ctx, owner, request.Query.ChangedSinceTime, compileResponse.ComputeResponse, dataToken, request.Query.FinalResultTime, dataTokenId == "", limits, outputTo, request.Query.Slice, tables)
+	queryContext, queryContextCancel := compute.GetNewQueryContext(ctx, owner, request.Query.ChangedSinceTime, compileResponse.ComputeResponse, dataToken, request.Query.FinalResultTime, dataTokenId == "", limits, destination, request.Query.Slice, tables)
 	defer queryContextCancel()
 	go func(ctx context.Context) {
 		for {
@@ -323,11 +323,11 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 			subLogger.Error().Str("state", computeResponse.State.String()).Msg("unexpected long query state")
 		}
 
-		if computeResponse.OutputTo != nil {
-			switch kind := request.Query.OutputTo.Destination.(type) {
-			case *v1alpha.OutputTo_ObjectStore:
+		if computeResponse.Destination != nil {
+			switch kind := request.Query.Destination.Destination.(type) {
+			case *v1alpha.Destination_ObjectStore:
 				outputPaths := []string{}
-				outputPaths = append(outputPaths, computeResponse.OutputTo.GetObjectStore().GetOutputPaths().Paths...)
+				outputPaths = append(outputPaths, computeResponse.Destination.GetObjectStore().GetOutputPaths().Paths...)
 
 				if request.QueryOptions != nil && request.QueryOptions.PresignResults {
 					outputPaths, err = q.presignResults(ctx, owner, outputPaths)
@@ -337,8 +337,8 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 				}
 
 				outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
-				queryResponse.OutputTo = &v1alpha.OutputTo{
-					Destination: &v1alpha.OutputTo_ObjectStore{
+				queryResponse.Destination = &v1alpha.Destination{
+					Destination: &v1alpha.Destination_ObjectStore{
 						ObjectStore: &v1alpha.ObjectStoreDestination{
 							FileType:        kind.ObjectStore.FileType,
 							OutputPrefixUri: outputURI,
@@ -349,7 +349,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 					},
 				}
 
-				metrics.OutputFiles += int64(len(computeResponse.OutputTo.GetObjectStore().GetOutputPaths().Paths))
+				metrics.OutputFiles += int64(len(computeResponse.Destination.GetObjectStore().GetOutputPaths().Paths))
 			default:
 				subLogger.Error().Interface("kind", kind).Msg("unknown output type")
 				return fmt.Errorf("query output type %s is not supported", kind)
@@ -391,18 +391,18 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 // validates the OutputTo field of the query, defaulting if unspecified or unknown.
 func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Query) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.validateOutputTo").Logger()
-	if query.OutputTo == nil {
+	if query.Destination == nil {
 		subLogger.Warn().Msg("mssing output_to, defaulting to 'ObjectStore->Parquet'")
 	} else {
-		switch kind := query.OutputTo.Destination.(type) {
-		case *v1alpha.OutputTo_ObjectStore:
+		switch kind := query.Destination.Destination.(type) {
+		case *v1alpha.Destination_ObjectStore:
 			switch kind.ObjectStore.FileType {
 			case v1alpha.FileType_FILE_TYPE_PARQUET, v1alpha.FileType_FILE_TYPE_CSV:
 				return nil
 			default:
 				subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown output_to file_type, defaulting to 'ObjectStore->Parquet'")
 			}
-		case *v1alpha.OutputTo_Pulsar, *v1alpha.OutputTo_Redis:
+		case *v1alpha.Destination_Pulsar, *v1alpha.Destination_Redis:
 			return fmt.Errorf("query output type: %s is only valid for materializations", kind)
 		default:
 			subLogger.Warn().Interface("kind", kind).Msg("unknown output_to, defaulting to 'ObjectStore->Parquet'")
@@ -410,8 +410,8 @@ func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Qu
 	}
 
 	// set default if haven't yet returned from this method
-	query.OutputTo = &v1alpha.OutputTo{
-		Destination: &v1alpha.OutputTo_ObjectStore{
+	query.Destination = &v1alpha.Destination{
+		Destination: &v1alpha.Destination_ObjectStore{
 			ObjectStore: &v1alpha.ObjectStoreDestination{
 				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 			},

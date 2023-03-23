@@ -384,7 +384,7 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 		FinalResultTime: queryContext.finalResultTime,
 		Plan:            queryContext.compileResp.Plan,
 		Limits:          queryContext.limits,
-		OutputTo:        queryContext.outputTo,
+		Destination:     queryContext.destination,
 		Tables:          queryContext.GetComputeTables(),
 	}
 
@@ -423,7 +423,7 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 		Interface("limits", executeRequest.Limits).
 		Interface("final_result_time", executeRequest.FinalResultTime).
 		Interface("changed_since_time", executeRequest.ChangedSince).
-		Interface("output_to", executeRequest.OutputTo).Msg("sending streaming query request to compute backend")
+		Interface("destination", executeRequest.Destination).Msg("sending streaming query request to compute backend")
 
 	executeClient, err := queryClient.Execute(queryContext.ctx, executeRequest)
 	if err != nil {
@@ -460,9 +460,9 @@ func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryRes
 		// Note: this does nothing visible to the user at the moment, as
 		// running materializations are currently opaque to the user.
 		// Eventually, we'll want to provide useful metadata for all destination types.
-		if res.OutputTo != nil {
-			switch kind := res.OutputTo.Destination.(type) {
-			case *v1alpha.OutputTo_ObjectStore:
+		if res.Destination != nil {
+			switch kind := res.Destination.Destination.(type) {
+			case *v1alpha.Destination_ObjectStore:
 				result.Paths = append(result.Paths, kind.ObjectStore.OutputPaths.Paths...)
 			}
 		}
@@ -550,13 +550,13 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			return nil
 		}
 
-		outputTo := &v1alpha.OutputTo{}
+		destination := &v1alpha.Destination{}
 		if materialization.Destination == nil {
 			matLogger.Error().Str("materialization", materialization.Name).Msg("materialization has no destination")
 			return nil
 		}
 		switch kind := materialization.Destination.Destination.(type) {
-		case *v1alpha.Materialization_Destination_ObjectStore:
+		case *v1alpha.Destination_ObjectStore:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to object store")
 
 			// Append the materialization version to the output prefix so result files
@@ -564,34 +564,24 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 			outputPrefixUri := kind.ObjectStore.GetOutputPrefixUri()
 			outputPrefixUri = path.Join(outputPrefixUri, strconv.FormatInt(materialization.Version, 10))
 
-			outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+			destination.Destination = &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType:        kind.ObjectStore.GetFileType(),
 					OutputPrefixUri: outputPrefixUri,
 				},
 			}
-		case *v1alpha.Materialization_Destination_Pulsar:
+		case *v1alpha.Destination_Pulsar:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to pulsar")
-			outputTo.Destination = &v1alpha.OutputTo_Pulsar{
-				Pulsar: &v1alpha.PulsarDestination{
-					Tenant:           kind.Pulsar.GetTenant(),
-					Namespace:        kind.Pulsar.GetNamespace(),
-					TopicName:        kind.Pulsar.GetTopicName(),
-					BrokerServiceUrl: kind.Pulsar.GetBrokerServiceUrl(),
-				},
-			}
-		case *v1alpha.Materialization_Destination_Redis:
+			destination.Destination = kind
+		case *v1alpha.Destination_Redis:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializing to redis")
-			outputTo.Destination = &v1alpha.OutputTo_Redis{
-				// TODO: Support redis destination
-				Redis: &v1alpha.RedisDestination{},
-			}
+			destination.Destination = kind
 		default:
 			matLogger.Error().Interface("type", kind).Str("when", "pre-compute").Msg("materialization output type not implemented")
 			return fmt.Errorf("materialization output type %s is not implemented", kind)
 		}
 
-		queryContext, _ := GetNewQueryContext(ctx, owner, nil, compileResp, dataToken, nil, true, nil, outputTo, materialization.SliceRequest, tables)
+		queryContext, _ := GetNewQueryContext(ctx, owner, nil, compileResp, dataToken, nil, true, nil, destination, materialization.SliceRequest, tables)
 
 		dataVersionID := materialization.DataVersionID
 		var minTimeInNewFiles int64 = math.MaxInt64
@@ -620,7 +610,7 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		// Not a great pattern, since we're recreating the context. If we're able
 		// to pull out the relevant code that converts `SlicePlans` to `SliceInfo`
 		// for the table client to get the min time of files, we can clean this up.
-		queryContext, queryContextCancel := GetNewQueryContext(ctx, owner, changedSinceTime, compileResp, dataToken, nil, true, nil, outputTo, materialization.SliceRequest, tables)
+		queryContext, queryContextCancel := GetNewQueryContext(ctx, owner, changedSinceTime, compileResp, dataToken, nil, true, nil, destination, materialization.SliceRequest, tables)
 		defer queryContextCancel()
 
 		err = m.computeMaterialization(materialization, queryContext)
@@ -864,21 +854,21 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetFileSchema").Str("uri", fileInput.GetURI()).Str("type", fileInput.GetExtension()).Logger()
 	// Send the metadata request to the FileService
 
-	var filePath *v1alpha.FilePath
+	var sourceData *v1alpha.SourceData
 
 	switch fileInput.GetType() {
 	case kaskadafile.TypeCsv:
-		filePath = &v1alpha.FilePath{Path: &v1alpha.FilePath_CsvPath{CsvPath: ConvertURIForCompute(fileInput.GetURI())}}
+		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_CsvPath{CsvPath: ConvertURIForCompute(fileInput.GetURI())}}
 	case kaskadafile.TypeParquet:
-		filePath = &v1alpha.FilePath{Path: &v1alpha.FilePath_ParquetPath{ParquetPath: ConvertURIForCompute(fileInput.GetURI())}}
+		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: ConvertURIForCompute(fileInput.GetURI())}}
 	default:
 		subLogger.Warn().Msg("user didn't specifiy file type, defaulting to parquet for now, but will error in the future")
-		filePath = &v1alpha.FilePath{Path: &v1alpha.FilePath_ParquetPath{ParquetPath: ConvertURIForCompute(fileInput.GetURI())}}
+		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: ConvertURIForCompute(fileInput.GetURI())}}
 	}
 
 	fileClient := m.computeClients.FileServiceClient(ctx)
 	metadataReq := &v1alpha.GetMetadataRequest{
-		FilePaths: []*v1alpha.FilePath{filePath},
+		SourceData: sourceData,
 	}
 
 	subLogger.Debug().Interface("request", metadataReq).Msg("sending get_metadata request to file service")
@@ -888,12 +878,12 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 		return nil, err
 	}
 
-	if len(metadataRes.FileMetadatas) != 1 {
-		subLogger.Error().Int("response_count", len(metadataRes.FileMetadatas)).Msg("issue getting file schema from file_service")
+	if metadataRes.SourceMetadata == nil {
+		subLogger.Error().Msg("issue getting file schema from file_service")
 		return nil, fmt.Errorf("issue getting file schema from file_service")
 	}
 
-	return metadataRes.FileMetadatas[0].Schema, nil
+	return metadataRes.SourceMetadata.Schema, nil
 }
 
 func ConvertURIForCompute(URI string) string {
