@@ -174,6 +174,8 @@ message PulsarSubscription {
   // a unique-id for this source to use when
   // subscribing to the pulsar broker.
   string subscription_id = 2;
+
+  google.protobuf.Timestamp last_publish_time = 3;
 }
 
 // The plan for how to slice the data.
