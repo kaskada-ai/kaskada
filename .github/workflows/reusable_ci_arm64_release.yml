@@ -112,14 +112,14 @@ jobs:
         run: |
           mkdir ../release/
           set
-          go build -ldflags="-w -s" -o ../release/wren main.go
+          CC=$CC_aarch64_unknown_linux_gnu CXX=$CXX_aarch64_unknown_linux_gnu go build -ldflags="-w -s" -o ../release/wren main.go
         working-directory: wren
         env:
           CGO_ENABLED: 1
           GOOS: linux
           GOARCH: arm64
-          CC: ${{ env.CC_aarch64_unknown_linux_gnu }}
-          CXX: ${{ env.CXX_aarch64_unknown_linux_gnu }}
+          # CC: "$CC_aarch64_unknown_linux_gnu"
+          # CXX: "$CXX_aarch64_unknown_linux_gnu"
 
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
