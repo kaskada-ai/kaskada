@@ -7,6 +7,12 @@ use arrow::error::ArrowError;
 use avro_rs::types::Value;
 use std::sync::Arc;
 
+/// Converts a nested Vec of Avro values into a Vec of Arrow arrays.
+///
+/// The avro_to_arrow function takes a nested vector of Avro values, where each inner vector
+/// represents a row and contains tuples with a string field name and the corresponding Avro Value,
+/// and returns a Result containing a vector of Arrow arrays (Vec<ArrayRef>) if the
+/// conversion is successful, or an ArrowError if an error occurs during conversion.
 pub fn avro_to_arrow(values: Vec<Vec<(String, Value)>>) -> Result<Vec<ArrayRef>, ArrowError> {
     (0..values[0].len())
         .map(|i| avro_to_arrow_field(&values, i))
@@ -156,5 +162,37 @@ impl AvroParser for Date32Type {
             Value::Date(d) => Some(*d),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use arrow::array::{Array, Int32Array, StringArray};
+    use avro_rs::types::Value;
+
+    #[test]
+    fn test_avro_to_arrow() {
+        let avro_values = vec![
+            vec![
+                ("field1".to_string(), Value::Int(1)),
+                ("field2".to_string(), Value::String("hello".to_string())),
+            ],
+            vec![
+                ("field1".to_string(), Value::Int(2)),
+                ("field2".to_string(), Value::String("world".to_string())),
+            ],
+        ];
+
+        let result = avro_to_arrow(avro_values).unwrap();
+        assert_eq!(result.len(), 2);
+
+        let int_array = result[0].as_any().downcast_ref::<Int32Array>().unwrap();
+        assert_eq!(int_array.value(0), 1);
+        assert_eq!(int_array.value(1), 2);
+
+        let str_array = result[1].as_any().downcast_ref::<StringArray>().unwrap();
+        assert_eq!(str_array.value(0), "hello");
+        assert_eq!(str_array.value(1), "world");
     }
 }
