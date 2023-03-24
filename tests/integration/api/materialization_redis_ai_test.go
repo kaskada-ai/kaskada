@@ -83,8 +83,8 @@ key: mat_redis_ai.customer_id,
 max_amount: mat_redis_ai.amount | max(),
 min_amount: mat_redis_ai.amount | min(),
 }`,
-					Destination: &v1alpha.Materialization_Destination{
-						Destination: &v1alpha.Materialization_Destination_Redis{
+					Destination: &v1alpha.Destination{
+						Destination: &v1alpha.Destination_Redis{
 							Redis: &v1alpha.RedisDestination{
 								HostName:       "redis",
 								Port:           6379,
