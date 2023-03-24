@@ -2,9 +2,8 @@
 # Project
 
 [![Protobuf CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml)
-[![Rust CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_rust.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_rust.yml)
+[![Engine CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml)
 [![Rust CI (Nightly)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml)
-[![Wren CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_wren.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_wren.yml)
 [![Python Client CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml)
 [![Notebooks CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml)
 
