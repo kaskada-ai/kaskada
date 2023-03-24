@@ -4,8 +4,8 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_api::kaskada::v1alpha::prepare_data_request::{PulsarConfig, SourceData};
-use sparrow_api::kaskada::v1alpha::{FilePath, PrepareDataRequest, PulsarSource, SlicePlan};
+use sparrow_api::kaskada::v1alpha::{source_data, PrepareDataRequest, PulsarConfig, SlicePlan};
+use sparrow_api::kaskada::v1alpha::{PulsarSubscription, SourceData};
 
 use sparrow_runtime::s3::S3Helper;
 
@@ -111,7 +111,12 @@ impl PrepareCommand {
         };
 
         // if input is "pulsar" then turn it into a PulsarSource
-        let source_data = if self.input.to_str().expect("unable to convert input to str (not utf8)") == "pulsar" {
+        let source_data = if self
+            .input
+            .to_str()
+            .expect("unable to convert input to str (not utf8)")
+            == "pulsar"
+        {
             // read webServiceUrl, brokerServiceUrl, authPlugin, authParams from config file
             // given by env var PULSAR_CLIENT_CONF
             let fname = std::env::var("PULSAR_CLIENT_CONF")
@@ -158,7 +163,7 @@ impl PrepareCommand {
                 .change_context(Error::MissingTableConfig)
                 .attach_printable("missing env var PULSAR_TOPIC")?;
 
-            let pulsar_source = Some(PulsarSource {
+            let pulsar_config = Some(PulsarConfig {
                 admin_service_url: config["webServiceUrl"].clone(),
                 broker_service_url: config["brokerServiceUrl"].clone(),
                 auth_plugin: config["authPlugin"].clone(),
@@ -168,12 +173,17 @@ impl PrepareCommand {
                 topic_name: pulsar_topic,
                 ..Default::default()
             });
-            tracing::debug!("Pulsar source is {:?}", pulsar_source);
+            tracing::debug!("Pulsar config is {:?}", pulsar_config);
 
-            SourceData::PulsarConfig(PulsarConfig {
-                pulsar_source,
-                subscription_id: pulsar_subscription,
-            })
+            SourceData {
+                source: Some(source_data::Source::PulsarSubscription(
+                    PulsarSubscription {
+                        config: pulsar_config,
+                        subscription_id: pulsar_subscription,
+                        last_publish_time: None,
+                    },
+                )),
+            }
         } else {
             let input = self
                 .input
@@ -182,12 +192,12 @@ impl PrepareCommand {
                 .change_context(Error::Canonicalize)
                 .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
 
-            let file_path = FilePath::try_from_local(input.as_path())
+            let file_path = SourceData::try_from_local(input.as_path())
                 .into_report()
                 .change_context(Error::UnrecognizedInputFormat)?;
-            SourceData::FilePath(FilePath {
-                path: Some(file_path),
-            })
+            SourceData {
+                source: Some(file_path),
+            }
         };
 
         if table.file_sets.is_empty() {

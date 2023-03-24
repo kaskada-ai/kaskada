@@ -4,8 +4,8 @@ use futures::stream::BoxStream;
 use futures::StreamExt;
 use pulsar::compression::Compression;
 use pulsar::Authentication;
-use sparrow_api::kaskada::v1alpha::output_to;
 use sparrow_api::kaskada::v1alpha::PulsarDestination;
+use sparrow_api::kaskada::v1alpha::{destination, PulsarConfig};
 
 use crate::execute::progress_reporter::ProgressUpdate;
 use error_stack::{IntoReport, ResultExt};
@@ -31,6 +31,7 @@ pub enum Error {
         to: DataType,
     },
     SchemaSerialization,
+    Internal,
 }
 
 impl error_stack::Context for Error {}
@@ -55,6 +56,7 @@ pub(super) async fn write(
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     mut batches: BoxStream<'static, RecordBatch>,
 ) -> error_stack::Result<(), Error> {
+    let pulsar = pulsar.config.ok_or(Error::Internal)?;
     let broker_url = if pulsar.broker_service_url.trim().is_empty() {
         error_stack::bail!(Error::PulsarTopicCreation {
             context: "empty broker service url".to_owned()
@@ -82,7 +84,9 @@ pub(super) async fn write(
     // Inform tracker of output type
     progress_updates_tx
         .send(ProgressUpdate::Destination {
-            destination: output_to::Destination::Pulsar(pulsar.clone()),
+            destination: destination::Destination::Pulsar(PulsarDestination {
+                config: Some(pulsar.clone()),
+            }),
         })
         .await
         .into_report()
@@ -162,7 +166,7 @@ pub(super) async fn write(
 // Builds the pulsar client
 async fn build_client(
     broker_url: &str,
-    pulsar: &PulsarDestination,
+    pulsar: &PulsarConfig,
 ) -> error_stack::Result<Pulsar<TokioExecutor>, Error> {
     let mut client_builder = Pulsar::builder(broker_url, TokioExecutor);
 
@@ -238,7 +242,7 @@ fn get_output_batch(
     Ok(RecordBatch::try_new(output_schema, output_columns).unwrap())
 }
 
-pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<String, Error> {
+pub fn format_topic_url(pulsar: &PulsarConfig) -> error_stack::Result<String, Error> {
     let tenant = if pulsar.tenant.trim().is_empty() {
         DEFAULT_PULSAR_TENANT
     } else {

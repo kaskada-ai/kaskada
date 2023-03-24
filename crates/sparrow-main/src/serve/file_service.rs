@@ -1,12 +1,11 @@
 use anyhow::{anyhow, Context};
 
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
-use sparrow_api::kaskada::v1alpha::get_metadata_request::Source;
-use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
     GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest, MergeMetadataResponse,
     SourceMetadata,
 };
+use sparrow_api::kaskada::v1alpha::{Schema, SourceData};
 
 use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::RawMetadata;
@@ -61,11 +60,11 @@ async fn get_metadata(
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
-    if request.source.is_none() {
+    if request.source_data.is_none() {
         anyhow::bail!("missing request source");
     }
 
-    let file_metadata = get_source_metadata(&s3, request.source.unwrap()).await?;
+    let file_metadata = get_source_metadata(&s3, &request.source_data.unwrap()).await?;
     Ok(Response::new(GetMetadataResponse {
         source_metadata: Some(file_metadata),
     }))
@@ -73,17 +72,17 @@ async fn get_metadata(
 
 pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
-    source: Source,
+    source_data: &SourceData,
 ) -> anyhow::Result<SourceMetadata> {
-    let (_, local_source) = preparation_service::convert_to_local_source(s3, &source)
+    let (_, local_source) = preparation_service::convert_to_local_sourcedata(s3, Some(source_data))
         .await
         .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
 
-    let metadata = RawMetadata::try_from(&local_source)?;
+    let metadata = RawMetadata::try_from(local_source.source.as_ref().context("missing source")?)?;
     let schema = Schema::try_from(metadata.table_schema.as_ref()).with_context(|| {
         format!(
             "Unable to encode schema {:?} for source file {:?}",
-            metadata.table_schema, source
+            metadata.table_schema, source_data
         )
     })?;
 
@@ -94,9 +93,9 @@ pub(crate) async fn get_source_metadata(
 
 #[cfg(test)]
 mod tests {
+    use sparrow_api::kaskada::v1alpha::source_data;
+
     use super::*;
-    use sparrow_api::kaskada::v1alpha::file_path;
-    use sparrow_runtime::prepare::file_source;
 
     #[tokio::test]
     async fn test_timestamp_with_timezone_gets_metadata() {
@@ -111,9 +110,11 @@ mod tests {
         // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                source: Some(file_source(file_path::Path::ParquetPath(
-                    path.canonicalize().unwrap().to_string_lossy().to_string(),
-                ))),
+                source_data: Some(SourceData {
+                    source: Some(source_data::Source::ParquetPath(
+                        path.canonicalize().unwrap().to_string_lossy().to_string(),
+                    )),
+                }),
             }))
             .await
             .unwrap()
@@ -134,9 +135,11 @@ mod tests {
         // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                source: Some(file_source(file_path::Path::CsvPath(
-                    path.canonicalize().unwrap().to_string_lossy().to_string(),
-                ))),
+                source_data: Some(SourceData {
+                    source: Some(source_data::Source::CsvPath(
+                        path.canonicalize().unwrap().to_string_lossy().to_string(),
+                    )),
+                }),
             }))
             .await
             .unwrap()
@@ -152,7 +155,9 @@ mod tests {
         let file_service = FileServiceImpl::new(s3_helper);
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                source: Some(file_source(file_path::Path::CsvData(csv_data.to_string()))),
+                source_data: Some(SourceData {
+                    source: Some(source_data::Source::CsvData(csv_data.to_owned())),
+                }),
             }))
             .await
             .unwrap()

@@ -8,8 +8,8 @@ use error_stack::{FutureExt as ESFutureExt, IntoReport, Result, ResultExt};
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt};
 use itertools::Itertools;
+use sparrow_api::kaskada::v1alpha::destination::Destination;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
-use sparrow_api::kaskada::v1alpha::output_to::Destination;
 use sparrow_api::kaskada::v1alpha::{self, data_type};
 use sparrow_core::{downcast_primitive_array, downcast_struct_array};
 
@@ -49,7 +49,7 @@ pub(super) fn write(
     limits: Limits,
     batches: BoxStream<'static, Batch>,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
-    output_to: v1alpha::OutputTo,
+    destination: v1alpha::Destination,
 ) -> error_stack::Result<impl Future<Output = Result<(), Error>>, Error> {
     let sink_schema = determine_output_schema(context)?;
 
@@ -86,7 +86,9 @@ pub(super) fn write(
     }
     .boxed();
 
-    let destination = output_to.destination.ok_or(Error::UnspecifiedDestination)?;
+    let destination = destination
+        .destination
+        .ok_or(Error::UnspecifiedDestination)?;
     match destination {
         Destination::ObjectStore(store) => {
             Ok(

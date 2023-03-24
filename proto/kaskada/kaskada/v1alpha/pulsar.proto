@@ -10,38 +10,43 @@ message PulsarConfig {
   // Defaults to "pulsar://127.0.0.1:6650".
   string broker_service_url = 1;
 
+   // The Pulsar admin REST URL for the cluster.
+  //
+  // Defaults to http://127.0.0.1:8080
+  string admin_service_url = 2;
+
   // Authentication plugin to use.
   // e.g. "org.apache.pulsar.client.impl.auth.AuthenticationToken"
-  string auth_plugin = 2;
+  string auth_plugin = 3;
 
   // Authentication parameters.
   // e.g. "token:xxx"
-  string auth_params = 3;
+  string auth_params = 4;
 
   // A custom certificate chain to authenticate the server in TLS connections.
-  string certificate_chain = 4;
+  string certificate_chain = 5;
 
   // The topic tenant within the instance.
   //
   // Defaults to "public".
-  string tenant = 5;
+  string tenant = 6;
 
   // The administrative unit of topics, which acts as a grouping
   // mechanism for related topics.
   //
   // Defaults to "default".
-  string namespace = 6;
+  string namespace = 7;
 
   // The final part of the topic url.
   //
   // Defaults to a randomly generated uuid.
-  string topic_name = 7;
+  string topic_name = 8;
 
   // The full topic url.
   // e.g. "persistent://{tenant}/{namespace}/{topic_name}"
   //
   // This field is populated in the output response.
-  string topic_url = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string topic_url = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Configuration for a single source of data from a pulsar topic.

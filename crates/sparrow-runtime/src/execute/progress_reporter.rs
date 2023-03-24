@@ -1,12 +1,13 @@
 use std::time::Duration;
 
 use futures::Stream;
+use sparrow_api::kaskada::v1alpha::destination;
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::execute_response::ProgressInformation;
 use sparrow_api::kaskada::v1alpha::object_store_destination::ResultPaths;
-use sparrow_api::kaskada::v1alpha::output_to;
+use sparrow_api::kaskada::v1alpha::Destination;
 use sparrow_api::kaskada::v1alpha::ObjectStoreDestination;
-use sparrow_api::kaskada::v1alpha::OutputTo;
+use sparrow_api::kaskada::v1alpha::PulsarConfig;
 use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LongQueryState};
 use tokio_stream::StreamExt;
 
@@ -37,13 +38,15 @@ struct ProgressTracker {
     /// If the output is not configured to write to files, this will be empty.
     output_paths: Vec<String>,
     /// Information on where the outputs are materialized to.
-    destination: Option<output_to::Destination>,
+    destination: Option<destination::Destination>,
 }
 
 #[derive(Debug)]
 pub(crate) enum ProgressUpdate {
     /// Informs the progress tracker of the output destination.
-    Destination { destination: output_to::Destination },
+    Destination {
+        destination: destination::Destination,
+    },
     /// Progress update reported for each table indicating total size.
     InputMetadata { total_num_rows: usize },
     /// Progress update indicating the given number of rows have been read.
@@ -132,19 +135,19 @@ impl ProgressTracker {
             flight_record_path: None,
             plan_yaml_path: None,
             compute_snapshots: Vec::new(),
-            output_to: Some(destination),
+            destination: Some(destination),
         })
     }
 
-    fn destination_to_output(&mut self) -> error_stack::Result<OutputTo, Error> {
+    fn destination_to_output(&mut self) -> error_stack::Result<Destination, Error> {
         // Clone the output paths in for object store destinations
         let destination = self
             .destination
             .as_ref()
             .ok_or(Error::Internal("expected destination"))?;
         match destination {
-            output_to::Destination::ObjectStore(store) => Ok(OutputTo {
-                destination: Some(output_to::Destination::ObjectStore(
+            destination::Destination::ObjectStore(store) => Ok(Destination {
+                destination: Some(destination::Destination::ObjectStore(
                     ObjectStoreDestination {
                         file_type: store.file_type,
                         output_prefix_uri: store.output_prefix_uri.clone(),
@@ -159,20 +162,29 @@ impl ProgressTracker {
                 error_stack::bail!(Error::FeatureNotEnabled { feature: "pulsar" })
             }
             #[cfg(feature = "pulsar")]
-            output_to::Destination::Pulsar(pulsar) => Ok(OutputTo {
-                destination: Some(output_to::Destination::Pulsar(PulsarDestination {
-                    broker_service_url: pulsar.broker_service_url.clone(),
-                    auth_plugin: pulsar.auth_plugin.clone(),
-                    auth_params: pulsar.auth_params.clone(),
-                    tenant: pulsar.tenant.clone(),
-                    namespace: pulsar.namespace.clone(),
-                    topic_name: pulsar.topic_name.clone(),
-                    topic_url: format_topic_url(pulsar)
-                        .change_context(Error::MissingField("missing topic name"))?,
-                    certificate_chain: pulsar.certificate_chain.clone(),
-                })),
-            }),
-            output_to::Destination::Redis(_) => {
+            destination::Destination::Pulsar(pulsar) => {
+                let config = pulsar
+                    .config
+                    .as_ref()
+                    .ok_or(Error::internal_msg("missing config"))?;
+                Ok(Destination {
+                    destination: Some(destination::Destination::Pulsar(PulsarDestination {
+                        config: Some(PulsarConfig {
+                            broker_service_url: config.broker_service_url.clone(),
+                            auth_plugin: config.auth_plugin.clone(),
+                            auth_params: config.auth_params.clone(),
+                            tenant: config.tenant.clone(),
+                            namespace: config.namespace.clone(),
+                            topic_name: config.topic_name.clone(),
+                            topic_url: format_topic_url(&config)
+                                .change_context(Error::MissingField("missing topic name"))?,
+                            certificate_chain: config.certificate_chain.clone(),
+                            admin_service_url: config.admin_service_url.clone(),
+                        }),
+                    })),
+                })
+            }
+            destination::Destination::Redis(_) => {
                 error_stack::bail!(Error::UnsupportedOutput { output: "redis" })
             }
         }
@@ -243,7 +255,7 @@ pub(super) fn progress_stream(
                                     flight_record_path: None,
                                     plan_yaml_path: None,
                                     compute_snapshots,
-                                    output_to: Some(output),
+                                    destination: Some(output),
                                 });
                                 yield final_result;
                                 break

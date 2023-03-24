@@ -53,7 +53,7 @@ impl ComputeExecutor {
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
-        output_to: v1alpha::OutputTo,
+        output_to: v1alpha::Destination,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
