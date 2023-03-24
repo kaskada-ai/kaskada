@@ -74,11 +74,21 @@ impl ObjectStoreUrl {
         file_path: PathBuf,
     ) -> error_stack::Result<(), Error> {
         let path = self.path()?;
-        // TODO: Update the unwrap await error. Probably need to cast it to error_stack error.
-        let stream = object_store.get(&path).await.unwrap().into_stream();
-        let mut file = tokio::fs::File::create(file_path.clone()).await.unwrap();
+        let stream = object_store
+            .get(&path)
+            .await
+            .into_report()
+            .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?
+            .into_stream();
+        let mut file = tokio::fs::File::create(file_path.clone())
+            .await
+            .into_report()
+            .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
         let mut body = StreamReader::new(stream);
-        tokio::io::copy(&mut body, &mut file).await.unwrap();
+        tokio::io::copy(&mut body, &mut file)
+            .await
+            .into_report()
+            .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
         Ok(())
     }
 }

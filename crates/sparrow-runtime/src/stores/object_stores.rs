@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 use error_stack::{IntoReport, ResultExt};
 use hashbrown::HashMap;
@@ -80,6 +83,8 @@ pub enum Error {
     UrlInvalidPath(Url),
     #[display(fmt = "error creating object store for {_0:?}")]
     CreatingObjectStore(ObjectStoreKey),
+    #[display(fmt = "downloading object for {_0:?}")]
+    DownloadingObject(PathBuf),
 }
 
 impl error_stack::Context for Error {}
