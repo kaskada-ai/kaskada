@@ -45,11 +45,13 @@ impl ObjectStoreRegistry {
     }
 
     fn get_object_store(&self, key: &ObjectStoreKey) -> Option<Arc<dyn ObjectStore>> {
+        // TODO: How to safely unwrap this? The read() returns a Poisoned error.
         let object_stores = self.object_stores.read().unwrap();
         object_stores.get(key).cloned()
     }
 
     fn put_object_store(&self, key: ObjectStoreKey, object_store: Arc<dyn ObjectStore>) {
+        // TODO: How to safely unwrap this? The read() returns a Poisoned error.
         let mut object_stores = self.object_stores.write().unwrap();
         object_stores.insert(key, object_store);
     }
