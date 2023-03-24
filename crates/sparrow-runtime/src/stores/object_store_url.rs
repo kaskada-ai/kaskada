@@ -7,6 +7,8 @@ use url::Url;
 
 use itertools::Itertools;
 
+use crate::ObjectStoreRegistry;
+
 use super::object_stores::Error;
 
 /// A string referring to a file in an object store.
@@ -60,24 +62,31 @@ impl ObjectStoreUrl {
                         region: Some(region.to_owned()),
                         virtual_hosted_style_request: true,
                     }),
-                    Some((bucket, "storage", "googleapis", "com")) => Ok(ObjectStoreKey::Gcs { 
-                        bucket: bucket.to_owned() 
+                    Some((bucket, "storage", "googleapis", "com")) => Ok(ObjectStoreKey::Gcs {
+                        bucket: bucket.to_owned(),
                     }),
                     Some(("storage", "cloud", "google", "com")) => {
-                        let mut path = self.0.path_segments().ok_or_else(|| Error::UrlInvalidPath(self.0.clone()))?;
-                        let bucket = path.next().ok_or_else(|| Error::UrlInvalidPath(self.0.clone()))?;
-                        Ok(ObjectStoreKey::Gcs { bucket: bucket.to_owned() })
+                        let mut path = self
+                            .0
+                            .path_segments()
+                            .ok_or_else(|| Error::UrlInvalidPath(self.0.clone()))?;
+                        let bucket = path
+                            .next()
+                            .ok_or_else(|| Error::UrlInvalidPath(self.0.clone()))?;
+                        Ok(ObjectStoreKey::Gcs {
+                            bucket: bucket.to_owned(),
+                        })
                     }
                     _ => error_stack::bail!(Error::UrlUnsupportedHost(self.0.clone())),
                 }
             }
             "gs" => {
                 let bucket = self
-                .0
-                .host_str()
-                .ok_or_else(|| Error::UrlMissingHost(self.0.clone()))?
-                .to_owned();
-                Ok(ObjectStoreKey::Gcs { bucket: bucket })
+                    .0
+                    .host_str()
+                    .ok_or_else(|| Error::UrlMissingHost(self.0.clone()))?
+                    .to_owned();
+                Ok(ObjectStoreKey::Gcs { bucket })
             }
             _ => {
                 error_stack::bail!(Error::UrlUnsupportedScheme(self.0.clone()))
@@ -86,10 +95,11 @@ impl ObjectStoreUrl {
     }
     pub async fn download(
         &self,
-        object_store: Arc<dyn ObjectStore>,
+        object_store_registry: &ObjectStoreRegistry,
         file_path: PathBuf,
     ) -> error_stack::Result<(), Error> {
         let path = self.path()?;
+        let object_store = object_store_registry.object_store(self.key()?)?;
         let stream = object_store
             .get(&path)
             .await
@@ -128,7 +138,7 @@ pub enum ObjectStoreKey {
     },
     Gcs {
         bucket: String,
-    }
+    },
 }
 
 #[cfg(test)]
@@ -233,19 +243,25 @@ mod tests {
         let url = ObjectStoreUrl::from_str("gs://bucket/path").unwrap();
         assert_eq!(
             url.key().unwrap(),
-            ObjectStoreKey::Gcs { bucket: "bucket".to_owned() }
+            ObjectStoreKey::Gcs {
+                bucket: "bucket".to_owned()
+            }
         );
 
         let url = ObjectStoreUrl::from_str("https://bucket.storage.googleapis.com/path").unwrap();
         assert_eq!(
             url.key().unwrap(),
-            ObjectStoreKey::Gcs { bucket: "bucket".to_owned() }
-        );        
+            ObjectStoreKey::Gcs {
+                bucket: "bucket".to_owned()
+            }
+        );
 
         let url = ObjectStoreUrl::from_str("https://storage.cloud.google.com/bucket/path").unwrap();
         assert_eq!(
             url.key().unwrap(),
-            ObjectStoreKey::Gcs { bucket: "bucket".to_owned() }
+            ObjectStoreKey::Gcs {
+                bucket: "bucket".to_owned()
+            }
         );
     }
 }
