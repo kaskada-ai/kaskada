@@ -67,6 +67,11 @@ jobs:
           echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
           echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
 
+  release_engine_cross_build:
+    name: Cross build release for aarch64 linux
+    needs: ["release_engine_draft"]
+    uses: ./.github/workflows/reusable_ci_arm64_release.yml
+
   release_engine_build:
     name: Engine Release Build
     needs: ["release_engine_draft"]
