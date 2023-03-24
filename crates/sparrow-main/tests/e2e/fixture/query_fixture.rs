@@ -11,8 +11,7 @@ use parquet::file::properties::WriterProperties;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::execute_request::{ComputeSnapshotConfig, Limits};
 use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
-use sparrow_api::kaskada::v1alpha::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::OutputTo;
+use sparrow_api::kaskada::v1alpha::{destination, Destination};
 use sparrow_api::kaskada::v1alpha::{
     CompileRequest, ExecuteRequest, FeatureSet, FileType, Formula, ObjectStoreDestination,
     PerEntityBehavior,
@@ -273,13 +272,13 @@ impl QueryFixture {
             file_type: output_format.into(),
             output_paths: None,
         };
-        let output_to = OutputTo {
-            destination: Some(Destination::ObjectStore(destination)),
+        let output_to = Destination {
+            destination: Some(destination::Destination::ObjectStore(destination)),
         };
 
         let request = ExecuteRequest {
             plan: Some(plan),
-            output_to: Some(output_to),
+            destination: Some(output_to),
             tables: data.tables(),
 
             ..self.execute_request.clone()

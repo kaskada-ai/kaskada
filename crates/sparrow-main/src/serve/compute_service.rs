@@ -227,7 +227,7 @@ async fn debug_message(
         state: LongQueryState::Final as i32,
         is_query_done: true,
         progress: None,
-        output_to: None,
+        destination: None,
         flight_record_path: uploaded_flight_record_path,
         plan_yaml_path: uploaded_plan_yaml_path,
         compute_snapshots: Vec::new(),
@@ -295,15 +295,14 @@ mod tests {
     use parquet::file::serialized_reader::SerializedFileReader;
     use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
     use sparrow_api::kaskada::v1alpha::execute_request::Limits;
-    use sparrow_api::kaskada::v1alpha::output_to::Destination;
-    use sparrow_api::kaskada::v1alpha::OutputTo;
     use sparrow_api::kaskada::v1alpha::{
-        compute_table, file_path, slice_plan, ComputeTable, FeatureSet, FilePath, FileType,
+        compute_table, destination, slice_plan, source_data, ComputeTable, FeatureSet, FileType,
         ObjectStoreDestination, PerEntityBehavior, SlicePlan, TableConfig, TableMetadata,
     };
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
-    use sparrow_runtime::prepare::{file_source, file_sourcedata, prepared_batches};
+    use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
+    use sparrow_runtime::prepare::{file_sourcedata, prepared_batches};
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
     use super::*;
@@ -503,7 +502,7 @@ mod tests {
                 percent: 50.0,
             })),
         };
-        let input_path = FilePath::try_from_local(&part1_file_path).unwrap();
+        let input_path = SourceData::try_from_local(&part1_file_path).unwrap();
         let prepared_batches: Vec<_> = prepared_batches(
             &file_sourcedata(input_path),
             &table,
@@ -515,14 +514,14 @@ mod tests {
         .collect()
         .unwrap();
 
-        let input_path = file_path::Path::ParquetPath(
+        let input_path = source_data::Source::ParquetPath(
             part1_file_path
                 .canonicalize()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
         );
-        let part1_metadata = RawMetadata::try_from(&file_source(input_path)).unwrap();
+        let part1_metadata = RawMetadata::try_from(&input_path).unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 
         debug_assert_eq!(prepared_batches.len(), 1);
@@ -608,8 +607,8 @@ mod tests {
             output_prefix_uri: format!("file://{}", output_dir.path().display()),
             output_paths: None,
         };
-        let output_to = OutputTo {
-            destination: Some(Destination::ObjectStore(store)),
+        let output_to = Destination {
+            destination: Some(destination::Destination::ObjectStore(store)),
         };
 
         let mut results: Vec<ExecuteResponse> = execute_impl(
@@ -625,7 +624,7 @@ mod tests {
                     }),
                     file_sets: vec![file_set],
                 }],
-                output_to: Some(output_to),
+                destination: Some(output_to),
                 // These are weird. Wren doesn't send "no limits" and "no query hash"
                 // when their missing. Instead, it sends the defaults.
                 limits: Some(Limits::default()),
@@ -662,8 +661,9 @@ mod tests {
 
         // Second, redact the output paths and check the response.
         for result in results.iter_mut() {
-            if let Some(output) = &mut result.output_to {
-                if let Some(Destination::ObjectStore(store)) = &mut output.destination {
+            if let Some(output) = &mut result.destination {
+                if let Some(destination::Destination::ObjectStore(store)) = &mut output.destination
+                {
                     store.output_prefix_uri = "<redacted_output_prefix_uri>".to_owned()
                 }
             };

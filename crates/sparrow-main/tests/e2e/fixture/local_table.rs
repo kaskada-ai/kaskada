@@ -2,9 +2,9 @@ use std::fs::File;
 
 use fallible_iterator::FallibleIterator;
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
+use sparrow_api::kaskada::v1alpha::SourceData;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, ComputeTable, PreparedFile, TableConfig, TableMetadata,
+    source_data, ComputeTable, PreparedFile, TableConfig, TableMetadata,
 };
 use sparrow_runtime::prepare::prepared_batches;
 use sparrow_runtime::PreparedMetadata;
@@ -65,7 +65,7 @@ impl LocalTestTable {
         }
     }
 
-    pub fn add_file_source(&mut self, raw_file_path: &file_path::Path) -> anyhow::Result<()> {
+    pub fn add_file_source(&mut self, raw_file_path: &source_data::Source) -> anyhow::Result<()> {
         tracing::info!("Adding file source: {:?}", raw_file_path);
         let source_data = sparrow_runtime::prepare::file_sourcedata(raw_file_path.clone());
         self.add_source(&source_data)

@@ -13,7 +13,7 @@ use pulsar::{
 };
 
 use crate::execute::avro_arrow;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::PulsarConfig;
+use sparrow_api::kaskada::v1alpha::PulsarSubscription;
 use std::io::Cursor;
 
 use std::time::Duration;
@@ -186,20 +186,23 @@ impl Iterator for PulsarReader {
 }
 
 pub(crate) async fn pulsar_consumer(
-    pulsar_config: &PulsarConfig,
+    subscription: &PulsarSubscription,
     schema: SchemaRef,
 ) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
-    let ps = pulsar_config.pulsar_source.as_ref().unwrap();
+    let config = subscription.config.as_ref().ok_or(Error::Internal)?;
     // specifying persistent:// or non-persistent:// appears to be optional
-    let topic_url = format!("{}/{}/{}", ps.tenant, ps.namespace, ps.topic_name);
+    let topic_url = format!(
+        "{}/{}/{}",
+        config.tenant, config.namespace, config.topic_name
+    );
 
-    let auth_token = crate::execute::pulsar_schema::pulsar_auth_token(ps.auth_params.as_str())
+    let auth_token = crate::execute::pulsar_schema::pulsar_auth_token(config.auth_params.as_str())
         .change_context(Error::CreatePulsarReader)?;
     let auth = Authentication {
         name: "token".to_string(),
         data: auth_token.as_bytes().to_vec(),
     };
-    let client = Pulsar::builder(&ps.broker_service_url, TokioExecutor)
+    let client = Pulsar::builder(&config.broker_service_url, TokioExecutor)
         .with_auth(auth)
         .build()
         .await
@@ -224,10 +227,10 @@ pub(crate) async fn pulsar_consumer(
         .with_topic(topic_url)
         .with_consumer_name(format!(
             "sparrow consumer for {}",
-            &pulsar_config.subscription_id
+            &subscription.subscription_id
         ))
         .with_subscription_type(SubType::Exclusive)
-        .with_subscription(&pulsar_config.subscription_id)
+        .with_subscription(&subscription.subscription_id)
         .build()
         .await
         .into_report()

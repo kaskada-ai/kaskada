@@ -39,8 +39,8 @@ pub enum Error {
         slice_plan: String,
         table_config: String,
     },
-    #[display(fmt = "unsupported file path {_0:?}")]
-    UnsupportedOutputPath(sparrow_api::kaskada::v1alpha::file_path::Path),
+    #[display(fmt = "unsupported source {_0:?}")]
+    UnsupportedOutputPath(sparrow_api::kaskada::v1alpha::source_data::Source),
     #[display(fmt = "invalid input path")]
     InvalidInputPath,
     #[display(fmt = "failed to read input")]

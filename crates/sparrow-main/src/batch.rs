@@ -129,7 +129,7 @@ impl BatchCommand {
                 ExecuteRequest {
                     plan: Some(plan),
                     tables,
-                    output_to: Some(output_to),
+                    destination: Some(output_to),
                     limits: Some(self.limits),
                     compute_snapshot_config: None,
                     changed_since: None,

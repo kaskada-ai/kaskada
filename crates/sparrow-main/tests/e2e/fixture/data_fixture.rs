@@ -1,5 +1,5 @@
 use sparrow_api::kaskada::v1alpha::{
-    file_path, ComputeTable, FilePath, TableConfig, TableMetadata,
+    source_data, ComputeTable, SourceData, TableConfig, TableMetadata,
 };
 use sparrow_syntax::is_valid_ident;
 
@@ -52,8 +52,8 @@ impl DataFixture {
         let table = self.add_table(config);
         for raw_file_path in raw_file_paths {
             let data_path = sparrow_testing::testdata_path(raw_file_path);
-            let file_path = FilePath::try_from_local(&data_path).unwrap();
-            table.add_file_source(&file_path)?
+            let source_data = SourceData::try_from_local(&data_path).unwrap();
+            table.add_file_source(&source_data)?
         }
         Ok(self)
     }
@@ -67,7 +67,7 @@ impl DataFixture {
         let temp_file = table.finish();
         let table = self.add_table(config);
         table
-            .add_file_source(&file_path::Path::ParquetPath(
+            .add_file_source(&source_data::Source::ParquetPath(
                 temp_file.path().to_str().unwrap().to_owned(),
             ))
             .unwrap();
@@ -81,7 +81,7 @@ impl DataFixture {
     ) -> Result<Self, crate::EndToEndError> {
         let table = self.add_table(config);
         table
-            .add_file_source(&file_path::Path::CsvData(csv_content.to_owned()))
+            .add_file_source(&source_data::Source::CsvData(csv_content.to_owned()))
             .unwrap();
         Ok(self)
     }

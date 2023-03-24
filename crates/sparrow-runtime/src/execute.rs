@@ -51,7 +51,9 @@ pub async fn execute(
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let plan = request.plan.ok_or(Error::MissingField("plan"))?;
 
-    let output_to = request.output_to.ok_or(Error::MissingField("output_to"))?;
+    let output_to = request
+        .destination
+        .ok_or(Error::MissingField("output_to"))?;
 
     let changed_since_time = request.changed_since.unwrap_or(Timestamp {
         seconds: 0,

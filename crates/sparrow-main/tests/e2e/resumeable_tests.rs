@@ -1,6 +1,6 @@
 //! Basic e2e tests for fake resumeable compute
 use indoc::indoc;
-use sparrow_api::kaskada::v1alpha::{file_path, TableConfig};
+use sparrow_api::kaskada::v1alpha::{source_data, TableConfig};
 use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
@@ -41,7 +41,7 @@ async fn assert_final_incremental_same_as_complete(
     };
 
     // Add the second file
-    let csv2 = file_path::Path::CsvData(csv2.to_owned());
+    let csv2 = source_data::Source::CsvData(csv2.to_owned());
     data_fixture
         .table_mut("Numbers")
         .add_file_source(&csv2)
@@ -212,8 +212,8 @@ async fn test_resumeable_with_unordered_file_sets() {
     };
 
     // Clear the table, add the second file first, then the first file.
-    let csv1 = file_path::Path::CsvData(csv1.to_owned());
-    let csv2 = file_path::Path::CsvData(csv2.to_owned());
+    let csv1 = source_data::Source::CsvData(csv1.to_owned());
+    let csv2 = source_data::Source::CsvData(csv2.to_owned());
 
     data_fixture.table_mut("Numbers").clear();
     data_fixture

@@ -4,14 +4,14 @@ use error_stack::{IntoReportCompat, ResultExt};
 use fallible_iterator::FallibleIterator;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::prepare_data_request::SourceData;
+use sparrow_api::kaskada::v1alpha::destination;
+use sparrow_api::kaskada::v1alpha::source_data;
+use sparrow_api::kaskada::v1alpha::Destination;
+use sparrow_api::kaskada::v1alpha::SourceData;
 use sparrow_api::kaskada::v1alpha::{
-    compute_table, file_path, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet,
-    FenlDiagnostics, FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig,
-    TableMetadata,
+    compute_table, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet, FenlDiagnostics,
+    FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig, TableMetadata,
 };
-use sparrow_api::kaskada::v1alpha::{FilePath, OutputTo};
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_runtime::s3::S3Helper;
@@ -91,15 +91,15 @@ pub(super) async fn execute_example(
         file_type: FileType::Csv.into(),
         output_paths: None,
     };
-    let output_to = OutputTo {
-        destination: Some(Destination::ObjectStore(destination)),
+    let output_to = Destination {
+        destination: Some(destination::Destination::ObjectStore(destination)),
     };
 
     let stream = sparrow_runtime::execute::execute(
         ExecuteRequest {
             plan: result.plan,
             tables,
-            output_to: Some(output_to),
+            destination: Some(output_to),
             limits: None,
             compute_snapshot_config: None,
             changed_since: None,
@@ -197,9 +197,9 @@ impl ExampleInputPreparer {
         config: TableConfig,
         input_csv: &str,
     ) -> error_stack::Result<ComputeTable, Error> {
-        let sd = SourceData::FilePath(FilePath {
-            path: Some(file_path::Path::CsvData(input_csv.to_owned())),
-        });
+        let sd = SourceData {
+            source: Some(source_data::Source::CsvData(input_csv.to_owned())),
+        };
         let prepared_batches: Vec<_> =
             sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
                 .change_context(Error::PrepareInput)?
