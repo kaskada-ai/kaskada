@@ -69,7 +69,7 @@ tokio-util.workspace = true
 tonic.workspace = true
 tracing.workspace = true
 uuid.workspace = true
-object_store = { version = "0.5.5", features = ["aws"] }
+object_store = { version = "0.5.5", features = ["aws", "gcp"] }
 url = "2.3.1"
 
 [dev-dependencies]
