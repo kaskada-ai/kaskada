@@ -24,7 +24,7 @@ mod error;
 mod input_prefetch;
 pub(crate) mod key_hash_inverse;
 mod operation;
-mod output;
+pub(crate) mod output;
 mod progress_reporter;
 pub(crate) mod pulsar_reader;
 pub(crate) mod pulsar_schema;

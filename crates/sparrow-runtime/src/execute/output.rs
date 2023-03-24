@@ -23,7 +23,6 @@ mod object_store;
 mod parquet;
 mod redis;
 
-#[cfg(feature = "pulsar")]
 pub(crate) mod pulsar;
 
 #[derive(Debug, derive_more::Display)]

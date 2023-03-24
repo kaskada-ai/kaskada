@@ -109,7 +109,12 @@ impl<'a> fmt::Display for SourceDataWrapper<'a> {
                 write!(
                     f,
                     "pulsar subscription {} to {} @ {}",
-                    ps.subscription_id, config.topic_url, config.broker_service_url
+                    ps.subscription_id,
+                    match crate::execute::output::pulsar::format_topic_url(config) {
+                        Ok(url) => url,
+                        Err(_) => "invalid pulsar url".to_string(),
+                    },
+                    config.broker_service_url
                 )
             }
             None => write!(f, "empty source (should never happen)"),
@@ -303,7 +308,9 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
             let mut hasher = sha2::Sha224::new();
             let config = ps.config.as_ref().unwrap();
             hasher.update(&config.broker_service_url);
-            hasher.update(&config.topic_url);
+            hasher.update(&config.tenant);
+            hasher.update(&config.namespace);
+            hasher.update(&config.topic_name);
             hasher.update(&ps.subscription_id);
             if let Some(pt) = &ps.last_publish_time {
                 let mut bytes = [0u8; 8];
