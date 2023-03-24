@@ -65,7 +65,7 @@ pub fn prepared_batches(
                 reader_from_csv(config, reader, prepare_hash, slice)?
             }
             source_data::Source::PulsarSubscription(ps) => {
-                reader_from_pulsar(config, &ps, prepare_hash, slice)?
+                reader_from_pulsar(config, ps, prepare_hash, slice)?
             }
         },
     };
