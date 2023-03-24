@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
+use error_stack::{IntoReportCompat, ResultExt, IntoReport};
 use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
 use sparrow_api::kaskada::v1alpha::Schema;
@@ -74,34 +75,54 @@ async fn get_metadata(
         .map(|source| get_source_metadata(&s3, object_store_registry.as_ref(), source))
         .collect();
 
-    let file_metadatas = try_join_all(file_metadatas).await?;
+    let file_metadatas = try_join_all(file_metadatas)
+        .await
+        .map_err(|e| anyhow::anyhow!("unable to get file metadata: {:?}", e))?;
     Ok(Response::new(GetMetadataResponse { file_metadatas }))
 }
+
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    #[display(fmt = "unable to get source path from request")]
+    SourcePathError,
+    #[display(fmt = "unable to create temporary file")]
+    TempFileDownloadFileError,
+    #[display(fmt = "unable to download file from object store")]
+    ObjectStoreError,
+    #[display(fmt = "schema error: '{_0}'")]
+    SchemaError(String)
+}
+impl error_stack::Context for Error {}
 
 pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
     object_store_registry: &ObjectStoreRegistry,
     source: &FilePath,
-) -> anyhow::Result<FileMetadata> {
+) -> error_stack::Result<FileMetadata, Error> {
     let source = source
         .path
         .as_ref()
-        .context(context_code!(Code::InvalidArgument, "Missing source_path"))?;
+        .context(context_code!(Code::InvalidArgument, "Missing source_path"))
+        .into_report()
+        .change_context(Error::SourcePathError)?;
 
-    let download_file = NamedTempFile::new()?;
+    let download_file = NamedTempFile::new()
+        .into_report()
+        .change_context(Error::TempFileDownloadFileError)?;
+    
     let download_file_path = download_file.into_temp_path();
     let source = match source {
         file_path::Path::ParquetPath(path) => {
             if is_s3_path(path) {
-                let object_store_url = ObjectStoreUrl::from_str(path).unwrap(); // TODO: Fix this unwrap.
-                let object_store_key = object_store_url.key().unwrap(); // TODO: Fix this unwrap.
+                let object_store_url = ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
+                let object_store_key = object_store_url.key().change_context(Error::ObjectStoreError)?;
                 let object_store = object_store_registry
                     .object_store(object_store_key)
-                    .unwrap(); // TODO: Fix this unwrap.
+                    .change_context(Error::ObjectStoreError)?;
                 object_store_url
                     .download(object_store, download_file_path.to_owned())
                     .await
-                    .unwrap();
+                    .change_context(Error::ObjectStoreError)?;
                 file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())
             } else {
                 file_path::Path::ParquetPath(path.to_string())
@@ -109,9 +130,15 @@ pub(crate) async fn get_source_metadata(
         }
         file_path::Path::CsvPath(path) => {
             if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path)?;
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await?;
+                let object_store_url = ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
+                let object_store_key = object_store_url.key().change_context(Error::ObjectStoreError)?;
+                let object_store = object_store_registry
+                    .object_store(object_store_key)
+                    .change_context(Error::ObjectStoreError)?;
+                object_store_url
+                    .download(object_store, download_file_path.to_owned())
+                    .await
+                    .change_context(Error::ObjectStoreError)?;
                 file_path::Path::CsvPath(download_file_path.to_string_lossy().to_string())
             } else {
                 file_path::Path::CsvPath(path.to_string())
@@ -120,13 +147,14 @@ pub(crate) async fn get_source_metadata(
         file_path::Path::CsvData(data) => file_path::Path::CsvData(data.to_string()),
     };
 
-    let metadata = RawMetadata::try_from(&source)?;
-    let schema = Schema::try_from(metadata.table_schema.as_ref()).with_context(|| {
-        format!(
-            "Unable to encode schema {:?} for source file {:?}",
-            metadata.table_schema, source
-        )
-    })?;
+    let metadata = RawMetadata::try_from(&source)
+        .into_report()
+        .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
+    let schema = Schema::try_from(metadata.table_schema.as_ref())
+        .into_report()
+        .change_context(Error::SchemaError(format!(
+            "Unable to encode schema {:?} for source file {:?}", metadata.table_schema, source
+        ).to_owned()))?;
 
     Ok(FileMetadata {
         schema: Some(schema),
