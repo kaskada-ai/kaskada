@@ -41,12 +41,6 @@ message PulsarConfig {
   //
   // Defaults to a randomly generated uuid.
   string topic_name = 8;
-
-  // The full topic url.
-  // e.g. "persistent://{tenant}/{namespace}/{topic_name}"
-  //
-  // This field is populated in the output response.
-  string topic_url = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Configuration for a single source of data from a pulsar topic.
