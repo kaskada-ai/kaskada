@@ -135,7 +135,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 		Describe("Start a query, and then send a termination signal to Kaskada", func() {
 			It("should return query results before exiting", func() {
 				go terminateKaskada()
-				destination := &v1alpha.OutputTo_ObjectStore{
+				destination := &v1alpha.Destination_ObjectStore{
 					ObjectStore: &v1alpha.ObjectStoreDestination{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 					},
@@ -144,7 +144,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				stream, err := queryClient.CreateQuery(ctx, &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
 						Expression:     query,
-						OutputTo:       &v1alpha.OutputTo{Destination: destination},
+						Destination:    &v1alpha.Destination{Destination: destination},
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
 					QueryOptions: &v1alpha.QueryOptions{
@@ -158,10 +158,10 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				res, err := helpers.GetMergedCreateQueryResponse(stream)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(res.GetOutputTo()).ShouldNot(BeNil())
-				Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
+				Expect(res.GetDestination()).ShouldNot(BeNil())
+				Expect(res.GetDestination().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
-				resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
+				resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 				results := helpers.DownloadParquet(resultsUrl)
 
 				Expect(len(results)).Should(Equal(100000))
@@ -188,9 +188,9 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				res, err := materializationClient.CreateMaterialization(ctx, &v1alpha.CreateMaterializationRequest{
 					Materialization: &v1alpha.Materialization{
 						MaterializationName: "transaction_details",
-						Expression:               query,
-						Destination: &v1alpha.Materialization_Destination{
-							Destination: &v1alpha.Materialization_Destination_Redis{
+						Expression:          query,
+						Destination: &v1alpha.Destination{
+							Destination: &v1alpha.Destination_Redis{
 								Redis: &v1alpha.RedisDestination{
 									HostName:       "redis",
 									Port:           6379,
