@@ -106,7 +106,9 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
                 .into_report()
                 .change_context(Error::CreatingObjectStore(key.clone()))?;
             Ok(Arc::new(object_store))
-        }
+        },
+        ObjectStoreKey::Gcs { bucket } => todo!(),
+        
     }
 }
 
