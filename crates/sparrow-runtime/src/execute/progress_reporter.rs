@@ -12,10 +12,6 @@ use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LongQueryState};
 use tokio_stream::StreamExt;
 
 #[cfg(feature = "pulsar")]
-use super::output::pulsar::format_topic_url;
-#[cfg(feature = "pulsar")]
-use error_stack::ResultExt;
-#[cfg(feature = "pulsar")]
 use sparrow_api::kaskada::v1alpha::PulsarDestination;
 
 use super::Error;
