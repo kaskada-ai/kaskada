@@ -1,3 +1,4 @@
+#![allow(clippy::large_enum_variant)] // Could box the pulsar subscription, but for now just allowing this.
 #![allow(clippy::derive_partial_eq_without_eq)] // stop clippy erroring on generated code from tonic (proto)
 use itertools::Itertools;
 

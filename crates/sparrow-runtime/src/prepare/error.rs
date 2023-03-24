@@ -40,7 +40,7 @@ pub enum Error {
         table_config: String,
     },
     #[display(fmt = "unsupported source {_0:?}")]
-    UnsupportedOutputPath(sparrow_api::kaskada::v1alpha::source_data::Source),
+    UnsupportedOutputPath(&'static str),
     #[display(fmt = "invalid input path")]
     InvalidInputPath,
     #[display(fmt = "failed to read input")]

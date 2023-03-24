@@ -176,7 +176,7 @@ impl ProgressTracker {
                             tenant: config.tenant.clone(),
                             namespace: config.namespace.clone(),
                             topic_name: config.topic_name.clone(),
-                            topic_url: format_topic_url(&config)
+                            topic_url: format_topic_url(config)
                                 .change_context(Error::MissingField("missing topic name"))?,
                             certificate_chain: config.certificate_chain.clone(),
                             admin_service_url: config.admin_service_url.clone(),
