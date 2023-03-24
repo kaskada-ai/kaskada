@@ -113,10 +113,19 @@ impl PulsarReader {
         let max_batch_size = 100000; // TODO make this adaptive based on the size of the messages
         let mut avro_values = Vec::with_capacity(max_batch_size);
         while avro_values.len() < max_batch_size {
-            // read the next entry from the pulsar consumer
-            // TODO this is fragile since tokio has no idea what is going on inside the consumer,
+            // read the next entry from the pulsar consumer.
+            // this is fragile since tokio has no idea what is going on inside the consumer,
             // so it's entirely possible to time out while actively reading messages from the broker.
-            // experimentally, 1ms is not reliable, but 10ms seems to work.
+            // this is no big deal if we've already read some messages (we'll just process the ones
+            // we read, then come back for more) but it's a problem if we haven't, because "no messages
+            // to read" is how we detect the end of the stream.
+            //
+            // this problem goes away once we have a long-running sparrow process that can just wait
+            // indefinitely to read messages, but in the meantime, we use a larger-than-should-be-necessary
+            // timeout to try to avoid this problem.
+            //
+            // experimentally, 10ms works fine locally, and 1000ms works fine with Astra, so 5x that
+            // number should give us ample headroom.
             let next_result = timeout(Duration::from_millis(1000), self.consumer.try_next()).await;
             let Ok(msg) = next_result else {
                 tracing::trace!("timed out reading next message");
