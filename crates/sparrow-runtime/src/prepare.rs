@@ -277,18 +277,19 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
             data_encoding::HEXUPPER.encode(&hash)
         }
         source_data::Source::PulsarSubscription(ps) => {
-            // TODO not sure what the right approach is here, we definitely don't want
-            // to read the entire contents of the topic twice. (that's what the file
-            // approaches do above, but reading from the broker would be much less
-            // performant.)
-            // perhaps we could hash the topic with the high water mark of the subscription?
             let mut hasher = sha2::Sha224::new();
             let config = ps.config.as_ref().unwrap();
-            let fqt = format!(
-                "{}/{}/{}",
-                config.tenant, config.namespace, config.topic_name
-            );
-            hasher.update(fqt);
+            hasher.update(&config.broker_service_url);
+            hasher.update(&config.topic_url);
+            hasher.update(&ps.subscription_id);
+            if let Some(pt) = &ps.last_publish_time {
+                let mut bytes = [0u8; 8];
+                let mut bytes2 = [0u8; 4];
+                bytes.copy_from_slice(&pt.seconds.to_be_bytes());
+                bytes2.copy_from_slice(&pt.nanos.to_be_bytes());
+                hasher.update(&bytes);
+                hasher.update(&bytes2);
+            }
             let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
         }
