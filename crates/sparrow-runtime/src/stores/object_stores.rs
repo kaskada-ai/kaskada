@@ -113,7 +113,14 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
                 .into_report()
                 .change_context(Error::CreatingObjectStore(key.clone()))?;
             Ok(Arc::new(object_store))
-        }
+        },
+        ObjectStoreKey::Gcs { bucket } => {
+            let builder = object_store::gcp::GoogleCloudStorageBuilder::from_env()
+                .with_bucket_name(bucket);
+            let object_store = builder.build().into_report().change_context(Error::CreatingObjectStore(key.clone()))?;
+            Ok(Arc::new(object_store))
+        },
+        
     }
 }
 
@@ -149,6 +156,13 @@ mod tests {
         };
         let object_store = create_object_store(&key).unwrap();
         assert_eq!(object_store.to_string(), "AmazonS3(test-bucket)")
+    }
+
+    #[test]
+    fn test_create_object_store_gcs() {
+        let key = ObjectStoreKey::Gcs { bucket: "test-bucket".to_owned() };
+        let object_store = create_object_store(&key).unwrap();
+        assert_eq!(object_store.to_string(), "GoogleCloudStorage(test-bucket)")
     }
 
     #[test]

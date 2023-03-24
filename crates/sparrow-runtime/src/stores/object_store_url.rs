@@ -60,8 +60,24 @@ impl ObjectStoreUrl {
                         region: Some(region.to_owned()),
                         virtual_hosted_style_request: true,
                     }),
+                    Some((bucket, "storage", "googleapis", "com")) => Ok(ObjectStoreKey::Gcs { 
+                        bucket: bucket.to_owned() 
+                    }),
+                    Some(("storage", "cloud", "google", "com")) => {
+                        let mut path = self.0.path_segments().ok_or_else(|| Error::UrlInvalidPath(self.0.clone()))?;
+                        let bucket = path.next().ok_or_else(|| Error::UrlInvalidPath(self.0.clone()))?;
+                        Ok(ObjectStoreKey::Gcs { bucket: bucket.to_owned() })
+                    }
                     _ => error_stack::bail!(Error::UrlUnsupportedHost(self.0.clone())),
                 }
+            }
+            "gs" => {
+                let bucket = self
+                .0
+                .host_str()
+                .ok_or_else(|| Error::UrlMissingHost(self.0.clone()))?
+                .to_owned();
+                Ok(ObjectStoreKey::Gcs { bucket: bucket })
             }
             _ => {
                 error_stack::bail!(Error::UrlUnsupportedScheme(self.0.clone()))
@@ -110,6 +126,9 @@ pub enum ObjectStoreKey {
         region: Option<String>,
         virtual_hosted_style_request: bool,
     },
+    Gcs {
+        bucket: String,
+    }
 }
 
 #[cfg(test)]
@@ -206,6 +225,27 @@ mod tests {
         assert_eq!(
             url.path().unwrap(),
             object_store::path::Path::parse("foo").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_gcp_urls() {
+        let url = ObjectStoreUrl::from_str("gs://bucket/path").unwrap();
+        assert_eq!(
+            url.key().unwrap(),
+            ObjectStoreKey::Gcs { bucket: "bucket".to_owned() }
+        );
+
+        let url = ObjectStoreUrl::from_str("https://bucket.storage.googleapis.com/path").unwrap();
+        assert_eq!(
+            url.key().unwrap(),
+            ObjectStoreKey::Gcs { bucket: "bucket".to_owned() }
+        );        
+
+        let url = ObjectStoreUrl::from_str("https://storage.cloud.google.com/bucket/path").unwrap();
+        assert_eq!(
+            url.key().unwrap(),
+            ObjectStoreKey::Gcs { bucket: "bucket".to_owned() }
         );
     }
 }
