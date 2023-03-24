@@ -1,5 +1,5 @@
 mod error;
-pub mod schema;
+mod schema;
 
 pub use error::*;
 pub use schema::*;
