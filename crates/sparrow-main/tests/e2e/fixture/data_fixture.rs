@@ -1,4 +1,6 @@
-use sparrow_api::kaskada::v1alpha::{source_data, ComputeTable, TableConfig, TableMetadata};
+use sparrow_api::kaskada::v1alpha::{
+    source_data, ComputeTable, SourceData, TableConfig, TableMetadata,
+};
 use sparrow_syntax::is_valid_ident;
 
 use crate::fixture::LocalTestTable;
@@ -79,7 +81,7 @@ impl DataFixture {
     ) -> Result<Self, crate::EndToEndError> {
         let table = self.add_table(config);
         table
-            .add_file_source(&file_path::Path::CsvData(csv_content.to_owned()))
+            .add_file_source(&source_data::Source::CsvData(csv_content.to_owned()))
             .unwrap();
         Ok(self)
     }
