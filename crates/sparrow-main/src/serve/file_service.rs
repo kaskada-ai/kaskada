@@ -11,7 +11,7 @@ use sparrow_api::kaskada::v1alpha::{
     MergeMetadataRequest, MergeMetadataResponse,
 };
 use sparrow_core::context_code;
-use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
+use sparrow_runtime::s3::is_s3_path;
 use sparrow_runtime::{ObjectStoreRegistry, ObjectStoreUrl, RawMetadata};
 use tempfile::NamedTempFile;
 use tonic::{Code, Response};
@@ -20,15 +20,13 @@ use crate::serve::error_status::IntoStatus;
 
 #[derive(Debug)]
 pub(super) struct FileServiceImpl {
-    s3: S3Helper, // TODO: Delete the s3 helper.
     object_store_registry: Arc<ObjectStoreRegistry>,
 }
 
 impl FileServiceImpl {
-    pub fn new(object_store_registry: Arc<ObjectStoreRegistry>, s3: S3Helper) -> Self {
+    pub fn new(object_store_registry: Arc<ObjectStoreRegistry>) -> Self {
         Self {
             object_store_registry,
-            s3,
         }
     }
 }
@@ -40,9 +38,8 @@ impl FileService for FileServiceImpl {
         &self,
         request: tonic::Request<GetMetadataRequest>,
     ) -> Result<tonic::Response<GetMetadataResponse>, tonic::Status> {
-        let s3 = self.s3.clone();
         let object_store = self.object_store_registry.clone();
-        match tokio::spawn(get_metadata(s3, object_store, request)).await {
+        match tokio::spawn(get_metadata(object_store, request)).await {
             Ok(result) => result.into_status(),
             Err(panic) => {
                 tracing::error!("Panic during prepare: {panic}");
@@ -63,7 +60,6 @@ impl FileService for FileServiceImpl {
 }
 
 async fn get_metadata(
-    s3: S3Helper,
     object_store_registry: Arc<ObjectStoreRegistry>,
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
@@ -72,7 +68,7 @@ async fn get_metadata(
     let file_metadatas: Vec<_> = request
         .file_paths
         .iter()
-        .map(|source| get_source_metadata(&s3, object_store_registry.as_ref(), source))
+        .map(|source| get_source_metadata(object_store_registry.as_ref(), source))
         .collect();
 
     let file_metadatas = try_join_all(file_metadatas)
@@ -95,7 +91,6 @@ pub enum Error {
 impl error_stack::Context for Error {}
 
 pub(crate) async fn get_source_metadata(
-    s3: &S3Helper,
     object_store_registry: &ObjectStoreRegistry,
     source: &FilePath,
 ) -> error_stack::Result<FileMetadata, Error> {
@@ -170,13 +165,9 @@ mod tests {
         // Regression test for handling files with a timestamp with a configured
         // timezone.
         let path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
-
-        let s3_helper = S3Helper::new().await;
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
-        let file_service = FileServiceImpl::new(object_store_registry, s3_helper);
+        let file_service = FileServiceImpl::new(object_store_registry);
 
-        // TODO: We may be able to clean this up to test the metadata logic
-        // without creating the S3 helper. But for now, this will suffice.
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
@@ -197,12 +188,8 @@ mod tests {
         let path =
             sparrow_testing::testdata_path("eventdata/2c889258-d676-4922-9a92-d7e9c60c1dde.csv");
 
-        let s3_helper = S3Helper::new().await;
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
-        let file_service = FileServiceImpl::new(object_store_registry, s3_helper);
-
-        // TODO: We may be able to clean this up to test the metadata logic
-        // without creating the S3 helper. But for now, this will suffice.
+        let file_service = FileServiceImpl::new(object_store_registry);
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
@@ -221,9 +208,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_metadata_csv_data() {
         let csv_data = "id,name,value,value2\n1,awkward,taco,123\n2,taco,awkward,456\n";
-        let s3_helper = S3Helper::new().await;
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
-        let file_service = FileServiceImpl::new(object_store_registry, s3_helper);
+        let file_service = FileServiceImpl::new(object_store_registry);
 
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {

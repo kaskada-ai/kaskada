@@ -61,7 +61,7 @@ impl ServeCommand {
 
         let s3 = S3Helper::new().await;
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
-        let file_service = FileServiceImpl::new(object_store_registry, s3.clone());
+        let file_service = FileServiceImpl::new(object_store_registry);
 
         // Leak the diagnostic prefix to create a `&'static` reference.
         // This simplifies the lifetime management of the futures.
