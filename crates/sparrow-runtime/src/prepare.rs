@@ -1,4 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
+use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
@@ -94,6 +95,28 @@ fn reader_from_pulsar(
         .change_context(Error::CreatePulsarReader)
 }
 
+// this is to avoid putting pulsar auth info in the logs
+pub struct SourceDataWrapper<'a>(&'a SourceData);
+
+impl<'a> fmt::Display for SourceDataWrapper<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0.source.as_ref() {
+            Some(source_data::Source::ParquetPath(path)) => write!(f, "{}", path),
+            Some(source_data::Source::CsvPath(path)) => write!(f, "{}", path),
+            Some(source_data::Source::CsvData(_)) => write!(f, "csv data"),
+            Some(source_data::Source::PulsarSubscription(ps)) => {
+                let config = ps.config.as_ref().unwrap();
+                write!(
+                    f,
+                    "pulsar subscription {} to {} @ {}",
+                    ps.subscription_id, config.topic_url, config.broker_service_url
+                )
+            }
+            None => write!(f, "empty source (should never happen)"),
+        }
+    }
+}
+
 /// Prepare the given file and return the list of prepared files.
 pub fn prepare_file(
     source_data: &SourceData,
@@ -105,8 +128,8 @@ pub fn prepare_file(
     let mut prepared_metadatas: Vec<_> = Vec::new();
     let mut prepared_files: Vec<_> = Vec::new();
     let preparer = prepared_batches(source_data, table_config, slice)?;
-    // TODO this logs pulsar auth information
-    let _span = tracing::info_span!("Preparing file", ?source_data).entered();
+    let _span =
+        tracing::info_span!("Preparing file", file = %SourceDataWrapper(source_data)).entered();
     for (batch_count, record_batch) in preparer.iterator().enumerate() {
         let (record_batch, metadata) = record_batch?;
         tracing::info!(
