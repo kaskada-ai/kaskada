@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
+    #[allow(dead_code)]
     AvroNotEnabled,
     AvroSchemaConversion,
     SchemaRequest,
@@ -69,11 +70,14 @@ fn schema_from_formatted(formatted_schema: &str) -> Result<Schema, Error> {
 
 #[derive(serde::Deserialize, Debug)]
 struct SchemaResponse {
+    #[allow(dead_code)]
     version: u32,
     #[serde(rename = "type")]
     schema_type: String,
+    #[allow(dead_code)]
     timestamp: u64,
     data: String,
+    #[allow(dead_code)]
     properties: serde_json::Value,
 }
 
