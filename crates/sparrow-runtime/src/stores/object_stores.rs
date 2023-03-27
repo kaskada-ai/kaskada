@@ -27,7 +27,6 @@ pub struct ObjectStoreRegistry {
 }
 
 impl ObjectStoreRegistry {
-    // TODO: Remove the public constructor
     pub fn new() -> Self {
         let object_stores = hashbrown::HashMap::new();
         ObjectStoreRegistry {
