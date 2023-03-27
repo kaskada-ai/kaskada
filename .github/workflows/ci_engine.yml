@@ -26,7 +26,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/engine-integration-tests
+  IMAGE: ghcr.io/${{ github.repository }}/engine-integration-tests
 
 jobs:
   build_wren:
