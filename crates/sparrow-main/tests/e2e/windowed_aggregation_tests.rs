@@ -28,43 +28,6 @@ fn window_data_fixture() -> DataFixture {
         .unwrap()
 }
 
-fn fixture() -> DataFixture {
-    DataFixture::new()
-        .with_table_from_csv(
-            TableConfig::new(
-                "Table",
-                &Uuid::new_v4(),
-                "click_timestamp",
-                None,
-                "visitor_id",
-                "",
-            ),
-            indoc! {"
-        click_timestamp,main_category,sub_category,visitor_id
-        1679340395000,Pet Supplies,,Larry
-        1679340423000,Sports,Tennis Equipment,Larry
-        1679340436000,Pet Supplies,Dog Fetching,Alice
-        1679340443000,Sports,Tennis Equipment,Jane
-        1679279243000,Sports,Tennis Equipment,Larry
-        1678847243000,Sports,,Alice
-        1678847423000,Pet Supplies,Dog Fetching,Alice
-        1678894223000,Sports,Tennis Rackets,Larry
-        1678771818821,Pet Supplies,Dog Fetching,Jane
-        1678686949976,Pet Supplies,Dog Fetching,Alice
-        1678602081131,Pet Supplies,Dog Fetching,Jane
-        1678517212286,Sports,Tennis Rackets,Jane
-        1678432343440,Pet Supplies,Dog Fetching,Alice
-        1678347474595,Sports,,Jane
-        1678262605750,Sports,Tennis Rackets,Alice
-        1678177736905,Pet Supplies,Dog Fetching,Larry
-        1678092868060,Sports,Tennis Equipment,Unice
-        1678007999214,Pet Supplies,,Unice
-        1677923130369,Pet Supplies,Dog Fetching,Unice
-"},
-        )
-        .unwrap()
-}
-
 fn window_data_fixture_with_nulls() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
@@ -82,21 +45,6 @@ fn window_data_fixture_with_nulls() -> DataFixture {
     "},
         )
         .unwrap()
-}
-
-#[tokio::test]
-async fn test_() {
-    insta::assert_snapshot!(QueryFixture::new("{ most_clicked: top(Table.main_category, window=sliding(1, is_valid(Table.main_category))) }").run_to_csv(&fixture()).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,since,slide
-    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1,1
-    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1,1
-    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,2,2
-    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,3,2
-    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,4,2
-    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,5,2
-    1996-12-20T00:40:03.000000000,9223372036854775808,3650215962958587783,A,6,2
-    1996-12-20T00:40:04.000000000,9223372036854775808,3650215962958587783,A,7,2
-    "###);
 }
 
 #[tokio::test]
