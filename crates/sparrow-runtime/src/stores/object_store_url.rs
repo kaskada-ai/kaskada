@@ -1,5 +1,4 @@
-use object_store::ObjectStore;
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{path::PathBuf, str::FromStr};
 
 use error_stack::{IntoReport, ResultExt};
 use tokio_util::io::StreamReader;
@@ -30,6 +29,9 @@ impl ObjectStoreUrl {
         match self.0.scheme() {
             "file" => Ok(ObjectStoreKey::Local),
             "mem" => Ok(ObjectStoreKey::Memory),
+            // S3 is the traditional S3 prefix for reading from S3.
+            // S3a is the protocol designed for scalability with Hadoop reading in mind.
+            // See: https://aws.amazon.com/blogs/opensource/community-collaboration-the-s3a-story/
             "s3" | "s3a" => {
                 let bucket = self
                     .0
