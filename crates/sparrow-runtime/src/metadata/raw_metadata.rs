@@ -26,8 +26,13 @@ pub struct RawMetadata {
     pub table_schema: SchemaRef,
 }
 
+/// For Pulsar, we want to keep the original user_schema around for use
+/// by the consumer.  This is because we want the RawMetadata.raw_schema
+/// to include the publish time metadata, but if we include that when creating the
+/// Pulsar consumer, Pulsar will correctly reject it as a schema mismatch.
 pub struct PulsarMetadata {
     /// the schema as defined by the user on the topic, corresponding to the messages created
+    /// with no additional metadata
     pub user_schema: SchemaRef,
     /// schema that includes metadata used by Sparrow
     pub sparrow_metadata: RawMetadata,
@@ -87,7 +92,7 @@ impl RawMetadata {
 
         Ok(PulsarMetadata {
             user_schema: Arc::new(pulsar_schema),
-            sparrow_metadata: Self::try_from_raw_schema(Arc::new(Schema::new(new_fields)))?
+            sparrow_metadata: Self::try_from_raw_schema(Arc::new(Schema::new(new_fields)))?,
         })
     }
 
