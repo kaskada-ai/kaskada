@@ -280,13 +280,13 @@ jobs:
           platforms: linux/arm64
           file: Dockerfile.release
           push: true
-          tags: ${{ env.PRE_RELEASE_IMAGE }}:${{ steps.vars.output.sha_short }},${{ env.PRE_RELEASE_IMAGE }}:latest
+          tags: ${{ env.PRE_RELEASE_IMAGE }}:${{ steps.vars.outputs.sha_short }},${{ env.PRE_RELEASE_IMAGE }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine linux/arm64
             org.opencontainers.image.description=The kaskada engine
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{ steps.vars.output.sha_short }}
+            org.opencontainers.image.version=${{ steps.vars.outputs.sha_short }}
             org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
