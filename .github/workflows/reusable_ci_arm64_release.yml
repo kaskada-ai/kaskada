@@ -18,6 +18,10 @@
 
 on:
   workflow_call:
+    outputs:
+      image-id:
+        description: "The image name published by this workflow"
+        value: ${{ jobs.build_arm64_docker_image.outputs.imageid }}
   workflow_dispatch:
 
 permissions:
