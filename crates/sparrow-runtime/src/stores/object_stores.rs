@@ -10,15 +10,15 @@ use url::Url;
 
 use super::object_store_url::ObjectStoreKey;
 
+/// Map from URL scheme to object store for that prefix.
+///
+/// Currently, we use a single object store or each scheme. This covers
+/// cases like `file:///` using a local file store and `s3://` using an
+/// S3 file store. We may find that it is useful (or necessary) to register
+/// specific object stores for specific prefixes -- for instance, to use
+/// different credentials for different buckets within S3.
 #[derive(Default)]
 pub struct ObjectStoreRegistry {
-    /// Map from URL scheme to object store for that prefix.
-    ///
-    /// Currently, we use a single object store or each scheme. This covers
-    /// cases like `file:///` using a local file store and `s3://` using an
-    /// S3 file store. We may find that it is useful (or necessary) to register
-    /// specific object stores for specific prefixes -- for instance, to use
-    /// different credentials for different buckets within S3.
     object_stores: RwLock<HashMap<ObjectStoreKey, Arc<dyn ObjectStore>>>,
 }
 
