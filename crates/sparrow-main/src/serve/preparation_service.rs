@@ -130,7 +130,48 @@ pub async fn convert_to_local_sourcedata(
                 source_data::Source::ParquetPath(_)
                 | source_data::Source::CsvPath(_)
                 | source_data::Source::CsvData(_) => {
-                    let (is_s3, local_path) = maybe_download_file(s3, source).await;
+                    let download_file = NamedTempFile::new().unwrap();
+                    let download_file_path = download_file.into_temp_path();
+                    let (is_s3, local_path) = match source {
+                        source_data::Source::ParquetPath(path) => {
+                            let path = path.as_str();
+                            if is_s3_path(path) {
+                                let s3_object = S3Object::try_from_uri(path).unwrap();
+                                s3.download_s3(s3_object, download_file_path.to_owned())
+                                    .await
+                                    .unwrap();
+                                (
+                                    true,
+                                    source_data::Source::ParquetPath(
+                                        download_file_path.to_string_lossy().to_string(),
+                                    ),
+                                )
+                            } else {
+                                (false, source_data::Source::ParquetPath(path.to_string()))
+                            }
+                        }
+                        source_data::Source::CsvPath(path) => {
+                            let path = path.as_str();
+                            if is_s3_path(path) {
+                                let s3_object = S3Object::try_from_uri(path).unwrap();
+                                s3.download_s3(s3_object, download_file_path.to_owned())
+                                    .await
+                                    .unwrap();
+                                (
+                                    true,
+                                    source_data::Source::CsvPath(
+                                        download_file_path.to_string_lossy().to_string(),
+                                    ),
+                                )
+                            } else {
+                                (false, source_data::Source::CsvPath(path.to_string()))
+                            }
+                        }
+                        source_data::Source::CsvData(data) => {
+                            (false, source_data::Source::CsvData(data.to_string()))
+                        }
+                        source_data::Source::PulsarSubscription(_) => (false, source.clone()),
+                    };
                     Ok((
                         is_s3,
                         SourceData {
@@ -141,52 +182,5 @@ pub async fn convert_to_local_sourcedata(
                 source_data::Source::PulsarSubscription(_) => Ok((false, sd.clone())),
             }
         }
-    }
-}
-
-// download remote file locally, if necessary.
-async fn maybe_download_file(
-    s3: &S3Helper,
-    source: &source_data::Source,
-) -> (bool, source_data::Source) {
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
-    match source {
-        source_data::Source::ParquetPath(path) => {
-            let path = path.as_str();
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path).unwrap();
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await
-                    .unwrap();
-                (
-                    true,
-                    source_data::Source::ParquetPath(
-                        download_file_path.to_string_lossy().to_string(),
-                    ),
-                )
-            } else {
-                (false, source_data::Source::ParquetPath(path.to_string()))
-            }
-        }
-        source_data::Source::CsvPath(path) => {
-            let path = path.as_str();
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path).unwrap();
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await
-                    .unwrap();
-                (
-                    true,
-                    source_data::Source::CsvPath(download_file_path.to_string_lossy().to_string()),
-                )
-            } else {
-                (false, source_data::Source::CsvPath(path.to_string()))
-            }
-        }
-        source_data::Source::CsvData(data) => {
-            (false, source_data::Source::CsvData(data.to_string()))
-        }
-        source_data::Source::PulsarSubscription(_) => (false, source.clone()),
     }
 }
