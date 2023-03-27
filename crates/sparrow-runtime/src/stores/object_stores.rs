@@ -17,6 +17,10 @@ use super::object_store_url::ObjectStoreKey;
 /// S3 file store. We may find that it is useful (or necessary) to register
 /// specific object stores for specific prefixes -- for instance, to use
 /// different credentials for different buckets within S3.
+/// 
+/// For now, the registry exists as a cache for the clients due to the overhead
+/// required to create the cache. The future goal for the registry is to
+/// control the number of possibile open connections.
 #[derive(Default)]
 pub struct ObjectStoreRegistry {
     object_stores: RwLock<HashMap<ObjectStoreKey, Arc<dyn ObjectStore>>>,
