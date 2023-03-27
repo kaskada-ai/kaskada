@@ -80,8 +80,14 @@ pub async fn prepare_data(
         }
     );
 
-    let (is_s3_object, source_data) =
-        convert_to_local_sourcedata(&s3, prepare_request.source_data.as_ref()).await?;
+    let download_file = NamedTempFile::new().unwrap();
+    let download_file_path = download_file.into_temp_path();
+    let (is_s3_object, source_data) = convert_to_local_sourcedata(
+        &s3,
+        prepare_request.source_data.as_ref(),
+        download_file_path,
+    )
+    .await?;
 
     let temp_dir = tempfile::tempdir()
         .into_report()
@@ -121,6 +127,7 @@ pub async fn prepare_data(
 pub async fn convert_to_local_sourcedata(
     s3: &S3Helper,
     source_data: Option<&SourceData>,
+    download_file_path: tempfile::TempPath,
 ) -> error_stack::Result<(bool, SourceData), Error> {
     match source_data {
         None => error_stack::bail!(Error::MissingField("source_data")),
@@ -130,8 +137,6 @@ pub async fn convert_to_local_sourcedata(
                 source_data::Source::ParquetPath(_)
                 | source_data::Source::CsvPath(_)
                 | source_data::Source::CsvData(_) => {
-                    let download_file = NamedTempFile::new().unwrap();
-                    let download_file_path = download_file.into_temp_path();
                     let (is_s3, local_path) = match source {
                         source_data::Source::ParquetPath(path) => {
                             let path = path.as_str();

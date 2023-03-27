@@ -10,6 +10,7 @@ use sparrow_api::kaskada::v1alpha::{Schema, SourceData};
 use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::RawMetadata;
 
+use tempfile::NamedTempFile;
 use tonic::Response;
 
 use crate::serve::error_status::IntoStatus;
@@ -74,9 +75,12 @@ pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
     source_data: &SourceData,
 ) -> anyhow::Result<SourceMetadata> {
-    let (_, local_source) = preparation_service::convert_to_local_sourcedata(s3, Some(source_data))
-        .await
-        .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
+    let download_file = NamedTempFile::new().unwrap();
+    let download_file_path = download_file.into_temp_path();
+    let (_, local_source) =
+        preparation_service::convert_to_local_sourcedata(s3, Some(source_data), download_file_path)
+            .await
+            .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
 
     let metadata = RawMetadata::try_from(local_source.source.as_ref().context("missing source")?)?;
     let schema = Schema::try_from(metadata.table_schema.as_ref()).with_context(|| {
