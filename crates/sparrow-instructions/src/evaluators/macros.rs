@@ -204,7 +204,7 @@ macro_rules! create_ordered_evaluator {
 /// expects the input to be a `BooleanArray`.
 ///
 /// The `$string_evaluator` must be a struct that implements `Evaluator` and
-/// expects the input to be a `BooleanArray`.
+/// expects the input to be a `StringArray`.
 ///
 /// The `$info` should be a `StaticInfo`, which contains information relevant
 /// to creating a new evaluator.

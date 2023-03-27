@@ -190,6 +190,12 @@ pub enum InstOp {
     Sum,
     #[strum(props(signature = "time_of(input: any) -> timestamp_ns"))]
     TimeOf,
+    #[strum(props(
+        dfg_signature = "top(input: any, window: window = null) -> any",
+        plan_signature = "top(input: any, ticks: bool = null, slide_duration: i64 = null) -> \
+                          any"
+    ))]
+    Top,
     #[strum(props(signature = "upper(s: string) -> string"))]
     Upper,
     #[strum(props(

@@ -282,6 +282,12 @@ fn create_simple_evaluator(
         InstOp::Max => {
             create_ordered_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Max, info)
         }
+        InstOp::Top => {
+            if info.args[0].data_type != DataType::Utf8 {
+                anyhow::bail!("Top aggregation only supports strings")
+            }
+            TopStringEvaluator::try_new(info)
+        }
         InstOp::Mean => {
             create_number_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Mean, info)
         }

@@ -79,6 +79,18 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
+        .register("top(input: any, window: window = null) -> any")
+        .with_dfg_signature("top(input: any, window: window = null, duration: i64 = null) -> any")
+        .with_implementation(Implementation::new_pattern(&format!(
+            "(top ({}) ({}) ({}))",
+            "transform (if ?input_is_new ?input_value) (merge_join ?input_op ?window_op)",
+            "?window_value",
+            "?duration_value"
+        )))
+        .with_is_new(Implementation::new_pattern(AGGREGATION_IS_NEW))
+        .with_time_domain_check(TimeDomainCheck::Aggregation);
+
+    registry
         .register("mean(input: number, window: window = null) -> f64")
         .with_dfg_signature(
             "mean(input: number, window: window = null, duration: i64 = null) -> f64",
