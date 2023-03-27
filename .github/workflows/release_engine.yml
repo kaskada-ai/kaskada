@@ -247,6 +247,6 @@ jobs:
         working-directory: proto
 
       - name: Publish release
-        run: gh release edit ${{ github.ref_name }} --draft=false --discussion-category="Announcements" --latest
+        run: gh release edit ${{ github.ref_name }}
         env:
           GH_TOKEN: ${{ github.token }}
