@@ -28,5 +28,6 @@
    $ export PULSAR_TENANT=kaskada
    $ export PULSAR_TOPIC=transactions
    $ export PULSAR_SUBSCRIPTION=test-sub-1
-    cargo run --bin sparrow-main -- prepare --schema=transactions-schema.yaml --table=Transactions --output-path=prepared pulsar
+   $ mkdir prepared/
+   $ cargo run --bin sparrow-main -- prepare --schema=transactions-schema.yaml --table=Transactions --output-path=prepared pulsar
    ```
