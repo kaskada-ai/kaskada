@@ -1,0 +1,47 @@
+name = 'top'
+signature = 'top(input: any, window: window = null) -> any'
+short_doc = 'Computes the most frequently occuring input.'
+long_doc = '''
+A heavy-hitters aggregation that keeps track of the most frequently
+occuring value in the input. 
+
+If multiple elements are equally maximum, the natural ordering for
+the given value is observed.
+
+### Parameters
+* input: The input column.
+* window: The window to aggregate within, as described in
+[Aggregation Functions](#aggregation-functions). If `null`, aggregates are across all
+rows for the current entity. If non-`null`, aggregates are within the specified window.
+See [window functions](#window-functions) for how to specify the aggregation window.
+
+### Results
+The number of occurences for each input value are totaled and the most frequently occuring value 
+is returned. Returns `null` until there has been at least one input.
+'''
+tags = [
+    'aggregation',
+    'math',
+]
+
+[[examples]]
+name = 'Top'
+expression = 'top(Input.value)'
+input_csv = '''
+time,key,value
+2021-01-01T00:00:00.000000000Z,Ben,Apple
+2021-01-01T00:00:00.000000000Z,Ryan,Cat
+2021-01-02T00:00:00.000000000Z,Ryan,Dog
+2021-01-03T00:00:00.000000000Z,Ben,Apple
+2021-01-04T00:00:00.000000000Z,Ben,Carrot
+2021-01-04T00:00:00.000000000Z,Ryan,Dog
+'''
+output_csv = '''
+time,key,value,result
+2021-01-01T00:00:00.000000000Z,Ben,Apple,Apple
+2021-01-01T00:00:00.000000000Z,Ryan,Cat,Cat
+2021-01-02T00:00:00.000000000Z,Ryan,Dog,Cat
+2021-01-03T00:00:00.000000000Z,Ben,Apple,Apple
+2021-01-04T00:00:00.000000000Z,Ben,Carrot,Apple
+2021-01-04T00:00:00.000000000Z,Ryan,Dog,Dog
+'''

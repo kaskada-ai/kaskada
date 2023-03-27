@@ -25,13 +25,12 @@ pub(crate) fn flatten_window_args(
             window.args().len()
         );
 
-        // Since aggregations have a single active window
-        let duration_id = dfg.add_literal(LiteralValue::Number(String::from("1")).to_scalar()?)?;
+        let duration_id = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
         let duration = Located::new(
             add_literal(
                 dfg,
                 duration_id,
-                FenlType::Concrete(DataType::Int64),
+                FenlType::Concrete(DataType::Null),
                 name.location().clone(),
             )?,
             name.location().clone(),

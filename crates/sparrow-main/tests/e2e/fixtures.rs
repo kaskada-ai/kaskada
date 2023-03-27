@@ -111,6 +111,24 @@ pub(crate) fn strings_data_fixture() -> DataFixture {
         .unwrap()
 }
 
+pub(crate) fn top_data_fixture() -> DataFixture {
+    DataFixture::new()
+        .with_table_from_csv(
+            TableConfig::new("Table", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            indoc! {"
+    time,subsort,key,str,i64,f64
+    1996-12-19T16:39:57-08:00,0,A,value1,1,2.0
+    1996-12-19T16:40:57-08:00,0,A,value2,1,2.0
+    1996-12-19T16:41:57-08:00,0,A,value2,1,2.0
+    1996-12-19T16:42:57-08:00,0,A,value3,1,2.0
+    1996-12-19T16:43:57-08:00,0,A,value3,1,2.0
+    1996-12-19T16:44:57-08:00,0,A,value1,1,2.0
+    1996-12-19T16:46:57-08:00,0,A,value2,1,2.0
+    "},
+        )
+        .unwrap()
+}
+
 /// Create a simple table with two boolean columns, `a` and `b`.
 ///
 /// ```csv

@@ -9,17 +9,17 @@ use sparrow_kernels::BitBufferIterator;
 use sparrow_plan::ValueRef;
 
 use crate::{
-    AggregationArgs, Evaluator, LastString, RuntimeInfo, StateToken, TwoStacks,
-    TwoStacksStringAccumToken,
+    AggFn, AggregationArgs, Evaluator, RuntimeInfo, StateToken, TopString, TwoStacks,
+    TwoStacksTopStringAccumToken,
 };
 
-/// Evaluator for the `last` instruction on strings.
-pub(crate) struct TwoStacksLastStringEvaluator {
+/// Evaluator for the `Top` instruction on strings.
+pub(crate) struct TwoStacksTopStringEvaluator {
     pub args: AggregationArgs<ValueRef>,
-    pub token: TwoStacksStringAccumToken<LastString>,
+    pub token: TwoStacksTopStringAccumToken<TopString>,
 }
 
-impl Evaluator for TwoStacksLastStringEvaluator {
+impl Evaluator for TwoStacksTopStringEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match &self.args {
             AggregationArgs::Sliding {
@@ -68,9 +68,9 @@ impl Evaluator for TwoStacksLastStringEvaluator {
     }
 }
 
-impl TwoStacksLastStringEvaluator {
+impl TwoStacksTopStringEvaluator {
     fn ensure_entity_capacity(
-        token: &mut TwoStacksStringAccumToken<LastString>,
+        token: &mut TwoStacksTopStringAccumToken<TopString>,
         entity_capacity: usize,
         window_parts: i64,
     ) {
@@ -84,7 +84,7 @@ impl TwoStacksLastStringEvaluator {
     #[inline]
     #[allow(clippy::too_many_arguments)]
     fn update_two_stacks_accum(
-        token: &mut TwoStacksStringAccumToken<LastString>,
+        token: &mut TwoStacksTopStringAccumToken<TopString>,
         entity_index: u32,
         input_is_valid: bool,
         sliding_is_valid: bool,
@@ -103,7 +103,7 @@ impl TwoStacksLastStringEvaluator {
             accum.add_input(&input.to_string());
         };
 
-        let value_to_emit = accum.accum_value();
+        let value_to_emit = TopString::extract(&accum.accum_value());
 
         if evict_window {
             accum.evict();
@@ -131,7 +131,7 @@ impl TwoStacksLastStringEvaluator {
     /// Specifically, no checking is done to ensure that elements appear in the
     /// appropriate order.
     fn aggregate(
-        token: &mut TwoStacksStringAccumToken<LastString>,
+        token: &mut TwoStacksTopStringAccumToken<TopString>,
         key_capacity: usize,
         key_indices: &UInt32Array,
         input: &ArrayRef,
@@ -235,25 +235,25 @@ mod tests {
 
     use super::*;
     #[test]
-    fn test_sliding_string_last_with_no_null() {
+    fn test_sliding_string_top_with_no_null() {
         let entity_indices = UInt32Array::from(vec![0, 0, 0, 0, 0]);
         let input: ArrayRef = Arc::new(StringArray::from(vec![
             Some("phone"),
-            Some("hello"),
-            Some("world"),
-            Some("monday"),
-            Some("dog"),
+            Some("phone"),
+            Some("phone"),
+            Some("apple"),
+            Some("apple"),
         ]));
         let sliding = BooleanArray::from(vec![
             Some(true),
-            Some(false),
+            Some(true),
             Some(false),
             Some(true),
             Some(false),
         ]);
 
-        let mut token = TwoStacksStringAccumToken::new();
-        let output = TwoStacksLastStringEvaluator::aggregate(
+        let mut token = TwoStacksTopStringAccumToken::new();
+        let output = TwoStacksTopStringEvaluator::aggregate(
             &mut token,
             1,
             &entity_indices,
@@ -267,10 +267,10 @@ mod tests {
             downcast_string_array(output.as_ref()).unwrap(),
             &StringArray::from(vec![
                 Some("phone"),
-                Some("hello"),
-                Some("world"),
-                Some("monday"),
-                Some("dog")
+                Some("phone"),
+                Some("phone"),
+                Some("phone"),
+                Some("apple")
             ])
         );
     }

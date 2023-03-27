@@ -88,6 +88,7 @@ impl Function {
             "sum"
                 | "min"
                 | "max"
+                | "top"
                 | "first"
                 | "last"
                 | "count"
