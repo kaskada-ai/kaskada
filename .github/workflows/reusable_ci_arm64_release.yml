@@ -31,7 +31,6 @@ permissions:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}/go-cross-compile-to-arm64
-  PRE_RELEASE_IMAGE: ghcr.io/${{ github.repository }}/engine-arm64
 
 name: Build linux/aarch64
 
