@@ -227,4 +227,4 @@ jobs:
         run: |
           sudo apt-get install qemu binfmt-support qemu-user-static
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker run --rm -t arm64v8/ubuntu uname -m
+          docker run --rm --platform linux/arm64 -t arm64v8/ubuntu uname -m
