@@ -240,19 +240,19 @@ jobs:
           sudo apt-get install qemu binfmt-support qemu-user-static
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker run --rm --platform linux/arm64 -t arm64v8/ubuntu uname -m
-          mkdir -p releases
+          mkdir -p release
 
       # - name: Download artifacts for wren and sparrow
       #   uses: actions/download-artifact@v3
       #   with:
       #     name: engine-linux-aarch64
-      #     path: releases/
+      #     path: release/
 
       - name: REMOVE! Download binaries instead of building them to test workflow
         shell: bash
         run: |
-          wget -O releases/sparrow --no-check-certificate 'https://drive.google.com/uc?export=download&id=1pw4Qm7L2rUQhJJt1jXvya26k7RW9ktlr'
-          wget -O releases/wren --no-check-certificate 'https://drive.google.com/uc?export=download&id=1L5UMZlmWd6745rxM3FeUOQKLfiawyUc0'
+          wget -O release/sparrow-main --no-check-certificate 'https://drive.google.com/uc?export=download&id=1pw4Qm7L2rUQhJJt1jXvya26k7RW9ktlr'
+          wget -O release/wren --no-check-certificate 'https://drive.google.com/uc?export=download&id=1L5UMZlmWd6745rxM3FeUOQKLfiawyUc0'
 
       - name: Current Date
         id: current_date
