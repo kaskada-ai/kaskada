@@ -1,0 +1,16 @@
+---
+source: crates/sparrow-qfr-tool/src/chrome/tests.rs
+expression: "run_test_ok(vec![], vec![], vec![])"
+---
+{
+  "traceEvents": [],
+  "metadata": {
+    "request_id": "request_id",
+    "build_info": {
+      "sparrow_version": "test_version",
+      "github_ref": "",
+      "github_sha": "",
+      "github_workflow": ""
+    }
+  }
+}

@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  jupyter:
+    container_name: kaskada-jupyter
+    image: ghcr.io/kaskada-ai/kaskada-jupyter:v0.0.1
+    command: ["jupyter", "notebook"]
+    volumes:
+      - ./notebooks:/home/jovyan/notebooks
+      - ./datasets:/home/jovyan/datasets
+    networks:
+      - demo
+    ports:
+      - "8888:8888"
+    platform: linux/amd64
+
+  pulsar:
+    image: apachepulsar/pulsar:2.11.0
+    container_name: pulsar
+    hostname: pulsar
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    networks:
+      - demo
+    command: ["bin/pulsar", "standalone"]
+    platform: linux/amd64
+         
+networks:
+  demo:
+    name: demo
+    driver: bridge
+ 

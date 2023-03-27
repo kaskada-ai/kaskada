@@ -15,6 +15,112 @@ Views are useful any time you need to share or re-use expressions:
 * ML feature definitions
 
 
+== Managing views with Python
+
+All methods in this section are from the `view` object. Be sure to import
+it before running any method:
+
+[source,python]
+----
+from kaskada import view
+----
+
+=== Creating a View
+
+To create a view, we'll start by describing the expression we'd like to
+name. In this case, we're interested in some purchase statistics for
+each user. This definition depends on business logic and might require
+some iteration to get just right.
+
+[source,python]
+----
+view.create_view(
+    view_name = "PurchaseStats",
+    expression = "{
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+    }"
+)
+----
+
+This creates a view names `PurchaseStats`.
+
+[TIP]
+.Idiomatic Kaskada
+====
+We like to use CamelCase for view names. This is
+the same naming convention as we use for tables, and helps to
+communicate that we're referring to a persistent resource in the Kaskada
+system, as opposed to a temporary local value created as part of a
+query.
+====
+
+If you're using IPython/Jupyter, you can create a view from the contents of a `%%fenl` block using the `--var` argument
+
+[source,Fenl]
+----
+%%fenl --var purchase_stats
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+Adding `--var purchase_stats` to the beginning of the
+magic block causes the extension to assign the query result to the
+variable `purchase_stats` when the block is run.
+
+We can use this variable to create a view using the Python client
+without re-typing the expression:
+
+[source,python]
+----
+view.create_view(
+    view_name = "PurchaseStats",
+    expression = purchase_stats.expression,
+)
+----
+
+=== List Views
+
+The list views method returns all views defined for your user. An
+optional search string can filter the response set.
+
+Here is an example of listing tables:
+
+[source,python]
+----
+view.list_views("Purchase")
+----
+
+=== Get View
+
+You can get a view using its name:
+
+[source,python]
+----
+view.get_view("PurchaseStats")
+----
+
+=== Updating a View
+
+Views are currently immutable. Updating a view requires deleting that
+view and then re-creating it.
+
+=== Deleting a view
+
+You can delete a view using its name:
+
+[source,python]
+----
+view.delete_view("PurchaseStats")
+----
+
+
 == Managing views with the CLI
 
 The CLI manages Kaskada resources declaratively by managing spec files.
@@ -81,6 +187,14 @@ When a spec file is applied, the CLI inspects all of the server's resources and 
 defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
 Applying a spec can create new views, change a view's mutable fields, or delete views.
 
+[WARNING]
+.View updates are destructive
+====
+Vies are currently immutable. 
+When the CLI updates a view, it does so by deleting the view and re-creating it.
+When this happens, the view may be temporarily unavailable to queries.
+====
+
 Before applying a spec file, it's a good idea to see what changes will be made. 
 You can see these changes by creating an apply plan.
 
@@ -96,107 +210,4 @@ You can apply a spec file using the CLI.
 [source,bash]
 ----
 cli sync apply --file spec.yaml
-----
-
-== Managing views with Python
-
-All methods in this section are from the `view` object. Be sure to import
-it before running any method:
-
-[source,python]
-----
-from kaskada import view
-----
-
-=== Creating a View
-
-To create a view, we'll start by describing the expression we'd like to
-name. In this case, we're interested in some purchase statistics for
-each user. This definition depends on business logic and might require
-some iteration to get just right.
-
-[TIP]
-.Idiomatic Kaskada
-====
-We like to use CamelCase for view names. This is
-the same naming convention as we use for tables, and helps to
-communicate that we're referring to a persistent resource in the Kaskada
-system, as opposed to a temporary local value created as part of a
-query.
-====
-
-[source,python]
-----
-view.create_view(
-    view_name = "PurchaseStats",
-    expression = "{
-        time: Purchase.purchase_time,
-        entity: Purchase.customer_id,
-        max_amount: Purchase.amount | max(),
-        min_amount: Purchase.amount | min(),
-    }"
-)
-----
-
-If you're using IPython/Jupyter, you can create a view from the contents of a `%%fenl` block using the `--var` argument
-
-[source,IPython]
-----
-%%fenl --var purchase_stats
-{
-    time: Purchase.purchase_time,
-    entity: Purchase.customer_id,
-    max_amount: Purchase.amount | max(),
-    min_amount: Purchase.amount | min(),
-}
-----
-
-Adding `--var purchase_stats` to the beginning of the
-magic block causes the extension to assign the query result to the
-variable `purchase_stats` when the block is run.
-
-We can use this variable to create a view using the Python client
-without re-typing the expression:
-
-[source,python]
-----
-view.create_view(
-    view_name = "PurchaseStats",
-    expression = purchase_stats.expression,
-)
-----
-
-=== List Views
-
-The list views method returns all views defined for your user. An
-optional search string can filter the response set.
-
-Here is an example of listing tables:
-
-[source,python]
-----
-view.list_views("Purchase")
-----
-
-=== Get View
-
-You can get a view using its name:
-
-[source,python]
-----
-view.get_view("PurchaseStats")
-----
-
-=== Updating a View
-
-Views are currently immutable. Updating a view requires deleting that
-view and then re-creating it.
-
-=== Deleting a view
-
-You can delete a view using its name:
-
-[source,python]
-----
-view.delete_view("PurchaseStats")
 ----

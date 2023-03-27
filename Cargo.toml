@@ -1,13 +1,10 @@
 [workspace]
 members = ["crates/*"]
 
-# TODO(#550): Re-enable sparrow-qfr-tool
-exclude = ["crates/sparrow-qfr-tool"]
-
 [workspace.package]
 authors = ["Kaskada Developers"]
 edition = "2021"
-version = "0.4.1"
+version = "0.4.3"
 license = "Apache-2.0"
 
 [workspace.dependencies]

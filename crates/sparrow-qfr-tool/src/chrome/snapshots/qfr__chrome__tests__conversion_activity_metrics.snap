@@ -1,0 +1,45 @@
+---
+source: crates/sparrow-qfr-tool/src/chrome/tests.rs
+expression: "run_test_ok(activities, metrics, records)"
+---
+{
+  "traceEvents": [
+    {
+      "name": "process_name",
+      "ph": "M",
+      "args": {
+        "name": "operation 0"
+      },
+      "ts": 0,
+      "pid": 11,
+      "tid": 0
+    },
+    {
+      "name": "root",
+      "ph": "X",
+      "dur": 2573,
+      "tdur": 1172,
+      "sf": 18,
+      "args": {
+        "gauge_metric": 18
+      },
+      "ts": 1000000,
+      "pid": 11,
+      "tid": 0
+    }
+  ],
+  "stackFrames": {
+    "18": {
+      "name": "root"
+    }
+  },
+  "metadata": {
+    "request_id": "request_id",
+    "build_info": {
+      "sparrow_version": "test_version",
+      "github_ref": "",
+      "github_sha": "",
+      "github_workflow": ""
+    }
+  }
+}

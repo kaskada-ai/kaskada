@@ -86,6 +86,9 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 					OutputTo:       outputTo,
 					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
 			}
 
 			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
@@ -125,6 +128,9 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 						PreviewRows: 50,
 					},
 				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
 			}
 
 			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
@@ -162,6 +168,9 @@ max_spent_in_single_transaction: max(transactions_large_files.price * transactio
 					Limits: &v1alpha.Query_Limits{
 						PreviewRows: 50000000000,
 					},
+				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
 				},
 			}
 

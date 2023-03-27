@@ -101,6 +101,9 @@ var _ = PDescribe("Query V1 REST", Ordered, func() {
 						OutputTo:       outputTo,
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
+					QueryOptions: &v1alpha.QueryOptions{
+						PresignResults: true,
+					},
 				}
 
 				jsonBody, err = protojson.Marshal(createQueryRequest)

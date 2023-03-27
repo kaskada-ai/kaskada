@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
 use sparrow_api::kaskada::v1alpha::{
     file_path, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
@@ -121,9 +122,18 @@ pub async fn prepare_data(
         file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string())),
     };
 
+    let temp_dir = tempfile::tempdir()
+        .into_report()
+        .change_context(Error::Internal)?;
+    let output_path = if is_s3_path(&prepare_request.output_path_prefix) {
+        temp_dir.path().to_str().ok_or(Error::Internal)?
+    } else {
+        &prepare_request.output_path_prefix
+    };
+
     let (prepared_metadata, prepared_files) = prepare_file(
         &path,
-        Path::new(&prepare_request.output_path_prefix),
+        Path::new(&output_path),
         &prepare_request.file_prefix,
         &table_config,
         &slice_plan.slice,
@@ -133,8 +143,8 @@ pub async fn prepare_data(
         upload_prepared_files_to_s3(
             s3,
             &prepared_metadata,
-            &prepare_request.file_prefix,
             &prepare_request.output_path_prefix,
+            &prepare_request.file_prefix,
         )
         .await?
     } else {

@@ -2,143 +2,13 @@
 
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
+The xref:developing:tables.adoc[Tables] section of the reference docs has more information about managing tables.
 
-== Creating a Table
-
-When creating a table, you must provide some information about how each
-row should be interpreted. You must describe:
-
-* A field containing the time associated with each row
-(`time_column_name`). The time should refer to when the event occurred.
-* An initial xref:fenl:entities[entity] key associated with each row
-(`entity_key_column_name`). The entity should identify a _thing_ in the
-world that each event is associated with. Don't worry too much about
-picking the "right" value here - it's easy to change the entity key in
-Fenl.
-
-Additionally, you may describe:
-
-* A subsort column associated with each row (`subsort_column_name`).
-This value is used to order rows associated with the same time value.
-
-[source,python]
-----
-from kaskada import table
-
-table.create_table(
-  table_name = "Purchase",
-  time_column_name = "purchase_time",
-  entity_key_column_name = "customer_id",
-)
-----
-
-This creates a table named `Purchase`. Any data loaded into this table
-must have a timestamp field named `purchase_time`, and a field named
-`customer_id`.
-
-[TIP]
-.Idiomatic Kaskada
-====
-We like to use CamelCase to name tables because it
-helps distinguish data sources from transformed values and function
-names.
-====
-
-The response from the `create_table` is a `table` object with contents
-similar to:
-
-[source,json]
-----
-table {
-  table_id: "76b***2e5"
-  table_name: "Purchase"
-  time_column_name: "purchase_time"
-  entity_key_column_name: "customer_id"
-  create_time {
-    seconds: 1634250064
-    nanos: 422017488
-  }
-  update_time {
-    seconds: 1634250064
-    nanos: 422017488
-  }
-}
-----
-
-== Loading Data
-
-Now that we've created a table, we're ready to load some data into it.
+== File Format
 
 Any data loaded into a table must include all columns used in the table definition.
 The full schema of a table is inferred from the data loaded into it.
 At the moment, all data loaded into a table must have the same schema.
-
-Data can be loaded into a table in multiple ways. In this example we'll
-load the contents of a Pandas dataframe into the table. 
-
-[source,python]
-----
-import pandas
-
-# A sample Parquet file provided by Kaskada for testing
-purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk"
-
-# Read the file into a Pandas Dataframe
-purchases = pandas.read_parquet(purchases_url)
-
-# Upload the dataframe's contents to the Purchase table
-table.load_dataframe("Purchase", purchases)
-----
-
-The result of running `load_dataframe` returns a `data_token_id`. The
-data token ID is a unique reference to the data currently stored in the
-system.
-
-[source,json]
-----
-data_token_id: "aa2***a6b9"
-----
-
-The file is added to the table.
-
-== Inspecting the Table's Contents
-
-To verify the file was loaded as expected you can use the table list
-method (`list_tables`) to see all the tables defined for your user and the files
-loaded into each:
-
-[source,python]
-----
-table.list_tables()
-----
-
-`list_tables` shows all the tables accessible by the user and returns a
-`list` of `table`. The table created above is shown here:
-
-[source,json]
-----
-tables {
-  table_id: "76b***2e5"
-  table_name: "Purchase"
-  time_column_name: "purchase_time"
-  entity_key_column_name: "customer_id"
-  subsort_column_name: "subsort_id"
-  create_time {
-    seconds: 1634067588
-    nanos: 312567086
-  }
-  update_time {
-    seconds: 1634067603
-    nanos: 70745776
-  }
-  version: 1
-}
-----
-
-After executing this block, all tables that have been defined are
-returned.
-
-== File Format
 
 The Kaskada compute engine expects uploaded file data to be either CSV or parquet version 2. 
 
@@ -147,3 +17,78 @@ Additionally, it expects the following:
 * The `time_column` (and all other date-time columns in your dataset)
 should be a type that can be xref:fenl:data-model.adoc#type-coercion[cast] to a xref:fenl:data-model.adoc#scalars[timestamp], for example an integer or RFC3330-formatted string.
 * If `subsort_id` is user-defined, the combination of the `group_column` (entity id), `time_column` and `subsort_column` should guarantee that each row is unique.  
+
+== File Location
+
+Kaskada supports loading files from different kinds of file storage.
+The file storage system is specified with the file path protocol prefix, for example `file:` or `s3:`.
+
+=== Local Storage
+
+Data can be loaded from the local disk using the `file:` protocol.
+When loading from disk, the file path must identify a file accessible to the Kaskada service.
+Local storage is not reccommended when using a remote Kaskada service.
+
+=== AWS S3 Storage
+
+Data can be loaded from AWS S3 (or compatible stores such as Minio) using the `s3:` protocol.
+When loading non-public objects from S3, the Kaskada service must be configured with credentials.
+Credentials are configured using environment variables.
+
+The following environment variables are used to configure credentials:
+
+* `AWS_ACCESS_KEY_ID`: AWS credential key.
+* `AWS_SECRET_ACCESS_KEY`: AWS credential secret.
+* `AWS_DEFAULT_REGION`: The AWS S3 region to use if not specified.
+* `AWS_ENDPOINT`: The S3 endpoint to connect to.
+* `AWS_SESSION_TOKEN`: The session token. Session tokens are required for credentials created by assuming an IAM role.
+* `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+* `AWS_ALLOW_HTTP`: Set to “true” to permit HTTP connections without TLS
+
+== Loading data with Python
+
+Data can be loaded into a table using the `table.load()` function
+
+[source,python]
+----
+from kaskada import table
+
+fullPathToFile = "file://content/drive/place/thing/purchases.parquet"
+table.load("Purchases", fullPathToFile)
+----
+
+[TIP]
+.Required format
+The files must be in a specific format. 
+See xref:reference:expected-file-format[Expected File Format] for details.
+
+This loads the contents of the file to the Purchases table.
+
+The result of running `load()` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
+
+[source,bash]
+----
+data_token_id: "aa2***a6b9"
+----
+
+== Loading data with the CLI
+
+Files can be loaded into a table using the CLI.
+When loading files with the CLI, the given path must be local to the Kaskada service.
+
+The file must be encoded as either CSV or Parquet version 2.
+
+[source,bash]
+----
+cli load \
+  --table Purchase \
+  --file-type csv \
+  --file-path file://path/to/purchases.csv
+----
+
+The result of running `cli load` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
+
+[source,bash]
+----
+data_token_id: "aa2***a6b9"
+----

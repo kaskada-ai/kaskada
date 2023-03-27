@@ -55,6 +55,9 @@ pub use gauge;
 
 /// Macro to create a counter metric.
 ///
+/// Counter metrics report a value that changes over time as deltas are
+/// added.
+///
 /// ```rust
 /// const NUM_ENTITIES: Counter<u64> = counter!("num_entities");
 /// ```

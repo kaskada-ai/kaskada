@@ -1,7 +1,8 @@
 use fallible_iterator::FallibleIterator;
 use tempfile::NamedTempFile;
 
-use super::{FlightRecordReader, FlightRecordWriter};
+use crate::io::reader::FlightRecordReader;
+use crate::io::writer::FlightRecordWriter;
 use crate::kaskada::sparrow::v1alpha::flight_record::ReportActivity;
 use crate::kaskada::sparrow::v1alpha::flight_record_header::{BuildInfo, RegisterActivity};
 use crate::kaskada::sparrow::v1alpha::metric_value::Value;

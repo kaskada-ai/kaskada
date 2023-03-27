@@ -11,7 +11,7 @@ use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
-use sparrow_qfr::io::FlightRecordWriter;
+use sparrow_qfr::io::writer::FlightRecordWriter;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_qfr::FlightRecorderFactory;
 use tempfile::TempDir;

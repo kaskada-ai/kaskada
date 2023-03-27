@@ -79,3 +79,81 @@ optional arguments:
   --var VAR             Assigns the QueryResponse to a local variable with the given
                         name. The QueryResponse contains result_url, query and dataframe. 
 ----
+
+== Using Kaskada with the command line (CLI)
+
+To use Kaskada on the command line, you'll need to install three components:
+
+* The Kaskada command-line executable
+* The Kaskada manager, which serves the Kaskada API
+* The Kaskada engine, which executes queries
+
+Each of these are available as pre-compiled binaries in the xref:url:https://github.com/kaskada-ai/kaskada/releases[Releases] section of Kaskada's Github repository.
+This example assumes you have installed `curl`.
+
+[source,shell]
+----
+VERSION=0.4.1
+ARCH=$(uname -m | awk '{print tolower($0)}')
+OS=$(uname -s | awk '{print tolower($0)}')
+
+curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-cli-$OS-$ARCH" -o kaskada-cli
+curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-engine-$OS-$ARCH" -o kaskada-engine
+curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-manager-$OS-$ARCH" -o kaskada-manager
+
+chmod +x kaskada-*
+----
+
+[TIP]
+.Authorizing applications on OSX
+====
+If you're using OSX, you may need to unblock the applications.
+OSX prevents applications you download from running as a security feature.
+You can remove the block placed on the file when it was downloaded with the following command:
+
+[source,shell]
+----
+xattr -dr com.apple.quarantine <path to file>
+----
+====
+
+You should now be able to run all three components.
+To verify they're installed correctly and executable, try running the following command:
+
+[source,shell]
+----
+./kaskada-cli -h
+----
+
+You should see output similar to the following:
+
+[source,shell]
+----
+A CLI tool for interacting with the Kaskada API
+
+Usage:
+  cli [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  load        A set of commands for loading data into kaskada
+  query       A set of commands for running queries on kaskada
+  sync        A set of commands for interacting with kaskada resources as code
+
+Flags:
+      --config string               config file (default is $HOME/.cli.yaml)
+  -d, --debug                       get debug log output
+  -h, --help                        help for cli
+      --kaskada-api-server string   Kaskada API Server
+      --kaskada-client-id string    Kaskada Client ID
+      --use-tls                     Use TLS when connecting to the Kaskada API (default true)
+----
+
+You can start a local instance of the Kaskada service by running the manager and engine:
+
+[source,shell]
+----
+./kaskada-manager 2>&1 > manager.log 2>&1 &
+./kaskada-engine serve > engine.log 2>&1 &
+----

@@ -1,9 +1,12 @@
 import operator
 import pprint
+from typing import Optional
 
+import pandas as pd
 from domonic.html import pre, table, td, th, tr
 from domonic.utils import Utils
 
+import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
 
 from .formatters_helpers import (
@@ -180,7 +183,14 @@ def get_slice_request_html(obj):
     return details
 
 
-def get_table_html_and_schema_df(obj):
+def get_table_source_pulsar(obj: table_pb.Table.PulsarSource) -> table:
+    pulsar = table(_class="kda_table")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "protocol_url")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "topic")
+    return pulsar
+
+
+def get_table_html_and_schema_df(obj: table_pb.Table):
     schema_df = get_schema_dataframe(obj)
     details = table(_class="kda_table")
     appendHtmlObjTableRowIfAttrExists(details, obj, "table_name")
@@ -193,47 +203,9 @@ def get_table_html_and_schema_df(obj):
         )
 
     if hasattr(obj, "table_source") and obj.HasField("table_source"):
-        if hasattr(obj.table_source, "iceberg") and obj.table_source.HasField(
-            "iceberg"
-        ):
-            iceberg = table(_class="kda_table")
-            appendHtmlObjTableRowIfAttrExists(
-                iceberg, obj.table_source.iceberg, "table_name"
-            )
-            appendHtmlObjTableRowIfAttrExists(
-                iceberg, obj.table_source.iceberg, "namespace"
-            )
-            if hasattr(
-                obj.table_source.iceberg, "config"
-            ) and obj.table_source.iceberg.HasField("config"):
-                config = table(_class="kda_table")
-                if hasattr(
-                    obj.table_source.iceberg.config, "glue"
-                ) and obj.table_source.iceberg.config.HasField("glue"):
-                    glue = table(_class="kda_table")
-                    if hasattr(
-                        obj.table_source.iceberg.config.glue, "warehouse"
-                    ) and obj.table_source.iceberg.config.glue.HasField("warehouse"):
-                        warehouse = table(_class="kda_table")
-                        appendHtmlObjTableRowIfAttrExists(
-                            warehouse,
-                            obj.table_source.iceberg.config.glue.warehouse,
-                            "bucket",
-                        )
-                        appendHtmlObjTableRowIfAttrExists(
-                            warehouse,
-                            obj.table_source.iceberg.config.glue.warehouse,
-                            "region",
-                        )
-                        appendHtmlObjTableRowIfAttrExists(
-                            warehouse,
-                            obj.table_source.iceberg.config.glue.warehouse,
-                            "prefix",
-                        )
-                        glue.appendChild(html_table_row("warehouse", warehouse))
-                    config.appendChild(html_table_row("glue", glue))
-                iceberg.appendChild(html_table_row("config", config))
-            details.appendChild(html_table_row("iceberg", iceberg))
+        if hasattr(obj.table_source, "pulsar") and obj.table_source.HasField("pulsar"):
+            pulsar = get_table_source_pulsar(obj.table_source.pulsar)
+            details.appendChild(html_table_row("pulsar", pulsar))
 
     appendHtmlObjTableRowIfAttrExists(details, obj, "version")
     if schema_df is not None:

@@ -43,7 +43,7 @@ var (
 	redisAIHost          = flag.String("redis-ai-host", "127.0.0.1", "Host to connect to the redis-ai integration instance. Note that this should be a specific instance for integration tests only, as the test cleanup will wipe any existing data from the redis instance.")
 	kaskadaHostname      = flag.String("hostname", "127.0.0.1", "hostname of Kaskada to connect")
 	kaskadaGrpcPort      = flag.Int("grpc-port", 50051, "Kaskada's gRPC port to connect")
-	kaskadaRestPort      = flag.Int("rest-port", 8080, "Kaskada's REST port to connect")
+	kaskadaRestPort      = flag.Int("rest-port", 3365, "Kaskada's REST port to connect")
 	kaskadaUseTLS        = flag.Bool("use-tls", false, "protocol for connecting to Kaskada")
 
 	externalBucket   = "external-bucket"
