@@ -81,16 +81,16 @@ fn reader_from_pulsar(
     slice: &Option<Slice>,
 ) -> error_stack::Result<PrepareIter, Error> {
     let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
-    let raw_metadata = RawMetadata::try_from_pulsar(pulsar_config)
+    let pm = RawMetadata::try_from_pulsar(pulsar_config)
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
     let consumer = block_on(crate::execute::pulsar_reader::pulsar_consumer(
         pulsar_subscription,
-        raw_metadata.raw_schema.clone(),
+        pm.user_schema.clone(),
     ))?;
-    let reader = PulsarReader::new(raw_metadata.table_schema.clone(), consumer);
-    PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
+    let reader = PulsarReader::new(pm.sparrow_metadata.raw_schema.clone(), consumer);
+    PrepareIter::try_new(reader, config, pm.sparrow_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreatePulsarReader)
 }

@@ -17,13 +17,20 @@ use crate::metadata::file_from_path;
 
 #[non_exhaustive]
 pub struct RawMetadata {
-    /// The raw schema of the file(s) backing this metadata.
+    /// The raw schema of the data source backing this metadata.
     pub raw_schema: SchemaRef,
-    /// The schema of the table as presented to the user.
+    /// The schema of the data source as presented to the user.
     ///
     /// This is the result of applying schema conversions to the raw schema,
     /// such as removing time zones, dropping decimal columns, etc.
     pub table_schema: SchemaRef,
+}
+
+pub struct PulsarMetadata {
+    /// the schema as defined by the user on the topic, corresponding to the messages created
+    pub user_schema: SchemaRef,
+    /// schema that includes metadata used by Sparrow
+    pub sparrow_metadata: RawMetadata,
 }
 
 impl RawMetadata {
@@ -43,7 +50,7 @@ impl RawMetadata {
             }
             source_data::Source::PulsarSubscription(ps) => {
                 let config = ps.config.as_ref().context("missing config")?;
-                Self::try_from_pulsar(config)
+                Ok(Self::try_from_pulsar(config)?.sparrow_metadata)
             }
         }
     }
@@ -59,9 +66,10 @@ impl RawMetadata {
         })
     }
 
-    /// Create a `RawMetadata` fram a Pulsar topic.
-    pub(crate) fn try_from_pulsar(config: &PulsarConfig) -> anyhow::Result<Self> {
-        let raw_schema = pulsar_schema::get_pulsar_schema(
+    /// Create a `RawMetadata` from a Pulsar topic.
+    pub(crate) fn try_from_pulsar(config: &PulsarConfig) -> anyhow::Result<PulsarMetadata> {
+        // the user-defined schema in the topic
+        let pulsar_schema = pulsar_schema::get_pulsar_schema(
             config.admin_service_url.as_str(),
             config.tenant.as_str(),
             config.namespace.as_str(),
@@ -70,16 +78,16 @@ impl RawMetadata {
         )
         .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
 
-        let rm = Self::try_from_raw_schema(Arc::new(raw_schema))?;
         // inject _publish_time field so that we have a consistent column to sort on
         // (this will always be our time_column in Pulsar sources)
         let publish_time = Field::new("_publish_time", TimestampMillisecondType::DATA_TYPE, false);
-        let mut new_fields = rm.table_schema.fields.clone();
+        let mut new_fields = pulsar_schema.fields.clone();
         new_fields.push(publish_time);
         tracing::debug!("pulsar schema fields: {:?}", new_fields);
-        Ok(Self {
-            raw_schema: rm.raw_schema,
-            table_schema: Arc::new(Schema::new(new_fields)),
+
+        Ok(PulsarMetadata {
+            user_schema: Arc::new(pulsar_schema),
+            sparrow_metadata: Self::try_from_raw_schema(Arc::new(Schema::new(new_fields)))?
         })
     }
 
