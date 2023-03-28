@@ -44,3 +44,16 @@ See the [docs](https://kaskada.io/docs-site/) to get started in a [Jupyter Noteb
 - **Continuous expressions**: Observe the value of aggregations at arbitrary points in time. Timelines are either “discrete” (instantaneous values or events) or “continuous” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
 - **Native time travel**: Shift values forward (but not backward) in time, allowing you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
 - **Simple, composable syntax**: It is functions all the way down. No global state, no dependencies to manage, and no spooky action at a distance. Quickly understand what a query is doing, and painlessly refactor to make it DRY.
+
+## Getting Help
+For general questions, the best place to go is [GitHub discussions](https://github.com/kaskada-ai/kaskada/discussions).
+
+For specific problems, file an [issue](https://github.com/kaskada-ai/kaskada/issues).
+
+## Discussion and Development
+Most development discussions take place on GitHub in this repo.
+
+## Contributing
+All contributions -- issues, fixes, documentation improvements, features and ideas -- are welcome.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
