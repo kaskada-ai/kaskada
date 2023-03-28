@@ -159,6 +159,7 @@ jobs:
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
         run: |
+          git config --global --add safe.directory '*'
           cp release/wren  ${WREN_ASSET_NAME}
           gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
           cp release/cli  ${CLI_ASSET_NAME}
@@ -225,7 +226,7 @@ jobs:
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
         run: |
-          cp release/sparrow-main ${ENGINE_ASSET_NAME}
+          cp target/aarch64-unknown-linux-gnu/release/sparrow-main ${ENGINE_ASSET_NAME}
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
         shell: bash
         env:
