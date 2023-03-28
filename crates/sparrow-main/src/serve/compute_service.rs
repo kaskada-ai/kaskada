@@ -288,7 +288,6 @@ mod tests {
     use std::fs::File;
     use std::path::Path;
 
-    use fallible_iterator::FallibleIterator;
     use futures::TryStreamExt;
     use itertools::Itertools;
     use parquet::file::reader::FileReader;
@@ -513,7 +512,7 @@ mod tests {
         .await
         .unwrap()
         .collect()
-        .unwrap();
+        .await;
 
         let input_path = source_data::Source::ParquetPath(
             part1_file_path
@@ -537,7 +536,7 @@ mod tests {
             .tempfile()
             .unwrap();
 
-        let (record_batch, metadata) = &prepared_batches[0];
+        let (record_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let output_file = File::create(&prepared_file).unwrap();
         let metadata_output_file = File::create(&metadata_file).unwrap();
 

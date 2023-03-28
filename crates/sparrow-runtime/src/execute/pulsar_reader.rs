@@ -4,7 +4,8 @@ use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
 use error_stack::{IntoReport, ResultExt};
-use futures::executor::block_on;
+use futures::task::FutureObj;
+use futures::FutureExt;
 use pulsar::consumer::InitialPosition;
 
 use pulsar::{
@@ -15,7 +16,10 @@ use pulsar::{
 use crate::execute::avro_arrow;
 use sparrow_api::kaskada::v1alpha::PulsarSubscription;
 use std::io::Cursor;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
+use futures::Stream;
 use std::time::Duration;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
@@ -186,11 +190,15 @@ impl PulsarReader {
     }
 }
 
-impl Iterator for PulsarReader {
+impl Stream for PulsarReader {
     type Item = Result<RecordBatch, ArrowError>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        block_on(self.next_async())
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // TODO is this the right way to do this?  I threw stuff at the wall until it worked.
+        let mut this = self.as_mut();
+        let mut fut = FutureObj::new(Box::new(this.next_async()));
+        let res = futures::ready!(fut.poll_unpin(cx));
+        Poll::Ready(res)
     }
 }
 

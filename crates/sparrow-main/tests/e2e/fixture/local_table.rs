@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use fallible_iterator::FallibleIterator;
+use futures::StreamExt;
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
 use sparrow_api::kaskada::v1alpha::SourceData;
 use sparrow_api::kaskada::v1alpha::{
@@ -75,62 +75,77 @@ impl LocalTestTable {
     }
 
     pub async fn add_source(&mut self, source_data: &SourceData) -> anyhow::Result<()> {
-        // Fake prepare the batches and write them to a parquet file..
-        //
-        // TODO: Simulate the actual interaction with prepare (eg., collect raw files
-        // and run prepare in response to analysis).
-        for prepared_batch in prepared_batches(source_data, &self.config, &None)
-            .await
-            .map_err(|e| e.into_error())?
-            .iterator()
+        let prepared_batches_and_metadata = {
+            let mut prepared_batches_and_metadata = Vec::new();
+
+            // Fake prepare the batches and write them to a parquet file..
+            //
+            // TODO: Simulate the actual interaction with prepare (eg., collect raw files
+            // and run prepare in response to analysis).
+            let mut iter = prepared_batches(source_data, &self.config, &None)
+                .await
+                .map_err(|e| e.into_error())?;
+            while let Some(prepared_batch) = iter.next().await {
+                let (prepared_batch, metadata) = prepared_batch?;
+
+                let prepared_file = tempfile::Builder::new()
+                    .suffix(".parquet")
+                    .tempfile()
+                    .unwrap();
+
+                let output_file = File::create(prepared_file.path())?;
+                let mut output = parquet::arrow::arrow_writer::ArrowWriter::try_new(
+                    output_file,
+                    prepared_batch.schema(),
+                    Some(
+                        // Set the created_by before hashing. This ensures the
+                        // hash won't change *just* because the Arrow version changes.
+                        parquet::file::properties::WriterProperties::builder()
+                            .set_created_by("kaskada e2e tests".to_owned())
+                            .build(),
+                    ),
+                )
+                .unwrap();
+
+                output.write(&prepared_batch).unwrap();
+                output.close().unwrap();
+
+                let metadata_output_file = tempfile::Builder::new()
+                    .suffix(".parquet")
+                    .tempfile()
+                    .unwrap();
+
+                let output_file = File::create(metadata_output_file.path())?;
+                let mut output = parquet::arrow::arrow_writer::ArrowWriter::try_new(
+                    output_file,
+                    metadata.schema(),
+                    None,
+                )
+                .unwrap();
+
+                output.write(&metadata).unwrap();
+                output.close().unwrap();
+
+                let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
+                    prepared_file.path(),
+                    metadata_output_file.path(),
+                )?;
+
+                prepared_batches_and_metadata.push((
+                    prepared_metadata,
+                    prepared_file,
+                    metadata_output_file,
+                ));
+            }
+
+            prepared_batches_and_metadata
+        };
+
+        // this is split out into a separate loop to avoid "cannot borrow `*self` as mutable
+        // because it is also borrowed as immutable"
+        for (prepared_metadata, prepared_file, metadata_output_file) in
+            prepared_batches_and_metadata
         {
-            let (prepared_batch, metadata) = prepared_batch.map_err(|e| {
-                // not sure why this gets swallowed up by the test harness
-                tracing::error!("Error preparing batch: {:?}", e);
-                e.into_error()
-            })?;
-            let prepared_file = tempfile::Builder::new()
-                .suffix(".parquet")
-                .tempfile()
-                .unwrap();
-
-            let output_file = File::create(prepared_file.path())?;
-            let mut output = parquet::arrow::arrow_writer::ArrowWriter::try_new(
-                output_file,
-                prepared_batch.schema(),
-                Some(
-                    // Set the created_by before hashing. This ensures the
-                    // hash won't change *just* because the Arrow version changes.
-                    parquet::file::properties::WriterProperties::builder()
-                        .set_created_by("kaskada e2e tests".to_owned())
-                        .build(),
-                ),
-            )
-            .unwrap();
-
-            output.write(&prepared_batch).unwrap();
-            output.close().unwrap();
-
-            let metadata_output_file = tempfile::Builder::new()
-                .suffix(".parquet")
-                .tempfile()
-                .unwrap();
-
-            let output_file = File::create(metadata_output_file.path())?;
-            let mut output = parquet::arrow::arrow_writer::ArrowWriter::try_new(
-                output_file,
-                metadata.schema(),
-                None,
-            )
-            .unwrap();
-
-            output.write(&metadata).unwrap();
-            output.close().unwrap();
-
-            let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
-                prepared_file.path(),
-                metadata_output_file.path(),
-            )?;
             self.update_table_metadata(TableMetadata {
                 schema: Some(prepared_metadata.table_schema.as_ref().try_into().unwrap()),
                 file_count: 1,
@@ -139,7 +154,6 @@ impl LocalTestTable {
             self.prepared_files
                 .push(prepared_metadata.try_into().unwrap());
 
-            // Push the prepared file so it isn't dropped & deleted.
             self.retained_files.push(prepared_file);
             self.retained_files.push(metadata_output_file);
         }

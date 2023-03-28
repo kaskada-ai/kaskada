@@ -1,8 +1,7 @@
 use std::fs::File;
 
 use error_stack::{IntoReportCompat, ResultExt};
-use fallible_iterator::FallibleIterator;
-use futures::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::destination;
 use sparrow_api::kaskada::v1alpha::source_data;
@@ -208,10 +207,13 @@ impl ExampleInputPreparer {
             sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
                 .await
                 .change_context(Error::PrepareInput)?
-                .collect()
-                .change_context(Error::PrepareInput)?;
+                .collect::<Vec<_>>()
+                .await;
 
-        let (prepared_batch, metadata) = &prepared_batches[0];
+        let (prepared_batch, metadata) = match prepared_batches[0].as_ref() {
+            Ok((prepared_batch, metadata)) => (prepared_batch, metadata),
+            Err(_) => error_stack::bail!(Error::PrepareInput),
+        };
 
         let prepared_file = tempfile::Builder::new()
             .suffix(".parquet")

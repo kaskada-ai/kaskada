@@ -4,11 +4,11 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use fallible_iterator::FallibleIterator;
-use futures::executor::block_on;
+use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
+use futures::TryStreamExt;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
 
@@ -37,11 +37,11 @@ const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 ///
 /// Returns a fallible iterator over pairs containing the data and metadata
 /// batches.
-pub async fn prepared_batches(
+pub async fn prepared_batches<'a>(
     source_data: &SourceData,
-    config: &TableConfig,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
+    config: &'a TableConfig,
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
     let prepare_hash = get_prepare_hash(source_data)?;
     let prepare_iter = match source_data.source.as_ref() {
         None => error_stack::bail!(Error::MissingField("source")),
@@ -74,22 +74,21 @@ pub async fn prepared_batches(
     Ok(prepare_iter)
 }
 
-async fn reader_from_pulsar(
-    config: &TableConfig,
+async fn reader_from_pulsar<'a>(
+    config: &'a TableConfig,
     pulsar_subscription: &PulsarSubscription,
     prepare_hash: u64,
-    slice: &Option<Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
+    slice: &'a Option<Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
     let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
     let pm = RawMetadata::try_from_pulsar(pulsar_config)
         .await
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
-    let consumer = block_on(crate::execute::pulsar_reader::pulsar_consumer(
-        pulsar_subscription,
-        pm.user_schema.clone(),
-    ))?;
+    let consumer =
+        crate::execute::pulsar_reader::pulsar_consumer(pulsar_subscription, pm.user_schema.clone())
+            .await?;
     let reader = PulsarReader::new(pm.sparrow_metadata.raw_schema.clone(), consumer);
     PrepareIter::try_new(reader, config, pm.sparrow_metadata, prepare_hash, slice)
         .into_report()
@@ -131,52 +130,70 @@ pub async fn prepare_file(
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let mut prepared_metadatas: Vec<_> = Vec::new();
-    let mut prepared_files: Vec<_> = Vec::new();
+    let prepared_metadatas = Arc::new(Mutex::new(Vec::new()));
+    let prepared_files = Arc::new(Mutex::new(Vec::new()));
     let preparer = prepared_batches(source_data, table_config, slice).await?;
-    let _span =
-        tracing::info_span!("Preparing file", file = %SourceDataWrapper(source_data)).entered();
-    for (batch_count, record_batch) in preparer.iterator().enumerate() {
-        let (record_batch, metadata) = record_batch?;
-        tracing::info!(
-            "Prepared batch {batch_count} has {} rows",
-            record_batch.num_rows()
-        );
-        if record_batch.num_rows() > 0 {
-            let output = output_path.join(format!("{output_prefix}-{batch_count}.parquet"));
-            let output_file = create_file(&output)?;
+    let batch_count = std::sync::atomic::AtomicUsize::new(0);
+    preparer
+        .try_for_each(|(record_batch, metadata)| {
+            let pmc = Arc::clone(&prepared_metadatas);
+            let pfc = Arc::clone(&prepared_files);
+            let bc = &batch_count;
+            async move {
+                let n = bc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                tracing::info!("Prepared batch {n} has {} rows", record_batch.num_rows());
 
-            let metadata_output =
-                output_path.join(format!("{output_prefix}-{batch_count}-metadata.parquet"));
-            let metadata_output_file = create_file(&metadata_output)?;
+                if record_batch.num_rows() > 0 {
+                    let output = output_path.join(format!("{output_prefix}-{n}.parquet"));
+                    let output_file = create_file(&output)?;
 
-            write_batch(output_file, record_batch).change_context(Error::WriteParquetData)?;
-            write_batch(metadata_output_file, metadata).change_context(Error::WriteMetadata)?;
+                    let metadata_output =
+                        output_path.join(format!("{output_prefix}-{n}-metadata.parquet"));
+                    let metadata_output_file = create_file(&metadata_output)?;
 
-            let prepared_metadata =
-                PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
-                    .into_report()
-                    .change_context(Error::DetermineMetadata)?;
-            let prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .try_into()
-                .change_context(Error::Internal)?;
-            tracing::info!("Prepared batch {batch_count} with metadata {prepared_metadata:?}");
-            prepared_metadatas.push(prepared_metadata);
+                    write_batch(output_file, record_batch)
+                        .change_context(Error::WriteParquetData)?;
+                    write_batch(metadata_output_file, metadata)
+                        .change_context(Error::WriteMetadata)?;
 
-            let metadata_yaml_output =
-                output_path.join(format!("{output_prefix}-{batch_count}-metadata.yaml"));
-            let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
-            serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
-                .into_report()
-                .change_context(Error::Internal)?;
-            tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
+                    let prepared_metadata =
+                        PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
+                            .into_report()
+                            .change_context(Error::DetermineMetadata)?;
+                    let prepared_file: PreparedFile = prepared_metadata
+                        .to_owned()
+                        .try_into()
+                        .change_context(Error::Internal)?;
+                    tracing::info!("Prepared batch {n} with metadata {prepared_metadata:?}");
+                    pmc.lock()?.push(prepared_metadata);
 
-            prepared_files.push(prepared_file);
-        }
-    }
+                    let metadata_yaml_output =
+                        output_path.join(format!("{output_prefix}-{n}-metadata.yaml"));
+                    let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
+                    serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
+                        .into_report()
+                        .change_context(Error::Internal)?;
+                    tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
 
-    Ok((prepared_metadatas, prepared_files))
+                    pfc.lock()?.push(prepared_file);
+                }
+
+                Ok(())
+            }
+        })
+        .await
+        .into_report()
+        .change_context(Error::Internal)?;
+
+    let pm = Arc::try_unwrap(prepared_metadatas)
+        .map_err(|_err| Error::Internal)? // can't put in report since it returns the Arc itself on error
+        .into_inner()
+        .map_err(|err| Report::new(err).change_context(Error::Internal))?;
+    let pf = Arc::try_unwrap(prepared_files)
+        .map_err(|err| Error::Internal)? // can't put in report since it returns the Arc itself on error
+        .into_inner()
+        .map_err(|err| Report::new(err).change_context(Error::Internal))?;
+    Ok((pm, pf))
 }
 
 pub async fn upload_prepared_files_to_s3(
@@ -348,13 +365,13 @@ fn get_batch_size(num_rows: i64, num_files: usize) -> usize {
     (num_rows + num_files - 1) / num_files
 }
 
-fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
-    config: &TableConfig,
+fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
+    config: &'a TableConfig,
     reader: R,
     file_size: u64,
     prepare_hash: u64,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
     let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(reader)
         .into_report()
         .change_context(Error::CreateParquetReader)?;
@@ -370,20 +387,22 @@ fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
         .build()
         .into_report()
         .change_context(Error::CreateParquetReader)?;
+    // create a Stream from reader
+    let stream_reader = futures::stream::iter(reader);
 
-    PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
+    PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreateParquetReader)
 }
 
 const BATCH_SIZE: usize = 1_000_000;
 
-fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
-    config: &TableConfig,
+fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
+    config: &'a TableConfig,
     reader: R,
     prepare_hash: u64,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
     use arrow::csv::ReaderBuilder;
 
     // Create the CSV reader.
@@ -397,8 +416,9 @@ fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
     let raw_metadata = RawMetadata::try_from_raw_schema(reader.schema())
         .into_report()
         .change_context(Error::CreateCsvReader)?;
+    let stream_reader = futures::stream::iter(reader);
 
-    PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
+    PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreateCsvReader)
 }
@@ -409,8 +429,7 @@ pub fn file_sourcedata(path: source_data::Source) -> SourceData {
 
 #[cfg(test)]
 mod tests {
-
-    use fallible_iterator::FallibleIterator;
+    use futures::StreamExt;
     use sparrow_api::kaskada::v1alpha::{source_data, SourceData, TableConfig};
     use uuid::Uuid;
 
@@ -506,9 +525,9 @@ mod tests {
         let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
             .await
             .unwrap();
-        let prepared_batches: Vec<_> = prepared_batches.collect().unwrap();
+        let prepared_batches = prepared_batches.collect::<Vec<_>>().await;
         assert_eq!(prepared_batches.len(), 1);
-        let (prepared_batch, metadata) = &prepared_batches[0];
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
         let _metadata_schema = metadata.schema();
     }
@@ -541,9 +560,9 @@ mod tests {
         let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
             .await
             .unwrap();
-        let prepared_batches: Vec<_> = prepared_batches.collect().unwrap();
+        let prepared_batches = prepared_batches.collect::<Vec<_>>().await;
         assert_eq!(prepared_batches.len(), 1);
-        let (prepared_batch, metadata) = &prepared_batches[0];
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
         let _metadata_schema = metadata.schema();
     }
