@@ -15,7 +15,7 @@ async fn test_undefined_column() {
     // The cast is here to ensure that we don't report an additional
     // error when casting from error to i64.
 
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined as i64}").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined as i64}").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -40,7 +40,7 @@ async fn test_undefined_column() {
 async fn test_undefined_column_last() {
     // Regression test for the code path that handles undefined fields
     // causing the diagnostic to be swallowed.
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined} | last()").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined} | last()").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -63,7 +63,7 @@ async fn test_undefined_column_last() {
 
 #[tokio::test]
 async fn test_undefined_column_field_ref() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined.foo }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined.foo }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -86,7 +86,7 @@ async fn test_undefined_column_field_ref() {
 
 #[tokio::test]
 async fn test_undefined_column_field_addition() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined + 5 }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ undefined: Numbers.undefined + 5 }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -191,7 +191,7 @@ async fn test_invalid_key_columns() {
 
 #[tokio::test]
 async fn test_illegal_cast_to_generic() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ m: Numbers.m as number }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ m: Numbers.m as number }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -214,7 +214,7 @@ async fn test_illegal_cast_to_generic() {
 
 #[tokio::test]
 async fn test_illegal_cast() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.key as duration_ns }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.key as duration_ns }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -237,7 +237,7 @@ async fn test_illegal_cast() {
 
 #[tokio::test]
 async fn test_unrecognized_function() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: cel(Numbers.n) }").run_to_csv(&f64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: cel(Numbers.n) }").run_to_csv(&f64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -260,7 +260,7 @@ async fn test_unrecognized_function() {
 
 #[tokio::test]
 async fn test_duplicate_fields() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n, n: Numbers.n, m: Numbers.m, m: Numbers.m }").run_to_csv(&f64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n, n: Numbers.n, m: Numbers.m, m: Numbers.m }").run_to_csv(&f64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -299,7 +299,7 @@ async fn test_non_record_base_to_extension() {
     // Note - this test case is both a non-record *base* and a non-record extension.
     // Ideally, we'd report *both*, but currently we report the non-record extension
     // first.
-    insta::assert_yaml_snapshot!(QueryFixture::new("Numbers.n | extend(Numbers.m)").run_to_csv(&f64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("Numbers.n | extend(Numbers.m)").run_to_csv(&f64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -320,7 +320,7 @@ async fn test_non_record_base_to_extension() {
 
 #[tokio::test]
 async fn test_non_record_extension() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("Numbers | extend(Numbers.m)").run_to_csv(&f64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("Numbers | extend(Numbers.m)").run_to_csv(&f64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -344,7 +344,7 @@ async fn test_concrete_type_error() {
     // A type error resulting from a concrete type (string) not matching the
     // concrete type of a function (exp) which expects `f64`. This doesn't use
     // the path of instantiating generics, so we test it separately.
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ m: exp(Strings.s) }").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ m: exp(Strings.s) }").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -374,7 +374,7 @@ async fn test_concrete_type_error() {
 async fn test_incompatible_actual_types_error() {
     // Test what happens when the actual types for a generic aren't compatible.
     // (No least-upper-bound).
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ m: Strings.s + Strings.n }").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ m: Strings.s + Strings.n }").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -402,7 +402,7 @@ async fn test_incompatible_actual_types_error() {
 async fn test_incompatible_lub_error() {
     // Test what happens when the solved type for a generic isn't compatible
     // with the constraint.
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ s2: Strings.s + Strings.s }").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ s2: Strings.s + Strings.s }").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -427,7 +427,7 @@ async fn test_incompatible_lub_error() {
 
 #[tokio::test]
 async fn test_parse_error() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("let { n: Numbers.n}").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("let { n: Numbers.n}").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -461,7 +461,7 @@ async fn test_parse_error() {
 
 #[tokio::test]
 async fn test_parse_error_missing_parentheses() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -484,7 +484,7 @@ async fn test_parse_error_missing_parentheses() {
 
 #[tokio::test]
 async fn test_parse_error_unrecognized() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("limit x = 5 in { n: Numbers.n}").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("limit x = 5 in { n: Numbers.n}").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -518,7 +518,7 @@ async fn test_parse_error_unrecognized() {
 
 #[tokio::test]
 async fn test_invalid_let_binding_unrecognized() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("let $ = 5 in { n: Numbers.n + 1 } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("let $ = 5 in { n: Numbers.n + 1 } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -541,7 +541,7 @@ async fn test_invalid_let_binding_unrecognized() {
 
 #[tokio::test]
 async fn test_invalid_let_binding_not_ident() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("let + = 5 in { n: Numbers.n + 1 } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("let + = 5 in { n: Numbers.n + 1 } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 3 errors in Fenl statements; see diagnostics
@@ -588,7 +588,7 @@ async fn test_invalid_let_binding_not_ident() {
 
 #[tokio::test]
 async fn test_invalid_expr() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("let x = 5 in { n: Numbers.n + $ } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("let x = 5 in { n: Numbers.n + $ } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -613,7 +613,7 @@ async fn test_invalid_expr() {
 async fn test_invalid_type_ident() {
     // This test what happens when the parser action fails.
     // In this case, `as ben` attempts to parse `ben` as a FenlType, which it isn't.
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n as ben } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n as ben } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -634,7 +634,7 @@ async fn test_invalid_type_ident() {
 
 #[tokio::test]
 async fn test_invalid_type() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n as + } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Numbers.n as + } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -670,7 +670,7 @@ async fn test_invalid_type() {
 
 #[tokio::test]
 async fn test_invalid_arguments_missing_named_value() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(x:) } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(x:) } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -693,7 +693,7 @@ async fn test_invalid_arguments_missing_named_value() {
 
 #[tokio::test]
 async fn test_invalid_arguments_unexpected_operator() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(+ Numbers.n) } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(+ Numbers.n) } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -716,7 +716,7 @@ async fn test_invalid_arguments_unexpected_operator() {
 
 #[tokio::test]
 async fn test_invalid_named_arguments_duplicates() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(x = Numbers.n, x = 5) } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(x = Numbers.n, x = 5) } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -746,7 +746,7 @@ async fn test_invalid_named_before_positional() {
     // since it is part of creating the Arguments.
     //
     // Ideally, the parser could produce an Arguments that got validated later.
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(x = Numbers.n, 5) } ").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ n: ceil(x = Numbers.n, 5) } ").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -769,7 +769,7 @@ async fn test_invalid_named_before_positional() {
 
 #[tokio::test]
 async fn test_invalid_output_type() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("Numbers.time").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("Numbers.time").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -788,14 +788,14 @@ async fn test_invalid_output_type() {
 #[tokio::test]
 #[ignore = "Aggregating a constant panics"]
 async fn test_sum_of_constant() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("sum(0)").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("sum(0)").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     "###);
 }
 
 #[tokio::test]
 async fn test_window_as_query() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("since(Numbers.m > 10)").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("since(Numbers.m > 10)").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -813,7 +813,7 @@ async fn test_window_as_query() {
 
 #[tokio::test]
 async fn test_windows_as_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ x: since(Numbers.m > 10) }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ x: since(Numbers.m > 10) }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -834,7 +834,7 @@ async fn test_windows_as_field() {
 
 #[tokio::test]
 async fn test_non_const_lag() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ invalid_lag: lag(Numbers.n, Numbers.n) }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ invalid_lag: lag(Numbers.n, Numbers.n) }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -855,7 +855,7 @@ async fn test_non_const_lag() {
 
 #[tokio::test]
 async fn test_unsupported_output_type_duration_basic() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ duration: seconds_between(Numbers.time, Numbers.time), other: Numbers.n }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ duration: seconds_between(Numbers.time, Numbers.time), other: Numbers.n }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -876,7 +876,7 @@ async fn test_unsupported_output_type_duration_basic() {
 
 #[tokio::test]
 async fn test_unsupported_output_type_interval_basic() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ interval: months_between(Numbers.time, Numbers.time), other: Numbers.time }").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ interval: months_between(Numbers.time, Numbers.time), other: Numbers.time }").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -901,7 +901,7 @@ async fn test_unsupported_output_type_with_last() {
     //
     // Current: No range of bytes
     // Expected: Underline offending expr that produced invalid type.
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ interval: months_between(Numbers.time, Numbers.time), other: Numbers.time } | last()").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ interval: months_between(Numbers.time, Numbers.time), other: Numbers.time } | last()").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -926,7 +926,7 @@ async fn test_unsupported_output_type_with_formula() {
     // struct.
     insta::assert_yaml_snapshot!(QueryFixture::new("{ interval: mon_bet, other: Numbers.time }")
         .with_formula("mon_bet", "months_between(Numbers.time, Numbers.time)")
-        .run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -954,7 +954,7 @@ async fn test_unsupported_output_type_with_nested_struct() {
     // produced the type.
     insta::assert_yaml_snapshot!(QueryFixture::new("{ interval: mon_bet, other: Numbers.time }")
         .with_formula("mon_bet", "{ interval_nested: months_between(Numbers.time, Numbers.time) }.interval_nested")
-        .run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -977,7 +977,7 @@ async fn test_unsupported_output_type_with_nested_struct() {
 async fn test_unsupported_output_type_with_formula_as_record_output() {
     insta::assert_yaml_snapshot!(QueryFixture::new("output")
         .with_formula("output", "{ interval: months_between(Numbers.time, Numbers.time) }")
-        .run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -1002,7 +1002,7 @@ async fn test_unsupported_output_type_with_nested_formulas() {
         .with_formula("a", "seconds_between(b, b)")
         .with_formula("b", "time_of(c)")
         .with_formula("c", "sum(Numbers.n)")
-        .run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -1027,7 +1027,7 @@ async fn test_unsupported_output_type_with_multiple_fields() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ a, b }")
         .with_formula("a", "months_between(Numbers.time, Numbers.time)")
         .with_formula("b", "seconds_between(Numbers.time, Numbers.time)")
-        .run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -1066,7 +1066,7 @@ async fn test_unsupported_output_type_with_nested_formulas_2() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ output: a }")
         .with_formula("a", "last(b)")
         .with_formula("b", "seconds_between(Numbers.time, Numbers.time)")
-        .run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics

@@ -65,18 +65,22 @@ impl LocalTestTable {
         }
     }
 
-    pub fn add_file_source(&mut self, raw_file_path: &source_data::Source) -> anyhow::Result<()> {
+    pub async fn add_file_source(
+        &mut self,
+        raw_file_path: &source_data::Source,
+    ) -> anyhow::Result<()> {
         tracing::info!("Adding file source: {:?}", raw_file_path);
         let source_data = sparrow_runtime::prepare::file_sourcedata(raw_file_path.clone());
-        self.add_source(&source_data)
+        self.add_source(&source_data).await
     }
 
-    pub fn add_source(&mut self, source_data: &SourceData) -> anyhow::Result<()> {
+    pub async fn add_source(&mut self, source_data: &SourceData) -> anyhow::Result<()> {
         // Fake prepare the batches and write them to a parquet file..
         //
         // TODO: Simulate the actual interaction with prepare (eg., collect raw files
         // and run prepare in response to analysis).
         for prepared_batch in prepared_batches(source_data, &self.config, &None)
+            .await
             .map_err(|e| e.into_error())?
             .iterator()
         {

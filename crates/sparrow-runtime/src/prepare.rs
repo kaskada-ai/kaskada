@@ -37,7 +37,7 @@ const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 ///
 /// Returns a fallible iterator over pairs containing the data and metadata
 /// batches.
-pub fn prepared_batches(
+pub async fn prepared_batches(
     source_data: &SourceData,
     config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
@@ -66,7 +66,7 @@ pub fn prepared_batches(
                 reader_from_csv(config, reader, prepare_hash, slice)?
             }
             source_data::Source::PulsarSubscription(ps) => {
-                reader_from_pulsar(config, ps, prepare_hash, slice)?
+                reader_from_pulsar(config, ps, prepare_hash, slice).await?
             }
         },
     };
@@ -74,7 +74,7 @@ pub fn prepared_batches(
     Ok(prepare_iter)
 }
 
-fn reader_from_pulsar(
+async fn reader_from_pulsar(
     config: &TableConfig,
     pulsar_subscription: &PulsarSubscription,
     prepare_hash: u64,
@@ -82,6 +82,7 @@ fn reader_from_pulsar(
 ) -> error_stack::Result<PrepareIter, Error> {
     let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
     let pm = RawMetadata::try_from_pulsar(pulsar_config)
+        .await
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
@@ -123,7 +124,7 @@ impl<'a> fmt::Display for SourceDataWrapper<'a> {
 }
 
 /// Prepare the given file and return the list of prepared files.
-pub fn prepare_file(
+pub async fn prepare_file(
     source_data: &SourceData,
     output_path: &Path,
     output_prefix: &str,
@@ -132,7 +133,7 @@ pub fn prepare_file(
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
     let mut prepared_metadatas: Vec<_> = Vec::new();
     let mut prepared_files: Vec<_> = Vec::new();
-    let preparer = prepared_batches(source_data, table_config, slice)?;
+    let preparer = prepared_batches(source_data, table_config, slice).await?;
     let _span =
         tracing::info_span!("Preparing file", file = %SourceDataWrapper(source_data)).entered();
     for (batch_count, record_batch) in preparer.iterator().enumerate() {
@@ -478,8 +479,8 @@ mod tests {
         assert_eq!(batch_size, expected_batch_size)
     }
 
-    #[test]
-    fn test_timestamp_with_timezone_data_prepares() {
+    #[tokio::test]
+    async fn test_timestamp_with_timezone_data_prepares() {
         let input_path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
 
         let input_path = source_data::Source::ParquetPath(
@@ -502,7 +503,9 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None).unwrap();
+        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+            .await
+            .unwrap();
         let prepared_batches: Vec<_> = prepared_batches.collect().unwrap();
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = &prepared_batches[0];
@@ -510,8 +513,8 @@ mod tests {
         let _metadata_schema = metadata.schema();
     }
 
-    #[test]
-    fn test_prepare_csv() {
+    #[tokio::test]
+    async fn test_prepare_csv() {
         let input_path =
             sparrow_testing::testdata_path("eventdata/2c889258-d676-4922-9a92-d7e9c60c1dde.csv");
 
@@ -535,7 +538,9 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None).unwrap();
+        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+            .await
+            .unwrap();
         let prepared_batches: Vec<_> = prepared_batches.collect().unwrap();
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = &prepared_batches[0];

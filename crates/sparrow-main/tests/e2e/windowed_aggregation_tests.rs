@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
 
-fn window_data_fixture() -> DataFixture {
+async fn window_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -25,10 +25,11 @@ fn window_data_fixture() -> DataFixture {
     1996-12-19T16:40:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
-fn window_data_fixture_with_nulls() -> DataFixture {
+async fn window_data_fixture_with_nulls() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -44,12 +45,13 @@ fn window_data_fixture_with_nulls() -> DataFixture {
     1996-12-19T16:40:04-08:00,0,A,10,habanero,true
     "},
         )
+        .await
         .unwrap()
 }
 
 #[tokio::test]
 async fn test_sliding_window_with_predicate() {
-    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo, window=since(daily())), slide: Foo | count(window=sliding(2, $input | is_valid())) }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo, window=since(daily())), slide: Foo | count(window=sliding(2, $input | is_valid())) }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,since,slide
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1,1
@@ -64,7 +66,7 @@ async fn test_sliding_window_with_predicate() {
 
 #[tokio::test]
 async fn test_sliding_window_with_predicate_final_results() {
-    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo, window=since(daily())), slide: Foo | count(window=sliding(2, $input | is_valid())) }").with_final_results().run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo, window=since(daily())), slide: Foo | count(window=sliding(2, $input | is_valid())) }").with_final_results().run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,since,slide
     1996-12-20T00:40:04.000000001,18446744073709551615,3650215962958587783,A,7,2
     1996-12-20T00:40:04.000000001,18446744073709551615,11753611437813598533,B,1,1
@@ -73,7 +75,7 @@ async fn test_sliding_window_with_predicate_final_results() {
 
 #[tokio::test]
 async fn test_count_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, count: count(Foo.n), count_since: count(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, count: count(Foo.n), count_since: count(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,count,count_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,1,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,1,1
@@ -88,7 +90,7 @@ async fn test_count_since_window() {
 
 #[tokio::test]
 async fn test_sum_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, sum: sum(Foo.n), sum_since: sum(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, sum: sum(Foo.n), sum_since: sum(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,sum,sum_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9,3.9
@@ -103,7 +105,7 @@ async fn test_sum_since_window() {
 
 #[tokio::test]
 async fn test_min_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, min: min(Foo.n), min_since: min(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, min: min(Foo.n), min_since: min(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,min,min_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9,3.9
@@ -118,7 +120,7 @@ async fn test_min_since_window() {
 
 #[tokio::test]
 async fn test_max_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, max: max(Foo.n), max_since: max(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, max: max(Foo.n), max_since: max(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,max,max_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9,3.9
@@ -133,7 +135,7 @@ async fn test_max_since_window() {
 
 #[tokio::test]
 async fn test_mean_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, mean: mean(Foo.n), mean_since: mean(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, mean: mean(Foo.n), mean_since: mean(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,mean,mean_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9,3.9
@@ -148,7 +150,7 @@ async fn test_mean_since_window() {
 
 #[tokio::test]
 async fn test_variance_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, variance: variance(Foo.n), variance_since: variance(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, variance: variance(Foo.n), variance_since: variance(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,variance,variance_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,,
@@ -163,7 +165,7 @@ async fn test_variance_since_window() {
 
 #[tokio::test]
 async fn test_last_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, last: last(Foo.n), last_since: last(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, last: last(Foo.n), last_since: last(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,last,last_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9,3.9
@@ -178,7 +180,7 @@ async fn test_last_since_window() {
 
 #[tokio::test]
 async fn test_f64_first_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, first: first(Foo.n), first_since: first(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.n < 7.0, first: first(Foo.n), first_since: first(Foo.n, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,first,first_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,false,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9,3.9
@@ -193,7 +195,7 @@ async fn test_f64_first_since_window() {
 
 #[tokio::test]
 async fn test_string_first_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ vegetable: Foo.vegetable, cond: Foo.n < 7.0, first: first(Foo.vegetable), first_since: first(Foo.vegetable, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ vegetable: Foo.vegetable, cond: Foo.n < 7.0, first: first(Foo.vegetable), first_since: first(Foo.vegetable, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,vegetable,cond,first,first_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,arugula,false,arugula,arugula
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,beet,true,beet,beet
@@ -208,7 +210,7 @@ async fn test_string_first_since_window() {
 
 #[tokio::test]
 async fn test_string_last_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ vegetable: Foo.vegetable, cond: Foo.n < 7.0, last: last(Foo.vegetable), last_since: last(Foo.vegetable, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ vegetable: Foo.vegetable, cond: Foo.n < 7.0, last: last(Foo.vegetable), last_since: last(Foo.vegetable, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,vegetable,cond,last,last_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,arugula,false,arugula,arugula
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,beet,true,beet,beet
@@ -223,7 +225,7 @@ async fn test_string_last_since_window() {
 
 #[tokio::test]
 async fn test_bool_first_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ bool: Foo.bool, cond: Foo.n < 7.0, first: first(Foo.bool), first_since: first(Foo.bool, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ bool: Foo.bool, cond: Foo.n < 7.0, first: first(Foo.bool), first_since: first(Foo.bool, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,bool,cond,first,first_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,false,true,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,true,true,true,true
@@ -238,7 +240,7 @@ async fn test_bool_first_since_window() {
 
 #[tokio::test]
 async fn test_bool_last_since_window() {
-    insta::assert_snapshot!(QueryFixture::new("{ bool: Foo.bool, cond: Foo.n < 7.0, last: last(Foo.bool), last_since: last(Foo.bool, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ bool: Foo.bool, cond: Foo.n < 7.0, last: last(Foo.bool), last_since: last(Foo.bool, window=since(Foo.n < 7.0))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,bool,cond,last,last_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,false,true,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,true,true,true,true
@@ -255,7 +257,7 @@ async fn test_bool_last_since_window() {
 /// of input validity.
 #[tokio::test]
 async fn test_first_since_window_emits_value_on_reset() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.bool, first_since: first(Foo.n, window=since(Foo.bool))  }").run_to_csv(&window_data_fixture_with_nulls()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.bool, first_since: first(Foo.n, window=since(Foo.bool))  }").run_to_csv(&window_data_fixture_with_nulls().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,first_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,true,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9
@@ -272,7 +274,7 @@ async fn test_first_since_window_emits_value_on_reset() {
 /// regardless of input validity.
 #[tokio::test]
 async fn test_first_sliding_window_emits_value_on_reset() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, first_sliding: first(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture_with_nulls()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, first_sliding: first(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture_with_nulls().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,first_sliding
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -289,7 +291,7 @@ async fn test_first_sliding_window_emits_value_on_reset() {
 /// of input validity.
 #[tokio::test]
 async fn test_last_since_window_emits_value_on_reset() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.bool, last_since: last(Foo.n, window=since(Foo.bool))  }").run_to_csv(&window_data_fixture_with_nulls()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, cond: Foo.bool, last_since: last(Foo.n, window=since(Foo.bool))  }").run_to_csv(&window_data_fixture_with_nulls().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,cond,last_since
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,true,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,true,3.9
@@ -306,7 +308,7 @@ async fn test_last_since_window_emits_value_on_reset() {
 /// regardless of input validity.
 #[tokio::test]
 async fn test_last_sliding_window_emits_value_on_reset() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, last_sliding: last(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture_with_nulls()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, last_sliding: last(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture_with_nulls().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,last_sliding
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -321,7 +323,7 @@ async fn test_last_sliding_window_emits_value_on_reset() {
 
 #[tokio::test]
 async fn test_count_sliding_window_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ cond: is_valid(Foo), total_count: count(Foo), sliding_count: count(Foo, window=sliding(3, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ cond: is_valid(Foo), total_count: count(Foo), sliding_count: count(Foo, window=sliding(3, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,cond,total_count,sliding_count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,1,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,true,1,1
@@ -336,7 +338,7 @@ async fn test_count_sliding_window_every_few_events() {
 
 #[tokio::test]
 async fn test_count_sliding_window_with_condition() {
-    insta::assert_snapshot!(QueryFixture::new("{ cond: Foo.n > 5, sliding_count: count(Foo.n, window=sliding(2, Foo.n > 5)) }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ cond: Foo.n > 5, sliding_count: count(Foo.n, window=sliding(2, Foo.n > 5)) }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,cond,sliding_count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,false,1
@@ -351,7 +353,7 @@ async fn test_count_sliding_window_with_condition() {
 
 #[tokio::test]
 async fn test_count_sliding_duration_1_equivalent_to_since() {
-    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo.bool, window=since(Foo.n > 5)), sliding: count(Foo.bool, window=sliding(1, Foo.n > 5))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo.bool, window=since(Foo.n > 5)), sliding: count(Foo.bool, window=sliding(1, Foo.n > 5))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,since,sliding
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1,1
@@ -366,7 +368,7 @@ async fn test_count_sliding_duration_1_equivalent_to_since() {
 
 #[tokio::test]
 async fn test_sum_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_sum: sum(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_sum: sum(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_sum
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9
@@ -381,7 +383,7 @@ async fn test_sum_sliding_every_few_events() {
 
 #[tokio::test]
 async fn test_first_f64_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9
@@ -396,7 +398,7 @@ async fn test_first_f64_sliding_every_few_events() {
 
 #[tokio::test]
 async fn test_first_string_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.vegetable, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.vegetable, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,arugula
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,beet
@@ -411,7 +413,7 @@ async fn test_first_string_sliding_every_few_events() {
 
 #[tokio::test]
 async fn test_first_boolean_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.bool, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.bool, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,true
@@ -426,7 +428,7 @@ async fn test_first_boolean_sliding_every_few_events() {
 
 #[tokio::test]
 async fn test_last_f64_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9
@@ -440,7 +442,7 @@ async fn test_last_f64_sliding_every_few_events() {
 }
 #[tokio::test]
 async fn test_last_string_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.vegetable, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.vegetable, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,arugula
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,beet
@@ -455,7 +457,7 @@ async fn test_last_string_sliding_every_few_events() {
 
 #[tokio::test]
 async fn test_last_bool_sliding_every_few_events() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.bool, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.bool, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,true
@@ -470,7 +472,7 @@ async fn test_last_bool_sliding_every_few_events() {
 
 #[tokio::test]
 async fn test_aggregation_arguments_wrong() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ count: Foo.n | count(since(Foo.n < 5))  }").run_to_csv(&window_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ count: Foo.n | count(since(Foo.n < 5))  }").run_to_csv(&window_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -508,7 +510,7 @@ async fn test_aggregation_arguments_wrong() {
 async fn test_sliding_arguments_wrong() {
     // This verifies we only produce *one error*, even though the result
     // of sliding is an error (non-constant duration).
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ count: Foo.n | count(sliding(Foo.n))  }").run_to_csv(&window_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ count: Foo.n | count(sliding(Foo.n))  }").run_to_csv(&window_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -529,7 +531,7 @@ async fn test_sliding_arguments_wrong() {
 
 #[tokio::test]
 async fn test_non_constant_sliding_duration_produces_diagnostic() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ count: count(Foo, window=sliding(Foo.n, Foo.n))  }").run_to_csv(&window_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ count: count(Foo, window=sliding(Foo.n, Foo.n))  }").run_to_csv(&window_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -569,6 +571,7 @@ async fn test_sliding_count_final_results() {
             1996-12-19T22:42:05-08:00,0,A,3
             "},
         )
+        .await
         .unwrap();
 
     // `key` and `m` are absent for B because it's last tick was at the hour,
@@ -586,7 +589,7 @@ async fn test_sliding_count_final_results() {
 
 #[tokio::test]
 async fn test_final_sliding_window_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ sliding_const: Foo.n | sum(window = sliding(5, true)) }").with_final_results().run_to_csv(&window_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sliding_const: Foo.n | sum(window = sliding(5, true)) }").with_final_results().run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sliding_const
     1996-12-20T00:40:04.000000001,18446744073709551615,3650215962958587783,A,30.25
     1996-12-20T00:40:04.000000001,18446744073709551615,11753611437813598533,B,3.9

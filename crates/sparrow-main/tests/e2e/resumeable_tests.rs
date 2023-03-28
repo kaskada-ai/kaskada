@@ -28,6 +28,7 @@ async fn assert_final_incremental_same_as_complete(
 
     let mut data_fixture = DataFixture::new()
         .with_table_from_csv(config, csv1)
+        .await
         .unwrap();
 
     // Run the query with the first file, updating the Rocks DB.
@@ -45,6 +46,7 @@ async fn assert_final_incremental_same_as_complete(
     data_fixture
         .table_mut("Numbers")
         .add_file_source(&csv2)
+        .await
         .unwrap();
 
     let non_persistent_results = non_persistent_query
@@ -61,7 +63,7 @@ async fn assert_final_incremental_same_as_complete(
     // open this file".
     let numbers = data_fixture.table_mut("Numbers");
     numbers.clear();
-    numbers.add_file_source(&csv2).unwrap();
+    numbers.add_file_source(&csv2).await.unwrap();
     let persistent_results = persistent_query
         .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
         .run_to_csv(&data_fixture)
@@ -199,6 +201,7 @@ async fn test_resumeable_with_unordered_file_sets() {
         .with_rocksdb(snapshot_dir.path(), None);
     let mut data_fixture = DataFixture::new()
         .with_table_from_csv(config, csv1)
+        .await
         .unwrap();
 
     // Run the query with the first file, updating the Rocks DB.
@@ -219,10 +222,12 @@ async fn test_resumeable_with_unordered_file_sets() {
     data_fixture
         .table_mut("Numbers")
         .add_file_source(&csv2)
+        .await
         .unwrap();
     data_fixture
         .table_mut("Numbers")
         .add_file_source(&csv1)
+        .await
         .unwrap();
 
     let persistent_results = persistent_query
@@ -620,6 +625,7 @@ async fn test_resumeable_final_no_new_data() {
 
     let mut data_fixture = DataFixture::new()
         .with_table_from_csv(config, csv1)
+        .await
         .unwrap();
 
     // Run the query, updating the RocksDb

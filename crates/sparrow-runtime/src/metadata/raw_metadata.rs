@@ -39,7 +39,7 @@ pub struct PulsarMetadata {
 }
 
 impl RawMetadata {
-    pub fn try_from(source: &Source) -> anyhow::Result<Self> {
+    pub async fn try_from(source: &Source) -> anyhow::Result<Self> {
         match source {
             source_data::Source::ParquetPath(path) => {
                 let file = file_from_path(std::path::Path::new(&path))?;
@@ -55,7 +55,7 @@ impl RawMetadata {
             }
             source_data::Source::PulsarSubscription(ps) => {
                 let config = ps.config.as_ref().context("missing config")?;
-                Ok(Self::try_from_pulsar(config)?.sparrow_metadata)
+                Ok(Self::try_from_pulsar(config).await?.sparrow_metadata)
             }
         }
     }
@@ -72,7 +72,7 @@ impl RawMetadata {
     }
 
     /// Create a `RawMetadata` from a Pulsar topic.
-    pub(crate) fn try_from_pulsar(config: &PulsarConfig) -> anyhow::Result<PulsarMetadata> {
+    pub(crate) async fn try_from_pulsar(config: &PulsarConfig) -> anyhow::Result<PulsarMetadata> {
         // the user-defined schema in the topic
         let pulsar_schema = pulsar_schema::get_pulsar_schema(
             config.admin_service_url.as_str(),
@@ -81,6 +81,7 @@ impl RawMetadata {
             config.topic_name.as_str(),
             config.auth_params.as_str(),
         )
+        .await
         .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
 
         // inject _publish_time field so that we have a consistent column to sort on

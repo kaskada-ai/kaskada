@@ -22,6 +22,7 @@ async fn test_prepare_default_subsort_parquet() {
             TableConfig::new("Numbers", &Uuid::new_v4(), "time", None, "key", ""),
             table,
         )
+        .await
         .unwrap();
 
     insta::assert_snapshot!(QueryFixture::new("Numbers").run_to_csv(&data_fixture).await.unwrap(), @r###"
@@ -59,6 +60,7 @@ async fn test_prepare_key_columns_parquet() {
             ),
             table,
         )
+        .await
         .unwrap();
     insta::assert_snapshot!(QueryFixture::new("Numbers").run_to_csv(&data_fixture).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,m,n
@@ -95,6 +97,7 @@ async fn test_u64_key() {
             TableConfig::new("Events", &Uuid::new_v4(), "time", None, "user_id", "user"),
             table,
         )
+        .await
         .unwrap();
     insta::assert_snapshot!(QueryFixture::new("Events").run_to_csv(&data_fixture).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,not_a_key,user_id

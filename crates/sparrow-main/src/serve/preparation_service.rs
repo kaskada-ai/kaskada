@@ -104,7 +104,8 @@ pub async fn prepare_data(
         &prepare_request.file_prefix,
         &table_config,
         &slice_plan.slice,
-    )?;
+    )
+    .await?;
 
     let prepared_files: Vec<PreparedFile> = if is_s3_object {
         upload_prepared_files_to_s3(

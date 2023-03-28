@@ -9,7 +9,7 @@ use crate::QueryFixture;
 
 #[tokio::test]
 async fn test_is_valid_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,true
@@ -22,7 +22,7 @@ async fn test_is_valid_i64() {
 
 #[tokio::test]
 async fn test_is_valid_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,true
@@ -35,7 +35,7 @@ async fn test_is_valid_f64() {
 
 #[tokio::test]
 async fn test_is_valid_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, is_valid: is_valid(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, is_valid: is_valid(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,true
@@ -48,7 +48,7 @@ async fn test_is_valid_string() {
 
 #[tokio::test]
 async fn test_is_valid_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, is_valid: is_valid(Booleans.a)}").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, is_valid: is_valid(Booleans.a)}").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,true
@@ -62,7 +62,7 @@ async fn test_is_valid_boolean() {
 
 #[tokio::test]
 async fn test_is_valid_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Times.n, is_valid: is_valid(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Times.n, is_valid: is_valid(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,is_valid
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,2,true
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,4,true
@@ -75,7 +75,7 @@ async fn test_is_valid_timestamp_ns() {
 
 #[tokio::test]
 async fn test_is_valid_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ is_valid: is_valid(Times)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ is_valid: is_valid(Times)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,is_valid
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,true
@@ -88,7 +88,7 @@ async fn test_is_valid_record() {
 
 #[tokio::test]
 async fn test_hash_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, hash: hash(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, hash: hash(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,hash
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,10021492687541564645
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,9175685813237050681
@@ -101,7 +101,7 @@ async fn test_hash_i64() {
 
 #[tokio::test]
 async fn test_hash_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, hash: hash(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, hash: hash(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,hash
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,7780135985717684634
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,14176767044433571390
@@ -114,7 +114,7 @@ async fn test_hash_string() {
 
 #[tokio::test]
 async fn test_hash_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, hash: hash(Booleans.a)}").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, hash: hash(Booleans.a)}").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,hash
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,2359047937476779835
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,14253486467890685049
@@ -128,7 +128,7 @@ async fn test_hash_boolean() {
 
 #[tokio::test]
 async fn test_hash_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Times.n, hash: hash(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Times.n, hash: hash(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,hash
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,2,1575016611515860288
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,4,11820145550582457114
@@ -143,12 +143,12 @@ async fn test_hash_timestamp_ns() {
 #[ignore = "hash on records is unsupported"]
 #[allow(unused_attributes)]
 async fn test_hash_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ hash: hash(Times)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @"");
+    insta::assert_snapshot!(QueryFixture::new("{ hash: hash(Times)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @"");
 }
 
 #[tokio::test]
 async fn test_basic_limit_rows_to_1() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").with_preview_rows(1).run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").with_preview_rows(1).run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,true
     "###);
@@ -158,7 +158,7 @@ async fn test_basic_limit_rows_to_1() {
 /// Set `preview_rows` to over the number of inputs. Verifies we don't stop
 /// early
 async fn test_basic_limit_rows_all() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").with_preview_rows(100).run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, is_valid: is_valid(Numbers.m)}").with_preview_rows(100).run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,true
@@ -173,7 +173,7 @@ async fn test_basic_limit_rows_all() {
 async fn test_constant_evaluation_preserves_types() {
     // Regression test for ensuring simplifier does not incorrectly
     // equate null and booleans.
-    insta::assert_snapshot!(QueryFixture::new("{ m1: if(false, Numbers.m), m2: Numbers.m }").with_final_results().run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m1: if(false, Numbers.m), m2: Numbers.m }").with_final_results().run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m1,m2
     1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,,
     1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,,24

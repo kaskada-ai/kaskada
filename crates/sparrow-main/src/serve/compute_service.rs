@@ -510,6 +510,7 @@ mod tests {
                 percent: 50.0,
             })),
         )
+        .await
         .unwrap()
         .collect()
         .unwrap();
@@ -521,7 +522,7 @@ mod tests {
                 .to_string_lossy()
                 .to_string(),
         );
-        let part1_metadata = RawMetadata::try_from(&input_path).unwrap();
+        let part1_metadata = RawMetadata::try_from(&input_path).await.unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 
         debug_assert_eq!(prepared_batches.len(), 1);

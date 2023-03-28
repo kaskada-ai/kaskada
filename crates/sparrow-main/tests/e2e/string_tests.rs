@@ -5,7 +5,7 @@ use crate::QueryFixture;
 
 #[tokio::test]
 async fn test_len() {
-    insta::assert_snapshot!(QueryFixture::new("{ len: len(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ len: len(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,len
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,5
@@ -18,7 +18,7 @@ async fn test_len() {
 
 #[tokio::test]
 async fn test_upper_len() {
-    insta::assert_snapshot!(QueryFixture::new("{ upper: upper(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ upper: upper(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,upper
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,HELLO
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,WORLD
@@ -31,7 +31,7 @@ async fn test_upper_len() {
 
 #[tokio::test]
 async fn test_lower_len() {
-    insta::assert_snapshot!(QueryFixture::new("{ lower: lower(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ lower: lower(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,lower
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hello
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,world
@@ -48,7 +48,7 @@ async fn test_substring() {
                 , substring_1: substring(Strings.s, start=1)
                 , substring_0_i: substring(Strings.s, end=Strings.n)
                 , substring_i: substring(Strings.s, start=Strings.n),
-                }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+                }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,substring_0_2,substring_1,substring_0_i,substring_i
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hE,Ello,,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,Wo,orld,World,

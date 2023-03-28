@@ -16,7 +16,7 @@ use crate::DataFixture;
 /// 1996-12-19T16:40:01-08:00,0,A,12,
 /// 1996-12-19T16:40:02-08:00,0,A,,
 /// ```
-pub(crate) fn i64_data_fixture() -> DataFixture {
+pub(crate) async fn i64_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -37,6 +37,7 @@ pub(crate) fn i64_data_fixture() -> DataFixture {
     1996-12-19T16:40:02-08:00,0,A,,
     "},
         )
+        .await
         .unwrap()
 }
 
@@ -51,7 +52,7 @@ pub(crate) fn i64_data_fixture() -> DataFixture {
 /// 1996-12-19T16:40:01-08:00,0,A,12.4,
 /// 1996-12-19T16:40:02-08:00,0,A,,
 /// ```
-pub(crate) fn f64_data_fixture() -> DataFixture {
+pub(crate) async fn f64_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -72,6 +73,7 @@ pub(crate) fn f64_data_fixture() -> DataFixture {
     1996-12-19T16:40:02-08:00,0,A,,
     "},
         )
+        .await
         .unwrap()
 }
 
@@ -87,7 +89,7 @@ pub(crate) fn f64_data_fixture() -> DataFixture {
 /// 1996-12-19T16:43:57-08:00,0,B,,2
 /// 1996-12-19T16:44:57-08:00,0,B,goodbye,
 /// ```
-pub(crate) fn strings_data_fixture() -> DataFixture {
+pub(crate) async fn strings_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -108,6 +110,7 @@ pub(crate) fn strings_data_fixture() -> DataFixture {
     1996-12-19T16:44:57-08:00,0,B,goodbye,,
     "},
         )
+        .await
         .unwrap()
 }
 
@@ -115,7 +118,7 @@ pub(crate) fn strings_data_fixture() -> DataFixture {
 ///
 /// ```csv
 /// ```
-pub(crate) fn boolean_data_fixture() -> DataFixture {
+pub(crate) async fn boolean_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -137,6 +140,7 @@ pub(crate) fn boolean_data_fixture() -> DataFixture {
     1996-12-19T16:45:57-08:00,0,B,,
     "},
         )
+        .await
         .unwrap()
 }
 
@@ -152,7 +156,7 @@ pub(crate) fn boolean_data_fixture() -> DataFixture {
 /// 1998-12-12T16:43:57-08:00,0,B,8,8,
 /// 2004-12-05T16:44:57-08:00,0,B,23,11,1994-12-19T16:39:57-08:00
 /// ```
-pub(crate) fn timestamp_ns_data_fixture() -> DataFixture {
+pub(crate) async fn timestamp_ns_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Times", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -166,5 +170,6 @@ pub(crate) fn timestamp_ns_data_fixture() -> DataFixture {
     2004-12-05T16:44:57-08:00,0,B,23,11,1994-12-19T16:39:57-08:00,mango
     "},
         )
+        .await
         .unwrap()
 }

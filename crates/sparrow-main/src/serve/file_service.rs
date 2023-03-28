@@ -82,7 +82,8 @@ pub(crate) async fn get_source_metadata(
             .await
             .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
 
-    let metadata = RawMetadata::try_from(local_source.source.as_ref().context("missing source")?)?;
+    let metadata =
+        RawMetadata::try_from(local_source.source.as_ref().context("missing source")?).await?;
     let schema = Schema::try_from(metadata.table_schema.as_ref()).with_context(|| {
         format!(
             "Unable to encode schema {:?} for source file {:?}",

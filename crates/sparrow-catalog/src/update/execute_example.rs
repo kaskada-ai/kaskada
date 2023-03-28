@@ -50,7 +50,9 @@ pub(super) async fn execute_example(
 ) -> error_stack::Result<String, Error> {
     // 1. Prepare the file
     let mut preparer = ExampleInputPreparer::new();
-    let tables = preparer.prepare_inputs(&example.input_csv, &example.tables)?;
+    let tables = preparer
+        .prepare_inputs(&example.input_csv, &example.tables)
+        .await?;
 
     let query = match &example.expression {
         ExampleExpression::Expression(simple) => {
@@ -166,7 +168,7 @@ impl ExampleInputPreparer {
     }
 
     // TODO: Use the DataFixture to accomplish this?
-    fn prepare_inputs(
+    async fn prepare_inputs(
         &mut self,
         input_csv: &Option<String>,
         tables: &[ExampleTable],
@@ -178,6 +180,7 @@ impl ExampleInputPreparer {
                     TableConfig::new("Input", &Uuid::new_v4(), "time", None, "key", "grouping"),
                     input_csv,
                 )
+                .await
                 .attach_printable_lazy(|| TableName("Input".to_owned()))?,
             );
         }
@@ -185,6 +188,7 @@ impl ExampleInputPreparer {
         for table in tables {
             prepared_tables.push(
                 self.prepare_input(table.table_config.clone(), &table.input_csv)
+                    .await
                     .attach_printable_lazy(|| TableName(table.table_config.name.clone()))?,
             );
         }
@@ -192,7 +196,7 @@ impl ExampleInputPreparer {
         Ok(prepared_tables)
     }
 
-    fn prepare_input(
+    async fn prepare_input(
         &mut self,
         config: TableConfig,
         input_csv: &str,
@@ -202,6 +206,7 @@ impl ExampleInputPreparer {
         };
         let prepared_batches: Vec<_> =
             sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
+                .await
                 .change_context(Error::PrepareInput)?
                 .collect()
                 .change_context(Error::PrepareInput)?;

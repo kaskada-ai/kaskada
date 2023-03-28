@@ -2,7 +2,6 @@ use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
 
 use error_stack::{IntoReport, Result, ResultExt};
-use futures::executor::block_on;
 use serde;
 use std::sync::Arc;
 
@@ -104,7 +103,7 @@ pub fn pulsar_auth_token(auth_params: &str) -> Result<&str, Error> {
 
 // retrieve the schema for the given topic via the admin api, with a REST call.
 // we can't use the pulsar client because the schema is not exposed there in the Rust client.
-async fn get_pulsar_schema_async(
+pub async fn get_pulsar_schema(
     admin_service_url: &str,
     tenant: &str,
     namespace: &str,
@@ -143,20 +142,4 @@ async fn get_pulsar_schema_async(
     let schema = schema_from_formatted(&schema_response.data)?;
 
     Ok(schema)
-}
-
-pub fn get_pulsar_schema(
-    admin_service_url: &str,
-    tenant: &str,
-    namespace: &str,
-    topic: &str,
-    auth_params: &str,
-) -> Result<Schema, Error> {
-    block_on(get_pulsar_schema_async(
-        admin_service_url,
-        tenant,
-        namespace,
-        topic,
-        auth_params,
-    ))
 }

@@ -44,7 +44,7 @@ impl DataFixture {
     }
 
     /// Adds a table backed by specified files to the test fixture.
-    pub fn with_table_from_files(
+    pub async fn with_table_from_files(
         mut self,
         config: TableConfig,
         raw_file_paths: &[&str],
@@ -53,13 +53,13 @@ impl DataFixture {
         for raw_file_path in raw_file_paths {
             let data_path = sparrow_testing::testdata_path(raw_file_path);
             let source_data = SourceData::try_from_local(&data_path).unwrap();
-            table.add_file_source(&source_data)?
+            table.add_file_source(&source_data).await?
         }
         Ok(self)
     }
 
     /// Adds a table backed by the table produced by the `ParquetTableBuilder`.
-    pub fn with_table_from_parquet(
+    pub async fn with_table_from_parquet(
         mut self,
         config: TableConfig,
         table: crate::ParquetTableBuilder,
@@ -70,11 +70,12 @@ impl DataFixture {
             .add_file_source(&source_data::Source::ParquetPath(
                 temp_file.path().to_str().unwrap().to_owned(),
             ))
+            .await
             .unwrap();
         Ok(self)
     }
 
-    pub fn with_table_from_csv(
+    pub async fn with_table_from_csv(
         mut self,
         config: TableConfig,
         csv_content: &str,
@@ -82,6 +83,7 @@ impl DataFixture {
         let table = self.add_table(config);
         table
             .add_file_source(&source_data::Source::CsvData(csv_content.to_owned()))
+            .await
             .unwrap();
         Ok(self)
     }
