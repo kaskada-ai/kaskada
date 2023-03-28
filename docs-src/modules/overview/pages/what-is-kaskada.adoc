@@ -1,15 +1,15 @@
 = What Is Kaskada?
 
-Understanding and reacting to the world in real-time requires understanding what is happening _now_ in the context of what happened in the past. 
+Understanding and reacting to the world in real-time requires understanding what is happening _now_ in the context of what happened in the past.
 You need the ability to understand if what just happened is unusual, how it relates to what happened previously, and how it relates to other things that are happening at the same time.
 
-Getting to this type of contextual real-time insight has historically been difficult, as it required bringing together incompatible tools designed for either bulk or streaming applications. Recent stream-processing frameworks make it easier to work across streams and bulk data sources, but force you to pick one: either you get the power of a low-level API or the convenience of a high-level query languge.
+Getting to this type of contextual real-time insight has historically been difficult, as it required bringing together incompatible tools designed for either bulk or streaming applications. Recent stream-processing frameworks make it easier to work across streams and bulk data sources, but force you to pick one: either you get the power of a low-level API or the convenience of a high-level query language.
 
-Kaskada provides a single, high-level, declarative query language. The power and convenience of Kaskada's query language come from the fact that it's built from a new abstraction: the timeline. Timelines give you the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc. Any query can be used, unchanged, in either batch or streaming mode. 
+Kaskada provides a single, high-level, declarative query language. The power and convenience of Kaskada's query language come from the fact that it's built from a new abstraction: the timeline. Timelines give you the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc. Any query can be used, unchanged, in either batch or streaming mode.
 
 == What are Timelines?
 
-Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about real-time streaming behavior, and is built on the idea of a timeline
+Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about changes over time, and is built on the idea of a timeline.
 
 .Where I was at various times
 [stream_viz,name=my-location]
@@ -73,7 +73,7 @@ SELECT sum(amount) OVER (PARTITION BY customer_id ORDER BY timestamp)
 FROM Purchase
 ----
 
-This uses a slightly arcane (and inconsistently supported) feature of SQL, windowed aggregations. 
+This uses a slightly arcane (and inconsistently supported) feature of SQL, windowed aggregations.
 Queries like this can get complex and unreadable quickly, because the abstractions do not easily facilitate these types of queries.
 
 For example, if you wanted to know how many times each user had visited your website since the last time they purchased something, you'd need to write something like this:
@@ -294,7 +294,7 @@ By shifting timelines relative to each other we can easily describe how values c
 let daily_average = Pageview
 | count(since(Purchase))
 | when(daily())
-| mean() 
+| mean()
 
 in daily_average - (daily_average | shift_by(hours(1)))
 ----
@@ -357,16 +357,16 @@ While some real-time systems support "streaming SQL", streams and tables are ver
 How a computation is described shouldn't depend on where events are stored - streaming vs batch is an implementation detail.
 By building Kaskada's query language on timelines, it brings the abstractions of streaming to bulk storage, rather than the other way around.
 
-Kaskada allows developers to focus on solving problems with event data by raising the abstraction level used to describe queries. 
+Kaskada allows developers to focus on solving problems with event data by raising the abstraction level used to describe queries.
 
 == Why Kaskada?
 
 Kaskada was built to be performant and easy to use and operate.
 
 We chose to build Kaskada in Rust because of it's performance, safety, lack of garbage collection and support for columnar data formats.
-The implementation leverages Apache Arrow for event processing and takes advantage of modern CPU optimizations like SIMD, branch prediction, and caching.  
+The implementation leverages Apache Arrow for event processing and takes advantage of modern CPU optimizations like SIMD, branch prediction, and caching.
 
-Computation is implemented as a single, chronological pass over the input events, so you can compute over datasets that are significantly larger than available memory. 
+Computation is implemented as a single, chronological pass over the input events, so you can compute over datasets that are significantly larger than available memory.
 Internally, events are stored on disk as Parquet files.
 We find that most computations are bottlenecked on I/O, so using an efficient columnar file format lets us selectively read the columns and row ranges needed to produce a result.
 

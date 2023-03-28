@@ -1,0 +1,4 @@
+There are several ways to get started with Kaskada.
+
+* xref:getting-started:hello-world-jupyter.adoc[]: How to `pip` install the Kaskada client and write queries from a Jupyter Notebook.
+* xref:getting-started:hello-world-cli.adoc[]: How to execute queries from the command line.
