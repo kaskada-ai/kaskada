@@ -1,7 +1,7 @@
 ####
 ## Duplicates steps from release_engine.yml because
 ##
-## - We need to run the Go's cross compile inside a custom docker image
+## - We need to run Go's cross compile inside a custom docker image
 ##   - GitHub's `if:` does not let us opt out of adding a container to a job
 ##      - Possible option is to create a custom action that uses the docker image
 ##        for the cross build only and share all other steps
@@ -30,7 +30,7 @@ permissions:
   discussions: write
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/go-cross-compile-to-arm64
+  IMAGE: ghcr.io/${{ github.repository }}/go-cross-compile-to-arm64
 
 name: Build linux/aarch64
 
