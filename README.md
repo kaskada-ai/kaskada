@@ -1,89 +1,49 @@
 
-# Project
+# Kaskada: Modern, open-source event-processing
 
-[![Protobuf CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml)
-[![Engine CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml)
-[![Rust CI (Nightly)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml)
-[![Python Client CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml)
-[![Notebooks CI](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml/badge.svg)](https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml)
+<p align="center">
+  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml">
+    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml/badge.svg" alt="Protobuf CI" style="max-width: 100%;">
+  </a>
+  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml">
+    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml/badge.svg" alt="Engine CI" style="max-width: 100%;">
+  </a>
+  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml">
+    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml/badge.svg" alt="Rust CI (Nightly)" style="max-width: 100%;">
+  </a>
+  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml">
+    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml/badge.svg" alt="Python Client CI" style="max-width: 100%;">
+  </a>
+  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml">
+    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml/badge.svg" alt="Notebooks CI" style="max-width: 100%;">
+  </a>
+</p>
 
-Kaskada is a query engine for event-based data designed for building & operating real-time ML at scale.
+<p align="center">
+  <a href="https://kaskada.io">kaskada.io</a>
+  |
+  <a href="https://kaskada.io/docs-site/">Docs</a>
+</p>
 
-Kaskada unifies real-time and historical data processing allowing practitioners to deploy real-time queries with access to their full event history and to instantly reconstruct the results a query would have produced at arbitrary, data-dependent times in the past.
+Kaskada is a unified event processing engine that provides all the power of stateful stream processing in a high-level, declarative query language designed specifically for reasoning about events in bulk and in real time.
 
-Kaskada’s core innovations are a set of time-aware query abstractions, a high-performance compute engine optimized for processing event data, and a flexible execution model supporting both bulk and real-time data processing.
+Kaskada's query language builds on the best features of SQL to provide a more expressive way to compute over events. Queries are simple and declarative. Unlike SQL, they are also concise, composable, and designed for processing events. By focusing on the event-processing use case, Kaskada's query language makes it easier to reason about when things happen, state at specific points in time, and how results change over time.
 
-These features were chosen to make Kaskada a perfect fit for Feature Engineering on event-based data, as part of Real-Time ML. With Kaskada you can seamlessly move from interactive feature exploration in a notebook to real-time feature serving in production without any changes to your feature definitions.
+Kaskada is implemented as a modern compute engine designed for processing events in bulk or real-time. Written in Rust and built on Apache Arrow, Kaskada can compute most workloads without the complexity and overhead of distributed execution.
 
-## Development
+Read more at [kaskada.io](https://kaskada.io).
+See the [docs](https://kaskada.io/docs-site/) to get started in a [Jupyter Notebook](https://kaskada.io/docs-site/kaskada/main/getting-started/hello-world-jupyter.html) or the [CLI](https://kaskada.io/docs-site/kaskada/main/getting-started/hello-world-cli.html).
 
-### Setup Environment
-#### Mac OS
-* Install [LLVM/Clang](https://clang.llvm.org/get_started.html) via the XCode tools.
-* Install protoc: `brew install protobuf`
-* Install golang: `brew install golang`
-* Install [Docker](https://docs.docker.com/desktop/install/mac-install/)
-* Increase open file limit: `echo 'ulimit -n 4096' >> ~/.zshrc`
-* Install Python (3.8.16) via [pyenv](https://github.com/pyenv/pyenv)
-  * `brew install pyenv`
-  * `pyenv install 3.8.16`
+## Features
 
-#### Linux (Debian-based)
-* `apt install clang lld libssl-dev pkg-config protobuf-compiler`
-* Install [Docker](https://docs.docker.com/engine/install/ubuntu/)
-* Increase open file limit: `echo 'ulimit -n 4096' >> ~/.bashrc`
-* Install [Python 3.8.16](https://www.python.org/downloads/release/python-3816/)
-
-#### All platforms: install Rust
-* Install Rust using [rustup](https://www.rust-lang.org/tools/install).
-* Install the following Rustup components
-    * `rustup component add rust-src` -- Rust source code for IDE completion.
-    * `rustup component add clippy rustfmt` -- Rust linter and formatter.
-
-### Testing & Building the Compute Engine
-Running `cargo test` will run all the tests for the compute engine.
-
-Run `cargo build --release -p sparrow-main` to build a release (optimized) binary of the main executable.
-
-### Testing & Building the API
-
-* ensure docker is running locally
-* run `make proto/generate` and `make ent/generate`.  See the `./wren/README.md` for more info on those.
-* run `make wren/test`
-
-### Testing & Building the Python Client
-
-* Verify that Python 3.8.16 is installed locally (other versions may be compatible too): `python --version`
-* Install Poetry: `pip install poetry`
-* Run `make python/setup` to install the dependencies with poetry.
-* Run `make python/test` to run the tests.
-* Run `make python/build` to build the wheel.
-* Run `make python/install` to build the wheel and install it locally.
-
-### Configurations
-* `TMPDIR` - The compute engine uses temporary files as part of computation. By default, this uses the default temporary file directory (platform dependent). See: [tempfile::NamedTempFile](https://docs.rs/tempfile/1.1.2/tempfile/struct.NamedTempFile.html). To set the temporary path directory, set the `TMPDIR` environment variable. See: [std::env::temp_dir](https://doc.rust-lang.org/std/env/fn.temp_dir.html).
-
-### Running integration tests
-
-* run `make test/int/docker-up` in one terminal window to get the Kaskada service and dependencies up
-* run `make test/int/run-api` in another terminal window to run the manager integration tests
-
-After making code changes, `ctrl-c` in the services window and restart it.
-
-**Note:** that there are also other make commands to test the other supported object stores and databases. Append any of the following on your make commands to test other scenarios:
-* `-s3`: s3 object storage (minio) with sqlite db
-* `-postgres`: local object storage with postgres db
-* `-postgres-s3`: s3 object storage (minio) with postgres db
-
-## Visual Studio Code
-
-* Install [Visual Studio Code (VSC)](https://code.visualstudio.com/download)
-* Install the following VSC extensions
-*  * [Rust Analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer). Essential.
-    Provides the language server integration for Rust code.
-*  * [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml). Optional.
-*  * [Cargo](https://marketplace.visualstudio.com/items?itemName=panicbit.cargo). Optional.
-*  * [Crates](https://marketplace.visualstudio.com/items?itemName=serayuzgur.crates) Optional.
+- Stateful aggregations: Aggregate events to produce a continuous timeline whose value can be observed at arbitrary points in time.
+- Automatic joins: Every expression is associated with an “entity”, allowing tables and expressions to be automatically joined. Entities eliminate redundant boilerplate code.
+- Event-based windowing: Collect events as you move through time, and aggregate them with respect to other events. Ordered aggregation makes it easy to describe temporal interactions.
+- Pipelined operations: Pipe syntax allows multiple operations to be chained together. Write your operations in the same order you think about them. It's timelines all the way down, making it easy to aggregate the results of aggregations.
+- Row generators:Pivot from events to time-series. Unlike grouped aggregates, generators produce rows even when there's no input, allowing you to react when something doesn't happen.
+- Continuous expressions: Observe the value of aggregations at arbitrary points in time. Timelines are either “discrete” (instantaneous values or events) or “continuous” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
+- Native time travel: Shift values forward (but not backward) in time, allowing you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
+- Simple, composable syntax: It is functions all the way down. No global state, no dependencies to manage, and no spooky action at a distance. Quickly understand what a query is doing, and painlessly refactor to make it DRY.
 
 ## Links
 
