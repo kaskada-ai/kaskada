@@ -166,7 +166,9 @@ def create_materialization(
         elif isinstance(destination, RedisDestination):
             materialization["destination"] = {"redis": destination.to_request()}
         elif isinstance(destination, PulsarDestination):
-            materialization["destination"] = {"pulsar": {"config":  destination.to_request()}}
+            materialization["destination"] = {
+                "pulsar": {"config": destination.to_request()}
+            }
         else:
             raise ValueError("invalid destination supplied")
 

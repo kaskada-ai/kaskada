@@ -348,6 +348,7 @@ def test_create_materialization_redis_destination(mockClient):
         expected_request, metadata=mockClient.get_metadata()
     )
 
+
 @patch("kaskada.client.Client")
 def test_create_materialization_astra_streaming_destination(mockClient):
     params = {
@@ -355,8 +356,8 @@ def test_create_materialization_astra_streaming_destination(mockClient):
         "namespace": "namespace",
         "topic_name": "name",
         "broker_service_url": "pulsar+ssl://pulsar-gcp-uscentral1.streaming.datastax.com:6651",
-        "auth_params" : "token:xxxxx12345",
-        "auth_plugin" : "org.apache.pulsar.client.impl.auth.AuthenticationToken"
+        "auth_params": "token:xxxxx12345",
+        "auth_plugin": "org.apache.pulsar.client.impl.auth.AuthenticationToken",
     }
 
     pulsar_destination = PulsarDestination(**params)
@@ -366,20 +367,6 @@ def test_create_materialization_astra_streaming_destination(mockClient):
     destination = pulsar_destination
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
-
-    
-                    # Destination: &v1alpha.Destination{
-					# 	Destination: &v1alpha.Destination_Pulsar{
-					# 		Pulsar: &v1alpha.PulsarDestination{
-					# 			Config: &v1alpha.PulsarConfig{
-					# 				BrokerServiceUrl: "pulsar://pulsar:6650",
-					# 				Tenant:           "public",
-					# 				Namespace:        "default",
-					# 				TopicName:        topicName,
-					# 			},
-					# 		},
-					# 	},
-					# },
 
     expected_request = material_pb.CreateMaterializationRequest(
         **{
