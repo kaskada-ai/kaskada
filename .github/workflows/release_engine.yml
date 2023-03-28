@@ -124,7 +124,9 @@ jobs:
         working-directory: wren
 
       - name: Wren - Copy NOTICE
-        run: cp NOTICE ./wren/
+        run: |
+          cp NOTICE ./wren/
+          cp NOTICE ./clients/cli
 
       - name: Apt Packages (Linux)
         if: matrix.goos == 'linux'
@@ -144,6 +146,17 @@ jobs:
           CXX: ${{ matrix.cxx }}
           CC: ${{ matrix.cc }}
         working-directory: wren
+
+      - name: CLI - Build
+        run: |
+          go build -ldflags="-w -s" -o ../release/cli${{ matrix.exe }} main.go
+        env:
+          GOARCH: ${{ matrix.goarch }}
+          GOOS: ${{ matrix.goos }}
+          CGO_ENABLED: 1
+          CXX: ${{ matrix.cxx }}
+          CC: ${{ matrix.cc }}
+        working-directory: clients/cli
 
       - name: Sparrow - Install toolchain
         id: toolchain
@@ -177,6 +190,7 @@ jobs:
           path: |
             release/sparrow-main${{ matrix.exe }}
             release/wren${{ matrix.exe }}
+            release/cli${{ matrix.exe }}
 
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
@@ -185,6 +199,8 @@ jobs:
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
           cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
           gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
+          cp release/cli${{ matrix.exe }} ${CLI_ASSET_NAME}
+          gh release upload ${TAG} ${CLI_ASSET_NAME} --clobber
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -193,6 +209,7 @@ jobs:
           # so can have a stable link to the latest asset.
           ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
           WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+          CLI_ASSET_NAME: kaskada-cli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
 
   release_docker_images:
     name: Build and push Docker images for releases
