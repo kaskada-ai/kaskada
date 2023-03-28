@@ -11,6 +11,7 @@ use sparrow_api::kaskada::v1alpha::{
     MergeMetadataRequest, MergeMetadataResponse,
 };
 use sparrow_core::context_code;
+use sparrow_runtime::object_store_url::ObjectStoreKey;
 use sparrow_runtime::s3::is_s3_path;
 use sparrow_runtime::{ObjectStoreRegistry, ObjectStoreUrl, RawMetadata};
 use tempfile::NamedTempFile;
@@ -108,18 +109,31 @@ pub(crate) async fn get_source_metadata(
     let download_file_path = download_file.into_temp_path();
     let source = match source {
         file_path::Path::ParquetPath(path) => {
-            if is_s3_path(path) {
-                let object_store_url =
-                    ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
-                object_store_url
-                    .download(object_store_registry, download_file_path.to_owned())
-                    .await
-                    .change_context(Error::ObjectStoreError)?;
-                file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())
-            } else {
-                file_path::Path::ParquetPath(path.to_string())
+            let object_store_url = ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
+            let key = object_store_url.key().change_context(Error::ObjectStoreError)?;
+            match key {
+                ObjectStoreKey::Local => file_path::Path::ParquetPath(path.to_string()),
+                ObjectStoreKey::Memory => todo!(),
+                ObjectStoreKey::Aws { bucket, region, virtual_hosted_style_request } => {
+                    let object_store_url =
+                        ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
+                    object_store_url
+                        .download(object_store_registry, download_file_path.to_owned())
+                        .await
+                        .change_context(Error::ObjectStoreError)?;
+                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())
+                    },
+                ObjectStoreKey::Gcs { bucket } => {
+                    let object_store_url =
+                        ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
+                    object_store_url
+                        .download(object_store_registry, download_file_path.to_owned())
+                        .await
+                        .change_context(Error::ObjectStoreError)?;
+                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())                        
+                },
             }
-        }
+        },
         file_path::Path::CsvPath(path) => {
             if is_s3_path(path) {
                 let object_store_url =
@@ -139,6 +153,7 @@ pub(crate) async fn get_source_metadata(
     let metadata = RawMetadata::try_from(&source)
         .into_report()
         .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
+    println!("Demo Log Line Metadata: {:?}", metadata.raw_schema);
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
         .change_context(Error::SchemaError(
