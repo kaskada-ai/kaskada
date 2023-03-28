@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "kaskada"
-version = "0.1.1a9"
+version = "0.1.2"
 description = "A client library for the Kaskada time travel machine learning service"
-authors = ["Kaskada <support@kaskada.com>"]
+authors = ["Kaskada <maintainers@kaskada.io>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [
