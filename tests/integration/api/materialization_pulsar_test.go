@@ -25,7 +25,7 @@ type testSchema struct {
 	MinAmount int    `json:"min_amount"`
 }
 
-var _ = FDescribe("Materialization with Pulsar upload", Ordered, Label("pulsar"), func() {
+var _ = Describe("Materialization with Pulsar upload", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -52,7 +52,6 @@ var _ = FDescribe("Materialization with Pulsar upload", Ordered, Label("pulsar")
 			URL:               "pulsar://localhost:6650",
 			ConnectionTimeout: 5 * time.Second,
 		})
-		// Expect(err).Should(BeNil())
 		defer pulsarClient.Close()
 
 		// create a table
