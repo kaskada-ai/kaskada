@@ -113,7 +113,9 @@ jobs:
         working-directory: wren
 
       - name: Wren - Copy NOTICE
-        run: cp NOTICE ./wren/
+        run: | 
+          cp NOTICE ./wren/
+          cp NOTICE ./clients/cli
 
       ## Deviation: Grab the names for cross compiler and linker from inside the docker container
       - name: Set variables for cross compiler and linker
@@ -125,9 +127,19 @@ jobs:
       - name: Wren - Build
         run: |
           mkdir ../release/
-          set
           go build -ldflags="-w -s" -o ../release/wren main.go
         working-directory: wren
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: arm64
+          CC: ${{ steps.vars.outputs.cc }}
+          CXX: ${{ steps.vars.outputs.cxx }}
+
+      - name: CLI - Build
+        run: |
+          go build -ldflags="-w -s" -o ../release/cli main.go
+        working-directory: clients/cli
         env:
           CGO_ENABLED: 1
           GOOS: linux
@@ -142,6 +154,7 @@ jobs:
           retention-days: 5
           path: |
             release/wren
+            release/cli
 
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
@@ -149,6 +162,8 @@ jobs:
           git config --global --add safe.directory '*'
           cp release/wren  ${WREN_ASSET_NAME}
           gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
+          cp release/cli  ${CLI_ASSET_NAME}
+          gh release upload ${TAG} ${CLI_ASSET_NAME} --clobber
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -156,6 +171,7 @@ jobs:
           # Name of the assets to produce. We don't include the version
           # so can have a stable link to the latest asset.
           WREN_ASSET_NAME: kaskada-manager-linux-aarch64
+          CLI_ASSET_NAME: kaskada-cli-linux-aarch64
 
   sparrow_cross_amd64_arm64:
     runs-on: ubuntu-20.04
