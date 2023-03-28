@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
@@ -9,8 +9,8 @@ use sparrow_api::kaskada::v1alpha::{
 use sparrow_runtime::prepare::{prepare_file, upload_prepared_files_to_s3, Error};
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
 
-use tempfile::NamedTempFile;
 use tonic::Response;
+use uuid::Uuid;
 
 use crate::IntoStatus;
 
@@ -80,8 +80,13 @@ pub async fn prepare_data(
         }
     );
 
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
+    let download_path = std::path::PathBuf::from("/data");
+    if !download_path.exists() {
+        std::fs::create_dir(&download_path)
+            .into_report()
+            .change_context(Error::Internal)?;
+    }
+    let download_file_path = download_path.join(Uuid::new_v4().to_string());
     let (is_s3_object, source_data) = convert_to_local_sourcedata(
         &s3,
         prepare_request.source_data.as_ref(),
@@ -127,7 +132,7 @@ pub async fn prepare_data(
 pub async fn convert_to_local_sourcedata(
     s3: &S3Helper,
     source_data: Option<&SourceData>,
-    download_file_path: tempfile::TempPath,
+    download_file_path: PathBuf,
 ) -> error_stack::Result<(bool, SourceData), Error> {
     match source_data {
         None => error_stack::bail!(Error::MissingField("source_data")),

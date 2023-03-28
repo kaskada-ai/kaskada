@@ -10,8 +10,8 @@ use sparrow_api::kaskada::v1alpha::{Schema, SourceData};
 use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::RawMetadata;
 
-use tempfile::NamedTempFile;
 use tonic::Response;
+use uuid::Uuid;
 
 use crate::serve::error_status::IntoStatus;
 use crate::serve::preparation_service;
@@ -75,8 +75,11 @@ pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
     source_data: &SourceData,
 ) -> anyhow::Result<SourceMetadata> {
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
+    let download_path = std::path::PathBuf::from("/data");
+    if !download_path.exists() {
+        std::fs::create_dir(&download_path)?;
+    }
+    let download_file_path = download_path.join(Uuid::new_v4().to_string());
     let (_, local_source) =
         preparation_service::convert_to_local_sourcedata(s3, Some(source_data), download_file_path)
             .await
