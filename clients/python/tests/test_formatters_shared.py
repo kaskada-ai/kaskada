@@ -80,7 +80,13 @@ def test_table_pulsar_config_html():
     namespace = "test-namespace"
     topic_name = "my-topic"
     pulsar = pulsar_pb.PulsarConfig(
-        **{"broker_service_url": broker_service_url, "auth_plugin": auth_plugin, "tenant": tenant, "namespace": namespace, "topic_name": topic_name }
+        **{
+            "broker_service_url": broker_service_url,
+            "auth_plugin": auth_plugin,
+            "tenant": tenant,
+            "namespace": namespace,
+            "topic_name": topic_name,
+        }
     )
     render = formatters.get_table_pulsar_config(pulsar)
     expected = table(_class="kda_table")
@@ -108,7 +114,13 @@ def test_table_html_pulsar_table():
         source=sources_pb.Source(
             pulsar=sources_pb.PulsarSource(
                 config=pulsar_pb.PulsarConfig(
-                    **{"broker_service_url": broker_service_url, "auth_plugin": auth_plugin, "tenant": tenant, "namespace": namespace, "topic_name": topic_name }
+                    **{
+                        "broker_service_url": broker_service_url,
+                        "auth_plugin": auth_plugin,
+                        "tenant": tenant,
+                        "namespace": namespace,
+                        "topic_name": topic_name,
+                    }
                 )
             )
         ),

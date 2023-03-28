@@ -104,6 +104,10 @@ def test_pulsar_destination_to_request():
         "namespace": "namespace",
         "topic_name": "name",
         "broker_service_url": "pulsar://127.0.0.1:6650",
+        "admin_service_url": "http://127.0.0.1:8080",
+        "auth_params": None,
+        "auth_plugin": None,
+        "certificate_chain": None,
     }
 
     pulsar_defaults = PulsarDestination()
@@ -328,6 +332,51 @@ def test_create_materialization_redis_destination(mockClient):
                     {"name": "my_second_view", "expression": "last(awkward)"}
                 ],
                 "destination": {"redis": redis_destination.to_request()},
+                "slice": slice_filter.to_request(),
+            }
+        }
+    )
+    create_materialization(
+        name,
+        expression,
+        destination,
+        views,
+        slice_filter=slice_filter,
+        client=mockClient,
+    )
+    mockClient.materialization_stub.CreateMaterialization.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
+def test_create_materialization_astra_streaming_destination(mockClient):
+    params = {
+        "tenant": "tenant",
+        "namespace": "namespace",
+        "topic_name": "name",
+        "broker_service_url": "pulsar+ssl://pulsar-gcp-uscentral1.streaming.datastax.com:6651",
+        "auth_params": "token:xxxxx12345",
+        "auth_plugin": "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+    }
+
+    pulsar_destination = PulsarDestination(**params)
+
+    name = "my_awkward_tacos"
+    expression = "last(tacos)"
+    destination = pulsar_destination
+    views = [MaterializationView("my_second_view", "last(awkward)")]
+    slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
+
+    expected_request = material_pb.CreateMaterializationRequest(
+        **{
+            "materialization": {
+                "materialization_name": name,
+                "expression": expression,
+                "with_views": [
+                    {"name": "my_second_view", "expression": "last(awkward)"}
+                ],
+                "destination": {"pulsar": {"config": pulsar_destination.to_request()}},
                 "slice": slice_filter.to_request(),
             }
         }

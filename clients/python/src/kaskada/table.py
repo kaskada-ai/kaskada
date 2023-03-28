@@ -21,7 +21,16 @@ class TableSource(object):
 
 
 class PulsarTableSource(TableSource):
-    def __init__(self, broker_service_url: str, auth_plugin: str, auth_params: str, certificate_chain: str, tenant: str, namespace: str, topic_name: str):
+    def __init__(
+        self,
+        broker_service_url: str,
+        auth_plugin: str,
+        auth_params: str,
+        certificate_chain: str,
+        tenant: str,
+        namespace: str,
+        topic_name: str,
+    ):
         self._broker_service_url = broker_service_url
         self._auth_plugin = auth_plugin
         self._auth_params = auth_params

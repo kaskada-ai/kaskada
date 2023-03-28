@@ -209,7 +209,9 @@ def get_table_html_and_schema_df(obj: table_pb.Table):
 
     if hasattr(obj, "source") and obj.HasField("source"):
         if hasattr(obj.source, "pulsar") and obj.source.HasField("pulsar"):
-            if hasattr(obj.source.pulsar, "config") and obj.source.pulsar.HasField("config"):
+            if hasattr(obj.source.pulsar, "config") and obj.source.pulsar.HasField(
+                "config"
+            ):
                 pulsar = get_table_pulsar_config(obj.source.pulsar.config)
                 details.appendChild(html_table_row("pulsar", pulsar))
 
