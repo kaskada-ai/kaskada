@@ -6,7 +6,7 @@ This is a simple test of Sparrow through its CLI interface.
 
 2. Prepare the CSV file. This will create a corresponding Parquet file with all the events correctly sorted:
 
-   `cargo run prepare --schema=schema.yaml --table=Transaction --output-path=prepared/ input/transactions.csv`
+   `mkdir prepared && cargo run prepare --schema=schema.yaml --table=Transaction --output-path=prepared/ input/transactions.csv`
 
 3. Run the query. Here the output is specified in the query yaml:
 
