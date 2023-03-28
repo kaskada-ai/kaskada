@@ -36,15 +36,11 @@ See the [docs](https://kaskada.io/docs-site/) to get started in a [Jupyter Noteb
 
 ## Features
 
-- Stateful aggregations: Aggregate events to produce a continuous timeline whose value can be observed at arbitrary points in time.
-- Automatic joins: Every expression is associated with an “entity”, allowing tables and expressions to be automatically joined. Entities eliminate redundant boilerplate code.
-- Event-based windowing: Collect events as you move through time, and aggregate them with respect to other events. Ordered aggregation makes it easy to describe temporal interactions.
-- Pipelined operations: Pipe syntax allows multiple operations to be chained together. Write your operations in the same order you think about them. It's timelines all the way down, making it easy to aggregate the results of aggregations.
-- Row generators:Pivot from events to time-series. Unlike grouped aggregates, generators produce rows even when there's no input, allowing you to react when something doesn't happen.
-- Continuous expressions: Observe the value of aggregations at arbitrary points in time. Timelines are either “discrete” (instantaneous values or events) or “continuous” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
-- Native time travel: Shift values forward (but not backward) in time, allowing you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
-- Simple, composable syntax: It is functions all the way down. No global state, no dependencies to manage, and no spooky action at a distance. Quickly understand what a query is doing, and painlessly refactor to make it DRY.
-
-## Links
-
-* [Kaskada Docs](https://kaskada-ai.github.io/docs-site) for more information.
+- **Stateful aggregations**: Aggregate events to produce a continuous timeline whose value can be observed at arbitrary points in time.
+- **Automatic joins**: Every expression is associated with an “entity”, allowing tables and expressions to be automatically joined. Entities eliminate redundant boilerplate code.
+- **Event-based windowing**: Collect events as you move through time, and aggregate them with respect to other events. Ordered aggregation makes it easy to describe temporal interactions.
+- **Pipelined operations**: Pipe syntax allows multiple operations to be chained together. Write your operations in the same order you think about them. It's timelines all the way down, making it easy to aggregate the results of aggregations.
+- **Row generators**: Pivot from events to time-series. Unlike grouped aggregates, generators produce rows even when there's no input, allowing you to react when something doesn't happen.
+- **Continuous expressions**: Observe the value of aggregations at arbitrary points in time. Timelines are either “discrete” (instantaneous values or events) or “continuous” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
+- **Native time travel**: Shift values forward (but not backward) in time, allowing you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
+- **Simple, composable syntax**: It is functions all the way down. No global state, no dependencies to manage, and no spooky action at a distance. Quickly understand what a query is doing, and painlessly refactor to make it DRY.
