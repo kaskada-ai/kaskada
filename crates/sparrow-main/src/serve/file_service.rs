@@ -1,6 +1,4 @@
 use std::sync::Arc;
-
-use anyhow::Context;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
@@ -9,9 +7,8 @@ use sparrow_api::kaskada::v1alpha::{
     FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
     MergeMetadataResponse,
 };
-use sparrow_core::context_code;
 use sparrow_runtime::{ObjectStoreRegistry, RawMetadata};
-use tonic::{Code, Response};
+use tonic::Response;
 
 use crate::serve::error_status::IntoStatus;
 
@@ -88,12 +85,11 @@ pub(crate) async fn get_source_metadata(
     source: &FilePath,
 ) -> error_stack::Result<FileMetadata, Error> {
     let source = source.path.as_ref().ok_or(Error::SourcePathError)?;
-    let metadata = RawMetadata::try_from(&source, object_store_registry)
+    let metadata = RawMetadata::try_from(source, object_store_registry)
         .await
         .into_report()
         .attach_printable_lazy(|| format!("Source: {:?}", source))
         .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
-    println!("Demo Log Line Metadata: {:?}", metadata.raw_schema);
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
         .attach_printable_lazy(|| format!("Raw Schema: {:?} Table Schema: {:?}", metadata.raw_schema, metadata.table_schema))

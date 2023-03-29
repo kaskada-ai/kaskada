@@ -32,7 +32,7 @@ impl RawMetadata {
         let download_file_path = download_file.into_temp_path();
         let source_path = match source_path {
             Path::ParquetPath(path) => {
-                let object_store_url = ObjectStoreUrl::from_str(&path).unwrap();
+                let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
                 object_store_url
                     .download(object_store_registry, download_file_path.to_path_buf())
                     .await
@@ -41,7 +41,7 @@ impl RawMetadata {
                 Path::ParquetPath(path)
             }
             Path::CsvPath(path) => {
-                let object_store_url = ObjectStoreUrl::from_str(&path).unwrap();
+                let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
                 object_store_url
                     .download(object_store_registry, download_file_path.to_path_buf())
                     .await
