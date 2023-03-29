@@ -80,14 +80,12 @@ pub async fn prepare_data(
         }
     );
 
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
-    let (is_s3_object, source_data) = convert_to_local_sourcedata(
-        &s3,
-        prepare_request.source_data.as_ref(),
-        download_file_path,
-    )
-    .await?;
+    let temp_file = NamedTempFile::new()
+        .into_report()
+        .change_context(Error::Internal)?;
+    let (is_s3_object, source_data) =
+        convert_to_local_sourcedata(&s3, prepare_request.source_data.as_ref(), temp_file.path())
+            .await?;
 
     let temp_dir = tempfile::tempdir()
         .into_report()
@@ -128,7 +126,7 @@ pub async fn prepare_data(
 pub async fn convert_to_local_sourcedata(
     s3: &S3Helper,
     source_data: Option<&SourceData>,
-    download_file_path: tempfile::TempPath,
+    local_path: &Path,
 ) -> error_stack::Result<(bool, SourceData), Error> {
     match source_data {
         None => error_stack::bail!(Error::MissingField("source_data")),
@@ -143,13 +141,11 @@ pub async fn convert_to_local_sourcedata(
                             let path = path.as_str();
                             if is_s3_path(path) {
                                 let s3_object = S3Object::try_from_uri(path).unwrap();
-                                s3.download_s3(s3_object, download_file_path.to_owned())
-                                    .await
-                                    .unwrap();
+                                s3.download_s3(s3_object, local_path).await.unwrap();
                                 (
                                     true,
                                     source_data::Source::ParquetPath(
-                                        download_file_path.to_string_lossy().to_string(),
+                                        local_path.to_string_lossy().to_string(),
                                     ),
                                 )
                             } else {
@@ -160,13 +156,11 @@ pub async fn convert_to_local_sourcedata(
                             let path = path.as_str();
                             if is_s3_path(path) {
                                 let s3_object = S3Object::try_from_uri(path).unwrap();
-                                s3.download_s3(s3_object, download_file_path.to_owned())
-                                    .await
-                                    .unwrap();
+                                s3.download_s3(s3_object, local_path).await.unwrap();
                                 (
                                     true,
                                     source_data::Source::CsvPath(
-                                        download_file_path.to_string_lossy().to_string(),
+                                        local_path.to_string_lossy().to_string(),
                                     ),
                                 )
                             } else {
@@ -174,7 +168,7 @@ pub async fn convert_to_local_sourcedata(
                             }
                         }
                         source_data::Source::CsvData(data) => {
-                            (false, source_data::Source::CsvData(data.to_string()))
+                            (false, source_data::Source::CsvData(data.to_owned()))
                         }
                         source_data::Source::PulsarSubscription(_) => (false, source.clone()),
                     };
