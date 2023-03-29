@@ -1,13 +1,16 @@
 use std::fs::File;
 use std::io::{BufReader, Cursor};
+use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::file_path::Path;
+use tempfile::NamedTempFile;
 use tracing::info;
 
 use crate::metadata::file_from_path;
+use crate::{ObjectStoreRegistry, ObjectStoreUrl};
 
 #[non_exhaustive]
 pub struct RawMetadata {
@@ -21,14 +24,47 @@ pub struct RawMetadata {
 }
 
 impl RawMetadata {
-    pub fn try_from(source_path: &Path) -> anyhow::Result<Self> {
+    pub async fn try_from(
+        source_path: &Path,
+        object_store_registry: &ObjectStoreRegistry,
+    ) -> anyhow::Result<Self> {
+        let download_file = NamedTempFile::new()?;
+        let download_file_path = download_file.into_temp_path();
+        let source_path = match source_path {
+            Path::ParquetPath(path) => {
+                let object_store_url = ObjectStoreUrl::from_str(&path).unwrap();
+                object_store_url
+                    .download(object_store_registry, download_file_path.to_path_buf())
+                    .await
+                    .unwrap();
+                let path = String::from(download_file_path.to_str().unwrap());
+                Path::ParquetPath(path)
+            }
+            Path::CsvPath(path) => {
+                let object_store_url = ObjectStoreUrl::from_str(&path).unwrap();
+                object_store_url
+                    .download(object_store_registry, download_file_path.to_path_buf())
+                    .await
+                    .unwrap();
+                let path = String::from(download_file_path.to_str().unwrap());
+                Path::CsvPath(path)
+            }
+            Path::CsvData(path) => Path::CsvData(path.to_owned()),
+        };
+        
+        Self::try_from_local(&source_path)
+    }
+
+    pub fn try_from_local(
+        source_path: &Path
+    ) -> anyhow::Result<Self> {
         match source_path {
             Path::ParquetPath(path) => {
-                let file = file_from_path(std::path::Path::new(path))?;
+                let file = file_from_path(std::path::Path::new(&path))?;
                 Self::try_from_parquet(file)
             }
             Path::CsvPath(path) => {
-                let file = file_from_path(std::path::Path::new(path))?;
+                let file = file_from_path(std::path::Path::new(&path))?;
                 Self::try_from_csv(file)
             }
             Path::CsvData(content) => {

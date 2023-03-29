@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -7,14 +6,11 @@ use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
 use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse,
-    MergeMetadataRequest, MergeMetadataResponse,
+    FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
+    MergeMetadataResponse,
 };
 use sparrow_core::context_code;
-use sparrow_runtime::object_store_url::ObjectStoreKey;
-use sparrow_runtime::s3::is_s3_path;
-use sparrow_runtime::{ObjectStoreRegistry, ObjectStoreUrl, RawMetadata};
-use tempfile::NamedTempFile;
+use sparrow_runtime::{ObjectStoreRegistry, RawMetadata};
 use tonic::{Code, Response};
 
 use crate::serve::error_status::IntoStatus;
@@ -82,10 +78,6 @@ async fn get_metadata(
 pub enum Error {
     #[display(fmt = "unable to get source path from request")]
     SourcePathError,
-    #[display(fmt = "unable to create temporary file")]
-    TempFileDownloadFileError,
-    #[display(fmt = "unable to download file from object store")]
-    ObjectStoreError,
     #[display(fmt = "schema error: '{_0}'")]
     SchemaError(String),
 }
@@ -101,56 +93,8 @@ pub(crate) async fn get_source_metadata(
         .context(context_code!(Code::InvalidArgument, "Missing source_path"))
         .into_report()
         .change_context(Error::SourcePathError)?;
-
-    let download_file = NamedTempFile::new()
-        .into_report()
-        .change_context(Error::TempFileDownloadFileError)?;
-
-    let download_file_path = download_file.into_temp_path();
-    let source = match source {
-        file_path::Path::ParquetPath(path) => {
-            let object_store_url = ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
-            let key = object_store_url.key().change_context(Error::ObjectStoreError)?;
-            match key {
-                ObjectStoreKey::Local => file_path::Path::ParquetPath(path.to_string()),
-                ObjectStoreKey::Memory => todo!(),
-                ObjectStoreKey::Aws { bucket, region, virtual_hosted_style_request } => {
-                    let object_store_url =
-                        ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
-                    object_store_url
-                        .download(object_store_registry, download_file_path.to_owned())
-                        .await
-                        .change_context(Error::ObjectStoreError)?;
-                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())
-                    },
-                ObjectStoreKey::Gcs { bucket } => {
-                    let object_store_url =
-                        ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
-                    object_store_url
-                        .download(object_store_registry, download_file_path.to_owned())
-                        .await
-                        .change_context(Error::ObjectStoreError)?;
-                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string())                        
-                },
-            }
-        },
-        file_path::Path::CsvPath(path) => {
-            if is_s3_path(path) {
-                let object_store_url =
-                    ObjectStoreUrl::from_str(path).change_context(Error::ObjectStoreError)?;
-                object_store_url
-                    .download(object_store_registry, download_file_path.to_owned())
-                    .await
-                    .change_context(Error::ObjectStoreError)?;
-                file_path::Path::CsvPath(download_file_path.to_string_lossy().to_string())
-            } else {
-                file_path::Path::CsvPath(path.to_string())
-            }
-        }
-        file_path::Path::CsvData(data) => file_path::Path::CsvData(data.to_string()),
-    };
-
-    let metadata = RawMetadata::try_from(&source)
+    let metadata = RawMetadata::try_from(&source, object_store_registry)
+        .await
         .into_report()
         .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
     println!("Demo Log Line Metadata: {:?}", metadata.raw_schema);
@@ -171,6 +115,8 @@ pub(crate) async fn get_source_metadata(
 
 #[cfg(test)]
 mod tests {
+    use sparrow_api::kaskada::v1alpha::file_path;
+
     use super::*;
 
     #[tokio::test]
@@ -180,12 +126,12 @@ mod tests {
         let path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
         let file_service = FileServiceImpl::new(object_store_registry);
-
+        let path = path.canonicalize().unwrap().to_string_lossy().to_string();
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
                     path: Some(file_path::Path::ParquetPath(
-                        path.canonicalize().unwrap().to_string_lossy().to_string(),
+                        format!("file://{path}", ),
                     )),
                 }],
             }))
@@ -203,11 +149,12 @@ mod tests {
 
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
         let file_service = FileServiceImpl::new(object_store_registry);
+        let path = path.canonicalize().unwrap().to_string_lossy().to_string();
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
                     path: Some(file_path::Path::CsvPath(
-                        path.canonicalize().unwrap().to_string_lossy().to_string(),
+                        format!("file://{path}", ),
                     )),
                 }],
             }))
