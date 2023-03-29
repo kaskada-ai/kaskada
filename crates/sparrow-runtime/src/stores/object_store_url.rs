@@ -116,16 +116,10 @@ impl ObjectStoreUrl {
             .into_report()
             .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
         let mut body = StreamReader::new(stream);
-        let bytes = tokio::io::copy(&mut body, &mut file)
+        tokio::io::copy(&mut body, &mut file)
             .await
             .into_report()
             .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
-        println!(
-            "Demo Log Line: Successfully downloaded: {:?} bytes to {:?} from {:?}",
-            bytes,
-            file_path.clone(),
-            path.clone()
-        );
         Ok(())
     }
 }
