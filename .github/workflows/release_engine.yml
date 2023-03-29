@@ -90,6 +90,10 @@ jobs:
             goos: linux
             goarch: amd64
             host: ubuntu-20.04
+          - target: x86_64-unknown-linux-gnu
+            goos: linux
+            goarch: amd64
+            host: ubuntu-22.04
           - target: x86_64-pc-windows-msvc
             goos: windows
             goarch: amd64
@@ -185,7 +189,7 @@ jobs:
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: engine-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: engine-${{ matrix.goos }}-${{ matrix.host }}-${{ matrix.goarch }}
           retention-days: 5
           path: |
             release/sparrow-main${{ matrix.exe }}
@@ -207,10 +211,12 @@ jobs:
           TAG: ${{ github.ref_name }}
           # Name of the assets to produce. We don't include the version
           # so can have a stable link to the latest asset.
-          ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
-          WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
-          CLI_ASSET_NAME: kaskada-cli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+          ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.host }}-${{ matrix.goarch }}${{ matrix.exe }}
+          WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.host }}-${{ matrix.goarch }}${{ matrix.exe }}
+          CLI_ASSET_NAME: kaskada-cli-${{ matrix.goos }}-${{ matrix.host }}-${{ matrix.goarch }}${{ matrix.exe }}
 
+  # Not building docker image for ubuntu 22.04 (libc 2.35 libssl 3.0) 
+  # See https://github.com/cross-rs/cross/pull/973 on the cross repo 
   release_docker_images:
     name: Build and push Docker images for releases
     runs-on: ubuntu-latest
@@ -239,7 +245,7 @@ jobs:
       - name: Download AMD64 binaries
         uses: actions/download-artifact@v3
         with:
-          name: engine-linux-amd64
+          name: engine-linux-ubuntu-20.04-amd64
           path: release/linux/amd64
 
       - name: Download ARM64 binaries
