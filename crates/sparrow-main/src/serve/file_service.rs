@@ -87,12 +87,7 @@ pub(crate) async fn get_source_metadata(
     object_store_registry: &ObjectStoreRegistry,
     source: &FilePath,
 ) -> error_stack::Result<FileMetadata, Error> {
-    let source = source
-        .path
-        .as_ref()
-        .context(context_code!(Code::InvalidArgument, "Missing source_path"))
-        .into_report()
-        .change_context(Error::SourcePathError)?;
+    let source = source.path.as_ref().ok_or(Error::SourcePathError)?;
     let metadata = RawMetadata::try_from(&source, object_store_registry)
         .await
         .into_report()
