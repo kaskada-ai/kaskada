@@ -75,10 +75,9 @@ pub(crate) async fn get_source_metadata(
     s3: &S3Helper,
     source_data: &SourceData,
 ) -> anyhow::Result<SourceMetadata> {
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
+    let temp_file = NamedTempFile::new().context("Unable to create temporary file")?;
     let (_, local_source) =
-        preparation_service::convert_to_local_sourcedata(s3, Some(source_data), download_file_path)
+        preparation_service::convert_to_local_sourcedata(s3, Some(source_data), temp_file.path())
             .await
             .map_err(|e| anyhow!("Unable to convert source to local source: {:?}", e))?;
 
@@ -90,6 +89,11 @@ pub(crate) async fn get_source_metadata(
             metadata.table_schema, source_data
         )
     })?;
+
+    // Explicitly close the temporary file here. This ensures that
+    // the temporary file cleaner on different OS's know to not remove
+    // the file at least until this point.
+    temp_file.close()?;
 
     Ok(SourceMetadata {
         schema: Some(schema),
