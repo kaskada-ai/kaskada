@@ -96,16 +96,17 @@ pub(crate) async fn get_source_metadata(
     let metadata = RawMetadata::try_from(&source, object_store_registry)
         .await
         .into_report()
+        .attach_printable_lazy(|| format!("Source: {:?}", source))
         .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
     println!("Demo Log Line Metadata: {:?}", metadata.raw_schema);
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
+        .attach_printable_lazy(|| format!("Raw Schema: {:?} Table Schema: {:?}", metadata.raw_schema, metadata.table_schema))
         .change_context(Error::SchemaError(
             format!(
                 "Unable to encode schema {:?} for source file {:?}",
                 metadata.table_schema, source
-            )
-            .to_owned(),
+            ),
         ))?;
 
     Ok(FileMetadata {
