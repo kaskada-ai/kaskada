@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use derive_more::Display;
 use error_stack::{IntoReport, ResultExt};
 use hashbrown::HashMap;
 use object_store::ObjectStore;
@@ -38,23 +39,26 @@ impl ObjectStoreRegistry {
         &self,
         key: ObjectStoreKey,
     ) -> error_stack::Result<Arc<dyn ObjectStore>, Error> {
-        if let Some(object_store) = self.get_object_store(&key) {
+        if let Some(object_store) = self.get_object_store(&key)? {
             Ok(object_store)
         } else {
             let object_store = create_object_store(&key)?;
-            self.put_object_store(key, object_store.clone());
+            self.put_object_store(key, object_store.clone())?;
             Ok(object_store)
         }
     }
 
-    fn get_object_store(&self, key: &ObjectStoreKey) -> Option<Arc<dyn ObjectStore>> {
-        let object_stores = self.object_stores.read().unwrap();
-        object_stores.get(key).cloned()
+    fn get_object_store(&self, key: &ObjectStoreKey) -> Result<Option<Arc<dyn ObjectStore>>, Error> {
+        let object_stores = self.object_stores
+            .read()
+            .map_err(|_| Error::ReadWriteObjectStore)?;
+        Ok(object_stores.get(key).cloned())
     }
 
-    fn put_object_store(&self, key: ObjectStoreKey, object_store: Arc<dyn ObjectStore>) {
-        let mut object_stores = self.object_stores.write().unwrap();
+    fn put_object_store(&self, key: ObjectStoreKey, object_store: Arc<dyn ObjectStore>) -> Result<(), Error> {
+        let mut object_stores = self.object_stores.write().map_err(|_| Error::ReadWriteObjectStore)?;
         object_stores.insert(key, object_store);
+        Ok(())
     }
 }
 
@@ -67,8 +71,10 @@ impl std::fmt::Debug for ObjectStoreRegistry {
     }
 }
 
-#[derive(derive_more::Display, Debug)]
+#[derive(Display, Debug)]
 pub enum Error {
+    #[display(fmt = "read-write lock object store error")]
+    ReadWriteObjectStore,
     #[display(fmt = "object store error")]
     ObjectStore,
     #[display(fmt = "invalid URL '{_0}'")]
@@ -150,7 +156,6 @@ mod tests {
 
     #[test]
     fn test_create_object_store_aws_builder() {
-        // TODO: Is there a better way to test this? Not sure to test the builder built properly from the key.
         let key = ObjectStoreKey::Aws {
             bucket: "test-bucket".to_string(),
             region: Some("test-region".to_string()),
@@ -174,11 +179,11 @@ mod tests {
         let object_store_registry = ObjectStoreRegistry::new();
         let key = ObjectStoreKey::Local;
         // Verify there is no object store for local first
-        assert!(object_store_registry.get_object_store(&key).is_none());
+        assert!(object_store_registry.get_object_store(&key).unwrap().is_none());
         // Call the public method
         let object_store = object_store_registry.object_store(key.clone());
         // Verify the result is valid and that
         assert!(object_store.is_ok());
-        assert!(object_store_registry.get_object_store(&key).is_some());
+        assert!(object_store_registry.get_object_store(&key).unwrap().is_some());
     }
 }
