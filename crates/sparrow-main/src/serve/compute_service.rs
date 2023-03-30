@@ -514,12 +514,14 @@ mod tests {
         .collect()
         .unwrap();
 
-        let input_path = file_path::Path::ParquetPath(
-            format!("file:///{}", part1_file_path
+        let input_path = file_path::Path::ParquetPath(format!(
+            "file:///{}",
+            part1_file_path
                 .canonicalize()
                 .unwrap()
                 .to_string_lossy()
-                .to_string()));
+                .to_string()
+        ));
         let part1_metadata = RawMetadata::try_from(&input_path, None).await.unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 

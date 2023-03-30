@@ -1,7 +1,4 @@
-use std::{
-    path::PathBuf,
-    str::FromStr,
-};
+use std::{path::PathBuf, str::FromStr};
 
 use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
@@ -128,9 +125,9 @@ impl FromStr for ObjectStoreUrl {
     type Err = error_stack::Report<<Url as FromStr>::Err>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Url::from_str(s).into_report().map(|it| {
-            ObjectStoreUrl { url: it }
-        })
+        Url::from_str(s)
+            .into_report()
+            .map(|it| ObjectStoreUrl { url: it })
     }
 }
 

@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use error_stack::{IntoReport, ResultExt};
 use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
@@ -8,6 +7,7 @@ use sparrow_api::kaskada::v1alpha::{
     MergeMetadataResponse,
 };
 use sparrow_runtime::{ObjectStoreRegistry, RawMetadata};
+use std::sync::Arc;
 use tonic::Response;
 
 use crate::serve::error_status::IntoStatus;
@@ -91,13 +91,16 @@ pub(crate) async fn get_source_metadata(
         .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
-        .attach_printable_lazy(|| format!("Raw Schema: {:?} Table Schema: {:?}", metadata.raw_schema, metadata.table_schema))
-        .change_context(Error::SchemaError(
+        .attach_printable_lazy(|| {
             format!(
-                "Unable to encode schema {:?} for source file {:?}",
-                metadata.table_schema, source
-            ),
-        ))?;
+                "Raw Schema: {:?} Table Schema: {:?}",
+                metadata.raw_schema, metadata.table_schema
+            )
+        })
+        .change_context(Error::SchemaError(format!(
+            "Unable to encode schema {:?} for source file {:?}",
+            metadata.table_schema, source
+        )))?;
 
     Ok(FileMetadata {
         schema: Some(schema),
@@ -121,9 +124,7 @@ mod tests {
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
-                    path: Some(file_path::Path::ParquetPath(
-                        format!("file:///{path}", ),
-                    )),
+                    path: Some(file_path::Path::ParquetPath(format!("file:///{path}",))),
                 }],
             }))
             .await
@@ -144,9 +145,7 @@ mod tests {
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
-                    path: Some(file_path::Path::CsvPath(
-                        format!("file:///{path}", ),
-                    )),
+                    path: Some(file_path::Path::CsvPath(format!("file:///{path}",))),
                 }],
             }))
             .await

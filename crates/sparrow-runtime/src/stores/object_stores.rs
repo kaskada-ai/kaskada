@@ -48,15 +48,26 @@ impl ObjectStoreRegistry {
         }
     }
 
-    fn get_object_store(&self, key: &ObjectStoreKey) -> Result<Option<Arc<dyn ObjectStore>>, Error> {
-        let object_stores = self.object_stores
+    fn get_object_store(
+        &self,
+        key: &ObjectStoreKey,
+    ) -> Result<Option<Arc<dyn ObjectStore>>, Error> {
+        let object_stores = self
+            .object_stores
             .read()
             .map_err(|_| Error::ReadWriteObjectStore)?;
         Ok(object_stores.get(key).cloned())
     }
 
-    fn put_object_store(&self, key: ObjectStoreKey, object_store: Arc<dyn ObjectStore>) -> Result<(), Error> {
-        let mut object_stores = self.object_stores.write().map_err(|_| Error::ReadWriteObjectStore)?;
+    fn put_object_store(
+        &self,
+        key: ObjectStoreKey,
+        object_store: Arc<dyn ObjectStore>,
+    ) -> Result<(), Error> {
+        let mut object_stores = self
+            .object_stores
+            .write()
+            .map_err(|_| Error::ReadWriteObjectStore)?;
         object_stores.insert(key, object_store);
         Ok(())
     }
@@ -179,11 +190,17 @@ mod tests {
         let object_store_registry = ObjectStoreRegistry::new();
         let key = ObjectStoreKey::Local;
         // Verify there is no object store for local first
-        assert!(object_store_registry.get_object_store(&key).unwrap().is_none());
+        assert!(object_store_registry
+            .get_object_store(&key)
+            .unwrap()
+            .is_none());
         // Call the public method
         let object_store = object_store_registry.object_store(key.clone());
         // Verify the result is valid and that
         assert!(object_store.is_ok());
-        assert!(object_store_registry.get_object_store(&key).unwrap().is_some());
+        assert!(object_store_registry
+            .get_object_store(&key)
+            .unwrap()
+            .is_some());
     }
 }
