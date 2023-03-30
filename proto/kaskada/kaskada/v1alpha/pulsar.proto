@@ -1,7 +1,6 @@
 syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
-import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
 message PulsarConfig {
