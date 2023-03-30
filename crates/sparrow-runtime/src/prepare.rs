@@ -335,8 +335,8 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
                 let mut bytes2 = [0u8; 4];
                 bytes.copy_from_slice(&pt.seconds.to_be_bytes());
                 bytes2.copy_from_slice(&pt.nanos.to_be_bytes());
-                hasher.update(&bytes);
-                hasher.update(&bytes2);
+                hasher.update(bytes);
+                hasher.update(bytes2);
             }
             let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
