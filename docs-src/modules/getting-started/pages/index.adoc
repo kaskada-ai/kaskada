@@ -1,8 +1,11 @@
 = Getting Started
 
-There are several ways to get started with Kaskada.
+Kaskada's query language focuses on the event-processing making it easier to reason about when things happen, the state at specific points in time, and how results change over time.
+Kaskada queries are simple, declarative and composable providing a more expressive way to query event-based data.
+
+There are several ways to quickly get started with Kaskada.
 
 * xref:getting-started:hello-world-jupyter.adoc[]: How to get up and running with Kaskada inside a Jupyter notebook running locally. 
-This quick tutorial will help you install and run kaskada from within a Jupiter notebook, load some sample data into Kaskada, use Kaskada queries and Python within Jupiter to explore that data.
+This quick tutorial will help you install and run Kaskada from within a Jupyter notebook, load some sample data into Kaskada, use Kaskada queries and Python within Jupyter to explore that data.
 * xref:getting-started:hello-world-cli.adoc[]: How to execute queries from the command line using the Kaskada CLI. 
-This quick tutorial will help you install and run kaskada from the command line, load some sample data into Kaskada, and use Kaskada queries to explore that data all on the command line.
+This quick tutorial will help you install and run Kaskada from the command line, load some sample data into Kaskada, and use Kaskada queries to explore that data all on the command line.
