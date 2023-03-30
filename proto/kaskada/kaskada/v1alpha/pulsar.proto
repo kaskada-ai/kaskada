@@ -2,6 +2,7 @@ syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
 import "google/protobuf/timestamp.proto";
+import "kaskada/kaskada/v1alpha/options.proto";
 
 message PulsarConfig {
   // The Pulsar protocol URL for the cluster.
@@ -20,7 +21,7 @@ message PulsarConfig {
 
   // Authentication parameters.
   // e.g. "token:xxx"
-  string auth_params = 4;
+  string auth_params = 4 [(kaskada.v1alpha.sensitive) = true];
 
   // A custom certificate chain to authenticate the server in TLS connections.
   string certificate_chain = 5;
