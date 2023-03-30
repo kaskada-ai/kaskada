@@ -190,7 +190,7 @@ pub async fn prepare_file(
         .into_inner()
         .map_err(|err| Report::new(err).change_context(Error::Internal))?;
     let pf = Arc::try_unwrap(prepared_files)
-        .map_err(|err| Error::Internal)? // can't put in report since it returns the Arc itself on error
+        .map_err(|_err| Error::Internal)? // can't put in report since it returns the Arc itself on error
         .into_inner()
         .map_err(|err| Report::new(err).change_context(Error::Internal))?;
     Ok((pm, pf))

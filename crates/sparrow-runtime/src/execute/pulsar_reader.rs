@@ -4,7 +4,6 @@ use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
 use error_stack::{IntoReport, ResultExt};
-use futures::task::FutureObj;
 use futures::FutureExt;
 use pulsar::consumer::InitialPosition;
 
@@ -193,12 +192,10 @@ impl PulsarReader {
 impl Stream for PulsarReader {
     type Item = Result<RecordBatch, ArrowError>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // TODO is this the right way to do this?  I threw stuff at the wall until it worked.
-        let mut this = self.as_mut();
-        let mut fut = FutureObj::new(Box::new(this.next_async()));
-        let res = futures::ready!(fut.poll_unpin(cx));
-        Poll::Ready(res)
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        let next = futures::ready!(Box::pin(this.next_async()).poll_unpin(cx));
+        Poll::Ready(next)
     }
 }
 
