@@ -9,7 +9,7 @@ message PulsarConfig {
   // Defaults to "pulsar://127.0.0.1:6650".
   string broker_service_url = 1;
 
-   // The Pulsar admin REST URL for the cluster.
+  // The Pulsar admin REST URL for the cluster.
   //
   // Defaults to http://127.0.0.1:8080
   string admin_service_url = 2;
