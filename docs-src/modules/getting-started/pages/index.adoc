@@ -1,6 +1,6 @@
 = Getting Started
 
-Kaskada's query language focuses on the event-processing making it easier to reason about when things happen, the state at specific points in time, and how results change over time.
+Kaskada's query language focuses on event-data processing making it easier to reason about when things happen, the state at specific points in time, and how results change over time.
 Kaskada queries are simple, declarative and composable providing a more expressive way to query event-based data.
 
 There are several ways to quickly get started with Kaskada.
