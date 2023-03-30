@@ -38,7 +38,7 @@ Cassandra is a open source NoSQL distributed database that provides
 linear scalability and low-latency query results.
 
 Feature values can be written to Cassandra in real-time via Pulsar.
-First, link:Apache%20Pulsar[materialize features into Pulsar].
+First, <<apache-pulsar,materialize features into Pulsar>>.
 Next use the link:https://pulsar.apache.org/docs/2.11.x/io-cassandra-sink/[Cassandra sink connector] to pull messages from Pulsar into Cassandra.
 
 === Redis
