@@ -54,20 +54,18 @@ impl<'a> Stream for PrepareIter<'a> {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         let reader = &mut self.reader;
-        // TODO can this be simplified?
-        Pin::new(reader).poll_next(cx).map(|opt| {
-            let Some(next) = opt else {
-                return None;
-            };
-            let r = next.map_err(|err| Report::new(err).change_context(Error::ReadingBatch).into());
-            let Ok(batch) = r else {
-                return Some(Err(r.unwrap_err()));
-            };
-            Some(
-                self.get_mut()
+        Pin::new(reader).poll_next(cx).map(|opt| match opt {
+            Some(Ok(batch)) => {
+                let result = self
+                    .get_mut()
                     .prepare_next_batch(batch)
-                    .map_err(|err| err.change_context(Error::ReadingBatch).into()),
-            )
+                    .map_err(|err| err.change_context(Error::ReadingBatch).into());
+                Some(result)
+            }
+            Some(Err(err)) => Some(Err(Report::new(err)
+                .change_context(Error::ReadingBatch)
+                .into())),
+            None => None,
         })
     }
 }
