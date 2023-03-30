@@ -189,7 +189,7 @@ jobs:
       - name: Upload engine artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: engine-${{ matrix.goos }}-${{ matrix.host }}-${{ matrix.goarch }}
+          name: engine-${{ matrix.goos }}-${{ matrix.goarch }}
           retention-days: 5
           path: |
             release/sparrow-main${{ matrix.exe }}
