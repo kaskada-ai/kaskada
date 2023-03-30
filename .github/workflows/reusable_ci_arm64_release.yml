@@ -138,7 +138,7 @@ jobs:
 
       - name: CLI - Build
         run: |
-          go build -ldflags="-w -s" -o ../release/cli main.go
+          go build -ldflags="-w -s" -o ../../release/cli main.go
         working-directory: clients/cli
         env:
           CGO_ENABLED: 1
