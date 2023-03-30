@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReport, ResultExt};
 use futures::future::try_join_all;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
 use sparrow_api::kaskada::v1alpha::Schema;
@@ -87,7 +87,6 @@ pub(crate) async fn get_source_metadata(
     let source = source.path.as_ref().ok_or(Error::SourcePathError)?;
     let metadata = RawMetadata::try_from(source, object_store_registry)
         .await
-        .into_report()
         .attach_printable_lazy(|| format!("Source: {:?}", source))
         .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
     let schema = Schema::try_from(metadata.table_schema.as_ref())

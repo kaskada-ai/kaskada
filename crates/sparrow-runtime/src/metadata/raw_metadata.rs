@@ -3,6 +3,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use error_stack::{IntoReport, ResultExt, IntoReportCompat};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::file_path::Path;
 use tempfile::NamedTempFile;
@@ -11,6 +12,22 @@ use tracing::info;
 use crate::metadata::file_from_path;
 use crate::object_store_url::ObjectStoreKey;
 use crate::{ObjectStoreRegistry, ObjectStoreUrl};
+
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    #[display(fmt = "object store error")]
+    ObjectStore,
+    #[display(fmt = "no object store registry")]
+    NoObjectStoreRegistry,
+    #[display(fmt = "local file error")]
+    LocalFileError,
+    #[display(fmt = "download error")]
+    DownloadError,
+    #[display(fmt = "reading schema error")]
+    ReadSchemaError
+}
+
+impl error_stack::Context for Error {}
 
 #[non_exhaustive]
 pub struct RawMetadata {
@@ -28,7 +45,7 @@ impl RawMetadata {
     pub async fn try_from(
         source_path: &Path,
         object_store_registry: Option<&ObjectStoreRegistry>,
-    ) -> anyhow::Result<Self> {
+    ) -> error_stack::Result<Self, Error> {
         match source_path {
             Path::ParquetPath(path) => Self::try_from_parquet(path, object_store_registry).await,
             Path::CsvPath(path) => Self::try_from_csv(path, object_store_registry).await,
@@ -40,58 +57,58 @@ impl RawMetadata {
     }
 
     /// Create `RawMetadata` from a raw schema.
-    pub fn try_from_raw_schema(raw_schema: SchemaRef) -> anyhow::Result<Self> {
+    pub fn from_raw_schema(raw_schema: SchemaRef) -> Self {
         // Convert the raw schema to a table schema.
         let table_schema = convert_schema(raw_schema.as_ref());
 
-        Ok(Self {
+        Self {
             raw_schema,
             table_schema,
-        })
+        }
     }
 
     /// Create a `RawMetadata` from a parquet string path and object store registry
-    async fn try_from_parquet(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> anyhow::Result<Self>{
-        let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
-        let object_store_key = object_store_url.key().unwrap();
+    async fn try_from_parquet(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> error_stack::Result<Self, Error>{
+        let object_store_url = ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore)?;
+        let object_store_key = object_store_url.key().change_context_lazy(|| Error::ObjectStore)?;
         match (object_store_key, object_store_registry) {
             (ObjectStoreKey::Local, _) => {
-                let path = object_store_url.path().unwrap().to_string();
+                let path = object_store_url.path().change_context_lazy(|| Error::ObjectStore)?.to_string();
                 let path = format!("/{}", path);
                 let path = std::path::Path::new(&path);
-                Self::try_from_parquet_path(path)
+                Self::try_from_parquet_path(path).into_report().change_context_lazy(|| Error::ReadSchemaError)
             },
-            (_, None) => anyhow::bail!("no object store registry provided"),
+            (_, None) => error_stack::bail!(Error::NoObjectStoreRegistry),
             (_, Some(object_store_registry)) => {
-                let download_file = NamedTempFile::new()?;
+                let download_file = NamedTempFile::new().map_err(|_| Error::DownloadError)?;
                 object_store_url
                 .download(object_store_registry, download_file.path().to_path_buf())
                 .await
-                .unwrap();
-                Self::try_from_parquet_path(download_file.path())
+                .change_context_lazy(|| Error::DownloadError)?;
+                Self::try_from_parquet_path(download_file.path()).into_report().change_context_lazy(|| Error::ReadSchemaError)
             }
         }
     }
 
     /// Create a `RawMetadata` from a CSV string path and object store registry
-    async fn try_from_csv(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> anyhow::Result<Self>{
-        let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
-        let object_store_key = object_store_url.key().unwrap();
+    async fn try_from_csv(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> error_stack::Result<Self, Error>{
+        let object_store_url = ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore)?;
+        let object_store_key = object_store_url.key().change_context_lazy(|| Error::ObjectStore)?;
         match (object_store_key, object_store_registry) {
             (ObjectStoreKey::Local, _) => {
-                let path = object_store_url.path().unwrap();
+                let path = object_store_url.path().change_context_lazy(|| Error::ObjectStore)?.to_string();
                 let path = format!("/{}", path);
-                let file = file_from_path(std::path::Path::new(&path))?;
+                let file = file_from_path(std::path::Path::new(&path)).into_report().change_context_lazy(|| Error::LocalFileError)?;
                 Self::try_from_csv_reader(file)
             },
-            (_, None) => anyhow::bail!("no object store registry provided"),
+            (_, None) => error_stack::bail!(Error::NoObjectStoreRegistry),
             (_, Some(object_store_registry)) => {
-                let download_file = NamedTempFile::new()?;
+                let download_file = NamedTempFile::new().into_report().change_context_lazy(|| Error::DownloadError)?;
                 object_store_url
                 .download(object_store_registry, download_file.path().to_path_buf())
                 .await
-                .unwrap();
-                let file = file_from_path(download_file.path())?;
+                .change_context_lazy(|| Error::DownloadError)?;
+                let file = file_from_path(download_file.path()).into_report().change_context_lazy(|| Error::DownloadError)?;
                 Self::try_from_csv_reader(file)
             }
         }
@@ -102,11 +119,11 @@ impl RawMetadata {
         let file = file_from_path(path)?;
         let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?;
         let raw_schema = parquet_reader.schema();
-        Self::try_from_raw_schema(raw_schema.clone())
+        Ok(Self::from_raw_schema(raw_schema.clone()))
     }
 
     /// Create a `RawMetadata` from a reader of a CSV file or string.
-    fn try_from_csv_reader<R>(reader: R) -> anyhow::Result<Self>
+    fn try_from_csv_reader<R>(reader: R) -> error_stack::Result<Self, Error>
     where
         R: std::io::Read + std::io::Seek,
     {
@@ -122,10 +139,12 @@ impl RawMetadata {
             // information about a given CSV file pretty quick. If this doesn't,
             // we can increase, or allow the user to specify the schema.
             .infer_schema(Some(1000))
-            .build(reader)?;
+            .build(reader)
+            .into_report()
+            .change_context_lazy(|| Error::ReadSchemaError)?;
 
         let raw_schema = raw_reader.schema();
-        Self::try_from_raw_schema(raw_schema)
+        Ok(Self::from_raw_schema(raw_schema))
     }
 }
 
@@ -197,7 +216,7 @@ mod tests {
             Field::new("c", DataType::Int64, true),
         ]));
 
-        let metadata = RawMetadata::try_from_raw_schema(raw_schema.clone()).unwrap();
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
         assert_eq!(metadata.raw_schema, raw_schema);
         assert_eq!(metadata.table_schema, raw_schema);
     }
@@ -235,7 +254,7 @@ mod tests {
             Field::new("c", DataType::Int64, true),
         ]));
 
-        let metadata = RawMetadata::try_from_raw_schema(raw_schema.clone()).unwrap();
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
         assert_eq!(metadata.raw_schema, raw_schema);
         assert_eq!(metadata.table_schema, converted_schema);
     }
@@ -291,7 +310,7 @@ mod tests {
             ),
         ]));
 
-        let metadata = RawMetadata::try_from_raw_schema(raw_schema.clone()).unwrap();
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
         assert_eq!(metadata.raw_schema, raw_schema);
         assert_eq!(metadata.table_schema, converted_schema);
     }

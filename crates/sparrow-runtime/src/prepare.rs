@@ -280,9 +280,7 @@ fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
     let batch_size = get_batch_size(num_rows, num_files);
     let parquet_reader = parquet_reader.with_batch_size(batch_size);
 
-    let raw_metadata = RawMetadata::try_from_raw_schema(parquet_reader.schema().clone())
-        .into_report()
-        .change_context(Error::CreateParquetReader)?;
+    let raw_metadata = RawMetadata::from_raw_schema(parquet_reader.schema().clone());
     let reader = parquet_reader
         .build()
         .into_report()
@@ -311,9 +309,7 @@ fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
         .build(reader)
         .into_report()
         .change_context(Error::CreateCsvReader)?;
-    let raw_metadata = RawMetadata::try_from_raw_schema(reader.schema())
-        .into_report()
-        .change_context(Error::CreateCsvReader)?;
+    let raw_metadata = RawMetadata::from_raw_schema(reader.schema());
 
     PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
