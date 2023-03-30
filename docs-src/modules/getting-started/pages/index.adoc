@@ -2,7 +2,7 @@
 
 There are several ways to get started with Kaskada.
 
-* xref:getting-started:hello-world-jupyter.adoc[]: How to get up and running with Kaskada in Jupyter notebook running locally on your box. 
+* xref:getting-started:hello-world-jupyter.adoc[]: How to get up and running with Kaskada inside a Jupyter notebook running locally. 
 This quick tutorial will help you install and run kaskada from within a Jupiter notebook, load some sample data into Kaskada, use Kaskada queries and Python within Jupiter to explore that data.
 * xref:getting-started:hello-world-cli.adoc[]: How to execute queries from the command line using the Kaskada CLI. 
 This quick tutorial will help you install and run kaskada from the command line, load some sample data into Kaskada, and use Kaskada queries to explore that data all on the command line.
