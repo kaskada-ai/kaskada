@@ -245,13 +245,13 @@ jobs:
       - name: Download AMD64 binaries
         uses: actions/download-artifact@v3
         with:
-          name: engine-linux-ubuntu-20.04-amd64
+          name: engine-linux-amd64
           path: release/linux/amd64
 
       - name: Download ARM64 binaries
         uses: actions/download-artifact@v3
         with:
-          name: engine-linux-arm64
+          name: engine-linux-aarch64
           path: release/linux/arm64
 
       - name: Current Date
