@@ -157,6 +157,7 @@ allow = [
     # This (universal) CC license is OK, but others (eg., CC-BY) may not be.
     "CC0-1.0",
     "Zlib",
+    "MPL-2.0",
 ]
 # List of explictly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
