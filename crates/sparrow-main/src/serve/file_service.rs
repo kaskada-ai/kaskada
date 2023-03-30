@@ -62,7 +62,7 @@ async fn get_metadata(
     let file_metadatas: Vec<_> = request
         .file_paths
         .iter()
-        .map(|source| get_source_metadata(object_store_registry.as_ref(), source))
+        .map(|source| get_source_metadata(Some(object_store_registry.as_ref()), source))
         .collect();
 
     let file_metadatas = try_join_all(file_metadatas)
@@ -81,7 +81,7 @@ pub enum Error {
 impl error_stack::Context for Error {}
 
 pub(crate) async fn get_source_metadata(
-    object_store_registry: &ObjectStoreRegistry,
+    object_store_registry: Option<&ObjectStoreRegistry>,
     source: &FilePath,
 ) -> error_stack::Result<FileMetadata, Error> {
     let source = source.path.as_ref().ok_or(Error::SourcePathError)?;
@@ -123,7 +123,7 @@ mod tests {
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
                     path: Some(file_path::Path::ParquetPath(
-                        format!("file://{path}", ),
+                        format!("file:///{path}", ),
                     )),
                 }],
             }))
@@ -146,7 +146,7 @@ mod tests {
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 file_paths: vec![FilePath {
                     path: Some(file_path::Path::CsvPath(
-                        format!("file://{path}", ),
+                        format!("file:///{path}", ),
                     )),
                 }],
             }))

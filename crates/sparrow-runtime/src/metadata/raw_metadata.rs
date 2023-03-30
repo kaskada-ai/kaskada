@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -10,6 +9,7 @@ use tempfile::NamedTempFile;
 use tracing::info;
 
 use crate::metadata::file_from_path;
+use crate::object_store_url::ObjectStoreKey;
 use crate::{ObjectStoreRegistry, ObjectStoreUrl};
 
 #[non_exhaustive]
@@ -24,53 +24,18 @@ pub struct RawMetadata {
 }
 
 impl RawMetadata {
+    /// Createa a `RawMetadata` from a `v1alpha::file_path::Path`.
     pub async fn try_from(
         source_path: &Path,
-        object_store_registry: &ObjectStoreRegistry,
-    ) -> anyhow::Result<Self> {
-        let download_file = NamedTempFile::new()?;
-        let download_file_path = download_file.into_temp_path();
-        let source_path = match source_path {
-            Path::ParquetPath(path) => {
-                let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
-                object_store_url
-                    .download(object_store_registry, download_file_path.to_path_buf())
-                    .await
-                    .unwrap();
-                let path = String::from(download_file_path.to_str().unwrap());
-                Path::ParquetPath(path)
-            }
-            Path::CsvPath(path) => {
-                let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
-                object_store_url
-                    .download(object_store_registry, download_file_path.to_path_buf())
-                    .await
-                    .unwrap();
-                let path = String::from(download_file_path.to_str().unwrap());
-                Path::CsvPath(path)
-            }
-            Path::CsvData(path) => Path::CsvData(path.to_owned()),
-        };
-        
-        Self::try_from_local(&source_path)
-    }
-
-    pub fn try_from_local(
-        source_path: &Path
+        object_store_registry: Option<&ObjectStoreRegistry>,
     ) -> anyhow::Result<Self> {
         match source_path {
-            Path::ParquetPath(path) => {
-                let file = file_from_path(std::path::Path::new(&path))?;
-                Self::try_from_parquet(file)
-            }
-            Path::CsvPath(path) => {
-                let file = file_from_path(std::path::Path::new(&path))?;
-                Self::try_from_csv(file)
-            }
+            Path::ParquetPath(path) => Self::try_from_parquet(path, object_store_registry).await,
+            Path::CsvPath(path) => Self::try_from_csv(path, object_store_registry).await,
             Path::CsvData(content) => {
                 let string_reader = BufReader::new(Cursor::new(content));
-                Self::try_from_csv(string_reader)
-            }
+                Self::try_from_csv_reader(string_reader)
+            },
         }
     }
 
@@ -85,15 +50,63 @@ impl RawMetadata {
         })
     }
 
-    /// Create a `RawMetadata` fram a Parquet File.
-    pub fn try_from_parquet(file: File) -> anyhow::Result<Self> {
+    /// Create a `RawMetadata` from a parquet string path and object store registry
+    async fn try_from_parquet(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> anyhow::Result<Self>{
+        let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
+        let object_store_key = object_store_url.key().unwrap();
+        match (object_store_key, object_store_registry) {
+            (ObjectStoreKey::Local, _) => {
+                let path = object_store_url.path().unwrap().to_string();
+                let path = format!("/{}", path);
+                let path = std::path::Path::new(&path);
+                Self::try_from_parquet_path(path)
+            },
+            (_, None) => anyhow::bail!("no object store registry provided"),
+            (_, Some(object_store_registry)) => {
+                let download_file = NamedTempFile::new()?;
+                object_store_url
+                .download(object_store_registry, download_file.path().to_path_buf())
+                .await
+                .unwrap();
+                Self::try_from_parquet_path(download_file.path())
+            }
+        }
+    }
+
+    /// Create a `RawMetadata` from a CSV string path and object store registry
+    async fn try_from_csv(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> anyhow::Result<Self>{
+        let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
+        let object_store_key = object_store_url.key().unwrap();
+        match (object_store_key, object_store_registry) {
+            (ObjectStoreKey::Local, _) => {
+                let path = object_store_url.path().unwrap();
+                let path = format!("/{}", path);
+                let file = file_from_path(std::path::Path::new(&path))?;
+                Self::try_from_csv_reader(file)
+            },
+            (_, None) => anyhow::bail!("no object store registry provided"),
+            (_, Some(object_store_registry)) => {
+                let download_file = NamedTempFile::new()?;
+                object_store_url
+                .download(object_store_registry, download_file.path().to_path_buf())
+                .await
+                .unwrap();
+                let file = file_from_path(download_file.path())?;
+                Self::try_from_csv_reader(file)
+            }
+        }
+    }
+
+    /// Create a `RawMetadata` fram a Parquet file path.
+    fn try_from_parquet_path(path: &std::path::Path) -> anyhow::Result<Self> {
+        let file = file_from_path(path)?;
         let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?;
         let raw_schema = parquet_reader.schema();
         Self::try_from_raw_schema(raw_schema.clone())
     }
 
     /// Create a `RawMetadata` from a reader of a CSV file or string.
-    fn try_from_csv<R>(reader: R) -> anyhow::Result<Self>
+    fn try_from_csv_reader<R>(reader: R) -> anyhow::Result<Self>
     where
         R: std::io::Read + std::io::Seek,
     {

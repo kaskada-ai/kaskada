@@ -515,13 +515,12 @@ mod tests {
         .unwrap();
 
         let input_path = file_path::Path::ParquetPath(
-            part1_file_path
+            format!("file:///{}", part1_file_path
                 .canonicalize()
                 .unwrap()
                 .to_string_lossy()
-                .to_string(),
-        );
-        let part1_metadata = RawMetadata::try_from_local(&input_path).unwrap();
+                .to_string()));
+        let part1_metadata = RawMetadata::try_from(&input_path, None).await.unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 
         debug_assert_eq!(prepared_batches.len(), 1);
@@ -604,7 +603,7 @@ mod tests {
 
         let store = ObjectStoreDestination {
             file_type: FileType::Parquet as i32,
-            output_prefix_uri: format!("file://{}", output_dir.path().display()),
+            output_prefix_uri: format!("file:///{}", output_dir.path().display()),
             output_paths: None,
         };
         let output_to = OutputTo {
