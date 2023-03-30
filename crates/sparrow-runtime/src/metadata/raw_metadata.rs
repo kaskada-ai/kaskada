@@ -20,11 +20,11 @@ pub enum Error {
     #[display(fmt = "no object store registry")]
     NoObjectStoreRegistry,
     #[display(fmt = "local file error")]
-    LocalFileError,
+    LocalFile,
     #[display(fmt = "download error")]
-    DownloadError,
+    DownloadIssue,
     #[display(fmt = "reading schema error")]
-    ReadSchemaError
+    ReadSchemaIssue
 }
 
 impl error_stack::Context for Error {}
@@ -68,7 +68,7 @@ impl RawMetadata {
     }
 
     /// Create a `RawMetadata` from a parquet string path and object store registry
-    async fn try_from_parquet(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> error_stack::Result<Self, Error>{
+    async fn try_from_parquet(path: &str, object_store_registry: Option<&ObjectStoreRegistry>) -> error_stack::Result<Self, Error>{
         let object_store_url = ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore)?;
         let object_store_key = object_store_url.key().change_context_lazy(|| Error::ObjectStore)?;
         match (object_store_key, object_store_registry) {
@@ -76,39 +76,39 @@ impl RawMetadata {
                 let path = object_store_url.path().change_context_lazy(|| Error::ObjectStore)?.to_string();
                 let path = format!("/{}", path);
                 let path = std::path::Path::new(&path);
-                Self::try_from_parquet_path(path).into_report().change_context_lazy(|| Error::ReadSchemaError)
+                Self::try_from_parquet_path(path).into_report().change_context_lazy(|| Error::ReadSchemaIssue)
             },
             (_, None) => error_stack::bail!(Error::NoObjectStoreRegistry),
             (_, Some(object_store_registry)) => {
-                let download_file = NamedTempFile::new().map_err(|_| Error::DownloadError)?;
+                let download_file = NamedTempFile::new().map_err(|_| Error::DownloadIssue)?;
                 object_store_url
                 .download(object_store_registry, download_file.path().to_path_buf())
                 .await
-                .change_context_lazy(|| Error::DownloadError)?;
-                Self::try_from_parquet_path(download_file.path()).into_report().change_context_lazy(|| Error::ReadSchemaError)
+                .change_context_lazy(|| Error::DownloadIssue)?;
+                Self::try_from_parquet_path(download_file.path()).into_report().change_context_lazy(|| Error::ReadSchemaIssue)
             }
         }
     }
 
     /// Create a `RawMetadata` from a CSV string path and object store registry
-    async fn try_from_csv(path: &String, object_store_registry: Option<&ObjectStoreRegistry>) -> error_stack::Result<Self, Error>{
+    async fn try_from_csv(path: &str, object_store_registry: Option<&ObjectStoreRegistry>) -> error_stack::Result<Self, Error>{
         let object_store_url = ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore)?;
         let object_store_key = object_store_url.key().change_context_lazy(|| Error::ObjectStore)?;
         match (object_store_key, object_store_registry) {
             (ObjectStoreKey::Local, _) => {
                 let path = object_store_url.path().change_context_lazy(|| Error::ObjectStore)?.to_string();
                 let path = format!("/{}", path);
-                let file = file_from_path(std::path::Path::new(&path)).into_report().change_context_lazy(|| Error::LocalFileError)?;
+                let file = file_from_path(std::path::Path::new(&path)).into_report().change_context_lazy(|| Error::LocalFile)?;
                 Self::try_from_csv_reader(file)
             },
             (_, None) => error_stack::bail!(Error::NoObjectStoreRegistry),
             (_, Some(object_store_registry)) => {
-                let download_file = NamedTempFile::new().into_report().change_context_lazy(|| Error::DownloadError)?;
+                let download_file = NamedTempFile::new().into_report().change_context_lazy(|| Error::DownloadIssue)?;
                 object_store_url
                 .download(object_store_registry, download_file.path().to_path_buf())
                 .await
-                .change_context_lazy(|| Error::DownloadError)?;
-                let file = file_from_path(download_file.path()).into_report().change_context_lazy(|| Error::DownloadError)?;
+                .change_context_lazy(|| Error::DownloadIssue)?;
+                let file = file_from_path(download_file.path()).into_report().change_context_lazy(|| Error::DownloadIssue)?;
                 Self::try_from_csv_reader(file)
             }
         }
@@ -141,7 +141,7 @@ impl RawMetadata {
             .infer_schema(Some(1000))
             .build(reader)
             .into_report()
-            .change_context_lazy(|| Error::ReadSchemaError)?;
+            .change_context_lazy(|| Error::ReadSchemaIssue)?;
 
         let raw_schema = raw_reader.schema();
         Ok(Self::from_raw_schema(raw_schema))
