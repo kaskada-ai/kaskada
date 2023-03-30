@@ -1,0 +1,20 @@
+[target.aarch64-unknown-linux-gnu]
+xargo = false
+build-std = false
+# official release docker image is tagged as :0.2.5 and based off ubuntu:16
+# using :main tag which is based off ubuntu:20.04
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
+pre-build = [
+    "dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes pkg-config libssl-dev:arm64 libprotobuf-dev protobuf-compiler",
+] # can also be the path to a file to run
+
+[target.aarch64-unknown-linux-gnu.env]
+passthrough = ["OPENSSL_LIB_DIR", "OPENSSL_INCLUDE_DIR"]
+# These vars need to be set before calling cross build ... 
+# export OPENSSL_INCLUDE_DIR=/usr/include/aarch64-linux-gnu/openssl
+# export OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu 
+
+
+# See 
+# https://github.com/cross-rs/cross
+# https://docs.rs/openssl/latest/openssl/

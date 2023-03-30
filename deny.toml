@@ -59,10 +59,72 @@ ignore = [
     # Not used in runtime code.
     # https://github.com/bheisler/criterion.rs/issues/629
     "RUSTSEC-2021-0145",
-    # Denial of service in openssl.
-    # Since fixed, but waiting on dependencies to update. 
-    # https://github.com/sfackler/rust-openssl/pull/1854
-    "RUSTSEC-2023-0024"
+
+    # Pulsar client needs to update openssl. 
+    #  Advisory: https://rustsec.org/advisories/RUSTSEC-2023-0023
+    #  `SubjectAlternativeName` and `ExtendedKeyUsage` arguments were parsed using the OpenSSL
+    #   function `X509V3_EXT_nconf`. This function parses all input using an OpenSSL mini-language
+    #   which can perform arbitrary file reads.
+
+    #   Thanks to David Benjamin (Google) for reporting this issue.
+    # = Announcement: https://github.com/sfackler/rust-openssl/pull/1854
+    # = Solution: Upgrade to >=0.10.48
+    # = openssl v0.10.46
+    #   └── native-tls v0.2.11
+    #       ├── async-native-tls v0.4.0
+    #       │   └── pulsar v5.1.0
+    #       │       └── sparrow-runtime v0.4.3
+    #       │           ├── sparrow-catalog v0.4.3
+    #       │           └── sparrow-main v0.4.3
+    #       │               └── sparrow-catalog v0.4.3 (*)
+    #       ├── pulsar v5.1.0 (*)
+    #       └── tokio-native-tls v0.3.1
+    #           └── pulsar v5.1.0 (*)
+    "RUSTSEC-2023-0023",
+
+    #  
+    #  Advisory: https://rustsec.org/advisories/RUSTSEC-2023-0022
+    #  OpenSSL has a `modified` bit that it can set on on `X509_NAME` objects. If this
+    #   bit is set then the object is not thread-safe even when it appears the code is
+    #   not modifying the value.
+
+    #   Thanks to David Benjamin (Google) for reporting this issue.
+    #   Announcement: https://github.com/sfackler/rust-openssl/pull/1854
+    #   Solution: Upgrade to >=0.10.48
+    #   openssl v0.10.46
+    #   └── native-tls v0.2.11
+    #       ├── async-native-tls v0.4.0
+    #       │   └── pulsar v5.1.0
+    #       │       └── sparrow-runtime v0.4.3
+    #       │           ├── sparrow-catalog v0.4.3
+    #       │           └── sparrow-main v0.4.3
+    #       │               └── sparrow-catalog v0.4.3 (*)
+    #       ├── pulsar v5.1.0 (*)
+    #       └── tokio-native-tls v0.3.1
+    #           └── pulsar v5.1.0 (*)
+    "RUSTSEC-2023-0022",
+
+
+    #    
+    #  Advisory: https://rustsec.org/advisories/RUSTSEC-2023-0024
+    #  These functions would crash when the context argument was None with certain extension types.
+
+    #  Thanks to David Benjamin (Google) for reporting this issue.
+    #  Announcement: https://github.com/sfackler/rust-openssl/pull/1854
+    #  Solution: Upgrade to >=0.10.48
+    #  openssl v0.10.46
+    #   └── native-tls v0.2.11
+    #       ├── async-native-tls v0.4.0
+    #       │   └── pulsar v5.1.0
+    #       │       └── sparrow-runtime v0.4.3
+    #       │           ├── sparrow-catalog v0.4.3
+    #       │           └── sparrow-main v0.4.3
+    #       │               └── sparrow-catalog v0.4.3 (*)
+    #       ├── pulsar v5.1.0 (*)
+    #       └── tokio-native-tls v0.3.1
+    #           └── pulsar v5.1.0 (*)
+    "RUSTSEC-2023-0024",
+
 ]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
@@ -95,7 +157,6 @@ allow = [
     # This (universal) CC license is OK, but others (eg., CC-BY) may not be.
     "CC0-1.0",
     "Zlib",
-    "MPL-2.0",
 ]
 # List of explictly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
@@ -146,17 +207,15 @@ exceptions = [
 # and the crate will be checked normally, which may produce warnings or errors
 # depending on the rest of your configuration
 #license-files = [
-    # Each entry is a crate relative path, and the (opaque) hash of its contents
-    #{ path = "LICENSE", hash = 0xbd0eed23 }
+# Each entry is a crate relative path, and the (opaque) hash of its contents
+#{ path = "LICENSE", hash = 0xbd0eed23 }
 #]
 
 [[licenses.clarify]]
 name = "ring"
 version = "*"
 expression = "MIT AND ISC AND OpenSSL"
-license-files = [
-    { path = "LICENSE", hash = 0xbd0eed23 }
-]
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 
 [licenses.private]
 # If true, ignores workspace crates that aren't published, or are only
@@ -241,6 +300,4 @@ allow-git = [
 name = "encoding_rs"
 version = "*"
 expression = "(Apache-2.0 OR MIT) AND BSD-3-Clause"
-license-files = [
-    { path = "COPYRIGHT", hash = 0x39f8ad31 }
-]
+license-files = [{ path = "COPYRIGHT", hash = 0x39f8ad31 }]

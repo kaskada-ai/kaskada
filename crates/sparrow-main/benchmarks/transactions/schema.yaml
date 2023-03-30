@@ -20,17 +20,27 @@ tables:
               kind: !Primitive 6 # I64
           - name: transaction_date
             data_type:
-              kind: !Primitive 22 # TIMESTAMP_MILLISECOND
+              kind: !Primitive 6 # I64
           - name: membership_expire_date
             data_type:
-              kind: !Primitive 22 # TIMESTAMP_MILLISECOND
+              kind: !Primitive 6 # I64
     file_sets:
       - slice_plan:
           table_name: Transaction
           percent: 100
         prepared_files:
           - path: prepared/prepared-Transaction-transactions-0.parquet
+            min_event_time: 1970-01-01T00:00:00.020150101Z
+            max_event_time: 1970-01-01T00:00:00.020170228Z
+            num_rows: 1000000
             metadata_path: prepared/prepared-Transaction-transactions-0-metadata.parquet
-            min_event_time: 2015-01-01T00:00:00Z
-            max_event_time: 2016-03-21T00:00:00Z
-            num_rows: 10773873
+          - path: prepared/prepared-Transaction-transactions-1.parquet
+            min_event_time: 1970-01-01T00:00:00.020150101Z
+            max_event_time: 1970-01-01T00:00:00.020170228Z
+            num_rows: 1000000
+            metadata_path: prepared/prepared-Transaction-transactions-1-metadata.parquet
+          - path: prepared/prepared-Transaction-transactions-2.parquet
+            min_event_time: 1970-01-01T00:00:00.020150101Z
+            max_event_time: 1970-01-01T00:00:00.020170228Z
+            num_rows: 1000000
+            metadata_path: prepared/prepared-Transaction-transactions-2-metadata.parquet

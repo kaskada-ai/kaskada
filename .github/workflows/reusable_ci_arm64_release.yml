@@ -1,3 +1,21 @@
+####
+## Duplicates steps from release_engine.yml because
+##
+## - We need to run Go's cross compile inside a custom docker image
+##   - GitHub's `if:` does not let us opt out of adding a container to a job
+##      - Possible option is to create a custom action that uses the docker image
+##        for the cross build only and share all other steps
+##   - GitHub action to install Go does not work with the image used for cross compile
+##     Reason is that the image sets everything up for ARM64 and it takes more work
+##     to undo and redo the setup. Solution right now is to install go in the image ourselves
+##
+## - For Rust we are using the `cross` crate but
+##     -  we are pulling in an updated docker image rather than the one the current
+##        cross version pulls by default (v0.2.5 which runs a container under Ubuntu 16).
+##
+## Deviations are marked in the file.
+####
+
 on:
   workflow_call:
   workflow_dispatch:
@@ -11,17 +29,152 @@ permissions:
   # For creating the release announcement.
   discussions: write
 
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/go-cross-compile-to-arm64
+
 name: Build linux/aarch64
 
-env:
-  IMAGE: ghcr.io/${{ github.repository_owner}}/build-image-engine
-  TARGET: aarch64-unknown-linux-gnu
-  GOOS: linux
-  GOARCH: arm64
-
 jobs:
-  say_hello: 
-    runs-on: macos-latest
+  build_cross_docker_image:
+    runs-on: ubuntu-20.04
+    outputs:
+      image-name: ${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short}}v
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@master
+
+      - name: Current Date
+        id: current_date
+        run: |
+          echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Set variables for later steps
+        id: vars
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "sha_full=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "branch_name=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile.go_cross_amd64_to_arm64
+          push: true
+          tags: ${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short }}v
+          labels: |
+            org.opencontainers.image.title=kaskada go cross compilation image
+            org.opencontainers.image.description=The kaskada go cross compilation image
+            org.opencontainers.image.url=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{  steps.vars.outputs.sha_short }}
+            org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
+            org.opencontainers.image.revision=${{ steps.vars.outputs.sha_full }}
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - name: Output Docker Container Name
+        id: docker-container-name
+        run: |
+          echo "${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short}}v"
+
+  build_wren:
+    needs: [build_cross_docker_image]
+    runs-on: ubuntu-20.04
+    ## Deviation: all steps are curried inside our docker image created from `build_cross_docker_image`
+    container:
+      image: ${{ needs.build_cross_docker_image.outputs.image-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      - name: Wren - Install Buf
+        uses: bufbuild/buf-setup-action@v1.12.0
+        with:
+          version: "1.10.0"
+          buf_user: ${{ secrets.BUF_USER }}
+          buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wren - Generate Protobufs
+        run: buf generate
+        working-directory: proto
+
+      ## Deviation: No Go install action here! Docker image has Go installed.
+      - name: Wren - Generate Ent
+        run: go generate ./ent
+        working-directory: wren
+
+      - name: Wren - Copy NOTICE
+        run: | 
+          cp NOTICE ./wren/
+          cp NOTICE ./clients/cli
+
+      ## Deviation: Grab the names for cross compiler and linker from inside the docker container
+      - name: Set variables for cross compiler and linker
+        id: vars
+        run: |
+          echo "cc=$(echo $CC_aarch64_unknown_linux_gnu)" >> $GITHUB_OUTPUT
+          echo "cxx=$(echo $CXX_aarch64_unknown_linux_gnu)" >> $GITHUB_OUTPUT
+
+      - name: Wren - Build
+        run: |
+          mkdir ../release/
+          go build -ldflags="-w -s" -o ../release/wren main.go
+        working-directory: wren
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: arm64
+          CC: ${{ steps.vars.outputs.cc }}
+          CXX: ${{ steps.vars.outputs.cxx }}
+
+      - name: CLI - Build
+        run: |
+          go build -ldflags="-w -s" -o ../../release/cli main.go
+        working-directory: clients/cli
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: arm64
+          CC: ${{ steps.vars.outputs.cc }}
+          CXX: ${{ steps.vars.outputs.cxx }}
+
+      - name: Upload engine artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: engine-linux-aarch64
+          retention-days: 5
+          path: |
+            release/wren
+            release/cli
+
+      - name: Add artifacts to release
+        if: startsWith(github.ref, 'refs/tags/engine@v')
+        run: |
+          git config --global --add safe.directory '*'
+          cp release/wren  ${WREN_ASSET_NAME}
+          gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
+          cp release/cli  ${CLI_ASSET_NAME}
+          gh release upload ${TAG} ${CLI_ASSET_NAME} --clobber
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          # Name of the assets to produce. We don't include the version
+          # so can have a stable link to the latest asset.
+          WREN_ASSET_NAME: kaskada-manager-linux-aarch64
+          CLI_ASSET_NAME: kaskada-cli-linux-aarch64
+
+  sparrow_cross_amd64_arm64:
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout code
         uses: actions/checkout@master
@@ -32,8 +185,53 @@ jobs:
           echo "created=$(date -u +"%Y-%m-%d %H:%M:%S%z")" | tee -a "$GITHUB_OUTPUT"
         shell: bash
 
-      - name: Set outputs
-        id: vars
+      - name: Rust install stable toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Apt Packages (Linux)
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: lld
+          version: 1.0
+
+      - name: Install Protoc
+        uses: Noelware/setup-protoc@1.0.2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      ## Deviation: Install cross crate
+      - name: Cargo install cross crate
+        shell: bash
+        run: cargo install cross
+
+      ## Deviation: build using `cross` command
+      - name: Sparrow - cross build (Release)
+        shell: bash
         run: |
-          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "sha_full=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          cross build --release --all-features --target aarch64-unknown-linux-gnu -p sparrow-main
+
+      - name: Upload engine artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: engine-linux-aarch64
+          retention-days: 5
+          path: |
+            target/aarch64-unknown-linux-gnu/release/sparrow-main
+
+      - name: Add artifacts to release
+        if: startsWith(github.ref, 'refs/tags/engine@v')
+        run: |
+          cp target/aarch64-unknown-linux-gnu/release/sparrow-main ${ENGINE_ASSET_NAME}
+          gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          # Name of the assets to produce. We don't include the version
+          # so can have a stable link to the latest asset.
+          ENGINE_ASSET_NAME: kaskada-engine-linux-aarch64

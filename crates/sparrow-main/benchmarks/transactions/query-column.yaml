@@ -1,0 +1,13 @@
+feature_set:
+  query: >
+    extend(Transaction,
+      {
+        payment_days_plus_1: Transaction.payment_plan_days + 1
+      }
+    )
+
+output_to:
+  destination:
+    !ObjectStore
+      file_type: 1 # FILE_TYPE_PARQUET
+      output_prefix_uri: file:///Users/benjamin.chambers/code/kaskada-oss/crates/sparrow-main/benchmarks/transactions/output

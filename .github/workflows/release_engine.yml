@@ -24,7 +24,7 @@ permissions:
   discussions: write
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner}}/engine
+  IMAGE: ghcr.io/${{ github.repository }}/engine
 
 name: Engine Release
 jobs:
@@ -67,6 +67,11 @@ jobs:
           echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
           echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
 
+  release_engine_cross_build:
+    name: Cross build release for aarch64 linux
+    needs: ["release_engine_draft"]
+    uses: ./.github/workflows/reusable_ci_arm64_release.yml
+
   release_engine_build:
     name: Engine Release Build
     needs: ["release_engine_draft"]
@@ -85,6 +90,10 @@ jobs:
             goos: linux
             goarch: amd64
             host: ubuntu-20.04
+          # - target: x86_64-unknown-linux-gnu
+          #   goos: linux
+          #   goarch: amd64
+          #   host: ubuntu-22.04
           - target: x86_64-pc-windows-msvc
             goos: windows
             goarch: amd64
@@ -119,7 +128,9 @@ jobs:
         working-directory: wren
 
       - name: Wren - Copy NOTICE
-        run: cp NOTICE ./wren/
+        run: |
+          cp NOTICE ./wren/
+          cp NOTICE ./clients/cli
 
       - name: Apt Packages (Linux)
         if: matrix.goos == 'linux'
@@ -139,6 +150,17 @@ jobs:
           CXX: ${{ matrix.cxx }}
           CC: ${{ matrix.cc }}
         working-directory: wren
+
+      - name: CLI - Build
+        run: |
+          go build -ldflags="-w -s" -o ../../release/cli${{ matrix.exe }} main.go
+        env:
+          GOARCH: ${{ matrix.goarch }}
+          GOOS: ${{ matrix.goos }}
+          CGO_ENABLED: 1
+          CXX: ${{ matrix.cxx }}
+          CC: ${{ matrix.cc }}
+        working-directory: clients/cli
 
       - name: Sparrow - Install toolchain
         id: toolchain
@@ -172,6 +194,7 @@ jobs:
           path: |
             release/sparrow-main${{ matrix.exe }}
             release/wren${{ matrix.exe }}
+            release/cli${{ matrix.exe }}
 
       - name: Add artifacts to release
         if: startsWith(github.ref, 'refs/tags/engine@v')
@@ -180,6 +203,8 @@ jobs:
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
           cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
           gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
+          cp release/cli${{ matrix.exe }} ${CLI_ASSET_NAME}
+          gh release upload ${TAG} ${CLI_ASSET_NAME} --clobber
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -188,6 +213,46 @@ jobs:
           # so can have a stable link to the latest asset.
           ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
           WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+          CLI_ASSET_NAME: kaskada-cli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+
+  # Not building docker image for ubuntu 22.04 (libc 2.35 libssl 3.0) 
+  # See https://github.com/cross-rs/cross/pull/973 on the cross repo 
+  release_docker_images:
+    name: Build and push Docker images for releases
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/engine@v')
+    needs:
+      [
+        "release_engine_draft",
+        "release_engine_build",
+        "release_engine_cross_build",
+      ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+        # Refs: https://www.stereolabs.com/docs/docker/building-arm-container-on-x86/
+      - name: Install Ubuntu packages for muliplatform
+        shell: bash
+        run: |
+          sudo apt-get install qemu binfmt-support qemu-user-static
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker run --rm --platform linux/arm64 -t arm64v8/ubuntu uname -m
+          mkdir -p release/linux/amd64
+          mkdir -p release/linux/arm64
+
+      - name: Download AMD64 binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: engine-linux-amd64
+          path: release/linux/amd64
+
+      - name: Download ARM64 binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: engine-linux-aarch64
+          path: release/linux/arm64
 
       - name: Current Date
         id: current_date
@@ -197,11 +262,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        if: ${{ startsWith(github.ref, 'refs/tags/engine@v') && matrix.target == 'x86_64-unknown-linux-gnu' }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
-        if: ${{ startsWith(github.ref, 'refs/tags/engine@v') && matrix.target == 'x86_64-unknown-linux-gnu' }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -209,14 +272,14 @@ jobs:
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v4
-        if: ${{ startsWith(github.ref, 'refs/tags/engine@v') && matrix.target == 'x86_64-unknown-linux-gnu' }}
         with:
           context: .
+          platforms: linux/amd64, linux/arm64
           file: Dockerfile.release
           push: true
           tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE }}:latest
           labels: |
-            org.opencontainers.image.title=kaskada engine
+            org.opencontainers.image.title=kaskada engine 
             org.opencontainers.image.description=The kaskada engine
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
