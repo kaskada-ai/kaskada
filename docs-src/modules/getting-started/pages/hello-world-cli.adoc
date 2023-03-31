@@ -9,7 +9,7 @@ To use Kaskada on the command line, you'll need to install three components:
 * The Kaskada engine, which executes queries
 
 Each Kaskada release has pre-compiled binaries for each component. 
-You can visit the https://github.com/kaskada-ai/kaskada/releases[Releases] page on Github to obtain the latest Kaskada release version.
+You can visit the https://github.com/kaskada-ai/kaskada/releases[Releases] page on Github to obtain the latest Kaskada release version binaries for your platform.
 The example commands below will download the latest Kaskada binaries and applies to Linux and OSX.
 
 
