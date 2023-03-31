@@ -39,6 +39,20 @@ pub fn read_pulsar_stream(
     }
 }
 
+pub fn read_pulsar_stream2(
+    schema: SchemaRef,
+    consumer: Consumer<AvroWrapper, TokioExecutor>,
+) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
+    let reader = PulsarReader::new(schema, consumer);
+    futures::stream::try_unfold(reader, |mut reader| async {
+        if let Some(next) = reader.next_result_async().await? {
+            Ok(Some((next, reader)))
+        } else {
+            Ok(None)
+        }
+    })
+}
+
 struct PulsarReader {
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
