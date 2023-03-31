@@ -27,7 +27,19 @@ pub struct AvroWrapper {
     value: Value,
 }
 
-pub struct PulsarReader {
+pub fn read_pulsar_stream(
+    schema: SchemaRef,
+    consumer: Consumer<AvroWrapper, TokioExecutor>,
+) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
+    async_stream::try_stream! {
+        let mut reader = PulsarReader::new(schema, consumer);
+        while let Some(next) = reader.next_result_async().await? {
+            yield next
+        }
+    }
+}
+
+struct PulsarReader {
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
 }
@@ -106,10 +118,6 @@ impl PulsarReader {
         PulsarReader { schema, consumer }
     }
 
-    async fn next_async(&mut self) -> Option<Result<RecordBatch, ArrowError>> {
-        self.next_result_async().await.transpose()
-    }
-
     // using ArrowError is not a great fit but that is what PrepareIter requires
     async fn next_result_async(&mut self) -> Result<Option<RecordBatch>, ArrowError> {
         tracing::debug!("reading pulsar messages");
@@ -186,16 +194,6 @@ impl PulsarReader {
                 RecordBatch::try_new(self.schema.clone(), arrow_data).map(Some)
             }
         }
-    }
-}
-
-impl Stream for PulsarReader {
-    type Item = Result<RecordBatch, ArrowError>;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.get_mut();
-        let next = futures::ready!(Box::pin(this.next_async()).poll_unpin(cx));
-        Poll::Ready(next)
     }
 }
 
