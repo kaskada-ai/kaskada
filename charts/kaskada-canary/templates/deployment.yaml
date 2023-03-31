@@ -26,10 +26,11 @@ spec:
     spec:
       containers:
         - name: engine
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             {{- include "kaskada-canary.s3Env" . | nindent 12 }}
+            {{- include "kaskada-canary.engineLogging" . | nindent 12 }}
             {{- range $key, $value := .Values.extraEnv }}
             - name: {{ $key }}
               value:  {{ $value }}
@@ -39,10 +40,6 @@ spec:
             - name: grpc
               protocol: TCP
               containerPort: 50052
-          livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
           {{- with .Values.resources.engine }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -51,7 +48,7 @@ spec:
             - mountPath: "/tmp"
               name: kaskada-canary-tmp
         - name: manager
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: DB_DIALECT
@@ -67,6 +64,7 @@ spec:
             - name: OBJECT_STORE_TYPE 
               value: {{ .Values.storage.objectStore.type }}
             {{- include "kaskada-canary.s3Env" . | nindent 12 }}
+            {{- include "kaskada-canary.managerLogging" . | nindent 12 }}
             {{- range $key, $value := .Values.extraEnv }}
             - name: {{ $key }}
               value:  {{ $value }}
@@ -79,10 +77,6 @@ spec:
             - name: rest
               protocol: TCP
               containerPort: 3365
-          livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
           {{- with .Values.resources.manager }}
           resources:
             {{- toYaml . | nindent 12 }}

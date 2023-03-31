@@ -36,9 +36,6 @@ Common labels
 {{- define "kaskada-canary.labels" -}}
 helm.sh/chart: {{ include "kaskada-canary.chart" . }}
 {{ include "kaskada-canary.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with .Values.commonLabels }}
 {{- toYaml . }}
@@ -97,4 +94,46 @@ Shared env vars for s3 object store
   value:  {{ .Values.storage.objectStore.s3.region }}
 {{- end }}
 {{- end }}
+{{- end -}}
+
+{{/*
+Env vars for engine logging config
+*/}}
+{{- define "kaskada-canary.engineLogging" -}}
+
+- name: SPARROW_LOG_FILTER
+{{- if (eq .Values.logging.level "debug") }}
+  value: "egg::=warn,sparrow_=debug,info"
+{{- else }}
+  value: "egg::=warn,sparrow_=info,info"
+{{- end }}
+
+- name: SPARROW_LOG_JSON
+{{- if (eq .Values.logging.format "console") }}
+  value: "false"
+{{- else }}
+  value: "true"
+{{- end }}
+
+{{- end -}}
+
+{{/*
+Env vars for manager logging config
+*/}}
+{{- define "kaskada-canary.managerLogging" -}}
+
+- name: DEBUG
+{{- if (eq .Values.logging.level "debug") }}
+  value: "true"
+{{- else }}
+  value: "false"
+{{- end }}
+
+- name: LOG_FORMAT_JSON
+{{- if (eq .Values.logging.format "console") }}
+  value: "false"
+{{- else }}
+  value: "true"
+{{- end }}
+
 {{- end -}}

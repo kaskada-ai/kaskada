@@ -3,7 +3,6 @@ name: kaskada-canary
 description: Kaskada is a query engine for event-based (timestamped) data.
 type: application
 version: 0.0.1
-appVersion: v0.4.3
 keywords:
   - kubernetes
   - kaskada

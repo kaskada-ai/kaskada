@@ -1,0 +1,62 @@
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  merge_group:
+    branches: [ main ]
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+name: Helm Chart - Kaskada Canary - CI
+
+jobs:
+  helm_canary_skip:
+    name: Helm Canary Skip Duplicates
+    continue-on-error: true # Uncomment once integration is finished
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "never"
+          skip_after_successful_duplicate: "true"
+          paths: '["charts/kaskada-canary/**"]'
+          # Theo, what does the below line do?
+          do_not_skip: '["workflow_dispatch", "schedule"]'
+
+  helm_canary_lint_and_test:
+    name: Lint and Test Canary Chart
+    needs: [helm_canary_skip]
+    if: needs.helm_canary_skip.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Lint Chart
+        run: helm lint .
+        working-directory: charts/kaskada-canary
+
+      - name: Install Kubeval
+        uses: lra/setup-kubeval@v1
+
+      - name: Validate Chart
+        run: helm template . | kubeval
+        working-directory: charts/kaskada-canary

@@ -9,7 +9,7 @@ also doesn't require a "real" db.  local is okay, and probably should be the def
 [Kaskada](https://github.com/kaskada-ai/kaskada/) is a query engine for event-based (timestamped) data.
 
 This helm chart installs a persistant version of the kaskada service in the simplest configuration possible.  
-This chart should be primarily used for initial testing and not for production scenarios.
+This chart is primarily for initial testing and should not be used in production scenarios.
 
 In this setup, the kaskada service runs as two containers in a single pod, and persists its database
 as a file on attached storage.  It also requires access to an object store.
@@ -36,7 +36,8 @@ The following table lists the configurable parameters of the _Kaskada-Canary_ ch
 | image.repository | string | `"ghcr.io/kaskada-ai/engine"` | Docker image repository |
 | image.tag | string | `nil` | Overrides the image tag whose default is the chart's appVersion |
 | imagePullSecrets | list | `[]` | Image pull secrets for Docker images |
-| lokiAddress | string | `nil` | The Loki server URL:Port, e.g. loki:3100 |
+| logging.format | string | `json` | The logging format for all containers in the pod. Either `json` or `console` |
+| logging.level | string `info` | The logging level for all containers in the pod. Either `info` or `debug`. Note that sensitive information may exist in logs if the `debug` level is used |
 | nameOverride | string | `""` | Overrides the chart's name |
 | namespace.name | string | `nil` | The name of the Namespace to deploy If not set, `.Release.Namespace` is used |
 | nodeSelector | object | `{}` | Node selector for the pod |

@@ -18,15 +18,22 @@ commonLabels: {}
 
 image:
   # -- Docker image repository
-  repository: ghcr.io/kaskada-ai/engine
+  repository: ghcr.io/kaskada-ai/kaskada/engine
   # -- Overrides the image tag whose 
-  # default is the chart's appVersion
-  tag: null
+  tag: latest
   # -- Docker image pull policy
   pullPolicy: IfNotPresent
 
 # -- Image pull secrets for Docker images
 imagePullSecrets: []
+
+# -- Configures logging output for the pod.
+logging:
+  # -- Should be `info` or `debug`
+  # -- Note that sensitive information may exist in logs if the `debug` level is used 
+  level: info
+  # -- Either `json` or `console`
+  format: json
 
 # -- Annotations to add to the pod
 podAnnotations: {}
@@ -117,11 +124,3 @@ storage:
     storage: 100Gi
     # -- The type of storage used to provision the temporary volume
     storageClassName:
-
-# -- ABOVE CONFIRMED AND DOCUMENTED
-
-logging:
-  level: info
-  format: json
-
-

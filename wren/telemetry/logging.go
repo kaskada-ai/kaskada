@@ -3,7 +3,6 @@ package telemetry
 import (
 	"context"
 	"os"
-	"strings"
 	"time"
 
 	grpc_zerolog "github.com/cheapRoc/grpc-zerolog"
@@ -29,7 +28,7 @@ type loggingProvider struct {
 }
 
 // NewLoggingProvider initializes logging for wren
-func NewLoggingProvider(debug bool, debugGrpc bool, logHealthCheck bool, env string) LoggingProvider {
+func NewLoggingProvider(debug bool, debugGrpc bool, formatJson bool, logHealthCheck bool, env string) LoggingProvider {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	if debug {
@@ -42,8 +41,7 @@ func NewLoggingProvider(debug bool, debugGrpc bool, logHealthCheck bool, env str
 		grpclog.SetLoggerV2(grpc_zerolog.New(log.Logger))
 	}
 
-	// If running on localhost, output in-line & colorized logs instead of json
-	if strings.EqualFold(env, "local") || strings.EqualFold(env, "docker-compose") {
+	if !formatJson { // Output in-line & colorized logs instead of json
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	}
 	return &loggingProvider{
