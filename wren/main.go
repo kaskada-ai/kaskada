@@ -68,6 +68,7 @@ var (
 	fileServiceHost          = flag.String("file-service-host", "localhost", "the hostname of the file service")
 	fileServicePort          = flag.Int("file-service-port", 50052, "the port of the file service")
 	fileServiceUseTLS        = flag.Bool("file-service-use-tls", false, "should TLS be used to connect to the file service")
+	logFormatJson            = flag.Bool("log-format-json", false, "if enabled, logs will be outputted in json")
 	logHealthCheck           = flag.Bool("log-health-check", false, "if enabled, output logs for health-check API calls")
 	prepareParallelizeFactor = flag.Int("prepare-parallelize-factor", 2, "the number of parallel prepare requests that are made per api request")
 	prepareServiceHost       = flag.String("prepare-service-host", "localhost", "the hostname of the prepare service")
@@ -137,7 +138,7 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(interrupt)
 
-	logProvider := telemetry.NewLoggingProvider(*debug, *debugGrpc, *logHealthCheck, *env)
+	logProvider := telemetry.NewLoggingProvider(*debug, *debugGrpc, *logFormatJson, *logHealthCheck, *env)
 	metricsProvider := telemetry.NewMetricsProvider()
 
 	traceProvider, shutdownTrace := telemetry.NewTracingProvider(ctx, *otelEndpoint)
