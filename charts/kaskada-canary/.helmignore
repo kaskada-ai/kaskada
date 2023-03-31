@@ -22,4 +22,4 @@
 *.tmproj
 .vscode/
 # chart tests
-tests/
+tests

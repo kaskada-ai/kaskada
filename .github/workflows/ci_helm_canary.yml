@@ -60,3 +60,10 @@ jobs:
       - name: Validate Chart
         run: helm template . | kubeval
         working-directory: charts/kaskada-canary
+
+      - name: Install Helm-UnitTest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version 0.3.0
+      
+      - name: Run Unit Tests
+        run: helm unittest .
+        working-directory: charts/kaskada-canary
