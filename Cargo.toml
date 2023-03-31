@@ -49,6 +49,7 @@ erased-serde = "0.3.25"
 error-stack = { version = "0.3.1", features = ["anyhow", "spantrace"] }
 fallible-iterator = "0.2.0"
 futures = "0.3.27"
+futures-lite = "1.12.0"
 half = { version = "2.2.1", features = ["serde"] }
 hashbrown = { version = "0.13.2", features = ["serde"] }
 hex = "0.4.3"

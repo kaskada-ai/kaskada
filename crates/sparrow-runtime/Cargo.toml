@@ -40,6 +40,7 @@ erased-serde.workspace = true
 error-stack.workspace = true
 fallible-iterator.workspace = true
 futures.workspace = true
+futures-lite.workspace = true
 half.workspace = true
 hashbrown.workspace = true
 inventory.workspace = true

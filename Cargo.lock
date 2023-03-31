@@ -4814,6 +4814,7 @@ dependencies = [
  "error-stack",
  "fallible-iterator",
  "futures",
+ "futures-lite",
  "half 2.2.1",
  "hashbrown 0.13.2",
  "insta",

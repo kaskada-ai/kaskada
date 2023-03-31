@@ -4,7 +4,8 @@ use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
 use error_stack::{IntoReport, ResultExt};
-use futures::FutureExt;
+use futures::Stream;
+use futures_lite::stream::StreamExt;
 use pulsar::consumer::InitialPosition;
 
 use pulsar::{
@@ -18,10 +19,8 @@ use std::io::Cursor;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use futures::Stream;
 use std::time::Duration;
 use tokio::time::timeout;
-use tokio_stream::StreamExt;
 
 pub struct AvroWrapper {
     value: Value,
@@ -194,8 +193,12 @@ impl Stream for PulsarReader {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
-        let next = futures::ready!(Box::pin(this.next_async()).poll_unpin(cx));
-        Poll::Ready(next)
+        let st = async_stream::stream! {
+            while let Some(next) = this.next_async().await {
+              yield next;
+            }
+        };
+        Box::pin(st).poll_next(cx)
     }
 }
 
