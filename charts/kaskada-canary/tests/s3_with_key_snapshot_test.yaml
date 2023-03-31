@@ -1,0 +1,18 @@
+suite: s3 with access-key snapshot test
+templates:
+  - deployment.yaml
+  - persistantVolumeClaim.yaml
+  - secret.yaml
+  - service.yaml
+  - serviceAccount.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+values: 
+  - ./values/s3_with_key.yaml
+tests:
+  - it: manifest should match snapshot
+    asserts:
+      - matchSnapshot: {}
