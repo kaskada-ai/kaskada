@@ -9,11 +9,12 @@ To use Kaskada on the command line, you'll need to install three components:
 * The Kaskada engine, which executes queries
 
 Each of these are available as pre-compiled binaries in the xref:url:https://github.com/kaskada-ai/kaskada/releases[Releases] section of Kaskada's Github repository.
-This example assumes you have installed `curl`.
+This example assumes you have installed `curl` and uses version `v0.5.4`. 
+You can visit the xref:url:https://github.com/kaskada-ai/kaskada/releases[Releases] page on Github to obtain the latest Kaskada release version.
 
 [source,shell]
 ----
-VERSION=0.4.1
+VERSION=0.5.4
 ARCH=$(uname -m | awk '{print tolower($0)}')
 OS=$(uname -s | awk '{print tolower($0)}')
 
