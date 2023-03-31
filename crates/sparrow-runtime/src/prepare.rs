@@ -26,7 +26,7 @@ pub use prepare_iter::*;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use tracing::Instrument;
 
-use crate::execute::pulsar_reader::PulsarReader;
+use crate::execute::pulsar_reader::read_pulsar_stream;
 use crate::s3::{S3Helper, S3Object};
 use crate::{PreparedMetadata, RawMetadata};
 
@@ -88,8 +88,8 @@ async fn reader_from_pulsar<'a>(
     let consumer =
         crate::execute::pulsar_reader::pulsar_consumer(pulsar_subscription, pm.user_schema.clone())
             .await?;
-    let reader = PulsarReader::new(pm.sparrow_metadata.raw_schema.clone(), consumer);
-    PrepareIter::try_new(reader, config, pm.sparrow_metadata, prepare_hash, slice)
+    let stream = read_pulsar_stream(pm.sparrow_metadata.raw_schema.clone(), consumer);
+    PrepareIter::try_new(stream, config, pm.sparrow_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreatePulsarReader)
 }
