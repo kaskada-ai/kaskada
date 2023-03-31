@@ -107,7 +107,6 @@ def test_pulsar_destination_to_request():
         "admin_service_url": "http://127.0.0.1:8080",
         "auth_params": None,
         "auth_plugin": None,
-        "certificate_chain": None,
     }
 
     pulsar_defaults = PulsarDestination()

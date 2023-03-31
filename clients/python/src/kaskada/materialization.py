@@ -88,7 +88,6 @@ class PulsarDestination(Destination):
         admin_service_url: str = "http://127.0.0.1:8080",
         auth_plugin: Optional[str] = None,
         auth_params: Optional[str] = None,
-        certificate_chain: Optional[str] = None,
     ):
         """
         Pulsar Materialization Destination
@@ -101,7 +100,6 @@ class PulsarDestination(Destination):
             admin_service_url (str): the pulsar admin REST URL for the cluster. defaults to http://127.0.0.1:8080
             auth_plugin (str): authentication plugin to use. e.g. "org.apache.pulsar.client.impl.auth.AuthenticationToken"
             auth_params (str): authentication parameters. e.g. "token:xxx"
-            certificate_chain (str): a custom certificate chain to authenticate the server in TLS connections.
         """
         self._tenant = tenant
         self._namespace = namespace
@@ -114,7 +112,6 @@ class PulsarDestination(Destination):
         self._admin_service_url = admin_service_url
         self._auth_plugin = auth_plugin
         self._auth_params = auth_params
-        self._certificate_chain = certificate_chain
 
     def to_request(self) -> Dict[str, Any]:
         return {
@@ -125,7 +122,6 @@ class PulsarDestination(Destination):
             "admin_service_url": self._admin_service_url,
             "auth_plugin": self._auth_plugin,
             "auth_params": self._auth_params,
-            "certificate_chain": self._certificate_chain,
         }
 
 

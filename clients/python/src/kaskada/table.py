@@ -26,7 +26,6 @@ class PulsarTableSource(TableSource):
         broker_service_url: str,
         auth_plugin: str,
         auth_params: str,
-        certificate_chain: str,
         tenant: str,
         namespace: str,
         topic_name: str,
@@ -34,7 +33,6 @@ class PulsarTableSource(TableSource):
         self._broker_service_url = broker_service_url
         self._auth_plugin = auth_plugin
         self._auth_params = auth_params
-        self._certificate_chain = certificate_chain
         self._tenant = tenant
         self._namespace = namespace
         self._topic_name = topic_name
