@@ -17,11 +17,10 @@ permissions:
   actions: write
   contents: read
 
-name: Helm Chart - Kaskada Canary - CI
-
+name: Helm Charts - CI
 jobs:
-  helm_canary_skip:
-    name: Helm Canary Skip Duplicates
+  helm_skip_ci:
+    name: Helm Charts Skip Duplicates
     continue-on-error: true # Uncomment once integration is finished
     runs-on: ubuntu-latest
     # Map a step output to a job output
@@ -34,15 +33,16 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["charts/kaskada-canary/**"]'
-          # Theo, what does the below line do?
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          paths: '["charts/**"]'
 
-  helm_canary_lint_and_test:
-    name: Lint and Test Canary Chart
-    needs: [helm_canary_skip]
-    if: needs.helm_canary_skip.outputs.should_skip != 'true'
+  helm_lint_and_test:
+    name: Lint and Test Charts
+    needs: [helm_skip_ci]
+    if: needs.helm_skip_ci.outputs.should_skip != 'true'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: charts
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -50,20 +50,17 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      - name: Lint Chart
-        run: helm lint .
-        working-directory: charts/kaskada-canary
+      - name: Lint Canary Chart
+        run: helm lint kaskada-canary
 
       - name: Install Kubeval
         uses: lra/setup-kubeval@v1
 
-      - name: Validate Chart
-        run: helm template . | kubeval
-        working-directory: charts/kaskada-canary
+      - name: Validate Canary Chart
+        run: helm template kaskada-canary | kubeval
 
       - name: Install Helm-UnitTest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest --version 0.3.0
       
-      - name: Run Unit Tests
-        run: helm unittest .
-        working-directory: charts/kaskada-canary
+      - name: Test Canary Chart
+        run: helm unittest kaskada-canary
