@@ -169,7 +169,7 @@ pub async fn prepare_file(
         async move {
             match r {
                 Ok((records, metadata)) => {
-                    tracing::info!("Prepared batch {n} has {} rows", records.num_rows());
+                    tracing::debug!("Prepared batch {n} has {} rows", records.num_rows());
 
                     if records.num_rows() == 0 {
                         return None;
@@ -193,64 +193,70 @@ pub async fn upload_prepared_files_to_s3(
     output_file_prefix: &str,
 ) -> error_stack::Result<Vec<PreparedFile>, Error> {
     let span = tracing::info_span!("Uploading prepared files to S3", ?output_s3_prefix);
-    let _enter = span.enter();
 
-    let mut parquet_uploads: Vec<_> = Vec::new();
-    let mut prepared_files: Vec<_> = Vec::new();
-    {
-        for (batch_count, prepared_metadata) in prepared_metadata.iter().enumerate() {
-            let prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .try_into()
-                .change_context(Error::Internal)?;
-            tracing::info!(
-                "Prepared batch {batch_count} has {} rows",
-                prepared_file.num_rows
-            );
+    let prepared_files: error_stack::Result<Vec<PreparedFile>, Error> = async move {
+        let mut parquet_uploads: Vec<_> = Vec::new();
+        let mut prepared_files: Vec<_> = Vec::new();
+        {
+            for (batch_count, prepared_metadata) in prepared_metadata.iter().enumerate() {
+                let prepared_file: PreparedFile = prepared_metadata
+                    .to_owned()
+                    .try_into()
+                    .change_context(Error::Internal)?;
+                tracing::debug!(
+                    "Prepared batch {batch_count} has {} rows",
+                    prepared_file.num_rows
+                );
 
-            tracing::info!(
-                "Prepared batch {batch_count} with metadata {:?}",
-                prepared_metadata
-            );
-            // Note that the `output_s3_prefix` is formatted as `s3://<bucket>/<output_prefix>`
-            let output_prefix_uri = S3Object::try_from_uri(output_s3_prefix)
-                .into_report()
-                .change_context(Error::Internal)?;
-            let output_bucket = output_prefix_uri.bucket;
-            let output_key_prefix = output_prefix_uri.key;
+                tracing::debug!(
+                    "Prepared batch {batch_count} with metadata {:?}",
+                    prepared_metadata
+                );
+                // Note that the `output_s3_prefix` is formatted as `s3://<bucket>/<output_prefix>`
+                let output_prefix_uri = S3Object::try_from_uri(output_s3_prefix)
+                    .into_report()
+                    .change_context(Error::Internal)?;
+                let output_bucket = output_prefix_uri.bucket;
+                let output_key_prefix = output_prefix_uri.key;
 
-            let upload_object = S3Object {
-                bucket: output_bucket.clone(),
-                key: format!("{output_key_prefix}/{output_file_prefix}-{batch_count}.parquet"),
-            };
+                let upload_object = S3Object {
+                    bucket: output_bucket.clone(),
+                    key: format!("{output_key_prefix}/{output_file_prefix}-{batch_count}.parquet"),
+                };
 
-            let metadata_upload_object = S3Object {
-                bucket: output_bucket.clone(),
-                key: format!(
-                    "{output_key_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet"
-                ),
-            };
-            let prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .with_s3_path(&upload_object)
-                .with_s3_metadata_path(&metadata_upload_object)
-                .try_into()
-                .change_context(Error::Internal)?;
-            parquet_uploads.push(s3.upload_s3(upload_object, Path::new(&prepared_metadata.path)));
-            parquet_uploads.push(s3.upload_s3(
-                metadata_upload_object,
-                Path::new(&prepared_metadata.metadata_path),
-            ));
-            prepared_files.push(prepared_file)
+                let metadata_upload_object = S3Object {
+                    bucket: output_bucket.clone(),
+                    key: format!(
+                        "{output_key_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet"
+                    ),
+                };
+                let prepared_file: PreparedFile = prepared_metadata
+                    .to_owned()
+                    .with_s3_path(&upload_object)
+                    .with_s3_metadata_path(&metadata_upload_object)
+                    .try_into()
+                    .change_context(Error::Internal)?;
+                parquet_uploads
+                    .push(s3.upload_s3(upload_object, Path::new(&prepared_metadata.path)));
+                parquet_uploads.push(s3.upload_s3(
+                    metadata_upload_object,
+                    Path::new(&prepared_metadata.metadata_path),
+                ));
+                prepared_files.push(prepared_file)
+            }
         }
+        // TODO: We could (instead) use a loop and select, which would allow us
+        // to fail early if anything failed. But it is more book-keeping.
+        let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
+        for result in parquet_uploads.await {
+            result.into_report().change_context(Error::UploadResult)?;
+        }
+        Ok(prepared_files)
     }
-    // TODO: We could (instead) use a loop and select, which would allow us
-    // to fail early if anything failed. But it is more book-keeping.
-    let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
-    for result in parquet_uploads.await {
-        result.into_report().change_context(Error::UploadResult)?;
-    }
-    Ok(prepared_files)
+    .instrument(span)
+    .await;
+
+    prepared_files
 }
 
 fn open_file(path: impl AsRef<Path>) -> error_stack::Result<File, Error> {
@@ -314,7 +320,7 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
         }
         source_data::Source::PulsarSubscription(ps) => {
             let mut hasher = sha2::Sha224::new();
-            let config = ps.config.as_ref().unwrap();
+            let config = ps.config.as_ref().ok_or(Error::Internal)?;
             hasher.update(&config.broker_service_url);
             hasher.update(&config.tenant);
             hasher.update(&config.namespace);

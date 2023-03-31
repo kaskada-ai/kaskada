@@ -51,9 +51,9 @@ pub async fn execute(
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let plan = request.plan.ok_or(Error::MissingField("plan"))?;
 
-    let output_to = request
+    let destination = request
         .destination
-        .ok_or(Error::MissingField("output_to"))?;
+        .ok_or(Error::MissingField("destination"))?;
 
     let changed_since_time = request.changed_since.unwrap_or(Timestamp {
         seconds: 0,
@@ -225,7 +225,7 @@ pub async fn execute(
         &late_bindings,
         &runtime_options,
         progress_updates_rx,
-        output_to,
+        destination,
     )
     .change_context(Error::internal_msg("spawn compute executor"))?;
 

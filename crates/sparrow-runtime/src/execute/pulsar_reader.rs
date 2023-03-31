@@ -132,8 +132,7 @@ impl PulsarReader {
             // indefinitely to read messages, but in the meantime, we use a larger-than-should-be-necessary
             // timeout to try to avoid this problem.
             //
-            // experimentally, 10ms works fine locally, and 1000ms works fine with Astra, so 5x that
-            // number should give us ample headroom.
+            // experimentally, 10ms works fine locally, and 1000ms works fine with Astra.
             let next_result = timeout(Duration::from_millis(1000), self.consumer.try_next()).await;
             let Ok(msg) = next_result else {
                 tracing::trace!("timed out reading next message");
