@@ -4,11 +4,10 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
-use futures::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
 
@@ -130,69 +129,60 @@ pub async fn prepare_file(
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let prepared_metadatas = Arc::new(Mutex::new(Vec::new()));
-    let prepared_files = Arc::new(Mutex::new(Vec::new()));
     let preparer = prepared_batches(source_data, table_config, slice).await?;
     let batch_count = std::sync::atomic::AtomicUsize::new(0);
-    preparer
-        .try_for_each(|(record_batch, metadata)| {
-            let pmc = Arc::clone(&prepared_metadatas);
-            let pfc = Arc::clone(&prepared_files);
-            let bc = &batch_count;
-            async move {
-                let n = bc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                tracing::info!("Prepared batch {n} has {} rows", record_batch.num_rows());
 
-                if record_batch.num_rows() > 0 {
-                    let output = output_path.join(format!("{output_prefix}-{n}.parquet"));
-                    let output_file = create_file(&output)?;
+    let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
+        let output = output_path.join(format!("{output_prefix}-{output_ordinal}.parquet"));
+        let output_file = create_file(&output)?;
 
-                    let metadata_output =
-                        output_path.join(format!("{output_prefix}-{n}-metadata.parquet"));
-                    let metadata_output_file = create_file(&metadata_output)?;
+        let metadata_output =
+            output_path.join(format!("{output_prefix}-{output_ordinal}-metadata.parquet"));
+        let metadata_output_file = create_file(&metadata_output)?;
 
-                    write_batch(output_file, record_batch)
-                        .change_context(Error::WriteParquetData)?;
-                    write_batch(metadata_output_file, metadata)
-                        .change_context(Error::WriteMetadata)?;
+        write_batch(output_file, records).change_context(Error::WriteParquetData)?;
+        write_batch(metadata_output_file, metadata).change_context(Error::WriteMetadata)?;
 
-                    let prepared_metadata =
-                        PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
-                            .into_report()
-                            .change_context(Error::DetermineMetadata)?;
-                    let prepared_file: PreparedFile = prepared_metadata
-                        .to_owned()
-                        .try_into()
-                        .change_context(Error::Internal)?;
-                    tracing::info!("Prepared batch {n} with metadata {prepared_metadata:?}");
-                    pmc.lock()?.push(prepared_metadata);
+        let prepared_metadata =
+            PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
+                .into_report()
+                .change_context(Error::DetermineMetadata)?;
+        let prepared_file: PreparedFile = prepared_metadata
+            .to_owned()
+            .try_into()
+            .change_context(Error::Internal)?;
+        tracing::info!("Prepared batch {output_ordinal} with metadata {prepared_metadata:?}");
 
-                    let metadata_yaml_output =
-                        output_path.join(format!("{output_prefix}-{n}-metadata.yaml"));
-                    let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
-                    serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
-                        .into_report()
-                        .change_context(Error::Internal)?;
-                    tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
+        let metadata_yaml_output =
+            output_path.join(format!("{output_prefix}-{output_ordinal}-metadata.yaml"));
+        let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
+        serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
+            .into_report()
+            .change_context(Error::Internal)?;
+        tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
 
-                    pfc.lock()?.push(prepared_file);
+        Ok((prepared_metadata, prepared_file))
+    };
+
+    let results = preparer.filter_map(|r| {
+        let n = batch_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        async move {
+            match r {
+                Ok((records, metadata)) => {
+                    tracing::info!("Prepared batch {n} has {} rows", records.num_rows());
+
+                    if records.num_rows() == 0 {
+                        return None;
+                    }
+                    Some(write_results(n, records, metadata))
                 }
-
-                Ok(())
+                Err(e) => Some(Err(Report::new(e).change_context(Error::Internal))),
             }
-        })
-        .await
-        .into_report()
-        .change_context(Error::Internal)?;
+        }
+    });
 
-    let pm = Arc::try_unwrap(prepared_metadatas)
-        .map_err(|_err| Error::Internal)? // can't put in report since it returns the Arc itself on error
-        .into_inner()
-        .map_err(|err| Report::new(err).change_context(Error::Internal))?;
-    let pf = Arc::try_unwrap(prepared_files)
-        .map_err(|_err| Error::Internal)? // can't put in report since it returns the Arc itself on error
-        .into_inner()
-        .map_err(|err| Report::new(err).change_context(Error::Internal))?;
+    // unzip the stream of (prepared_file, prepared_metadata) into two vectors
+    let (pm, pf): (Vec<_>, Vec<_>) = results.try_collect::<Vec<_>>().await?.into_iter().unzip();
     Ok((pm, pf))
 }
 
