@@ -172,7 +172,6 @@ impl ProgressTracker {
                             tenant: config.tenant.clone(),
                             namespace: config.namespace.clone(),
                             topic_name: config.topic_name.clone(),
-                            certificate_chain: config.certificate_chain.clone(),
                             admin_service_url: config.admin_service_url.clone(),
                         }),
                     })),

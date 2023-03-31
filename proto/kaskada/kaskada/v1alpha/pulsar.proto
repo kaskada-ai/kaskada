@@ -23,24 +23,21 @@ message PulsarConfig {
   // e.g. "token:xxx"
   string auth_params = 4 [(kaskada.v1alpha.sensitive) = true];
 
-  // A custom certificate chain to authenticate the server in TLS connections.
-  string certificate_chain = 5;
-
   // The topic tenant within the instance.
   //
   // Defaults to "public".
-  string tenant = 6;
+  string tenant = 5;
 
   // The administrative unit of topics, which acts as a grouping
   // mechanism for related topics.
   //
   // Defaults to "default".
-  string namespace = 7;
+  string namespace = 6;
 
   // The final part of the topic url.
   //
   // Defaults to a randomly generated uuid.
-  string topic_name = 8;
+  string topic_name = 7;
 }
 
 // Configuration for a single source of data from a pulsar topic.

@@ -185,10 +185,7 @@ async fn build_client(
             token
         } else {
             error_stack::bail!(Error::PulsarAuth {
-                context: format!(
-                    "expected \"token:\" style prefix. Saw {}",
-                    pulsar.auth_params
-                )
+                context: format!("expected \"token:\" prefix",)
             })
         };
 
@@ -197,16 +194,6 @@ async fn build_client(
             data: auth_token.as_bytes().to_vec(),
         };
         client_builder = client_builder.with_auth(pulsar_auth);
-    };
-
-    // Add TLS encryption
-    if !pulsar.certificate_chain.is_empty() {
-        // The default values for the other configs are explicitly show here for
-        // clarity. We can allow the user to configure these if requested.
-        client_builder = client_builder
-            .with_allow_insecure_connection(false)
-            .with_tls_hostname_verification_enabled(true)
-            .with_certificate_chain(pulsar.certificate_chain.as_bytes().to_vec());
     };
 
     let client = client_builder

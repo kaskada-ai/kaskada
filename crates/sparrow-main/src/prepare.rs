@@ -163,7 +163,7 @@ impl PrepareCommand {
                 .change_context(Error::MissingTableConfig)
                 .attach_printable("missing env var PULSAR_TOPIC")?;
 
-            let pulsar_config = Some(PulsarConfig {
+            let pulsar_config = PulsarConfig {
                 admin_service_url: config["webServiceUrl"].clone(),
                 broker_service_url: config["brokerServiceUrl"].clone(),
                 auth_plugin: config["authPlugin"].clone(),
@@ -172,13 +172,13 @@ impl PrepareCommand {
                 namespace: pulsar_namespace,
                 topic_name: pulsar_topic,
                 ..Default::default()
-            });
-            tracing::debug!("Pulsar config is {:?}", pulsar_config);
+            };
+            tracing::debug!("Pulsar config is {:?}", redact_auth_field(&pulsar_config));
 
             SourceData {
                 source: Some(source_data::Source::PulsarSubscription(
                     PulsarSubscription {
-                        config: pulsar_config,
+                        config: Some(pulsar_config),
                         subscription_id: pulsar_subscription,
                         last_publish_time: None,
                     },
@@ -228,4 +228,14 @@ impl PrepareCommand {
 
         Ok(())
     }
+}
+
+// Hack to remove auth fields from log output.
+//
+// Ideally, we use tonic or prost reflection to redact all
+// fields marked as sensitive.
+fn redact_auth_field(pulsar: &PulsarConfig) -> PulsarConfig {
+    let mut clone = pulsar.clone();
+    clone.auth_params = "...redacted...".to_owned();
+    clone
 }
