@@ -15,8 +15,8 @@ use crate::{ObjectStoreRegistry, ObjectStoreUrl};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
-    #[display(fmt = "object store error")]
-    ObjectStore,
+    #[display(fmt = "object store error for path: {_0}")]
+    ObjectStore(String),
     #[display(fmt = "no object store registry")]
     NoObjectStoreRegistry,
     #[display(fmt = "local file error")]
@@ -73,15 +73,15 @@ impl RawMetadata {
         object_store_registry: Option<&ObjectStoreRegistry>,
     ) -> error_stack::Result<Self, Error> {
         let object_store_url =
-            ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore)?;
+            ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         let object_store_key = object_store_url
             .key()
-            .change_context_lazy(|| Error::ObjectStore)?;
+            .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         match (object_store_key, object_store_registry) {
             (ObjectStoreKey::Local, _) => {
                 let path = object_store_url
                     .path()
-                    .change_context_lazy(|| Error::ObjectStore)?
+                    .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
                     .to_string();
                 let path = format!("/{}", path);
                 let path = std::path::Path::new(&path);
@@ -109,15 +109,15 @@ impl RawMetadata {
         object_store_registry: Option<&ObjectStoreRegistry>,
     ) -> error_stack::Result<Self, Error> {
         let object_store_url =
-            ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore)?;
+            ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         let object_store_key = object_store_url
             .key()
-            .change_context_lazy(|| Error::ObjectStore)?;
+            .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         match (object_store_key, object_store_registry) {
             (ObjectStoreKey::Local, _) => {
                 let path = object_store_url
                     .path()
-                    .change_context_lazy(|| Error::ObjectStore)?
+                    .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
                     .to_string();
                 let path = format!("/{}", path);
                 let file = file_from_path(std::path::Path::new(&path))
