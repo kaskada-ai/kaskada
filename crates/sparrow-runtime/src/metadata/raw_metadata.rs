@@ -72,8 +72,8 @@ impl RawMetadata {
         path: &str,
         object_store_registry: Option<&ObjectStoreRegistry>,
     ) -> error_stack::Result<Self, Error> {
-        let object_store_url =
-            ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
+        let object_store_url = ObjectStoreUrl::from_str(path)
+            .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         let object_store_key = object_store_url
             .key()
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
@@ -108,8 +108,8 @@ impl RawMetadata {
         path: &str,
         object_store_registry: Option<&ObjectStoreRegistry>,
     ) -> error_stack::Result<Self, Error> {
-        let object_store_url =
-            ObjectStoreUrl::from_str(path).change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
+        let object_store_url = ObjectStoreUrl::from_str(path)
+            .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         let object_store_key = object_store_url
             .key()
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
