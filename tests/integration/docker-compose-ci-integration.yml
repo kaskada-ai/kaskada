@@ -26,7 +26,7 @@ services:
     networks:
       - integration
     command: [ "bin/pulsar", "standalone" ]
-    restart: unless-stopped
+    # restart: unless-stopped
 
   kaskada:
     build:

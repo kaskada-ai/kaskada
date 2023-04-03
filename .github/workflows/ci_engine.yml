@@ -94,7 +94,7 @@ jobs:
 
       - name: Use docker compose 
         run: |
-          DOCKER_BUILDKIT=1 docker-compose -f ./tests/integration/docker-compose-ci-integration.yml up --build
+          DOCKER_BUILDKIT=1 docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build
           cd ./tests/integration/api
           LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
