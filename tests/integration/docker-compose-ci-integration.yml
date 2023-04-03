@@ -35,7 +35,7 @@ services:
     # image: tsk-local-integ:latest
     # container_name: kaskada
     depends_on:
-     - pulsar-integration
+      - pulsar-integration
     environment:
       # for sparrow
       SPARROW_GRPC_ADDR: 0.0.0.0:50052
@@ -68,7 +68,7 @@ services:
     volumes:
       - ./data:/data
       - ../../testdata:/testdata
-    command: [ "/run-integ.sh" ]
+    command: [ "/run.sh" ]
     restart: unless-stopped
 
 volumes:
