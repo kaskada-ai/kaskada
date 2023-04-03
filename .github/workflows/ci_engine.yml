@@ -88,6 +88,10 @@ jobs:
 
           wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1yMHLeN7p0IxtkXBPWXzEV937FOnHy4Gz' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1yMHLeN7p0IxtkXBPWXzEV937FOnHy4Gz" -O ./ci-bin/integ-tests/api.test && rm -rf /tmp/cookies.txt
 
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        
       - name: Use docker compose 
         run: |
           docker-compose -f ./tests/integration/docker-compose-ci-integration.yml up --build
