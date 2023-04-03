@@ -78,20 +78,20 @@ jobs:
       
       - name: Donwload binaries 
         run: |
-          mkdir -p /ci-bin/engine/
-          mkdir -p /ci-bin/wren/
-          mkdir -p /ci-bin/integ-tests/
+          mkdir -p ./ci-bin/engine/
+          mkdir -p ./ci-bin/wren/
+          mkdir -p ./ci-bin/integ-tests/
 
-          wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1aRmw0PorusMUQTe6WSDJeC-qXXJSjxER' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1aRmw0PorusMUQTe6WSDJeC-qXXJSjxER" -O /ci-bin/engine/sparrow-main && rm -rf /tmp/cookies.txt
+          wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1aRmw0PorusMUQTe6WSDJeC-qXXJSjxER' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1aRmw0PorusMUQTe6WSDJeC-qXXJSjxER" -O ./ci-bin/engine/sparrow-main && rm -rf /tmp/cookies.txt
 
-          wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1PnAzdbfHolKiisK6Y71xW6NYsE5yQmn_' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1PnAzdbfHolKiisK6Y71xW6NYsE5yQmn_" -O /ci-bin/wren/wren-binary && rm -rf /tmp/cookies.txt
+          wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1PnAzdbfHolKiisK6Y71xW6NYsE5yQmn_' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1PnAzdbfHolKiisK6Y71xW6NYsE5yQmn_" -O ./ci-bin/wren/wren-binary && rm -rf /tmp/cookies.txt
 
-          wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1yMHLeN7p0IxtkXBPWXzEV937FOnHy4Gz' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1yMHLeN7p0IxtkXBPWXzEV937FOnHy4Gz" -O /ci-bin/integ-tests/api.test && rm -rf /tmp/cookies.txt
+          wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1yMHLeN7p0IxtkXBPWXzEV937FOnHy4Gz' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1yMHLeN7p0IxtkXBPWXzEV937FOnHy4Gz" -O ./ci-bin/integ-tests/api.test && rm -rf /tmp/cookies.txt
 
       - name: Use docker compose 
         run: |
           docker-compose -f ./tests/integration/docker-compose.yml up --build
-          cd tests/integration/api
+          cd ./tests/integration/api
           LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
   # build_integ_test_docker_image:
