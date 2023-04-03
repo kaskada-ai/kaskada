@@ -91,10 +91,10 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        
+
       - name: Use docker compose 
         run: |
-          docker-compose -f ./tests/integration/docker-compose-ci-integration.yml up --build
+          DOCKER_BUILDKIT=1 docker-compose -f ./tests/integration/docker-compose-ci-integration.yml up --build
           cd ./tests/integration/api
           LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
