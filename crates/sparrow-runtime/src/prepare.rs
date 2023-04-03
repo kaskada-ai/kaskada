@@ -248,7 +248,7 @@ pub async fn upload_prepared_files_to_s3(
     // TODO: We could (instead) use a loop and select, which would allow us
     // to fail early if anything failed. But it is more book-keeping.
     let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
-    for result in parquet_uploads.in_current_span().await {
+    for result in parquet_uploads.await {
         result.into_report().change_context(Error::UploadResult)?;
     }
 

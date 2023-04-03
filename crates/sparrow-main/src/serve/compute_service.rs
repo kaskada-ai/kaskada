@@ -52,7 +52,13 @@ impl ComputeService for ComputeServiceImpl {
         &self,
         request: Request<CompileRequest>,
     ) -> Result<Response<CompileResponse>, Status> {
-        match tokio::spawn(compile_impl(request).in_current_span()).await {
+        let span = tracing::info_span!("Compile");
+        let _enter = span.enter();
+
+        match tokio::spawn(compile_impl(request).in_current_span())
+            .in_current_span()
+            .await
+        {
             Ok(result) => result.into_status(),
             Err(panic) => {
                 tracing::error!("Panic during prepare: {panic}");
@@ -65,6 +71,9 @@ impl ComputeService for ComputeServiceImpl {
         &self,
         request: Request<ExecuteRequest>,
     ) -> Result<Response<Self::ExecuteStream>, Status> {
+        let span = tracing::info_span!("Execute");
+        let _enter = span.enter();
+
         let handle = tokio::spawn(
             execute_impl(
                 self.flight_record_path,
@@ -73,7 +82,7 @@ impl ComputeService for ComputeServiceImpl {
             )
             .in_current_span(),
         );
-        match handle.await {
+        match handle.in_current_span().await {
             Ok(result) => {
                 let stream = result.into_status()?;
                 Ok(Response::new(Box::pin(stream)))
