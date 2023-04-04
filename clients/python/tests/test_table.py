@@ -93,7 +93,7 @@ def test_pulsar_table_source():
     namespace = "test-namespace"
     topic_name = "my-topic"
     test_source = kaskada.table.PulsarTableSource(
-        broker_service_url, auth_plugin, "", "", tenant, namespace, topic_name
+        broker_service_url, auth_plugin, "", tenant, namespace, topic_name
     )
     assert test_source._broker_service_url == broker_service_url
     assert test_source._auth_plugin == auth_plugin
@@ -110,7 +110,7 @@ def test_table_create_table_with_pulsar_table_source(mockClient):
     namespace = "test-namespace"
     topic_name = "my-topic"
     test_source = kaskada.table.PulsarTableSource(
-        broker_service_url, auth_plugin, "", "", tenant, namespace, topic_name
+        broker_service_url, auth_plugin, "", tenant, namespace, topic_name
     )
     expected_request = table_pb.CreateTableRequest(
         table=table_pb.Table(

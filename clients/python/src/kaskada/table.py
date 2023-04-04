@@ -178,7 +178,6 @@ def create_table(
                             "broker_service_url": source._broker_service_url,
                             "auth_plugin": source._auth_plugin,
                             "auth_params": source._auth_params,
-                            "certificate_chain": source._certificate_chain,
                             "tenant": source._tenant,
                             "namespace": source._namespace,
                             "topic_name": source._topic_name,

@@ -185,7 +185,7 @@ async fn build_client(
             token
         } else {
             error_stack::bail!(Error::PulsarAuth {
-                context: format!("expected \"token:\" prefix",)
+                context: "expected \"token:\" prefix".to_owned(),
             })
         };
 
