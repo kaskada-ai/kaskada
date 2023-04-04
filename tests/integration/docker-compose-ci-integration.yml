@@ -26,6 +26,12 @@ services:
     networks:
       - integration
     command: [ "bin/pulsar", "standalone" ]
+    healthcheck:
+      test: curl --fail  http://localhost:8080/admin/v2/brokers/health
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     # restart: unless-stopped
 
   kaskada:
