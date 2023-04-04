@@ -1,0 +1,26 @@
+= Integrating with Apache Pulsar
+
+Apache Pulsar is an open-source distributed streaming platform.
+
+== Writing to Pulsar
+
+Query results can be written to Pulsar in real-time by creating a materialization. 
+
+[source,python]
+----
+tenant = "public"
+namespace = "default"
+topic_name = "model_features"
+broker_service_url = "pulsar://127.0.0.1:6650"
+destination = materialization.PulsarDestination(tenant, namespace, topic_name, broker_service_url)
+
+materialization.create_materialization(
+    name = "MaterializedFeatures",
+    destination = destination,
+    query = "{
+      key: Purchase.customer_id,
+      max_amount: Purchase.amount | max(),
+      min_amount: Purchase.amount | min(),
+    }"
+)
+----
