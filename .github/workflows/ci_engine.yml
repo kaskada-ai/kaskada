@@ -97,7 +97,7 @@ jobs:
           
       - name: Check docker containers healthcheck
         run: |    
-          timeout 60s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 2; done'
+          timeout 120s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 2; done'
 
       - name: Run integration tests
         run: | 
