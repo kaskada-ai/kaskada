@@ -1,0 +1,28 @@
+= Integrating with AWS Redshift
+
+Redshift is a hosted data warehouse that provides scalable SQL queries
+over large data sets.
+
+== Writing to Redshift
+
+Query results can be loaded into Redshift by exporting values as Parquet and using the `COPY` instruction to load the Parquet file into a Parquet table. 
+Query results can be returned as a URL identifying the output Parquet file by supplying the output config `--output parquet`.
+
+[source,fenl]
+----
+%%fenl --output parquet
+{
+  key: Purchase.customer_id,
+  max_amount: Purchase.amount | max(),
+  min_amount: Purchase.amount | min(),
+}
+----
+
+The resulting Parquet file can be loaded into a Redshift table.
+
+[source,sql]
+----
+COPY feature_vectors
+FROM '<file url>'
+FORMAT AS PARQUET;
+----

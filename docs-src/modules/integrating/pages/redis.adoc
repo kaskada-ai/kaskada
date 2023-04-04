@@ -1,0 +1,9 @@
+= Integrating with Redis
+
+Redis is an OpenSource in-memory data-structure store. 
+
+== Writing to Redis
+
+Query results can be written to Redis in real-time via Pulsar.
+First, xref:apache-pulsar.adoc[materialize features into Pulsar].
+Next use the link:https://pulsar.apache.org/docs/2.11.x/io-redis-sink/[Redis sink connector] to pull messages from Pulsar into Redis.
