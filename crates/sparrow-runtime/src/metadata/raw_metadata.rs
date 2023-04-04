@@ -10,21 +10,21 @@ use tempfile::NamedTempFile;
 use tracing::info;
 
 use crate::metadata::file_from_path;
-use crate::object_store_url::ObjectStoreKey;
-use crate::{ObjectStoreRegistry, ObjectStoreUrl};
+use crate::stores::object_store_url::ObjectStoreKey;
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
     #[display(fmt = "object store error for path: {_0}")]
     ObjectStore(String),
     #[display(fmt = "no object store registry")]
-    NoObjectStoreRegistry,
+    MissingObjectStoreRegistry,
     #[display(fmt = "local file error")]
     LocalFile,
     #[display(fmt = "download error")]
-    DownloadIssue,
+    Download,
     #[display(fmt = "reading schema error")]
-    ReadSchemaIssue,
+    ReadSchema,
 }
 
 impl error_stack::Context for Error {}
@@ -41,10 +41,10 @@ pub struct RawMetadata {
 }
 
 impl RawMetadata {
-    /// Createa a `RawMetadata` from a `v1alpha::file_path::Path`.
+    /// Create a `RawMetadata` from a `v1alpha::file_path::Path`.
     pub async fn try_from(
         source_path: &Path,
-        object_store_registry: Option<&ObjectStoreRegistry>,
+        object_store_registry: &ObjectStoreRegistry,
     ) -> error_stack::Result<Self, Error> {
         match source_path {
             Path::ParquetPath(path) => Self::try_from_parquet(path, object_store_registry).await,
@@ -70,35 +70,37 @@ impl RawMetadata {
     /// Create a `RawMetadata` from a parquet string path and object store registry
     async fn try_from_parquet(
         path: &str,
-        object_store_registry: Option<&ObjectStoreRegistry>,
+        object_store_registry: &ObjectStoreRegistry,
     ) -> error_stack::Result<Self, Error> {
         let object_store_url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         let object_store_key = object_store_url
             .key()
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
-        match (object_store_key, object_store_registry) {
-            (ObjectStoreKey::Local, _) => {
+        match object_store_key {
+            ObjectStoreKey::Local => {
                 let path = object_store_url
                     .path()
                     .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
                     .to_string();
+                // The local paths are formatted file:///absolute/path/to/file.file
+                // The Object Store path strips the prefix file:/// but we need to add the
+                // root slash back prior to opening the file.
                 let path = format!("/{}", path);
                 let path = std::path::Path::new(&path);
                 Self::try_from_parquet_path(path)
                     .into_report()
-                    .change_context_lazy(|| Error::ReadSchemaIssue)
+                    .change_context_lazy(|| Error::ReadSchema)
             }
-            (_, None) => error_stack::bail!(Error::NoObjectStoreRegistry),
-            (_, Some(object_store_registry)) => {
-                let download_file = NamedTempFile::new().map_err(|_| Error::DownloadIssue)?;
+            _ => {
+                let download_file = NamedTempFile::new().map_err(|_| Error::Download)?;
                 object_store_url
                     .download(object_store_registry, download_file.path().to_path_buf())
                     .await
-                    .change_context_lazy(|| Error::DownloadIssue)?;
+                    .change_context_lazy(|| Error::Download)?;
                 Self::try_from_parquet_path(download_file.path())
                     .into_report()
-                    .change_context_lazy(|| Error::ReadSchemaIssue)
+                    .change_context_lazy(|| Error::ReadSchema)
             }
         }
     }
@@ -106,15 +108,15 @@ impl RawMetadata {
     /// Create a `RawMetadata` from a CSV string path and object store registry
     async fn try_from_csv(
         path: &str,
-        object_store_registry: Option<&ObjectStoreRegistry>,
+        object_store_registry: &ObjectStoreRegistry,
     ) -> error_stack::Result<Self, Error> {
         let object_store_url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
         let object_store_key = object_store_url
             .key()
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
-        match (object_store_key, object_store_registry) {
-            (ObjectStoreKey::Local, _) => {
+        match object_store_key {
+            ObjectStoreKey::Local => {
                 let path = object_store_url
                     .path()
                     .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
@@ -125,18 +127,17 @@ impl RawMetadata {
                     .change_context_lazy(|| Error::LocalFile)?;
                 Self::try_from_csv_reader(file)
             }
-            (_, None) => error_stack::bail!(Error::NoObjectStoreRegistry),
-            (_, Some(object_store_registry)) => {
+            _ => {
                 let download_file = NamedTempFile::new()
                     .into_report()
-                    .change_context_lazy(|| Error::DownloadIssue)?;
+                    .change_context_lazy(|| Error::Download)?;
                 object_store_url
                     .download(object_store_registry, download_file.path().to_path_buf())
                     .await
-                    .change_context_lazy(|| Error::DownloadIssue)?;
+                    .change_context_lazy(|| Error::Download)?;
                 let file = file_from_path(download_file.path())
                     .into_report()
-                    .change_context_lazy(|| Error::DownloadIssue)?;
+                    .change_context_lazy(|| Error::Download)?;
                 Self::try_from_csv_reader(file)
             }
         }
@@ -169,7 +170,7 @@ impl RawMetadata {
             .infer_schema(Some(1000))
             .build(reader)
             .into_report()
-            .change_context_lazy(|| Error::ReadSchemaIssue)?;
+            .change_context_lazy(|| Error::ReadSchema)?;
 
         let raw_schema = raw_reader.schema();
         Ok(Self::from_raw_schema(raw_schema))

@@ -6,7 +6,8 @@ use sparrow_api::kaskada::v1alpha::{
     FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
     MergeMetadataResponse,
 };
-use sparrow_runtime::{ObjectStoreRegistry, RawMetadata};
+use sparrow_runtime::stores::ObjectStoreRegistry;
+use sparrow_runtime::RawMetadata;
 use std::sync::Arc;
 use tonic::Response;
 
@@ -62,7 +63,7 @@ async fn get_metadata(
     let file_metadatas: Vec<_> = request
         .file_paths
         .iter()
-        .map(|source| get_source_metadata(Some(object_store_registry.as_ref()), source))
+        .map(|source| get_source_metadata(object_store_registry.as_ref(), source))
         .collect();
 
     let file_metadatas = try_join_all(file_metadatas)
@@ -74,21 +75,21 @@ async fn get_metadata(
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
     #[display(fmt = "unable to get source path from request")]
-    SourcePathError,
+    SourcePath,
     #[display(fmt = "schema error: '{_0}'")]
-    SchemaError(String),
+    Schema(String),
 }
 impl error_stack::Context for Error {}
 
 pub(crate) async fn get_source_metadata(
-    object_store_registry: Option<&ObjectStoreRegistry>,
+    object_store_registry: &ObjectStoreRegistry,
     source: &FilePath,
 ) -> error_stack::Result<FileMetadata, Error> {
-    let source = source.path.as_ref().ok_or(Error::SourcePathError)?;
+    let source = source.path.as_ref().ok_or(Error::SourcePath)?;
     let metadata = RawMetadata::try_from(source, object_store_registry)
         .await
         .attach_printable_lazy(|| format!("Source: {:?}", source))
-        .change_context(Error::SchemaError("unable to get raw metadata".to_owned()))?;
+        .change_context(Error::Schema("unable to get raw metadata".to_owned()))?;
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
         .attach_printable_lazy(|| {
@@ -97,7 +98,7 @@ pub(crate) async fn get_source_metadata(
                 metadata.raw_schema, metadata.table_schema
             )
         })
-        .change_context(Error::SchemaError(format!(
+        .change_context(Error::Schema(format!(
             "Unable to encode schema {:?} for source file {:?}",
             metadata.table_schema, source
         )))?;

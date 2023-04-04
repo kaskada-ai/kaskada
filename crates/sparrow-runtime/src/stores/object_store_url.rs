@@ -6,11 +6,8 @@ use serde::{Deserialize, Serialize};
 use tokio_util::io::StreamReader;
 use url::Url;
 
+use super::{object_stores::Error, ObjectStoreRegistry};
 use itertools::Itertools;
-
-use crate::ObjectStoreRegistry;
-
-use super::object_stores::Error;
 
 /// A string referring to a file in an object store.
 #[derive(Debug, Serialize, Deserialize, Clone)]

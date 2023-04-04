@@ -146,9 +146,8 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        stores::{object_store_url::ObjectStoreKey, object_stores::create_object_store},
-        ObjectStoreRegistry,
+    use crate::stores::{
+        object_store_url::ObjectStoreKey, object_stores::create_object_store, ObjectStoreRegistry,
     };
 
     #[test]
