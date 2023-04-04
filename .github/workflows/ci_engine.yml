@@ -83,7 +83,7 @@ jobs:
           echo "::group::Data Dir"
           ls -laR tests/integration/data
           echo "::endgroup::"
-          
+
       - name: Donwload binaries 
         run: |
           mkdir -p ./ci-bin/engine/
@@ -114,7 +114,7 @@ jobs:
 
       - name: Docker compose down for integration tests 
         run: |  
-        docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
+          docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
 
   # build_integ_test_docker_image:
   #   name: Build docker image with binary artifacts for integration tests
