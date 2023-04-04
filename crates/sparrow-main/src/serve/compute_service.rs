@@ -303,6 +303,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
     use sparrow_runtime::prepare::prepared_batches;
+    use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
     use super::*;
@@ -522,7 +523,10 @@ mod tests {
                 .to_string_lossy()
                 .to_string()
         ));
-        let part1_metadata = RawMetadata::try_from(&input_path, None).await.unwrap();
+        let object_store_registry = ObjectStoreRegistry::new();
+        let part1_metadata = RawMetadata::try_from(&input_path, &object_store_registry)
+            .await
+            .unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 
         debug_assert_eq!(prepared_batches.len(), 1);
