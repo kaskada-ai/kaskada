@@ -2,6 +2,7 @@
 
 # make sure the TMPDIR directory exists
 mkdir -p $TMPDIR
+chmod -R a+rw $(dirname $TMPDIR)
 
 # Start the first process
 DB_DIALECT=$DB_DIALECT DB_PATH=$DB_PATH DB_IN_MEMORY=$DB_IN_MEMORY \
