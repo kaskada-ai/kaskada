@@ -155,12 +155,12 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 
 		computeTable := convertKaskadaTableToComputeTable(kaskadaTable)
 
-		var filePath *v1alpha.FilePath
+		var sourceData *v1alpha.SourceData
 		switch kaskadaFile.Type {
 		case kaskadafile.TypeCsv:
-			filePath = &v1alpha.FilePath{Path: &v1alpha.FilePath_CsvPath{CsvPath: ConvertURIForCompute(kaskadaFile.Path)}}
+			sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_CsvPath{CsvPath: ConvertURIForCompute(kaskadaFile.Path)}}
 		case kaskadafile.TypeParquet:
-			filePath = &v1alpha.FilePath{Path: &v1alpha.FilePath_ParquetPath{ParquetPath: ConvertURIForCompute(kaskadaFile.Path)}}
+			sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: ConvertURIForCompute(kaskadaFile.Path)}}
 		default:
 			subLogger.Error().Str("file_type", kaskadaFile.Type.String()).Msg("unsupported file_type for prepare")
 			return fmt.Errorf("unsupported file_type for prepare")
@@ -169,7 +169,7 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		// Send the preparation request to the prepare client
 		prepareClient := m.computeClients.PrepareServiceClient(ctx)
 		prepareReq := &v1alpha.PrepareDataRequest{
-			FilePath:         filePath,
+			SourceData:       sourceData,
 			Config:           computeTable.Config,
 			OutputPathPrefix: ConvertURIForCompute(prepareOutputURI),
 			FilePrefix:       prepareFilePrefix,

@@ -1,15 +1,15 @@
 use std::fs::File;
 
 use error_stack::{IntoReportCompat, ResultExt};
-use fallible_iterator::FallibleIterator;
-use futures::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::output_to::Destination;
-use sparrow_api::kaskada::v1alpha::OutputTo;
+use sparrow_api::kaskada::v1alpha::destination;
+use sparrow_api::kaskada::v1alpha::source_data;
+use sparrow_api::kaskada::v1alpha::Destination;
+use sparrow_api::kaskada::v1alpha::SourceData;
 use sparrow_api::kaskada::v1alpha::{
-    compute_table, file_path, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet,
-    FenlDiagnostics, FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig,
-    TableMetadata,
+    compute_table, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet, FenlDiagnostics,
+    FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
@@ -49,7 +49,9 @@ pub(super) async fn execute_example(
 ) -> error_stack::Result<String, Error> {
     // 1. Prepare the file
     let mut preparer = ExampleInputPreparer::new();
-    let tables = preparer.prepare_inputs(&example.input_csv, &example.tables)?;
+    let tables = preparer
+        .prepare_inputs(&example.input_csv, &example.tables)
+        .await?;
 
     let query = match &example.expression {
         ExampleExpression::Expression(simple) => {
@@ -90,15 +92,15 @@ pub(super) async fn execute_example(
         file_type: FileType::Csv.into(),
         output_paths: None,
     };
-    let output_to = OutputTo {
-        destination: Some(Destination::ObjectStore(destination)),
+    let output_to = Destination {
+        destination: Some(destination::Destination::ObjectStore(destination)),
     };
 
     let stream = sparrow_runtime::execute::execute(
         ExecuteRequest {
             plan: result.plan,
             tables,
-            output_to: Some(output_to),
+            destination: Some(output_to),
             limits: None,
             compute_snapshot_config: None,
             changed_since: None,
@@ -165,7 +167,7 @@ impl ExampleInputPreparer {
     }
 
     // TODO: Use the DataFixture to accomplish this?
-    fn prepare_inputs(
+    async fn prepare_inputs(
         &mut self,
         input_csv: &Option<String>,
         tables: &[ExampleTable],
@@ -177,6 +179,7 @@ impl ExampleInputPreparer {
                     TableConfig::new("Input", &Uuid::new_v4(), "time", None, "key", "grouping"),
                     input_csv,
                 )
+                .await
                 .attach_printable_lazy(|| TableName("Input".to_owned()))?,
             );
         }
@@ -184,6 +187,7 @@ impl ExampleInputPreparer {
         for table in tables {
             prepared_tables.push(
                 self.prepare_input(table.table_config.clone(), &table.input_csv)
+                    .await
                     .attach_printable_lazy(|| TableName(table.table_config.name.clone()))?,
             );
         }
@@ -191,21 +195,25 @@ impl ExampleInputPreparer {
         Ok(prepared_tables)
     }
 
-    fn prepare_input(
+    async fn prepare_input(
         &mut self,
         config: TableConfig,
         input_csv: &str,
     ) -> error_stack::Result<ComputeTable, Error> {
-        let prepared_batches: Vec<_> = sparrow_runtime::prepare::prepared_batches(
-            &file_path::Path::CsvData(input_csv.to_owned()),
-            &config,
-            &None,
-        )
-        .change_context(Error::PrepareInput)?
-        .collect()
-        .change_context(Error::PrepareInput)?;
+        let sd = SourceData {
+            source: Some(source_data::Source::CsvData(input_csv.to_owned())),
+        };
+        let prepared_batches: Vec<_> =
+            sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
+                .await
+                .change_context(Error::PrepareInput)?
+                .collect::<Vec<_>>()
+                .await;
 
-        let (prepared_batch, metadata) = &prepared_batches[0];
+        let (prepared_batch, metadata) = match prepared_batches[0].as_ref() {
+            Ok((prepared_batch, metadata)) => (prepared_batch, metadata),
+            Err(_) => error_stack::bail!(Error::PrepareInput),
+        };
 
         let prepared_file = tempfile::Builder::new()
             .suffix(".parquet")

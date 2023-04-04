@@ -55,8 +55,8 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
 
 		// define a query to run on the table
-		outputTo := &v1alpha.OutputTo{}
-		outputTo.Destination = &v1alpha.OutputTo_Redis{
+		destination := &v1alpha.Destination{}
+		destination.Destination = &v1alpha.Destination_Redis{
 			Redis: &v1alpha.RedisDestination{
 				HostName:       "redis",
 				Port:           6379,
@@ -73,7 +73,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 				max_amount: purchases_redis_ai.amount | max(),
 				min_amount: purchases_redis_ai.amount | min(),
 				}`,
-				OutputTo: outputTo,
+				Destination: destination,
 			},
 		}
 	})
@@ -97,7 +97,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
-			Expect(res.GetOutputTo().GetRedis()).ShouldNot(BeNil())
+			Expect(res.GetDestination().GetRedis()).ShouldNot(BeNil())
 
 			//verify results
 			dataType, shape, values, err := redisAIClient.TensorGetValues("karen")
@@ -133,7 +133,7 @@ var _ = PDescribe("Query V1 gRPC with redis AI upload", Ordered, Label("redis"),
 			res, err := helpers.GetMergedCreateQueryResponse(stream)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res).ShouldNot(BeNil())
-			Expect(res.GetOutputTo().GetRedis()).ShouldNot(BeNil())
+			Expect(res.GetDestination().GetRedis()).ShouldNot(BeNil())
 
 			//verify results
 			dataType, shape, values, err := redisAIClient.TensorGetValues("karen")

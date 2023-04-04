@@ -9,7 +9,7 @@ use crate::QueryFixture;
 
 #[tokio::test]
 async fn test_eq_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, eq: Numbers.m == Numbers.n }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, eq: Numbers.m == Numbers.n }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,10,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,3,false
@@ -22,7 +22,7 @@ async fn test_eq_i64() {
 
 #[tokio::test]
 async fn test_eq_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, eq: Numbers.m == Numbers.n }").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, eq: Numbers.m == Numbers.n }").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,10.0,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,3.9,false
@@ -35,7 +35,7 @@ async fn test_eq_f64() {
 
 #[tokio::test]
 async fn test_eq_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Times.m, n: Times.n, eq: (Times.m as timestamp_ns) == (Times.n as timestamp_ns) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Times.m, n: Times.n, eq: (Times.m as timestamp_ns) == (Times.n as timestamp_ns) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,eq
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,4,2,false
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,3,4,false
@@ -48,7 +48,7 @@ async fn test_eq_timestamp_ns() {
 
 #[tokio::test]
 async fn test_eq_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, b: Booleans.b, eq: Booleans.a == Booleans.b }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, b: Booleans.b, eq: Booleans.a == Booleans.b }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,b,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,true,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,false,true
@@ -62,7 +62,7 @@ async fn test_eq_boolean() {
 
 #[tokio::test]
 async fn test_eq_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, t: Strings.t, eq: Strings.s == Strings.t }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, t: Strings.t, eq: Strings.s == Strings.t }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,t,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,hEllo,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,world,false
@@ -76,7 +76,7 @@ async fn test_eq_string() {
 #[tokio::test]
 #[ignore = "https://gitlab.com/kaskada/kaskada/-/issues/127"]
 async fn test_eq_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, eq: { a: Numbers.m, b: Numbers.n } == { a: Numbers.n, b: Numbers.n } }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, eq: { a: Numbers.m, b: Numbers.n } == { a: Numbers.n, b: Numbers.n } }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,gte
     1994-12-20T00:39:57.000000000,0,16072519723445549088,true
     1995-10-20T00:40:57.000000000,0,18113259709342437355,false
@@ -89,7 +89,7 @@ async fn test_eq_record() {
 
 #[tokio::test]
 async fn test_eq_i64_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == 10 }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == 10 }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,false
@@ -102,7 +102,7 @@ async fn test_eq_i64_literal() {
 
 #[tokio::test]
 async fn test_eq_i64_literal_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: 10 == Numbers.m }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: 10 == Numbers.m }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,false
@@ -115,7 +115,7 @@ async fn test_eq_i64_literal_converse() {
 
 #[tokio::test]
 async fn test_eq_i64_literal_null() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == null }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == null }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,
@@ -128,7 +128,7 @@ async fn test_eq_i64_literal_null() {
 
 #[tokio::test]
 async fn test_eq_i64_literal_null_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: null == Numbers.m }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: null == Numbers.m }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,
@@ -141,7 +141,7 @@ async fn test_eq_i64_literal_null_converse() {
 
 #[tokio::test]
 async fn test_eq_f64_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == 24.3 }").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == 24.3 }").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,true
@@ -154,7 +154,7 @@ async fn test_eq_f64_literal() {
 
 #[tokio::test]
 async fn test_eq_f64_literal_zero() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == 0.0 }").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, eq: Numbers.m == 0.0 }").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,false
@@ -170,7 +170,7 @@ async fn test_eq_timestamp_ns_literal() {
     insta::assert_snapshot!(QueryFixture::new("
         let m_time = Times.m as timestamp_ns
         let literal = \"1970-01-01T00:00:00.000000008Z\"
-        in { m_time, literal_time: literal as timestamp_ns, lt: m_time == literal}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+        in { m_time, literal_time: literal as timestamp_ns, lt: m_time == literal}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m_time,literal_time,lt
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1970-01-01T00:00:00.000000004,1970-01-01T00:00:00.000000008,false
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1970-01-01T00:00:00.000000003,1970-01-01T00:00:00.000000008,false
@@ -183,7 +183,7 @@ async fn test_eq_timestamp_ns_literal() {
 
 #[tokio::test]
 async fn test_eq_boolean_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: Booleans.a == true }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: Booleans.a == true }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,false
@@ -197,7 +197,7 @@ async fn test_eq_boolean_literal() {
 
 #[tokio::test]
 async fn test_eq_boolean_literal_null() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: Booleans.a == null }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: Booleans.a == null }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,
@@ -211,7 +211,7 @@ async fn test_eq_boolean_literal_null() {
 
 #[tokio::test]
 async fn test_eq_boolean_literal_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: true == Booleans.a }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: true == Booleans.a }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,false
@@ -225,7 +225,7 @@ async fn test_eq_boolean_literal_converse() {
 
 #[tokio::test]
 async fn test_eq_boolean_literal_null_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: null == Booleans.a }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, eq: null == Booleans.a }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,
@@ -239,7 +239,7 @@ async fn test_eq_boolean_literal_null_converse() {
 
 #[tokio::test]
 async fn test_eq_string_literal() {
-    insta::assert_snapshot!(QueryFixture::new("let eq = Strings.s == \"hello world\" in { s: Strings.s, eq, is_valid: is_valid(eq)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("let eq = Strings.s == \"hello world\" in { s: Strings.s, eq, is_valid: is_valid(eq)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,eq,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,false,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,false,true
@@ -252,7 +252,7 @@ async fn test_eq_string_literal() {
 
 #[tokio::test]
 async fn test_eq_string_literal_converse() {
-    insta::assert_snapshot!(QueryFixture::new("let eq = \"hello world\" == Strings.s in { s: Strings.s, eq, is_valid: is_valid(eq)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("let eq = \"hello world\" == Strings.s in { s: Strings.s, eq, is_valid: is_valid(eq)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,eq,is_valid
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,false,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,false,true
@@ -265,7 +265,7 @@ async fn test_eq_string_literal_converse() {
 
 #[tokio::test]
 async fn test_eq_string_literal_null() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, eq: Strings.s == null }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, eq: Strings.s == null }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,
@@ -278,7 +278,7 @@ async fn test_eq_string_literal_null() {
 
 #[tokio::test]
 async fn test_eq_string_literal_null_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, eq: null == Strings.s }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, eq: null == Strings.s }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,
@@ -292,7 +292,7 @@ async fn test_eq_string_literal_null_converse() {
 #[tokio::test]
 #[ignore = "https://gitlab.com/kaskada/kaskada/-/issues/127"]
 async fn test_eq_record_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Numbers.m, b: Numbers.n, eq: { a: Numbers.m, b: Numbers.n } == { a: 5, b: 10 } }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Numbers.m, b: Numbers.n, eq: { a: Numbers.m, b: Numbers.n } == { a: 5, b: 10 } }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,gte
     1994-12-20T00:39:57.000000000,0,16072519723445549088,true
     1995-10-20T00:40:57.000000000,0,18113259709342437355,false
@@ -305,7 +305,7 @@ async fn test_eq_record_literal() {
 
 #[tokio::test]
 async fn test_neq_i64_old() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, neq: Numbers.m <> Numbers.n }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, neq: Numbers.m <> Numbers.n }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,10,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,3,true
@@ -318,7 +318,7 @@ async fn test_neq_i64_old() {
 
 #[tokio::test]
 async fn test_neq_i64_new() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, neq: Numbers.m != Numbers.n }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, neq: Numbers.m != Numbers.n }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,10,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,3,true
@@ -331,7 +331,7 @@ async fn test_neq_i64_new() {
 
 #[tokio::test]
 async fn test_neq_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, neq: Numbers.m <> Numbers.n}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, neq: Numbers.m <> Numbers.n}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,10.0,true
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,3.9,true
@@ -344,7 +344,7 @@ async fn test_neq_f64() {
 
 #[tokio::test]
 async fn test_neq_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Times.m, n: Times.n, neq: (Times.m as timestamp_ns) <> (Times.n as timestamp_ns) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Times.m, n: Times.n, neq: (Times.m as timestamp_ns) <> (Times.n as timestamp_ns) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,neq
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,4,2,true
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,3,4,true
@@ -357,7 +357,7 @@ async fn test_neq_timestamp_ns() {
 
 #[tokio::test]
 async fn test_neq_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, b: Booleans.b, neq: Booleans.a <> Booleans.b}").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, b: Booleans.b, neq: Booleans.a <> Booleans.b}").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,b,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,true,false
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,false,false
@@ -371,7 +371,7 @@ async fn test_neq_boolean() {
 
 #[tokio::test]
 async fn test_neq_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, t: Strings.t, neq: Strings.s <> Strings.t}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s, t: Strings.t, neq: Strings.s <> Strings.t}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,t,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,hEllo,false
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,world,true
@@ -385,7 +385,7 @@ async fn test_neq_string() {
 #[tokio::test]
 #[ignore = "https://gitlab.com/kaskada/kaskada/-/issues/127"]
 async fn test_neq_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Numbers.m, b: Numbers.n, neq: { a: Numbers.m, b: Numbers.n } <> { a: Numbers.n, b: Numbers.n } }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Numbers.m, b: Numbers.n, neq: { a: Numbers.m, b: Numbers.n } <> { a: Numbers.n, b: Numbers.n } }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,gte
     1994-12-20T00:39:57.000000000,0,16072519723445549088,true
     1995-10-20T00:40:57.000000000,0,18113259709342437355,false
@@ -398,7 +398,7 @@ async fn test_neq_record() {
 
 #[tokio::test]
 async fn test_neq_i64_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: Numbers.m <> 5 }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: Numbers.m <> 5 }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,true
@@ -411,7 +411,7 @@ async fn test_neq_i64_literal() {
 
 #[tokio::test]
 async fn test_neq_i64_literal_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: 5 != Numbers.m }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: 5 != Numbers.m }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,true
@@ -424,7 +424,7 @@ async fn test_neq_i64_literal_converse() {
 
 #[tokio::test]
 async fn test_neq_i64_literal_null() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: Numbers.m != null }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: Numbers.m != null }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,
@@ -437,7 +437,7 @@ async fn test_neq_i64_literal_null() {
 
 #[tokio::test]
 async fn test_neq_i64_literal_null_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: null != Numbers.m }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: null != Numbers.m }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,
@@ -450,7 +450,7 @@ async fn test_neq_i64_literal_null_converse() {
 
 #[tokio::test]
 async fn test_neq_f64_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: Numbers.m <> 5.2}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, neq: Numbers.m <> 5.2}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,false
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,true
@@ -466,7 +466,7 @@ async fn test_neq_timestamp_ns_literal() {
     insta::assert_snapshot!(QueryFixture::new("
         let m_time = Times.m as timestamp_ns
         let literal = \"1970-01-01T00:00:00.000000008Z\"
-        in { m_time, literal_time: literal as timestamp_ns, neq: m_time <> literal}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+        in { m_time, literal_time: literal as timestamp_ns, neq: m_time <> literal}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m_time,literal_time,neq
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1970-01-01T00:00:00.000000004,1970-01-01T00:00:00.000000008,true
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1970-01-01T00:00:00.000000003,1970-01-01T00:00:00.000000008,true
@@ -479,7 +479,7 @@ async fn test_neq_timestamp_ns_literal() {
 
 #[tokio::test]
 async fn test_neq_boolean_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: Booleans.a <> true }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: Booleans.a <> true }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,false
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,true
@@ -493,7 +493,7 @@ async fn test_neq_boolean_literal() {
 
 #[tokio::test]
 async fn test_neq_boolean_literal_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: true != Booleans.a }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: true != Booleans.a }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,false
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,true
@@ -507,7 +507,7 @@ async fn test_neq_boolean_literal_converse() {
 
 #[tokio::test]
 async fn test_neq_boolean_literal_null() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: Booleans.a <> null }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: Booleans.a <> null }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,
@@ -521,7 +521,7 @@ async fn test_neq_boolean_literal_null() {
 
 #[tokio::test]
 async fn test_neq_boolean_literal_null_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: null != Booleans.a }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, neq: null != Booleans.a }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false,
@@ -535,7 +535,7 @@ async fn test_neq_boolean_literal_null_converse() {
 
 #[tokio::test]
 async fn test_neq_string_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: Strings.s <> \"hello world\" }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: Strings.s <> \"hello world\" }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,true
@@ -548,7 +548,7 @@ async fn test_neq_string_literal() {
 
 #[tokio::test]
 async fn test_neq_string_literal_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: \"hello world\" != Strings.s }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: \"hello world\" != Strings.s }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,true
@@ -561,7 +561,7 @@ async fn test_neq_string_literal_converse() {
 
 #[tokio::test]
 async fn test_neq_string_literal_null() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: Strings.s <> null }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: Strings.s <> null }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,
@@ -574,7 +574,7 @@ async fn test_neq_string_literal_null() {
 
 #[tokio::test]
 async fn test_neq_string_literal_null_converse() {
-    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: null != Strings.s }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ s: Strings.s,  neq: null != Strings.s }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,s,neq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo,
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World,
@@ -588,7 +588,7 @@ async fn test_neq_string_literal_null_converse() {
 #[tokio::test]
 #[ignore = "https://gitlab.com/kaskada/kaskada/-/issues/127"]
 async fn test_neq_record_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ a: Numbers.m, b: Numbers.n, neq: { a: Numbers.m, b: Numbers.n } <> { a: 5, b: 10 } }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ a: Numbers.m, b: Numbers.n, neq: { a: Numbers.m, b: Numbers.n } <> { a: 5, b: 10 } }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,gte
     1994-12-20T00:39:57.000000000,0,16072519723445549088,true
     1995-10-20T00:40:57.000000000,0,18113259709342437355,false

@@ -21,9 +21,21 @@ class TableSource(object):
 
 
 class PulsarTableSource(TableSource):
-    def __init__(self, protocol_url: str, topic: str):
-        self._protocol_url = protocol_url
-        self._topic = topic
+    def __init__(
+        self,
+        broker_service_url: str,
+        auth_plugin: str,
+        auth_params: str,
+        tenant: str,
+        namespace: str,
+        topic_name: str,
+    ):
+        self._broker_service_url = broker_service_url
+        self._auth_plugin = auth_plugin
+        self._auth_params = auth_params
+        self._tenant = tenant
+        self._namespace = namespace
+        self._topic_name = topic_name
 
 
 def get_table_name(
@@ -160,10 +172,16 @@ def create_table(
             )
         if source is not None:
             if isinstance(source, PulsarTableSource):
-                table_args["table_source"] = {
+                table_args["source"] = {
                     "pulsar": {
-                        "protocol_url": source._protocol_url,
-                        "topic": source._topic,
+                        "config": {
+                            "broker_service_url": source._broker_service_url,
+                            "auth_plugin": source._auth_plugin,
+                            "auth_params": source._auth_params,
+                            "tenant": source._tenant,
+                            "namespace": source._namespace,
+                            "topic_name": source._topic_name,
+                        }
                     }
                 }
             else:

@@ -18,13 +18,16 @@ use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
 use crate::RuntimeOptions;
 
+mod avro_arrow;
 mod compute_executor;
 mod error;
 mod input_prefetch;
 pub(crate) mod key_hash_inverse;
 mod operation;
-mod output;
+pub(crate) mod output;
 mod progress_reporter;
+pub(crate) mod pulsar_reader;
+pub(crate) mod pulsar_schema;
 mod spawner;
 
 pub use compute_executor::*;
@@ -48,7 +51,9 @@ pub async fn execute(
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let plan = request.plan.ok_or(Error::MissingField("plan"))?;
 
-    let output_to = request.output_to.ok_or(Error::MissingField("output_to"))?;
+    let destination = request
+        .destination
+        .ok_or(Error::MissingField("destination"))?;
 
     let changed_since_time = request.changed_since.unwrap_or(Timestamp {
         seconds: 0,
@@ -220,7 +225,7 @@ pub async fn execute(
         &late_bindings,
         &runtime_options,
         progress_updates_rx,
-        output_to,
+        destination,
     )
     .change_context(Error::internal_msg("spawn compute executor"))?;
 

@@ -13,7 +13,7 @@ async fn test_record_creation() {
         let record = { x: 5, y: \"hello\", z: Strings.s, n: Strings.n }
         let y = record.y
         let z = record.z
-        in { n: record.x + record.n, y, z }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+        in { n: record.x + record.n, y, z }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,y,z
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,hello,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,10,hello,World
@@ -30,7 +30,7 @@ async fn test_record_extension() {
         let record = Strings | extend({ x: 5, y: \"hello\"})
         let y = record.y
         let z = record.s
-        in { n: record.x + record.n, y, z }").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+        in { n: record.x + record.n, y, z }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,y,z
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,hello,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,10,hello,World
@@ -43,7 +43,7 @@ async fn test_record_extension() {
 
 #[tokio::test]
 async fn test_record_extension_error() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("Strings.x | extend({y: 5})").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("Strings.x | extend({y: 5})").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -66,7 +66,7 @@ async fn test_record_extension_error() {
 
 #[tokio::test]
 async fn test_record_extension_ordering() {
-    insta::assert_snapshot!(QueryFixture::new("Strings | extend({ x: 5, y: \"hello\"})").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("Strings | extend({ x: 5, y: \"hello\"})").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,x,y,time,subsort,key,s,n,t
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,hello,1996-12-19T16:39:57-08:00,0,A,hEllo,0,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,5,hello,1996-12-19T16:40:57-08:00,0,B,World,5,world
@@ -79,7 +79,7 @@ async fn test_record_extension_ordering() {
 
 #[tokio::test]
 async fn test_record_removal() {
-    insta::assert_snapshot!(QueryFixture::new("remove_fields(Strings, \"time\", \"subsort\")").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("remove_fields(Strings, \"time\", \"subsort\")").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,s,n,t
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,A,hEllo,0,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,B,World,5,world
@@ -92,7 +92,7 @@ async fn test_record_removal() {
 
 #[tokio::test]
 async fn test_record_removal_pipe() {
-    insta::assert_snapshot!(QueryFixture::new("Strings | remove_fields($input, \"time\", \"subsort\")").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("Strings | remove_fields($input, \"time\", \"subsort\")").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,s,n,t
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,A,hEllo,0,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,B,World,5,world
@@ -105,7 +105,7 @@ async fn test_record_removal_pipe() {
 
 #[tokio::test]
 async fn test_record_select() {
-    insta::assert_snapshot!(QueryFixture::new("select_fields(Strings, \"time\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("select_fields(Strings, \"time\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,s
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1996-12-19T16:39:57-08:00,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1996-12-19T16:40:57-08:00,World
@@ -128,6 +128,7 @@ async fn test_record_select_unused_key() {
             2021-03-01T00:00:00.000000000Z,B,,3.7,true
             2021-04-10T00:00:00.000000000Z,A,13,,true"},
         )
+        .await
         .unwrap();
 
     insta::assert_snapshot!(QueryFixture::new("select_fields(Input, 'a', 'b')").run_to_csv(&data_fixture).await.unwrap(), @r###"
@@ -141,7 +142,7 @@ async fn test_record_select_unused_key() {
 
 #[tokio::test]
 async fn test_record_select_pipe() {
-    insta::assert_snapshot!(QueryFixture::new("Strings | select_fields($input, \"time\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("Strings | select_fields($input, \"time\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,s
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1996-12-19T16:39:57-08:00,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1996-12-19T16:40:57-08:00,World
@@ -154,7 +155,7 @@ async fn test_record_select_pipe() {
 
 #[tokio::test]
 async fn test_record_remove_non_record() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings.s, \"time\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings.s, \"time\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -175,7 +176,7 @@ async fn test_record_remove_non_record() {
 
 #[tokio::test]
 async fn test_record_remove_non_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, \"x\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, \"x\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -198,7 +199,7 @@ async fn test_record_remove_non_field() {
 
 #[tokio::test]
 async fn test_record_remove_error_base() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings.x, \"time\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings.x, \"time\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -221,7 +222,7 @@ async fn test_record_remove_error_base() {
 
 #[tokio::test]
 async fn test_record_remove_non_string_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, 54, \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, 54, \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -242,7 +243,7 @@ async fn test_record_remove_non_string_field() {
 
 #[tokio::test]
 async fn test_remove_select_error_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, $input, \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, $input, \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -276,7 +277,7 @@ async fn test_remove_select_error_field() {
 
 #[tokio::test]
 async fn test_record_remove_non_const_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, Strings.s, \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("remove_fields(Strings, Strings.s, \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -297,7 +298,7 @@ async fn test_record_remove_non_const_field() {
 
 #[tokio::test]
 async fn test_record_select_non_record() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings.s, \"time\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings.s, \"time\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -318,7 +319,7 @@ async fn test_record_select_non_record() {
 
 #[tokio::test]
 async fn test_record_select_non_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, \"x\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, \"x\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -341,7 +342,7 @@ async fn test_record_select_non_field() {
 
 #[tokio::test]
 async fn test_record_select_error_base() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings.x, \"time\", \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings.x, \"time\", \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -364,7 +365,7 @@ async fn test_record_select_error_base() {
 
 #[tokio::test]
 async fn test_record_select_non_string_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, 54, \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, 54, \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -385,7 +386,7 @@ async fn test_record_select_non_string_field() {
 
 #[tokio::test]
 async fn test_record_select_error_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, $input, \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, $input, \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 2 errors in Fenl statements; see diagnostics
@@ -419,7 +420,7 @@ async fn test_record_select_error_field() {
 
 #[tokio::test]
 async fn test_record_select_non_const_field() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, Strings.s, \"s\")").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("select_fields(Strings, Strings.s, \"s\")").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -440,7 +441,7 @@ async fn test_record_select_non_const_field() {
 
 #[tokio::test]
 async fn test_empty_record() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ }").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ }").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -461,7 +462,7 @@ async fn test_empty_record() {
 
 #[tokio::test]
 async fn test_empty_record_in_extend() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("Strings | extend({})").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("Strings | extend({})").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -482,7 +483,7 @@ async fn test_empty_record_in_extend() {
 
 #[tokio::test]
 async fn test_empty_record_in_remove() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("{ a: Strings.s } | remove_fields($input, 'a')").run_to_csv(&strings_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ a: Strings.s } | remove_fields($input, 'a')").run_to_csv(&strings_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics

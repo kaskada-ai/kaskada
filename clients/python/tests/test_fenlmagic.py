@@ -17,7 +17,7 @@ def test_fenl_with_defaults(mockClient):
     expected_request = query_pb.CreateQueryRequest(
         query=query_pb.Query(
             expression=expression,
-            output_to={
+            destination={
                 "object_store": destinations_pb.ObjectStoreDestination(
                     file_type=common_pb.FILE_TYPE_PARQUET
                 )
@@ -44,7 +44,7 @@ def test_fenl_with_all_args(mockClient):
     expected_request = query_pb.CreateQueryRequest(
         query=query_pb.Query(
             expression=expression,
-            output_to={
+            destination={
                 "object_store": destinations_pb.ObjectStoreDestination(
                     file_type=common_pb.FILE_TYPE_CSV
                 )

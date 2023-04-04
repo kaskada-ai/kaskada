@@ -89,8 +89,8 @@ var _ = PDescribe("Query V1 REST", Ordered, func() {
 	Context("When the table schema is created correctly", func() {
 		Describe("Query a table with an invalid schema", func() {
 			It("should return an invalid argument error", func() {
-				outputTo := &v1alpha.OutputTo{}
-				outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+				destination := &v1alpha.Destination{}
+				destination.Destination = &v1alpha.Destination_ObjectStore{
 					ObjectStore: &v1alpha.ObjectStoreDestination{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 					},
@@ -98,7 +98,7 @@ var _ = PDescribe("Query V1 REST", Ordered, func() {
 				createQueryRequest := &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
 						Expression:     "sum(purchases_rest.nachos)",
-						OutputTo:       outputTo,
+						Destination:    destination,
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
 					QueryOptions: &v1alpha.QueryOptions{

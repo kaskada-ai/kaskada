@@ -30,7 +30,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 	sampleKaskadaQuery := &v1alpha.Query{
 		QueryId:     "e8c1b897-7b37-4773-bd07-44df5eb2b8b9",
 		Expression:  "some-fenl-expression",
-		OutputTo:    nil,
+		Destination: nil,
 		DataTokenId: &wrapperspb.StringValue{},
 		Views:       []*v1alpha.View{},
 	}
@@ -147,7 +147,7 @@ func Test_queryV1Service_listQueries(t *testing.T) {
 	sampleKaskadaQuery := &v1alpha.Query{
 		QueryId:     "e8c1b897-7b37-4773-bd07-44df5eb2b8b9",
 		Expression:  "some-fenl-expression",
-		OutputTo:    nil,
+		Destination: nil,
 		DataTokenId: &wrapperspb.StringValue{},
 		Views:       []*v1alpha.View{},
 	}
@@ -258,7 +258,7 @@ func (m *MockKaskadaQueryClient) GetKaskadaQuery(ctx context.Context, owner *ent
 		Query: &v1alpha.Query{
 			QueryId:     "e8c1b897-7b37-4773-bd07-44df5eb2b8b9",
 			Expression:  "some-fenl-expression",
-			OutputTo:    nil,
+			Destination: nil,
 			DataTokenId: &wrapperspb.StringValue{},
 			Views:       []*v1alpha.View{},
 		},
@@ -271,7 +271,7 @@ func (m *MockKaskadaQueryClient) ListKaskadaQueries(ctx context.Context, owner *
 		Query: &v1alpha.Query{
 			QueryId:     "e8c1b897-7b37-4773-bd07-44df5eb2b8b9",
 			Expression:  "some-fenl-expression",
-			OutputTo:    nil,
+			Destination: nil,
 			DataTokenId: &wrapperspb.StringValue{},
 			Views:       []*v1alpha.View{},
 		},

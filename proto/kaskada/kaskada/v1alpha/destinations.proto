@@ -4,9 +4,10 @@ package kaskada.kaskada.v1alpha;
 
 import "google/api/field_behavior.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/pulsar.proto";
 
 // Describes the destination results are materialized to.
-message OutputTo {
+message Destination {
   oneof destination {
     ObjectStoreDestination object_store = 1;
     RedisDestination redis = 2;
@@ -87,30 +88,5 @@ message RedisDestination {
 }
 
 message PulsarDestination {
-  // The Pulsar protocol URL for the cluster.
-  //
-  // Defaults to "pulsar://127.0.0.1:6650".
-  string broker_service_url = 1;
-
-  // The topic tenant within the instance.
-  //
-  // Defaults to "public".
-  string tenant = 2;
-
-  // The administrative unit of topics, which acts as a grouping
-  // mechanism for related topics.
-  //
-  // Defaults to "default".
-  string namespace = 3;
-
-  // The final part of the topic url.
-  //
-  // Defaults to a randomly generated uuid.
-  string topic_name = 4;
-
-  // The full topic url.
-  // e.g. "persistent://{tenant}/{namespace}/{topic_name}"
-  //
-  // This field is populated in the output response.
-  string topic_url = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  PulsarConfig config = 1;
 }

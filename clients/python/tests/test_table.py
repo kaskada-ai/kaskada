@@ -8,6 +8,8 @@ import pytest
 
 import kaskada.client
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
+import kaskada.kaskada.v1alpha.pulsar_pb2 as pulsar_pb
+import kaskada.kaskada.v1alpha.sources_pb2 as sources_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 import kaskada.table
 
@@ -85,11 +87,16 @@ def test_table_create_table_subsort_column_id(mockClient):
 
 
 def test_pulsar_table_source():
-    protocol = "pulsar://localhost:6650"
-    topic = "my-topic"
-    test_source = kaskada.table.PulsarTableSource(protocol, topic)
-    assert test_source._protocol_url == protocol
-    assert test_source._topic == topic
+    broker_service_url = "pulsar://localhost:6650"
+    auth_plugin = "auth-plugin"
+    tenant = "test-tenant"
+    namespace = "test-namespace"
+    topic_name = "my-topic"
+    test_source = kaskada.table.PulsarTableSource(
+        broker_service_url, auth_plugin, "", tenant, namespace, topic_name
+    )
+    assert test_source._broker_service_url == broker_service_url
+    assert test_source._auth_plugin == auth_plugin
 
 
 @patch("kaskada.client.Client")
@@ -97,19 +104,32 @@ def test_table_create_table_with_pulsar_table_source(mockClient):
     table_name = "test_table"
     time_column_name = "time"
     entity_key_column_name = "entity"
-    protocol_url = "pulsar://localhost:6650"
-    topic = "my-topic"
-    test_source = kaskada.table.PulsarTableSource(protocol_url, topic)
+    broker_service_url = "pulsar://localhost:6650"
+    auth_plugin = "auth-plugin"
+    tenant = "test-tenant"
+    namespace = "test-namespace"
+    topic_name = "my-topic"
+    test_source = kaskada.table.PulsarTableSource(
+        broker_service_url, auth_plugin, "", tenant, namespace, topic_name
+    )
     expected_request = table_pb.CreateTableRequest(
         table=table_pb.Table(
             table_name=table_name,
             time_column_name=time_column_name,
             entity_key_column_name=entity_key_column_name,
-            table_source={
-                "pulsar": table_pb.Table.PulsarSource(
-                    **{"protocol_url": protocol_url, "topic": topic}
+            source=sources_pb.Source(
+                pulsar=sources_pb.PulsarSource(
+                    config=pulsar_pb.PulsarConfig(
+                        **{
+                            "broker_service_url": broker_service_url,
+                            "auth_plugin": auth_plugin,
+                            "tenant": tenant,
+                            "namespace": namespace,
+                            "topic_name": topic_name,
+                        }
+                    )
                 )
-            },
+            ),
         )
     )
     kaskada.table.create_table(

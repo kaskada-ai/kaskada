@@ -2,38 +2,60 @@ use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::sync::Arc;
 
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use anyhow::Context;
+use arrow::array::ArrowPrimitiveType;
+use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMillisecondType};
+
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use sparrow_api::kaskada::v1alpha::file_path::Path;
+use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
+
+use sparrow_api::kaskada::v1alpha::PulsarConfig;
 use tracing::info;
 
+use crate::execute::pulsar_schema;
 use crate::metadata::file_from_path;
 
 #[non_exhaustive]
 pub struct RawMetadata {
-    /// The raw schema of the file(s) backing this metadata.
+    /// The raw schema of the data source backing this metadata.
     pub raw_schema: SchemaRef,
-    /// The schema of the table as presented to the user.
+    /// The schema of the data source as presented to the user.
     ///
     /// This is the result of applying schema conversions to the raw schema,
     /// such as removing time zones, dropping decimal columns, etc.
     pub table_schema: SchemaRef,
 }
 
+/// For Pulsar, we want to keep the original user_schema around for use
+/// by the consumer.  This is because we want the RawMetadata.raw_schema
+/// to include the publish time metadata, but if we include that when creating the
+/// Pulsar consumer, Pulsar will correctly reject it as a schema mismatch.
+pub struct PulsarMetadata {
+    /// the schema as defined by the user on the topic, corresponding to the messages created
+    /// with no additional metadata
+    pub user_schema: SchemaRef,
+    /// schema that includes metadata used by Sparrow
+    pub sparrow_metadata: RawMetadata,
+}
+
 impl RawMetadata {
-    pub fn try_from(source_path: &Path) -> anyhow::Result<Self> {
-        match source_path {
-            Path::ParquetPath(path) => {
-                let file = file_from_path(std::path::Path::new(path))?;
+    pub async fn try_from(source: &Source) -> anyhow::Result<Self> {
+        match source {
+            source_data::Source::ParquetPath(path) => {
+                let file = file_from_path(std::path::Path::new(&path))?;
                 Self::try_from_parquet(file)
             }
-            Path::CsvPath(path) => {
-                let file = file_from_path(std::path::Path::new(path))?;
+            source_data::Source::CsvPath(path) => {
+                let file = file_from_path(std::path::Path::new(&path))?;
                 Self::try_from_csv(file)
             }
-            Path::CsvData(content) => {
+            source_data::Source::CsvData(content) => {
                 let string_reader = BufReader::new(Cursor::new(content));
                 Self::try_from_csv(string_reader)
+            }
+            source_data::Source::PulsarSubscription(ps) => {
+                let config = ps.config.as_ref().context("missing config")?;
+                Ok(Self::try_from_pulsar(config).await?.sparrow_metadata)
             }
         }
     }
@@ -46,6 +68,32 @@ impl RawMetadata {
         Ok(Self {
             raw_schema,
             table_schema,
+        })
+    }
+
+    /// Create a `RawMetadata` from a Pulsar topic.
+    pub(crate) async fn try_from_pulsar(config: &PulsarConfig) -> anyhow::Result<PulsarMetadata> {
+        // the user-defined schema in the topic
+        let pulsar_schema = pulsar_schema::get_pulsar_schema(
+            config.admin_service_url.as_str(),
+            config.tenant.as_str(),
+            config.namespace.as_str(),
+            config.topic_name.as_str(),
+            config.auth_params.as_str(),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to get pulsar schema: {:?}", e))?;
+
+        // inject _publish_time field so that we have a consistent column to sort on
+        // (this will always be our time_column in Pulsar sources)
+        let publish_time = Field::new("_publish_time", TimestampMillisecondType::DATA_TYPE, false);
+        let mut new_fields = pulsar_schema.fields.clone();
+        new_fields.push(publish_time);
+        tracing::debug!("pulsar schema fields: {:?}", new_fields);
+
+        Ok(PulsarMetadata {
+            user_schema: Arc::new(pulsar_schema),
+            sparrow_metadata: Self::try_from_raw_schema(Arc::new(Schema::new(new_fields)))?,
         })
     }
 

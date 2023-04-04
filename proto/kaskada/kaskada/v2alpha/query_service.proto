@@ -104,10 +104,7 @@ message QueryConfig {
   kaskada.v1alpha.SliceRequest slice = 2;
 
   // Configures how the query results should be returned.
-  kaskada.v1alpha.OutputTo output_to = 7;
-
-  // Modified out Output is produced on Feb.24.2023
-  reserved 3;
+  kaskada.v1alpha.Destination destination = 3;
 
   // Determines how results are returned.
   //

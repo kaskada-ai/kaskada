@@ -1,0 +1,16 @@
+tables:
+  - config:
+      name: Transactions
+      uuid: ece50bec-9cdb-11ed-a8fc-0242ac120003
+      time_column_name: _publish_time
+      group_column_name: user_id
+      grouping: Transactions
+    metadata:
+      file_count: 1
+      schema:
+        fields:
+    file_sets:
+      - slice_plan:
+          table_name: Transaction
+          percent: 100
+        prepared_files:

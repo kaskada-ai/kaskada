@@ -8,7 +8,7 @@ use crate::fixtures::i64_data_fixture;
 use crate::{DataFixture, QueryFixture};
 
 /// Fixture for testing cast operations.
-fn cast_data_fixture() -> DataFixture {
+async fn cast_data_fixture() -> DataFixture {
     let transactions = indoc! {"
         from,to,time,subsort,i64,f64,description,order_time,number_string
         0,2,1996-12-19T16:39:57-08:00,0,50,21.4,food,2005-12-19T16:39:57-08:00,65
@@ -31,12 +31,13 @@ fn cast_data_fixture() -> DataFixture {
             ),
             transactions,
         )
+        .await
         .unwrap()
 }
 
 #[tokio::test]
 async fn test_implicit_cast_i64_to_f64_add() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, f64_field: Input.f64, add: Input.i64 + Input.f64 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, f64_field: Input.f64, add: Input.i64 + Input.f64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64_field,f64_field,add
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,21.4,71.4
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,1.22,
@@ -50,7 +51,7 @@ async fn test_implicit_cast_i64_to_f64_add() {
 
 #[tokio::test]
 async fn test_implicit_cast_i64_to_f64_powf() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, f64_field: Input.f64, powf: powf(Input.i64, Input.f64) }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, f64_field: Input.f64, powf: powf(Input.i64, Input.f64) }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64_field,f64_field,powf
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,21.4,2.280122041201667e36
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,1.22,
@@ -64,7 +65,7 @@ async fn test_implicit_cast_i64_to_f64_powf() {
 
 #[tokio::test]
 async fn test_implicit_cast_i64_to_f64_literal() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, add: Input.i64 + 1.11 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, add: Input.i64 + 1.11 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64_field,add
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,51.11
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,
@@ -78,7 +79,7 @@ async fn test_implicit_cast_i64_to_f64_literal() {
 
 #[tokio::test]
 async fn test_string_as_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ number_string: Input.number_string, number_string_as_i64: Input.number_string as i64 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ number_string: Input.number_string, number_string_as_i64: Input.number_string as i64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,number_string,number_string_as_i64
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,65,65
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,hello,
@@ -92,7 +93,7 @@ async fn test_string_as_i64() {
 
 #[tokio::test]
 async fn test_i64_as_i32() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, i64_as_i32: Input.i64 as i32 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, i64_as_i32: Input.i64 as i32 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64,i64_as_i32
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,50
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,
@@ -106,7 +107,7 @@ async fn test_i64_as_i32() {
 
 #[tokio::test]
 async fn test_f64_as_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ f64: Input.f64, f64_as_i64: Input.f64 as i64 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f64: Input.f64, f64_as_i64: Input.f64 as i64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f64,f64_as_i64
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,21.4,21
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,1.22,1
@@ -120,7 +121,7 @@ async fn test_f64_as_i64() {
 
 #[tokio::test]
 async fn test_i64_as_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, i64_as_string: Input.i64 as string }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, i64_as_string: Input.i64 as string }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64,i64_as_string
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,50
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,
@@ -136,7 +137,7 @@ async fn test_i64_as_string() {
 async fn test_null_literal_as_string() {
     // Include i64 because we currently don't support queries where all values
     // are literals.
-    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, null_: null, null_as_string: null as string }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, null_: null, null_as_string: null as string }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64,null_,null_as_string
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,,
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,,
@@ -152,7 +153,7 @@ async fn test_null_literal_as_string() {
 async fn test_seconds_between_as_i64() {
     insta::assert_snapshot!(QueryFixture::new(
         "let duration_s = seconds_between(Input.order_time, Input.time)
-         in { duration_s_as_i64: duration_s as i64 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+         in { duration_s_as_i64: duration_s as i64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,duration_s_as_i64
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,-283996800
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,-126230400
@@ -166,7 +167,7 @@ async fn test_seconds_between_as_i64() {
 
 #[tokio::test]
 async fn test_days_between_as_i32() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, interval_days_as_i64: days(Input.i64) as i32 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, interval_days_as_i64: days(Input.i64) as i32 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64,interval_days_as_i64
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,50
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,
@@ -180,7 +181,7 @@ async fn test_days_between_as_i32() {
 
 #[tokio::test]
 async fn test_months_between_as_i32() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, interval_months_as_i64: months(Input.i64) as i32 }").run_to_csv(&cast_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: Input.i64, interval_months_as_i64: months(Input.i64) as i32 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64,interval_months_as_i64
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,50
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,
@@ -196,7 +197,7 @@ async fn test_months_between_as_i32() {
 async fn test_bool_as_i64() {
     insta::assert_snapshot!(QueryFixture::new("let m = Numbers.m
                 let n = Numbers.n + 11
-                in { m, n, eq: (m == n) as i64 }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+                in { m, n, eq: (m == n) as i64 }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,eq
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,21,0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,14,0

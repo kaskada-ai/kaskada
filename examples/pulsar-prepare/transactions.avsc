@@ -1,0 +1,17 @@
+{
+  "type" : "record",
+  "name" : "Transactions",
+  "fields" : [ {
+    "name" : "user_id",
+    "type" : "int"
+  }, {
+    "name" : "product_id",
+    "type" : "int"
+  }, {
+    "name" : "quantity",
+    "type" : "int"
+  }, {
+    "name" : "total_spent",
+    "type" : "double"
+  } ]
+}

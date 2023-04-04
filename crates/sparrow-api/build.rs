@@ -7,11 +7,14 @@ fn main() {
     let proto_files = &[
         "../../proto/kaskada/kaskada/v1alpha/fenl_diagnostics.proto",
         "../../proto/kaskada/kaskada/v1alpha/schema.proto",
+        "../../proto/kaskada/kaskada/v1alpha/sources.proto",
+        "../../proto/kaskada/kaskada/v1alpha/destinations.proto",
         "../../proto/kaskada/kaskada/v1alpha/common.proto",
         "../../proto/kaskada/kaskada/v1alpha/file_service.proto",
         "../../proto/kaskada/kaskada/v1alpha/destinations.proto",
         "../../proto/kaskada/kaskada/v1alpha/plan.proto",
         "../../proto/kaskada/kaskada/v1alpha/preparation_service.proto",
+        "../../proto/kaskada/kaskada/v1alpha/pulsar.proto",
         "../../proto/kaskada/kaskada/v1alpha/compute_service.proto",
         "../../proto/google/api/field_behavior.proto",
     ];
