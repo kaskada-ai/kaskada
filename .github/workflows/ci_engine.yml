@@ -75,7 +75,15 @@ jobs:
 
       - name: Copy NOTICE
         run: cp NOTICE ./wren/
-      
+
+      - name: Create data dir with right permissions 
+        run: |
+          mkdir -p tests/integration/data/tmp
+          chmod -R a+rw tests/integration/data 
+          echo "::group::Data Dir"
+          ls -laR tests/integration/data
+          echo "::endgroup::"
+          
       - name: Donwload binaries 
         run: |
           mkdir -p ./ci-bin/engine/
@@ -105,7 +113,8 @@ jobs:
           LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
       - name: Docker compose down for integration tests 
-        run: docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
+        run: |  
+        docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
 
   # build_integ_test_docker_image:
   #   name: Build docker image with binary artifacts for integration tests
