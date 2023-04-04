@@ -79,7 +79,7 @@ jobs:
       - name: Create data dir with right permissions 
         run: |
           mkdir -p tests/integration/data/tmp
-          chmod -R a+rw tests/integration/data 
+          chmod -R a+rw tests/integration/ 
           echo "::group::Data Dir"
           ls -laR tests/integration/data
           echo "::endgroup::"
