@@ -87,7 +87,11 @@ async fn reader_from_pulsar<'a>(
     let consumer =
         crate::execute::pulsar_reader::pulsar_consumer(pulsar_subscription, pm.user_schema.clone())
             .await?;
-    let stream = read_pulsar_stream(pm.sparrow_metadata.raw_schema.clone(), consumer);
+    let stream = read_pulsar_stream(
+        pm.sparrow_metadata.raw_schema.clone(),
+        consumer,
+        pulsar_subscription.last_publish_time,
+    );
     PrepareIter::try_new(stream, config, pm.sparrow_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreatePulsarReader)
