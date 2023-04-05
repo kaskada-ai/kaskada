@@ -109,6 +109,9 @@ jobs:
 
       - name: Run integration tests
         run: | 
+          echo "::group::Data Dir"
+          ls -laR tests/integration/data
+          echo "::endgroup::"
           cd ./tests/integration/api
           LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
