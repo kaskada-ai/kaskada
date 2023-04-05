@@ -29,6 +29,24 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}/engine-integration-tests
 
 jobs:
+
+  integration_skip:
+    name: Integration Tests Skip Duplicates
+    continue-on-error: true # Uncomment once integration is finished
+    runs-on: ubuntu-20.04
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "never"
+          skip_after_successful_duplicate: "true"
+          paths: '["tests/integration/**", "Dockerfile.integration",   ".github/workflows/ci_engine.yml"]'
+          do_not_skip: '["schedule"]'
+
   build_wren:
     name: Build wren (golang)
     uses: ./.github/workflows/reusable_ci_wren.yml
@@ -39,9 +57,9 @@ jobs:
 
   run_integration_tests: 
     name: Run integration tests
-    needs: [build_wren, build_sparrow]
+    needs: [integration_skip, build_wren, build_sparrow]
     runs-on: ubuntu-latest
-    if: ${{ needs.build_wren.outputs.should_skip != true || needs.build_sparrow.outputs.should_skip != true }}
+    if: ${{ needs.integration_sklp.outputs.should_skip != true || needs.build_wren.outputs.should_skip != true || needs.build_sparrow.outputs.should_skip != true }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -96,17 +114,15 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Docker compose up for integration tests 
-        run: |
-          DOCKER_BUILDKIT=1 docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build --detach
+        run: make ci/integration/tests/docker-compose-up
           
       - name: Check docker containers healthcheck
-        run: |    
-          timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 10; done'
+        run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 10; done'
 
       # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
       # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
       # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
-      # A better fix would probably be to match the user and group of the container to the user and group of the runner.  
+      # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.  
       - name: Run integration tests
         run: | 
           echo "::group::Data Dir"
@@ -115,8 +131,7 @@ jobs:
           ls -laR tests/integration/data
           echo "::endgroup::"
 
-          make test/int/run-api
+          make ci/integration/tests/run/api
 
       - name: Docker compose down for integration tests 
-        run: |  
-          docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
+        run: make ci/integration/tests/docker-compose-down

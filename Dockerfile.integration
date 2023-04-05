@@ -1,5 +1,4 @@
 FROM debian:bullseye-slim
-# FROM ubuntu:22.04
 
 RUN  apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates wget \
@@ -13,12 +12,8 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.11 && \
 RUN mkdir -p /data/tmp 
 RUN mkdir /integ-test-run
 
-# RUN wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb
-# RUN dpkg -i libssl1.1_1.1.1f-1ubuntu2_amd64.deb
-
 COPY --chmod=755 ./ci-bin/engine/sparrow-main /bin/sparrow-main
 COPY --chmod=755 ./ci-bin/wren/wren-binary /bin/wren
 COPY --chmod=755 ./run.sh /run.sh
-# COPY ./testdata/ /testdata
 
 CMD ["/bin/bash", "/run.sh"]
