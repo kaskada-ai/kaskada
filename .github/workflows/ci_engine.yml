@@ -110,7 +110,7 @@ jobs:
       - name: Run integration tests
         run: | 
           echo "::group::Data Dir"
-          sudo chown -R $UID:$GID tests/integration/data
+          sudo chown -R $USER:$(id -g -n $USER) tests/integration/data
           chmod -R a+rw tests/integration/
           ls -laR tests/integration/data
           echo "::endgroup::"
