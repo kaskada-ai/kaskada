@@ -99,7 +99,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Doocker compose up for integration tests 
+      - name: Docker compose up for integration tests 
         run: |
           DOCKER_BUILDKIT=1 docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build --detach
           
@@ -110,8 +110,11 @@ jobs:
       - name: Run integration tests
         run: | 
           echo "::group::Data Dir"
+          sudo chown -R $UID:$GID tests/integration/data
+          chmod -R a+rw tests/integration/
           ls -laR tests/integration/data
           echo "::endgroup::"
+
           cd ./tests/integration/api
           LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
