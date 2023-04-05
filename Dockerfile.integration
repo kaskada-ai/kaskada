@@ -18,7 +18,6 @@ RUN mkdir /integ-test-run
 
 COPY --chmod=755 ./ci-bin/engine/sparrow-main /bin/sparrow-main
 COPY --chmod=755 ./ci-bin/wren/wren-binary /bin/wren
-COPY --chmod=755 ./ci-bin/integ-tests/api.test /integ-test-run/api.test
 COPY --chmod=755 ./run.sh /run.sh
 # COPY ./testdata/ /testdata
 
