@@ -186,7 +186,7 @@ func clearOutputOnlyList[M protoreflect.ProtoMessage](messages []M) []M {
 func getClientID() string {
 	clientId := viper.GetString("kaskada-client-id")
 	if clientId == "" {
-		log.Warn().Msg("no client-id found, initiating request without passing client-id header.")
+		log.Debug().Msg("no client-id found, initiating request without passing client-id header.")
 	}
 	return clientId
 }
