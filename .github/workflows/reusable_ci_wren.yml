@@ -29,7 +29,7 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["wren/**", "proto/**/*.proto", ".github/workflows/reusable_ci_wren.yml"]'
+          paths: '["wren/**", "proto/**/*.proto", ".github/workflows/reusable_ci_wren.yml",  ".github/workflows/ci_engine.yml"]'
           do_not_skip: '["schedule"]'
 
   wren_build_and_test:

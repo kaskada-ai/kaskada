@@ -38,7 +38,7 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto", ".github/workflows/reusable_ci_rust.yml"]'
+          paths: '["crates/**", "Cargo.lock", "Cargo.toml", "proto/**/*.proto", ".github/workflows/reusable_ci_rust.yml",  ".github/workflows/ci_engine.yml"]'
           do_not_skip: '["schedule"]'
 
   rust_check:
