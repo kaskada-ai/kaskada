@@ -321,14 +321,9 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
             hasher.update(&config.namespace);
             hasher.update(&config.topic_name);
             hasher.update(&ps.subscription_id);
-            if let Some(pt) = &ps.last_publish_time {
-                let mut bytes = [0u8; 8];
-                let mut bytes2 = [0u8; 4];
-                bytes.copy_from_slice(&pt.seconds.to_be_bytes());
-                bytes2.copy_from_slice(&pt.nanos.to_be_bytes());
-                hasher.update(bytes);
-                hasher.update(bytes2);
-            }
+            let mut bytes = [0u8; 8];
+            bytes.copy_from_slice(&ps.last_publish_time.to_be_bytes());
+            hasher.update(bytes);
             let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
         }
