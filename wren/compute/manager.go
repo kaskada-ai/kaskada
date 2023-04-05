@@ -886,6 +886,10 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 	return metadataRes.SourceMetadata.Schema, nil
 }
 
+func ConvertURIForCompute(URI string) string {
+	return strings.TrimPrefix(URI, "file://")
+}
+
 func ConvertURIForManager(URI string) string {
 	if strings.HasPrefix(URI, "/") {
 		return fmt.Sprintf("file://%s", URI)
