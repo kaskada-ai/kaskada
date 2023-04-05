@@ -1,14 +1,16 @@
-use error_stack::{IntoReport, ResultExt};
-use futures::future::try_join_all;
-use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
-use sparrow_api::kaskada::v1alpha::Schema;
-use sparrow_api::kaskada::v1alpha::{
-    FileMetadata, FilePath, GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest,
-    MergeMetadataResponse,
-};
-use sparrow_runtime::stores::ObjectStoreRegistry;
-use sparrow_runtime::RawMetadata;
 use std::sync::Arc;
+
+use error_stack::{IntoReport, ResultExt};
+use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
+use sparrow_api::kaskada::v1alpha::{
+    GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest, MergeMetadataResponse,
+    SourceMetadata, SourceData,
+};
+use sparrow_api::kaskada::v1alpha::Schema;
+
+use sparrow_runtime::RawMetadata;
+
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use tonic::Response;
 
 use crate::serve::error_status::IntoStatus;
@@ -59,17 +61,18 @@ async fn get_metadata(
     request: tonic::Request<GetMetadataRequest>,
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
+    let file_metadata = match request.source_data {
+        Some(source_data) => {
+            get_source_metadata(&object_store_registry, &source_data)
+            .await
+            .or_else(|_| anyhow::bail!("failed getting source metadata"))
+        },
+        None => anyhow::bail!("missing request source"),
+    }?;
 
-    let file_metadatas: Vec<_> = request
-        .file_paths
-        .iter()
-        .map(|source| get_source_metadata(object_store_registry.as_ref(), source))
-        .collect();
-
-    let file_metadatas = try_join_all(file_metadatas)
-        .await
-        .map_err(|e| anyhow::anyhow!("unable to get file metadata: {:?}", e))?;
-    Ok(Response::new(GetMetadataResponse { file_metadatas }))
+    Ok(Response::new(GetMetadataResponse {
+        source_metadata: Some(file_metadata),
+    }))
 }
 
 #[derive(derive_more::Display, Debug)]
@@ -83,9 +86,9 @@ impl error_stack::Context for Error {}
 
 pub(crate) async fn get_source_metadata(
     object_store_registry: &ObjectStoreRegistry,
-    source: &FilePath,
-) -> error_stack::Result<FileMetadata, Error> {
-    let source = source.path.as_ref().ok_or(Error::SourcePath)?;
+    source: &SourceData,
+) -> error_stack::Result<SourceMetadata, Error> {
+    let source = source.source.as_ref().ok_or(Error::SourcePath)?;
     let metadata = RawMetadata::try_from(source, object_store_registry)
         .await
         .attach_printable_lazy(|| format!("Source: {:?}", source))
@@ -102,15 +105,14 @@ pub(crate) async fn get_source_metadata(
             "Unable to encode schema {:?} for source file {:?}",
             metadata.table_schema, source
         )))?;
-
-    Ok(FileMetadata {
+    Ok(SourceMetadata {
         schema: Some(schema),
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use sparrow_api::kaskada::v1alpha::file_path;
+    use sparrow_api::kaskada::v1alpha::source_data;
 
     use super::*;
 
@@ -124,9 +126,11 @@ mod tests {
         let path = path.canonicalize().unwrap().to_string_lossy().to_string();
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
-                    path: Some(file_path::Path::ParquetPath(format!("file:///{path}",))),
-                }],
+                source_data: Some(SourceData {
+                    source: Some(source_data::Source::ParquetPath(
+                        format!("file:///{path}"),
+                    )),
+                }),
             }))
             .await
             .unwrap()
@@ -145,9 +149,11 @@ mod tests {
         let path = path.canonicalize().unwrap().to_string_lossy().to_string();
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
-                    path: Some(file_path::Path::CsvPath(format!("file:///{path}",))),
-                }],
+                source_data: Some(SourceData {
+                    source: Some(source_data::Source::CsvPath(
+                        format!("file:///{path}"),
+                    )),
+                }),
             }))
             .await
             .unwrap()
@@ -164,9 +170,9 @@ mod tests {
 
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
-                file_paths: vec![FilePath {
-                    path: Some(file_path::Path::CsvData(csv_data.to_string())),
-                }],
+                source_data: Some(SourceData {
+                    source: Some(source_data::Source::CsvData(csv_data.to_owned())),
+                }),
             }))
             .await
             .unwrap()

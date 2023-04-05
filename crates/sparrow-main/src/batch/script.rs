@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 
 use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
-use sparrow_api::kaskada::v1alpha::OutputTo;
-use sparrow_api::kaskada::v1alpha::{ComputeTable, FeatureSet};
+use sparrow_api::kaskada::v1alpha::{ComputeTable, Destination, FeatureSet};
 
 /// A serializable description of schema for a set of tables.
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +19,7 @@ pub(crate) struct Schema {
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Script {
     // / The destination to output results to.
-    pub(crate) output_to: OutputTo,
+    pub(crate) output_to: Destination,
     /// The features to be computed for the query.
     pub(crate) feature_set: FeatureSet,
 }

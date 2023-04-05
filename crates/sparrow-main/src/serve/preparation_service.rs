@@ -3,8 +3,8 @@ use std::path::Path;
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
 use sparrow_api::kaskada::v1alpha::{
-    file_path, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
-    PrepareDataResponse, PreparedFile,
+    source_data, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
+    PrepareDataResponse, PreparedFile, SourceData,
 };
 use sparrow_runtime::prepare::{prepare_file, upload_prepared_files_to_s3, Error};
 use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
@@ -68,14 +68,6 @@ pub async fn prepare_data(
         .config
         .ok_or(Error::MissingField("table_config"))?;
 
-    let file_path = prepare_request
-        .file_path
-        .ok_or(Error::MissingField("file_path"))?;
-    let path = file_path
-        .path
-        .as_ref()
-        .ok_or(Error::MissingField("file_path.path"))?;
-
     let slice_plan = prepare_request
         .slice_plan
         .ok_or(Error::MissingField("slice_plan"))?;
@@ -88,39 +80,12 @@ pub async fn prepare_data(
         }
     );
 
-    let download_file = NamedTempFile::new().unwrap();
-    let download_file_path = download_file.into_temp_path();
-    let (is_s3_object, path) = match path {
-        file_path::Path::ParquetPath(path) => {
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path).unwrap();
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await
-                    .unwrap();
-                (
-                    true,
-                    file_path::Path::ParquetPath(download_file_path.to_string_lossy().to_string()),
-                )
-            } else {
-                (false, file_path::Path::ParquetPath(path.to_string()))
-            }
-        }
-        file_path::Path::CsvPath(path) => {
-            if is_s3_path(path) {
-                let s3_object = S3Object::try_from_uri(path).unwrap();
-                s3.download_s3(s3_object, download_file_path.to_owned())
-                    .await
-                    .unwrap();
-                (
-                    true,
-                    file_path::Path::CsvPath(download_file_path.to_string_lossy().to_string()),
-                )
-            } else {
-                (false, file_path::Path::CsvPath(path.to_string()))
-            }
-        }
-        file_path::Path::CsvData(data) => (false, file_path::Path::CsvData(data.to_string())),
-    };
+    let temp_file = NamedTempFile::new()
+        .into_report()
+        .change_context(Error::Internal)?;
+    let (is_s3_object, source_data) =
+        convert_to_local_sourcedata(&s3, prepare_request.source_data.as_ref(), temp_file.path())
+            .await?;
 
     let temp_dir = tempfile::tempdir()
         .into_report()
@@ -132,12 +97,13 @@ pub async fn prepare_data(
     };
 
     let (prepared_metadata, prepared_files) = prepare_file(
-        &path,
+        &source_data,
         Path::new(&output_path),
         &prepare_request.file_prefix,
         &table_config,
         &slice_plan.slice,
-    )?;
+    )
+    .await?;
 
     let prepared_files: Vec<PreparedFile> = if is_s3_object {
         upload_prepared_files_to_s3(
@@ -155,4 +121,66 @@ pub async fn prepare_data(
         prep_id: CURRENT_PREP_ID,
         prepared_files,
     }))
+}
+
+pub async fn convert_to_local_sourcedata(
+    s3: &S3Helper,
+    source_data: Option<&SourceData>,
+    local_path: &Path,
+) -> error_stack::Result<(bool, SourceData), Error> {
+    match source_data {
+        None => error_stack::bail!(Error::MissingField("source_data")),
+        Some(sd) => {
+            let source = sd.source.as_ref().ok_or(Error::MissingField("source"))?;
+            match source {
+                source_data::Source::ParquetPath(_)
+                | source_data::Source::CsvPath(_)
+                | source_data::Source::CsvData(_) => {
+                    let (is_s3, local_path) = match source {
+                        source_data::Source::ParquetPath(path) => {
+                            let path = path.as_str();
+                            if is_s3_path(path) {
+                                let s3_object = S3Object::try_from_uri(path).unwrap();
+                                s3.download_s3(s3_object, local_path).await.unwrap();
+                                (
+                                    true,
+                                    source_data::Source::ParquetPath(
+                                        local_path.to_string_lossy().to_string(),
+                                    ),
+                                )
+                            } else {
+                                (false, source_data::Source::ParquetPath(path.to_string()))
+                            }
+                        }
+                        source_data::Source::CsvPath(path) => {
+                            let path = path.as_str();
+                            if is_s3_path(path) {
+                                let s3_object = S3Object::try_from_uri(path).unwrap();
+                                s3.download_s3(s3_object, local_path).await.unwrap();
+                                (
+                                    true,
+                                    source_data::Source::CsvPath(
+                                        local_path.to_string_lossy().to_string(),
+                                    ),
+                                )
+                            } else {
+                                (false, source_data::Source::CsvPath(path.to_string()))
+                            }
+                        }
+                        source_data::Source::CsvData(data) => {
+                            (false, source_data::Source::CsvData(data.to_owned()))
+                        }
+                        source_data::Source::PulsarSubscription(_) => (false, source.clone()),
+                    };
+                    Ok((
+                        is_s3,
+                        SourceData {
+                            source: Some(local_path),
+                        },
+                    ))
+                }
+                source_data::Source::PulsarSubscription(_) => Ok((false, sd.clone())),
+            }
+        }
+    }
 }

@@ -167,9 +167,9 @@ func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, reques
 	table := request.Table
 
 	// if no table source passed in request, set it to Kaskada source
-	if table.TableSource == nil {
-		table.TableSource = &v1alpha.Table_TableSource{
-			Source: &v1alpha.Table_TableSource_Kaskada{},
+	if table.Source == nil {
+		table.Source = &v1alpha.Source{
+			Source: &v1alpha.Source_Kaskada{},
 		}
 	}
 
@@ -178,7 +178,7 @@ func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, reques
 		EntityKeyColumnName: table.EntityKeyColumnName,
 		GroupingID:          table.GroupingId,
 		TimeColumnName:      table.TimeColumnName,
-		Source:              table.TableSource,
+		Source:              table.Source,
 	}
 
 	if table.SubsortColumnName != nil {
@@ -370,7 +370,7 @@ func (t *tableService) getProtoFromDB(ctx context.Context, table *ent.KaskadaTab
 		CreateTime:          timestamppb.New(table.CreatedAt),
 		UpdateTime:          timestamppb.New(table.UpdatedAt),
 		Schema:              table.MergedSchema,
-		TableSource:         table.Source,
+		Source:              table.Source,
 	}
 
 	version, err := t.kaskadaTableClient.GetKaskadaTableVersion(ctx, table)

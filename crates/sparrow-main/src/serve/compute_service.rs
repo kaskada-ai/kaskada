@@ -2,6 +2,7 @@ use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeService;
+
 use sparrow_api::kaskada::v1alpha::{
     CompileRequest, CompileResponse, ExecuteRequest, ExecuteResponse,
     GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState,
@@ -51,7 +52,13 @@ impl ComputeService for ComputeServiceImpl {
         &self,
         request: Request<CompileRequest>,
     ) -> Result<Response<CompileResponse>, Status> {
-        match tokio::spawn(compile_impl(request).in_current_span()).await {
+        let span = tracing::info_span!("Compile");
+        let _enter = span.enter();
+
+        match tokio::spawn(compile_impl(request).in_current_span())
+            .in_current_span()
+            .await
+        {
             Ok(result) => result.into_status(),
             Err(panic) => {
                 tracing::error!("Panic during prepare: {panic}");
@@ -64,6 +71,9 @@ impl ComputeService for ComputeServiceImpl {
         &self,
         request: Request<ExecuteRequest>,
     ) -> Result<Response<Self::ExecuteStream>, Status> {
+        let span = tracing::info_span!("Execute");
+        let _enter = span.enter();
+
         let handle = tokio::spawn(
             execute_impl(
                 self.flight_record_path,
@@ -72,7 +82,7 @@ impl ComputeService for ComputeServiceImpl {
             )
             .in_current_span(),
         );
-        match handle.await {
+        match handle.in_current_span().await {
             Ok(result) => {
                 let stream = result.into_status()?;
                 Ok(Response::new(Box::pin(stream)))
@@ -226,7 +236,7 @@ async fn debug_message(
         state: LongQueryState::Final as i32,
         is_query_done: true,
         progress: None,
-        output_to: None,
+        destination: None,
         flight_record_path: uploaded_flight_record_path,
         plan_yaml_path: uploaded_plan_yaml_path,
         compute_snapshots: Vec::new(),
@@ -287,23 +297,21 @@ mod tests {
     use std::fs::File;
     use std::path::Path;
 
-    use fallible_iterator::FallibleIterator;
     use futures::TryStreamExt;
     use itertools::Itertools;
     use parquet::file::reader::FileReader;
     use parquet::file::serialized_reader::SerializedFileReader;
     use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
     use sparrow_api::kaskada::v1alpha::execute_request::Limits;
-    use sparrow_api::kaskada::v1alpha::output_to::Destination;
-    use sparrow_api::kaskada::v1alpha::OutputTo;
     use sparrow_api::kaskada::v1alpha::{
-        compute_table, file_path, slice_plan, ComputeTable, FeatureSet, FilePath, FileType,
+        compute_table, destination, slice_plan, source_data, ComputeTable, FeatureSet, FileType,
         ObjectStoreDestination, PerEntityBehavior, SlicePlan, TableConfig, TableMetadata,
     };
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
-    use sparrow_runtime::prepare::prepared_batches;
     use sparrow_runtime::stores::ObjectStoreRegistry;
+    use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
+    use sparrow_runtime::prepare::{file_sourcedata, prepared_batches};
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
     use super::*;
@@ -503,26 +511,29 @@ mod tests {
                 percent: 50.0,
             })),
         };
-        let input_path = FilePath::try_from_local(&part1_file_path).unwrap();
+        let input_path = SourceData::try_from_local(&part1_file_path).unwrap();
         let prepared_batches: Vec<_> = prepared_batches(
-            &input_path,
+            &file_sourcedata(input_path),
             &table,
             &Some(slice_plan::Slice::Percent(slice_plan::PercentSlice {
                 percent: 50.0,
             })),
         )
+        .await
         .unwrap()
         .collect()
-        .unwrap();
+        .await;
 
-        let input_path = file_path::Path::ParquetPath(format!(
-            "file:///{}",
+        let part1_file_path = part1_file_path
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+
+        let part1_file_path = format!("file://{part1_file_path}");
+        let input_path = source_data::Source::ParquetPath(
             part1_file_path
-                .canonicalize()
-                .unwrap()
-                .to_string_lossy()
-                .to_string()
-        ));
+        );
         let object_store_registry = ObjectStoreRegistry::new();
         let part1_metadata = RawMetadata::try_from(&input_path, &object_store_registry)
             .await
@@ -541,7 +552,7 @@ mod tests {
             .tempfile()
             .unwrap();
 
-        let (record_batch, metadata) = &prepared_batches[0];
+        let (record_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let output_file = File::create(&prepared_file).unwrap();
         let metadata_output_file = File::create(&metadata_file).unwrap();
 
@@ -612,8 +623,8 @@ mod tests {
             output_prefix_uri: format!("file:///{}", output_dir.path().display()),
             output_paths: None,
         };
-        let output_to = OutputTo {
-            destination: Some(Destination::ObjectStore(store)),
+        let output_to = Destination {
+            destination: Some(destination::Destination::ObjectStore(store)),
         };
 
         let mut results: Vec<ExecuteResponse> = execute_impl(
@@ -629,7 +640,7 @@ mod tests {
                     }),
                     file_sets: vec![file_set],
                 }],
-                output_to: Some(output_to),
+                destination: Some(output_to),
                 // These are weird. Wren doesn't send "no limits" and "no query hash"
                 // when their missing. Instead, it sends the defaults.
                 limits: Some(Limits::default()),
@@ -666,8 +677,9 @@ mod tests {
 
         // Second, redact the output paths and check the response.
         for result in results.iter_mut() {
-            if let Some(output) = &mut result.output_to {
-                if let Some(Destination::ObjectStore(store)) = &mut output.destination {
+            if let Some(output) = &mut result.destination {
+                if let Some(destination::Destination::ObjectStore(store)) = &mut output.destination
+                {
                     store.output_prefix_uri = "<redacted_output_prefix_uri>".to_owned()
                 }
             };

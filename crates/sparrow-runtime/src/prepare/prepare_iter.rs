@@ -1,5 +1,7 @@
 use std::borrow::BorrowMut;
-use std::sync::Arc;
+use std::pin::Pin;
+use std::sync::{Arc, PoisonError};
+use std::task::Poll;
 
 use anyhow::{anyhow, Context};
 use arrow::array::{Array, ArrayRef, UInt64Array};
@@ -9,7 +11,9 @@ use arrow::datatypes::{
 };
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
+use futures::stream::BoxStream;
+use futures::{Stream, StreamExt};
 use hashbrown::HashSet;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{slice_plan, TableConfig};
@@ -30,8 +34,8 @@ use crate::RawMetadata;
 /// 2. Casts required columns
 /// 3. Sorts the record batches by the time column, subsort column, and key hash
 /// 4. Computing the key-hash and key batch metadata.
-pub struct PrepareIter {
-    reader: Box<dyn Iterator<Item = Result<RecordBatch, ArrowError>> + 'static>,
+pub struct PrepareIter<'a> {
+    reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     /// The final schema to produce, including the 3 key columns.
     prepared_schema: SchemaRef,
     /// Instructions for creating the resulting batches from a reade
@@ -42,23 +46,70 @@ pub struct PrepareIter {
     metadata: PrepareMetadata,
 }
 
-impl fallible_iterator::FallibleIterator for PrepareIter {
-    type Item = (RecordBatch, RecordBatch);
+impl<'a> Stream for PrepareIter<'a> {
+    type Item = Result<(RecordBatch, RecordBatch), PrepareErrorWrapper>;
 
-    type Error = error_stack::Report<Error>;
-
-    fn next(&mut self) -> error_stack::Result<Option<Self::Item>, Error> {
-        if let Some(next) = self.reader.next() {
-            let next = next.into_report().change_context(Error::ReadingBatch)?;
-            let prepare_batch = self.prepare_next_batch(next)?;
-            Ok(Some(prepare_batch))
-        } else {
-            Ok(None)
-        }
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let reader = &mut self.reader;
+        Pin::new(reader).poll_next(cx).map(|opt| match opt {
+            Some(Ok(batch)) => {
+                let result = self
+                    .get_mut()
+                    .prepare_next_batch(batch)
+                    .map_err(|err| err.change_context(Error::ReadingBatch).into());
+                Some(result)
+            }
+            Some(Err(err)) => Some(Err(Report::new(err)
+                .change_context(Error::ReadingBatch)
+                .into())),
+            None => None,
+        })
     }
 }
 
-impl std::fmt::Debug for PrepareIter {
+/// the Stream API works best with Result types that include an actual
+/// std::error::Error.  Simple things work okay with arbitrary Results,
+/// but things like TryForEach do not.  Since error_stack Errors do
+/// not implement std::error::Error, we wrap them in this.
+#[derive(Debug)]
+pub struct PrepareErrorWrapper(pub Report<Error>);
+
+impl std::fmt::Display for PrepareErrorWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl std::error::Error for PrepareErrorWrapper {}
+
+impl From<Report<Error>> for PrepareErrorWrapper {
+    fn from(error: Report<Error>) -> Self {
+        PrepareErrorWrapper(error)
+    }
+}
+
+impl<T> From<PoisonError<T>> for PrepareErrorWrapper {
+    fn from(error: PoisonError<T>) -> Self {
+        PrepareErrorWrapper(Report::new(Error::Internal).attach_printable(format!("{:?}", error)))
+    }
+}
+
+impl From<std::io::Error> for PrepareErrorWrapper {
+    fn from(error: std::io::Error) -> Self {
+        PrepareErrorWrapper(Report::new(Error::Internal).attach_printable(format!("{:?}", error)))
+    }
+}
+
+impl From<anyhow::Error> for PrepareErrorWrapper {
+    fn from(error: anyhow::Error) -> Self {
+        PrepareErrorWrapper(Report::new(Error::Internal).attach_printable(format!("{:?}", error)))
+    }
+}
+
+impl<'a> std::fmt::Debug for PrepareIter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PrepareIter")
             .field("prepared_schema", &self.prepared_schema)
@@ -67,9 +118,9 @@ impl std::fmt::Debug for PrepareIter {
     }
 }
 
-impl PrepareIter {
+impl<'a> PrepareIter<'a> {
     pub fn try_new(
-        reader: impl Iterator<Item = Result<RecordBatch, ArrowError>> + 'static,
+        reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
         config: &TableConfig,
         raw_metadata: RawMetadata,
         prepare_hash: u64,
@@ -129,7 +180,7 @@ impl PrepareIter {
         let metadata = PrepareMetadata::new(entity_key_column.data_type().clone());
 
         Ok(Self {
-            reader: Box::new(reader),
+            reader: reader.boxed(),
             prepared_schema,
             columns,
             slice_preparer,
@@ -281,7 +332,7 @@ impl ColumnBehavior {
             .with_context(|| {
                 context_code!(
                     tonic::Code::Internal,
-                    "Required column '{}' not present in schema {:?}",
+                    "column to cast '{}' not present in schema {:?}",
                     source_name,
                     source_schema
                 )
@@ -328,7 +379,7 @@ impl ColumnBehavior {
             .with_context(|| {
                 context_code!(
                     tonic::Code::Internal,
-                    "Required column '{}' not present in schema {:?}",
+                    "subsort column '{}' not present in schema {:?}",
                     source_name,
                     source_schema
                 )
@@ -383,7 +434,7 @@ impl ColumnBehavior {
             .with_context(|| {
                 context_code!(
                     tonic::Code::Internal,
-                    "Required column '{}' not present in schema {:?}",
+                    "entity key column '{}' not present in schema {:?}",
                     source_name,
                     source_schema
                 )

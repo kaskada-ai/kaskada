@@ -65,8 +65,8 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 	})
 
 	It("should be reported in a timely manner", func() {
-		outputTo := &v1alpha.OutputTo{}
-		outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+		destination := &v1alpha.Destination{}
+		destination.Destination = &v1alpha.Destination_ObjectStore{
 			ObjectStore: &v1alpha.ObjectStoreDestination{
 				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 			},
@@ -74,7 +74,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		createQueryRequest := &v1alpha.CreateQueryRequest{
 			Query: &v1alpha.Query{
 				Expression:     "__INTERNAL_COMPILE_PANIC__",
-				OutputTo:       outputTo,
+				Destination:    destination,
 				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 			},
 			QueryOptions: &v1alpha.QueryOptions{
@@ -99,8 +99,8 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 
 	It("should support queries after ", func() {
 		// First, cause a panic.
-		outputTo := &v1alpha.OutputTo{}
-		outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+		destination := &v1alpha.Destination{}
+		destination.Destination = &v1alpha.Destination_ObjectStore{
 			ObjectStore: &v1alpha.ObjectStoreDestination{
 				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 			},
@@ -108,7 +108,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		createQueryRequest := &v1alpha.CreateQueryRequest{
 			Query: &v1alpha.Query{
 				Expression:     "__INTERNAL_COMPILE_PANIC__",
-				OutputTo:       outputTo,
+				Destination:    destination,
 				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 			},
 			QueryOptions: &v1alpha.QueryOptions{
@@ -140,7 +140,7 @@ entity: query_v1_panic.customer_id,
 max_amount: query_v1_panic.amount | max(),
 min_amount: query_v1_panic.amount | min(),
 }`,
-				OutputTo:       outputTo,
+				Destination:    destination,
 				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 			},
 			QueryOptions: &v1alpha.QueryOptions{
@@ -156,8 +156,8 @@ min_amount: query_v1_panic.amount | min(),
 		Expect(err).ShouldNot(HaveOccurred())
 
 		VerifyRequestDetails(res.RequestDetails)
-		Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
-		Expect(res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
+		Expect(res.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+		Expect(res.GetDestination().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
 		Expect(res.Analysis.Schema).Should(ContainElements(
 			primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND),
@@ -166,7 +166,7 @@ min_amount: query_v1_panic.amount | min(),
 			primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
 		))
 
-		resultsUrl := res.GetOutputTo().GetObjectStore().GetOutputPaths().Paths[0]
+		resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 		firstResults := helpers.DownloadParquet(resultsUrl)
 
 		Expect(firstResults).Should(HaveLen(10))

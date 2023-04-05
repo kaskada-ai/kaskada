@@ -26,7 +26,7 @@ let shifted =  predictors
 in shifted | extend(lookup($input.entity, target))
 "};
 
-fn data_fixture_purchases_and_fraud() -> DataFixture {
+async fn data_fixture_purchases_and_fraud() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
             TableConfig::new(
@@ -39,6 +39,7 @@ fn data_fixture_purchases_and_fraud() -> DataFixture {
             ),
             &["purchases/purchases_part1.parquet"],
         )
+        .await
         .unwrap()
         .with_table_from_files(
             TableConfig::new(
@@ -51,6 +52,7 @@ fn data_fixture_purchases_and_fraud() -> DataFixture {
             ),
             &["purchases/purchases_part1.parquet"],
         )
+        .await
         .unwrap()
         .with_table_from_files(
             TableConfig::new(
@@ -63,6 +65,7 @@ fn data_fixture_purchases_and_fraud() -> DataFixture {
             ),
             &["purchases/frauds.parquet"],
         )
+        .await
         .unwrap()
 }
 
@@ -70,7 +73,7 @@ fn data_fixture_purchases_and_fraud() -> DataFixture {
 async fn test_feature_query() {
     insta::assert_snapshot!(
         QueryFixture::new(QUERY)
-        .run_to_csv(&data_fixture_purchases_and_fraud())
+        .run_to_csv(&data_fixture_purchases_and_fraud().await)
         .await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,target,entity,purchase_total,mean_purchase

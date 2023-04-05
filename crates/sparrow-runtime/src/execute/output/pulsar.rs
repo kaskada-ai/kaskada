@@ -1,20 +1,23 @@
-use std::sync::Arc;
-
-use arrow::datatypes::{ArrowPrimitiveType, DataType, Schema, SchemaRef, TimestampMicrosecondType};
+use arrow::datatypes::{ArrowPrimitiveType, DataType, SchemaRef, TimestampMicrosecondType};
 use arrow::record_batch::RecordBatch;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use pulsar::compression::Compression;
-use sparrow_api::kaskada::v1alpha::output_to;
+use pulsar::Authentication;
 use sparrow_api::kaskada::v1alpha::PulsarDestination;
+use sparrow_api::kaskada::v1alpha::{destination, PulsarConfig};
 
 use crate::execute::progress_reporter::ProgressUpdate;
 use error_stack::{IntoReport, ResultExt};
 
+use crate::execute::pulsar_schema;
 use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {
+    PulsarAuth {
+        context: String,
+    },
     PulsarTopicCreation {
         context: String,
     },
@@ -27,10 +30,8 @@ pub enum Error {
         from: DataType,
         to: DataType,
     },
-    #[cfg(not(feature = "avro"))]
-    AvroNotEnabled,
-    #[cfg(feature = "avro")]
-    AvroSchemaConversion,
+    SchemaSerialization,
+    Internal,
 }
 
 impl error_stack::Context for Error {}
@@ -55,6 +56,7 @@ pub(super) async fn write(
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     mut batches: BoxStream<'static, RecordBatch>,
 ) -> error_stack::Result<(), Error> {
+    let pulsar = pulsar.config.ok_or(Error::Internal)?;
     let broker_url = if pulsar.broker_service_url.trim().is_empty() {
         error_stack::bail!(Error::PulsarTopicCreation {
             context: "empty broker service url".to_owned()
@@ -64,8 +66,10 @@ pub(super) async fn write(
     };
 
     let topic_url = format_topic_url(&pulsar)?;
-    let output_schema = get_output_schema(schema)?;
-    let formatted_schema = format_schema(output_schema.clone())?;
+    let output_schema =
+        pulsar_schema::get_output_schema(schema).change_context(Error::SchemaSerialization)?;
+    let formatted_schema = pulsar_schema::format_schema(output_schema.clone())
+        .change_context(Error::SchemaSerialization)?;
 
     tracing::info!("Creating pulsar topic {topic_url} with schema: {formatted_schema}");
     // Note: Pulsar works natively in Avro - move towards serializing
@@ -80,22 +84,19 @@ pub(super) async fn write(
     // Inform tracker of output type
     progress_updates_tx
         .send(ProgressUpdate::Destination {
-            destination: output_to::Destination::Pulsar(pulsar.clone()),
+            destination: destination::Destination::Pulsar(PulsarDestination {
+                config: Some(pulsar.clone()),
+            }),
         })
         .await
         .into_report()
         .change_context(Error::ProgressUpdate)?;
 
-    let client = Pulsar::builder(broker_url, TokioExecutor)
-        .build()
-        .await
-        .into_report()
-        .change_context(Error::JsonSerialization)?;
-
+    let client = build_client(broker_url, &pulsar).await?;
     let mut producer = client
         .producer()
         .with_topic(topic_url.clone())
-        .with_name("producer")
+        .with_name("sparrow-producer")
         .with_options(producer::ProducerOptions {
             schema: Some(schema),
             batch_size: Some(BATCH_SIZE),
@@ -162,6 +163,48 @@ pub(super) async fn write(
     Ok(())
 }
 
+// Builds the pulsar client
+async fn build_client(
+    broker_url: &str,
+    pulsar: &PulsarConfig,
+) -> error_stack::Result<Pulsar<TokioExecutor>, Error> {
+    let mut client_builder = Pulsar::builder(broker_url, TokioExecutor);
+
+    // Add authorization
+    if !pulsar.auth_plugin.is_empty() {
+        // Currently, we only support auth with jwt tokens
+        // https://pulsar.apache.org/docs/2.4.0/security-token-client/
+        error_stack::ensure!(
+            pulsar.auth_plugin == "org.apache.pulsar.client.impl.auth.AuthenticationToken",
+            Error::PulsarAuth {
+                context: format!("unsupported auth plugin: {}", pulsar.auth_plugin)
+            }
+        );
+        // Additionally, only the string format is supported
+        let auth_token = if let Some(token) = pulsar.auth_params.strip_prefix("token:") {
+            token
+        } else {
+            error_stack::bail!(Error::PulsarAuth {
+                context: "expected \"token:\" prefix".to_owned(),
+            })
+        };
+
+        let pulsar_auth = Authentication {
+            name: "token".to_owned(),
+            data: auth_token.as_bytes().to_vec(),
+        };
+        client_builder = client_builder.with_auth(pulsar_auth);
+    };
+
+    let client = client_builder
+        .build()
+        .await
+        .into_report()
+        .change_context(Error::JsonSerialization)?;
+
+    Ok(client)
+}
+
 // Drops columns to match the given output schema
 fn get_output_batch(
     output_schema: SchemaRef,
@@ -186,44 +229,7 @@ fn get_output_batch(
     Ok(RecordBatch::try_new(output_schema, output_columns).unwrap())
 }
 
-fn get_output_schema(schema: SchemaRef) -> error_stack::Result<SchemaRef, Error> {
-    let fields = schema.fields();
-
-    // Avro does not support certain types that we use internally for the implicit columns.
-    // For the `_time` (timestamp_ns) column, we cast to timestamp_us, sacrificing nano precision.
-    // (Optionally, we could provide a separate column composed of the nanos as a separate i64).
-    // The `_subsort` and `_key_hash` columns are dropped.
-    let time_us = arrow::datatypes::Field::new("_time", TimestampMicrosecondType::DATA_TYPE, false);
-    let mut new_fields = vec![time_us];
-    fields
-        .iter()
-        .skip(3) // Skip the `_time`, `_subsort`, and `_key_hash` fields
-        .for_each(|f| new_fields.push(f.clone()));
-
-    Ok(Arc::new(Schema::new(new_fields)))
-}
-
-#[cfg(not(feature = "avro"))]
-fn format_schema(_schema: SchemaRef) -> error_stack::Result<String, Error> {
-    error_stack::bail!(Error::AvroNotEnabled)
-}
-
-#[cfg(feature = "avro")]
-fn format_schema(schema: SchemaRef) -> error_stack::Result<String, Error> {
-    let avro_schema = sparrow_arrow::avro::to_avro_schema(&schema)
-        .change_context(Error::AvroSchemaConversion)
-        .attach_printable_lazy(|| {
-            format!("failed to convert arrow schema to avro schema {schema}")
-        })?;
-    serde_json::to_string(&avro_schema)
-        .into_report()
-        .change_context(Error::JsonSerialization)
-        .attach_printable_lazy(|| {
-            format!("failed to serialize avro schema to json string: {avro_schema:?}")
-        })
-}
-
-pub fn format_topic_url(pulsar: &PulsarDestination) -> error_stack::Result<String, Error> {
+pub fn format_topic_url(pulsar: &PulsarConfig) -> error_stack::Result<String, Error> {
     let tenant = if pulsar.tenant.trim().is_empty() {
         DEFAULT_PULSAR_TENANT
     } else {

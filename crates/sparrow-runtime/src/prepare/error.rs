@@ -12,6 +12,8 @@ pub enum Error {
     CreateParquetReader,
     #[display(fmt = "failed to create CSV file reader")]
     CreateCsvReader,
+    #[display(fmt = "failed to create Pulsar reader")]
+    CreatePulsarReader,
     #[display(fmt = "reading batch")]
     ReadingBatch,
     #[display(fmt = "slicing batch")]
@@ -37,8 +39,8 @@ pub enum Error {
         slice_plan: String,
         table_config: String,
     },
-    #[display(fmt = "unsupported file path {_0:?}")]
-    UnsupportedOutputPath(sparrow_api::kaskada::v1alpha::file_path::Path),
+    #[display(fmt = "unsupported source {_0:?}")]
+    UnsupportedOutputPath(&'static str),
     #[display(fmt = "invalid input path")]
     InvalidInputPath,
     #[display(fmt = "failed to read input")]

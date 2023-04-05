@@ -26,7 +26,7 @@ func (Materialization) Fields() []ent.Field {
 		field.String("description").Optional(),
 		field.String("expression").Immutable(),
 		field.Bytes("with_views").GoType(&v1alpha.WithViews{}).Immutable(),
-		field.Bytes("destination").GoType(&v1alpha.Materialization_Destination{}).Immutable(),
+		field.Bytes("destination").GoType(&v1alpha.Destination{}).Immutable(),
 		field.Bytes("schema").GoType(&v1alpha.Schema{}).Immutable(),
 		field.Bytes("slice_request").GoType(&v1alpha.SliceRequest{}).Immutable(),
 		field.Bytes("analysis").GoType(&v1alpha.Analysis{}).Immutable(),

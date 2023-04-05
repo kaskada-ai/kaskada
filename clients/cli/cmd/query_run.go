@@ -59,18 +59,18 @@ var queryRunCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info().Msg("starting query run")
 
-		outputTo := &apiv1alpha.OutputTo{}
+		destination := &apiv1alpha.Destination{}
 
 		responseAs := viper.GetString("response_as")
 		switch responseAs {
 		case "csv":
-			outputTo.Destination = &apiv1alpha.OutputTo_ObjectStore{
+			destination.Destination = &apiv1alpha.Destination_ObjectStore{
 				ObjectStore: &apiv1alpha.ObjectStoreDestination{
 					FileType: apiv1alpha.FileType_FILE_TYPE_CSV,
 				},
 			}
 		case "parquet":
-			outputTo.Destination = &apiv1alpha.OutputTo_ObjectStore{
+			destination.Destination = &apiv1alpha.Destination_ObjectStore{
 				ObjectStore: &apiv1alpha.ObjectStoreDestination{
 					FileType: apiv1alpha.FileType_FILE_TYPE_PARQUET,
 				},
@@ -90,7 +90,7 @@ var queryRunCmd = &cobra.Command{
 		queryReq := &apiv1alpha.CreateQueryRequest{
 			Query: &apiv1alpha.Query{
 				Expression: expression,
-				OutputTo:   outputTo,
+				Destination:   destination,
 			},
 			QueryOptions: &apiv1alpha.QueryOptions{
 				DryRun:               viper.GetBool("dry_run"),
@@ -130,10 +130,10 @@ var queryRunCmd = &cobra.Command{
 
 		logAndQuitIfErrorExists(err)
 
-		if viper.GetBool("stdout") && resp.OutputTo != nil {
+		if viper.GetBool("stdout") && resp.Destination != nil {
 
-			switch outputTo := resp.OutputTo.Destination.(type) {
-			case *apiv1alpha.OutputTo_ObjectStore:
+			switch outputTo := resp.Destination.Destination.(type) {
+			case *apiv1alpha.Destination_ObjectStore:
 				for _, path := range outputTo.ObjectStore.OutputPaths.Paths {
 					f, err := os.Open(strings.TrimPrefix(path, `file://`))
 					logAndQuitIfErrorExists(err)

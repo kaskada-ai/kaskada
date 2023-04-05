@@ -1,17 +1,21 @@
 use std::collections::hash_map::DefaultHasher;
+use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
 
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use fallible_iterator::FallibleIterator;
+use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
+use futures::{StreamExt, TryStreamExt};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
+
 use serde_yaml;
 use sha2::Digest;
-use sparrow_api::kaskada::v1alpha::{file_path, slice_plan, PreparedFile, TableConfig};
+use sparrow_api::kaskada::v1alpha::{
+    slice_plan, source_data, PreparedFile, PulsarSubscription, SourceData, TableConfig,
+};
 
 mod error;
 mod prepare_iter;
@@ -19,8 +23,10 @@ mod slice_preparer;
 
 pub use error::*;
 pub use prepare_iter::*;
+use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use tracing::Instrument;
 
+use crate::execute::pulsar_reader::read_pulsar_stream;
 use crate::s3::{S3Helper, S3Object};
 use crate::{PreparedMetadata, RawMetadata};
 
@@ -30,90 +36,153 @@ const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 ///
 /// Returns a fallible iterator over pairs containing the data and metadata
 /// batches.
-pub fn prepared_batches(
-    file_path: &file_path::Path,
-    config: &TableConfig,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
-    let prepare_hash = get_prepare_hash(file_path)?;
-    let prepare_iter = match file_path {
-        file_path::Path::ParquetPath(source) => {
-            let reader = open_file(source)?;
-            let file_size = reader
-                .metadata()
-                .into_report()
-                .change_context(Error::Internal)?
-                .len();
-            reader_from_parquet(config, reader, file_size, prepare_hash, slice)?
-        }
-        file_path::Path::CsvPath(source) => {
-            let file = open_file(source)?;
-            let reader = BufReader::new(file);
-            reader_from_csv(config, reader, prepare_hash, slice)?
-        }
-        file_path::Path::CsvData(content) => {
-            let content = Cursor::new(content.to_string());
-            let reader = BufReader::new(content);
-            reader_from_csv(config, reader, prepare_hash, slice)?
-        }
+pub async fn prepared_batches<'a>(
+    source_data: &SourceData,
+    config: &'a TableConfig,
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
+    let prepare_hash = get_prepare_hash(source_data)?;
+    let prepare_iter = match source_data.source.as_ref() {
+        None => error_stack::bail!(Error::MissingField("source")),
+        Some(source) => match source {
+            source_data::Source::ParquetPath(source) => {
+                let reader = open_file(source)?;
+                let file_size = reader
+                    .metadata()
+                    .into_report()
+                    .change_context(Error::Internal)?
+                    .len();
+                reader_from_parquet(config, reader, file_size, prepare_hash, slice)?
+            }
+            source_data::Source::CsvPath(source) => {
+                let file = open_file(source)?;
+                let reader = BufReader::new(file);
+                reader_from_csv(config, reader, prepare_hash, slice)?
+            }
+            source_data::Source::CsvData(content) => {
+                let content = Cursor::new(content.to_string());
+                let reader = BufReader::new(content);
+                reader_from_csv(config, reader, prepare_hash, slice)?
+            }
+            source_data::Source::PulsarSubscription(ps) => {
+                reader_from_pulsar(config, ps, prepare_hash, slice).await?
+            }
+        },
     };
 
     Ok(prepare_iter)
 }
 
+async fn reader_from_pulsar<'a>(
+    config: &'a TableConfig,
+    pulsar_subscription: &PulsarSubscription,
+    prepare_hash: u64,
+    slice: &'a Option<Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
+    let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
+    let pm = RawMetadata::try_from_pulsar(pulsar_config)
+        .await
+        .change_context(Error::CreatePulsarReader)?;
+
+    let consumer =
+        crate::execute::pulsar_reader::pulsar_consumer(pulsar_subscription, pm.user_schema.clone())
+            .await?;
+    let stream = read_pulsar_stream(pm.sparrow_metadata.raw_schema.clone(), consumer);
+    PrepareIter::try_new(stream, config, pm.sparrow_metadata, prepare_hash, slice)
+        .into_report()
+        .change_context(Error::CreatePulsarReader)
+}
+
+// this is to avoid putting pulsar auth info in the logs
+pub struct SourceDataWrapper<'a>(&'a SourceData);
+
+impl<'a> fmt::Display for SourceDataWrapper<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0.source.as_ref() {
+            Some(source_data::Source::ParquetPath(path)) => write!(f, "{}", path),
+            Some(source_data::Source::CsvPath(path)) => write!(f, "{}", path),
+            Some(source_data::Source::CsvData(_)) => write!(f, "csv data"),
+            Some(source_data::Source::PulsarSubscription(ps)) => {
+                let config = ps.config.as_ref().unwrap();
+                write!(
+                    f,
+                    "pulsar subscription {} to {} @ {}",
+                    ps.subscription_id,
+                    match crate::execute::output::pulsar::format_topic_url(config) {
+                        Ok(url) => url,
+                        Err(_) => "invalid pulsar url".to_string(),
+                    },
+                    config.broker_service_url
+                )
+            }
+            None => write!(f, "empty source (should never happen)"),
+        }
+    }
+}
+
 /// Prepare the given file and return the list of prepared files.
-pub fn prepare_file(
-    input_path: &file_path::Path,
+pub async fn prepare_file(
+    source_data: &SourceData,
     output_path: &Path,
     output_prefix: &str,
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let mut prepared_metadatas: Vec<_> = Vec::new();
-    let mut prepared_files: Vec<_> = Vec::new();
-    let preparer = prepared_batches(input_path, table_config, slice)?;
-    let _span = tracing::info_span!("Preparing file", ?input_path).entered();
-    for (batch_count, record_batch) in preparer.iterator().enumerate() {
-        let (record_batch, metadata) = record_batch?;
-        tracing::info!(
-            "Prepared batch {batch_count} has {} rows",
-            record_batch.num_rows()
-        );
-        if record_batch.num_rows() > 0 {
-            let output = output_path.join(format!("{output_prefix}-{batch_count}.parquet"));
-            let output_file = create_file(&output)?;
+    let preparer = prepared_batches(source_data, table_config, slice).await?;
+    let batch_count = std::sync::atomic::AtomicUsize::new(0);
 
-            let metadata_output =
-                output_path.join(format!("{output_prefix}-{batch_count}-metadata.parquet"));
-            let metadata_output_file = create_file(&metadata_output)?;
+    let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
+        let output = output_path.join(format!("{output_prefix}-{output_ordinal}.parquet"));
+        let output_file = create_file(&output)?;
 
-            write_batch(output_file, record_batch).change_context(Error::WriteParquetData)?;
-            write_batch(metadata_output_file, metadata).change_context(Error::WriteMetadata)?;
+        let metadata_output =
+            output_path.join(format!("{output_prefix}-{output_ordinal}-metadata.parquet"));
+        let metadata_output_file = create_file(&metadata_output)?;
 
-            let prepared_metadata =
-                PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
-                    .into_report()
-                    .change_context(Error::DetermineMetadata)?;
-            let prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .try_into()
-                .change_context(Error::Internal)?;
-            tracing::info!("Prepared batch {batch_count} with metadata {prepared_metadata:?}");
-            prepared_metadatas.push(prepared_metadata);
+        write_batch(output_file, records).change_context(Error::WriteParquetData)?;
+        write_batch(metadata_output_file, metadata).change_context(Error::WriteMetadata)?;
 
-            let metadata_yaml_output =
-                output_path.join(format!("{output_prefix}-{batch_count}-metadata.yaml"));
-            let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
-            serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
+        let prepared_metadata =
+            PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
                 .into_report()
-                .change_context(Error::Internal)?;
-            tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
+                .change_context(Error::DetermineMetadata)?;
+        let prepared_file: PreparedFile = prepared_metadata
+            .to_owned()
+            .try_into()
+            .change_context(Error::Internal)?;
+        tracing::info!("Prepared batch {output_ordinal} with metadata {prepared_metadata:?}");
 
-            prepared_files.push(prepared_file);
+        let metadata_yaml_output =
+            output_path.join(format!("{output_prefix}-{output_ordinal}-metadata.yaml"));
+        let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
+        serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
+            .into_report()
+            .change_context(Error::Internal)?;
+        tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
+
+        Ok((prepared_metadata, prepared_file))
+    };
+
+    let results = preparer.filter_map(|r| {
+        let n = batch_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        async move {
+            match r {
+                Ok((records, metadata)) => {
+                    tracing::debug!("Prepared batch {n} has {} rows", records.num_rows());
+
+                    if records.num_rows() == 0 {
+                        return None;
+                    }
+                    Some(write_results(n, records, metadata))
+                }
+                Err(e) => Some(Err(Report::new(e).change_context(Error::Internal))),
+            }
         }
-    }
+    });
 
-    Ok((prepared_metadatas, prepared_files))
+    // unzip the stream of (prepared_file, prepared_metadata) into two vectors
+    let (pm, pf): (Vec<_>, Vec<_>) = results.try_collect::<Vec<_>>().await?.into_iter().unzip();
+    Ok((pm, pf))
 }
 
 pub async fn upload_prepared_files_to_s3(
@@ -133,12 +202,12 @@ pub async fn upload_prepared_files_to_s3(
                 .to_owned()
                 .try_into()
                 .change_context(Error::Internal)?;
-            tracing::info!(
+            tracing::debug!(
                 "Prepared batch {batch_count} has {} rows",
                 prepared_file.num_rows
             );
 
-            tracing::info!(
+            tracing::debug!(
                 "Prepared batch {batch_count} with metadata {:?}",
                 prepared_metadata
             );
@@ -174,12 +243,14 @@ pub async fn upload_prepared_files_to_s3(
             prepared_files.push(prepared_file)
         }
     }
+
     // TODO: We could (instead) use a loop and select, which would allow us
     // to fail early if anything failed. But it is more book-keeping.
     let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
     for result in parquet_uploads.await {
         result.into_report().change_context(Error::UploadResult)?;
     }
+
     Ok(prepared_files)
 }
 
@@ -212,9 +283,10 @@ fn write_batch(
     Ok(())
 }
 
-fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
-    let hex_encoding = match path {
-        file_path::Path::ParquetPath(source) => {
+fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error> {
+    let source = source_data.source.as_ref().ok_or(Error::Internal)?;
+    let hex_encoding = match source {
+        source_data::Source::ParquetPath(source) => {
             let file = open_file(source)?;
             let mut file = BufReader::new(file);
             let mut hasher = sha2::Sha224::new();
@@ -223,7 +295,7 @@ fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
 
             data_encoding::HEXUPPER.encode(&hash)
         }
-        file_path::Path::CsvPath(source) => {
+        source_data::Source::CsvPath(source) => {
             let file = open_file(source)?;
             let mut file = BufReader::new(file);
             let mut hasher = sha2::Sha224::new();
@@ -232,13 +304,32 @@ fn get_prepare_hash(path: &file_path::Path) -> error_stack::Result<u64, Error> {
 
             data_encoding::HEXUPPER.encode(&hash)
         }
-        file_path::Path::CsvData(content) => {
+        source_data::Source::CsvData(content) => {
             let content = Cursor::new(content.to_string());
             let mut file = BufReader::new(content);
             let mut hasher = sha2::Sha224::new();
             std::io::copy(&mut file, &mut hasher).unwrap();
             let hash = hasher.finalize();
 
+            data_encoding::HEXUPPER.encode(&hash)
+        }
+        source_data::Source::PulsarSubscription(ps) => {
+            let mut hasher = sha2::Sha224::new();
+            let config = ps.config.as_ref().ok_or(Error::Internal)?;
+            hasher.update(&config.broker_service_url);
+            hasher.update(&config.tenant);
+            hasher.update(&config.namespace);
+            hasher.update(&config.topic_name);
+            hasher.update(&ps.subscription_id);
+            if let Some(pt) = &ps.last_publish_time {
+                let mut bytes = [0u8; 8];
+                let mut bytes2 = [0u8; 4];
+                bytes.copy_from_slice(&pt.seconds.to_be_bytes());
+                bytes2.copy_from_slice(&pt.nanos.to_be_bytes());
+                hasher.update(bytes);
+                hasher.update(bytes2);
+            }
+            let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
         }
     };
@@ -265,13 +356,13 @@ fn get_batch_size(num_rows: i64, num_files: usize) -> usize {
     (num_rows + num_files - 1) / num_files
 }
 
-fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
-    config: &TableConfig,
+fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
+    config: &'a TableConfig,
     reader: R,
     file_size: u64,
     prepare_hash: u64,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
     let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(reader)
         .into_report()
         .change_context(Error::CreateParquetReader)?;
@@ -285,20 +376,22 @@ fn reader_from_parquet<R: parquet::file::reader::ChunkReader + 'static>(
         .build()
         .into_report()
         .change_context(Error::CreateParquetReader)?;
+    // create a Stream from reader
+    let stream_reader = futures::stream::iter(reader);
 
-    PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
+    PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreateParquetReader)
 }
 
 const BATCH_SIZE: usize = 1_000_000;
 
-fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
-    config: &TableConfig,
+fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
+    config: &'a TableConfig,
     reader: R,
     prepare_hash: u64,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter, Error> {
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<PrepareIter<'a>, Error> {
     use arrow::csv::ReaderBuilder;
 
     // Create the CSV reader.
@@ -310,17 +403,21 @@ fn reader_from_csv<R: std::io::Read + std::io::Seek + 'static>(
         .into_report()
         .change_context(Error::CreateCsvReader)?;
     let raw_metadata = RawMetadata::from_raw_schema(reader.schema());
+    let stream_reader = futures::stream::iter(reader);
 
-    PrepareIter::try_new(reader, config, raw_metadata, prepare_hash, slice)
+    PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreateCsvReader)
 }
 
+pub fn file_sourcedata(path: source_data::Source) -> SourceData {
+    SourceData { source: Some(path) }
+}
+
 #[cfg(test)]
 mod tests {
-
-    use fallible_iterator::FallibleIterator;
-    use sparrow_api::kaskada::v1alpha::{file_path, TableConfig};
+    use futures::StreamExt;
+    use sparrow_api::kaskada::v1alpha::{source_data, SourceData, TableConfig};
     use uuid::Uuid;
 
     use crate::prepare::{get_batch_size, get_num_files, get_u64_hash, GIGABYTE_IN_BYTES};
@@ -388,17 +485,20 @@ mod tests {
         assert_eq!(batch_size, expected_batch_size)
     }
 
-    #[test]
-    fn test_timestamp_with_timezone_data_prepares() {
+    #[tokio::test]
+    async fn test_timestamp_with_timezone_data_prepares() {
         let input_path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
 
-        let input_path = file_path::Path::ParquetPath(
+        let input_path = source_data::Source::ParquetPath(
             input_path
                 .canonicalize()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
         );
+        let source_data = SourceData {
+            source: Some(input_path),
+        };
 
         let table_config = TableConfig::new(
             "Event",
@@ -409,26 +509,31 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&input_path, &table_config, &None).unwrap();
-        let prepared_batches: Vec<_> = prepared_batches.collect().unwrap();
+        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+            .await
+            .unwrap();
+        let prepared_batches = prepared_batches.collect::<Vec<_>>().await;
         assert_eq!(prepared_batches.len(), 1);
-        let (prepared_batch, metadata) = &prepared_batches[0];
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
         let _metadata_schema = metadata.schema();
     }
 
-    #[test]
-    fn test_prepare_csv() {
+    #[tokio::test]
+    async fn test_prepare_csv() {
         let input_path =
             sparrow_testing::testdata_path("eventdata/2c889258-d676-4922-9a92-d7e9c60c1dde.csv");
 
-        let input_path = file_path::Path::CsvPath(
+        let input_path = source_data::Source::CsvPath(
             input_path
                 .canonicalize()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
         );
+        let source_data = SourceData {
+            source: Some(input_path),
+        };
 
         let table_config = TableConfig::new(
             "Segment",
@@ -439,10 +544,12 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&input_path, &table_config, &None).unwrap();
-        let prepared_batches: Vec<_> = prepared_batches.collect().unwrap();
+        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+            .await
+            .unwrap();
+        let prepared_batches = prepared_batches.collect::<Vec<_>>().await;
         assert_eq!(prepared_batches.len(), 1);
-        let (prepared_batch, metadata) = &prepared_batches[0];
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
         let _metadata_schema = metadata.schema();
     }

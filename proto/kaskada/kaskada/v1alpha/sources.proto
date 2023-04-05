@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package kaskada.kaskada.v1alpha;
+
+import "kaskada/kaskada/v1alpha/pulsar.proto";
+
+message Source {
+  oneof source {
+    KaskadaSource kaskada = 1;
+    PulsarSource pulsar = 2;
+  }
+}
+
+message KaskadaSource {}
+
+message PulsarSource {
+  PulsarConfig config = 1;
+}

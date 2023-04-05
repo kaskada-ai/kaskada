@@ -108,9 +108,9 @@ func (q *queryV2Service) createQuery(ctx context.Context, owner *ent.Owner, requ
 		}
 	}
 
-	if queryConfig.OutputTo == nil {
-		queryConfig.OutputTo = &v1alpha.OutputTo{
-			Destination: &v1alpha.OutputTo_ObjectStore{
+	if queryConfig.Destination == nil {
+		queryConfig.Destination = &v1alpha.Destination{
+			Destination: &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 				},
@@ -319,8 +319,8 @@ func (q *queryV2Service) getProtoFromDB(ctx context.Context, query *ent.KaskadaQ
 		Metrics: query.Metrics,
 	}
 
-	switch kind := query.Config.OutputTo.Destination.(type) {
-	case *v1alpha.OutputTo_ObjectStore:
+	switch kind := query.Config.Destination.Destination.(type) {
+	case *v1alpha.Destination_ObjectStore:
 		responseQuery.Results.Output.FileResults = &apiv1alpha.FileResults{
 			FileType: kind.ObjectStore.FileType,
 			Paths:    []string{},

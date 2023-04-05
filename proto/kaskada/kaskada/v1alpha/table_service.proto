@@ -8,6 +8,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/common.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
+import "kaskada/kaskada/v1alpha/sources.proto";
 import "validate/validate.proto";
 
 message Table {
@@ -69,25 +70,8 @@ message Table {
   // The number of files in this table.
   int64 file_count = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // The backing configuration for the table
-  TableSource table_source = 12;
-
-  message TableSource {
-    oneof source {
-      // By default, all tables are assumed to be Kaskada internal tables.
-      KaskadaSource kaskada = 1;
-      // An optional source of a Pulsar Source to read from a topic;
-      PulsarSource pulsar = 2;
-    }
-  }
-
-  message KaskadaSource {}
-  message PulsarSource {
-    // The Pulsar protocol connection URL
-    string protocol_url = 1;
-    // Pulsar topic to read from
-    string topic = 2;
-  }
+  // The backing source for the table
+  Source source = 12;
 }
 
 message ListTablesRequest {

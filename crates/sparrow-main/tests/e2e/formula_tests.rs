@@ -5,7 +5,7 @@ use crate::QueryFixture;
 async fn test_formulas_out_of_order() {
     insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, n: Numbers.n, add: n_plus_m }")
         .with_formula("n_plus_m", "numbers_m + Numbers.n")
-        .with_formula("numbers_m", "Numbers.m").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+        .with_formula("numbers_m", "Numbers.m").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,add
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,10,15
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,3,27
@@ -20,7 +20,7 @@ async fn test_formulas_out_of_order() {
 async fn test_formulas_cyclic_dependency() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ sum: n + m }")
         .with_formula("n", "m + 1")
-        .with_formula("m", "n + 1").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+        .with_formula("m", "n + 1").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -49,7 +49,7 @@ async fn test_invalid_formula_not_rereported() {
     // This test verifies that if an formula's expression is invalid (`$$`)
     // it doesn't cause an "unbound reference" error elsewhere.
     insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Invalid + 5 } ")
-      .with_formula("Invalid", "Numbers.n + $$").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+      .with_formula("Invalid", "Numbers.n + $$").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -75,7 +75,7 @@ async fn test_invalid_formula_still_reports_query_error() {
     // This verifies that if a formula is invalid, we still report
     // problems in the query.
     insta::assert_yaml_snapshot!(QueryFixture::new("{ n: Invalid + $$ } ")
-      .with_formula("Invalid", "Numbers.n + $$").run_to_csv(&i64_data_fixture()).await.unwrap_err(), @r###"
+      .with_formula("Invalid", "Numbers.n + $$").run_to_csv(&i64_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -101,7 +101,7 @@ async fn test_unused_formula_does_not_report_query_error() {
     // This verifies that if an invalid formula is not used, we
     // still report problems in the query.
     insta::assert_snapshot!(QueryFixture::new("{ n: Numbers.n } ")
-      .with_formula("Invalid", "Numbers.n + $$").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+      .with_formula("Invalid", "Numbers.n + $$").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3

@@ -11,7 +11,7 @@ use crate::QueryFixture;
 
 #[tokio::test]
 async fn test_sum_i64_final() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m) }").with_final_results().run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m) }").with_final_results().run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,34
     1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,24
@@ -20,7 +20,7 @@ async fn test_sum_i64_final() {
 
 #[tokio::test]
 async fn test_sum_since_tick_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=since(daily())) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=since(daily())) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -33,7 +33,7 @@ async fn test_sum_since_tick_i64() {
 
 #[tokio::test]
 async fn test_since_tick_with_pipe_sum() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=since( (Numbers.m | (daily() or $input > 10)) ) ) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=since( (Numbers.m | (daily() or $input > 10)) ) ) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -45,7 +45,7 @@ async fn test_since_tick_with_pipe_sum() {
 }
 #[tokio::test]
 async fn test_since_predicate_sum_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=since(Numbers.n > 7)) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=since(Numbers.n > 7)) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -57,7 +57,7 @@ async fn test_since_predicate_sum_i64() {
 }
 #[tokio::test]
 async fn test_sliding_tick_sum_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=sliding(2, daily())) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=sliding(2, daily())) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -69,7 +69,7 @@ async fn test_sliding_tick_sum_i64() {
 }
 #[tokio::test]
 async fn test_sliding_predicate_sum_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=sliding(2, Numbers.m > 1)) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m, window=sliding(2, Numbers.m > 1)) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -82,7 +82,7 @@ async fn test_sliding_predicate_sum_i64() {
 
 #[tokio::test]
 async fn test_nested_sum_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum: sum(sum(Numbers.m))}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum: sum(sum(Numbers.m))}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -95,7 +95,7 @@ async fn test_nested_sum_i64() {
 
 #[tokio::test]
 async fn test_sum_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum: sum(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum: sum(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -108,7 +108,7 @@ async fn test_sum_i64() {
 
 #[tokio::test]
 async fn test_sum_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum: sum(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum: sum(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3
@@ -121,7 +121,7 @@ async fn test_sum_f64() {
 
 #[tokio::test]
 async fn test_mean_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ mean: mean(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ mean: mean(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,mean
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.0
@@ -134,7 +134,7 @@ async fn test_mean_i64() {
 
 #[tokio::test]
 async fn test_mean_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ mean: mean(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ mean: mean(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,mean
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3
@@ -147,7 +147,7 @@ async fn test_mean_f64() {
 
 #[tokio::test]
 async fn test_variance_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ variance: variance(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ variance: variance(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,variance
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,
@@ -160,7 +160,7 @@ async fn test_variance_i64() {
 
 #[tokio::test]
 async fn test_variance_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ variance: variance(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ variance: variance(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,variance
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,
@@ -173,7 +173,7 @@ async fn test_variance_f64() {
 
 #[tokio::test]
 async fn test_stddev_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, stddev: stddev(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, stddev: stddev(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,stddev
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,
@@ -186,7 +186,7 @@ async fn test_stddev_i64() {
 
 #[tokio::test]
 async fn test_stddev_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, stddev: stddev(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, stddev: stddev(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,stddev
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3,
@@ -199,7 +199,7 @@ async fn test_stddev_f64() {
 
 #[tokio::test]
 async fn test_min_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ min: min(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ min: min(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,min
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3
@@ -212,7 +212,7 @@ async fn test_min_f64() {
 
 #[tokio::test]
 async fn test_min_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ min: min(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ min: min(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,min
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -225,7 +225,7 @@ async fn test_min_i64() {
 
 #[tokio::test]
 async fn test_min_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ min: min(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ min: min(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,min
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,2
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,4
@@ -238,7 +238,7 @@ async fn test_min_timestamp_ns() {
 
 #[tokio::test]
 async fn test_max_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ max: max(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ max: max(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,max
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3
@@ -251,7 +251,7 @@ async fn test_max_f64() {
 
 #[tokio::test]
 async fn test_max_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ max: max(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ max: max(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,max
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -264,7 +264,7 @@ async fn test_max_i64() {
 
 #[tokio::test]
 async fn test_max_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ max: max(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ max: max(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,max
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,2
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,4
@@ -277,7 +277,7 @@ async fn test_max_timestamp_ns() {
 
 #[tokio::test]
 async fn test_count_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1
@@ -290,7 +290,7 @@ async fn test_count_i64() {
 
 #[tokio::test]
 async fn test_count_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1
@@ -303,7 +303,7 @@ async fn test_count_f64() {
 
 #[tokio::test]
 async fn test_count_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Numbers)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Numbers)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1
@@ -316,7 +316,7 @@ async fn test_count_record() {
 
 #[tokio::test]
 async fn test_count_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1
@@ -329,7 +329,7 @@ async fn test_count_string() {
 
 #[tokio::test]
 async fn test_count_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Booleans.a)}").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Booleans.a)}").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1
@@ -343,7 +343,7 @@ async fn test_count_boolean() {
 
 #[tokio::test]
 async fn test_count_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1
@@ -356,7 +356,7 @@ async fn test_count_timestamp_ns() {
 
 #[tokio::test]
 async fn test_count_if_condition() {
-    insta::assert_snapshot!(QueryFixture::new("{ count_if: count_if(Numbers.m > 10)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count_if: count_if(Numbers.m > 10)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count_if
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,0
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1
@@ -369,7 +369,7 @@ async fn test_count_if_condition() {
 
 #[tokio::test]
 async fn test_first_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: first(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: first(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -382,7 +382,7 @@ async fn test_first_i64() {
 
 #[tokio::test]
 async fn test_first_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: first(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: first(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3
@@ -395,7 +395,7 @@ async fn test_first_f64() {
 
 #[tokio::test]
 async fn test_first_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: Numbers | first() | $input.m }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: Numbers | first() | $input.m }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -408,7 +408,7 @@ async fn test_first_record() {
 
 #[tokio::test]
 async fn test_first_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: first(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: first(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World
@@ -421,7 +421,7 @@ async fn test_first_string() {
 
 #[tokio::test]
 async fn test_first_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: first(Booleans.a) }").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: first(Booleans.a) }").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false
@@ -435,7 +435,7 @@ async fn test_first_boolean() {
 
 #[tokio::test]
 async fn test_first_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: first(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: first(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,2
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,4
@@ -448,7 +448,7 @@ async fn test_first_timestamp_ns() {
 
 #[tokio::test]
 async fn test_last_sliding_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m, window=sliding(3, monthly())) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m, window=sliding(3, monthly())) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -461,7 +461,7 @@ async fn test_last_sliding_i64() {
 
 #[tokio::test]
 async fn test_first_since_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ first: first(Numbers.m, window=since(daily())) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first: first(Numbers.m, window=since(daily())) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -474,7 +474,7 @@ async fn test_first_since_i64() {
 
 #[tokio::test]
 async fn test_last_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m)}").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m)}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -490,7 +490,7 @@ async fn test_last_i64_finished() {
     // This uses `when_finished()` to read the result of `last` after all
     // `Numbers` rows have been processed, at which point it *should not*
     // be updated, because there is no new `Numbers.m`.
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m) | when(finished()) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m) | when(finished()) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,12
     1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,24
@@ -502,7 +502,7 @@ async fn test_last_i64_record_finished() {
     // This uses `when_finished()` to read the result of `last` after all
     // `Numbers` rows have been processed, at which point it *should not*
     // be updated, because there is no new `Numbers.m`.
-    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m } | last() | when(finished())").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m } | last() | when(finished())").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m
     1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,
     1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,24
@@ -511,7 +511,7 @@ async fn test_last_i64_record_finished() {
 
 #[tokio::test]
 async fn test_last_f64() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m)}").run_to_csv(&f64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m)}").run_to_csv(&f64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.2
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24.3
@@ -524,7 +524,7 @@ async fn test_last_f64() {
 
 #[tokio::test]
 async fn test_last_record() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: Numbers | last() | $input.m }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: Numbers | last() | $input.m }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24
@@ -537,7 +537,7 @@ async fn test_last_record() {
 
 #[tokio::test]
 async fn test_last_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Strings.s)}").run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Strings.s)}").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,hEllo
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,World
@@ -550,7 +550,7 @@ async fn test_last_string() {
 
 #[tokio::test]
 async fn test_last_string_finished() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Strings.s)}").with_final_results().run_to_csv(&strings_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Strings.s)}").with_final_results().run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:44:57.000000001,18446744073709551615,3650215962958587783,A,hEllo
     1996-12-20T00:44:57.000000001,18446744073709551615,11753611437813598533,B,goodbye
@@ -559,7 +559,7 @@ async fn test_last_string_finished() {
 
 #[tokio::test]
 async fn test_last_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Booleans.a)}").run_to_csv(&boolean_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Booleans.a)}").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true
     1996-12-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,false
@@ -573,7 +573,7 @@ async fn test_last_boolean() {
 
 #[tokio::test]
 async fn test_last_timestamp_ns() {
-    insta::assert_snapshot!(QueryFixture::new("{ last: last(Times.n)}").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ last: last(Times.n)}").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,2
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,4
@@ -586,7 +586,7 @@ async fn test_last_timestamp_ns() {
 
 #[tokio::test]
 async fn test_count_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: count(0) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: count(0) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,0
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,0
@@ -599,7 +599,7 @@ async fn test_count_constant() {
 
 #[tokio::test]
 async fn test_count_if_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: count_if(false) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: count_if(false) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,0
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,0
@@ -612,7 +612,7 @@ async fn test_count_if_constant() {
 
 #[tokio::test]
 async fn test_first_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: first(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: first(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -625,7 +625,7 @@ async fn test_first_constant() {
 
 #[tokio::test]
 async fn test_lag_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: lag(2, 2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: lag(2, 2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -638,7 +638,7 @@ async fn test_lag_constant() {
 
 #[tokio::test]
 async fn test_last_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: last(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: last(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -651,7 +651,7 @@ async fn test_last_constant() {
 
 #[tokio::test]
 async fn test_max_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: max(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: max(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -664,7 +664,7 @@ async fn test_max_constant() {
 
 #[tokio::test]
 async fn test_mean_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: mean(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: mean(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -677,7 +677,7 @@ async fn test_mean_constant() {
 
 #[tokio::test]
 async fn test_min_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: min(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: min(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -690,7 +690,7 @@ async fn test_min_constant() {
 
 #[tokio::test]
 async fn test_min_stddev() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: stddev(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: stddev(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -703,7 +703,7 @@ async fn test_min_stddev() {
 
 #[tokio::test]
 async fn test_min_sum() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: sum(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: sum(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -716,7 +716,7 @@ async fn test_min_sum() {
 
 #[tokio::test]
 async fn test_min_variance() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: variance(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: variance(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -729,7 +729,7 @@ async fn test_min_variance() {
 
 #[tokio::test]
 async fn test_first_sum_constant() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: first(sum(1)) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: first(sum(1)) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -742,7 +742,7 @@ async fn test_first_sum_constant() {
 
 #[tokio::test]
 async fn test_add_sum_constants() {
-    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: sum(1) + sum(2) }").run_to_csv(&timestamp_ns_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Times.time, agg: sum(1) + sum(2) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,agg
     1994-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1994-12-19T16:39:57-08:00,
     1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,1995-10-19T16:40:57-08:00,
@@ -755,7 +755,7 @@ async fn test_add_sum_constants() {
 
 #[tokio::test]
 async fn test_literal_agg() {
-    insta::assert_snapshot!(QueryFixture::new("{ agg_literal: sum(5), max_output: max(Numbers.m) }").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ agg_literal: sum(5), max_output: max(Numbers.m) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,agg_literal,max_output
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,,5
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,,24

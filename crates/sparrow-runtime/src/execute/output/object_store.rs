@@ -6,8 +6,7 @@ use arrow::record_batch::RecordBatch;
 use derive_more::Display;
 use error_stack::{IntoReport, IntoReportCompat, Result, ResultExt};
 use futures::stream::BoxStream;
-use sparrow_api::kaskada::v1alpha::output_to;
-use sparrow_api::kaskada::v1alpha::{FileType, ObjectStoreDestination};
+use sparrow_api::kaskada::v1alpha::{destination, FileType, ObjectStoreDestination};
 use tempfile::NamedTempFile;
 use tokio::time::Instant;
 use uuid::Uuid;
@@ -39,7 +38,7 @@ pub(super) async fn write(
     // Inform tracker of destination type
     progress_updates_tx
         .send(ProgressUpdate::Destination {
-            destination: output_to::Destination::ObjectStore(object_store.clone()),
+            destination: destination::Destination::ObjectStore(object_store.clone()),
         })
         .await
         .into_report()

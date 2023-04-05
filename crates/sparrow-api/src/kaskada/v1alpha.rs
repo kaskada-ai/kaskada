@@ -1,9 +1,9 @@
+#![allow(clippy::large_enum_variant)] // Could box the pulsar subscription, but for now just allowing this.
 #![allow(clippy::derive_partial_eq_without_eq)] // stop clippy erroring on generated code from tonic (proto)
 use itertools::Itertools;
 
 use crate::kaskada::v1alpha::object_store_destination::ResultPaths;
 use crate::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use crate::kaskada::v1alpha::output_to::Destination;
 
 tonic::include_proto!("kaskada.kaskada.v1alpha");
 
@@ -34,9 +34,9 @@ impl ExecuteResponse {
     //
     /// Returns `None` if not an `ObjectStoreOutput`.
     pub fn output_paths(&self) -> Option<Vec<String>> {
-        match &self.output_to {
+        match &self.destination {
             Some(output) => match &output.destination {
-                Some(Destination::ObjectStore(store)) => store
+                Some(destination::Destination::ObjectStore(store)) => store
                     .output_paths
                     .as_ref()
                     .map(|output_paths| output_paths.paths.clone()),
@@ -50,9 +50,10 @@ impl ExecuteResponse {
     ///
     /// Returns `None` if not an `ObjectStoreOutput`.
     pub fn output_paths_mut(&mut self) -> Option<&mut ResultPaths> {
-        match &mut self.output_to {
+        match &mut self.destination {
             Some(output) => match &mut output.destination {
-                Some(Destination::ObjectStore(store)) => match &mut store.output_paths {
+                Some(destination::Destination::ObjectStore(store)) => match &mut store.output_paths
+                {
                     Some(output_path) => Some(output_path),
                     None => None,
                 },
@@ -140,11 +141,13 @@ impl std::fmt::Display for PlanHash {
     }
 }
 
-impl FilePath {
-    pub fn try_from_local(path: &std::path::Path) -> anyhow::Result<file_path::Path> {
+impl SourceData {
+    pub fn try_from_local(path: &std::path::Path) -> anyhow::Result<source_data::Source> {
         let path = match path.extension().and_then(|ext| ext.to_str()) {
-            Some("parquet") => file_path::Path::ParquetPath(path.to_string_lossy().into_owned()),
-            Some("csv") => file_path::Path::CsvPath(path.to_string_lossy().into_owned()),
+            Some("parquet") => {
+                source_data::Source::ParquetPath(path.to_string_lossy().into_owned())
+            }
+            Some("csv") => source_data::Source::CsvPath(path.to_string_lossy().into_owned()),
             unsupported => anyhow::bail!("Unsupported extension {:?}", unsupported),
         };
         Ok(path)

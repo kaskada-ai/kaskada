@@ -2,23 +2,23 @@
 source: crates/sparrow-main/src/serve/file_service.rs
 expression: result
 ---
-file_metadatas:
-  - schema:
-      fields:
-        - name: id
-          data_type:
-            kind:
-              Primitive: 6
-        - name: name
-          data_type:
-            kind:
-              Primitive: 14
-        - name: value
-          data_type:
-            kind:
-              Primitive: 14
-        - name: value2
-          data_type:
-            kind:
-              Primitive: 6
+source_metadata:
+  schema:
+    fields:
+      - name: id
+        data_type:
+          kind:
+            Primitive: 6
+      - name: name
+        data_type:
+          kind:
+            Primitive: 14
+      - name: value
+        data_type:
+          kind:
+            Primitive: 14
+      - name: value2
+        data_type:
+          kind:
+            Primitive: 6
 

@@ -28,7 +28,7 @@ func (KaskadaTable) Fields() []ent.Field {
 		field.String("time_column_name").Immutable(),
 		field.String("subsort_column_name").Optional().Nillable().Immutable(),
 		field.String("grouping_id").Optional().Immutable(),
-		field.Bytes("source").GoType(&v1alpha.Table_TableSource{}).Immutable(),
+		field.Bytes("source").GoType(&v1alpha.Source{}).Immutable(),
 		field.Bytes("merged_schema").GoType(&v1alpha.Schema{}).Optional().Nillable(),
 	}
 }

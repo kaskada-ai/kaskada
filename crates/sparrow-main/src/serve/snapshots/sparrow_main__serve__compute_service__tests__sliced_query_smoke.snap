@@ -16,7 +16,7 @@ expression: results
   flight_record_path: ~
   plan_yaml_path: ~
   compute_snapshots: []
-  output_to:
+  destination:
     destination:
       ObjectStore:
         file_type: 1
@@ -30,5 +30,5 @@ expression: results
   flight_record_path: ~
   plan_yaml_path: ~
   compute_snapshots: []
-  output_to: ~
+  destination: ~
 

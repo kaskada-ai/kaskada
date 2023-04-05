@@ -1,6 +1,6 @@
 //! Basic e2e tests for fake resumeable compute
 use indoc::indoc;
-use sparrow_api::kaskada::v1alpha::{file_path, TableConfig};
+use sparrow_api::kaskada::v1alpha::{source_data, TableConfig};
 use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
@@ -28,6 +28,7 @@ async fn assert_final_incremental_same_as_complete(
 
     let mut data_fixture = DataFixture::new()
         .with_table_from_csv(config, csv1)
+        .await
         .unwrap();
 
     // Run the query with the first file, updating the Rocks DB.
@@ -41,8 +42,12 @@ async fn assert_final_incremental_same_as_complete(
     };
 
     // Add the second file
-    let csv2 = file_path::Path::CsvData(csv2.to_owned());
-    data_fixture.table_mut("Numbers").add_source(&csv2).unwrap();
+    let csv2 = source_data::Source::CsvData(csv2.to_owned());
+    data_fixture
+        .table_mut("Numbers")
+        .add_file_source(&csv2)
+        .await
+        .unwrap();
 
     let non_persistent_results = non_persistent_query
         .run_to_csv(&data_fixture)
@@ -58,7 +63,7 @@ async fn assert_final_incremental_same_as_complete(
     // open this file".
     let numbers = data_fixture.table_mut("Numbers");
     numbers.clear();
-    numbers.add_source(&csv2).unwrap();
+    numbers.add_file_source(&csv2).await.unwrap();
     let persistent_results = persistent_query
         .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
         .run_to_csv(&data_fixture)
@@ -196,6 +201,7 @@ async fn test_resumeable_with_unordered_file_sets() {
         .with_rocksdb(snapshot_dir.path(), None);
     let mut data_fixture = DataFixture::new()
         .with_table_from_csv(config, csv1)
+        .await
         .unwrap();
 
     // Run the query with the first file, updating the Rocks DB.
@@ -209,12 +215,20 @@ async fn test_resumeable_with_unordered_file_sets() {
     };
 
     // Clear the table, add the second file first, then the first file.
-    let csv1 = file_path::Path::CsvData(csv1.to_owned());
-    let csv2 = file_path::Path::CsvData(csv2.to_owned());
+    let csv1 = source_data::Source::CsvData(csv1.to_owned());
+    let csv2 = source_data::Source::CsvData(csv2.to_owned());
 
     data_fixture.table_mut("Numbers").clear();
-    data_fixture.table_mut("Numbers").add_source(&csv2).unwrap();
-    data_fixture.table_mut("Numbers").add_source(&csv1).unwrap();
+    data_fixture
+        .table_mut("Numbers")
+        .add_file_source(&csv2)
+        .await
+        .unwrap();
+    data_fixture
+        .table_mut("Numbers")
+        .add_file_source(&csv1)
+        .await
+        .unwrap();
 
     let persistent_results = persistent_query
         .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
@@ -611,6 +625,7 @@ async fn test_resumeable_final_no_new_data() {
 
     let mut data_fixture = DataFixture::new()
         .with_table_from_csv(config, csv1)
+        .await
         .unwrap();
 
     // Run the query, updating the RocksDb

@@ -321,22 +321,22 @@ func GetMergedCreateQueryResponse(stream v1alpha.QueryService_CreateQueryClient)
 		if queryResponse.RequestDetails != nil {
 			mergedResponse.RequestDetails = queryResponse.RequestDetails
 		}
-		if queryResponse.GetOutputTo().GetRedis() != nil {
-			mergedResponse.OutputTo = &v1alpha.OutputTo{
-				Destination: &v1alpha.OutputTo_Redis{Redis: queryResponse.GetOutputTo().GetRedis()},
+		if queryResponse.GetDestination().GetRedis() != nil {
+			mergedResponse.Destination = &v1alpha.Destination{
+				Destination: &v1alpha.Destination_Redis{Redis: queryResponse.GetDestination().GetRedis()},
 			}
 		}
-		if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths() != nil {
-			newPaths := queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().Paths
+		if queryResponse.GetDestination().GetObjectStore().GetOutputPaths() != nil {
+			newPaths := queryResponse.GetDestination().GetObjectStore().GetOutputPaths().Paths
 			existingPaths := []string{}
 
-			if mergedResponse.GetOutputTo().GetObjectStore().GetOutputPaths() != nil {
-				existingPaths = mergedResponse.GetOutputTo().GetObjectStore().GetOutputPaths().Paths
+			if mergedResponse.GetDestination().GetObjectStore().GetOutputPaths() != nil {
+				existingPaths = mergedResponse.GetDestination().GetObjectStore().GetOutputPaths().Paths
 			}
-			mergedResponse.OutputTo = &v1alpha.OutputTo{
-				Destination: &v1alpha.OutputTo_ObjectStore{
+			mergedResponse.Destination = &v1alpha.Destination{
+				Destination: &v1alpha.Destination_ObjectStore{
 					ObjectStore: &v1alpha.ObjectStoreDestination{
-						FileType: queryResponse.GetOutputTo().GetObjectStore().FileType,
+						FileType: queryResponse.GetDestination().GetObjectStore().FileType,
 						OutputPaths: &v1alpha.ObjectStoreDestination_ResultPaths{
 							Paths: append(existingPaths, newPaths...),
 						},

@@ -32,7 +32,7 @@ def test_create_query_with_defaults(mockClient):
     expected_request = query_pb.CreateQueryRequest(
         query=query_pb.Query(
             expression=expression,
-            output_to={
+            destination={
                 "object_store": destinations_pb.ObjectStoreDestination(
                     file_type=common_pb.FILE_TYPE_PARQUET
                 )

@@ -5,9 +5,7 @@ import "kaskada/kaskada/v1alpha/common.proto";
 
 message PrepareDataRequest {
   // The source of information for the prepare data
-  //
-  // Note: Version 1 - Allow only 1 file
-  FilePath file_path = 1;
+  SourceData source_data = 1;
 
   // General configuration of the table
   TableConfig config = 2;
