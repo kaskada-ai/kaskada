@@ -1,7 +1,6 @@
 syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
-import "google/protobuf/timestamp.proto";
 import "kaskada/kaskada/v1alpha/options.proto";
 
 message PulsarConfig {
@@ -48,5 +47,5 @@ message PulsarSubscription {
   // subscribing to the pulsar broker.
   string subscription_id = 2;
 
-  google.protobuf.Timestamp last_publish_time = 3;
+  int64 last_publish_time = 3;
 }
