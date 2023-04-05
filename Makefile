@@ -93,7 +93,7 @@ ci/integration/tests/docker-compose-down:
 	export DOCKER_BUILDKIT=1 
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
 
-ci/integration/tests/run/api: tests/int/run-api
+ci/integration/tests/run/api: test/int/run-api
 
 
 wren/build:
