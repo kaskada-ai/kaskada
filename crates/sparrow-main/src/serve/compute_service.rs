@@ -52,7 +52,13 @@ impl ComputeService for ComputeServiceImpl {
         &self,
         request: Request<CompileRequest>,
     ) -> Result<Response<CompileResponse>, Status> {
-        match tokio::spawn(compile_impl(request).in_current_span()).await {
+        let span = tracing::info_span!("Compile");
+        let _enter = span.enter();
+
+        match tokio::spawn(compile_impl(request).in_current_span())
+            .in_current_span()
+            .await
+        {
             Ok(result) => result.into_status(),
             Err(panic) => {
                 tracing::error!("Panic during prepare: {panic}");
@@ -65,6 +71,9 @@ impl ComputeService for ComputeServiceImpl {
         &self,
         request: Request<ExecuteRequest>,
     ) -> Result<Response<Self::ExecuteStream>, Status> {
+        let span = tracing::info_span!("Execute");
+        let _enter = span.enter();
+
         let handle = tokio::spawn(
             execute_impl(
                 self.flight_record_path,
@@ -73,7 +82,7 @@ impl ComputeService for ComputeServiceImpl {
             )
             .in_current_span(),
         );
-        match handle.await {
+        match handle.in_current_span().await {
             Ok(result) => {
                 let stream = result.into_status()?;
                 Ok(Response::new(Box::pin(stream)))
@@ -302,6 +311,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
     use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
     use sparrow_runtime::prepare::{file_sourcedata, prepared_batches};
+    use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
     use super::*;
@@ -514,14 +524,18 @@ mod tests {
         .collect()
         .await;
 
-        let input_path = source_data::Source::ParquetPath(
-            part1_file_path
-                .canonicalize()
-                .unwrap()
-                .to_string_lossy()
-                .to_string(),
-        );
-        let part1_metadata = RawMetadata::try_from(&input_path).await.unwrap();
+        let part1_file_path = part1_file_path
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+
+        let part1_file_path = format!("file://{part1_file_path}");
+        let input_path = source_data::Source::ParquetPath(part1_file_path);
+        let object_store_registry = ObjectStoreRegistry::new();
+        let part1_metadata = RawMetadata::try_from(&input_path, &object_store_registry)
+            .await
+            .unwrap();
         let schema = Schema::try_from(part1_metadata.table_schema.as_ref()).unwrap();
 
         debug_assert_eq!(prepared_batches.len(), 1);
@@ -604,7 +618,7 @@ mod tests {
 
         let store = ObjectStoreDestination {
             file_type: FileType::Parquet as i32,
-            output_prefix_uri: format!("file://{}", output_dir.path().display()),
+            output_prefix_uri: format!("file:///{}", output_dir.path().display()),
             output_paths: None,
         };
         let output_to = Destination {

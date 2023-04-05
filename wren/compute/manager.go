@@ -858,12 +858,12 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 
 	switch fileInput.GetType() {
 	case kaskadafile.TypeCsv:
-		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_CsvPath{CsvPath: ConvertURIForCompute(fileInput.GetURI())}}
+		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_CsvPath{CsvPath: fileInput.GetURI()}}
 	case kaskadafile.TypeParquet:
-		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: ConvertURIForCompute(fileInput.GetURI())}}
+		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: fileInput.GetURI()}}
 	default:
 		subLogger.Warn().Msg("user didn't specifiy file type, defaulting to parquet for now, but will error in the future")
-		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: ConvertURIForCompute(fileInput.GetURI())}}
+		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: fileInput.GetURI()}}
 	}
 
 	fileClient := m.computeClients.FileServiceClient(ctx)

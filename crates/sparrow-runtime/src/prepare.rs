@@ -82,7 +82,6 @@ async fn reader_from_pulsar<'a>(
     let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
     let pm = RawMetadata::try_from_pulsar(pulsar_config)
         .await
-        .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
     let consumer =
@@ -193,70 +192,66 @@ pub async fn upload_prepared_files_to_s3(
     output_file_prefix: &str,
 ) -> error_stack::Result<Vec<PreparedFile>, Error> {
     let span = tracing::info_span!("Uploading prepared files to S3", ?output_s3_prefix);
+    let _enter = span.enter();
 
-    let prepared_files: error_stack::Result<Vec<PreparedFile>, Error> = async move {
-        let mut parquet_uploads: Vec<_> = Vec::new();
-        let mut prepared_files: Vec<_> = Vec::new();
-        {
-            for (batch_count, prepared_metadata) in prepared_metadata.iter().enumerate() {
-                let prepared_file: PreparedFile = prepared_metadata
-                    .to_owned()
-                    .try_into()
-                    .change_context(Error::Internal)?;
-                tracing::debug!(
-                    "Prepared batch {batch_count} has {} rows",
-                    prepared_file.num_rows
-                );
+    let mut parquet_uploads: Vec<_> = Vec::new();
+    let mut prepared_files: Vec<_> = Vec::new();
+    {
+        for (batch_count, prepared_metadata) in prepared_metadata.iter().enumerate() {
+            let prepared_file: PreparedFile = prepared_metadata
+                .to_owned()
+                .try_into()
+                .change_context(Error::Internal)?;
+            tracing::debug!(
+                "Prepared batch {batch_count} has {} rows",
+                prepared_file.num_rows
+            );
 
-                tracing::debug!(
-                    "Prepared batch {batch_count} with metadata {:?}",
-                    prepared_metadata
-                );
-                // Note that the `output_s3_prefix` is formatted as `s3://<bucket>/<output_prefix>`
-                let output_prefix_uri = S3Object::try_from_uri(output_s3_prefix)
-                    .into_report()
-                    .change_context(Error::Internal)?;
-                let output_bucket = output_prefix_uri.bucket;
-                let output_key_prefix = output_prefix_uri.key;
+            tracing::debug!(
+                "Prepared batch {batch_count} with metadata {:?}",
+                prepared_metadata
+            );
+            // Note that the `output_s3_prefix` is formatted as `s3://<bucket>/<output_prefix>`
+            let output_prefix_uri = S3Object::try_from_uri(output_s3_prefix)
+                .into_report()
+                .change_context(Error::Internal)?;
+            let output_bucket = output_prefix_uri.bucket;
+            let output_key_prefix = output_prefix_uri.key;
 
-                let upload_object = S3Object {
-                    bucket: output_bucket.clone(),
-                    key: format!("{output_key_prefix}/{output_file_prefix}-{batch_count}.parquet"),
-                };
+            let upload_object = S3Object {
+                bucket: output_bucket.clone(),
+                key: format!("{output_key_prefix}/{output_file_prefix}-{batch_count}.parquet"),
+            };
 
-                let metadata_upload_object = S3Object {
-                    bucket: output_bucket.clone(),
-                    key: format!(
-                        "{output_key_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet"
-                    ),
-                };
-                let prepared_file: PreparedFile = prepared_metadata
-                    .to_owned()
-                    .with_s3_path(&upload_object)
-                    .with_s3_metadata_path(&metadata_upload_object)
-                    .try_into()
-                    .change_context(Error::Internal)?;
-                parquet_uploads
-                    .push(s3.upload_s3(upload_object, Path::new(&prepared_metadata.path)));
-                parquet_uploads.push(s3.upload_s3(
-                    metadata_upload_object,
-                    Path::new(&prepared_metadata.metadata_path),
-                ));
-                prepared_files.push(prepared_file)
-            }
+            let metadata_upload_object = S3Object {
+                bucket: output_bucket.clone(),
+                key: format!(
+                    "{output_key_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet"
+                ),
+            };
+            let prepared_file: PreparedFile = prepared_metadata
+                .to_owned()
+                .with_s3_path(&upload_object)
+                .with_s3_metadata_path(&metadata_upload_object)
+                .try_into()
+                .change_context(Error::Internal)?;
+            parquet_uploads.push(s3.upload_s3(upload_object, Path::new(&prepared_metadata.path)));
+            parquet_uploads.push(s3.upload_s3(
+                metadata_upload_object,
+                Path::new(&prepared_metadata.metadata_path),
+            ));
+            prepared_files.push(prepared_file)
         }
-        // TODO: We could (instead) use a loop and select, which would allow us
-        // to fail early if anything failed. But it is more book-keeping.
-        let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
-        for result in parquet_uploads.await {
-            result.into_report().change_context(Error::UploadResult)?;
-        }
-        Ok(prepared_files)
     }
-    .instrument(span)
-    .await;
 
-    prepared_files
+    // TODO: We could (instead) use a loop and select, which would allow us
+    // to fail early if anything failed. But it is more book-keeping.
+    let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
+    for result in parquet_uploads.await {
+        result.into_report().change_context(Error::UploadResult)?;
+    }
+
+    Ok(prepared_files)
 }
 
 fn open_file(path: impl AsRef<Path>) -> error_stack::Result<File, Error> {
@@ -376,9 +371,7 @@ fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
     let batch_size = get_batch_size(num_rows, num_files);
     let parquet_reader = parquet_reader.with_batch_size(batch_size);
 
-    let raw_metadata = RawMetadata::try_from_raw_schema(parquet_reader.schema().clone())
-        .into_report()
-        .change_context(Error::CreateParquetReader)?;
+    let raw_metadata = RawMetadata::from_raw_schema(parquet_reader.schema().clone());
     let reader = parquet_reader
         .build()
         .into_report()
@@ -409,9 +402,7 @@ fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
         .build(reader)
         .into_report()
         .change_context(Error::CreateCsvReader)?;
-    let raw_metadata = RawMetadata::try_from_raw_schema(reader.schema())
-        .into_report()
-        .change_context(Error::CreateCsvReader)?;
+    let raw_metadata = RawMetadata::from_raw_schema(reader.schema());
     let stream_reader = futures::stream::iter(reader);
 
     PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)

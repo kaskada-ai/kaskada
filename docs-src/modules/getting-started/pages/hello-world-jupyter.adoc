@@ -281,10 +281,10 @@ Purchase
 ----
 
 [NOTE]
-----
+====
 This table is intentionally small so that you can get to know
 queries with Kaskada.
-----
+====
 
 As you begin to better understand your data you can start using
 aggregations over your data such as the `max()` function:
@@ -332,12 +332,12 @@ results in time:
 ----
 
 [TIP]
-----
+====
 The result of a previous cell in Jupyter is available to be saved
 by setting a variable to the result temporarily stored as `_`. You can
 then interact with these results at a typical dataframe such as
 displaying the columns or plotting a histogram:
-----
+====
 
 [source,IPython]
 ----

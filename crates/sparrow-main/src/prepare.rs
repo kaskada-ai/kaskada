@@ -171,7 +171,6 @@ impl PrepareCommand {
                 tenant: pulsar_tenant,
                 namespace: pulsar_namespace,
                 topic_name: pulsar_topic,
-                // ..Default::default()
             };
             tracing::debug!("Pulsar config is {:?}", redact_auth_field(&pulsar_config));
 
