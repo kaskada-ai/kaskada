@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kaskada-canary-db
+  namespace: {{ include "kaskada-canary.namespace" . }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.dbData.storage }}
+  storageClassName: {{ .Values.storage.dbData.storageClassName }}
+  volumeMode: Filesystem
+---
+{{- if (eq .Values.storage.objectStore.type "local") }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kaskada-canary-data
+  namespace: {{ include "kaskada-canary.namespace" . }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.objectStore.local.storage }}
+  storageClassName: {{ .Values.storage.objectStore.local.storageClassName }}
+  volumeMode: Filesystem
+{{- end }}

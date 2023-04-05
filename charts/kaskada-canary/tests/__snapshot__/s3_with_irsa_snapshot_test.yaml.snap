@@ -9,7 +9,7 @@ manifest should match snapshot:
         app.kubernetes.io/name: kaskada-canary
         helm.sh/chart: kaskada-canary-0.0.1
       name: my-release-kaskada-canary
-      namespace: s3-with-key
+      namespace: s3-with-irsa
     spec:
       replicas: 1
       selector:
@@ -29,38 +29,17 @@ manifest should match snapshot:
                 - /bin/sparrow-main
                 - serve
               env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      key: AWS_ACCESS_KEY_ID
-                      name: my-release-kaskada-canary
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      key: AWS_SECRET_ACCESS_KEY
-                      name: my-release-kaskada-canary
-                - name: AWS_REGION
-                  value: us-west-2
-                - name: AWS_DEFAULT_REGION
-                  value: us-west-2
                 - name: SPARROW_LOG_FILTER
                   value: egg::=warn,sparrow_=info,info
                 - name: SPARROW_LOG_JSON
                   value: "true"
-              image: ghcr.io/kaskada-ai/kaskada/engine:v0.5.4
+              image: ghcr.io/kaskada-ai/kaskada/engine:latest
               imagePullPolicy: IfNotPresent
               name: engine
               ports:
                 - containerPort: 50052
                   name: grpc
                   protocol: TCP
-              resources:
-                limits:
-                  cpu: 2
-                  memory: 8Gi
-                requests:
-                  cpu: 500m
-                  memory: 2Gi
               volumeMounts:
                 - mountPath: /tmp
                   name: kaskada-canary-tmp
@@ -74,30 +53,16 @@ manifest should match snapshot:
                 - name: DB_IN_MEMORY
                   value: "false"
                 - name: OBJECT_STORE_BUCKET
-                  value: kaskada-bucket
+                  value: kaskada-us-west-2-demo
                 - name: OBJECT_STORE_PATH
                   value: /data/
                 - name: OBJECT_STORE_TYPE
                   value: s3
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      key: AWS_ACCESS_KEY_ID
-                      name: my-release-kaskada-canary
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      key: AWS_SECRET_ACCESS_KEY
-                      name: my-release-kaskada-canary
-                - name: AWS_REGION
-                  value: us-west-2
-                - name: AWS_DEFAULT_REGION
-                  value: us-west-2
                 - name: DEBUG
                   value: "false"
                 - name: LOG_FORMAT_JSON
                   value: "true"
-              image: ghcr.io/kaskada-ai/kaskada/engine:v0.5.4
+              image: ghcr.io/kaskada-ai/kaskada/engine:latest
               imagePullPolicy: IfNotPresent
               name: manager
               ports:
@@ -107,16 +72,10 @@ manifest should match snapshot:
                 - containerPort: 3365
                   name: rest
                   protocol: TCP
-              resources:
-                limits:
-                  cpu: 250m
-                  memory: 250Mi
-                requests:
-                  cpu: 100m
-                  memory: 100Mi
               volumeMounts:
                 - mountPath: /db
                   name: kaskada-canary-db
+          serviceAccountName: kaskada
           volumes:
             - name: kaskada-canary-db
               persistentVolumeClaim:
@@ -139,7 +98,7 @@ manifest should match snapshot:
     kind: PersistentVolumeClaim
     metadata:
       name: kaskada-canary-db
-      namespace: s3-with-key
+      namespace: s3-with-irsa
     spec:
       accessModes:
         - ReadWriteOnce
@@ -150,20 +109,6 @@ manifest should match snapshot:
       volumeMode: Filesystem
   3: |
     apiVersion: v1
-    data:
-      AWS_ACCESS_KEY_ID: QVdTQUNDRVNTS0VZSUQ=
-      AWS_SECRET_ACCESS_KEY: bXlTZUNSRVRhQ0Nlc3NLZXk=
-    kind: Secret
-    metadata:
-      labels:
-        app.kubernetes.io/instance: my-release
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: kaskada-canary
-        helm.sh/chart: kaskada-canary-0.0.1
-      name: my-release-kaskada-canary
-      namespace: s3-with-key
-  4: |
-    apiVersion: v1
     kind: Service
     metadata:
       labels:
@@ -172,7 +117,7 @@ manifest should match snapshot:
         app.kubernetes.io/name: kaskada-canary
         helm.sh/chart: kaskada-canary-0.0.1
       name: my-release-kaskada-canary
-      namespace: s3-with-key
+      namespace: s3-with-irsa
     spec:
       ports:
         - name: grpc
@@ -187,3 +132,16 @@ manifest should match snapshot:
         app.kubernetes.io/instance: my-release
         app.kubernetes.io/name: kaskada-canary
       type: LoadBalancer
+  4: |
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::581634802795:role/irsa_s3
+      labels:
+        app.kubernetes.io/instance: my-release
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kaskada-canary
+        helm.sh/chart: kaskada-canary-0.0.1
+      name: kaskada
+      namespace: s3-with-irsa

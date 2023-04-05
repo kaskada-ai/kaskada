@@ -8,10 +8,9 @@ nameOverride: ""
 # -- Overrides the chart's computed fullname
 fullnameOverride: ""
 
-namespace:
-  # -- The name of the Namespace to deploy
+  # -- The name of the Namespace to deploy into.
   # If not set, `.Release.Namespace` is used
-  name: null
+namespace: null
 
 # -- Labels to apply to all resources
 commonLabels: {}
@@ -41,7 +40,6 @@ podAnnotations: {}
 # -- Labels to add to the pod
 podLabels: {}
 
-
 ## Expose the kaskada-canary service to be accessed from outside the cluster (LoadBalancer service).
 ## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
 ## ref: http://kubernetes.io/docs/user-guide/services/
@@ -62,19 +60,6 @@ service:
   # -- Adds the appProtocol field to the service. This allows to work with istio protocol selection. Ex: "http" or "tcp"
   appProtocol: ""
 
-serviceAccount:
-  # -- Specifies whether a ServiceAccount should be created
-  create: true
-  # -- The name of the ServiceAccount to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: null
-  # -- Image pull secrets for the service account
-  imagePullSecrets: []
-  # -- Annotations for the service account
-  annotations: {}
-  # -- Set this toggle to false to opt out of automounting API credentials for the service account
-  automountServiceAccountToken: true
-
 # -- Node selector for the pod
 nodeSelector: {}
 # -- Tolerations for the pod
@@ -92,35 +77,45 @@ storage:
     # -- The name of the bucket or container to use for storing data
     bucket: null
     # -- The bucket path prefix to use for storing data
-    path: /
-    # -- The type of object storage to use for the service. Either `s3`, `gcs`, or `azure`
-    type: null
-    s3:
-      # -- The region where the S3 bucket exists
-      region: null
-      # -- An AWS secret access key that has permisison to write to the bucket & prefix
-      secretAccessKey: null
-      # -- An AWS access key id that has permisison to write to the bucket & path
-      accessKeyId: null
-    gcs:
-      # -- A json token to authenticate with the service account to write to the bucket & prefix
-      jsonToken: null
-      # -- A GCS service account id that has permission to write to the bucket & prefix
-      serviceAccountId: null
-    azure:
-      # -- An account name that has permission to write to the container & blob
-      accountName: null
-      # -- An account key that has permission to write to the container & blob
-      accountKey: null
+    path: /data/
+    # -- The type of object storage to use for the service. Either `local` or `s3`.
+    # -- If `s3`, configure authentication to s3 in the `auth` section below
+    type: local
+    local:
+      # -- The size of the data storage volume when using local storage.
+      storage: 100Gi
+      # -- The type of storage used to provision the local data volume.
+      storageClassName:      
   # -- Configures the database storage for the kaskada service
   dbData:
     # -- The size of the database volume
-    storage: 10Gi
+    storage: 1Gi
     # -- The type of storage used to provision the persisted database volume
     storageClassName:
   # -- Configures temporary storage for the kaskada service
   tmpData:
     # -- The size of the temporary volume
-    storage: 100Gi
+    storage: 10Gi
     # -- The type of storage used to provision the temporary volume
     storageClassName:
+
+auth:
+  # -- (Optional) User-based authentication for AWS when using S3 as the primary storage for kaskada
+  # -- Instead, consider using IRSA authenication via the `auth.serviceAccount` values below.
+  aws:
+      # -- An AWS secret access key that has permisison to write to the bucket & prefix
+      secretAccessKey: null
+      # -- An AWS access key id that has permisison to write to the bucket & path
+      accessKeyId: null
+      # -- The region where the S3 bucket exists
+      region: null
+  serviceAccount:
+    # -- Specifies whether a ServiceAccount should be created
+    create: false
+    # -- The name of the ServiceAccount to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: null
+    # -- Image pull secrets for the service account
+    imagePullSecrets: []
+    # -- Annotations for the service account
+    annotations: {}

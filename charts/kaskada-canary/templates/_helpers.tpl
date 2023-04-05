@@ -53,45 +53,45 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Create the name of the namespace
 */}}
-{{- define "kaskada-canary.namespaceName" -}}
-{{- default .Release.Namespace .Values.namespace.name }}
+{{- define "kaskada-canary.namespace" -}}
+{{- default .Release.Namespace .Values.namespace }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
 {{- define "kaskada-canary.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-    {{ default (include "kaskada-canary.fullname" .) .Values.serviceAccount.name }}
+{{- if .Values.auth.serviceAccount.create -}}
+    {{ default (include "kaskada-canary.fullname" .) .Values.auth.serviceAccount.name }}
 {{- else -}}
-    {{ default "default" .Values.serviceAccount.name }}
+    {{ default "default" .Values.auth.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Shared env vars for s3 object store
+Shared env vars for aws
 */}}
-{{- define "kaskada-canary.s3Env" -}}
+{{- define "kaskada-canary.awsEnv" -}}
 {{- if (eq .Values.storage.objectStore.type "s3") }}
-{{- if .Values.storage.objectStore.s3.accessKeyId }}
+{{- if .Values.auth.aws.accessKeyId }}
 - name: AWS_ACCESS_KEY_ID
   valueFrom:
     secretKeyRef:
       name: {{ include "kaskada-canary.fullname" . }}
       key: AWS_ACCESS_KEY_ID
 {{- end }}
-{{- if .Values.storage.objectStore.s3.secretAccessKey }}
+{{- if .Values.auth.aws.secretAccessKey }}
 - name: AWS_SECRET_ACCESS_KEY
   valueFrom:
     secretKeyRef:
       name: {{ include "kaskada-canary.fullname" . }}
       key: AWS_SECRET_ACCESS_KEY
 {{- end }}
-{{- if .Values.storage.objectStore.s3.region }}
+{{- if .Values.auth.aws.region }}
 - name: AWS_REGION
-  value:  {{ .Values.storage.objectStore.s3.region }}
+  value:  {{ .Values.auth.aws.region }}
 - name: AWS_DEFAULT_REGION
-  value:  {{ .Values.storage.objectStore.s3.region }}
+  value:  {{ .Values.auth.aws.region }}
 {{- end }}
 {{- end }}
 {{- end -}}
