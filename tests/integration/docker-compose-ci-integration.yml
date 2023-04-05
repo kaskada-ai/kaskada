@@ -32,14 +32,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
-    # restart: unless-stopped
 
   kaskada:
     build:
       context: ../../
       dockerfile: Dockerfile.integration
-    # image: tsk-local-integ:latest
-    # container_name: kaskada
     depends_on:
       - pulsar-integration
     environment:

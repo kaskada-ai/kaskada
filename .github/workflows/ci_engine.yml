@@ -32,7 +32,6 @@ jobs:
 
   integration_skip:
     name: Integration Tests Skip Duplicates
-    continue-on-error: true # Uncomment once integration is finished
     runs-on: ubuntu-20.04
     # Map a step output to a job output
     outputs:
