@@ -2,11 +2,11 @@ use std::io::{BufReader, Cursor};
 use std::str::FromStr;
 use std::sync::Arc;
 
+use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMillisecondType};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use tempfile::NamedTempFile;
-use arrow::array::ArrowPrimitiveType;
 
 use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
 
@@ -62,7 +62,10 @@ pub struct PulsarMetadata {
 }
 
 impl RawMetadata {
-    pub async fn try_from(source: &Source, object_store_registry: &ObjectStoreRegistry) -> error_stack::Result<Self, Error> {
+    pub async fn try_from(
+        source: &Source,
+        object_store_registry: &ObjectStoreRegistry,
+    ) -> error_stack::Result<Self, Error> {
         match source {
             source_data::Source::ParquetPath(path) => {
                 Self::try_from_parquet(path, object_store_registry).await
@@ -169,7 +172,9 @@ impl RawMetadata {
     }
 
     /// Create a `RawMetadata` from a Pulsar topic.
-    pub(crate) async fn try_from_pulsar(config: &PulsarConfig) -> error_stack::Result<PulsarMetadata, Error> {
+    pub(crate) async fn try_from_pulsar(
+        config: &PulsarConfig,
+    ) -> error_stack::Result<PulsarMetadata, Error> {
         // the user-defined schema in the topic
         let pulsar_schema = pulsar_schema::get_pulsar_schema(
             config.admin_service_url.as_str(),

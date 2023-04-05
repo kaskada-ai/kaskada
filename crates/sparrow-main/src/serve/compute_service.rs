@@ -309,9 +309,9 @@ mod tests {
     };
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
-    use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
     use sparrow_runtime::prepare::{file_sourcedata, prepared_batches};
+    use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
     use super::*;
@@ -531,9 +531,7 @@ mod tests {
             .to_string();
 
         let part1_file_path = format!("file://{part1_file_path}");
-        let input_path = source_data::Source::ParquetPath(
-            part1_file_path
-        );
+        let input_path = source_data::Source::ParquetPath(part1_file_path);
         let object_store_registry = ObjectStoreRegistry::new();
         let part1_metadata = RawMetadata::try_from(&input_path, &object_store_registry)
             .await

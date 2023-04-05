@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
+use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
     GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest, MergeMetadataResponse,
-    SourceMetadata, SourceData,
+    SourceData, SourceMetadata,
 };
-use sparrow_api::kaskada::v1alpha::Schema;
 
 use sparrow_runtime::RawMetadata;
 
@@ -62,11 +62,9 @@ async fn get_metadata(
 ) -> anyhow::Result<tonic::Response<GetMetadataResponse>> {
     let request = request.into_inner();
     let file_metadata = match request.source_data {
-        Some(source_data) => {
-            get_source_metadata(&object_store_registry, &source_data)
+        Some(source_data) => get_source_metadata(&object_store_registry, &source_data)
             .await
-            .or_else(|_| anyhow::bail!("failed getting source metadata"))
-        },
+            .or_else(|_| anyhow::bail!("failed getting source metadata")),
         None => anyhow::bail!("missing request source"),
     }?;
 
@@ -127,9 +125,7 @@ mod tests {
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 source_data: Some(SourceData {
-                    source: Some(source_data::Source::ParquetPath(
-                        format!("file:///{path}"),
-                    )),
+                    source: Some(source_data::Source::ParquetPath(format!("file:///{path}"))),
                 }),
             }))
             .await
@@ -150,9 +146,7 @@ mod tests {
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 source_data: Some(SourceData {
-                    source: Some(source_data::Source::CsvPath(
-                        format!("file:///{path}"),
-                    )),
+                    source: Some(source_data::Source::CsvPath(format!("file:///{path}"))),
                 }),
             }))
             .await
