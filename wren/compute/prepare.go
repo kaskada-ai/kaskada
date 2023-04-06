@@ -172,7 +172,7 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		prepareReq := &v1alpha.PrepareDataRequest{
 			SourceData:       sourceData,
 			Config:           computeTable.Config,
-			OutputPathPrefix: ConvertURIForCompute(prepareOutputURI),
+			OutputPathPrefix: prepareOutputURI,
 			FilePrefix:       prepareFilePrefix,
 			SlicePlan:        prepareJob.SlicePlan,
 		}

@@ -8,7 +8,6 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use sparrow_api::kaskada::v1alpha::{source_data, PrepareDataRequest, PulsarConfig, SlicePlan};
 use sparrow_api::kaskada::v1alpha::{PulsarSubscription, SourceData};
 
-use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::stores::ObjectStoreRegistry;
 
 use crate::batch::{Schema, ScriptPath};
@@ -221,18 +220,13 @@ impl PrepareCommand {
             file_prefix: file_prefix.to_string(),
             slice_plan: Some(sp),
         };
-        let s3_helper = S3Helper::new().await;
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
 
-        serve::preparation_service::prepare_data(
-            s3_helper,
-            object_store_registry,
-            tonic::Request::new(pdr),
-        )
-        .await
-        .change_context(Error::Preparing)
-        .attach_printable_lazy(|| ScriptPath(self.schema.clone()))
-        .attach_printable_lazy(|| TableName(self.table.clone()))?;
+        serve::preparation_service::prepare_data(object_store_registry, tonic::Request::new(pdr))
+            .await
+            .change_context(Error::Preparing)
+            .attach_printable_lazy(|| ScriptPath(self.schema.clone()))
+            .attach_printable_lazy(|| TableName(self.table.clone()))?;
 
         Ok(())
     }

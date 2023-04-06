@@ -1,9 +1,10 @@
 use std::collections::hash_map::DefaultHasher;
-use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
+use std::str::FromStr;
+use std::{fmt, path};
 
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
@@ -28,6 +29,8 @@ use tracing::Instrument;
 
 use crate::execute::pulsar_reader::read_pulsar_stream;
 use crate::s3::{S3Helper, S3Object};
+use crate::stores::object_store_url::ObjectStoreKey;
+use crate::stores::ObjectStoreUrl;
 use crate::{PreparedMetadata, RawMetadata};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
@@ -127,20 +130,30 @@ impl<'a> fmt::Display for SourceDataWrapper<'a> {
 /// Prepare the given file and return the list of prepared files.
 pub async fn prepare_file(
     source_data: &SourceData,
-    output_path: &Path,
+    output_path: &str,
     output_prefix: &str,
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
+    let object_store_url = ObjectStoreUrl::from_str(output_path).unwrap();
+    let object_store_key = object_store_url.key().unwrap();
+    let object_store_path = format!("/{}", object_store_url.path().unwrap().to_string());
+    let temp_dir = tempfile::tempdir().unwrap();
+    //
+    let local_output_prefix = match object_store_key {
+        ObjectStoreKey::Local => path::Path::new(object_store_path.as_str()),
+        _ => temp_dir.path(),
+    };
+
     let preparer = prepared_batches(source_data, table_config, slice).await?;
     let batch_count = std::sync::atomic::AtomicUsize::new(0);
 
     let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
-        let output = output_path.join(format!("{output_prefix}-{output_ordinal}.parquet"));
+        let output = local_output_prefix.join(format!("{output_prefix}-{output_ordinal}.parquet"));
         let output_file = create_file(&output)?;
 
         let metadata_output =
-            output_path.join(format!("{output_prefix}-{output_ordinal}-metadata.parquet"));
+            local_output_prefix.join(format!("{output_prefix}-{output_ordinal}-metadata.parquet"));
         let metadata_output_file = create_file(&metadata_output)?;
 
         write_batch(output_file, records).change_context(Error::WriteParquetData)?;
@@ -157,7 +170,7 @@ pub async fn prepare_file(
         tracing::info!("Prepared batch {output_ordinal} with metadata {prepared_metadata:?}");
 
         let metadata_yaml_output =
-            output_path.join(format!("{output_prefix}-{output_ordinal}-metadata.yaml"));
+            local_output_prefix.join(format!("{output_prefix}-{output_ordinal}-metadata.yaml"));
         let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
         serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
             .into_report()
