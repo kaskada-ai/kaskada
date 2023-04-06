@@ -61,7 +61,7 @@ impl ServeCommand {
 
         let s3 = S3Helper::new().await;
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
-        let file_service = FileServiceImpl::new(object_store_registry);
+        let file_service = FileServiceImpl::new(object_store_registry.clone());
 
         // Leak the diagnostic prefix to create a `&'static` reference.
         // This simplifies the lifetime management of the futures.
@@ -78,7 +78,8 @@ impl ServeCommand {
         };
         let flight_record_path = Box::leak(Box::new(flight_record_path));
         let compute_service = ComputeServiceImpl::new(flight_record_path, s3.clone());
-        let preparation_service = PreparationServiceImpl::new(s3.clone());
+        let preparation_service =
+            PreparationServiceImpl::new(s3.clone(), object_store_registry.clone());
 
         let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
 

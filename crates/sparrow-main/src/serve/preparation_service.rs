@@ -1,14 +1,19 @@
 use std::path::Path;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationService;
+use sparrow_api::kaskada::v1alpha::source_data::Source;
 use sparrow_api::kaskada::v1alpha::{
     source_data, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
     PrepareDataResponse, PreparedFile, SourceData,
 };
 use sparrow_runtime::prepare::{prepare_file, upload_prepared_files_to_s3, Error};
-use sparrow_runtime::s3::{is_s3_path, S3Helper, S3Object};
+use sparrow_runtime::s3::{is_s3_path, S3Helper};
 
+use sparrow_runtime::stores::object_store_url::ObjectStoreKey;
+use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use tempfile::NamedTempFile;
 use tonic::Response;
 
@@ -19,12 +24,17 @@ const CURRENT_PREP_ID: i32 = 5;
 
 #[derive(Debug)]
 pub(super) struct PreparationServiceImpl {
+    // TODO: Remove this.
     s3: S3Helper,
+    object_store_registry: Arc<ObjectStoreRegistry>,
 }
 
 impl PreparationServiceImpl {
-    pub fn new(s3: S3Helper) -> Self {
-        Self { s3 }
+    pub fn new(s3: S3Helper, object_store_registry: Arc<ObjectStoreRegistry>) -> Self {
+        Self {
+            s3,
+            object_store_registry,
+        }
     }
 }
 
@@ -36,8 +46,9 @@ impl PreparationService for PreparationServiceImpl {
         request: tonic::Request<PrepareDataRequest>,
     ) -> Result<tonic::Response<PrepareDataResponse>, tonic::Status> {
         let s3 = self.s3.clone();
+        let object_store = self.object_store_registry.clone();
 
-        let handle = tokio::spawn(prepare_data(s3, request));
+        let handle = tokio::spawn(prepare_data(s3, object_store, request));
         match handle.await {
             Ok(result) => result.into_status(),
             Err(panic) => {
@@ -61,6 +72,7 @@ impl PreparationService for PreparationServiceImpl {
 
 pub async fn prepare_data(
     s3: S3Helper,
+    object_store_registry: Arc<ObjectStoreRegistry>,
     request: tonic::Request<PrepareDataRequest>,
 ) -> error_stack::Result<tonic::Response<PrepareDataResponse>, Error> {
     let prepare_request = request.into_inner();
@@ -83,9 +95,12 @@ pub async fn prepare_data(
     let temp_file = NamedTempFile::new()
         .into_report()
         .change_context(Error::Internal)?;
-    let (is_s3_object, source_data) =
-        convert_to_local_sourcedata(&s3, prepare_request.source_data.as_ref(), temp_file.path())
-            .await?;
+    let (is_s3_object, source_data) = convert_to_local_sourcedata(
+        object_store_registry,
+        prepare_request.source_data.as_ref(),
+        temp_file.path(),
+    )
+    .await?;
 
     let temp_dir = tempfile::tempdir()
         .into_report()
@@ -105,6 +120,7 @@ pub async fn prepare_data(
     )
     .await?;
 
+    // TODO: Update the removal of the s3 in upload.
     let prepared_files: Vec<PreparedFile> = if is_s3_object {
         upload_prepared_files_to_s3(
             s3,
@@ -124,7 +140,7 @@ pub async fn prepare_data(
 }
 
 pub async fn convert_to_local_sourcedata(
-    s3: &S3Helper,
+    object_store_registry: Arc<ObjectStoreRegistry>,
     source_data: Option<&SourceData>,
     local_path: &Path,
 ) -> error_stack::Result<(bool, SourceData), Error> {
@@ -138,33 +154,89 @@ pub async fn convert_to_local_sourcedata(
                 | source_data::Source::CsvData(_) => {
                     let (is_s3, local_path) = match source {
                         source_data::Source::ParquetPath(path) => {
-                            let path = path.as_str();
-                            if is_s3_path(path) {
-                                let s3_object = S3Object::try_from_uri(path).unwrap();
-                                s3.download_s3(s3_object, local_path).await.unwrap();
-                                (
-                                    true,
-                                    source_data::Source::ParquetPath(
-                                        local_path.to_string_lossy().to_string(),
-                                    ),
-                                )
-                            } else {
-                                (false, source_data::Source::ParquetPath(path.to_string()))
+                            let object_store_url = ObjectStoreUrl::from_str(path).unwrap();
+                            let object_store_key = object_store_url.key().unwrap();
+                            match object_store_key {
+                                ObjectStoreKey::Local | ObjectStoreKey::Memory => (
+                                    false,
+                                    Source::ParquetPath(format!(
+                                        "/{}",
+                                        object_store_url.path().unwrap()
+                                    )),
+                                ),
+                                ObjectStoreKey::Aws {
+                                    bucket: _,
+                                    region: _,
+                                    virtual_hosted_style_request: _,
+                                } => {
+                                    object_store_url
+                                        .download(&object_store_registry, local_path.to_path_buf())
+                                        .await
+                                        .unwrap();
+                                    (
+                                        true,
+                                        Source::ParquetPath(format!(
+                                            "/{}",
+                                            local_path.canonicalize().unwrap().to_string_lossy()
+                                        )),
+                                    )
+                                }
+                                ObjectStoreKey::Gcs { bucket: _ } => {
+                                    object_store_url
+                                        .download(&object_store_registry, local_path.to_path_buf())
+                                        .await
+                                        .unwrap();
+                                    (
+                                        true,
+                                        Source::ParquetPath(format!(
+                                            "/{}",
+                                            local_path.canonicalize().unwrap().to_string_lossy()
+                                        )),
+                                    )
+                                }
                             }
                         }
-                        source_data::Source::CsvPath(path) => {
-                            let path = path.as_str();
-                            if is_s3_path(path) {
-                                let s3_object = S3Object::try_from_uri(path).unwrap();
-                                s3.download_s3(s3_object, local_path).await.unwrap();
-                                (
-                                    true,
-                                    source_data::Source::CsvPath(
-                                        local_path.to_string_lossy().to_string(),
-                                    ),
-                                )
-                            } else {
-                                (false, source_data::Source::CsvPath(path.to_string()))
+                        source_data::Source::CsvPath(csv_path) => {
+                            let object_store_url = ObjectStoreUrl::from_str(csv_path).unwrap();
+                            let object_store_key = object_store_url.key().unwrap();
+                            match object_store_key {
+                                ObjectStoreKey::Local | ObjectStoreKey::Memory => (
+                                    false,
+                                    Source::CsvPath(format!(
+                                        "/{}",
+                                        object_store_url.path().unwrap()
+                                    )),
+                                ),
+                                ObjectStoreKey::Aws {
+                                    bucket: _,
+                                    region: _,
+                                    virtual_hosted_style_request: _,
+                                } => {
+                                    object_store_url
+                                        .download(&object_store_registry, local_path.to_path_buf())
+                                        .await
+                                        .unwrap();
+                                    (
+                                        true,
+                                        Source::CsvPath(format!(
+                                            "/{}",
+                                            local_path.canonicalize().unwrap().to_string_lossy()
+                                        )),
+                                    )
+                                }
+                                ObjectStoreKey::Gcs { bucket: _ } => {
+                                    object_store_url
+                                        .download(&object_store_registry, local_path.to_path_buf())
+                                        .await
+                                        .unwrap();
+                                    (
+                                        true,
+                                        Source::CsvPath(format!(
+                                            "/{}",
+                                            local_path.canonicalize().unwrap().to_string_lossy()
+                                        )),
+                                    )
+                                }
                             }
                         }
                         source_data::Source::CsvData(data) => {
