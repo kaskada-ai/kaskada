@@ -3,8 +3,8 @@ use std::{path::PathBuf, str::FromStr};
 use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
 
+use tokio::fs;
 use tokio_util::io::StreamReader;
-use tokio::{io::AsyncWriteExt, fs};
 use url::Url;
 
 use super::{object_stores::Error, ObjectStoreRegistry};
