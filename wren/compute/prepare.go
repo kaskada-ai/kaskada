@@ -158,9 +158,9 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		var sourceData *v1alpha.SourceData
 		switch kaskadaFile.Type {
 		case kaskadafile.TypeCsv:
-			sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_CsvPath{CsvPath: ConvertURIForCompute(kaskadaFile.Path)}}
+			sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_CsvPath{CsvPath: kaskadaFile.Path}}
 		case kaskadafile.TypeParquet:
-			sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: ConvertURIForCompute(kaskadaFile.Path)}}
+			sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: kaskadaFile.Path}}
 		default:
 			subLogger.Error().Str("file_type", kaskadaFile.Type.String()).Msg("unsupported file_type for prepare")
 			return fmt.Errorf("unsupported file_type for prepare")
