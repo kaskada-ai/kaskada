@@ -113,6 +113,18 @@ sequence = ["style-isort", "style-black"]
 help = "Run to remove unused imports and variables"
 cmd = "autoflake -r --in-place --remove-unused-variables src/"
 
+[tool.poe.tasks.docs-build]
+help = "Build documentation into HTML"
+cmd = "sphinx-build -E -b html docs/source/. docs/build"
+
+[tool.poe.tasks.docs-generate]
+help = "Generates documentation from docstrings"
+cmd = "sphinx-apidoc -f -E  -M -o docs/source src/"
+
+[tool.poe.tasks.docs]
+help = "Generated and build HTML docs"
+sequence = ["docs-generate", "docs-build"]
+
 [tool.isort]
 profile = "black"
 skip = ["src/kaskada/kaskada"]

@@ -10,8 +10,9 @@ Welcome to Kaskada Python Client's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   modules
-
+   kaskada<kaskada>
+   fenlmagic<fenlmagic>
+ 
 Indices and tables
 ==================
 

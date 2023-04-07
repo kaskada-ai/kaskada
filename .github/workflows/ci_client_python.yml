@@ -98,3 +98,12 @@ jobs:
         run: poetry run poe lint
       - name: Python Client Test
         run: poetry run poe test
+      - name: Python Client Docs
+        run: poetry run poe docs
+
+      - name: Upload Python Client Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: kaskada-client-docs
+          retention-days: 5
+          path: clients/python/docs/build
