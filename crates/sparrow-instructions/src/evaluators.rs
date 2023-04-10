@@ -282,11 +282,33 @@ fn create_simple_evaluator(
         InstOp::Max => {
             create_ordered_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Max, info)
         }
+        InstOp::MaxBy => {
+            // create_typed_evaluator!(
+            //     &info.args[0].data_type,
+            //     ArrowAggEvaluator,
+            //     MaxByBooleanEvaluator,
+            //     MaxByStringEvaluator,
+            //     MaxByPrimitive,
+            //     info
+            // )
+            todo!()
+        }
         InstOp::Mean => {
             create_number_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Mean, info)
         }
         InstOp::Min => {
             create_ordered_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Min, info)
+        }
+        InstOp::MinBy => {
+            // create_typed_evaluator!(
+            //                 &info.args[0].data_type,
+            //                 ArrowAggEvaluator,
+            //                 MinByBooleanEvaluator,
+            //                 MinByStringEvaluator,
+            //                 MinByPrimitive,
+            //                 info
+            //             )
+            todo!()
         }
         InstOp::MonthOfYear => MonthOfYearEvaluator::try_new(info),
         InstOp::MonthOfYear0 => MonthOfYear0Evaluator::try_new(info),

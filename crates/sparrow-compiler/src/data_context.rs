@@ -202,6 +202,7 @@ impl DataContext {
                 table_info.name(),
                 Rc::new(AstDfg::new(
                     value,
+                    None,
                     is_new,
                     value_type,
                     Some(table_info.group_id()),

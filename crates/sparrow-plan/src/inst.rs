@@ -135,6 +135,11 @@ pub enum InstOp {
     ))]
     Max,
     #[strum(props(
+        dfg_signature = "max_by(measure: ordered, value: any, window: window = null) -> any",
+        plan_signature = "max_by(measure: ordered, value: any, ticks: bool = null, slide_duration: i64 = null) -> any"
+    ))]
+    MaxBy,
+    #[strum(props(
         dfg_signature = "mean(input: number, window: window = null) -> f64",
         plan_signature = "mean(input: number, ticks: bool = null, slide_duration: i64 = null) -> \
                           f64"
@@ -146,6 +151,11 @@ pub enum InstOp {
                           ordered"
     ))]
     Min,
+    #[strum(props(
+        dfg_signature = "min_by(measure: ordered, value: any, window: window = null) -> any",
+        plan_signature = "min_by(input: any, ticks: bool = null, slide_duration: i64 = null) -> any"
+    ))]
+    MinBy,
     #[strum(props(signature = "month_of_year(time: timestamp_ns) -> u32"))]
     MonthOfYear,
     #[strum(props(signature = "month_of_year0(time: timestamp_ns) -> u32"))]
@@ -307,7 +317,6 @@ static INST_OP_SIGNATURES: EnumMap<InstOp, OpSignatures> = {
             for parameter in signatures.plan().parameters().types() {
                 if matches!(parameter.inner(), FenlType::Window) {
                     panic!("Illegal type '{}' in plan_signature for instruction {:?}", parameter.inner(), op)
-
                 }
             }
 

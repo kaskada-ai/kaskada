@@ -117,6 +117,8 @@ pub(crate) fn typecheck_inst(
             let field_values = argument_types.iter().skip(1).step_by(2);
 
             let mut fields = Vec::with_capacity(argument_types.len() / 2);
+            println!("FRAZ - instruction record field names: {:?}", field_names);
+            println!("FRAZ - instruction record field values: {:?}", field_values);
             for (field_name, field_type) in izip!(field_names, field_values) {
                 let field_name = if let Some(ScalarValue::Utf8(Some(field_name))) = field_name {
                     field_name

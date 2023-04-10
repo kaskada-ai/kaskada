@@ -97,6 +97,7 @@ fn infer_result_type(
         }
     }
 
+    println!("Fraz - exptoplan InstKind: {:?}", inst_kind);
     let result_type = crate::types::instruction::typecheck_inst(
         inst_kind,
         argument_types,

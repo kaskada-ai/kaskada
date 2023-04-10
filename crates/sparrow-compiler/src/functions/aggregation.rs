@@ -65,6 +65,35 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
+        .register("test(one: any, two: any) -> any")
+        .with_implementation(Implementation::new_pattern(&format!("{}", {
+            "(record ?one_field ?one_value ?two_field ?two_value)"
+        })))
+        .with_is_new(Implementation::AnyInputIsNew);
+
+    registry
+        .register("min_by(measure: ordered, value: any, window: window = null) -> any")
+        .with_dfg_signature(
+            "min_by(measure: ordered, value: any, window: window = null, duration: i64 = null, measure_field: string = \"measure\", value_field: string = \"value\" ) -> any",
+        )
+        .with_implementation(Implementation::new_pattern({
+            const INPUTS_MERGE: &str = "(merge_join ?window_op (merge_join ?measure_op ?value_op))";
+            const MEASURE: &str = const_format::formatcp!("(transform (if ?measure_is_new ?measure_value) {INPUTS_MERGE})");
+            const VALUE: &str = const_format::formatcp!("(transform (if ?value_is_new ?value_value) {INPUTS_MERGE})");
+
+            // const_format::formatcp!("(min_by {MEASURE} {VALUE} ?window_value ?duration_value)")
+            const_format::formatcp!("(min_by (record ?measure_field_value {MEASURE} ?value_field_value {VALUE}) ?window_value ?duration_value)")
+
+        }))
+        .with_is_new(Implementation::new_pattern(&format!(
+            // TODO: FRAZ - I think this needs to be an is_new of all three fields
+            "(logical_or (logical_or ?value_is_new ({})) ({})",
+            "?measure_is_new",
+            "?window_is_new)",
+        )))
+        .with_time_domain_check(TimeDomainCheck::Aggregation);
+
+    registry
         .register("max(input: ordered, window: window = null) -> ordered")
         .with_dfg_signature(
             "max(input: ordered, window: window = null, duration: i64 = null) -> ordered",
@@ -77,6 +106,25 @@ pub(super) fn register(registry: &mut Registry) {
         )))
         .with_is_new(Implementation::new_pattern(AGGREGATION_IS_NEW))
         .with_time_domain_check(TimeDomainCheck::Aggregation);
+
+    // registry
+    //     .register("max_by(measure: ordered, value: any, window: window = null) -> any")
+    //     .with_dfg_signature(
+    //         "max_by(measure: ordered, value: any, window: window = null, duration: i64 = null) -> any",
+    //     )
+    //     .with_implementation(Implementation::new_pattern({
+    //         const INPUTS_MERGE: &str = "(merge_join ?window_op (merge_join ?measure_op ?value_op))";
+    //         const MEASURE: &str = const_format::formatcp!("(transform (if ?measure_is_new ?measure_value) {INPUTS_MERGE})");
+    //         const VALUE: &str = const_format::formatcp!("(transform (if ?value_is_new ?value_value) {INPUTS_MERGE})");
+
+    //         const_format::formatcp!("(max_by {MEASURE} {VALUE} ?window_value ?duration_value)")
+    //     }))
+    //     .with_is_new(Implementation::new_pattern(&format!(
+    //         "(logical_or ({}) ({})",
+    //         "?measure_is_new",
+    //         "?window_is_new)",
+    //     )))
+    //     .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
         .register("mean(input: number, window: window = null) -> f64")
