@@ -78,6 +78,7 @@ pub(super) fn ast_to_dfg(
         // Note: Now that `AstDfgRef` contains a `Location`, this likely does not
         // need to be wrapped in `Located`.
         _ => arguments.try_transform(|e| -> anyhow::Result<Located<AstDfgRef>> {
+            println!("Fraz --- try transform expression: {:?}", e.inner());
             let ast_dfg = ast_to_dfg(data_context, dfg, diagnostics, e.inner())?;
             Ok(e.with_value(ast_dfg))
         })?,
@@ -121,6 +122,7 @@ pub(super) fn ast_to_dfg(
                             Expression::Inst(InstKind::Cast(to_type.clone())),
                             smallvec![input.value()],
                         )?,
+                        None,
                         input.is_new(),
                         to_type.clone().into(),
                         input.grouping(),
@@ -221,6 +223,7 @@ pub(super) fn ast_to_dfg(
             let value_type = field_type.clone().into();
             Ok(Rc::new(AstDfg::new(
                 value,
+                None,
                 is_new,
                 value_type,
                 base.grouping(),
@@ -259,6 +262,7 @@ pub(super) fn ast_to_dfg(
                     let tick_node = dfg.add_operation(Operation::Tick(behavior), tick_input)?;
                     let tick_node = Rc::new(AstDfg::new(
                         tick_node,
+                        None,
                         tick_node,
                         FenlType::Concrete(DataType::Boolean),
                         agg_input.grouping(),
@@ -492,6 +496,7 @@ pub(super) fn ast_to_dfg(
                 .map(|(arg, expected_type)| -> anyhow::Result<_> {
                     let ast_dfg = Rc::new(AstDfg::new(
                         cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
+                        None,
                         arg.is_new(),
                         expected_type,
                         arg.grouping(),
@@ -504,36 +509,134 @@ pub(super) fn ast_to_dfg(
                 .try_collect()?;
 
             let args: Vec<_> = if function.is_aggregation() {
-                // If the function is an aggregation, we may need to flatten the window.
-                dfg.enter_env();
-                dfg.bind("$condition_input", args[0].inner().clone());
+                // TODO: FRAZ - So...what I'm doing is working off the user parsed expression now.
+                // then I'm using the pattern I created to rewrite my given arguments to the one I want in
+                // the pattern. When I call dfg.create_dfg_node, it goes into the function.rs, where it says
+                // for the _value and _is_new, it calls create_node() and goes into implementation.rs
+                // where it checks the implementation enum type, and if its a pattern, it calls
+                // function.create_subst_from_args then adds pattern.
+                // In function.rs create_subst, this is where we are substituting the given arguments
+                // with the pattern _value and _is_new.
 
-                let window = &expr.args()[1];
-                let (condition, duration) = match window.op() {
-                    ExprOp::Call(window_name) => {
-                        flatten_window_args(window_name, window, dfg, data_context, diagnostics)?
-                    }
-                    ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
-                        // Unwindowed aggregations just use nulls
-                        let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
-                        let null_arg = Located::new(
-                            add_literal(
-                                dfg,
-                                null_arg,
-                                FenlType::Concrete(DataType::Null),
+                // TODO: I'm creating the args now. I have the two children args now. I can define what
+                // the stupid record node is with both measure and value, but if I don't define
+                // the variable for it in the implementation, then it won't work.
+                // Can I name the node here?
+                // How does the pattern actually get used? When I add_pattern, if I have the substitution there,
+                // it will just check against the pattern. But I need to say "it's okay to not have the _value variabel"
+                // in the original signature, or I can cheat and reuse a variable name, and implicitly change it's meaning
+                // Or I can do the record thing in the pattern, but I'm not sure how to do that. perhaps it'll just work
+                // if I do this four arg length thing then create the node.
+
+                // The plan_signature is used in typechecking, in expression_to_plan.
+                // So, I need to make sure the args here are the same as the args in the plan_signature.
+                println!("FRAZ - Aggregation: {:?}", function_name.inner());
+
+                // TODO: FRAZ - what a strange, poor pattern, we have here.
+                if args.len() > 3 {
+                    // max_by and min_by are unique in that they have four arguments
+                    dfg.enter_env();
+                    dfg.bind("$condition_input", args[1].inner().clone());
+
+                    // field names
+                    println!(
+                        "FRAZ - Adding field names for min by: {:?}",
+                        function_name.inner()
+                    );
+                    let measure_field = dfg.add_string_literal("measure_field")?;
+                    let measure_arg = Located::new(
+                        add_literal(
+                            dfg,
+                            measure_field,
+                            FenlType::Concrete(DataType::Utf8),
+                            expr.args()[0].location().clone(),
+                        )?,
+                        expr.args()[0].location().clone(),
+                    );
+                    let value_field = dfg.add_string_literal("value_field")?;
+                    let value_arg = Located::new(
+                        add_literal(
+                            dfg,
+                            value_field,
+                            FenlType::Concrete(DataType::Utf8),
+                            expr.args()[0].location().clone(),
+                        )?,
+                        expr.args()[0].location().clone(),
+                    );
+
+                    let window = &expr.args()[2];
+                    let (condition, duration) = match window.op() {
+                        ExprOp::Call(window_name) => flatten_window_args(
+                            window_name,
+                            window,
+                            dfg,
+                            data_context,
+                            diagnostics,
+                        )?,
+                        ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
+                            // Unwindowed aggregations just use nulls
+                            let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
+                            let null_arg = Located::new(
+                                add_literal(
+                                    dfg,
+                                    null_arg,
+                                    FenlType::Concrete(DataType::Null),
+                                    window.location().clone(),
+                                )?,
                                 window.location().clone(),
-                            )?,
-                            window.location().clone(),
-                        );
+                            );
 
-                        (null_arg.clone(), null_arg)
-                    }
-                    unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
-                };
+                            (null_arg.clone(), null_arg)
+                        }
+                        unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
+                    };
 
-                dfg.exit_env();
-                // [agg_input, condition, duration]
-                vec![args[0].clone(), condition, duration]
+                    dfg.exit_env();
+                    // [measure, input, condition, duration]
+                    vec![
+                        args[0].clone(),
+                        args[1].clone(),
+                        condition,
+                        duration,
+                        measure_arg,
+                        value_arg,
+                    ]
+                } else {
+                    // If the function is an aggregation, we may need to flatten the window.
+                    dfg.enter_env();
+                    dfg.bind("$condition_input", args[0].inner().clone());
+
+                    let window = &expr.args()[1];
+                    let (condition, duration) = match window.op() {
+                        ExprOp::Call(window_name) => flatten_window_args(
+                            window_name,
+                            window,
+                            dfg,
+                            data_context,
+                            diagnostics,
+                        )?,
+                        ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
+                            // Unwindowed aggregations just use nulls
+                            let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
+                            let null_arg = Located::new(
+                                add_literal(
+                                    dfg,
+                                    null_arg,
+                                    FenlType::Concrete(DataType::Null),
+                                    window.location().clone(),
+                                )?,
+                                window.location().clone(),
+                            );
+
+                            (null_arg.clone(), null_arg)
+                        }
+                        unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
+                    };
+
+                    dfg.exit_env();
+                    // [aggregation_input, condition, duration]
+                    vec![args[0].clone(), condition, duration]
+                }
             } else if function.name() == "when" || function.name() == "if" {
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[1].inner().clone());
@@ -546,6 +649,17 @@ pub(super) fn ast_to_dfg(
                 args
             };
 
+            if function.name() == "test" {
+                // For every first and two after, create the string args
+                // Problem - I need the name of the string? Or does it not really matter.
+                // It matters because that's how I replace the field name.
+                // I can go for a generic pattern like one_field, two_field, I think?
+
+                let arg_0 = args[0].inner().clone();
+                let x = dfg.add_string_literal(&format!("{}", "one_field")).unwrap();
+            }
+
+            println!("FRAZ - Adding function call: {:?}", function_name.inner());
             function.create_dfg_node(
                 function_name.location(),
                 data_context,
@@ -560,6 +674,7 @@ pub(super) fn ast_to_dfg(
         ExprOp::Let(_, _) => Err(anyhow!("Unreachable: Let expression handled above")),
         ExprOp::Error => Err(anyhow!("Unreachable: Error expression handled above")),
         ExprOp::Record(fields, location) => {
+            println!("FRAZ - AstToDfg Record, with fields: {:?}", fields);
             record_to_dfg(data_context, location, dfg, diagnostics, fields, arguments)
         }
         ExprOp::ExtendRecord(location) => extend_record_to_dfg(
@@ -711,6 +826,7 @@ fn add_literal(
     let is_new = dfg.add_literal(false)?;
     Ok(Rc::new(AstDfg::new(
         value,
+        None,
         is_new,
         value_type,
         None,

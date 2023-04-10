@@ -207,6 +207,9 @@ impl FromStr for StepKind {
             Ok(StepKind::Expression(Expression::LateBound(
                 LateBoundValue::ChangedSinceTime,
             )))
+        } else if s == "record" {
+            println!("FRAZ - Record found in step kind");
+            Ok(StepKind::Expression(Expression::Inst(InstKind::Record)))
         } else {
             inst_from_str(s)
         }

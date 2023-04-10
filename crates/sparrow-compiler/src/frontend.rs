@@ -354,6 +354,7 @@ fn create_changed_since_time_node(dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
     let is_new = dfg.add_literal(false)?;
     Ok(Rc::new(AstDfg::new(
         value,
+        None,
         is_new,
         value_type,
         None,
@@ -377,6 +378,7 @@ fn create_final_at_time_time_node(dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
     let is_new = dfg.add_literal(false)?;
     Ok(Rc::new(AstDfg::new(
         value,
+        None,
         is_new,
         value_type,
         None,

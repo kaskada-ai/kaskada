@@ -139,6 +139,7 @@ pub(super) fn evaluate_constant(
 
     let argument_types = args.iter().map(|i| i.data_type.clone().into()).collect();
     let argument_literals: Vec<_> = inputs.into_iter().map(Some).collect();
+    println!("Fraz - const eval");
     let result_type = typecheck_inst(
         kind,
         argument_types,

@@ -5,7 +5,7 @@ use egg::{Subst, Var};
 use itertools::{izip, Itertools};
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_plan::GroupId;
-use sparrow_syntax::{FeatureSetPart, FenlType, Located, Location, Signature};
+use sparrow_syntax::{FeatureSetPart, FenlType, LiteralValue, Located, Location, Signature};
 
 use crate::ast_to_dfg::AstDfg;
 use crate::dfg::Dfg;
@@ -87,7 +87,9 @@ impl Function {
             self.name(),
             "sum"
                 | "min"
+                | "min_by"
                 | "max"
+                | "max_by"
                 | "first"
                 | "last"
                 | "count"
@@ -176,6 +178,7 @@ impl Function {
         // to avoid growth.
         let mut subst = Subst::with_capacity(3 * args.len() + 5);
         for (index, arg_name, argument) in izip!(0.., self.arg_names(), args) {
+            println!("FRAZ - Arg name: {:?}", arg_name);
             if !skip.iter().contains(&index) {
                 subst.insert(
                     Var::from_str(&format!("?{arg_name}_is_new")).expect("is_new var"),
@@ -186,6 +189,15 @@ impl Function {
                     Var::from_str(&format!("?{arg_name}_value")).expect("value var"),
                     argument.value(),
                 );
+
+                // TODO: FRAZ  stuff
+                // let x = dfg.add_string_literal(&format!("{arg_name}")).unwrap();
+                // if let Some(field_name) = argument.field_name() {
+                //     subst.insert(
+                //         Var::from_str(&format!("?{arg_name}_field")).expect("field var"),
+                //         field_name,
+                //     );
+                // }
 
                 let operation = dfg.operation(argument.value());
 
@@ -226,6 +238,7 @@ impl Function {
 
         Ok(Rc::new(AstDfg::new(
             value,
+            None,
             is_new,
             value_type,
             grouping,

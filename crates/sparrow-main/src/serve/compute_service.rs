@@ -310,7 +310,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
     use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
-    use sparrow_runtime::prepare::{file_sourcedata, prepared_batches};
+    use sparrow_runtime::prepare::{source_data, prepared_batches};
     use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
@@ -513,7 +513,7 @@ mod tests {
         };
         let input_path = SourceData::try_from_local(&part1_file_path).unwrap();
         let prepared_batches: Vec<_> = prepared_batches(
-            &file_sourcedata(input_path),
+            &source_data(input_path),
             &table,
             &Some(slice_plan::Slice::Percent(slice_plan::PercentSlice {
                 percent: 50.0,
