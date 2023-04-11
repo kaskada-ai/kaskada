@@ -10,8 +10,8 @@ use crate::fixtures::{
 use crate::QueryFixture;
 
 #[tokio::test]
-async fn test_min_yb() {
-    insta::assert_snapshot!(QueryFixture::new("{ min_by: min_by(Numbers.m, Numbers.n) }").with_dump_dot("asdf").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
+async fn test_max_yb() {
+    insta::assert_snapshot!(QueryFixture::new("{ max_by: max_by(Numbers.m, Numbers.n) }").with_dump_dot("asdf").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
 
     "###);

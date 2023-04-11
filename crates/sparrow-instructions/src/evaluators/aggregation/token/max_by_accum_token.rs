@@ -44,17 +44,19 @@ where
         self.values.resize(len, None);
     }
 
-    pub fn get_value(&mut self, key: u32) -> anyhow::Result<Option<T2>> {
-        Ok(self.values[key as usize].clone())
+    pub fn get_measured(&mut self, key: u32) -> Option<T1> {
+        self.measured[key as usize].clone()
     }
 
-    pub fn put_measured(&mut self, key: u32, measure: Option<T1>) -> anyhow::Result<()> {
+    pub fn get_output(&mut self, key: u32) -> Option<T2> {
+        self.values[key as usize].clone()
+    }
+
+    pub fn set_measured(&mut self, key: u32, measure: Option<T1>) {
         self.measured[key as usize] = measure;
-        Ok(())
     }
 
-    pub fn put_output_value(&mut self, key: u32, value: Option<T2>) -> anyhow::Result<()> {
+    pub fn set_output(&mut self, key: u32, value: Option<T2>) {
         self.values[key as usize] = value;
-        Ok(())
     }
 }

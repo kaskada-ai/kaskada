@@ -139,7 +139,6 @@ pub(super) fn record_to_dfg(
 
     Ok(Rc::new(AstDfg::new(
         value,
-        None,
         is_new,
         value_type,
         grouping,
@@ -253,7 +252,6 @@ pub(super) fn extend_record_to_dfg(
 
     Ok(Rc::new(AstDfg::new(
         value,
-        None,
         is_new,
         value_type,
         grouping,
@@ -381,7 +379,6 @@ pub(super) fn select_remove_fields(
 
     Ok(Rc::new(AstDfg::new(
         value,
-        None,
         record.is_new(),
         value_type,
         record.grouping(),

@@ -28,6 +28,7 @@ impl Evaluator for RecordEvaluator {
             .map(|(field, arg)| info.value(arg)?.array_ref().map(|i| (field.clone(), i)))
             .try_collect()?;
 
+        println!("FRAZ - fields: {:?}", fields);
         let result = make_struct_array(info.num_rows(), fields);
         Ok(Arc::new(result))
     }

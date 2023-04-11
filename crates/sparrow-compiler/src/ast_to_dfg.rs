@@ -78,7 +78,6 @@ pub(super) fn ast_to_dfg(
         // Note: Now that `AstDfgRef` contains a `Location`, this likely does not
         // need to be wrapped in `Located`.
         _ => arguments.try_transform(|e| -> anyhow::Result<Located<AstDfgRef>> {
-            println!("Fraz --- try transform expression: {:?}", e.inner());
             let ast_dfg = ast_to_dfg(data_context, dfg, diagnostics, e.inner())?;
             Ok(e.with_value(ast_dfg))
         })?,
@@ -122,7 +121,6 @@ pub(super) fn ast_to_dfg(
                             Expression::Inst(InstKind::Cast(to_type.clone())),
                             smallvec![input.value()],
                         )?,
-                        None,
                         input.is_new(),
                         to_type.clone().into(),
                         input.grouping(),
@@ -223,7 +221,6 @@ pub(super) fn ast_to_dfg(
             let value_type = field_type.clone().into();
             Ok(Rc::new(AstDfg::new(
                 value,
-                None,
                 is_new,
                 value_type,
                 base.grouping(),
@@ -262,7 +259,6 @@ pub(super) fn ast_to_dfg(
                     let tick_node = dfg.add_operation(Operation::Tick(behavior), tick_input)?;
                     let tick_node = Rc::new(AstDfg::new(
                         tick_node,
-                        None,
                         tick_node,
                         FenlType::Concrete(DataType::Boolean),
                         agg_input.grouping(),
@@ -496,7 +492,6 @@ pub(super) fn ast_to_dfg(
                 .map(|(arg, expected_type)| -> anyhow::Result<_> {
                     let ast_dfg = Rc::new(AstDfg::new(
                         cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
-                        None,
                         arg.is_new(),
                         expected_type,
                         arg.grouping(),
@@ -530,19 +525,15 @@ pub(super) fn ast_to_dfg(
 
                 // The plan_signature is used in typechecking, in expression_to_plan.
                 // So, I need to make sure the args here are the same as the args in the plan_signature.
-                println!("FRAZ - Aggregation: {:?}", function_name.inner());
 
-                // TODO: FRAZ - what a strange, poor pattern, we have here.
-                if args.len() > 3 {
-                    // max_by and min_by are unique in that they have four arguments
+                if function_name.inner() == "max_by" || function_name.inner() == "min_by" {
                     dfg.enter_env();
                     dfg.bind("$condition_input", args[1].inner().clone());
 
-                    // field names
-                    println!(
-                        "FRAZ - Adding field names for min by: {:?}",
-                        function_name.inner()
-                    );
+                    // max_by and min_by are unique in that we need to construct a record
+                    // of their `measure` and `value` arguments. This is so we can continue
+                    // to use the existing framework for aggregations, which assumes a single
+                    // input column of values.
                     let measure_field = dfg.add_string_literal("measure_field")?;
                     let measure_arg = Located::new(
                         add_literal(
@@ -564,6 +555,7 @@ pub(super) fn ast_to_dfg(
                         expr.args()[0].location().clone(),
                     );
 
+                    // Flatten the window arguments
                     let window = &expr.args()[2];
                     let (condition, duration) = match window.op() {
                         ExprOp::Call(window_name) => flatten_window_args(
@@ -602,10 +594,10 @@ pub(super) fn ast_to_dfg(
                         value_arg,
                     ]
                 } else {
-                    // If the function is an aggregation, we may need to flatten the window.
                     dfg.enter_env();
                     dfg.bind("$condition_input", args[0].inner().clone());
 
+                    // Flatten the window arguments
                     let window = &expr.args()[1];
                     let (condition, duration) = match window.op() {
                         ExprOp::Call(window_name) => flatten_window_args(
@@ -649,17 +641,6 @@ pub(super) fn ast_to_dfg(
                 args
             };
 
-            if function.name() == "test" {
-                // For every first and two after, create the string args
-                // Problem - I need the name of the string? Or does it not really matter.
-                // It matters because that's how I replace the field name.
-                // I can go for a generic pattern like one_field, two_field, I think?
-
-                let arg_0 = args[0].inner().clone();
-                let x = dfg.add_string_literal(&format!("{}", "one_field")).unwrap();
-            }
-
-            println!("FRAZ - Adding function call: {:?}", function_name.inner());
             function.create_dfg_node(
                 function_name.location(),
                 data_context,
@@ -826,7 +807,6 @@ fn add_literal(
     let is_new = dfg.add_literal(false)?;
     Ok(Rc::new(AstDfg::new(
         value,
-        None,
         is_new,
         value_type,
         None,

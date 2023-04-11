@@ -24,6 +24,13 @@ pub(crate) fn typecheck_inst(
 ) -> anyhow::Result<FenlType> {
     match inst {
         InstKind::Simple(instruction) => {
+            // TODO: FRAZ - The max_by instruction is a special case because it
+            // needs to output the type of the inner value, not the input type, which is
+            // a struct of the { measure, value }.
+            if instruction.name() == "max_by" {
+                return Ok(FenlType::Concrete(DataType::Int64));
+            }
+
             let signature = instruction.signature(mode);
             let argument_types = Resolved::new(
                 Cow::Borrowed(signature.parameters().names()),
@@ -117,8 +124,6 @@ pub(crate) fn typecheck_inst(
             let field_values = argument_types.iter().skip(1).step_by(2);
 
             let mut fields = Vec::with_capacity(argument_types.len() / 2);
-            println!("FRAZ - instruction record field names: {:?}", field_names);
-            println!("FRAZ - instruction record field values: {:?}", field_values);
             for (field_name, field_type) in izip!(field_names, field_values) {
                 let field_name = if let Some(ScalarValue::Utf8(Some(field_name))) = field_name {
                     field_name
