@@ -466,7 +466,9 @@ fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
 }
 
 pub fn source_data(source: source_data::Source) -> SourceData {
-    SourceData { source: Some(source) }
+    SourceData {
+        source: Some(source),
+    }
 }
 
 #[cfg(test)]

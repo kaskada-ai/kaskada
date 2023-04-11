@@ -82,7 +82,6 @@ impl Default for Dfg {
         let error_id = graph.add(DfgLang::new(StepKind::Error, smallvec![]));
         let error_node = Rc::new(AstDfg::new(
             error_id,
-            None,
             error_id,
             FenlType::Error,
             None,

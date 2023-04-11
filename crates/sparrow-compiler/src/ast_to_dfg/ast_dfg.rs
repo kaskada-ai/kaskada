@@ -22,8 +22,6 @@ pub struct AstDfg {
     /// Wrapped in a `RefCell` to allow mutability during
     /// pruning/simplification.
     pub(crate) value: RefCell<Id>,
-    /// TODO: FRAZ
-    pub(crate) field_name: RefCell<Option<Id>>,
     /// Reference to the step containing the "is_new" bits of the AST node.
     ///
     /// Wrapped in a `RefCell` to allow mutability during
@@ -54,7 +52,6 @@ pub struct AstDfg {
 impl AstDfg {
     pub(crate) fn new(
         value: Id,
-        field_name: Option<Id>,
         is_new: Id,
         value_type: FenlType,
         grouping: Option<GroupId>,
@@ -81,7 +78,6 @@ impl AstDfg {
 
         AstDfg {
             value: RefCell::new(value),
-            field_name: RefCell::new(field_name),
             is_new: RefCell::new(is_new),
             value_type,
             grouping,
@@ -93,10 +89,6 @@ impl AstDfg {
 
     pub(crate) fn value(&self) -> Id {
         *self.value.borrow()
-    }
-
-    pub(crate) fn field_name(&self) -> Option<Id> {
-        *self.field_name.borrow()
     }
 
     pub(crate) fn is_new(&self) -> Id {

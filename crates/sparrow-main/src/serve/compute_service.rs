@@ -310,7 +310,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
     use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
-    use sparrow_runtime::prepare::{source_data, prepared_batches};
+    use sparrow_runtime::prepare::{prepared_batches, source_data};
     use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 

@@ -65,10 +65,7 @@ impl LocalTestTable {
         }
     }
 
-    pub async fn add_file_source(
-        &mut self,
-        source: &source_data::Source,
-    ) -> anyhow::Result<()> {
+    pub async fn add_file_source(&mut self, source: &source_data::Source) -> anyhow::Result<()> {
         tracing::info!("Adding source: {:?}", source);
         let source_data = sparrow_runtime::prepare::source_data(source.clone());
         self.add_source(&source_data).await

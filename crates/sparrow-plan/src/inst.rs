@@ -136,7 +136,7 @@ pub enum InstOp {
     Max,
     #[strum(props(
         dfg_signature = "max_by(measure: ordered, value: any, window: window = null) -> any",
-        plan_signature = "max_by(measure: ordered, value: any, ticks: bool = null, slide_duration: i64 = null) -> any"
+        plan_signature = "max_by(input: any, ticks: bool = null, slide_duration: i64 = null) -> any"
     ))]
     MaxBy,
     #[strum(props(

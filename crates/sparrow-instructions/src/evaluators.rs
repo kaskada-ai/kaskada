@@ -1,5 +1,5 @@
 use arrow::array::ArrayRef;
-use arrow::datatypes::DataType;
+use arrow::datatypes::{DataType, Int32Type, Int64Type};
 use itertools::Itertools;
 use sparrow_plan::{InstKind, InstOp};
 
@@ -291,7 +291,19 @@ fn create_simple_evaluator(
             //     MaxByPrimitive,
             //     info
             // )
-            todo!()
+            let (t1, t2) = match info.args[0].data_type() {
+                DataType::Struct(fields) => {
+                    println!("Fields: {:?}", fields);
+                    (fields[0].data_type(), fields[1].data_type())
+                }
+                _ => anyhow::bail!("MinBy must be a struct"),
+            };
+            match (t1, t2) {
+                (DataType::Int64, DataType::Int64) => {
+                    MaxByEvaluator::<Int64Type, Int64Type>::try_new(info)
+                }
+                (_, _) => anyhow::bail!("MaxBy not implemented for {:?}, {:?}", t1, t2),
+            }
         }
         InstOp::Mean => {
             create_number_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Mean, info)
@@ -300,15 +312,25 @@ fn create_simple_evaluator(
             create_ordered_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Min, info)
         }
         InstOp::MinBy => {
+            let (t1, t2) = match info.args[0].data_type() {
+                DataType::Struct(fields) => {
+                    println!("Fields: {:?}", fields);
+                    (fields[0].data_type(), fields[1].data_type())
+                }
+                _ => anyhow::bail!("MinBy must be a struct"),
+            };
+            // MaxByEvaluator::try_new(info)
+            todo!()
+
+            // println!("FRAZ - {:?}", info.args[0]);
             // create_typed_evaluator!(
-            //                 &info.args[0].data_type,
+            // &info.args[0].data_type,
             //                 ArrowAggEvaluator,
             //                 MinByBooleanEvaluator,
             //                 MinByStringEvaluator,
             //                 MinByPrimitive,
             //                 info
-            //             )
-            todo!()
+            // )
         }
         InstOp::MonthOfYear => MonthOfYearEvaluator::try_new(info),
         InstOp::MonthOfYear0 => MonthOfYear0Evaluator::try_new(info),
