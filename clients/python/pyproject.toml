@@ -119,7 +119,7 @@ cmd = "sphinx-build -E -b html docs/source/. docs/build"
 
 [tool.poe.tasks.docs-generate]
 help = "Generates documentation from docstrings"
-cmd = "sphinx-apidoc -f -E  -M -o docs/source src/"
+cmd = "sphinx-apidoc -f -E  -M -o docs/source src/ src/clients/python/kaskada/kaskada"
 
 [tool.poe.tasks.docs]
 help = "Generated and build HTML docs"
@@ -131,6 +131,15 @@ skip = ["src/kaskada/kaskada"]
 
 [tool.mypy]
 exclude = ["src/kaskada/kaskada"]
+implicit_optional = true
+
+[[tool.mypy.overrides]]
+follow_imports = "skip"
+
+
+module = ["kaskada.kaskada.*"]
+ignore_errors = true
+ignore_missing_imports = true
 
 [tool.pylint.format]
 max-line-length = "120"
