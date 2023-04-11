@@ -2,6 +2,8 @@ use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
 
 use error_stack::{IntoReport, Result, ResultExt};
+use serde;
+use serde_json::Value;
 use std::sync::Arc;
 
 #[derive(Debug, derive_more::Display)]
@@ -9,6 +11,8 @@ pub enum Error {
     #[allow(dead_code)]
     AvroNotEnabled,
     AvroSchemaConversion,
+    MalformedSchema,
+    RoundTripError,
     SchemaRequest,
     UnsupportedSchema,
 }
@@ -57,18 +61,104 @@ pub fn format_schema(schema: SchemaRef) -> Result<String, Error> {
 }
 
 fn schema_from_formatted(formatted_schema: &str) -> Result<Schema, Error> {
-    // construct an avro_schema::schema::Schema from the json formatted schema
-    let avro_schema: avro_schema::schema::Schema = serde_json::from_str(formatted_schema)
-        .into_report()
-        .change_context(Error::AvroSchemaConversion)
-        .attach_printable_lazy(|| {
-            format!("failed to deserialize avro schema from json string: {formatted_schema}")
+    fn avro_schema_from_json(formatted_schema: &str) -> Result<avro_schema::schema::Schema, Error> {
+        serde_json::from_str(formatted_schema)
+            .into_report()
+            .change_context(Error::AvroSchemaConversion)
+            .attach_printable_lazy(|| {
+                format!("failed to deserialize avro schema from json string: {formatted_schema}")
+            })
+    }
+
+    fn parse_json(formatted_schema: &str) -> Result<Value, Error> {
+        serde_json::from_str(formatted_schema)
+            .into_report()
+            .change_context(Error::AvroSchemaConversion)
+            .attach_printable_lazy(|| format!("invalid json string: {formatted_schema}"))
+    }
+
+    fn get_required_field<'a>(json: &'a Value, field_name: &'a str) -> Result<String, Error> {
+        let v = json.get(field_name).ok_or_else(|| {
+            error_stack::report!(Error::MalformedSchema)
+                .attach_printable(format!("missing field {}", field_name))
         })?;
-    // convert to sparrow format
-    let sparrow_schema = sparrow_arrow::avro::from_avro_schema(&avro_schema)
-        .change_context(Error::AvroSchemaConversion)
-        .attach_printable_lazy(|| format!("from_avro_schema({:?}) failed", &avro_schema))?;
-    Ok(sparrow_schema)
+        serde_json::to_string(v).map_err(|e| {
+            error_stack::report!(Error::RoundTripError)
+                .attach_printable(format!("failed to serialize json value: {e}"))
+        })
+    }
+
+    fn convert_to_arrow(avro_schema: &avro_schema::schema::Schema) -> Result<Schema, Error> {
+        sparrow_arrow::avro::from_avro_schema(avro_schema)
+            .change_context(Error::AvroSchemaConversion)
+            .attach_printable_lazy(|| format!("from_avro_schema({:?}) failed", &avro_schema))
+    }
+
+    // The json string should have fields name, type, properties, and schema.
+    // The type field tells us how to deserialize the schema.
+    let json = parse_json(formatted_schema)?;
+    let schema_type = get_required_field(&json, "type")?.to_lowercase();
+
+    // we support avro and key/value schema types.  in the key/value case, both key
+    // and value are json documents containing avro schemas.  We will flatten these
+    // to a single schema.  This is guaranteed to be okay for CDC, since each field
+    // corresponds to a unique Cassandra column.
+    let avro_schema = match schema_type.as_str() {
+        "avro" => avro_schema_from_json(formatted_schema)?,
+        "key_value" => {
+            let k = get_required_field(&json, "key")?;
+            let v = get_required_field(&json, "value")?;
+            let key_schema = avro_schema_from_json(k.as_str())?;
+            let value_schema = avro_schema_from_json(v.as_str())?;
+            combine_avro_schemas(key_schema, value_schema)?
+        }
+        _ => {
+            let r = error_stack::report!(Error::UnsupportedSchema)
+                .attach_printable(format!("unsupported schema type: {schema_type}"));
+            return Err(r);
+        }
+    };
+
+    Ok(convert_to_arrow(&avro_schema)?)
+}
+
+fn combine_avro_schemas(
+    key_schema: avro_schema::schema::Schema,
+    value_schema: avro_schema::schema::Schema,
+) -> Result<avro_schema::schema::Schema, Error> {
+    let fields1 = match key_schema {
+        avro_schema::schema::Schema::Record(r) => r.fields,
+        _ => {
+            let r = error_stack::report!(Error::UnsupportedSchema).attach_printable(format!(
+                "expected key schema to be a Record variant, found {:?}",
+                key_schema
+            ));
+            return Err(r);
+        }
+    };
+    let fields2 = match value_schema {
+        avro_schema::schema::Schema::Record(r) => r.fields,
+        _ => {
+            let r = error_stack::report!(Error::UnsupportedSchema).attach_printable(format!(
+                "expected value schema to be a Record variant, found {:?}",
+                value_schema
+            ));
+            return Err(r);
+        }
+    };
+
+    let mut fields = vec![];
+    fields.extend(fields1);
+    fields.extend(fields2);
+    let record = avro_schema::schema::Record {
+        name: "combined key/value schema".to_string(),
+        namespace: None,
+        doc: None,
+        aliases: vec![],
+        fields,
+    };
+
+    Ok(avro_schema::schema::Schema::Record(record))
 }
 
 #[derive(serde::Deserialize, Debug)]
