@@ -97,25 +97,42 @@ jobs:
 
       - name: Python Client build package
         run: poetry build
+      
+        # Used in publish_to_PyPi to verify the package
+      - name: Generate requirements.txt 
+        run: poetry export -f requirements.txt --output requirements.txt
 
-      - name: Verify python package build artifact
-        run: |
-          poetry export -f requirements.txt --output requirements.txt
-          pip install -r requirements.txt
-          rm requirements.txt
-          pip install dist/kaskada-*.whl
-          cd ../../
-          python tests/integration/pythonClient/test_package.py
-
-
-      - name: Upload Python Client Artifact
+      - name: Upload Python Client Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: python-client-${{ matrix.os }}-${{ matrix.python-version }}
-          path: clients/python/dist
+          path: | 
+            tests/integration/pythonClient/test_package.py
+            clients/python/requirements.txt
+            clients/python/dist
 
-      # - name: Release to PyPi 
-      #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
-      #   run: poetry publish --build
-      #   env:
-      #     POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+  publish_to_PyPi:
+    needs: [python_client_build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
+    steps:
+      - name: Download Python Client Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: python-client-ubuntu-latest-3.7
+          path: verify/
+
+      - name: Verify python package build artifact
+        run: |
+          cd verify
+          pip install -r requirements.txt
+          rm requirements.txt
+          pip install kaskada-*.whl
+          python test_package.py
+          rm test_package.py
+
+      - name: Release to PyPi 
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
+        run: poetry publish --build
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
