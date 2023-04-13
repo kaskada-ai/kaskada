@@ -114,17 +114,16 @@ jobs:
   publish_to_PyPi:
     needs: [python_client_build]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
     steps:
       - name: Download Python Client Artifacts
         uses: actions/download-artifact@v3
         with:
           name: python-client-ubuntu-latest-3.7
-          path: verify/
+          path: dist/
 
       - name: Verify python package build artifact
         run: |
-          cd verify
+          cd dist
           pip install -r requirements.txt
           rm requirements.txt
           pip install kaskada-*.whl
@@ -133,6 +132,6 @@ jobs:
 
       - name: Release to PyPi 
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
-        run: poetry publish --build
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@v1.8.5
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
