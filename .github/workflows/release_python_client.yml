@@ -1,2 +1,49 @@
+on:
+  push:
+    tags:
+      - "python@v*" # Create tags matching 'engine@v*'', i.e. engine@v1.0.0
 
+  # Allow the workflow to be manually run.
+  # When doing so, artifacts will be built but not associated with a release.
+  workflow_dispatch:
+
+# In cases of concurrent workflows running (consecutive pushes to PR)
+# leave the latest workflow and cancel the other (older) workflows
+# See https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: python-client-release
+  cancel-in-progress: true
+
+
+permissions:
+  # For deploying release artifacts.
+  contents: write
+  pull-requests: read
+
+name: Python Client Release
+
+jobs:
+  python_protos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Buf
+        uses: bufbuild/buf-setup-action@v1.12.0
+        with:
+          version: "1.10.0"
+          buf_user: ${{ secrets.BUF_USER }}
+          buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Protos
+        run: buf generate
+        working-directory: proto
+
+      - name: Upload Python Proto Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-protos
+          # Python gRPC code is generated in src/kaskada/kaskada
+          path: clients/python/src/kaskada/kaskada
 
