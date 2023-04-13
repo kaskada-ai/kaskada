@@ -115,6 +115,12 @@ jobs:
     needs: [python_client_build]
     runs-on: ubuntu-latest
     steps:
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.7
+
       - name: Download Python Client Artifacts
         uses: actions/download-artifact@v3
         with:
