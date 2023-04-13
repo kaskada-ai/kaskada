@@ -58,6 +58,7 @@ jobs:
     defaults:
       run:
         working-directory: ./clients/python
+
     steps:
 
       - name: Checkout Code
@@ -99,23 +100,21 @@ jobs:
 
       - name: Verify python package build artifact
         run: |
-          pushd
-          cd clients/python/
           poetry export -f requirements.txt --output requirements.txt
           pip install -r requirements.txt
           pip install dist/kaskada-*.whl
-          popd
+          cd ../../
           python tests/integration/pythonClient/test_package.py
           rm requirements.txt
 
       - name: Upload Python Client Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: python-client-package
+          name: python-client-${{ matrix.os }}-${{ matrix.python-version }}
           path: clients/python/dist
 
-      - name: Release to PyPi 
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
-        run: poetry publish --build
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+      # - name: Release to PyPi 
+      #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
+      #   run: poetry publish --build
+      #   env:
+      #     POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
