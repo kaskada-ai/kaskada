@@ -102,10 +102,11 @@ jobs:
         run: |
           poetry export -f requirements.txt --output requirements.txt
           pip install -r requirements.txt
+          rm requirements.txt
           pip install dist/kaskada-*.whl
           cd ../../
           python tests/integration/pythonClient/test_package.py
-          rm requirements.txt
+
 
       - name: Upload Python Client Artifact
         uses: actions/upload-artifact@v3
