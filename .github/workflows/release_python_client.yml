@@ -129,7 +129,6 @@ jobs:
 
       - name: Verify python package build artifact
         run: |
-          cd 
           pip install -r clients/python/requirements.txt
           rm clients/python/requirements.txt
           pip install clients/python/dist/kaskada-*.whl
