@@ -119,14 +119,15 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-client-ubuntu-latest-3.7
-          path: dist/
+          # path: verify/
 
       - name: Verify python package build artifact
         run: |
-          cd dist
+          cd clients/python
           pip install -r requirements.txt
           rm requirements.txt
-          pip install kaskada-*.whl
+          pip install dist/kaskada-*.whl
+          cd ../../tests/integration/pythonClient
           python test_package.py
           rm test_package.py
 
