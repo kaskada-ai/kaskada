@@ -136,9 +136,12 @@ jobs:
           cd ../../tests/integration/pythonClient
           python test_package.py
           rm test_package.py
+          cd ../../../
 
       - name: Release to PyPi 
         # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/python@v')
-        uses: pypa/gh-action-pypi-publish@v1.8.5
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TOKEN }}
+          packages-dir: clients/python/dist
+        # working-directory: ./clients/python
