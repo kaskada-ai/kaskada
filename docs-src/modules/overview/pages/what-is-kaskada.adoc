@@ -315,7 +315,7 @@ in daily_average - (daily_average | shift_by(hours(1)))
         ]
     },
     {
-        "label": "daily_average | shift_by(days(7))",
+        "label": "daily_average | shift_by(hours(1))",
         "kind": "continuous",
         "data": [
             [
@@ -326,7 +326,7 @@ in daily_average - (daily_average | shift_by(hours(1)))
         ]
     },
     {
-        "label": "daily_average - (daily_average | shift_by(days(7)))",
+        "label": "daily_average - (daily_average | shift_by(hours(1)))",
         "kind": "continuous",
         "data": [
             [
