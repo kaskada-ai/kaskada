@@ -35,11 +35,15 @@ class Session:
 
     def __del__(self):
         if self._manager_process is not None:
-            logger.info("Stopping Kaskada Manager service")
+            logger.info(
+                "Stopping Kaskada Manager service"
+            ) if logger is not None else None
             self._manager_process.kill()
 
         if self._engine_process is not None:
-            logger.info("Stopping Kaskada Engine service")
+            logger.info(
+                "Stopping Kaskada Engine service"
+            ) if logger is not None else None
             self._engine_process.kill()
 
     def connect(self):
