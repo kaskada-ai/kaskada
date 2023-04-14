@@ -348,7 +348,7 @@ Aligning our mental model with the problem being solved makes reasoning about ti
 == The shift away from technology-specific solutions
 
 A big reason for the power and persistence of SQL is that it's a declarative language - you write what you want, not how to compute it.
-This allows you to focus on understanding your data, whithout having to think about query implementation details.
+This allows you to focus on understanding your data, without having to think about query implementation details.
 
 Unfortunately, the rise of stream-based data processing has forced developers to spend a lot of time thinking about implementation details.
 SQL queries written against OLAP offline data stores often aren't supported by streaming data processors.
