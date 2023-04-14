@@ -112,11 +112,11 @@ tables:
 - tableName: Purchase
   timeColumnName: purchase_time
   entityKeyColumnName: customer_id
-  tableSource:
+  source:
     kaskada: {}
 ----
 
-To create this table, we much sync the state of the Kaskada service with the contents of the file.
+To create this table, we must sync the state of the Kaskada service with the contents of the file.
 
 [source,shell]
 ----

@@ -124,13 +124,13 @@ Tables are described in a spec file as a list of table objects under the `tables
   entityKeyColumnName: entity_key
   subsortColumnName: offset
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 - tableName: Purchase
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 ----
 
@@ -153,13 +153,13 @@ tables:
   entityKeyColumnName: entity_key
   subsortColumnName: offset
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 - tableName: Purchase
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 views:
     # ...
@@ -179,7 +179,7 @@ tables:
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 ----
 
