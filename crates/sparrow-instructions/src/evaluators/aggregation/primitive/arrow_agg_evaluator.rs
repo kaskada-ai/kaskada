@@ -37,12 +37,12 @@ where
 {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match &self.args {
-            AggregationArgs::NoWindow { input } => {
+            AggregationArgs::NoWindow { inputs } => {
                 // Get the stored state of the accum
                 let mut accum = self.token.get_primitive_accum()?;
 
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let result = Self::aggregate(
                     &mut accum,
                     grouping.num_groups(),
@@ -55,12 +55,12 @@ where
 
                 result
             }
-            AggregationArgs::Since { ticks, input } => {
+            AggregationArgs::Since { ticks, inputs } => {
                 // Get the stored state of the accum
                 let mut accum = self.token.get_primitive_accum()?;
 
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let ticks = info.value(ticks)?.boolean_array()?;
                 let result = Self::aggregate_since(
                     &mut accum,

@@ -74,18 +74,16 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("min_by(measure: ordered, value: any, window: window = null) -> any")
         .with_dfg_signature(
-            "min_by(measure: ordered, value: any, window: window = null, duration: i64 = null, measure_field: string = null, value_field: string = null ) -> any",
+            "min_by(measure: ordered, value: any, window: window = null, duration: i64 = null) -> any",
         )
         .with_implementation(Implementation::new_pattern({
             const INPUTS_MERGE: &str = "(merge_join ?window_op (merge_join ?measure_op ?value_op))";
             const MEASURE: &str = const_format::formatcp!("(transform (if ?measure_is_new ?measure_value) {INPUTS_MERGE})");
             const VALUE: &str = const_format::formatcp!("(transform (if ?value_is_new ?value_value) {INPUTS_MERGE})");
 
-// TODO: FRAZ DOC THIS
-            const_format::formatcp!("(min_by (record ?measure_field_value {MEASURE} ?value_field_value {VALUE}) ?window_value ?duration_value)")
+            const_format::formatcp!("(min_by {MEASURE} {VALUE} ?window_value ?duration_value)")
         }))
         .with_is_new(Implementation::new_pattern(&format!(
-            // TODO: FRAZ Document this
             "(logical_or (logical_or ?value_is_new ({})) ({})",
             "?measure_is_new",
             "?window_is_new)",
@@ -109,19 +107,16 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("max_by(measure: ordered, value: any, window: window = null) -> any")
         .with_dfg_signature(
-            "max_by(measure: ordered, value: any, window: window = null, duration: i64 = null, measure_field: string = null, value_field: string = null ) -> any",
+            "max_by(measure: ordered, value: any, window: window = null, duration: i64 = null) -> any",
         )
         .with_implementation(Implementation::new_pattern({
             const INPUTS_MERGE: &str = "(merge_join ?window_op (merge_join ?measure_op ?value_op))";
             const MEASURE: &str = const_format::formatcp!("(transform (if ?measure_is_new ?measure_value) {INPUTS_MERGE})");
             const VALUE: &str = const_format::formatcp!("(transform (if ?value_is_new ?value_value) {INPUTS_MERGE})");
 
-// TODO: FRAZ DOC THIS
-            const_format::formatcp!("(max_by (record ?measure_field_value {MEASURE} ?value_field_value {VALUE}) ?window_value ?duration_value)")
-
+            const_format::formatcp!("(max_by {MEASURE} {VALUE} ?window_value ?duration_value)")
         }))
         .with_is_new(Implementation::new_pattern(&format!(
-            // TODO: FRAZ Document this
             "(logical_or (logical_or ?value_is_new ({})) ({})",
             "?measure_is_new",
             "?window_is_new)",

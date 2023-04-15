@@ -530,31 +530,6 @@ pub(super) fn ast_to_dfg(
                     dfg.enter_env();
                     dfg.bind("$condition_input", args[1].inner().clone());
 
-                    // max_by and min_by are unique in that we need to construct a record
-                    // of their `measure` and `value` arguments. This is so we can continue
-                    // to use the existing framework for aggregations, which assumes a single
-                    // input column of values.
-                    let measure_field = dfg.add_string_literal("measure_field")?;
-                    let measure_arg = Located::new(
-                        add_literal(
-                            dfg,
-                            measure_field,
-                            FenlType::Concrete(DataType::Utf8),
-                            expr.args()[0].location().clone(),
-                        )?,
-                        expr.args()[0].location().clone(),
-                    );
-                    let value_field = dfg.add_string_literal("value_field")?;
-                    let value_arg = Located::new(
-                        add_literal(
-                            dfg,
-                            value_field,
-                            FenlType::Concrete(DataType::Utf8),
-                            expr.args()[0].location().clone(),
-                        )?,
-                        expr.args()[0].location().clone(),
-                    );
-
                     // Flatten the window arguments
                     let window = &expr.args()[2];
                     let (condition, duration) = match window.op() {
@@ -585,14 +560,7 @@ pub(super) fn ast_to_dfg(
 
                     dfg.exit_env();
                     // [measure, input, condition, duration]
-                    vec![
-                        args[0].clone(),
-                        args[1].clone(),
-                        condition,
-                        duration,
-                        measure_arg,
-                        value_arg,
-                    ]
+                    vec![args[0].clone(), args[1].clone(), condition, duration]
                 } else {
                     dfg.enter_env();
                     dfg.bind("$condition_input", args[0].inner().clone());

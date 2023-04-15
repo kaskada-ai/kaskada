@@ -10,18 +10,54 @@ use crate::fixtures::{
 use crate::QueryFixture;
 
 #[tokio::test]
-async fn test_max_yb() {
+async fn test_max_by_i64_i64() {
     insta::assert_snapshot!(QueryFixture::new("{ max_by: max_by(Numbers.m, Numbers.n) }").with_dump_dot("asdf").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,sum_field
-
+    _time,_subsort,_key_hash,_key,max_by
+    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10
+    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3
+    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,6
     "###);
 }
 
 #[tokio::test]
-async fn test() {
-    insta::assert_snapshot!(QueryFixture::new("{ test: test(Numbers.m, Numbers.n) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,sum_field
+async fn test_max_by_i64_string() {
+    insta::assert_snapshot!(QueryFixture::new("{ max_by: max_by(Strings.n, Strings.t) }").run_to_csv(&strings_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,max_by
+    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10
+    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3
+    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,6
+    "###);
+}
 
+#[tokio::test]
+async fn test_max_by_timestamp_string() {
+    insta::assert_snapshot!(QueryFixture::new("{ max_by: max_by(Times.other_time, Times.fruit) }").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,max_by
+    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10
+    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3
+    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,6
+    "###);
+}
+
+#[tokio::test]
+async fn test_max_by_nested_aggregations() {
+    insta::assert_snapshot!(QueryFixture::new("{ max_by: max_by(Numbers.m, Numbers.n) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,max_by
+    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10
+    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3
+    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,6
+    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,6
     "###);
 }
 

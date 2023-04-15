@@ -41,21 +41,23 @@ where
 {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match &self.args {
-            AggregationArgs::NoWindow { input } => {
+            AggregationArgs::NoWindow { inputs } => {
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let measure_vals = info.value(&inputs[0])?.array_ref()?;
+                let input_vals = info.value(&inputs[1])?.array_ref()?;
                 let result = Self::aggregate(
                     &mut self.token,
                     grouping.num_groups(),
                     grouping.group_indices(),
+                    &measure_vals,
                     &input_vals,
                 );
 
                 result
             }
-            AggregationArgs::Since { ticks, input } => {
+            AggregationArgs::Since { ticks, inputs } => {
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let ticks = info.value(ticks)?.boolean_array()?;
                 // let result = Self::aggregate_since(
                 //     &mut self.token,
@@ -130,23 +132,45 @@ where
     fn update_accum(
         token: &mut MaxByAccumToken<T1::Native, T2::Native>,
         entity_index: u32,
+        measure_is_valid: bool,
         input_is_valid: bool,
-        measure_input: T1::Native,
-        value_input: T2::Native,
+        measure_value: T1::Native,
+        input_value: T2::Native,
     ) -> Option<T2::Native> {
-        if input_is_valid {
-            match token.get_measured(entity_index) {
-                Some(cur_max) => {
-                    if measure_input >= cur_max {
-                        token.set_measured(entity_index, Some(measure_input.clone()));
-                        token.set_output(entity_index, Some(value_input.clone()));
+        match token.get_measured(entity_index) {
+            Some(cur_max) => {
+                println!("cur_max: {:?}", cur_max);
+                // print the measure value
+                println!("measure_value: {:?}", measure_value);
+                // print the measure is valid
+                println!("measure_is_valid: {:?}", measure_is_valid);
+                if measure_is_valid && measure_value >= cur_max {
+                    token.set_measured(entity_index, Some(measure_value));
+                    // TODO: Same deal, a valid null value will never be set here.
+                    // but we can't know whether it's because its non-new or actually null.
+                    // if it's not-new, then are there cases where we actually don't
+                    // want to set it? In the current implementation pattern, yes, because
+                    // we have that if statement. But if we get rid of that...does it work?
+                    // 1. Get rid of if statement.
+                    // 2. Set input value no matter what, don't check validity.
+                    if input_is_valid {
+                        token.set_output(entity_index, Some(input_value));
                     }
                 }
-                None => {
-                    token.set_measured(entity_index, Some(measure_input.clone()));
-                    token.set_output(entity_index, Some(value_input.clone()));
+            }
+            None => {
+                if measure_is_valid {
+                    token.set_measured(entity_index, Some(measure_value));
                 }
-            };
+
+                // TODO: FRAZ - this means we'll be ignoring `null` inputs, even if it's a valid output.
+                // But since we have no way of distinguishing between null and non-new in this current pattern
+                // we can't do any better than this, unless we go the other way and set the output even if
+                // the input was not new (meaning we set it to null with out `if input_is_new input_value` transform)
+                if input_is_valid {
+                    token.set_output(entity_index, Some(input_value));
+                }
+            }
         }
 
         token.get_output(entity_index)
@@ -211,49 +235,121 @@ where
         token: &mut MaxByAccumToken<T1::Native, T2::Native>,
         key_capacity: usize,
         entity_indices: &UInt32Array,
-        input: &ArrayRef,
+        measure_values: &ArrayRef,
+        input_values: &ArrayRef,
     ) -> anyhow::Result<ArrayRef> {
-        assert_eq!(entity_indices.len(), input.len());
+        assert_eq!(entity_indices.len(), measure_values.len());
+        assert_eq!(entity_indices.len(), input_values.len());
 
         // Make sure the accum vec is large enough for the entity accumulators we want
         // to store.
         Self::ensure_entity_capacity(token, key_capacity);
 
-        let input = downcast_struct_array(input.as_ref())?;
-        debug_assert!(
-            input.columns().len() == 2,
-            "expected 2 columns, measure and input"
-        );
-        let measure_input = downcast_primitive_array::<T1>(input.column(0))?;
-        let value_input = downcast_primitive_array::<T2>(input.column(1))?;
+        let measure_values = downcast_primitive_array::<T1>(measure_values.as_ref())?;
+        let input_values = downcast_primitive_array::<T2>(input_values.as_ref())?;
 
         // TODO: Handle the case where the input is empty (null_count == len) and we
         // don't need to compute anything.
-        let result: PrimitiveArray<T2> =
-            if let Some(is_valid) = BitBufferIterator::array_valid_bits(input) {
+
+        let measure_valid_bits = BitBufferIterator::array_valid_bits(measure_values);
+        let input_valid_bits = BitBufferIterator::array_valid_bits(input_values);
+        let result: PrimitiveArray<T2> = match (measure_valid_bits, input_valid_bits) {
+            (Some(mvb), Some(ivb)) => {
                 let iter = izip!(
-                    is_valid,
+                    mvb,
+                    ivb,
                     entity_indices.values(),
-                    measure_input.values(),
-                    value_input.values()
+                    measure_values.values(),
+                    input_values.values()
                 )
-                .map(|(is_valid, entity_index, measure_input, value_input)| {
-                    Self::update_accum(token, *entity_index, is_valid, *measure_input, *value_input)
+                .map(
+                    |(
+                        measure_is_valid,
+                        input_is_valid,
+                        entity_index,
+                        measure_value,
+                        input_value,
+                    )| {
+                        Self::update_accum(
+                            token,
+                            *entity_index,
+                            measure_is_valid,
+                            input_is_valid,
+                            *measure_value,
+                            *input_value,
+                        )
+                    },
+                );
+                // SAFETY: `izip!` and `map` are trusted length iterators.
+                unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
+            }
+
+            (Some(mvb), None) => {
+                let iter = izip!(
+                    mvb,
+                    entity_indices.values(),
+                    measure_values.values(),
+                    input_values.values()
+                )
+                .map(
+                    |(measure_is_valid, entity_index, measure_value, input_value)| {
+                        Self::update_accum(
+                            token,
+                            *entity_index,
+                            measure_is_valid,
+                            true,
+                            *measure_value,
+                            *input_value,
+                        )
+                    },
+                );
+                // SAFETY: `izip!` and `map` are trusted length iterators.
+                unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
+            }
+
+            (None, Some(ivb)) => {
+                let iter = izip!(
+                    ivb,
+                    entity_indices.values(),
+                    measure_values.values(),
+                    input_values.values()
+                )
+                .map(
+                    |(input_is_valid, entity_index, measure_value, input_value)| {
+                        Self::update_accum(
+                            token,
+                            *entity_index,
+                            true,
+                            input_is_valid,
+                            *measure_value,
+                            *input_value,
+                        )
+                    },
+                );
+                // SAFETY: `izip!` and `map` are trusted length iterators.
+                unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
+            }
+            (None, None) => {
+                let iter = izip!(
+                    entity_indices.values(),
+                    measure_values.values(),
+                    input_values.values()
+                )
+                .map(|(entity_index, measure_value, input_value)| {
+                    Self::update_accum(
+                        token,
+                        *entity_index,
+                        true,
+                        true,
+                        *measure_value,
+                        *input_value,
+                    )
                 });
                 // SAFETY: `izip!` and `map` are trusted length iterators.
                 unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
-            } else {
-                let iter = izip!(
-                    entity_indices.values(),
-                    measure_input.values(),
-                    value_input.values()
-                )
-                .map(|(entity_index, measure_input, value_input)| {
-                    Self::update_accum(token, *entity_index, true, *measure_input, *value_input)
-                });
-                // SAFETY: `izip!` and `map` are trusted length iterators.
-                unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
-            };
+            }
+        };
+
         Ok(Arc::new(result))
     }
 

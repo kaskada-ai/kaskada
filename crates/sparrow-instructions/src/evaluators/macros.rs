@@ -192,6 +192,66 @@ macro_rules! create_ordered_evaluator {
     }};
 }
 
+macro_rules! create_two_typed_evaluator {
+    ($input_type_1:expr,
+        $input_type_2:expr,
+        $primitive_evaluator:ident,
+        $bool_evaluator:ident,
+        $string_evaluator:ident,
+        $info:expr) => {{
+        use arrow::datatypes::*;
+        use DataType::*;
+
+        // Rewrite the following match statement but include input_type_1 and input_type_2
+        match ($input_type_1, $input_type_2) {
+            (Int8, Int16Type) => $primitive_evaluator::<Int8Type, Int16Type>::try_new($info),
+            (Int8, Int32Type) => $primitive_evaluator::<Int8Type, Int32Type>::try_new($info),
+            (Int8, Int64Type) => $primitive_evaluator::<Int8Type, Int64Type>::try_new($info),
+            (Int8, UInt8Type) => $primitive_evaluator::<Int8Type, UInt8Type>::try_new($info),
+            (Int8, UInt16Type) => $primitive_evaluator::<Int8Type, UInt16Type>::try_new($info),
+            (Int8, UInt32Type) => $primitive_evaluator::<Int8Type, UInt32Type>::try_new($info),
+            (Int8, UInt64Type) => $primitive_evaluator::<Int8Type, UInt64Type>::try_new($info),
+            (Int8, Float32Type) => $primitive_evaluator::<Int8Type, Float32Type>::try_new($info),
+            (Int8, Float64Type) => $primitive_evaluator::<Int8Type, Float64Type>::try_new($info),
+            (Int8, Timestamp(TimeUnit::Microsecond, None)) => {
+                $primitive_evaluator::<Int8Type, TimestampMicrosecondType>::try_new($info)
+            }
+            (Int8, Timestamp(TimeUnit::Millisecond, None)) => {
+                $primitive_evaluator::<Int8Type, TimestampMillisecondType>::try_new($info)
+            }
+            (Int8, Timestamp(TimeUnit::Nanosecond, None)) => {
+                $primitive_evaluator::<Int8Type, TimestampNanosecondType>::try_new($info)
+            }
+            (Int8, Timestamp(TimeUnit::Second, None)) => {
+                $primitive_evaluator::<Int8Type, TimestampSecondType>::try_new($info)
+            }
+            (Int8, Date32Type) => $primitive_evaluator::<Int8Type, Date32Type>::try_new($info),
+            (Int8, Date64Type) => $primitive_evaluator::<Int8Type, Date64Type>::try_new($info),
+            (Int8, Time32(TimeUnit::Millisecond)) => {
+                $primitive_evaluator::<Int8Type, Time32MillisecondType>::try_new($info)
+            }
+            (Int8, Time32(TimeUnit::Second)) => {
+                $primitive_evaluator::<Int8Type, Time32SecondType>::try_new($info)
+            }
+            (Int8, Time64(TimeUnit::Microsecond)) => {
+                $primitive_evaluator::<Int8Type, Time64MicrosecondType>::try_new($info)
+            }
+            (Int8, Time64(TimeUnit::Nanosecond)) => {
+                $primitive_evaluator::<Int8Type, Time64NanosecondType>::try_new($info)
+            }
+            (Int8, Duration(TimeUnit::Second)) => {
+                $primitive_evaluator::<Int8Type, DurationSecondType>::try_new($info)
+            }
+            (Int8, Duration(TimeUnit::Millisecond)) => {
+                $primitive_evaluator::<Int8Type, DurationMillisecondType>::try_new($info)
+            }
+            (Int8, Duration(TimeUnit::Microsecond)) => {
+                $primitive_evaluator::<Int8Type, DurationMicrosecondType>::try_new($info)
+            }
+        }
+    }};
+}
+
 /// Create a `Box<dyn Evaluator>` for a generic instruction.
 ///
 /// The `$input_type` must be a `&DataType` corresponding to the signed input

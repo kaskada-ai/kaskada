@@ -291,18 +291,16 @@ fn create_simple_evaluator(
             //     MaxByPrimitive,
             //     info
             // )
-            let (t1, t2) = match info.args[0].data_type() {
-                DataType::Struct(fields) => {
-                    println!("Fields: {:?}", fields);
-                    (fields[0].data_type(), fields[1].data_type())
-                }
-                _ => anyhow::bail!("MinBy must be a struct"),
-            };
-            match (t1, t2) {
+
+            match (info.args[0].data_type(), info.args[1].data_type()) {
                 (DataType::Int64, DataType::Int64) => {
                     MaxByEvaluator::<Int64Type, Int64Type>::try_new(info)
                 }
-                (_, _) => anyhow::bail!("MaxBy not implemented for {:?}, {:?}", t1, t2),
+                (_, _) => anyhow::bail!(
+                    "MaxBy not implemented for types {:?}, {:?}",
+                    info.args[0].data_type(),
+                    info.args[1].data_type()
+                ),
             }
         }
         InstOp::Mean => {

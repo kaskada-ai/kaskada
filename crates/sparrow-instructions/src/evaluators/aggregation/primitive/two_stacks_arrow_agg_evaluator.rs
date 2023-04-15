@@ -40,7 +40,7 @@ where
         // implementation in order to avoid matching the arguments each evaluation.
         match &self.args {
             AggregationArgs::Sliding {
-                input,
+                inputs,
                 ticks,
                 duration,
             } => {
@@ -48,7 +48,7 @@ where
                 let mut accum = self.token.get_primitive_accum()?;
 
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let ticks = info.value(ticks)?.boolean_array()?;
                 let duration = info
                     .value(duration)?

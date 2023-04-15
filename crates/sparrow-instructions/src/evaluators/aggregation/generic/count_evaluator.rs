@@ -22,9 +22,9 @@ pub struct CountIfEvaluator {
 impl Evaluator for CountIfEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match &self.args {
-            AggregationArgs::NoWindow { input } => {
+            AggregationArgs::NoWindow { inputs } => {
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let result = Self::aggregate(
                     &mut self.token,
                     grouping.num_groups(),
@@ -33,9 +33,9 @@ impl Evaluator for CountIfEvaluator {
                 );
                 result
             }
-            AggregationArgs::Since { ticks, input } => {
+            AggregationArgs::Since { ticks, inputs } => {
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let ticks = info.value(ticks)?.boolean_array()?;
                 let result = Self::aggregate_since(
                     &mut self.token,

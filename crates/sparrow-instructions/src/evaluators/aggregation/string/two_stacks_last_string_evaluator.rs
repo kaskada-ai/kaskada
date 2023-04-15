@@ -23,12 +23,12 @@ impl Evaluator for TwoStacksLastStringEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match &self.args {
             AggregationArgs::Sliding {
-                input,
+                inputs,
                 ticks,
                 duration,
             } => {
                 let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
+                let input_vals = info.value(&inputs[0])?.array_ref()?;
                 let ticks = info.value(ticks)?.boolean_array()?;
                 let duration = info
                     .value(duration)?
