@@ -3,7 +3,6 @@ use std::{path::PathBuf, str::FromStr};
 use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
 
-use tokio::fs;
 use tokio_util::io::StreamReader;
 use url::Url;
 
@@ -115,18 +114,6 @@ impl ObjectStoreUrl {
             .await
             .into_report()
             .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
-        Ok(())
-    }
-    pub async fn upload(
-        &self,
-        object_store_registry: &ObjectStoreRegistry,
-        file_path: PathBuf,
-    ) -> error_stack::Result<(), Error> {
-        let path = self.path()?;
-        let mut file = fs::File::open(file_path).await.unwrap();
-        let object_store = object_store_registry.object_store(self.key()?)?;
-        let (_id, mut writer) = object_store.put_multipart(&path).await.unwrap();
-        tokio::io::copy(&mut file, &mut writer).await.unwrap();
         Ok(())
     }
 }

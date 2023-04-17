@@ -90,12 +90,13 @@ pub async fn prepare_data(
         .into_report()
         .change_context(Error::Internal)?;
     let source_data = convert_to_local_sourcedata(
-        object_store_registry,
+        object_store_registry.clone(),
         prepare_request.source_data.as_ref(),
         temp_file.path(),
     )
     .await?;
     let (_prepared_metadata, prepared_files) = prepare_file(
+        &object_store_registry,
         &source_data,
         &prepare_request.output_path_prefix,
         &prepare_request.file_prefix,
@@ -136,20 +137,26 @@ pub async fn convert_to_local_sourcedata(
                                 .download(&object_store_registry, local_path.to_path_buf())
                                 .await
                                 .unwrap();
-                            Source::ParquetPath(format!(
-                                "/{}",
-                                local_path.canonicalize().unwrap().to_string_lossy()
-                            ))
+                            Source::ParquetPath(
+                                local_path
+                                    .canonicalize()
+                                    .unwrap()
+                                    .to_string_lossy()
+                                    .to_string(),
+                            )
                         }
                         ObjectStoreKey::Gcs { bucket: _ } => {
                             object_store_url
                                 .download(&object_store_registry, local_path.to_path_buf())
                                 .await
                                 .unwrap();
-                            Source::ParquetPath(format!(
-                                "/{}",
-                                local_path.canonicalize().unwrap().to_string_lossy()
-                            ))
+                            Source::ParquetPath(
+                                local_path
+                                    .canonicalize()
+                                    .unwrap()
+                                    .to_string_lossy()
+                                    .to_string(),
+                            )
                         }
                     }
                 }
@@ -169,20 +176,26 @@ pub async fn convert_to_local_sourcedata(
                                 .download(&object_store_registry, local_path.to_path_buf())
                                 .await
                                 .unwrap();
-                            Source::CsvPath(format!(
-                                "/{}",
-                                local_path.canonicalize().unwrap().to_string_lossy()
-                            ))
+                            Source::CsvPath(
+                                local_path
+                                    .canonicalize()
+                                    .unwrap()
+                                    .to_string_lossy()
+                                    .to_string(),
+                            )
                         }
                         ObjectStoreKey::Gcs { bucket: _ } => {
                             object_store_url
                                 .download(&object_store_registry, local_path.to_path_buf())
                                 .await
                                 .unwrap();
-                            Source::CsvPath(format!(
-                                "/{}",
-                                local_path.canonicalize().unwrap().to_string_lossy()
-                            ))
+                            Source::CsvPath(
+                                local_path
+                                    .canonicalize()
+                                    .unwrap()
+                                    .to_string_lossy()
+                                    .to_string(),
+                            )
                         }
                     }
                 }
