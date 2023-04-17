@@ -28,9 +28,8 @@ use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use tracing::Instrument;
 
 use crate::execute::pulsar_reader::read_pulsar_stream;
-use crate::s3::{S3Helper, S3Object};
 use crate::stores::object_store_url::ObjectStoreKey;
-use crate::stores::ObjectStoreUrl;
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use crate::{PreparedMetadata, RawMetadata};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
@@ -129,20 +128,22 @@ impl<'a> fmt::Display for SourceDataWrapper<'a> {
 
 /// Prepare the given file and return the list of prepared files.
 pub async fn prepare_file(
+    object_store_registry: &ObjectStoreRegistry,
     source_data: &SourceData,
     output_path: &str,
     output_prefix: &str,
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let object_store_url = ObjectStoreUrl::from_str(output_path).unwrap();
-    let object_store_key = object_store_url.key().unwrap();
-    let object_store_path = format!("/{}", object_store_url.path().unwrap().to_string());
+    let output_url = ObjectStoreUrl::from_str(output_path).unwrap();
+    let output_key = output_url.key().unwrap();
     let temp_dir = tempfile::tempdir().unwrap();
-    //
-    let local_output_prefix = match object_store_key {
-        ObjectStoreKey::Local => path::Path::new(object_store_path.as_str()),
-        _ => temp_dir.path(),
+    let temp_dir = temp_dir.path().to_str().unwrap();
+    let path = format!("/{}", output_url.path().unwrap().to_string());
+    let local_output_prefix = if output_key.eq(&ObjectStoreKey::Local) {
+        path::Path::new(&path)
+    } else {
+        path::Path::new(temp_dir)
     };
 
     let preparer = prepared_batches(source_data, table_config, slice).await?;
@@ -199,65 +200,73 @@ pub async fn prepare_file(
 
     // unzip the stream of (prepared_file, prepared_metadata) into two vectors
     let (pm, pf): (Vec<_>, Vec<_>) = results.try_collect::<Vec<_>>().await?.into_iter().unzip();
-    Ok((pm, pf))
+    match output_key {
+        // No further action needs to be done for local/in-memory objects.
+        ObjectStoreKey::Local | ObjectStoreKey::Memory => Ok((pm, pf)),
+        // Need to upload the local files now.
+        _ => {
+            let upload_results = upload_prepared_files_to_s3(
+                object_store_registry,
+                &pm,
+                &output_prefix,
+                output_prefix,
+            )
+            .await
+            .unwrap();
+            Ok((pm, upload_results))
+        }
+    }
 }
 
 pub async fn upload_prepared_files_to_s3(
-    s3: S3Helper,
+    object_store_registry: &ObjectStoreRegistry,
     prepared_metadata: &[PreparedMetadata],
-    output_s3_prefix: &str,
+    output_prefix: &str,
     output_file_prefix: &str,
 ) -> error_stack::Result<Vec<PreparedFile>, Error> {
-    let span = tracing::info_span!("Uploading prepared files to S3", ?output_s3_prefix);
+    let span = tracing::info_span!("Uploading prepared files to object store", ?output_prefix);
     let _enter = span.enter();
 
     let mut parquet_uploads: Vec<_> = Vec::new();
     let mut prepared_files: Vec<_> = Vec::new();
     {
         for (batch_count, prepared_metadata) in prepared_metadata.iter().enumerate() {
-            let prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .try_into()
-                .change_context(Error::Internal)?;
             tracing::debug!(
                 "Prepared batch {batch_count} has {} rows",
-                prepared_file.num_rows
+                prepared_metadata.num_rows
             );
 
             tracing::debug!(
                 "Prepared batch {batch_count} with metadata {:?}",
                 prepared_metadata
             );
-            // Note that the `output_s3_prefix` is formatted as `s3://<bucket>/<output_prefix>`
-            let output_prefix_uri = S3Object::try_from_uri(output_s3_prefix)
-                .into_report()
-                .change_context(Error::Internal)?;
-            let output_bucket = output_prefix_uri.bucket;
-            let output_key_prefix = output_prefix_uri.key;
 
-            let upload_object = S3Object {
-                bucket: output_bucket.clone(),
-                key: format!("{output_key_prefix}/{output_file_prefix}-{batch_count}.parquet"),
-            };
+            let prepared_url =
+                format!("{output_prefix}/{output_file_prefix}-{batch_count}.parquet");
+            let metadata_prepared_url =
+                format!("{output_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet");
 
-            let metadata_upload_object = S3Object {
-                bucket: output_bucket.clone(),
-                key: format!(
-                    "{output_key_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet"
-                ),
-            };
-            let prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .with_s3_path(&upload_object)
-                .with_s3_metadata_path(&metadata_upload_object)
-                .try_into()
-                .change_context(Error::Internal)?;
-            parquet_uploads.push(s3.upload_s3(upload_object, Path::new(&prepared_metadata.path)));
-            parquet_uploads.push(s3.upload_s3(
-                metadata_upload_object,
+            let prepare_object_store_url = ObjectStoreUrl::from_str(prepared_url.as_str()).unwrap();
+            let metadata_object_store_url =
+                ObjectStoreUrl::from_str(&metadata_prepared_url.as_str()).unwrap();
+
+            parquet_uploads.push(
+                object_store_registry
+                    .upload(prepare_object_store_url, Path::new(&prepared_metadata.path)),
+            );
+
+            parquet_uploads.push(object_store_registry.upload(
+                metadata_object_store_url,
                 Path::new(&prepared_metadata.metadata_path),
             ));
-            prepared_files.push(prepared_file)
+
+            let result_prepared_file: PreparedFile = prepared_metadata
+                .to_owned()
+                .with_path(prepared_url)
+                .with_metadata_path(metadata_prepared_url)
+                .try_into()
+                .change_context(Error::Internal)?;
+            prepared_files.push(result_prepared_file)
         }
     }
 
@@ -265,7 +274,7 @@ pub async fn upload_prepared_files_to_s3(
     // to fail early if anything failed. But it is more book-keeping.
     let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
     for result in parquet_uploads.await {
-        result.into_report().change_context(Error::UploadResult)?;
+        result.change_context(Error::UploadResult)?;
     }
 
     Ok(prepared_files)
