@@ -53,6 +53,12 @@ Depending on you Python installation and configuration you may have `pip3` inste
 If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 install kaskada`
 ====
 
+[IMPORTANT]
+====
+Installing kaskada for the first time can take 10-15 minutes while some external dependencies are built.
+Subsequent installs and upgrades are generally faster.
+====
+
 Now that we have everything installed let's fire up a notebook and get the remaining components of Kaskada installed.
 
 Using a terminal start a new Jupyter notebook using the command 
@@ -115,16 +121,16 @@ row should be interpreted. You must describe:
 
 * A field containing the time associated with each row
 (`time_column_name`). The time should refer to when the event occurred.
-* An initial xref:fenl:entities[entity] key associated with each row
+* An initial xref:fenl:entities.adoc[entity] key associated with each row
 (`entity_key_column_name`). The entity should identify a _thing_ in the
 world that each event is associated with. Don't worry too much about
 picking the "right" value here - it's easy to change the entity key in
 Fenl.
-* A subsort column associated with each row (`subsort_column_name`).
+* An (optional) subsort column associated with each row (`subsort_column_name`).
 This value is used to order rows associated with the same time value.
 
 For more information about these fields, see:
-xref:how-to-guides:expected-file-format[Expected File Format]
+xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 
 [source,python]
 ----
@@ -182,8 +188,8 @@ Now that we've created a table, we're ready to load some data into it.
 Data can be loaded into a table in multiple ways. In this example we'll
 load the contents of a Pandas dataframe into the table. To learn about
 the different ways data can be loaded into a table, see the
-xref:developing:tables.adoc#uploading-data["Uploading Data"
-section of the "Working with Data"] page.
+xref:ROOT:loading-data.adoc["Loading Data"]
+section of the docs.
 
 [source,python]
 ----
@@ -254,7 +260,7 @@ After executing this block, all tables that have been defined are
 returned.
 
 For more help with tables and loading data, see xref:developing:tables.adoc[Reference -
-Working with Tables]
+Tables]
 
 == Querying Data
 
@@ -264,7 +270,7 @@ You can write queries in a number of ways with Kaskada. Here we start
 with fenlmagic because these queries are not persistent. As you are
 iterating in Jupyter it can be helpful to build up your feature and time
 selection as you go, once you'd like to persist a query, check out our
-article on xref:developing:views.adoc[Sharing Queries].
+article on sharing queries with xref:developing:views.adoc[Views].
 
 You can make Fenl queries by prefixing a query block with `%%fenl`. The
 query results will be computed and returned as a Pandas dataframe. The
@@ -286,6 +292,18 @@ This table is intentionally small so that you can get to know
 queries with Kaskada.
 ====
 
+It can be helpful to limit your results to a single entity.
+This makes it easier to see how a single entity changes over time.
+
+[source,Fenl]
+----
+%%fenl
+Purchase | when(Purchase.customer_id == "patrick")
+----
+In this example, we build a pipeline of functions using the `|` character.
+Pipelines are an easy way to use the results of one expression as the input to another expresion.
+In this example we begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"`. 
+
 As you begin to better understand your data you can start using
 aggregations over your data such as the `max()` function:
 
@@ -294,9 +312,11 @@ aggregations over your data such as the `max()` function:
 %%fenl
 {
    max_purchase: Purchase.amount | max(),
-}
+} | when(Purchase.customer_id == "patrick") 
 ----
 
+[IMPORTANT]
+====
 These results may be surprising if you were expecting a single value,
 this is a feature, not a bug!
 
@@ -312,6 +332,7 @@ information about the future from "leaking" into the past.
 
 Read more in the xref:fenl:language-guide.adoc[Fenl
 Language Guide]
+====
 
 Now we can start building up our features. To reduce the set of columns
 output in your query, you can define a record with the curly braces

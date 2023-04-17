@@ -40,39 +40,6 @@ xattr -dr com.apple.quarantine <path to file>
 ----
 ====
 
-You should now be able to run all three components.
-To verify they're installed correctly and executable, try running the following command:
-
-[source,shell]
-----
-./kaskada-cli -h
-----
-
-You should see output similar to the following:
-
-[source,shell]
-----
-A CLI tool for interacting with the Kaskada API
-
-Usage:
-  cli [command]
-
-Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  help        Help about any command
-  load        A set of commands for loading data into kaskada
-  query       A set of commands for running queries on kaskada
-  sync        A set of commands for interacting with kaskada resources as code
-
-Flags:
-      --config string               config file (default is $HOME/.cli.yaml)
-  -d, --debug                       get debug log output
-  -h, --help                        help for cli
-      --kaskada-api-server string   Kaskada API Server
-      --kaskada-client-id string    Kaskada Client ID
-      --use-tls                     Use TLS when connecting to the Kaskada API (default true)
-----
-
 You can start a local instance of the Kaskada service by running the manager and engine:
 
 [source,shell]
@@ -80,6 +47,30 @@ You can start a local instance of the Kaskada service by running the manager and
 ./kaskada-manager 2>&1 > manager.log 2>&1 &
 ./kaskada-engine serve > engine.log 2>&1 &
 ----
+
+[TIP]
+.Allowing services to listen on OSX
+----
+When using OSX, you may need to allow these services to create an API listener the first time you run these commands.
+This is normal, and indicates the services are working as expected - the API allows services to communicate between themselves.
+----
+
+To verify they're installed correctly and executable, try running the following command (which lists any resources you've created):
+
+[source,shell]
+----
+./kaskada-cli sync export --all
+----
+
+You should see output similar to the following:
+
+[source,shell]
+----
+10:18AM INF starting export
+{}  
+10:18AM INF Success!
+----
+
 
 == Managing resources
 
@@ -92,27 +83,35 @@ The first step is to create a spec file containing the table's definition.
 When creating a table, you must provide some information about how each
 row should be interpreted. You must describe:
 
-* A field containing the time associated with each row
+* A field containing the time associated with each event
 (`time_column_name`). The time should refer to when the event occurred.
-* An initial xref:fenl:entities[entity] key associated with each row
+* An initial xref:fenl:entities.adoc[entity] key associated with each row
 (`entity_key_column_name`). The entity should identify a _thing_ in the
 world that each event is associated with. Don't worry too much about
 picking the "right" value here - it's easy to change the entity key in
 Fenl.
-* A subsort column associated with each row (`subsort_column_name`).
+* An (optional) subsort column associated with each event (`subsort_column_name`).
 This value is used to order rows associated with the same time value.
 
 For more information about these fields, see:
-xref:how-to-guides:expected-file-format[Expected File Format]
+xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 
-[,yaml]
+[source,yaml]
 .spec.yaml
 ----
 tables:
-- tableName: Purchase
-  timeColumnName: purchase_time
-  entityKeyColumnName: customer_id
-  source:
+  # The name of the table
+- tableName: Purchase               
+
+  # A field containing the time associated with each event
+  timeColumnName: purchase_time     
+
+  # An initial entity key associated with each event
+  entityKeyColumnName: customer_id  
+
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
+  source:                          
     kaskada: {}
 ----
 
@@ -164,14 +163,14 @@ curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBh
 The file's content is added to the table.
 
 For more help with tables and loading data, see xref:developing:tables.adoc[Reference -
-Working with Tables]
+Tables]
 
 == Querying Data
 
 You can write queries in a number of ways with Kaskada. As you are
 iterating it can be helpful to build up your queries as components
 as you go.  Once you'd like to persist a query, check out our
-article on xref:developing:views.adoc[Sharing Queries].
+article on sharing queries with xref:developing:views.adoc[Views].
 
 Let's start by looking at the Purchase table without any filters, this
 query will return all of the columns and rows contained in a table:
@@ -183,13 +182,27 @@ Purchase
 EOS
 ----
 
-Note: this table is intentionally small so that you can get to know
-queries with Kaskada. When you upload your own data, you may want to
-write the results to a file rather than `stdout`:
+[NOTE]
+====
+This table is intentionally small so that you can get to know queries with Kaskada. 
+When working with larger data sets, you may want to write the results to a file rather than `stdout` (by omitting the `--stdout` flag).
+====
+
+Let's walk through this command.
+We begin by using the CLI to run a query: `kaskada-cli query run`.
+CLI commands are organized into groups like `query`, `load`, and `sync` - each group contains a set of related sub-commands.
+In order to see the results of our query, we used the command flag `--stdout`; the default behavior is to write results to a file and return a JSON object describing the result of the query.
+Finally, we specified how to encode the results with the flag `--response-as csv`.
+CSV is a good format for writing results to STDOUT, but the default is to encode results in Parquet, which is a much more efficient encoding for larger datasets.
+The query is enclosed between `<<EOS` and `EOS` - this is Bash syntax for "heredocs", which allow you to easily write multi-line strings and pass them into the CLI on STDIN.
+
+
+It can be helpful to limit your results to a single entity.
+This makes it easier to see how a single entity changes over time.
 
 [source,shell]
 ----
-./kaskada-cli query run --response-as csv > results.csv <<EOS
+./kaskada-cli query run --stdout --response-as csv <<EOS
 Purchase | when(Purchase.customer_id == "patrick")
 EOS
 ----
@@ -202,10 +215,12 @@ aggregations over your data such as the `max()` function:
 ./kaskada-cli query run --stdout --response-as csv <<EOS
 {
    max_purchase: Purchase.amount | max(),
-}
+} | when(Purchase.customer_id == "patrick")
 EOS
 ----
 
+[IMPORTANT]
+====
 These results may be surprising if you were expecting a single value,
 this is a feature, not a bug!
 
@@ -221,6 +236,7 @@ information about the future from "leaking" into the past.
 
 Read more in the xref:fenl:language-guide.adoc[Fenl
 Language Guide]
+====
 
 Now we can start building up more complex queries. To reduce the set of columns
 output in your query, you can define a record with the curly braces
@@ -237,7 +253,7 @@ results in time:
     entity: Purchase.customer_id,
     max_amount: Purchase.amount | max(),
     min_amount: Purchase.amount | min(),
-}
+} | when(Purchase.customer_id == "patrick")
 EOS
 ----
 
