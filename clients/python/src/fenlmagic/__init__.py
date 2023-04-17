@@ -139,13 +139,13 @@ class FenlMagics(Magics):
                 # TODO: figure out how to support reading from multiple parquet paths
                 if (
                     len(
-                        query_result.query_response.output_to.object_store.output_paths.paths
+                        query_result.query_response.destination.object_store.output_paths.paths
                     )
                     > 0
                 ):
                     if response_as == query.ResponseType.FILE_TYPE_PARQUET:
                         df = pandas.read_parquet(
-                            query_result.query_response.output_to.object_store.output_paths.paths[
+                            query_result.query_response.destination.object_store.output_paths.paths[
                                 0
                             ],
                             engine="pyarrow",
@@ -153,7 +153,7 @@ class FenlMagics(Magics):
                         query_result.set_dataframe(df)
                     elif response_as == query.ResponseType.FILE_TYPE_CSV:
                         df = pandas.read_csv(
-                            query_result.query_response.output_to.object_store.output_paths.paths[
+                            query_result.query_response.destination.object_store.output_paths.paths[
                                 0
                             ],
                         )

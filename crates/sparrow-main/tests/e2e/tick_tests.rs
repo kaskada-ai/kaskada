@@ -8,7 +8,7 @@ use crate::fixtures::i64_data_fixture;
 use crate::{DataFixture, QueryFixture};
 
 /// A dataset with inputs spanning minutes
-fn data_fixture_over_minutes() -> DataFixture {
+async fn data_fixture_over_minutes() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -26,11 +26,12 @@ fn data_fixture_over_minutes() -> DataFixture {
     1996-12-19T16:41:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 /// A dataset with inputs spanning hours
-fn data_fixture_over_hours() -> DataFixture {
+async fn data_fixture_over_hours() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -47,11 +48,12 @@ fn data_fixture_over_hours() -> DataFixture {
     1996-12-20T03:40:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 /// A dataset with inputs spanning hours, with the end lined up to an hour.
-fn data_fixture_over_hours_end_on_hour() -> DataFixture {
+async fn data_fixture_over_hours_end_on_hour() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -68,11 +70,12 @@ fn data_fixture_over_hours_end_on_hour() -> DataFixture {
     1996-12-20T03:00:00-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 /// A dataset with inputs spanning days
-fn data_days_for_else() -> DataFixture {
+async fn data_days_for_else() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -88,11 +91,12 @@ fn data_days_for_else() -> DataFixture {
     1996-12-22T16:40:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 /// A dataset with inputs spanning days
-fn data_fixture_over_days() -> DataFixture {
+async fn data_fixture_over_days() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -109,11 +113,12 @@ fn data_fixture_over_days() -> DataFixture {
     1996-12-22T16:40:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 /// A dataset with inputs spanning months
-fn data_fixture_over_months() -> DataFixture {
+async fn data_fixture_over_months() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -130,11 +135,12 @@ fn data_fixture_over_months() -> DataFixture {
     1997-05-22T16:40:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 /// A dataset with inputs spanning years
-fn data_fixture_over_years() -> DataFixture {
+async fn data_fixture_over_years() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -151,12 +157,13 @@ fn data_fixture_over_years() -> DataFixture {
     2001-05-22T16:40:04-08:00,0,A,10,habanero,false
     "},
         )
+        .await
         .unwrap()
 }
 
 #[tokio::test]
 async fn test_time_of_produces_discrete_values() {
-    insta::assert_snapshot!(QueryFixture::new("{ t: Foo.n | last() | time_of() } | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ t: Foo.n | last() | time_of() } | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,t
     1996-12-20T08:00:00.000000000,18446744073709551615,3650215962958587783,A,
     1996-12-20T08:00:00.000000000,18446744073709551615,11753611437813598533,B,
@@ -171,7 +178,7 @@ async fn test_time_of_produces_discrete_values() {
 
 #[tokio::test]
 async fn test_time_of_to_last_produces_continuous_values() {
-    insta::assert_snapshot!(QueryFixture::new("{ t: Foo.n | time_of() | last() } | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ t: Foo.n | time_of() | last() } | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,t
     1996-12-20T08:00:00.000000000,18446744073709551615,3650215962958587783,A,1996-12-20T08:00:00.000000000
     1996-12-20T08:00:00.000000000,18446744073709551615,11753611437813598533,B,1996-12-20T07:39:58.000000000
@@ -186,7 +193,7 @@ async fn test_time_of_to_last_produces_continuous_values() {
 
 #[tokio::test]
 async fn test_tick_with_discrete_values() {
-    insta::assert_snapshot!(QueryFixture::new("Foo | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("Foo | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,n,vegetable,bool
     1996-12-20T08:00:00.000000000,18446744073709551615,3650215962958587783,A,,,,,,
     1996-12-20T08:00:00.000000000,18446744073709551615,11753611437813598533,B,,,,,,
@@ -201,7 +208,7 @@ async fn test_tick_with_discrete_values() {
 
 #[tokio::test]
 async fn test_since_tick_when_tick() {
-    insta::assert_snapshot!(QueryFixture::new("{ when: count(Foo, window=since(hourly())) } | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ when: count(Foo, window=since(hourly())) } | when(hourly())").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,when
     1996-12-20T08:00:00.000000000,18446744073709551615,3650215962958587783,A,2
     1996-12-20T08:00:00.000000000,18446744073709551615,11753611437813598533,B,1
@@ -216,7 +223,7 @@ async fn test_since_tick_when_tick() {
 
 #[tokio::test]
 async fn test_since_minutely() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, minutely: count(Foo, window=since(minutely())) }").run_to_csv(&data_fixture_over_minutes()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, minutely: count(Foo, window=since(minutely())) }").run_to_csv(&data_fixture_over_minutes().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,minutely
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,1
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,1
@@ -237,7 +244,7 @@ async fn test_since_minutely() {
 
 #[tokio::test]
 async fn test_if_hourly() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, n_if_hourly: Foo.n | if(hourly()) }").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, n_if_hourly: Foo.n | if(hourly()) }").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,n_if_hourly
     1996-12-20T07:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,
     1996-12-20T07:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,
@@ -261,7 +268,7 @@ async fn test_if_hourly() {
 
 #[tokio::test]
 async fn test_daily_else() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_since: sum(Foo.n, window=since(daily())) | else(0) }").run_to_csv(&data_days_for_else()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_since: sum(Foo.n, window=since(daily())) | else(0) }").run_to_csv(&data_days_for_else().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_since
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,0.0
@@ -284,7 +291,7 @@ async fn test_daily_else() {
 
 #[tokio::test]
 async fn test_daily_else_to_last() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_since: sum(Foo.n, window=since(daily())) | else(0) | last() }").run_to_csv(&data_days_for_else()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_since: sum(Foo.n, window=since(daily())) | else(0) | last() }").run_to_csv(&data_days_for_else().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_since
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,0.0
@@ -307,7 +314,7 @@ async fn test_daily_else_to_last() {
 
 #[tokio::test]
 async fn test_since_daily() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(daily())) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(daily())) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,sum_since
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -331,7 +338,7 @@ async fn test_since_daily() {
 
 #[tokio::test]
 async fn test_since_hourly() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(hourly())) }").run_to_csv(&data_fixture_over_hours()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(hourly())) }").run_to_csv(&data_fixture_over_hours().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,sum_since
     1996-12-20T07:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-20T07:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -355,7 +362,7 @@ async fn test_since_hourly() {
 
 #[tokio::test]
 async fn test_since_hourly_end_on_hour() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(hourly())) }").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(hourly())) }").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,sum_since
     1996-12-20T07:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-20T07:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -379,7 +386,7 @@ async fn test_since_hourly_end_on_hour() {
 
 #[tokio::test]
 async fn test_when_hourly_end_on_hour() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_when_tick: sum(Foo.n) | when(hourly()) }").run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_when_tick: sum(Foo.n) | when(hourly()) }").run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_when_tick
     1996-12-20T08:00:00.000000000,18446744073709551615,3650215962958587783,A,16.2
     1996-12-20T08:00:00.000000000,18446744073709551615,11753611437813598533,B,3.9
@@ -394,7 +401,7 @@ async fn test_when_hourly_end_on_hour() {
 
 #[tokio::test]
 async fn test_when_hourly_end_on_hour_final_results() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_on_hour: sum(Foo.n) | when(hourly()) }").with_final_results().run_to_csv(&data_fixture_over_hours_end_on_hour()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_on_hour: sum(Foo.n) | when(hourly()) }").with_final_results().run_to_csv(&data_fixture_over_hours_end_on_hour().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_on_hour
     1996-12-20T11:00:00.000000001,18446744073709551615,3650215962958587783,A,46.45
     1996-12-20T11:00:00.000000001,18446744073709551615,11753611437813598533,B,27.799999999999997
@@ -404,7 +411,7 @@ async fn test_when_hourly_end_on_hour_final_results() {
 #[tokio::test]
 
 async fn test_since_daily_over_span_of_days() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(daily())) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(daily())) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,sum_since
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -428,7 +435,7 @@ async fn test_since_daily_over_span_of_days() {
 
 #[tokio::test]
 async fn test_since_monthly() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(monthly())) }").run_to_csv(&data_fixture_over_months()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(monthly())) }").run_to_csv(&data_fixture_over_months().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,sum_since
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -454,7 +461,7 @@ async fn test_since_monthly() {
 
 #[tokio::test]
 async fn test_since_yearly() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(yearly())) }").run_to_csv(&data_fixture_over_years()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, sum_since: sum(Foo.n, window=since(yearly())) }").run_to_csv(&data_fixture_over_years().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,n,sum_since
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,10.0,10.0
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,3.9,3.9
@@ -480,7 +487,7 @@ async fn test_since_yearly() {
 
 #[tokio::test]
 async fn test_tick_with_when_produces_values_on_window_bounds() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum_when_day: sum(Foo.n, window=since(daily())) | when(daily()) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum_when_day: sum(Foo.n, window=since(daily())) | when(daily()) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_when_day
     1996-12-20T00:00:00.000000000,18446744073709551615,3650215962958587783,A,10.0
     1996-12-20T00:00:00.000000000,18446744073709551615,11753611437813598533,B,3.9
@@ -499,7 +506,7 @@ async fn test_tick_when_finished() {
     // final values.
     // Specifically, the discrete value `Numbers.time` will be undefined when
     // "finished", but we expect to get the most recent (new) value.
-    insta::assert_snapshot!(QueryFixture::new("{ time: Numbers.time, sum: sum(Numbers.m) } | last() | when(finished())").run_to_csv(&i64_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ time: Numbers.time, sum: sum(Numbers.m) } | last() | when(finished())").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,sum
     1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,1996-12-19T16:40:02-08:00,34
     1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,1996-12-19T16:39:58-08:00,24
@@ -508,7 +515,7 @@ async fn test_tick_when_finished() {
 
 #[tokio::test]
 async fn test_count_sliding_tick_daily() {
-    insta::assert_snapshot!(QueryFixture::new("{ count: count(Foo), sliding_count: count(Foo, window=sliding(2, daily())) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ count: count(Foo), sliding_count: count(Foo, window=sliding(2, daily())) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,count,sliding_count
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,1,1
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,1,1
@@ -532,7 +539,7 @@ async fn test_count_sliding_tick_daily() {
 
 #[tokio::test]
 async fn test_count_daily_sliding_equivalent_to_since() {
-    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo, window=since(daily())), sliding: count(Foo, window=sliding(1, daily())) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ since: count(Foo, window=since(daily())), sliding: count(Foo, window=sliding(1, daily())) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,since,sliding
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,1,1
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,1,1
@@ -556,7 +563,7 @@ async fn test_count_daily_sliding_equivalent_to_since() {
 
 #[tokio::test]
 async fn test_max_subsort_input_merges_correctly() {
-    insta::assert_snapshot!(QueryFixture::new("{ field: count(Foo, window=since(daily())) | count(window=since(daily())) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ field: count(Foo, window=since(daily())) | count(window=since(daily())) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,field
     1996-12-19T20:39:57.000000000,9223372036854775808,3650215962958587783,A,1
     1996-12-19T20:39:58.000000000,9223372036854775808,11753611437813598533,B,1
@@ -581,5 +588,5 @@ async fn test_max_subsort_input_merges_correctly() {
 #[tokio::test]
 #[ignore = "misused tick causes panic"]
 async fn test_misused_ticks() {
-    insta::assert_snapshot!(QueryFixture::new("let agg_level = hourly() in { sum_n: sum(Foo.n, window=since(agg_level)) }").run_to_csv(&data_fixture_over_days()).await.unwrap(), @"");
+    insta::assert_snapshot!(QueryFixture::new("let agg_level = hourly() in { sum_n: sum(Foo.n, window=since(agg_level)) }").run_to_csv(&data_fixture_over_days().await).await.unwrap(), @"");
 }

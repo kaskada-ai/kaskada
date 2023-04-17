@@ -6,6 +6,7 @@ import pandas as pd
 from domonic.html import pre, table, td, th, tr
 from domonic.utils import Utils
 
+import kaskada.kaskada.v1alpha.pulsar_pb2 as pulsar_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
 
@@ -183,10 +184,14 @@ def get_slice_request_html(obj):
     return details
 
 
-def get_table_source_pulsar(obj: table_pb.Table.PulsarSource) -> table:
+def get_table_pulsar_config(obj: pulsar_pb.PulsarConfig) -> table:
     pulsar = table(_class="kda_table")
-    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "protocol_url")
-    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "topic")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "broker_service_url")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "auth_plugin")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "tenant")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "namespace")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "topic_name")
+    appendHtmlObjTableRowIfAttrExists(pulsar, obj, "topic_url")
     return pulsar
 
 
@@ -202,10 +207,13 @@ def get_table_html_and_schema_df(obj: table_pb.Table):
             html_obj_table_row("subsort_column_name", obj.subsort_column_name.value)
         )
 
-    if hasattr(obj, "table_source") and obj.HasField("table_source"):
-        if hasattr(obj.table_source, "pulsar") and obj.table_source.HasField("pulsar"):
-            pulsar = get_table_source_pulsar(obj.table_source.pulsar)
-            details.appendChild(html_table_row("pulsar", pulsar))
+    if hasattr(obj, "source") and obj.HasField("source"):
+        if hasattr(obj.source, "pulsar") and obj.source.HasField("pulsar"):
+            if hasattr(obj.source.pulsar, "config") and obj.source.pulsar.HasField(
+                "config"
+            ):
+                pulsar = get_table_pulsar_config(obj.source.pulsar.config)
+                details.appendChild(html_table_row("pulsar", pulsar))
 
     appendHtmlObjTableRowIfAttrExists(details, obj, "version")
     if schema_df is not None:

@@ -67,8 +67,8 @@ var _ = Describe("Query V1 gRPC with multiple tables", Ordered, func() {
 		helpers.LoadTestFileIntoTable(ctx, conn, transactionTable, "transactions/transactions_part1.parquet")
 
 		// define a query to run on the table
-		outputTo := &v1alpha.OutputTo{}
-		outputTo.Destination = &v1alpha.OutputTo_ObjectStore{
+		destination := &v1alpha.Destination{}
+		destination.Destination = &v1alpha.Destination_ObjectStore{
 			ObjectStore: &v1alpha.ObjectStoreDestination{
 				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
 			},
@@ -89,7 +89,7 @@ quantity: meaningful_txns.quantity,
 membership_date : membership.registration_date,
 member_name : membership.name
 }`,
-			OutputTo:       outputTo,
+			Destination:    destination,
 			ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 		}
 		queryOptions := &v1alpha.QueryOptions{
@@ -131,7 +131,7 @@ member_name : membership.name
 				Expect(firstResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_ANALYSIS))
 				VerifyRequestDetails(firstResponse.RequestDetails)
 				Expect(firstResponse.Config.DataTokenId).ShouldNot(BeEmpty())
-				Expect(firstResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
+				Expect(firstResponse.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
 
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
 					primitiveSchemaField("price", v1alpha.DataType_PRIMITIVE_TYPE_F64),
@@ -185,8 +185,8 @@ member_name : membership.name
 					Expect(queryResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_COMPUTING))
 					Expect(queryResponse.RequestDetails.RequestId).Should(Equal(firstResponse.RequestDetails.RequestId))
 
-					if queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths() != nil {
-						resultUrls = append(resultUrls, queryResponse.GetOutputTo().GetObjectStore().GetOutputPaths().GetPaths()...)
+					if queryResponse.GetDestination().GetObjectStore().GetOutputPaths().GetPaths() != nil {
+						resultUrls = append(resultUrls, queryResponse.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()...)
 					}
 				}
 

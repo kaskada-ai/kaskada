@@ -131,7 +131,7 @@ Tables are described in a spec file as a list of table objects under the `tables
   groupingId: User
   # Where the table's data will be stored
   # The default storage location is 'kaskada', and uses local files to store events.
-  tableSource:
+  source:
     kaskada: {}
 
   # The name of the table
@@ -144,7 +144,7 @@ Tables are described in a spec file as a list of table objects under the `tables
   groupingId: User
   # Where the table's data will be stored
   # The default storage location is 'kaskada', and uses local files to store events.
-  tableSource:
+  source:
     kaskada: {}
 ----
 
@@ -167,13 +167,13 @@ tables:
   entityKeyColumnName: entity_key
   subsortColumnName: offset
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 - tableName: Purchase
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 views:
     # ...
@@ -193,7 +193,7 @@ tables:
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 ----
 

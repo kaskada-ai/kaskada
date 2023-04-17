@@ -26,9 +26,9 @@ message Query {
   string expression = 2 [(validate.rules).string.min_len = 1];
 
   // Configures how the query results should be returned.
-  OutputTo output_to = 104;
+  Destination destination = 104;
 
-  // Modified output from one_of to `OutputTo` message.
+  // Modified output from one_of to `Destination` message.
   // Updated on Feb.24.2023
   reserved 101, 102, 103;
 
@@ -166,9 +166,9 @@ message CreateQueryResponse {
   // each result represents a different subset of the results. All
   // results in any messge in the response stream should be
   // collected and used to represent the complete output.
-  OutputTo output_to = 104;
+  Destination destination = 104;
 
-  // Modified output from one_of to `OutputTo` message.
+  // Modified output from one_of to `Destination` message.
   // Removed on Feb.24.2023
   reserved 101, 102, 103;
 

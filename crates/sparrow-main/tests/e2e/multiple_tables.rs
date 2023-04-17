@@ -95,40 +95,51 @@ fn make_table_config(name: &str) -> TableConfig {
     )
 }
 
-fn purchase_table() -> DataFixture {
+async fn purchase_table() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(make_table_config("Purchases"), PURCHASE_CSV)
+        .await
         .unwrap()
 }
 
-fn purchase_tables_two_days() -> DataFixture {
+async fn purchase_tables_two_days() -> DataFixture {
     purchase_table()
+        .await
         .with_table_from_csv(make_table_config("NDPurchases"), NEXT_DAY_PURCHASE_CSV)
+        .await
         .unwrap()
 }
 
-fn purchase_tables_different_keys() -> DataFixture {
+async fn purchase_tables_different_keys() -> DataFixture {
     purchase_table()
+        .await
         .with_table_from_csv(make_table_config("DKPurchases"), DIFFERENT_KEY_SAME_DAY)
+        .await
         .unwrap()
 }
 
-fn purchase_tables_overlapping_keys() -> DataFixture {
+async fn purchase_tables_overlapping_keys() -> DataFixture {
     purchase_table()
+        .await
         .with_table_from_csv(make_table_config("OKPurchases"), OVERLAPPING_KEYS)
+        .await
         .unwrap()
 }
 
-fn purchase_tables_superset() -> DataFixture {
+async fn purchase_tables_superset() -> DataFixture {
     purchase_table()
+        .await
         .with_table_from_csv(make_table_config("SSPurchases"), SUPERSET)
+        .await
         .unwrap()
 }
 #[tokio::test]
 // joins the purchases table to a copy of its self and adds totals
 async fn test_identical_table_join() {
     let test_data = purchase_table()
+        .await
         .with_table_from_csv(make_table_config("P2"), PURCHASE_CSV)
+        .await
         .unwrap();
 
     insta::assert_snapshot!(QueryFixture::new(
@@ -154,7 +165,7 @@ async fn test_tables_different_dates() {
         QueryFixture::new(
         "{t1_val: Purchases.total, t2_val: NDPurchases.total, sum: Purchases.total + \
          NDPurchases.total}")
-         .run_to_csv(&purchase_tables_two_days()).await.unwrap(),
+         .run_to_csv(&purchase_tables_two_days().await).await.unwrap(),
          @r###"
     _time,_subsort,_key_hash,_key,t1_val,t2_val,sum
     2022-01-03T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1,,
@@ -180,7 +191,7 @@ async fn test_tables_no_overlapping_keys() {
         QueryFixture::new(
         "{t1_val: Purchases.total, t2_val: DKPurchases.total, sum: Purchases.total + \
          DKPurchases.total}")
-         .run_to_csv(&purchase_tables_different_keys()).await.unwrap(),
+         .run_to_csv(&purchase_tables_different_keys().await).await.unwrap(),
          @r###"
     _time,_subsort,_key_hash,_key,t1_val,t2_val,sum
     2022-01-03T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1,,
@@ -206,7 +217,7 @@ async fn test_tables_overlapping_keys() {
         QueryFixture::new(
         "{t1_val: Purchases.total, t2_val: OKPurchases.total, sum: Purchases.total + \
          OKPurchases.total}")
-         .run_to_csv(&purchase_tables_overlapping_keys()).await.unwrap(),
+         .run_to_csv(&purchase_tables_overlapping_keys().await).await.unwrap(),
          @r###"
     _time,_subsort,_key_hash,_key,t1_val,t2_val,sum
     2022-01-03T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1,,
@@ -229,7 +240,7 @@ async fn test_tables_superset() {
         QueryFixture::new(
         "{t1_val: Purchases.total, t2_val: SSPurchases.total, sum: Purchases.total + \
          SSPurchases.total}")
-         .run_to_csv(&purchase_tables_superset()).await.unwrap(),
+         .run_to_csv(&purchase_tables_superset().await).await.unwrap(),
          @r###"
     _time,_subsort,_key_hash,_key,t1_val,t2_val,sum
     2022-01-03T00:37:57.000000000,9223372036854775808,11753611437813598533,B,,1,
@@ -253,7 +264,9 @@ async fn test_tables_superset() {
 #[tokio::test]
 async fn test_triple_add_same_table() {
     let test_data = purchase_table()
+        .await
         .with_table_from_csv(make_table_config("P2"), PURCHASE_CSV)
+        .await
         .unwrap();
     insta::assert_snapshot!(
         QueryFixture::new(
@@ -275,9 +288,12 @@ async fn test_triple_add_same_table() {
 #[tokio::test]
 async fn test_triple_add_different_tables() {
     let test_data = purchase_table()
+        .await
         .with_table_from_csv(make_table_config("SSPurchases"), SUPERSET)
+        .await
         .unwrap()
         .with_table_from_csv(make_table_config("OKPurchases"), OVERLAPPING_KEYS)
+        .await
         .unwrap();
 
     insta::assert_snapshot!(
@@ -312,9 +328,12 @@ async fn test_triple_add_different_tables() {
 #[tokio::test]
 async fn test_3_tables_with_3_additions_with_1_common_operand() {
     let test_data = purchase_table()
+        .await
         .with_table_from_csv(make_table_config("SSPurchases"), SUPERSET)
+        .await
         .unwrap()
         .with_table_from_csv(make_table_config("OKPurchases"), OVERLAPPING_KEYS)
+        .await
         .unwrap();
 
     insta::assert_snapshot!(

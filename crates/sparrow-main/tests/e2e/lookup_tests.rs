@@ -10,7 +10,7 @@ use crate::{DataFixture, QueryFixture};
 ///
 /// Includes two tables `Sent` and `Received` both grouped by account ID.
 /// Also includes a `CodeName` table used for lookups on a different type.
-fn lookup_account_data_fixture() -> DataFixture {
+async fn lookup_account_data_fixture() -> DataFixture {
     let transactions = indoc! {"
         from,to,time,subsort,amount,description,order_time,code
         0,2,1996-12-19T16:39:57-08:00,0,50,food,2005-12-19T16:39:57-08:00,5
@@ -41,6 +41,7 @@ fn lookup_account_data_fixture() -> DataFixture {
             ),
             transactions,
         )
+        .await
         .unwrap()
         .with_table_from_csv(
             TableConfig::new(
@@ -53,6 +54,7 @@ fn lookup_account_data_fixture() -> DataFixture {
             ),
             transactions,
         )
+        .await
         .unwrap()
         .with_table_from_csv(
             TableConfig::new(
@@ -65,6 +67,7 @@ fn lookup_account_data_fixture() -> DataFixture {
             ),
             code_names,
         )
+        .await
         .unwrap()
 }
 
@@ -73,7 +76,7 @@ async fn test_lookup_self_i64() {
     insta::assert_snapshot!(QueryFixture::new("let sum_sent = sum(Sent.amount)
                 let last_sender = last(Received.from)
                 let last_sender_sum_sent = lookup(last(Received.from), sum_sent)
-                in { last_sender, last_sender_sum_sent }").run_to_csv(&lookup_account_data_fixture()).await.unwrap(), @r###"
+                in { last_sender, last_sender_sum_sent }").run_to_csv(&lookup_account_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,last_sender,last_sender_sum_sent
     1996-12-20T00:39:57.000000000,9223372036854775808,1575016611515860288,2,0,50
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,0,61
@@ -89,7 +92,7 @@ async fn test_lookup_self_i64_with_merge_interpolation() {
     insta::assert_snapshot!(QueryFixture::new("let sum_sent = sum(Sent.amount)
                 let last_sender = last(Received.from)
                 let last_sender_sum_sent = lookup(last(Received.from), sum_sent)
-                in { sum_sent, last_sender, last_sender_sum_sent }").run_to_csv(&lookup_account_data_fixture()).await.unwrap(), @r###"
+                in { sum_sent, last_sender, last_sender_sum_sent }").run_to_csv(&lookup_account_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_sent,last_sender,last_sender_sum_sent
     1996-12-20T00:39:57.000000000,9223372036854775808,1575016611515860288,2,,0,50
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,,
@@ -109,7 +112,7 @@ async fn test_lookup_self_i64_with_merge_interpolation() {
 async fn test_lookup_self_string() {
     insta::assert_snapshot!(QueryFixture::new("let last_sender = last(Received.from)
                 let last_sender_description = lookup(last_sender, last(Sent.description))
-                in { description: Received.description, last_sender, last_sender_description }").run_to_csv(&lookup_account_data_fixture()).await.unwrap(), @r###"
+                in { description: Received.description, last_sender, last_sender_description }").run_to_csv(&lookup_account_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,description,last_sender,last_sender_description
     1996-12-20T00:39:57.000000000,9223372036854775808,1575016611515860288,2,food,0,food
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,gas,0,gas
@@ -124,7 +127,7 @@ async fn test_lookup_self_string() {
 async fn test_lookup_self_record() {
     insta::assert_snapshot!(QueryFixture::new("let last_sender = last(Received.from)
                 let last_sender_sent = lookup(last(Received.to), Sent.description)
-                in Sent | extend({ received_description: Received.description, last_sender, last_sender_sent })").run_to_csv(&lookup_account_data_fixture()).await.unwrap(), @r###"
+                in Sent | extend({ received_description: Received.description, last_sender, last_sender_sent })").run_to_csv(&lookup_account_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,received_description,last_sender,last_sender_sent,from,to,time,subsort,amount,description,order_time,code
     1996-12-20T00:39:57.000000000,9223372036854775808,1575016611515860288,2,food,0,,,,,,,,,
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,,,,0,2,1996-12-19T16:39:57-08:00,0,50,food,2005-12-19T16:39:57-08:00,5
@@ -142,7 +145,7 @@ async fn test_lookup_self_record() {
 
 #[tokio::test]
 async fn test_lookup_code_name() {
-    insta::assert_snapshot!(QueryFixture::new("{ code: Sent.code, code_name: lookup(Sent.code, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+    insta::assert_snapshot!(QueryFixture::new("{ code: Sent.code, code_name: lookup(Sent.code, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap(), @r###"
     _time,_subsort,_key_hash,_key,code,code_name
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,5,FiveA
@@ -158,7 +161,7 @@ async fn test_lookup_code_name() {
 async fn test_lookup_code_name_wacky_unused() {
     // Ensures simplification does not associate distinct expressions together.
     insta::assert_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(Sent.code, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(Sent.code, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap(), @r###"
     _time,_subsort,_key_hash,_key,code,code_name
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,5,FiveA
@@ -173,7 +176,7 @@ async fn test_lookup_code_name_wacky_unused() {
 #[tokio::test]
 async fn test_lookup_invalid_key_type() {
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(Sent.description, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(Sent.description, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -209,7 +212,7 @@ async fn test_lookup_invalid_key_type() {
 #[tokio::test]
 async fn test_lookup_invalid_key_expression() {
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(Sent.desciption, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(Sent.desciption, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -245,7 +248,7 @@ async fn test_lookup_invalid_key_expression() {
 #[tokio::test]
 async fn test_lookup_invalid_key_expression_window() {
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(since(is_valid(Sent.description)), CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(since(is_valid(Sent.description)), CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -283,7 +286,7 @@ async fn test_lookup_invalid_key_expression_window() {
 #[tokio::test]
 async fn test_lookup_invalid_value_expression() {
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(Sent.description, CodeNme.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(Sent.description, CodeNme.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -321,7 +324,7 @@ async fn test_lookup_with_key() {
     insta::assert_snapshot!(QueryFixture::new("{ code_name: lookup(lookup_key, lookup_value) }")
     .with_formula("lookup_key", "Sent.code | last()")
     .with_formula("lookup_value", "Sent | with_key(Sent.code, grouping=\"Code\") | when($input.description == \"food\") | count(window=since(daily()))")
-    .run_to_csv(&lookup_account_data_fixture()).await
+    .run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap(), @r###"
     _time,_subsort,_key_hash,_key,code_name
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,1
@@ -337,7 +340,7 @@ async fn test_lookup_with_key() {
 async fn test_lookup_invalid_value_grouping_post_recovery() {
     // Verifies that an unrecognized name does not produce an internal error.
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(Sent.description, CodeNme.name | count()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(Sent.description, CodeNme.name | count()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -373,7 +376,7 @@ async fn test_lookup_invalid_value_grouping_post_recovery() {
 #[tokio::test]
 async fn test_lookup_invalid_constant_value() {
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(Sent.description, 50) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(Sent.description, 50) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -407,7 +410,7 @@ async fn test_lookup_invalid_constant_value() {
 #[tokio::test]
 async fn test_lookup_invalid_constant_key() {
     insta::assert_yaml_snapshot!(QueryFixture::new("let foo = Sent.code | if(false) in
-                    { code: Sent.code, code_name: lookup(50, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture()).await
+                    { code: Sent.code, code_name: lookup(50, CodeName.name | last()) }").run_to_csv(&lookup_account_data_fixture().await).await
         .unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
@@ -445,7 +448,7 @@ async fn test_lookup_only_includes_primary_entites() {
     // that appear in `Received`, since `Sent` is only used within the value.
     // 0, 1, 2 receive transfers, but only 0 and 2 send transfers. Thus
     // there should only be 2 entities in the rows.
-    insta::assert_snapshot!(QueryFixture::new("{ description: lookup(last(Sent.to), Received.description) }").run_to_csv(&lookup_account_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ description: lookup(last(Sent.to), Received.description) }").run_to_csv(&lookup_account_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,description
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,food
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,gas
@@ -458,7 +461,7 @@ async fn test_lookup_only_includes_primary_entites() {
 
 #[tokio::test]
 async fn test_lookup_only_includes_primary_entites_final_results() {
-    insta::assert_snapshot!(QueryFixture::new("{ description: lookup(last(Sent.to), Received.description) }").with_final_results().run_to_csv(&lookup_account_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ description: lookup(last(Sent.to), Received.description) }").with_final_results().run_to_csv(&lookup_account_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,description
     1999-12-20T00:39:58.000000001,18446744073709551615,1575016611515860288,2,food
     1999-12-20T00:39:58.000000001,18446744073709551615,14253486467890685049,0,null_amount

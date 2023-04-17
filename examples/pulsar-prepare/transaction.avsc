@@ -1,0 +1,19 @@
+{
+  "type" : "record",
+  "name" : "TransactionSchema",
+  "namespace" : "com.datastax.examples",
+  "fields" : [ {
+    "name" : "user_id",
+    "type" : "int",
+    "doc" : "Unique user ID"
+  }, {
+    "name" : "billed_amount",
+    "type" : "double",
+    "doc" : "Amount billed"
+  }, {
+    "name" : "billed_at_ms",
+    "type" : "long",
+    "doc" : "Unix epoch time in ms"
+  } ],
+  "doc:" : "A basic schema for transactions"
+}

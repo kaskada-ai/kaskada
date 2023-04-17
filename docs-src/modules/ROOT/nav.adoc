@@ -1,5 +1,10 @@
 * xref:installing.adoc[Installing]
 * xref:loading-data.adoc[Loading Data]
+* Examples
+** https://github.com/kaskada-ai/kaskada/blob/main/examples/Kaskada%20Demo%20for%20Event%20Processing%20and%20Time-centric%20Calculations.ipynb[Overview Notebook]
+** https://github.com/kaskada-ai/kaskada/blob/main/examples/ML_example.ipynb[Real-time ML Notebook]
+** https://github.com/kaskada-ai/kaskada/blob/main/examples/Customer_Retention_(OSS).ipynb[Customer Retention Notebook]
+** https://github.com/kaskada-ai/kaskada/blob/main/examples/pulsar-materialize/notebooks/Materialize_to_Pulsar.ipynb[Materializing to Pulsar Notebook]
 
 // * Tutorials 
 // *** https://colab.research.google.com/drive/1gPshkDfMQEb_DJ6qalGJVai-Uj0oV7zO?usp=sharing[Hello World Notebook (Collab)]

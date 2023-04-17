@@ -1,2 +1,6 @@
 * Integrating
-** xref:integrating-with-feature-stores.adoc[]
+** xref:apache-pulsar.adoc[Apache Pulsar]
+** xref:apache-cassandra.adoc[Apache Cassandra]
+** xref:redis.adoc[Redis]
+** xref:aws-redshift.adoc[AWS Redshift]
+** xref:snowflake.adoc[Snowflake]

@@ -76,7 +76,7 @@ var _ = Describe("Queries V1", Ordered, func() {
 		It("should create a query resource with default values", func() {
 			query := &v1alpha.CreateQueryRequest{
 				Query: &v1alpha.Query{
-					Expression:     tableName,
+					Expression: tableName,
 				},
 			}
 			stream, err := queryClient.CreateQuery(ctx, query)
@@ -108,7 +108,7 @@ var _ = Describe("Queries V1", Ordered, func() {
 			})
 			Expect(err).Should(BeNil())
 			Expect(res.Query.QueryId).Should(Equal(queryUUID.String()))
-			Expect(res.Query.OutputTo.GetObjectStore().FileType).Should(Equal(v1alpha.FileType_FILE_TYPE_PARQUET))
+			Expect(res.Query.Destination.GetObjectStore().FileType).Should(Equal(v1alpha.FileType_FILE_TYPE_PARQUET))
 			Expect(res.Query.ResultBehavior).Should(Equal(v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS))
 		})
 		It("should list the queries with newly created resource", func() {

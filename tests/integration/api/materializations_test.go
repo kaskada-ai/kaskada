@@ -24,7 +24,7 @@ var _ = Describe("Materializations", Ordered, Label("redis"), Label("redis-ai"),
 	var matClient v1alpha.MaterializationServiceClient
 	var mat1, mat2 *v1alpha.Materialization
 	var maxAmount, minAmount string
-	var destination *v1alpha.Materialization_Destination
+	var destination *v1alpha.Destination
 
 	BeforeAll(func() {
 		//get connection to wren
@@ -49,8 +49,8 @@ entity: purchases_mat_test.customer_id,
 min_amount: purchases_mat_test.amount | min(),
 }`
 
-		destination = &v1alpha.Materialization_Destination{
-			Destination: &v1alpha.Materialization_Destination_Redis{
+		destination = &v1alpha.Destination{
+			Destination: &v1alpha.Destination_Redis{
 				Redis: &v1alpha.RedisDestination{
 					HostName:       "redis",
 					Port:           6379,
@@ -99,7 +99,7 @@ min_amount: purchases_mat_test.amount | min(),
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "maxAmount",
-					Expression:               maxAmount,
+					Expression:          maxAmount,
 					Destination:         destination,
 					Slice:               &v1alpha.SliceRequest{},
 				},
@@ -121,7 +121,7 @@ min_amount: purchases_mat_test.amount | min(),
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "maxAmount",
-					Expression:               maxAmount,
+					Expression:          maxAmount,
 					Destination:         destination,
 					Slice:               &v1alpha.SliceRequest{},
 				},
@@ -153,7 +153,7 @@ min_amount: purchases_mat_test.amount | min(),
 			createRequest := &v1alpha.CreateMaterializationRequest{
 				Materialization: &v1alpha.Materialization{
 					MaterializationName: "minAmount",
-					Expression:               minAmount,
+					Expression:          minAmount,
 					Destination:         destination,
 					Slice:               &v1alpha.SliceRequest{},
 				},

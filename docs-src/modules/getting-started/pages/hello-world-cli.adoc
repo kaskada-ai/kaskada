@@ -111,11 +111,11 @@ tables:
 
   # Where the table's data will be stored
   # The default storage location is 'kaskada', and uses local files to store events.
-  tableSource:                          
+  source:                          
     kaskada: {}
 ----
 
-To create this table, we much sync the state of the Kaskada service with the contents of the file.
+To create this table, we must sync the state of the Kaskada service with the contents of the file.
 
 [source,shell]
 ----
@@ -157,7 +157,7 @@ curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBh
 
 ./kaskada-cli load \
     --table Purchase \
-    --file-path file://purchase.parquet
+    --file-path file://${PWD}/purchase.parquet
 ----
 
 The file's content is added to the table.

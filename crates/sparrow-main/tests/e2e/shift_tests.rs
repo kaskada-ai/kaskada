@@ -9,7 +9,7 @@ use crate::{DataFixture, QueryFixture};
 /// Fixture for testing when.
 ///
 /// Includes a column of every type being and a condition column.
-fn shift_data_fixture() -> DataFixture {
+async fn shift_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -30,12 +30,13 @@ fn shift_data_fixture() -> DataFixture {
     1996-12-19T16:40:02-08:00,0,A,true,,02,hello,1999-01-19T16:39:57-08:00
     "},
         )
+        .await
         .unwrap()
 }
 
 #[tokio::test]
 async fn test_shift_by_months() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_by(months(5)) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_by(months(5)) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64
     1997-05-20T00:39:57.000000000,0,3650215962958587783,A,57
     1997-05-20T00:39:58.000000000,1,11753611437813598533,B,58
@@ -48,7 +49,7 @@ async fn test_shift_by_months() {
 
 #[tokio::test]
 async fn test_shift_by_seconds() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_by(seconds(5)) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_by(seconds(5)) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64
     1996-12-20T00:40:02.000000000,0,3650215962958587783,A,57
     1996-12-20T00:40:03.000000000,1,11753611437813598533,B,58
@@ -61,7 +62,7 @@ async fn test_shift_by_seconds() {
 
 #[tokio::test]
 async fn test_shift_to_plus_seconds() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_to(add_time(seconds(5), time_of($input))) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_to(add_time(seconds(5), time_of($input))) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64
     1996-12-20T00:40:02.000000000,0,3650215962958587783,A,57
     1996-12-20T00:40:03.000000000,1,11753611437813598533,B,58
@@ -74,7 +75,7 @@ async fn test_shift_to_plus_seconds() {
 
 #[tokio::test]
 async fn test_shift_until_data_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64
     1996-12-20T00:39:57.000000000,0,3650215962958587783,A,57
     1996-12-20T00:40:00.000000000,1,11753611437813598533,B,58
@@ -87,7 +88,7 @@ async fn test_shift_until_data_i64() {
 
 #[tokio::test]
 async fn test_shift_until_data_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ bool: ShiftFixture.bool | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ bool: ShiftFixture.bool | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,bool
     1996-12-20T00:39:57.000000000,0,3650215962958587783,A,false
     1996-12-20T00:40:00.000000000,1,11753611437813598533,B,true
@@ -100,7 +101,7 @@ async fn test_shift_until_data_boolean() {
 
 #[tokio::test]
 async fn test_shift_until_data_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ string: ShiftFixture.string | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ string: ShiftFixture.string | shift_until(ShiftFixture.cond) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,string
     1996-12-20T00:39:57.000000000,0,3650215962958587783,A,hello
     1996-12-20T00:40:00.000000000,1,11753611437813598533,B,world
@@ -113,7 +114,7 @@ async fn test_shift_until_data_string() {
 
 #[tokio::test]
 async fn test_shift_until_data_record() {
-    insta::assert_snapshot!(QueryFixture::new("ShiftFixture | shift_until($input.cond)").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("ShiftFixture | shift_until($input.cond)").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,cond,bool,i64,string,other_time
     1996-12-20T00:39:57.000000000,0,3650215962958587783,A,1996-12-19T16:39:57-08:00,0,A,true,false,57,hello,1997-12-19T16:39:57-08:00
     1996-12-20T00:40:00.000000000,1,11753611437813598533,B,1996-12-19T16:39:58-08:00,0,B,false,true,58,world,1997-10-19T16:39:57-08:00
@@ -127,7 +128,7 @@ async fn test_shift_until_data_record() {
 #[tokio::test]
 #[ignore = "Shift to literal unsupported"]
 async fn test_shift_to_literal_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ n: ShiftFixture.i64 | shift_to(\"1996-12-19T16:40:00-08:00\") }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ n: ShiftFixture.i64 | shift_to(\"1996-12-19T16:40:00-08:00\") }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,n
     1996-12-20T00:40:00.000000000,0,16072519723445549088,57
     1996-12-20T00:40:00.000000000,1,18113259709342437355,58
@@ -139,7 +140,7 @@ async fn test_shift_to_literal_i64() {
 #[tokio::test]
 #[ignore = "Shift to literal unsupported"]
 async fn test_shift_to_literal_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ bool: ShiftFixture.bool | shift_to(\"1996-12-19T16:40:00-08:00\") }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ bool: ShiftFixture.bool | shift_to(\"1996-12-19T16:40:00-08:00\") }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,bool
     1996-12-20T00:40:00.000000000,0,16072519723445549088,false
     1996-12-20T00:40:00.000000000,1,18113259709342437355,true
@@ -151,7 +152,7 @@ async fn test_shift_to_literal_boolean() {
 #[tokio::test]
 #[ignore = "https://gitlab.com/kaskada/kaskada/-/issues/572"]
 async fn test_shift_to_literal_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ string: ShiftFixture.string | shift_to(\"1996-12-19T16:40:00-08:00\") }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ string: ShiftFixture.string | shift_to(\"1996-12-19T16:40:00-08:00\") }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,string
     1996-12-20T00:40:00.000000000,0,16072519723445549088,hello
     1996-12-20T00:40:00.000000000,1,18113259709342437355,world
@@ -163,7 +164,7 @@ async fn test_shift_to_literal_string() {
 #[tokio::test]
 #[ignore = "https://gitlab.com/kaskada/kaskada/-/issues/572"]
 async fn test_shift_to_literal_record() {
-    insta::assert_snapshot!(QueryFixture::new("ShiftFixture | shift_to(\"1996-12-19T16:40:00-08:00\")").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("ShiftFixture | shift_to(\"1996-12-19T16:40:00-08:00\")").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,time,subsort,key,cond,bool,i64,string,other_time
     1996-12-20T00:40:00.000000000,0,16072519723445549088,1996-12-19T16:39:57-08:00,0,A,true,false,57,hello,1997-12-19T16:39:57-08:00
     1996-12-20T00:40:00.000000000,1,18113259709342437355,1996-12-19T16:39:58-08:00,0,B,false,true,58,world,1997-10-19T16:39:57-08:00
@@ -174,7 +175,7 @@ async fn test_shift_to_literal_record() {
 
 #[tokio::test]
 async fn test_shift_to_data_i64() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_to(ShiftFixture.other_time) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64: ShiftFixture.i64 | shift_to(ShiftFixture.other_time) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64
     1997-10-20T00:39:57.000000000,0,11753611437813598533,B,58
     1997-12-20T00:39:57.000000000,1,3650215962958587783,A,57
@@ -185,7 +186,7 @@ async fn test_shift_to_data_i64() {
 
 #[tokio::test]
 async fn test_shift_to_data_boolean() {
-    insta::assert_snapshot!(QueryFixture::new("{ bool: ShiftFixture.bool | shift_to(ShiftFixture.other_time) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ bool: ShiftFixture.bool | shift_to(ShiftFixture.other_time) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,bool
     1997-10-20T00:39:57.000000000,0,11753611437813598533,B,true
     1997-12-20T00:39:57.000000000,1,3650215962958587783,A,false
@@ -196,7 +197,7 @@ async fn test_shift_to_data_boolean() {
 
 #[tokio::test]
 async fn test_shift_to_data_string() {
-    insta::assert_snapshot!(QueryFixture::new("{ string: ShiftFixture.string | shift_to(ShiftFixture.other_time) }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ string: ShiftFixture.string | shift_to(ShiftFixture.other_time) }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,string
     1997-10-20T00:39:57.000000000,0,11753611437813598533,B,world
     1997-12-20T00:39:57.000000000,1,3650215962958587783,A,hello
@@ -207,7 +208,7 @@ async fn test_shift_to_data_string() {
 
 #[tokio::test]
 async fn test_shift_to_data_record() {
-    insta::assert_snapshot!(QueryFixture::new("ShiftFixture | shift_to(ShiftFixture.other_time)").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("ShiftFixture | shift_to(ShiftFixture.other_time)").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,cond,bool,i64,string,other_time
     1997-10-20T00:39:57.000000000,0,11753611437813598533,B,1996-12-19T16:39:58-08:00,0,B,false,true,58,world,1997-10-19T16:39:57-08:00
     1997-12-20T00:39:57.000000000,1,3650215962958587783,A,1996-12-19T16:39:57-08:00,0,A,true,false,57,hello,1997-12-19T16:39:57-08:00
@@ -224,7 +225,7 @@ async fn test_shift_until_false() {
         # For the purposes of this test, we want this to be all false.
         let gt_75 = ShiftFixture.i64 > 75
         let shift_until_gt_75 = ShiftFixture.string | shift_until(gt_75)
-        in { gt_10, shift_until_gt_10, gt_75, shift_until_gt_75 } | when(gt_10 or gt_75)").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+        in { gt_10, shift_until_gt_10, gt_75, shift_until_gt_75 } | when(gt_10 or gt_75)").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,gt_10,shift_until_gt_10,gt_75,shift_until_gt_75
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,,false,
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,true,,false,
@@ -240,7 +241,7 @@ async fn test_shift_until_false_sum() {
         # For the purpsoses of this test, we want this to be all false.
         let gt_75 = ShiftFixture.i64 > 75
         let shift_until_gt_75 = ShiftFixture.string | shift_until(gt_75)
-        in { gt_10, shift_until_gt_10, gt_75, shift_until_gt_75 }").run_to_csv(&shift_data_fixture()).await.unwrap(), @r###"
+        in { gt_10, shift_until_gt_10, gt_75, shift_until_gt_75 }").run_to_csv(&shift_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,gt_10,shift_until_gt_10,gt_75,shift_until_gt_75
     1996-12-20T00:39:57.000000000,0,3650215962958587783,A,,57,,
     1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,true,57,false,
@@ -283,6 +284,7 @@ async fn test_shift_to_sparse() {
                 1996-08-21T00:00:00-00:00,0,Ben,1996-08-22T00:00:00-00:00,true,6
             "},
         )
+        .await
         .unwrap();
 
     insta::assert_snapshot!(QueryFixture::new("{ result: ShiftFixture.n | shift_to(ShiftFixture.date) }").run_to_csv(&data).await.unwrap(), @r###"
@@ -296,7 +298,7 @@ async fn test_shift_to_sparse() {
     "###);
 }
 
-fn tables() -> DataFixture {
+async fn tables() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("T", &Uuid::new_v4(), "time", Some("sub_sort"), "id", ""),
@@ -306,6 +308,7 @@ fn tables() -> DataFixture {
         2000-01-01T01:00:00.000000000,1,c,333
         2000-01-02T00:00:00.000000000,2,b,222"},
         )
+        .await
         .unwrap()
 }
 
@@ -318,7 +321,7 @@ const Q1: &str = indoc! {"
 async fn shift_to_and_lookup() {
     insta::assert_snapshot!(
         QueryFixture::new(Q1)
-        .run_to_csv(&tables())
+        .run_to_csv(&tables().await)
         .await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,time,sub_sort,id,v
@@ -344,7 +347,7 @@ async fn shift_to() {
                     1996-06-21T00:00:00-00:00,Ryan,3,1996-05-22T00:00:00-00:00,4
                     1996-07-21T00:00:00-00:00,Ben,4,1996-07-22T00:00:00-00:00,5
                     1996-08-21T00:00:00-00:00,Ben,5,1996-08-22T00:00:00-00:00,6
-                ")).unwrap())
+                ")).await.unwrap())
         .await.unwrap(),
         @r###"
     _time,_subsort,_key_hash,_key,time,key,sub_sort,date,n

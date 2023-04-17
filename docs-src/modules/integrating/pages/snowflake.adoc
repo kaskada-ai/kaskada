@@ -1,0 +1,41 @@
+= Integrating with Snowflake
+
+Snowflake is a hosted data warehouse that provides scalable SQL queries
+over large data sets.
+
+== Writing to Snowflake
+
+Query results can be loaded into Snowflake by exporting values as Parquet and using the `COPY` instruction to load the Parquet file into a Parquet table. 
+Query results can be returned as a URL identifying the output Parquet file by supplying the output config `--output parquet`.
+
+[source,fenl]
+----
+%%fenl --output parquet
+{
+  key: Purchase.customer_id,
+  max_amount: Purchase.amount | max(),
+  min_amount: Purchase.amount | min(),
+}
+----
+
+The resulting Parquet file can be loaded into a temporary Snowflake table.
+
+[source,sql]
+----
+create or replace temporary table feature_vectors (
+  key varchar default null,
+  max_amount number,
+  min_amount number
+);
+
+create or replace file format feature_vector_parquet_format
+  type = 'parquet';
+
+create or replace temporary stage feature_vector_stage
+  file_format = feature_vector_parquet_format;
+
+put <file url> @sf_tut_stage;
+
+copy into cities
+  from (select * from @sf_tut_stage/<filename>.parquet);
+----

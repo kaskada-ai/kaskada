@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
 
-fn sample_event_data_fixture() -> DataFixture {
+async fn sample_event_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
             TableConfig::new(
@@ -19,12 +19,13 @@ fn sample_event_data_fixture() -> DataFixture {
             ),
             &["eventdata/sample_event_data.parquet"],
         )
+        .await
         .unwrap()
 }
 
 #[tokio::test]
 async fn test_initial_query() {
-    let data_fixture = sample_event_data_fixture();
+    let data_fixture = sample_event_data_fixture().await;
     let no_simplifier = QueryFixture::new("Events")
         .without_simplification()
         .run_to_parquet_hash(&data_fixture)
@@ -107,7 +108,7 @@ in {is_login_event, last_locale, page_views, page_views_this_month}
 
 #[tokio::test]
 async fn test_events() {
-    insta::assert_snapshot!(QueryFixture::new(EVENTS).run_to_csv(&sample_event_data_fixture()).await.unwrap(),
+    insta::assert_snapshot!(QueryFixture::new(EVENTS).run_to_csv(&sample_event_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,id,count_today,locale_score_sliding
     2020-10-27T16:03:28.331000000,9223372036854775808,12546332615935823199,8a16beda-c07a-4625-a805-2d28f5934107,8a16beda-c07a-4625-a805-2d28f5934107,1,1
@@ -161,7 +162,7 @@ async fn test_events() {
 
 #[tokio::test]
 async fn test_events_with_final_results() {
-    insta::assert_snapshot!(QueryFixture::new(EVENTS).with_final_results().run_to_csv(&sample_event_data_fixture()).await.unwrap(),
+    insta::assert_snapshot!(QueryFixture::new(EVENTS).with_final_results().run_to_csv(&sample_event_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,id,count_today,locale_score_sliding
     2020-10-27T17:36:57.104000001,18446744073709551615,7966499180359851935,02b9152e-3b25-45cc-b7bb-0d8f98bf7524,02b9152e-3b25-45cc-b7bb-0d8f98bf7524,5,5
@@ -172,7 +173,7 @@ async fn test_events_with_final_results() {
 
 #[tokio::test]
 async fn test_page_event() {
-    insta::assert_snapshot!(QueryFixture::new(PAGE_EVENTS).run_to_csv(&sample_event_data_fixture()).await.unwrap(),
+    insta::assert_snapshot!(QueryFixture::new(PAGE_EVENTS).run_to_csv(&sample_event_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,id,locale_score_sliding
     2020-10-27T16:03:28.331000000,9223372036854775808,12546332615935823199,8a16beda-c07a-4625-a805-2d28f5934107,8a16beda-c07a-4625-a805-2d28f5934107,2.0
@@ -189,7 +190,7 @@ async fn test_page_event() {
 
 #[tokio::test]
 async fn test_page_event_with_final_results() {
-    insta::assert_snapshot!(QueryFixture::new(PAGE_EVENTS).with_final_results().run_to_csv(&sample_event_data_fixture()).await.unwrap(),
+    insta::assert_snapshot!(QueryFixture::new(PAGE_EVENTS).with_final_results().run_to_csv(&sample_event_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,id,locale_score_sliding
     2020-10-27T17:36:57.104000001,18446744073709551615,7966499180359851935,02b9152e-3b25-45cc-b7bb-0d8f98bf7524,02b9152e-3b25-45cc-b7bb-0d8f98bf7524,0.0
@@ -204,7 +205,7 @@ async fn test_page_views() {
     // We can't assert on the result, since the definition of `monthly()`
     // depends on the timezone of the machine the test runs on.
     QueryFixture::new(PAGE_VIEWS)
-        .run_to_parquet(&sample_event_data_fixture())
+        .run_to_parquet(&sample_event_data_fixture().await)
         .await
         .unwrap();
 }
@@ -212,6 +213,7 @@ async fn test_page_views() {
 #[tokio::test]
 async fn test_multiple_distinct_partitions() {
     let data = sample_event_data_fixture()
+        .await
         .with_table_from_files(
             TableConfig::new(
                 "EventsByLocale",
@@ -223,6 +225,7 @@ async fn test_multiple_distinct_partitions() {
             ),
             &["eventdata/event_data.parquet"],
         )
+        .await
         .unwrap();
 
     let hash = QueryFixture::new(
@@ -252,7 +255,7 @@ async fn test_multiple_distinct_partitions() {
 #[tokio::test]
 async fn test_consistent_result_count_with_select_fields() {
     // Regression test for select_fields affecting cardinality
-    let data_fixture = event_data_fixture();
+    let data_fixture = event_data_fixture().await;
 
     let query1 = r#"
     let TrackEvent = Events
@@ -276,7 +279,7 @@ async fn test_consistent_result_count_with_select_fields() {
 #[tokio::test]
 async fn test_consistent_cardinality_with_extend_windows() {
     // Regression test for extend and windows affecting cardinality
-    let data_fixture = event_data_fixture();
+    let data_fixture = event_data_fixture().await;
 
     let query1 = r#"
     let t = Events
@@ -303,7 +306,7 @@ async fn test_consistent_cardinality_with_extend_windows() {
 
 #[tokio::test]
 async fn test_consistent_result_count_with_when() {
-    let data_fixture = event_data_fixture();
+    let data_fixture = event_data_fixture().await;
 
     let query1 = r#"
      let track_event = Events
@@ -349,7 +352,7 @@ async fn test_consistent_result_count_with_when() {
     );
 }
 
-fn event_data_fixture() -> DataFixture {
+async fn event_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
             TableConfig::new(
@@ -362,6 +365,7 @@ fn event_data_fixture() -> DataFixture {
             ),
             &["eventdata/event_data.parquet"],
         )
+        .await
         .unwrap()
 }
 

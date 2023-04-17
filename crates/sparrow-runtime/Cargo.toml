@@ -34,11 +34,13 @@ enum-map.workspace = true
 lz4 = { workspace = true, optional = true }
 serde_json.workspace = true
 pulsar = { workspace = true, optional = true }
+avro-rs = { workspace = true }
 avro-schema = { workspace = true, optional = true }
 erased-serde.workspace = true
 error-stack.workspace = true
 fallible-iterator.workspace = true
 futures.workspace = true
+futures-lite.workspace = true
 half.workspace = true
 hashbrown.workspace = true
 inventory.workspace = true
@@ -48,6 +50,7 @@ owning_ref.workspace = true
 parquet.workspace = true
 pin-project.workspace = true
 prost-wkt-types.workspace = true
+reqwest.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 sha2.workspace = true
@@ -68,7 +71,9 @@ tokio-stream.workspace = true
 tokio-util.workspace = true
 tonic.workspace = true
 tracing.workspace = true
+url.workspace = true
 uuid.workspace = true
+object_store.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

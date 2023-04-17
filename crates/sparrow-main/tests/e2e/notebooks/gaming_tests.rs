@@ -19,7 +19,7 @@ event_at,entity_id,duration,won
 "};
 
 /// Create a fixture with the sample events csv.
-fn gaming_data_fixture() -> DataFixture {
+async fn gaming_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -32,6 +32,7 @@ fn gaming_data_fixture() -> DataFixture {
             ),
             GAMING_EVENTS_CSV,
         )
+        .await
         .unwrap()
 }
 
@@ -49,7 +50,7 @@ const GAMING_EVENTS: &str = indoc! {"
 
 #[tokio::test]
 async fn test_gaming_events_to_csv() {
-    insta::assert_snapshot!(QueryFixture::new(GAMING_EVENTS).with_dump_dot("gaming").run_to_csv(&gaming_data_fixture()).await.unwrap(),
+    insta::assert_snapshot!(QueryFixture::new(GAMING_EVENTS).with_dump_dot("gaming").run_to_csv(&gaming_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,loss_duration
     2022-01-01T03:56:00.000000000,0,17054345325612802246,Bob,11

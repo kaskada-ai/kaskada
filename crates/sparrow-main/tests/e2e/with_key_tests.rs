@@ -18,7 +18,7 @@ use crate::{DataFixture, QueryFixture};
 /// 1996-12-19T16:40:01-08:00,0,A,1,A,3
 /// 1996-12-19T16:40:02-08:00,0,A,0,B,4
 /// ```
-pub(crate) fn with_key_data_fixture() -> DataFixture {
+pub(crate) async fn with_key_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new("Table", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
@@ -32,12 +32,13 @@ pub(crate) fn with_key_data_fixture() -> DataFixture {
     1996-12-19T16:40:02-08:00,0,A,0,B,4
     "},
         )
+        .await
         .unwrap()
 }
 
 #[tokio::test]
 async fn test_with_key_i64_pipe() {
-    insta::assert_snapshot!(QueryFixture::new("Table | with_key($input.foreign_key_i64)").run_to_csv(&with_key_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("Table | with_key($input.foreign_key_i64)").run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,foreign_key_i64,foreign_key_str,n
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,1996-12-19T16:39:57-08:00,0,A,0,B,0
     1996-12-20T00:39:58.000000000,9223372036854775808,2359047937476779835,1,1996-12-19T16:39:58-08:00,0,B,1,A,1
@@ -50,7 +51,7 @@ async fn test_with_key_i64_pipe() {
 
 #[tokio::test]
 async fn test_with_key_lookup_select() {
-    insta::assert_snapshot!(QueryFixture::new("Table | with_key($input.foreign_key_i64) | last() | lookup(Table.foreign_key_i64) | when($input.foreign_key_i64 > 0)").run_to_csv(&with_key_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("Table | with_key($input.foreign_key_i64) | last() | lookup(Table.foreign_key_i64) | when($input.foreign_key_i64 > 0)").run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,foreign_key_i64,foreign_key_str,n
     1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1996-12-19T16:39:58-08:00,0,B,1,A,1
     1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,1996-12-19T16:39:59-08:00,0,A,2,,
@@ -61,7 +62,7 @@ async fn test_with_key_lookup_select() {
 
 #[tokio::test]
 async fn test_with_key_i64() {
-    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_i64, Table)").run_to_csv(&with_key_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_i64, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,foreign_key_i64,foreign_key_str,n
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,1996-12-19T16:39:57-08:00,0,A,0,B,0
     1996-12-20T00:39:58.000000000,9223372036854775808,2359047937476779835,1,1996-12-19T16:39:58-08:00,0,B,1,A,1
@@ -79,7 +80,7 @@ async fn test_with_key_aggregate_select() {
     // while the key is directly from the `scan`.
     insta::assert_snapshot!(QueryFixture::new(
         "{ sum: Table.n | when(Table.key == 'A') | sum() | with_key(Table.foreign_key_i64) }"
-    ).run_to_csv(&with_key_data_fixture()).await.unwrap(), @r###"
+    ).run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,0
     1996-12-20T00:39:58.000000000,9223372036854775808,2359047937476779835,1,
@@ -95,7 +96,7 @@ async fn test_with_key_i64_parquet_output() {
     // NOTE: Parquet output changes when the Parquet writer version changes.
     insta::assert_snapshot!(
         QueryFixture::new("with_key(Table.foreign_key_i64, Table)")
-            .run_to_parquet_hash(&with_key_data_fixture())
+            .run_to_parquet_hash(&with_key_data_fixture().await)
             .await
             .unwrap(),
         @"1DF26641A9CC03AFC60F023F4E20078C854B3A000DF5D8E09E6DF20F"
@@ -104,7 +105,7 @@ async fn test_with_key_i64_parquet_output() {
 
 #[tokio::test]
 async fn test_with_computed_key_i64() {
-    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_i64 + 1, Table)").run_to_csv(&with_key_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_i64 + 1, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,foreign_key_i64,foreign_key_str,n
     1996-12-20T00:39:57.000000000,9223372036854775808,2359047937476779835,1,1996-12-19T16:39:57-08:00,0,A,0,B,0
     1996-12-20T00:39:58.000000000,9223372036854775808,1575016611515860288,2,1996-12-19T16:39:58-08:00,0,B,1,A,1
@@ -117,7 +118,7 @@ async fn test_with_computed_key_i64() {
 
 #[tokio::test]
 async fn test_with_computed_key_str() {
-    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_str, Table)").run_to_csv(&with_key_data_fixture()).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_str, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,subsort,key,foreign_key_i64,foreign_key_str,n
     1996-12-20T00:39:57.000000000,9223372036854775808,11753611437813598533,B,1996-12-19T16:39:57-08:00,0,A,0,B,0
     1996-12-20T00:39:58.000000000,9223372036854775808,3650215962958587783,A,1996-12-19T16:39:58-08:00,0,B,1,A,1
@@ -130,7 +131,7 @@ async fn test_with_computed_key_str() {
 
 #[tokio::test]
 async fn test_with_key_unsupported_type() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("with_key({k: Table.foreign_key_str}, Table)").run_to_csv(&with_key_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("with_key({k: Table.foreign_key_str}, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -155,7 +156,7 @@ async fn test_with_key_unsupported_type() {
 
 #[tokio::test]
 async fn test_with_key_error_key() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("with_key(unbound_key, Table)").run_to_csv(&with_key_data_fixture()).await.unwrap_err(), @r###"
+    insta::assert_yaml_snapshot!(QueryFixture::new("with_key(unbound_key, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics

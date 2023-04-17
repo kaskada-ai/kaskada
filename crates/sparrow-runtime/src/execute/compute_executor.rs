@@ -53,7 +53,7 @@ impl ComputeExecutor {
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
-        output_to: v1alpha::OutputTo,
+        destination: v1alpha::Destination,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
@@ -78,13 +78,13 @@ impl ComputeExecutor {
 
         spawner.spawn(
             "output".to_owned(),
-            info_span!("Output Writer", ?output_to),
+            info_span!("Output Writer", ?destination),
             crate::execute::output::write(
                 &context,
                 runtime_options.limits.clone(),
                 futures::StreamExt::boxed(tokio_stream::wrappers::ReceiverStream::new(output_rx)),
                 context.progress_updates_tx.clone(),
-                output_to,
+                destination,
             )
             .change_context(Internal("error writing output"))?
             .map_err(|e| e.change_context(Internal("error writing output"))),

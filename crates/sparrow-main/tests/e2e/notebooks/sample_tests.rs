@@ -17,7 +17,7 @@ const SAMPLE_EVENTS_CSV: &str = indoc! {"
 "};
 
 /// Create a fixture with the sample events csv.
-fn sample_data_fixture() -> DataFixture {
+async fn sample_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
             TableConfig::new(
@@ -30,6 +30,7 @@ fn sample_data_fixture() -> DataFixture {
             ),
             SAMPLE_EVENTS_CSV,
         )
+        .await
         .unwrap()
 }
 
@@ -53,7 +54,7 @@ const SAMPLE_EVENTS: &str = indoc! {"
 
 #[tokio::test]
 async fn test_sample_events_to_csv() {
-    insta::assert_snapshot!(QueryFixture::new(SAMPLE_EVENTS).run_to_csv(&sample_data_fixture()).await.unwrap(),
+    insta::assert_snapshot!(QueryFixture::new(SAMPLE_EVENTS).run_to_csv(&sample_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,timestamp_continuous,username_continuous,count_hourly,event_count_total,event_time_not_continuous,event_username_not_continuous
     2022-01-01T12:00:00.000000000,18446744073709551615,9458906648771141622,ada,2022-01-01T12:00:00.000000000,ada,1,1,,
@@ -69,7 +70,7 @@ async fn test_sample_events_to_csv() {
 
 #[tokio::test]
 async fn test_sample_events_to_parquet() {
-    let data_fixture = sample_data_fixture();
+    let data_fixture = sample_data_fixture().await;
     let no_simplifier = QueryFixture::new(SAMPLE_EVENTS)
         .run_to_parquet_hash(&data_fixture)
         .await

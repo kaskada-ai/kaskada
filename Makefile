@@ -82,6 +82,20 @@ test/int/run-api-postgres:
 test/int/run-api-postgres-s3:
 	cd tests/integration/api && LOCAL=true DB_DIALECT="postgres" OBJECT_STORE_TYPE=s3 OBJECT_STORE_PATH=/data go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
+####
+## CI related targets
+####
+ci/integration/tests/docker-compose-up:
+	export DOCKER_BUILDKIT=1 
+	docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build --detach
+
+ci/integration/tests/docker-compose-down:
+	export DOCKER_BUILDKIT=1 
+	docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
+
+ci/integration/tests/run/api: test/int/run-api
+
+
 wren/build:
 	cp NOTICE wren/
 	cd wren && go build main.go
