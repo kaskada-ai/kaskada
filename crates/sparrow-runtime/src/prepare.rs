@@ -135,7 +135,7 @@ pub async fn prepare_file(
     let output_key = output_url.key().unwrap();
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_dir = temp_dir.path().to_str().unwrap();
-    let path = format!("/{}", output_url.path().unwrap().to_string());
+    let path = format!("/{}", output_url.path().unwrap());
     let local_output_prefix = if output_key.eq(&ObjectStoreKey::Local) {
         path::Path::new(&path)
     } else {
@@ -204,7 +204,7 @@ pub async fn prepare_file(
             let upload_results = upload_prepared_files_to_s3(
                 object_store_registry,
                 &pm,
-                &output_prefix,
+                output_prefix,
                 output_prefix,
             )
             .await
@@ -244,7 +244,7 @@ pub async fn upload_prepared_files_to_s3(
 
             let prepare_object_store_url = ObjectStoreUrl::from_str(prepared_url.as_str()).unwrap();
             let metadata_object_store_url =
-                ObjectStoreUrl::from_str(&metadata_prepared_url.as_str()).unwrap();
+                ObjectStoreUrl::from_str(metadata_prepared_url.as_str()).unwrap();
 
             parquet_uploads.push(
                 object_store_registry
