@@ -1,5 +1,4 @@
-# FROM debian:bullseye-slim
-FROM ubuntu:20.04
+FROM debian:bullseye-slim
 
 RUN  apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates wget \
@@ -15,7 +14,6 @@ RUN mkdir /integ-test-run
 
 COPY --chmod=755 ./ci-bin/engine/sparrow-main /bin/sparrow-main
 COPY --chmod=755 ./ci-bin/wren/wren-binary /bin/wren
-COPY --chmod=755 ./ci-bin/integ-tests/api.test /integ-test-run/api.test
-COPY --chmod=755 ./run-integ.sh run-integ.sh
-COPY ./testdata/ /testdata
+COPY --chmod=755 ./run.sh /run.sh
 
+CMD ["/bin/bash", "/run.sh"]
