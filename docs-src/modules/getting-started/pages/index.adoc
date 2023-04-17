@@ -9,3 +9,11 @@ There are several ways to quickly get started with Kaskada.
 This quick tutorial will help you install and run Kaskada from within a Jupyter notebook, load some sample data into Kaskada, use Kaskada queries and Python within Jupyter to explore that data.
 * xref:getting-started:hello-world-cli.adoc[]: How to execute queries from the command line using the Kaskada CLI. 
 This quick tutorial will help you install and run Kaskada from the command line, load some sample data into Kaskada, and use Kaskada queries to explore that data all on the command line.
+
+[TIP]
+.Installing different clients
+====
+The Python and CLI clients are independent and are installed separately.
+For example, you don't need to install the Python client in order to use the CLI.
+If you would like use both, you must install them independently.
+====
