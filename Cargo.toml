@@ -4,7 +4,7 @@ members = ["crates/*"]
 [workspace.package]
 authors = ["Kaskada Developers"]
 edition = "2021"
-version = "0.5.0"
+version = "0.6.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]

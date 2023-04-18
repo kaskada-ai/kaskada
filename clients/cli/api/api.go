@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -194,7 +195,9 @@ func getClientID() string {
 func getContextAndConnection() (context.Context, *grpc.ClientConn) {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "client-id", getClientID())
 
-	opts := []grpc.DialOption{}
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+	}
 	if viper.GetBool("use-tls") {
 		creds := credentials.NewTLS(nil)
 		opts = append(opts, grpc.WithTransportCredentials(creds))
@@ -204,7 +207,15 @@ func getContextAndConnection() (context.Context, *grpc.ClientConn) {
 
 	var err error
 	serverAddr := viper.GetString("kaskada-api-server")
-	conn, err := grpc.Dial(serverAddr, opts...)
+	dialCtx, _ := context.WithTimeout(ctx, time.Second)
+	conn, err := grpc.DialContext(dialCtx, serverAddr, opts...)
+	if err == context.DeadlineExceeded {
+		if serverAddr == "localhost:50051" {
+			log.Fatal().Msgf("Failed to connect to Kaskada on %s after 1s - is the Kaskada service running?", serverAddr)
+		} else {
+			log.Fatal().Err(err).Msgf("Failed to connect to Kaskada on %s after 1s - is the Kaskada service running and accessible?", serverAddr)
+		}
+	}
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to dial the API")
 		return nil, nil
