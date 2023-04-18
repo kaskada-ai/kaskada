@@ -6,10 +6,18 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+from datetime import date
+import tomli
+
+current_year = date.today().year
+pyproject_file = open("../../pyproject.toml", "rb")
+config = tomli.load(pyproject_file)["tool"]["poetry"]
+
 project = "Kaskada Python Client"
-copyright = "2023, The Kaskada Authors"
-author = "The Kaskada Authors"
-release = "0.1.2"
+author = ','.join(config['authors'])
+version = config['version']
+release = version
+copyright = f"2022—{current_year}, {author}" if current_year > 2023 else f"{current_year}, {author}"
 
 # Path setup
 import sys
