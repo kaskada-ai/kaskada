@@ -136,7 +136,7 @@ jobs:
         run: make ci/integration/tests/docker-compose-down
 
   run_integration_tests_s3: 
-          name: Run integration tests
+          name: Run S3 integration tests
           needs: [integration_skip, build_wren, build_sparrow]
           runs-on: ubuntu-latest
           if: ${{ needs.integration_sklp.outputs.should_skip != true || needs.build_wren.outputs.should_skip != true || needs.build_sparrow.outputs.should_skip != true }}
