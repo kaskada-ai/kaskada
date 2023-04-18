@@ -119,17 +119,31 @@ Tables are described in a spec file as a list of table objects under the `tables
 
 [source,yaml]
 ----
+  # The name of the table
 - tableName: GamePlay
+  # A field containing the time associated with each event
   timeColumnName: event_at
+  # An initial entity key associated with each event
   entityKeyColumnName: entity_key
+  # An (optional) subsort column associated with each event
   subsortColumnName: offset
+  # A name describing the entity key
   groupingId: User
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
   source:
     kaskada: {}
+
+  # The name of the table
 - tableName: Purchase
+  # A field containing the time associated with each event
   timeColumnName: event_at
+  # An initial entity key associated with each event
   entityKeyColumnName: entity_id
+  # A name describing the entity key
   groupingId: User
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
   source:
     kaskada: {}
 ----
@@ -140,7 +154,7 @@ You can export all the tables currently defined using the CLI.
 
 [source,bash]
 ----
-cli sync export --all
+kaskada-cli sync export --all
 ----
 
 The export result is shown below
@@ -169,7 +183,7 @@ Alternately, if you know a specific table you'd like to export you can specify i
 
 [source,bash]
 ----
-cli sync export --table Purchase
+kaskada-cli sync export --table Purchase
 ----
 
 [source,yaml]
@@ -203,7 +217,7 @@ You can see these changes by creating an apply plan.
 
 [source,bash]
 ----
-cli sync plan --file spec.yaml
+kaskada-cli sync plan --file spec.yaml
 
 # > 2:18PM INF starting plan
 # > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
@@ -217,7 +231,7 @@ You can apply a spec file using the CLI.
 
 [source,bash]
 ----
-cli sync apply --file spec.yaml
+kaskada-cli sync apply --file spec.yaml
 
 # > 2:25PM INF starting apply
 # > 2:25PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
