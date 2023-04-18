@@ -1,3 +1,9 @@
+"""Integration with IPython (Notebooks) for Fenl.
+
+    Raises:
+        UsageError: when improper arguments are provided
+"""
+
 from __future__ import print_function
 
 import os
