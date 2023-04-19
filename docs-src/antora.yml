@@ -6,6 +6,7 @@ start_page: overview:what-is-kaskada.adoc
 nav:
   - modules/overview/nav.adoc
   - modules/getting-started/nav.adoc
+  - modules/installing/nav.adoc
   - modules/ROOT/nav.adoc
   - modules/developing/nav.adoc
   - modules/integrating/nav.adoc

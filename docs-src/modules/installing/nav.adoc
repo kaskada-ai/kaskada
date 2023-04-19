@@ -1,0 +1,3 @@
+* xref:index.adoc[]
+** xref:local.adoc[]
+** xref:kubernetes.adoc[]

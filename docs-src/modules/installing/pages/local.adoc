@@ -1,10 +1,9 @@
-= Installing
+= Installing Kaskada Locally
 
 Kaskada is an event-processing engine comprised of two main components: 
 
 * The `kaskada-engine` component is a stateful compute engine for transforming event data.
 * The `kaskada-manager` is an (optionally) stateful API for communicating with clients
-
 
 
 == Using Kaskada with Python
