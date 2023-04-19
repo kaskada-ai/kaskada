@@ -297,12 +297,12 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 
 	newFiles = append(newFiles, internal.AddFileProps{
 		URI:        fileInput.GetURI(),
-		Identifier: "",
+		Identifier: fileInput.GetURI(),
 		Schema:     fileSchema,
 		FileType:   fileInput.GetType(),
 	})
 
-	newDataToken, err := t.kaskadaTableClient.AddFilesToTable(ctx, owner, kaskadaTable, newFiles, fileSchema, nil, nil)
+	newDataToken, err := t.kaskadaTableClient.AddFilesToTable(ctx, owner, kaskadaTable, newFiles, fileSchema, nil, func() error { return nil })
 	if err != nil {
 		return nil, err
 	}
