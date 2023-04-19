@@ -163,12 +163,10 @@ def test_table_create_table_with_invalid_table_source(mockClient):
 @patch("kaskada.client.Client")
 def test_table_load_parquet(mockClient):
     table_name = "test_table"
-    local_file = "local.parquet"
+    local_file = "file:///local.parquet"
     expected_request = table_pb.LoadDataRequest(
         table_name=table_name,
-        file_input=common_pb.FileInput(
-            file_type="FILE_TYPE_PARQUET", uri=f"file://{Path(local_file).absolute()}"
-        ),
+        file_input=common_pb.FileInput(file_type="FILE_TYPE_PARQUET", uri=local_file),
     )
 
     kaskada.table.load(table_name, local_file, client=mockClient)
@@ -210,11 +208,11 @@ def test_table_load_parquet_gcs(mockClient):
 @patch("kaskada.client.Client")
 def test_table_load_csv(mockClient):
     table_name = "test_table"
-    local_file = "local.csv"
+    local_file = "file:///local.csv"
     expected_request = table_pb.LoadDataRequest(
         table_name=table_name,
         file_input=common_pb.FileInput(
-            file_type="FILE_TYPE_CSV", uri=f"file://{Path(local_file).absolute()}"
+            file_type="FILE_TYPE_CSV", uri=f"file:///local.csv"
         ),
     )
 

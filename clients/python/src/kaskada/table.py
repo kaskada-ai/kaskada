@@ -10,7 +10,7 @@ import pandas as pd
 import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 from kaskada.client import Client, get_client
-from kaskada.utils import handleException, handleGrpcError, to_uri
+from kaskada.utils import handleException, handleGrpcError
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -228,14 +228,14 @@ def delete_table(
 
 def load(
     table_name: str,
-    file: str,
+    file_uri: str,
     client: Optional[Client] = None,
 ) -> table_pb.LoadDataResponse:
     """Loads a local file to a table. The type of file is inferred from the extension.
 
     Args:
         table_name (str): The name of the target table
-        file (str): The path to a local file (absolute or relative), or a S3 / GCS / Azure Blob URI
+        file_uri (str): The path to a local file (absolute or relative), or a S3 / GCS / Azure Blob URI
         client (Optional[Client], optional): The Kaskada Client. Defaults to None.
 
     Returns:
@@ -243,7 +243,7 @@ def load(
     """
     try:
         client = get_client(client)
-        path = Path(file).absolute()
+        path = Path(file_uri).absolute()
         extension = path.suffix.lower()
         file_type = ""
         if extension == ".parquet":
@@ -257,7 +257,7 @@ def load(
 
         input = common_pb.FileInput(
             file_type=file_type,
-            uri=to_uri(file),
+            uri=file_uri,
         )
         req = table_pb.LoadDataRequest(table_name=table_name, file_input=input)
         logger.debug(f"Load Tables Request: {req}")
@@ -303,4 +303,4 @@ def load_dataframe(
         use_deprecated_int96_timestamps=True,
     )
     temp_file.close()
-    return load(table_name=table_name, file=temp_file.name, client=client)
+    return load(table_name=table_name, file_uri='file://{}'.format(temp_file.name), client=client)
