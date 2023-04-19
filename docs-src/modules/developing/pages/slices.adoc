@@ -63,18 +63,20 @@ The usage of a slice is only applicable at query time, and only _one_
 filter can be applied per query. To apply a filter to a query, use the
 Kaskada module method: `set_default_slice`.
 
-Here is an example of setting the slice filter:
-
-[source,python]
-----
-# entity_filter is created in the example above
-kda.set_default_slice(entity_filter)
-----
-
 After setting the slice, all subsequent queries will utilize the slice
 filter on the same session.
 
 === IPython (Jupyter) Extension
+
+[source,python]
+----
+from kaskada.slice_filters import EntityPercentFilter
+
+filter_percentage = 12.34
+entity_filter = EntityPercentFilter(filter_percentage)
+kda.set_default_slice(entity_filter)
+----
+
 
 [source,ipython]
 ----
@@ -92,6 +94,14 @@ filter on the same session.
 [source,python]
 ----
 from kaskada import compute
+from kaskada.api.session import LocalBuilder
+from kaskada.slice_filters import EntityPercentFilter
+
+session = LocalBuilder().build()
+
+filter_percentage = 12.34
+entity_filter = EntityPercentFilter(filter_percentage)
+kda.set_default_slice(entity_filter)
 
 query = '''
 {

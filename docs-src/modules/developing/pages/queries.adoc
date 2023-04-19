@@ -4,9 +4,10 @@ The following sections will help with writing queries.
 
 == Final vs Historical Results
 
-Every query can be computed in two different ways: final and historical.
-Historical queries return the full history of how an expression changes over time for every entity.
-Final queries return the result of the query expression for every entity after processing all events.
+Every query produces a timeline which may be returned in two different ways -- the final results (at a specific time) or all historic results.
+The "result behavior" configures which results are produced.
+Queries for historic results return the full history of how the values changed over time for each entity.
+Queries for final results return the latest result for each entity at the specified time (default is after all events have been processed).
 
 You determine which type of query to execute using the "result behavior" configuration at query time.
 By default, historical results are returned.
@@ -74,8 +75,10 @@ Using python directly is one way to write queries.
 
 [source,python]
 ----
-import pandas
 from kaskada import compute
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
 
 query = """{ 
   time: Purchase.purchase_time, 
@@ -84,8 +87,10 @@ query = """{
   min_amount: Purchase.amount | min()
 }"""
 
-response_parquet = compute.query(query=query).parquet.path
+response_parquet = compute.query(query = query).output_to.object_store.output_paths[0]
 
+# (Optional) view results as a Pandas dataframe.
+import pandas
 pandas.read_parquet(response_parquet)
 ----
 
@@ -215,8 +220,8 @@ t_purchases = kt.create_table(
     entity_key_column_name = "customer_id",
     subsort_column_name =    "subsort_id",
 )
-file_purchases1 = kt.upload_file(table="purchases", file_path="purchases_part1.parquet")
-file_purchases2 = kt.upload_file(table=t_purchases, file_path="purchases_part2.parquet")
+file_purchases1 = kt.load(table_name="purchases", file="purchases_part1.parquet")
+file_purchases2 = kt.load(table_name=t_purchases, file="purchases_part2.parquet")
 print(f"SUCCESS: Created Purchases table and uploaded data.")
 print("\t Table Response:")
 print(indent(t_purchases, 2, "\t"))
@@ -230,7 +235,7 @@ t_transactions = kt.create_table(
     entity_key_column_name = "id",
     subsort_column_name =    "idx",
 )
-file_transactions1 = kt.upload_file(table=t_transactions, file_path="transactions_part1.parquet")
+file_transactions1 = kt.load(table_name=t_transactions, file="transactions_part1.parquet")
 print(f"SUCCESS: Created Transactions table and uploaded data.")
 print("\t Table Response:")
 print(indent(t_transactions, 2, "\t"))

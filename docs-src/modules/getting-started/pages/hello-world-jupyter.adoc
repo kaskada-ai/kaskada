@@ -51,6 +51,8 @@ pip install kaskada
 ====
 Depending on you Python installation and configuration you may have `pip3` instead of `pip` available in your terminal. 
 If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 install kaskada`
+
+You can see what version of Python `pip` uses by running `pip -V`
 ====
 
 [IMPORTANT]
@@ -109,7 +111,7 @@ The special string `%%fenl` will also connect to the Kaskada components that we 
 
 Congratulations, you now have Kaskada locally installed and you can start loading and querying your data using Kaskada inside a Jupyter notebook. 
 
-== Loading Data 
+== Loading Data into a Table
 
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
@@ -119,15 +121,13 @@ each row is a value of the same type.
 When creating a table, you must provide some information about how each
 row should be interpreted. You must describe:
 
-* A field containing the time associated with each row
+* The name of a column in your data that contains the time of each row
 (`time_column_name`). The time should refer to when the event occurred.
-* An initial xref:fenl:entities.adoc[entity] key associated with each row
+* The name of a column in your data that contains the xref:fenl:entities.adoc[entity] key of each row
 (`entity_key_column_name`). The entity should identify a _thing_ in the
 world that each event is associated with. Don't worry too much about
 picking the "right" value here - it's easy to change the entity key in
 Fenl.
-* An (optional) subsort column associated with each row (`subsort_column_name`).
-This value is used to order rows associated with the same time value.
 
 For more information about these fields, see:
 xref:ROOT:loading-data.adoc#file-format[Expected File Format]
@@ -135,12 +135,17 @@ xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 [source,python]
 ----
 from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
 
 table.create_table(
+  # The table's name
   table_name = "Purchase",
+  # The name of a column in your data that contains the time associated with each row
   time_column_name = "purchase_time",
+  # The name of a column in your data that contains the entity key associated with each row
   entity_key_column_name = "customer_id",
-  subsort_column_name = "subsort_id",
 )
 ----
 
@@ -186,26 +191,27 @@ request_details {
 Now that we've created a table, we're ready to load some data into it.
 
 Data can be loaded into a table in multiple ways. In this example we'll
-load the contents of a Pandas dataframe into the table. To learn about
+load the contents of a Parquet file into the table. To learn about
 the different ways data can be loaded into a table, see the
 xref:ROOT:loading-data.adoc["Loading Data"]
 section of the docs.
 
 [source,python]
 ----
-import pandas
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
 
 # A sample Parquet file provided by Kaskada for testing
-purchases_url = "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk"
+# Available at https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk
+purchases_path = "file:///absolute/path/to/purchases.parquet"
 
-# Read the file into a Pandas Dataframe
-purchases = pandas.read_parquet(purchases_url)
-
-# Upload the dataframe's contents to the Purchase table
-table.load_dataframe("Purchase", purchases)
+# Upload the files's contents to the Purchase table (which was created in the previous step)
+table.load(table_name = "Purchase", file = purchases_path)
 ----
 
-The result of running `load_dataframe` is a `data_token_id`. The
+The result of running `load` is a `data_token_id`. The
 data token ID is a unique reference to the data currently stored in the
 system.
 
@@ -227,6 +233,11 @@ loaded into each:
 
 [source,python]
 ----
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 table.list_tables()
 ----
 
@@ -300,6 +311,7 @@ This makes it easier to see how a single entity changes over time.
 %%fenl
 Purchase | when(Purchase.customer_id == "patrick")
 ----
+
 In this example, we build a pipeline of functions using the `|` character.
 Pipelines are an easy way to use the results of one expression as the input to another expresion.
 In this example we begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"`. 

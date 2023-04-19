@@ -17,14 +17,6 @@ Views are useful any time you need to share or re-use expressions:
 
 == Managing views with Python
 
-All methods in this section are from the `view` object. Be sure to import
-it before running any method:
-
-[source,python]
-----
-from kaskada import view
-----
-
 === Creating a View
 
 To create a view, we'll start by describing the expression we'd like to
@@ -34,6 +26,11 @@ some iteration to get just right.
 
 [source,python]
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.create_view(
     view_name = "PurchaseStats",
     expression = "{
@@ -79,6 +76,11 @@ without re-typing the expression:
 
 [source,python]
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.create_view(
     view_name = "PurchaseStats",
     expression = purchase_stats.expression,
@@ -94,6 +96,11 @@ Here is an example of listing tables:
 
 [source,python]
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.list_views("Purchase")
 ----
 
@@ -103,6 +110,11 @@ You can get a view using its name:
 
 [source,python]
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.get_view("PurchaseStats")
 ----
 
@@ -117,6 +129,11 @@ You can delete a view using its name:
 
 [source,python]
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.delete_view("PurchaseStats")
 ----
 
@@ -125,6 +142,14 @@ view.delete_view("PurchaseStats")
 
 The CLI manages Kaskada resources declaratively by managing spec files.
 A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== Creating, updating and deleting tables with the CLI
+
+
+The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
+To create a table, add the table's description to your spec file and run `kaskada-cli sync apply`.
+To update a table, change the table's description in your spec file and run `kaskada-cli sync apply`.
+It is not currently possible to delete a table using the CLI.
 
 === The format of views in a spec file.
 

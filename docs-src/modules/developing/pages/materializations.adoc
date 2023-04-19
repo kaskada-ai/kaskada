@@ -70,14 +70,6 @@ materializations:
 
 == Managing Materializations with Python
 
-All methods on this page use from the `materialization` object. Be sure
-to import it before running any method:
-
-[source,python]
-----
-from kaskada import materialization
-----
-
 === Creating a Materialization
 
 To create a materialization, we'll start by describing the expression
@@ -87,6 +79,11 @@ logic and might require some iteration to get just right.
 
 [source,python]
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 purchase_stats = """
 {
     time: Purchase.purchase_time,
@@ -118,6 +115,11 @@ Here is an example of listing tables:
 
 [source,python]
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 materialization.list_materializations("Purchase")
 ----
 
@@ -127,6 +129,11 @@ You can get a materialization using its name:
 
 [source,python]
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 materialization.get_materialization("PurchaseStats")
 ----
 
@@ -142,6 +149,11 @@ You can delete a materialization using its name:
 
 [source,python]
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 materialization.delete_materialization("PurchaseStats")
 ----
 
