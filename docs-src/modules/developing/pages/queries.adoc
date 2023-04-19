@@ -190,7 +190,7 @@ resp = query.create_query(expression=query, result_behavior="final-results")
 ./kaskada-cli query run --result-behavior final-results <<EOS
 Purchase
 EOS
----
+----
 
 == Querying with Python
 
