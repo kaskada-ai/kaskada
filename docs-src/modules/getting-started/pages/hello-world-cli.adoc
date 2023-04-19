@@ -13,7 +13,7 @@ You can visit the https://github.com/kaskada-ai/kaskada/releases[Releases] page 
 The example commands below will download the latest Kaskada binaries and applies to Linux and OSX.
 
 
-[source,shell]
+[source,bash]
 ----
 curl -s https://api.github.com/repos/kaskada-ai/kaskada/releases/latest |\
 grep "browser_download_url.*" |\
@@ -34,7 +34,7 @@ If you're using OSX, you may need to unblock the applications.
 OSX prevents applications you download from running as a security feature.
 You can remove the block placed on the file when it was downloaded with the following command:
 
-[source,shell]
+[source,bash]
 ----
 xattr -dr com.apple.quarantine <path to file>
 ----
@@ -42,7 +42,7 @@ xattr -dr com.apple.quarantine <path to file>
 
 You can start a local instance of the Kaskada service by running the manager and engine:
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-manager 2>&1 > manager.log 2>&1 &
 ./kaskada-engine serve > engine.log 2>&1 &
@@ -57,14 +57,14 @@ This is normal, and indicates the services are working as expected - the API all
 
 To verify they're installed correctly and executable, try running the following command (which lists any resources you've created):
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli sync export --all
 ----
 
 You should see output similar to the following:
 
-[source,shell]
+[source,bash]
 ----
 10:18AM INF starting export
 {}  
@@ -117,7 +117,7 @@ tables:
 
 To create this table, we must sync the state of the Kaskada service with the contents of the file.
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli sync apply -f spec.yaml
 
@@ -151,7 +151,7 @@ the different ways data can be loaded into a table, see the
 xref:developing:tables.adoc#uploading-data["Uploading Data"
 section of the "Tables"] page.
 
-[source,shell]
+[source,bash]
 ----
 # Download a file to load and save it to path 'purchase.parquet'
 curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk" -o purchase.parquet
@@ -177,7 +177,7 @@ article on sharing queries with xref:developing:views.adoc[Views].
 Let's start by looking at the Purchase table without any filters, this
 query will return all of the columns and rows contained in a table:
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli query run --stdout --response-as csv <<EOS
 Purchase
@@ -203,7 +203,7 @@ CSV is a good format for writing results to STDOUT because it's relatively human
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli query run --stdout --response-as csv <<EOS
 Purchase | when(Purchase.customer_id == "patrick")
@@ -213,7 +213,7 @@ EOS
 As you begin to better understand your data you can start using
 aggregations over your data such as the `max()` function:
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli query run --stdout --response-as csv <<EOS
 {
@@ -248,7 +248,7 @@ the below query. In order to debug your features, we recommend including
 the time and the entity with each query so that you can walk through the
 results in time:
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli query run --stdout --response-as csv <<EOS
 {

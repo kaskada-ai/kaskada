@@ -159,7 +159,9 @@ def get_client(client: Optional[Client] = None) -> Client:
         Client: The provided client argument or the global client.
     """
     if client is None and KASKADA_DEFAULT_CLIENT is None:
-        raise ValueError("No client was provided, and no global client is configured. Consider setting the global client by creating a session, for example 'kaskada.api.session.LocalBuilder().build()`.")
+        raise ValueError(
+            "No client was provided, and no global client is configured. Consider setting the global client by creating a session, for example 'kaskada.api.session.LocalBuilder().build()`."
+        )
     elif client is None:
         client = KASKADA_DEFAULT_CLIENT
 
