@@ -2,6 +2,51 @@
 
 The following sections will help with writing queries.
 
+== Final vs Historical Results
+
+Every query can be computed in two different ways: final and historical.
+Historical queries return the full history of how an expression changes over time for every entity.
+Final queries return the result of the query expression for every entity after processing all events.
+
+You determine which type of query to execute using the "result behavior" configuration at query time.
+By default, historical results are returned.
+To return final results, you must configure the `final-results` behavior:
+
+[source,Fenl]
+.Final queries with fenlmagic
+----
+%%fenl --result_behavior final-results
+{
+    time: Purchase.purchase_time,
+    entity: Purchase.customer_id,
+    max_amount: Purchase.amount | max(),
+    min_amount: Purchase.amount | min(),
+}
+----
+
+[source,python]
+.Final queries with Python
+----
+from kaskada import compute
+
+query = """{
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  max_amount: last(Purchase.amount) | max(),
+  min_amount: Purchase.amount | min()
+}"""
+
+resp = query.create_query(expression=query, result_behavior="final-results")
+----
+
+[source,bash]
+.Final queries in the CLI
+----
+./kaskada-cli query run --result-behavior final-results <<EOS
+Purchase
+EOS
+----
+
 == Records
 
 All queries need to specify a record. A record is simply a set of named

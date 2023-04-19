@@ -26,6 +26,16 @@ To perform static type analysis (mypy): `$ poetry run poe types`
 #### Lint Task
 To run the linter (pylint): `$ poetry run poe lint`
 
+#### Generate documentation 
+We use Sphinx and rely on autogeneration extensions within Sphinx to read docstrings and 
+generate an HTML formatted version of the codes documentation. 
+
+* `poetry run poe docs` : generates and builds the docs 
+* `poetry run poe docs-generate` : generates the docs (.rst files)
+* `poetry run poe docs-build` : builds the HTML rendered version of the generated docs (from .rst to .html)
+
+The generated HTML is located inside `docs/build`. Load `docs/build/index.html` in your browser to see the HTML rendered output. 
+
 ## Using the Client from Jupyter
 
 #### Install Jupyter
