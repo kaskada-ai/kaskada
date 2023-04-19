@@ -18,7 +18,7 @@ If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 ins
 Kaskada is now installed. Kaskada can be used locally by creating a local session.
 
 .Creating a local Kaskada session in Python
-[.python]
+[source,python]
 ----
 from kaskada.api.session import LocalBuilder
 session = LocalBuilder().build()
@@ -38,7 +38,7 @@ Kaskada's python library includes notebook customizations that allow us to write
 We need to enable these customizations first before we can use them. 
 
 .Enable fenlmagic in this notebook 
-[,python]
+[source,ipython]
 ----
 %load_ext fenlmagic
 ----

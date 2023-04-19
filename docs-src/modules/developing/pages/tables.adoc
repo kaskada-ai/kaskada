@@ -5,29 +5,26 @@ each row is a value of the same type.
 
 == Managing tables with Python
 
-All methods on this page use the `table` module. Be sure to import it
-before running any method:
-
-[source,python]
-----
-from kaskada import table
-----
-
 === Creating a Table
 
 When creating a table, you must provide information about how each row
 should be interpreted. You must describe:
 
-* A field containing the time associated with each row. The time should
-refer to when the event occurred.
-* An initial xref:fenl:entities[entity] key associated with each row. The
-entity should identify a _thing_ in the world related to each event.
+* The name of a column in your data that contains the time of each row
+(`time_column_name`). The time should refer to when the event occurred.
+* The name of a column in your data that contains the xref:fenl:entities.adoc[entity] key of each row
+(`entity_key_column_name`). The entity should identify a _thing_ in the
+world that each event is associated with. Don't worry too much about
+picking the "right" value here - it's easy to change the entity key in
+Fenl.
+
 
 Optionally:
 
-* A subsort column associated with each row. This value is used to order
-rows associated with the same time value. If no subsort column is
-provided, Kaskada will generate one.
+* An subsort column associated with each row (`subsort_column_name`).
+This value is used to order rows associated with the same time value.
+If no subsort column is provided, Kaskada will generate one.
+* A name describing the type of entity, for example "User" or "Purchase".
 
 For more information about these fields, see:
 xref:reference:expected-file-format[Expected File Format]
@@ -36,11 +33,18 @@ Here is an example of creating a table:
 
 [source,python]
 ----
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 table.create_table(
+  # The table's name
   table_name = "Purchase",
+  # The name of a column in your data that contains the time associated with each row
   time_column_name = "purchase_time",
+  # The name of a column in your data that contains the entity key associated with each row
   entity_key_column_name = "customer_id",
-  subsort_column_name = "subsort_id",
 )
 ----
 
@@ -65,7 +69,12 @@ Here is an example of listing tables:
 
 [source,python]
 ----
-table.list_tables(search = "chase")
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.list_tables()
 ----
 
 === Get Table
@@ -74,7 +83,12 @@ You can get a table using its name:
 
 [source,python]
 ----
-table.get_table("Purchase")
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.get_table(table = "Purchase")
 ----
 
 === Updating a Table
@@ -88,7 +102,12 @@ You can delete a table using its name:
 
 [source,python]
 ----
-table.delete_table("Purchase")
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.delete_table(table = "Purchase")
 ----
 
 [WARNING]
@@ -105,13 +124,25 @@ functioning incorrectly.
 
 [source,python]
 ----
-table.delete_table("Purchase", force=True)
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.delete_table(table = "Purchase", force = True)
 ----
 
 == Managing tables with the CLI
 
 The CLI manages Kaskada resources declaratively by managing spec files.
 A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== Creating, updating and deleting tables with the CLI
+
+The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
+To create a table, add the table's description to your spec file and run `kaskada-cli sync apply`.
+To update a table, change the table's description in your spec file and run `kaskada-cli sync apply`.
+It is not currently possible to delete a table using the CLI.
 
 === The format of tables in a spec file.
 

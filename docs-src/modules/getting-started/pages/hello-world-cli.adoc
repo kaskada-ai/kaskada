@@ -50,10 +50,10 @@ You can start a local instance of the Kaskada service by running the manager and
 
 [TIP]
 .Allowing services to listen on OSX
-----
+====
 When using OSX, you may need to allow these services to create an API listener the first time you run these commands.
 This is normal, and indicates the services are working as expected - the API allows services to communicate between themselves.
-----
+====
 
 To verify they're installed correctly and executable, try running the following command (which lists any resources you've created):
 
@@ -141,7 +141,7 @@ names.
 
 You've now created your first table! 
 
-== Loading Data
+== Loading data into a table
 
 Now that we've created a table, we're ready to load some data into it.
 
@@ -153,8 +153,10 @@ section of the "Tables"] page.
 
 [source,shell]
 ----
+# Download a file to load and save it to path 'purchase.parquet'
 curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk" -o purchase.parquet
 
+# Load the file into the Purchase table (which was created in the previous step)
 ./kaskada-cli load \
     --table Purchase \
     --file-path file://${PWD}/purchase.parquet
@@ -165,7 +167,7 @@ The file's content is added to the table.
 For more help with tables and loading data, see xref:developing:tables.adoc[Reference -
 Tables]
 
-== Querying Data
+== Querying data
 
 You can write queries in a number of ways with Kaskada. As you are
 iterating it can be helpful to build up your queries as components
@@ -189,12 +191,13 @@ When working with larger data sets, you may want to write the results to a file 
 ====
 
 Let's walk through this command.
-We begin by using the CLI to run a query: `kaskada-cli query run`.
+
+1. We begin by using the CLI to run a query: `kaskada-cli query run`.
 CLI commands are organized into groups like `query`, `load`, and `sync` - each group contains a set of related sub-commands.
-In order to see the results of our query, we used the command flag `--stdout`; the default behavior is to write results to a file and return a JSON object describing the result of the query.
-Finally, we specified how to encode the results with the flag `--response-as csv`.
-CSV is a good format for writing results to STDOUT, but the default is to encode results in Parquet, which is a much more efficient encoding for larger datasets.
-The query is enclosed between `<<EOS` and `EOS` - this is Bash syntax for "heredocs", which allow you to easily write multi-line strings and pass them into the CLI on STDIN.
+2. In order to see the results of our query, we used the command flag `--stdout`; the default behavior is to write results to a file and return a JSON object describing the result of the query.
+3. Finally, we specified how to encode the results with the flag `--response-as csv`.
+CSV is a good format for writing results to STDOUT because it's relatively human-readible. The default is to encode results in Parquet, which is a much more efficient encoding for larger datasets.
+4. The query is enclosed between `<<EOS` and `EOS` - this is Bash syntax for "heredocs", which allow you to easily write multi-line strings and pass them into the CLI on STDIN.
 
 
 It can be helpful to limit your results to a single entity.
