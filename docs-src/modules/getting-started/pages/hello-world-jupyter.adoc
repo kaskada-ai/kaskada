@@ -11,7 +11,7 @@ Once you have both prerequisites installed ensure that you can run them.
 Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
 
 .Verifying Kaskada prerequisites. The output shown here is from an Ubuntu system--the output on your machine may vary.
-[,shell]
+[source,bash]
 ----
 $ python --version
 Python 3.10.6
@@ -41,7 +41,7 @@ The first step in using Kaskada in a notebook is to install the Kaskada Python c
 Open a terminal in your OS and using `pip` install the Kaskada Python client.
 
 .Installing Kaskada using pip
-[,shell]
+[source,bash]
 ----
 pip install kaskada 
 ----
@@ -66,7 +66,7 @@ Now that we have everything installed let's fire up a notebook and get the remai
 Using a terminal start a new Jupyter notebook using the command 
 
 .Start a Jupyter notebook.
-[,shell]
+[source,bash]
 ----
 jupyter notebook
 ----
@@ -74,7 +74,7 @@ jupyter notebook
 The jupyter command should activate your browser and you can open a new notebook. 
 Create a new code cell in your new notebook and enter the following code in the code cell. 
 
-[,python]
+[source,python]
 ----
 from kaskada.api.session import LocalBuilder
 
@@ -101,7 +101,7 @@ We need to enable these customizations first before we can use them.
 So in a new code cell input the following command and run this cell. 
 
 .Enable fenlmagic in this notebook 
-[,python]
+[source,python]
 ----
 %load_ext fenlmagic
 ----
@@ -205,7 +205,7 @@ session = LocalBuilder().build()
 
 # A sample Parquet file provided by Kaskada for testing
 # Available at https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk
-purchases_path = "file:///absolute/path/to/purchases.parquet"
+purchases_path = "/absolute/path/to/purchases.parquet"
 
 # Upload the files's contents to the Purchase table (which was created in the previous step)
 table.load(table_name = "Purchase", file = purchases_path)
