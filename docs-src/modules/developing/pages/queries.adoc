@@ -67,14 +67,15 @@ Pipe syntax allows multiple operations to be chained together. Write your operat
 {
   largest_spend_over_2_purchases: purchase.amount
   | when(purchase.category == "food") 
-  | sum(window=sliding(2, $input)) # Inner aggregation
-  | max()                          # Outer aggregation
+  | sum(window=sliding(2, purchase.category == "food")) # Inner aggregation
+  | max()                                               # Outer aggregation
 }
 ----
 
+
 === Row generators
 
-Pivot from events to time-series. Unlike grouped aggregates, generators produce rows even when there's no input, allowing you to react when something doesn't happen.
+Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.adoc#tick-functions[tick generators] such as `daily()` produce rows even when there's no input, allowing you to react when something _doesn't_ happen.
 
 [source,Fenl]
 ----
@@ -91,7 +92,7 @@ Observe the value of aggregations at arbitrary points in time. Timelines are eit
 
 [source,Fenl]
 ----
-let product_average = review
+let product_average = review.stars
 | with_key(review.product_id)
 | mean()
 
@@ -100,9 +101,13 @@ in {
 }
 ----
 
-Shift values forward (but not backward) in time, allowing you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
+In this example the `lookup` function is used to observe a value computed for a different entity.
+The variable `product_average` computes the average review using the product's ID as entity.
+The lookup starts with each `purchase`, then looks up the current value of the product's average review, for the procduct ID specified in the purchase.
 
 === Native time travel
+
+Shifting values forward (but not backward) in time, allows you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
 
 [source,Fenl]
 ----
