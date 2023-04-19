@@ -117,7 +117,7 @@ class Client(object):
 
 
 def validate_client(client: Client):
-    """Valides the client by checking the service stubs
+    """Validates the client by checking the service stubs
 
     Args:
         client (Client): The client to validate
@@ -165,5 +165,6 @@ def get_client(client: Optional[Client] = None) -> Client:
     elif client is None:
         client = KASKADA_DEFAULT_CLIENT
 
+    assert client is not None  # make mypy happy
     validate_client(client)
     return client
