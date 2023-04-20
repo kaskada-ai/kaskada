@@ -14,10 +14,14 @@ pyproject_file = open("../../pyproject.toml", "rb")
 config = tomli.load(pyproject_file)["tool"]["poetry"]
 
 project = "Kaskada Python Client"
-author = ','.join(config['authors'])
-version = config['version']
+author = ",".join(config["authors"])
+version = config["version"]
 release = version
-copyright = f"2022—{current_year}, {author}" if current_year > 2023 else f"{current_year}, {author}"
+copyright = (
+    f"2022—{current_year}, {author}"
+    if current_year > 2023
+    else f"{current_year}, {author}"
+)
 
 # Path setup
 import sys
@@ -38,7 +42,12 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx_rtd_theme",
+    "autoapi.extension",
 ]
+
+
+autoapi_type = "python"
+autoapi_dirs = ["."]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
@@ -64,31 +73,3 @@ exclude_patterns = []
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
-
-
-# automate building API .rst files, necessary for ReadTheDocs, as inspired by:
-# https://github.com/readthedocs/readthedocs.org/issues/1139#issuecomment-398083449
-def run_apidoc(_):
-    ignore_paths = ["src/clients/python/kaskada/kaskada"]
-
-    argv = [
-        "-f",
-        "-e",
-        "-M",
-        "-o", "docs/source",
-        "src"
-    ] + ignore_paths
-
-    try:
-        # Sphinx 1.7+
-        from sphinx.ext import apidoc
-        apidoc.main(argv)
-    except ImportError:
-        # Sphinx 1.6 (and earlier)
-        from sphinx import apidoc
-        argv.insert(0, apidoc.__file__)
-        apidoc.main(argv)
-
-
-def setup(app):
-    app.connect('builder-inited', run_apidoc)
