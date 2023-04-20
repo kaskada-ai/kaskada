@@ -125,9 +125,7 @@ cmd = "sphinx-apidoc -f -E  -M -o docs/source src/ src/clients/python/kaskada/ka
 
 [tool.poe.tasks.docs]
 help = "Generated and build HTML docs"
-# see https://github.com/readthedocs/readthedocs.org/issues/1139#issuecomment-398083449
-sequence = ["docs-generate", "docs-build"] 
-# sequence = ["docs-build"]
+sequence = ["docs-build"]
 
 [tool.isort]
 profile = "black"
