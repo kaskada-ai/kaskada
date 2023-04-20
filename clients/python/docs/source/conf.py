@@ -64,3 +64,31 @@ exclude_patterns = []
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+
+
+# automate building API .rst files, necessary for ReadTheDocs, as inspired by:
+# https://github.com/readthedocs/readthedocs.org/issues/1139#issuecomment-398083449
+def run_apidoc(_):
+    ignore_paths = ["src/clients/python/kaskada/kaskada"]
+
+    argv = [
+        "-f",
+        "-e",
+        "-M",
+        "-o", "docs/source",
+        "src"
+    ] + ignore_paths
+
+    try:
+        # Sphinx 1.7+
+        from sphinx.ext import apidoc
+        apidoc.main(argv)
+    except ImportError:
+        # Sphinx 1.6 (and earlier)
+        from sphinx import apidoc
+        argv.insert(0, apidoc.__file__)
+        apidoc.main(argv)
+
+
+def setup(app):
+    app.connect('builder-inited', run_apidoc)
