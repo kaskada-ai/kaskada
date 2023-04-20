@@ -87,7 +87,11 @@ async fn reader_from_pulsar<'a>(
     let consumer =
         crate::execute::pulsar_reader::pulsar_consumer(pulsar_subscription, pm.user_schema.clone())
             .await?;
-    let stream = read_pulsar_stream(pm.sparrow_metadata.raw_schema.clone(), consumer);
+    let stream = read_pulsar_stream(
+        pm.sparrow_metadata.raw_schema.clone(),
+        consumer,
+        pulsar_subscription.last_publish_time,
+    );
     PrepareIter::try_new(stream, config, pm.sparrow_metadata, prepare_hash, slice)
         .into_report()
         .change_context(Error::CreatePulsarReader)
@@ -321,14 +325,9 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
             hasher.update(&config.namespace);
             hasher.update(&config.topic_name);
             hasher.update(&ps.subscription_id);
-            if let Some(pt) = &ps.last_publish_time {
-                let mut bytes = [0u8; 8];
-                let mut bytes2 = [0u8; 4];
-                bytes.copy_from_slice(&pt.seconds.to_be_bytes());
-                bytes2.copy_from_slice(&pt.nanos.to_be_bytes());
-                hasher.update(bytes);
-                hasher.update(bytes2);
-            }
+            let mut bytes = [0u8; 8];
+            bytes.copy_from_slice(&ps.last_publish_time.to_be_bytes());
+            hasher.update(bytes);
             let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
         }

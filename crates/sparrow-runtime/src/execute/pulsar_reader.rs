@@ -27,9 +27,10 @@ pub struct AvroWrapper {
 pub fn read_pulsar_stream(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
+    last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema, consumer);
+        let mut reader = PulsarReader::new(schema, consumer, last_publish_time);
         while let Some(next) = reader.next_result_async().await? {
             yield next
         }
@@ -39,6 +40,7 @@ pub fn read_pulsar_stream(
 struct PulsarReader {
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
+    last_publish_time: i64,
 }
 
 #[derive(Debug)]
@@ -64,6 +66,8 @@ pub enum DeserializeError {
     Avro,
     #[display(fmt = "unsupported Avro value")]
     UnsupportedType,
+    #[display(fmt = "internal error")]
+    InternalError,
 }
 
 impl error_stack::Context for DeserializeError {}
@@ -111,8 +115,16 @@ impl DeserializeMessage for AvroWrapper {
 }
 
 impl PulsarReader {
-    pub fn new(schema: SchemaRef, consumer: Consumer<AvroWrapper, TokioExecutor>) -> Self {
-        PulsarReader { schema, consumer }
+    pub fn new(
+        schema: SchemaRef,
+        consumer: Consumer<AvroWrapper, TokioExecutor>,
+        last_publish_time: i64,
+    ) -> Self {
+        PulsarReader {
+            schema,
+            consumer,
+            last_publish_time,
+        }
     }
 
     // using ArrowError is not a great fit but that is what PrepareIter requires
@@ -176,6 +188,30 @@ impl PulsarReader {
                     // try_next will return None if the stream is closed, which shouldn't
                     // happen in the pulsar scenario.  maybe if the broker shuts down?
                     tracing::debug!("read None from consumer -- not sure how this happens");
+                    break;
+                }
+            }
+        }
+
+        // ensure that _publish_time never goes backwards
+        for avro_value in &mut avro_values {
+            for (field_name, field_value) in avro_value {
+                if field_name == "_publish_time" {
+                    match field_value {
+                        Value::TimestampMillis(publish_time) => {
+                            if *publish_time < self.last_publish_time {
+                                *publish_time = self.last_publish_time;
+                            } else {
+                                self.last_publish_time = *publish_time;
+                            }
+                        }
+                        _ => {
+                            let e = error_stack::report!(DeserializeError::InternalError);
+                            return Err(ArrowError::from_external_error(Box::new(
+                                DeserializeErrorWrapper::from(e),
+                            )));
+                        }
+                    }
                     break;
                 }
             }
