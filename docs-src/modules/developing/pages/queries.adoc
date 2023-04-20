@@ -154,7 +154,7 @@ A given query can be computed in different ways.
 You can either return a table describing each change in the timeline, or a table describing the "final" value of the timeline.
 
 Every query produces a timeline which may be returned in two different ways -- the final results (at a specific time) or all historic results.
-The "result behavior" configuresj which results are produced.
+The "result behavior" configures which results are produced.
 Queries for historic results return the full history of how the values changed over time for each entity.
 Queries for final results return the latest result for each entity at the specified time (default is after all events have been processed).
 
