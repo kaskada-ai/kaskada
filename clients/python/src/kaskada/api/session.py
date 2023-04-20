@@ -109,6 +109,8 @@ class LocalBuilder(Builder):
     KASKADA_MANAGER_BIN_NAME_DEFAULT = "kaskada-manager"
     KASKADA_ENGINE_BIN_NAME_DEFAULT = "kaskada-engine"
 
+    KASKADA_DISABLE_DOWNLOAD_ENV = "KASKADA_DISABLE_DOWNLOAD"
+
     def __init__(
         self,
         endpoint: str = KASKADA_ENDPOINT_DEFAULT,
@@ -125,7 +127,9 @@ class LocalBuilder(Builder):
             LocalBuilder.KASKADA_LOG_PATH_ENV, LocalBuilder.KASKADA_LOG_PATH_DEFAULT
         )
         self.endpoint(endpoint, is_secure)
-        self._download = True
+        self._download = (
+            os.getenv(LocalBuilder.KASKADA_DISABLE_DOWNLOAD_ENV, "false") != "true"
+        )
         self._manager_configs: Dict[str, Any] = {}
 
     def path(self, path: str):
