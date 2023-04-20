@@ -14,10 +14,14 @@ pyproject_file = open("../../pyproject.toml", "rb")
 config = tomli.load(pyproject_file)["tool"]["poetry"]
 
 project = "Kaskada Python Client"
-author = ','.join(config['authors'])
-version = config['version']
+author = ",".join(config["authors"])
+version = config["version"]
 release = version
-copyright = f"2022—{current_year}, {author}" if current_year > 2023 else f"{current_year}, {author}"
+copyright = (
+    f"2022—{current_year}, {author}"
+    if current_year > 2023
+    else f"{current_year}, {author}"
+)
 
 # Path setup
 import sys
@@ -38,7 +42,12 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx_rtd_theme",
+    "autoapi.extension",
 ]
+
+
+autoapi_type = "python"
+autoapi_dirs = ["."]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
