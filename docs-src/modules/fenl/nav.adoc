@@ -1,4 +1,4 @@
-* Fenl
+* Query Syntax (Fenl)
 ** xref:fenl-quick-start.adoc[Fenl Quick Start] 
 ** xref:language-guide.adoc[Fenl Language Guide] 
 *** xref:data-model.adoc[Data model]

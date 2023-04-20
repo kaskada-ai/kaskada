@@ -1,4 +1,4 @@
-= Fenl Catalog
+= Fenl Function Catalog
 
 == Functions
 
