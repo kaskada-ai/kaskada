@@ -45,9 +45,10 @@ extensions = [
     "autoapi.extension",
 ]
 
-
+autodoc_typehints = "description"
 autoapi_type = "python"
-autoapi_dirs = ["."]
+autoapi_dirs = ["../../src/"]
+autoapi_ignore = ["*_pb2.py", "*_pb2_grpc.py", "*_pb2.pyi", "*_pb2_grpc.pyi"]
 
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
