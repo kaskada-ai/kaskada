@@ -1,4 +1,4 @@
-package cmd
+package sync
 
 import (
 	"fmt"
@@ -39,30 +39,30 @@ var exportCmd = &cobra.Command{
 		viewNames := viper.GetStringSlice("view")
 
 		if !getAll && len(materializationNames)+len(tableNames)+len(viewNames) == 0 {
-			logAndQuitIfErrorExists(fmt.Errorf("either `all`, `materialization`, `table`, or `view` flag needs to be set at least once"))
+			utils.LogAndQuitIfErrorExists(fmt.Errorf("either `all`, `materialization`, `table`, or `view` flag needs to be set at least once"))
 		}
 
 		if getAll {
 			materializations, err = exportMaterializations(apiClient)
-			logAndQuitIfErrorExists(err)
+			utils.LogAndQuitIfErrorExists(err)
 			tables, err = exportTables(apiClient)
-			logAndQuitIfErrorExists(err)
+			utils.LogAndQuitIfErrorExists(err)
 			views, err = exportViews(apiClient)
-			logAndQuitIfErrorExists(err)
+			utils.LogAndQuitIfErrorExists(err)
 		} else {
 			for _, materializationName := range materializationNames {
 				materialization, err := exportMaterialization(apiClient, materializationName)
-				logAndQuitIfErrorExists(err)
+				utils.LogAndQuitIfErrorExists(err)
 				materializations = append(materializations, materialization)
 			}
 			for _, tableName := range tableNames {
 				table, err := exportTable(apiClient, tableName)
-				logAndQuitIfErrorExists(err)
+				utils.LogAndQuitIfErrorExists(err)
 				tables = append(tables, table)
 			}
 			for _, viewName := range viewNames {
 				view, err := exportView(apiClient, viewName)
-				logAndQuitIfErrorExists(err)
+				utils.LogAndQuitIfErrorExists(err)
 				views = append(views, view)
 			}
 		}
@@ -74,13 +74,13 @@ var exportCmd = &cobra.Command{
 		}
 
 		yamlData, err := utils.ProtoToYaml(spec)
-		logAndQuitIfErrorExists(err)
+		utils.LogAndQuitIfErrorExists(err)
 
 		filePath := viper.GetString("file-path")
 		if filePath == "" {
 			fmt.Printf("%s\n", yamlData)
 		} else {
-			logAndQuitIfErrorExists(os.WriteFile(filePath, yamlData, 0666))
+			utils.LogAndQuitIfErrorExists(os.WriteFile(filePath, yamlData, 0666))
 		}
 		log.Info().Msg("Success!")
 	},
@@ -165,8 +165,6 @@ func exportView(apiClient api.ApiClient, viewName string) (*apiv1alpha.View, err
 }
 
 func init() {
-	syncCmd.AddCommand(exportCmd)
-
 	exportCmd.Flags().Bool("all", false, "set this flag to export all tables, views, and materializations in the system")
 	exportCmd.Flags().StringP("file-path", "f", "", "specify a file path to export the resources to, instead of exporting to std-out")
 	exportCmd.Flags().StringArrayP("materialization", "m", []string{}, "the name of the `materialization` resource to export.  This flag can be set multiple times to specify multiple materialization.")

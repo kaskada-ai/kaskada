@@ -28,7 +28,7 @@ type apiClient struct {
 type ApiClient interface {
 	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
 	Create(item protoreflect.ProtoMessage) error
-	Delete(item protoreflect.ProtoMessage) error
+	Delete(item protoreflect.ProtoMessage, force bool) error
 	Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
 	List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error)
 	Query(*apiv1alpha.CreateQueryRequest) (*apiv1alpha.CreateQueryResponse, error)
@@ -67,15 +67,15 @@ func (c apiClient) Create(item protoreflect.ProtoMessage) error {
 	}
 }
 
-func (c apiClient) Delete(item protoreflect.ProtoMessage) error {
+func (c apiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 	kind := reflect.TypeOf(item).String()
 	switch t := item.(type) {
 	case *apiv1alpha.Materialization:
-		return c.materialization.Delete(t.MaterializationName)
+		return c.materialization.Delete(t.MaterializationName, force)
 	case *apiv1alpha.Table:
-		return c.table.Delete(t.TableName)
+		return c.table.Delete(t.TableName, force)
 	case *apiv1alpha.View:
-		return c.view.Delete(t.ViewName)
+		return c.view.Delete(t.ViewName, force)
 	default:
 		log.Fatal().Str("kind", kind).Msg("unknown item kind for delete")
 		return nil
@@ -184,16 +184,16 @@ func clearOutputOnlyList[M protoreflect.ProtoMessage](messages []M) []M {
 	return output
 }
 
-func getClientID() string {
+
+func getContextAndConnection() (context.Context, *grpc.ClientConn) {
+	ctx := context.Background()
+	
 	clientId := viper.GetString("kaskada-client-id")
 	if clientId == "" {
 		log.Debug().Msg("no client-id found, initiating request without passing client-id header.")
+	} else {
+		ctx = metadata.AppendToOutgoingContext(context.Background(), "client-id", clientId)
 	}
-	return clientId
-}
-
-func getContextAndConnection() (context.Context, *grpc.ClientConn) {
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "client-id", getClientID())
 
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),

@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/kaskada-ai/kaskada/wren/ent"
 )
 
@@ -35,9 +36,19 @@ func (u *apiClient) GetOwner() *ent.Owner {
 
 // AddAPIClientToContext returns a context with the client attached
 func AddAPIClientToContext(ctx context.Context, client APIClient) context.Context {
+
+	// TODO: this doesn't work as expected.  Maybe the fields are getting added too late?
+	// add ids for request & payload logs
+	ctx = logging.InjectFields(ctx,
+		logging.Fields{
+			"owner_id", client.GetOwner().ID.String(),
+			"client_id", client.GetOwner().ClientID,
+		})
+
 	// Add the client-id to the context logger
 	contextLogger := log.Ctx(ctx).With().
 		Str("owner_id", client.GetOwner().ID.String()).
+		Str("client_id", client.GetOwner().ClientID).
 		Logger()
 	ctx = contextLogger.WithContext(ctx)
 	// Finally add the full client object

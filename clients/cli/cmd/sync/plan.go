@@ -1,4 +1,4 @@
-package cmd
+package sync
 
 import (
 	"fmt"
@@ -21,19 +21,17 @@ var planCmd = &cobra.Command{
 		files := viper.GetStringSlice("plan_file")
 
 		if len(files) == 0 {
-			logAndQuitIfErrorExists(fmt.Errorf("at least one `file` flag must be set"))
+			utils.LogAndQuitIfErrorExists(fmt.Errorf("at least one `file` flag must be set"))
 		}
 
 		apiClient := api.NewApiClient()
 		_, err := utils.Plan(apiClient, files)
-		logAndQuitIfErrorExists(err)
+		utils.LogAndQuitIfErrorExists(err)
 		log.Info().Msg("Success!")
 	},
 }
 
 func init() {
-	syncCmd.AddCommand(planCmd)
-
 	planCmd.Flags().StringArrayP("file", "f", []string{}, "specify one or more file-paths of yaml spec files")
 	viper.BindPFlag("plan_file", planCmd.Flags().Lookup("file"))
 }

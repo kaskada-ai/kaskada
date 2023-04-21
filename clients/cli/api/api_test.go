@@ -210,7 +210,7 @@ func Test_apiClient_Delete(t *testing.T) {
 				table:           tt.fields.table,
 				view:            tt.fields.view,
 			}
-			if err := c.Delete(tt.args.item); (err != nil) != tt.wantErr {
+			if err := c.Delete(tt.args.item, true); (err != nil) != tt.wantErr {
 				t.Errorf("apiClient.Delete() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -380,7 +380,7 @@ func (*mockMaterializationClient) Create(item *apiv1alpha.Materialization) error
 }
 
 // Delete implements MaterializationClient
-func (*mockMaterializationClient) Delete(name string) error {
+func (*mockMaterializationClient) Delete(name string, force bool) error {
 	return nil
 }
 
@@ -410,7 +410,7 @@ func (*mockTableClient) Create(item *apiv1alpha.Table) error {
 }
 
 // Delete implements TableClient
-func (*mockTableClient) Delete(name string) error {
+func (*mockTableClient) Delete(name string, force bool) error {
 	return nil
 }
 
@@ -436,7 +436,7 @@ func (*mockViewClient) Create(item *apiv1alpha.View) error {
 }
 
 // Delete implements ViewClient
-func (*mockViewClient) Delete(name string) error {
+func (*mockViewClient) Delete(name string, force bool) error {
 	return nil
 }
 

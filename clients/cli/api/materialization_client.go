@@ -19,7 +19,7 @@ type MaterializationClient interface {
 	List() ([]*apiv1alpha.Materialization, error)
 	Get(name string) (*apiv1alpha.Materialization, error)
 	Create(item *apiv1alpha.Materialization) error
-	Delete(name string) error
+	Delete(name string, force bool) error
 }
 
 func NewMaterializationServiceClient(ctx context.Context, conn *grpc.ClientConn) MaterializationClient {
@@ -63,7 +63,7 @@ func (c materializationClient) Create(item *apiv1alpha.Materialization) error {
 	return nil
 }
 
-func (c materializationClient) Delete(name string) error {
+func (c materializationClient) Delete(name string, force bool) error {
 	_, err := c.client.DeleteMaterialization(c.ctx, &apiv1alpha.DeleteMaterializationRequest{MaterializationName: name})
 	if err != nil {
 		log.Debug().Err(err).Str("name", name).Msg("issue deleting materialization")

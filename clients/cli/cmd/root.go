@@ -4,6 +4,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kaskada-ai/kaskada/clients/cli/cmd/materialization"
+	"github.com/kaskada-ai/kaskada/clients/cli/cmd/query"
+	"github.com/kaskada-ai/kaskada/clients/cli/cmd/sync"
+	"github.com/kaskada-ai/kaskada/clients/cli/cmd/table"
+	"github.com/kaskada-ai/kaskada/clients/cli/cmd/view"
+	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -31,6 +37,13 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	rootCmd.AddCommand(table.TableCmd)
+	rootCmd.AddCommand(view.ViewCmd)
+	rootCmd.AddCommand(materialization.MaterializationCmd)
+	rootCmd.AddCommand(query.QueryCmd)
+	rootCmd.AddCommand(sync.SyncCmd)
+	rootCmd.AddCommand(LoadCmd)
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
@@ -38,7 +51,7 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initLogging, initConfig)
+	cobra.OnInitialize(utils.InitLogging, initConfig)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -61,10 +74,6 @@ func init() {
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
-}
-
-func initLogging() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -94,11 +103,5 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-}
-
-func logAndQuitIfErrorExists(err error) {
-	if err != nil {
-		log.Fatal().Err(err).Send()
 	}
 }

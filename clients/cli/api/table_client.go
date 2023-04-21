@@ -19,7 +19,7 @@ type TableClient interface {
 	List() ([]*apiv1alpha.Table, error)
 	Get(name string) (*apiv1alpha.Table, error)
 	Create(item *apiv1alpha.Table) error
-	Delete(name string) error
+	Delete(name string, force bool) error
 	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
 }
 
@@ -58,8 +58,8 @@ func (c tableClient) Create(item *apiv1alpha.Table) error {
 	return nil
 }
 
-func (c tableClient) Delete(name string) error {
-	_, err := c.client.DeleteTable(c.ctx, &apiv1alpha.DeleteTableRequest{TableName: name, Force: true})
+func (c tableClient) Delete(name string, force bool) error {
+	_, err := c.client.DeleteTable(c.ctx, &apiv1alpha.DeleteTableRequest{TableName: name, Force: force})
 	if err != nil {
 		log.Debug().Err(err).Str("name", name).Msg("issue deleting table")
 		return err
