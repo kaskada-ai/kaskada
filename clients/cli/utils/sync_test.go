@@ -80,7 +80,7 @@ func (*errorGetApiClient) Create(item protoreflect.ProtoMessage) error {
 }
 
 // Delete implements api.ApiClient
-func (*errorGetApiClient) Delete(item protoreflect.ProtoMessage) error {
+func (*errorGetApiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 	panic("unimplemented")
 }
 
@@ -112,7 +112,7 @@ func (*notFoundGetApiClient) Create(item protoreflect.ProtoMessage) error {
 }
 
 // Delete implements api.ApiClient
-func (*notFoundGetApiClient) Delete(item protoreflect.ProtoMessage) error {
+func (*notFoundGetApiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 	panic("unimplemented")
 }
 
@@ -143,7 +143,7 @@ func (*getApiClient) Create(item protoreflect.ProtoMessage) error {
 }
 
 // Delete implements api.ApiClient
-func (*getApiClient) Delete(item protoreflect.ProtoMessage) error {
+func (*getApiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 	panic("unimplemented")
 }
 

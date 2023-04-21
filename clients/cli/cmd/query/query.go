@@ -1,13 +1,13 @@
-package cmd
+package query
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// syncCmd represents the sync command
-var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "A set of commands for interacting with kaskada resources as code",
+// QueryCmd represents the query command
+var QueryCmd = &cobra.Command{
+	Use:   "query",
+	Short: "A set of commands for running queries on kaskada",
 	/*
 		Long: `A longer description that spans multiple lines and likely contains examples
 		and usage of using your command. For example:
@@ -19,5 +19,5 @@ var syncCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(syncCmd)
+	QueryCmd.AddCommand(runCmd)
 }

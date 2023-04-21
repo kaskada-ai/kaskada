@@ -3,7 +3,7 @@
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
 
-== Managing tables with Python
+== Managing tables
 
 === Creating a Table
 
@@ -32,6 +32,7 @@ xref:reference:expected-file-format[Expected File Format]
 Here is an example of creating a table:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -68,6 +69,7 @@ optional search string can filter the results.
 Here is an example of listing tables:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -82,6 +84,7 @@ table.list_tables()
 You can get a table using its name:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -101,6 +104,7 @@ and then re-creating it with a new expression.
 You can delete a table using its name:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -108,6 +112,12 @@ from kaskada.api.session import LocalBuilder
 session = LocalBuilder().build()
 
 table.delete_table(table = "Purchase")
+----
+
+[source,bash]
+.with the CLI:
+----
+./kaskada-cli table delete -t Purchase
 ----
 
 [WARNING]
@@ -132,7 +142,7 @@ session = LocalBuilder().build()
 table.delete_table(table = "Purchase", force = True)
 ----
 
-== Managing tables with the CLI
+== Managing tables with the CLI and Spec files
 
 The CLI manages Kaskada resources declaratively by managing spec files.
 A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
@@ -142,7 +152,7 @@ A spec file is a YAML file describing a set of Kaskada resources, for examples t
 The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
 To create a table, add the table's description to your spec file and run `kaskada-cli sync apply`.
 To update a table, change the table's description in your spec file and run `kaskada-cli sync apply`.
-It is not currently possible to delete a table using the CLI.
+To delete a table, see xref:reference:cli.adoc#deleting-a-table[Deleting a table].
 
 === The format of tables in a spec file.
 
