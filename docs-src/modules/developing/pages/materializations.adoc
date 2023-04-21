@@ -68,7 +68,7 @@ materializations:
 ----
 ////
 
-== Managing Materializations with Python
+== Managing Materializations
 
 === Creating a Materialization
 
@@ -155,6 +155,11 @@ from kaskada.api.session import LocalBuilder
 session = LocalBuilder().build()
 
 materialization.delete_materialization("PurchaseStats")
+----
+
+[source,bash]
+----
+./kaskada-cli materialization delete -m PurchaseStats
 ----
 
 Deleting a materialization does not delete any data persisted in the

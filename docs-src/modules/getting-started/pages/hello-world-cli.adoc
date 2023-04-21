@@ -157,7 +157,7 @@ section of the "Tables"] page.
 curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk" -o purchase.parquet
 
 # Load the file into the Purchase table (which was created in the previous step)
-./kaskada-cli load \
+./kaskada-cli table load \
     --table Purchase \
     --file-path file://${PWD}/purchase.parquet
 ----
@@ -262,3 +262,18 @@ EOS
 
 For more help writing queries, see xref:developing:queries.adoc[Reference -
 Writing Queries]
+
+== Cleaning up
+
+When you're done with this tutorial, you can delete the table you created in order to free up resources.
+
+[source,bash]
+----
+# Delete the Purchase table (which was created in the previous step)
+./kaskada-cli table delete --table Purchase
+----
+
+The table is deleted and any files loaded into it are removed from the system.
+
+For more help with tables, see xref:developing:tables.adoc[Reference -
+Tables]
