@@ -10,8 +10,7 @@ Welcome to Kaskada Python Client's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   kaskada<kaskada>
-   fenlmagic<fenlmagic>
+   autoapi/index.rst
  
 Indices and tables
 ==================
