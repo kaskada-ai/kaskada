@@ -78,6 +78,7 @@ purchase statistics for each user. This definition depends on business
 logic and might require some iteration to get just right.
 
 [source,python]
+.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -114,6 +115,7 @@ for your user. An optional search string can filter the response set.
 Here is an example of listing tables:
 
 [source,python]
+.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -128,6 +130,7 @@ materialization.list_materializations("Purchase")
 You can get a materialization using its name:
 
 [source,python]
+.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -148,6 +151,7 @@ new expression.
 You can delete a materialization using its name:
 
 [source,python]
+.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -158,6 +162,7 @@ materialization.delete_materialization("PurchaseStats")
 ----
 
 [source,bash]
+.with the CLI:
 ----
 ./kaskada-cli materialization delete -m PurchaseStats
 ----

@@ -32,6 +32,7 @@ xref:reference:expected-file-format[Expected File Format]
 Here is an example of creating a table:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -68,6 +69,7 @@ optional search string can filter the results.
 Here is an example of listing tables:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -82,6 +84,7 @@ table.list_tables()
 You can get a table using its name:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -101,6 +104,7 @@ and then re-creating it with a new expression.
 You can delete a table using its name:
 
 [source,python]
+.with Python:
 ----
 from kaskada import table
 from kaskada.api.session import LocalBuilder
@@ -111,6 +115,7 @@ table.delete_table(table = "Purchase")
 ----
 
 [source,bash]
+.with the CLI:
 ----
 ./kaskada-cli table delete -t Purchase
 ----
