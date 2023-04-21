@@ -7,6 +7,9 @@ on:
   # Allow manual triggering of this workflow
   workflow_dispatch:
 
+  pull_request:
+    branches: [main]
+
 # In cases of concurrent workflows running (consecutive pushes to PR)
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
@@ -38,11 +41,22 @@ jobs:
           paths: '["docs-src/**"]'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
+
   run_antora_build:
+            name: Run Publish Workflow at kaskada-ai/docs-site
+            needs: [docs_skip]
+            runs-on: ubuntu-latest
+            if: needs.docs_skip.outputs.should_skip != 'true' && github.ref != 'refs/heads/main'
+            steps:
+              - run: gh workflow run pull-request.yml -R kaskada-ai/docs-site
+                env:
+                  GH_TOKEN: ${{ secrets.DOCS_TOKEN }}
+  
+  run_antora_publish:
     name: Run Publish Workflow at kaskada-ai/docs-site
     needs: [docs_skip]
     runs-on: ubuntu-latest
-    if: needs.docs_skip.outputs.should_skip != 'true'
+    if: needs.docs_skip.outputs.should_skip != 'true' && github.ref == 'refs/heads/main'
     steps:
       - run: gh workflow run publish.yml -R kaskada-ai/docs-site
         env:
