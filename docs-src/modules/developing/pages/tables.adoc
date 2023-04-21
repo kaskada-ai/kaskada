@@ -99,7 +99,7 @@ table.get_table(table = "Purchase")
 Tables are currently immutable. Updating a table requires deleting it
 and then re-creating it with a new expression.
 
-=== Deleting a table
+=== Deleting a Table
 
 You can delete a table using its name:
 
@@ -152,7 +152,7 @@ A spec file is a YAML file describing a set of Kaskada resources, for examples t
 The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
 To create a table, add the table's description to your spec file and run `kaskada-cli sync apply`.
 To update a table, change the table's description in your spec file and run `kaskada-cli sync apply`.
-To delete a table, see xref:getting-started:hello-world-cli.adoc#cleaning-up[Cleaning Up].
+To delete a table, see <<Deleting a Table, deleting a table>>
 
 === The format of tables in a spec file.
 
