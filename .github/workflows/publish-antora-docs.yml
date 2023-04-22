@@ -43,12 +43,12 @@ jobs:
 
 
   run_antora_build:
-            name: Run Publish Workflow at kaskada-ai/docs-site
+            name: Run Build Workflow at kaskada-ai/docs-site
             needs: [docs_skip]
             runs-on: ubuntu-latest
             if: needs.docs_skip.outputs.should_skip != 'true' && github.ref != 'refs/heads/main'
             steps:
-              - run: gh workflow run pull-request.yml -R kaskada-ai/docs-site
+              - run: gh workflow run pull_request.yml -R kaskada-ai/docs-site
                 env:
                   GH_TOKEN: ${{ secrets.DOCS_TOKEN }}
   
