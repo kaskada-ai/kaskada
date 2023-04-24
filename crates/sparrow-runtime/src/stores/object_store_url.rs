@@ -95,7 +95,7 @@ impl ObjectStoreUrl {
     pub async fn download(
         &self,
         object_store_registry: &ObjectStoreRegistry,
-        file_path: PathBuf,
+        file_path: &PathBuf,
     ) -> error_stack::Result<(), Error> {
         let path = self.path()?;
         let object_store = object_store_registry.object_store(self.key()?)?;
@@ -125,6 +125,12 @@ impl FromStr for ObjectStoreUrl {
         Url::from_str(s)
             .into_report()
             .map(|it| ObjectStoreUrl { url: it })
+    }
+}
+
+impl std::fmt::Display for ObjectStoreUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.url.fmt(f)
     }
 }
 
