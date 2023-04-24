@@ -1,0 +1,37 @@
+
+= Engine and manager logs 
+
+The Kaskada engine and manager generate logs that can be used to troubleshoot issues with the Kaskada system. 
+These logs contain valuable information about the state of the system and can be used to diagnose issues. 
+Including relevant segments from the logs when you open an issue can greatly help others troubleshoot your problem.
+
+
+Log files are located in the user's home folder `~/.cache/kaskada/logs`. 
+Each time the engine and/or manager is started, a new folder is created with a UUID as the folder name. 
+Inside this folder you should be able to find 2 logs per application the standard output log and the standard error log. 
+
+Here is an example with 2 folders from two separate runs of the engine and manager.
+
+
+....
+/home/therapon/.cache/kaskada/logs
+├── 1ed25c9e-8914-4527-92a9-9ee716a59847
+│   ├── engine_stderr.txt
+│   ├── engine_stdout.txt
+│   ├── manager_stderr.txt
+│   └── manager_stdout.txt
+└── ff16bd01-5d19-4da2-b645-a959868ac681
+    ├── engine_stderr.txt
+    ├── engine_stdout.txt
+    ├── manager_stderr.txt
+    └── manager_stdout.txt
+....
+
+The standard output log contains the output of the application (info, warn etc.) and the standard error log contains any errors that occurred during the run.
+
+[TIP]
+====
+On Unix systems the `tail` command is very convenient for viewing the last few lines of multiple files at a time. 
+For example, to view new lines of the standard output logs for the engine and manager you can run the following command from the logs folder:
+`tail -f engine_stdout.txt manager_stdout.txt`
+====
