@@ -125,10 +125,10 @@ Every table must include a column identifying the xref:fenl:temporal-aggregation
 When creating a table, you must tell Kaskada which columns contain the time and entity of each row:
 
 * The time column is specified using the `time_column_name` parameter.
-  This parameter should identify a column name in the table's data which contains time values.
+  This parameter must identify a column name in the table's data which contains time values.
   The time should refer to when the event occurred.
 * The xref:fenl:entities.adoc[entity] key is specified using the `entity_key_column_name` parameter.
-  This parameter should identify a column name in the table's data which contains the entity key value.
+  This parameter must identify a column name in the table's data which contains the entity key value.
   The entity key should identify a _thing_ in the world that each event is associated with.
   Don't worry too much about picking the "right" value - it's easy to change the entity using the `xref:fenl:catalog.adoc#with-key[with_key()]` function.
 
