@@ -80,21 +80,22 @@ A spec file is a YAML file describing a set of Kaskada resources, for examples t
 We'll begin by creating a table.
 The first step is to create a spec file containing the table's definition.
 
-When creating a table, you must provide some information about how each
-row should be interpreted. You must describe:
+Every table is associated with a schema which defines the structure of each event in the table.
+Schemas are inferred from the data you load into a table, however, some columns are required by Kaskada's data model.
+Every table must include a column identifying the xref:fenl:temporal-aggregation.adoc[time] and xref:fenl:entities.adoc[entity] associated with each row. 
 
-* A field containing the time associated with each event
-(`time_column_name`). The time should refer to when the event occurred.
-* An initial xref:fenl:entities.adoc[entity] key associated with each row
-(`entity_key_column_name`). The entity should identify a _thing_ in the
-world that each event is associated with. Don't worry too much about
-picking the "right" value here - it's easy to change the entity key in
-Fenl.
-* An (optional) subsort column associated with each event (`subsort_column_name`).
-This value is used to order rows associated with the same time value.
+When creating a table, you must tell Kaskada which columns contain the time and entity of each row:
 
-For more information about these fields, see:
-xref:ROOT:loading-data.adoc#file-format[Expected File Format]
+* The xref:fenl:temporal-aggregation.adoc[time] column is specified using the `time_column_name` parameter.
+  This parameter should identify a column name in the table's data which contains time values.
+  The time should refer to when the event occurred.
+* The xref:fenl:entities.adoc[entity] key is specified using the `entity_key_column_name` parameter.
+  This parameter should identify a column name in the table's data which contains the entity key value.
+  The entity key should identify a _thing_ in the world that each event is associated with.
+  Don't worry too much about picking the "right" value - it's easy to change the entity using the xref:fenl:catalog.adoc#with-key[`with_key()`] function.
+
+For more information about configuring tables, see xref:developing:tables.adoc#creating-a-table[].
+For more information about the expected structure of input files, see xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 
 [source,yaml]
 .spec.yaml

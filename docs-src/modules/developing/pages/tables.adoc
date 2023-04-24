@@ -7,27 +7,30 @@ each row is a value of the same type.
 
 === Creating a Table
 
-When creating a table, you must provide information about how each row
-should be interpreted. You must describe:
+Every table is associated with a schema which defines the structure of each event in the table.
+Schemas are inferred from the data you load into a table, however, some columns are required by Kaskada's data model.
+Every table must include a column identifying the xref:fenl:temporal-aggregation.adoc[time] and xref:fenl:entities.adoc[entity] associated with each row. 
 
-* The name of a column in your data that contains the time of each row
-(`time_column_name`). The time should refer to when the event occurred.
-* The name of a column in your data that contains the xref:fenl:entities.adoc[entity] key of each row
-(`entity_key_column_name`). The entity should identify a _thing_ in the
-world that each event is associated with. Don't worry too much about
-picking the "right" value here - it's easy to change the entity key in
-Fenl.
+When creating a table, you must tell Kaskada which columns contain the time and entity of each row:
 
+* The xref:fenl:temporal-aggregation.adoc[time] column is specified using the `time_column_name` parameter.
+  This parameter should identify a column name in the table's data which contains time values.
+  The time should refer to when the event occurred.
+* The xref:fenl:entities.adoc[entity] key is specified using the `entity_key_column_name` parameter.
+  This parameter should identify a column name in the table's data which contains the entity key value.
+  The entity key should identify a _thing_ in the world that each event is associated with.
+  Don't worry too much about picking the "right" value - it's easy to change the entity using the xref:fenl:catalog.adoc#with-key[`with_key()`] function.
 
-Optionally:
+You may additionally configure the table's behavior by specifying the following parameters:
 
-* An subsort column associated with each row (`subsort_column_name`).
-This value is used to order rows associated with the same time value.
-If no subsort column is provided, Kaskada will generate one.
-* A name describing the type of entity, for example "User" or "Purchase".
+* An subsort column associated with each row is specified using the `subsort_column_name` parameter.
+  This value is used to order rows associated with the same time value.
+  If no subsort column is provided, Kaskada will generate one.
+* The type of entity is specified using the `grouping_id` parameter.
+  The grouping ID specifies what kind of entity each event is associated with, for example "User" or "Purchase".
+  When combining events from different tables, events with the same entity key and grouping ID are treated as being part of the same entity.
 
-For more information about these fields, see:
-xref:reference:expected-file-format[Expected File Format]
+For more information about the expected structure of input files, see xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 
 Here is an example of creating a table:
 
