@@ -247,9 +247,12 @@ async fn upload_prepared_files(
             let metadata_prepared_url =
                 format!("{output_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet");
 
-            let prepare_object_store_url = ObjectStoreUrl::from_str(prepared_url.as_str()).unwrap();
+            let prepare_object_store_url = ObjectStoreUrl::from_str(prepared_url.as_str())
+                .change_context_lazy(|| Error::InvalidUrl(format!("{}", prepared_url.as_str())))?;
             let metadata_object_store_url =
-                ObjectStoreUrl::from_str(metadata_prepared_url.as_str()).unwrap();
+                ObjectStoreUrl::from_str(metadata_prepared_url.as_str()).change_context_lazy(
+                    || Error::InvalidUrl(format!("{}", metadata_prepared_url.as_str())),
+                )?;
 
             parquet_uploads.push(
                 object_store_registry

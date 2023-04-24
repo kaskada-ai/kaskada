@@ -54,12 +54,25 @@ impl ObjectStoreRegistry {
         target_url: ObjectStoreUrl,
         local_file_path: &path::Path,
     ) -> error_stack::Result<(), Error> {
-        let target_path = target_url.path().unwrap();
-        let target_key = target_url.key().unwrap();
-        let object_store = self.object_store(target_key).unwrap();
-        let mut local_file = fs::File::open(local_file_path).await.unwrap();
-        let (_id, mut writer) = object_store.put_multipart(&target_path).await.unwrap();
-        tokio::io::copy(&mut local_file, &mut writer).await.unwrap();
+        let target_path = target_url.path()?;
+        let target_key = target_url.key()?;
+        let object_store = self.object_store(target_key)?;
+        let mut local_file = fs::File::open(local_file_path)
+            .await
+            .into_report()
+            .change_context(Error::Internal)?;
+        let (_id, mut writer) = object_store
+            .put_multipart(&target_path)
+            .await
+            .into_report()
+            .change_context(Error::ReadWriteObjectStore)
+            .attach_printable_lazy(|| {
+                format!("failed to write multipart upload to path {}", target_path)
+            })?;
+        tokio::io::copy(&mut local_file, &mut writer)
+            .await
+            .into_report()
+            .change_context(Error::Internal)?;
         Ok(())
     }
 
@@ -120,6 +133,8 @@ pub enum Error {
     CreatingObjectStore(ObjectStoreKey),
     #[display(fmt = "downloading object for {_0:?}")]
     DownloadingObject(PathBuf),
+    #[display(fmt = "internal error")]
+    Internal,
 }
 
 impl error_stack::Context for Error {}
