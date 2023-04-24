@@ -131,11 +131,21 @@ pub async fn prepare_file(
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let output_url = ObjectStoreUrl::from_str(output_path).unwrap();
-    let output_key = output_url.key().unwrap();
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_dir = temp_dir.path().to_str().unwrap();
-    let path = format!("/{}", output_url.path().unwrap());
+    let output_url = ObjectStoreUrl::from_str(output_path)
+        .change_context_lazy(|| Error::InvalidUrl(output_path.to_owned()))?;
+    let output_key = output_url
+        .key()
+        .change_context_lazy(|| Error::InvalidUrl(format!("{}", output_url)))?;
+    let temp_dir = tempfile::tempdir()
+        .into_report()
+        .change_context(Error::Internal)?;
+    let temp_dir = temp_dir.path().to_str().ok_or(Error::Internal)?;
+    let path = format!(
+        "/{}",
+        output_url
+            .path()
+            .change_context_lazy(|| Error::InvalidUrl(format!("{}", output_url)))?
+    );
     let local_output_prefix = if output_key.eq(&ObjectStoreKey::Local) {
         path::Path::new(&path)
     } else {
@@ -201,20 +211,15 @@ pub async fn prepare_file(
         ObjectStoreKey::Local | ObjectStoreKey::Memory => Ok((pm, pf)),
         // Need to upload the local files now.
         _ => {
-            let upload_results = upload_prepared_files_to_s3(
-                object_store_registry,
-                &pm,
-                output_prefix,
-                output_prefix,
-            )
-            .await
-            .unwrap();
+            let upload_results =
+                upload_prepared_files(object_store_registry, &pm, output_prefix, output_prefix)
+                    .await?;
             Ok((pm, upload_results))
         }
     }
 }
 
-pub async fn upload_prepared_files_to_s3(
+async fn upload_prepared_files(
     object_store_registry: &ObjectStoreRegistry,
     prepared_metadata: &[PreparedMetadata],
     output_prefix: &str,

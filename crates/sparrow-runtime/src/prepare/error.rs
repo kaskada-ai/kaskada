@@ -47,6 +47,10 @@ pub enum Error {
     ReadInput,
     #[display(fmt = "failed to upload result")]
     UploadResult,
+    #[display(fmt = "downloading object {_0} to path {_0}")]
+    DownloadingObject(String, String),
+    #[display(fmt = "invalid url: {_0}")]
+    InvalidUrl(String),
 }
 
 impl error_stack::Context for Error {}
