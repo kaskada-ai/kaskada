@@ -293,16 +293,32 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 		return nil, errors.WithMessagef(err, "validating schema for file: %s on table: %s", fileInput, kaskadaTable.Name)
 	}
 
+	toPath := t.tableStore.GetFileSubPath(owner, kaskadaTable, fileInput.GetExtension())
+
+	newObject, err := t.objectStoreClient.CopyObjectIn(ctx, fileInput.GetURI(), toPath)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "loading file: %s into table: %s", fileInput, kaskadaTable.Name)
+	}
+
+	fileIdentifier, err := t.objectStoreClient.GetObjectIdentifier(ctx, newObject)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "getting identifier for file: %s in table: %s", fileInput, kaskadaTable.Name)
+	}
+
 	newFiles := []internal.AddFileProps{}
 
 	newFiles = append(newFiles, internal.AddFileProps{
-		URI:        fileInput.GetURI(),
-		Identifier: fileInput.GetURI(),
+		URI:        newObject.URI(),
+		Identifier: fileIdentifier,
 		Schema:     fileSchema,
 		FileType:   fileInput.GetType(),
 	})
 
-	newDataToken, err := t.kaskadaTableClient.AddFilesToTable(ctx, owner, kaskadaTable, newFiles, fileSchema, nil, func() error { return nil })
+	cleanupOnError := func() error {
+		return t.objectStoreClient.DeleteObject(ctx, newObject)
+	}
+
+	newDataToken, err := t.kaskadaTableClient.AddFilesToTable(ctx, owner, kaskadaTable, newFiles, fileSchema, nil, cleanupOnError)
 	if err != nil {
 		return nil, err
 	}
