@@ -16,15 +16,26 @@ To learn more about Fenl:
 Kaskada's query language builds on the lessons of 50+ years of query language design to provide a declarative, composable, easy-to-read, and type-safe way of describing computations related to time. 
 The following is a quick overview of the query language's main features and syntax.
 
+=== Viewing and filtering the contents of a table
+
+Kaskada queries are built by composing simple expressions. 
+Every expression returns a timeline.
+
+[source,Fenl]
+----
+Purchase | when(Purchase.amount > 10)
+----
+
+In this example we start with the expression `Purchase` (the timeline of all purchase events) then filter it using `xref:fenl:catalog.adoc#when[when()]`.
+The result is a timeline of purchase events whose amount is greater than 10.
+
 === Stateful aggregations
 
 Aggregate events to produce a continuous timeline whose value can be observed at arbitrary points in time.
 
 [source,Fenl]
 ----
-{
-  max_review_to_date: max(review.stars),
-}
+{ max_verified_review_to_date: Review.stars | when(Review.verified) | max() }
 ----
 
 [TIP]
@@ -35,16 +46,21 @@ Records allow one or more values to be grouped into a single row.
 You can create a record using the syntax `{key: value, key2: value2}`.
 ====
 
+In this example we first filter the timeline of `Review` events to only include verified reviews, then aggregate the filtered results using the `xref:fenl:catalog.adoc#max[max()]` aggregation.
+The resulting timeline describes the maximum number of stars as-of every point in time.
+
 === Automatic joins
 
-Every expression is associated with an “entity”, allowing tables and expressions to be automatically joined. Entities eliminate redundant boilerplate code.
+Every expression is associated with an xref:fenl:entities.adoc[entity], allowing tables and expressions to be automatically joined. Entities eliminate redundant boilerplate code.
 
 [source,Fenl]
 ----
-{
-  purchases_per_page_view: count(purchase) / count(pageview),
-}
+{ purchases_per_page_view: count(Purchase) / count(Pageview) }
 ----
+
+Here we've used the `xref:fenl:catalog.adoc#count[count()]` aggregation to divide the number of purchases up to each point in time by the number of pageviews up to the same point in time.
+The result is a timeline describing how each user's purchase-per-pageview changes over time.
+Since both the `Purchase` and `Pageview` tables have the same entity, we can easily combine them.
 
 === Event-based windowing
 
@@ -53,10 +69,13 @@ Collect events as you move through time, and aggregate them with respect to othe
 [source,Fenl]
 ----
 {
-  pageviews_since_last_purchase:  count(pageview, window=since(purchase)),
-  spend_since_last_review:        count(purchase, window=since(review)),
+  pageviews_since_last_purchase:  count(Pageview, window=since(Purchase)),
+  spend_since_last_review:        count(Purchase, window=since(Review)),
 }
 ----
+
+By default, aggregations are applied from the beginning of time, but here we've used the `xref:fenl:catalog.adoc#since[since()]` window function to configure the aggregation to reset each time there's a `Purchase` or `Review`, respectively.
+
 
 === Pipelined operations
 
@@ -66,21 +85,20 @@ Pipe syntax allows multiple operations to be chained together. Write your operat
 ----
 {
   largest_spend_over_2_purchases: purchase.amount
-  | when(purchase.category == "food") 
-  | sum(window=sliding(2, purchase.category == "food")) # Inner aggregation
+  | when(Purchase.category == "food") 
+  | sum(window=sliding(2, Purchase.category == "food")) # Inner aggregation
   | max()                                               # Outer aggregation
 }
 ----
 
-
 === Row generators
 
-Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.adoc#tick-functions[tick generators] such as `daily()` produce rows even when there's no input, allowing you to react when something _doesn't_ happen.
+Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.adoc#tick-functions[tick generators] such as `xref:fenl:catalog.adoc#daily[daily()]` produce rows even when there's no input, allowing you to react when something _doesn't_ happen.
 
 [source,Fenl]
 ----
 {
-  signups_per_hour: count(signups, window=since(daily()))
+  signups_per_hour: count(Signups, window=since(daily()))
   | when(daily())
   | mean()
 }
@@ -88,20 +106,18 @@ Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.a
 
 === Continuous expressions
 
-Observe the value of aggregations at arbitrary points in time. Timelines are either “discrete” (instantaneous values or events) or “continuous” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
+Observe the value of aggregations at arbitrary points in time. Timelines are either “xref:fenl:continuity.adoc#discrete-expressions[discrete]” (instantaneous values or events) or “xref:fenl:continuity.adoc#continuous-expressions[continuous]” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
 
 [source,Fenl]
 ----
-let product_average = review.stars
-| with_key(review.product_id)
+let product_average = Review.stars
+| with_key(Review.product_id)
 | mean()
 
-in {
-  average_product_review: product_average | lookup(purchase.product_id)),
-}
+in { average_product_review: product_average | lookup(Purchase.product_id)) }
 ----
 
-In this example the `lookup` function is used to observe a value computed for a different entity.
+In this example the `xref:fenl:catalog.adoc#lookup[lookup()]` function is used to observe a value computed for a different entity.
 The variable `product_average` computes the average review using the product's ID as entity.
 The lookup starts with each `purchase`, then looks up the current value of the product's average review, for the procduct ID specified in the purchase.
 
@@ -111,14 +127,15 @@ Shifting values forward (but not backward) in time, allows you to combine differ
 
 [source,Fenl]
 ----
-let purchases_now = count(purchase)
+let purchases_now = count(Purchase)
 let purchases_yesterday =
    purchases_now | shift_by(days(1))
 
-in {
-  purchases_in_last_day: purchases_now - purchases_yesterday,
-}
+in { purchases_in_last_day: purchases_now - purchases_yesterday }
 ----
+
+In this example we take the timeline produced by `purchases_now` and move it forward in time by one day using the `xref:fenl:catalog.adoc#shift-by[shift_by()]` function. 
+We then subtract the shifted value from the original, unshifted value
 
 === Simple, composable syntax
 
@@ -129,8 +146,8 @@ It is functions all the way down. No global state, no dependencies to manage, an
 # How many big purchases happen each hour and where?
 let cadence = hourly()
 # Anything can be named and re-used
-let hourly_big_purchases = purchase
-| when(purchase.amount > 10)
+let hourly_big_purchases = Purchase
+| when(Purchase.amount > 10)
 # Filter anywhere 
 | count(window=since(cadence))
 # Aggregate anything
@@ -141,7 +158,7 @@ in {hourly_big_purchases}
 # Records are just another type
 | extend({
   # …modify them sequentially
-  last_visit_region: last(pageview.region)
+  last_visit_region: last(Pageview.region)
 })
 ----
 
@@ -165,7 +182,7 @@ To return final results, you must configure the `final-results` behavior:
 [source,Fenl]
 .Final queries with fenlmagic
 ----
-%%fenl --result_behavior final-results
+%%fenl --result-behavior final-results
 {
     time: Purchase.purchase_time,
     entity: Purchase.customer_id,
