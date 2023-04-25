@@ -177,7 +177,7 @@ First, print a colon-separated list of the directories in your `PATH`.
 
 [source,bash]
 ----
-$ echo PATH
+echo PATH
 ----
 
 Move the Kaskada binaries to one of the listed locations. 
@@ -185,7 +185,7 @@ This command assumes that the binaries are currently in your working directory a
 
 [source,bash]
 ----
-$ mv kaskada-* /usr/local/bin/
+mv kaskada-* /usr/local/bin/
 ----
 
 For more information about adding binaries to your path, see https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix[this StackOverflow article].
