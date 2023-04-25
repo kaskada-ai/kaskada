@@ -3,44 +3,52 @@
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
 
-== Managing tables with Python
-
-All methods on this page use the `table` module. Be sure to import it
-before running any method:
-
-[source,python]
-----
-from kaskada import table
-----
+== Managing tables
 
 === Creating a Table
 
-When creating a table, you must provide information about how each row
-should be interpreted. You must describe:
+Every table is associated with a schema which defines the structure of each event in the table.
+Schemas are inferred from the data you load into a table, however, some columns are required by Kaskada's data model.
+Every table must include a column identifying the xref:fenl:temporal-aggregation.adoc[time] and xref:fenl:entities.adoc[entity] associated with each row. 
 
-* A field containing the time associated with each row. The time should
-refer to when the event occurred.
-* An initial xref:fenl:entities[entity] key associated with each row. The
-entity should identify a _thing_ in the world related to each event.
+When creating a table, you must tell Kaskada which columns contain the time and entity of each row:
 
-Optionally:
+* The xref:fenl:temporal-aggregation.adoc[time] column is specified using the `time_column_name` parameter.
+  This parameter must identify a column name in the table's data which contains time values.
+  The time should refer to when the event occurred.
+* The xref:fenl:entities.adoc[entity] key is specified using the `entity_key_column_name` parameter.
+  This parameter must identify a column name in the table's data which contains the entity key value.
+  The entity key should identify a _thing_ in the world that each event is associated with.
+  Don't worry too much about picking the "right" value - it's easy to change the entity using the xref:fenl:catalog.adoc#with-key[`with_key()`] function.
 
-* A subsort column associated with each row. This value is used to order
-rows associated with the same time value. If no subsort column is
-provided, Kaskada will generate one.
+You may additionally configure the table's behavior by specifying the following parameters:
 
-For more information about these fields, see:
-xref:reference:expected-file-format[Expected File Format]
+* An subsort column associated with each row is specified using the `subsort_column_name` parameter.
+  This value is used to order rows associated with the same time value.
+  If no subsort column is provided, Kaskada will generate one.
+* The type of entity is specified using the `grouping_id` parameter.
+  The grouping ID specifies what kind of entity each event is associated with, for example "User" or "Purchase".
+  When combining events from different tables, events with the same entity key and grouping ID are treated as being part of the same entity.
+
+For more information about the expected structure of input files, see xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 
 Here is an example of creating a table:
 
 [source,python]
+.with Python:
 ----
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 table.create_table(
+  # The table's name
   table_name = "Purchase",
+  # The name of a column in your data that contains the time associated with each row
   time_column_name = "purchase_time",
+  # The name of a column in your data that contains the entity key associated with each row
   entity_key_column_name = "customer_id",
-  subsort_column_name = "subsort_id",
 )
 ----
 
@@ -64,8 +72,14 @@ optional search string can filter the results.
 Here is an example of listing tables:
 
 [source,python]
+.with Python:
 ----
-table.list_tables(search = "chase")
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.list_tables()
 ----
 
 === Get Table
@@ -73,8 +87,14 @@ table.list_tables(search = "chase")
 You can get a table using its name:
 
 [source,python]
+.with Python:
 ----
-table.get_table("Purchase")
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.get_table(table = "Purchase")
 ----
 
 === Updating a Table
@@ -82,13 +102,25 @@ table.get_table("Purchase")
 Tables are currently immutable. Updating a table requires deleting it
 and then re-creating it with a new expression.
 
-=== Deleting a table
+=== Deleting a Table
 
 You can delete a table using its name:
 
 [source,python]
+.with Python:
 ----
-table.delete_table("Purchase")
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.delete_table(table = "Purchase")
+----
+
+[source,bash]
+.with the CLI:
+----
+./kaskada-cli table delete -t Purchase
 ----
 
 [WARNING]
@@ -105,13 +137,25 @@ functioning incorrectly.
 
 [source,python]
 ----
-table.delete_table("Purchase", force=True)
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.delete_table(table = "Purchase", force = True)
 ----
 
-== Managing tables with the CLI
+== Managing tables with the CLI and Spec files
 
 The CLI manages Kaskada resources declaratively by managing spec files.
 A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== Creating, updating and deleting tables with the CLI
+
+The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
+To create a table, add the table's description to your spec file and run `kaskada-cli sync apply`.
+To update a table, change the table's description in your spec file and run `kaskada-cli sync apply`.
+To delete a table, see <<Deleting a Table, deleting a table>>
 
 === The format of tables in a spec file.
 
@@ -119,18 +163,32 @@ Tables are described in a spec file as a list of table objects under the `tables
 
 [source,yaml]
 ----
+  # The name of the table
 - tableName: GamePlay
+  # A field containing the time associated with each event
   timeColumnName: event_at
+  # An initial entity key associated with each event
   entityKeyColumnName: entity_key
+  # An (optional) subsort column associated with each event
   subsortColumnName: offset
+  # A name describing the entity key
   groupingId: User
-  tableSource:
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
+  source:
     kaskada: {}
+
+  # The name of the table
 - tableName: Purchase
+  # A field containing the time associated with each event
   timeColumnName: event_at
+  # An initial entity key associated with each event
   entityKeyColumnName: entity_id
+  # A name describing the entity key
   groupingId: User
-  tableSource:
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
+  source:
     kaskada: {}
 ----
 
@@ -140,7 +198,7 @@ You can export all the tables currently defined using the CLI.
 
 [source,bash]
 ----
-cli sync export --all
+kaskada-cli sync export --all
 ----
 
 The export result is shown below
@@ -153,13 +211,13 @@ tables:
   entityKeyColumnName: entity_key
   subsortColumnName: offset
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 - tableName: Purchase
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 views:
     # ...
@@ -169,7 +227,7 @@ Alternately, if you know a specific table you'd like to export you can specify i
 
 [source,bash]
 ----
-cli sync export --table Purchase
+kaskada-cli sync export --table Purchase
 ----
 
 [source,yaml]
@@ -179,7 +237,7 @@ tables:
   timeColumnName: event_at
   entityKeyColumnName: entity_id
   groupingId: User
-  tableSource:
+  source:
     kaskada: {}
 ----
 
@@ -203,7 +261,7 @@ You can see these changes by creating an apply plan.
 
 [source,bash]
 ----
-cli sync plan --file spec.yaml
+kaskada-cli sync plan --file spec.yaml
 
 # > 2:18PM INF starting plan
 # > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
@@ -217,7 +275,7 @@ You can apply a spec file using the CLI.
 
 [source,bash]
 ----
-cli sync apply --file spec.yaml
+kaskada-cli sync apply --file spec.yaml
 
 # > 2:25PM INF starting apply
 # > 2:25PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay

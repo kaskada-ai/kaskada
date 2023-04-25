@@ -117,7 +117,7 @@ class Client(object):
 
 
 def validate_client(client: Client):
-    """Valides the client by checking the service stubs
+    """Validates the client by checking the service stubs
 
     Args:
         client (Client): The client to validate
@@ -159,11 +159,12 @@ def get_client(client: Optional[Client] = None) -> Client:
         Client: The provided client argument or the global client.
     """
     if client is None and KASKADA_DEFAULT_CLIENT is None:
-        raise ValueError("Client must be provided")
+        raise ValueError(
+            "No client was provided, and no global client is configured. Consider setting the global client by creating a session, for example 'kaskada.api.session.LocalBuilder().build()`."
+        )
     elif client is None:
         client = KASKADA_DEFAULT_CLIENT
 
-    if client is None:
-        raise ValueError("Client must be provided")
+    assert client is not None  # make mypy happy
     validate_client(client)
     return client

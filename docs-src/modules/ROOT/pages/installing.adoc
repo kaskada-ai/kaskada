@@ -3,7 +3,7 @@
 == Using Kaskada with Python
 
 .Installing Kaskada using pip
-[,shell]
+[source,bash]
 ----
 pip install kaskada 
 ----
@@ -18,7 +18,7 @@ If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 ins
 Kaskada is now installed. Kaskada can be used locally by creating a local session.
 
 .Creating a local Kaskada session in Python
-[.python]
+[source,python]
 ----
 from kaskada.api.session import LocalBuilder
 session = LocalBuilder().build()
@@ -38,7 +38,7 @@ Kaskada's python library includes notebook customizations that allow us to write
 We need to enable these customizations first before we can use them. 
 
 .Enable fenlmagic in this notebook 
-[,python]
+[source,ipython]
 ----
 %load_ext fenlmagic
 ----
@@ -91,7 +91,7 @@ To use Kaskada on the command line, you'll need to install three components:
 Each of these are available as pre-compiled binaries in the xref:url:https://github.com/kaskada-ai/kaskada/releases[Releases] section of Kaskada's Github repository.
 This example assumes you have installed `curl`.
 
-[source,shell]
+[source,bash]
 ----
 VERSION=0.4.1
 ARCH=$(uname -m | awk '{print tolower($0)}')
@@ -111,7 +111,7 @@ If you're using OSX, you may need to unblock the applications.
 OSX prevents applications you download from running as a security feature.
 You can remove the block placed on the file when it was downloaded with the following command:
 
-[source,shell]
+[source,bash]
 ----
 xattr -dr com.apple.quarantine <path to file>
 ----
@@ -120,14 +120,14 @@ xattr -dr com.apple.quarantine <path to file>
 You should now be able to run all three components.
 To verify they're installed correctly and executable, try running the following command:
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-cli -h
 ----
 
 You should see output similar to the following:
 
-[source,shell]
+[source,bash]
 ----
 A CLI tool for interacting with the Kaskada API
 
@@ -152,7 +152,7 @@ Flags:
 
 You can start a local instance of the Kaskada service by running the manager and engine:
 
-[source,shell]
+[source,bash]
 ----
 ./kaskada-manager 2>&1 > manager.log 2>&1 &
 ./kaskada-engine serve > engine.log 2>&1 &

@@ -1,0 +1,5 @@
+tomli==2.0.1
+Sphinx==5.3.0
+sphinx-rtd-theme==1.2.0
+sphinx-autodoc-typehints==1.22
+sphinx-autoapi==2.1.0

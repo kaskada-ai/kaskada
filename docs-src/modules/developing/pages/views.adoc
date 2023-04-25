@@ -15,15 +15,7 @@ Views are useful any time you need to share or re-use expressions:
 * ML feature definitions
 
 
-== Managing views with Python
-
-All methods in this section are from the `view` object. Be sure to import
-it before running any method:
-
-[source,python]
-----
-from kaskada import view
-----
+== Managing views
 
 === Creating a View
 
@@ -33,7 +25,13 @@ each user. This definition depends on business logic and might require
 some iteration to get just right.
 
 [source,python]
+.with Python:
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.create_view(
     view_name = "PurchaseStats",
     expression = "{
@@ -79,6 +77,11 @@ without re-typing the expression:
 
 [source,python]
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.create_view(
     view_name = "PurchaseStats",
     expression = purchase_stats.expression,
@@ -93,7 +96,13 @@ optional search string can filter the response set.
 Here is an example of listing tables:
 
 [source,python]
+.with Python:
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.list_views("Purchase")
 ----
 
@@ -102,7 +111,13 @@ view.list_views("Purchase")
 You can get a view using its name:
 
 [source,python]
+.with Python:
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.get_view("PurchaseStats")
 ----
 
@@ -116,15 +131,34 @@ view and then re-creating it.
 You can delete a view using its name:
 
 [source,python]
+.with Python:
 ----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 view.delete_view("PurchaseStats")
 ----
 
+[source,bash]
+.with the CLI:
+----
+./kaskada-cli view delete -v PurchaseStats
+----
 
-== Managing views with the CLI
+== Managing views with the CLI and Spec files
 
 The CLI manages Kaskada resources declaratively by managing spec files.
 A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+=== Creating, updating and deleting views with the CLI
+
+
+The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
+To create a view, add the view's description to your spec file and run `kaskada-cli sync apply`.
+To update a view, change the view's description in your spec file and run `kaskada-cli sync apply`.
+To delete a view, see xref:deleting-a-view[Deleting a view].
 
 === The format of views in a spec file.
 
@@ -133,9 +167,10 @@ Views are described in a spec file as a list of view objects under the `views` k
 [source,yaml]
 ----
 views:
-    - view_id: 14c4...ba56 <1>
-      view_name: PurchaseStats <2>
-      expression: | <3>
+      # A name used to refer to the view in queries
+    - view_name: PurchaseStats
+      # The expression to substitute anywhere the view's name is used
+      expression: |
         {
             time: Purchase.purchase_time,
             entity: Purchase.customer_id,
@@ -143,13 +178,11 @@ views:
             min_amount: Purchase.amount | min(),
             count: CountPurchase,
         } 
-    - view_id: dd61...70e9
-      view_name: CountPurchase
+      # A name used to refer to the view in queries
+    - view_name: CountPurchase
+      # The expression to substitute anywhere the view's name is used
       expression: count(Purchase)
 ----
-<1> A unique identifier for the view. This value is assigned by the manager and is read-only.
-<2> A name used to refer to the view in queries.
-<3> The expression to substitute anywhere the view's name is used.
 
 
 === Exporting the current views as a spec file.
@@ -158,7 +191,7 @@ You can export all the views currently defined using the CLI.
 
 [source,bash]
 ----
-cli sync export --all
+kaskada-cli sync export --all
 ----
 
 The export result is shown below
@@ -177,7 +210,7 @@ Alternately, if you know a specific view you'd like to export you can specify it
 
 [source,bash]
 ----
-cli sync export --view PurchaseStats
+kaskada-cli sync export --view PurchaseStats
 ----
 
 === Updating Kaskada to reflect the contents of a spec file
@@ -200,7 +233,7 @@ You can see these changes by creating an apply plan.
 
 [source,bash]
 ----
-cli sync plan --file spec.yaml
+kaskada-cli sync plan --file spec.yaml
 ----
 
 Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
@@ -209,5 +242,5 @@ You can apply a spec file using the CLI.
 
 [source,bash]
 ----
-cli sync apply --file spec.yaml
+kaskada-cli sync apply --file spec.yaml
 ----

@@ -179,7 +179,7 @@ impl PrepareCommand {
                     PulsarSubscription {
                         config: Some(pulsar_config),
                         subscription_id: pulsar_subscription,
-                        last_publish_time: None,
+                        last_publish_time: 0,
                     },
                 )),
             }

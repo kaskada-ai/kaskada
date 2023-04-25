@@ -115,9 +115,11 @@ def unpack_details(grpc_detail):
     """Unpack a grpc status detail field (which is a 'google.protobuf.Any' type).
     `Unpack()` checks the descriptor of the passed-in message object against the stored one
     and returns False if they don't match and does not attempt any unpacking; True otherwise.
-        Source:
-            https://github.com/protocolbuffers/protobuf/blob/master/python/google/protobuf/internal/well_known_types.py#L81
-            https://github.com/protocolbuffers/protobuf/blob/master/python/google/protobuf/internal/python_message.py#L1135
+
+    Sources
+
+    * `well_known_types.py  <https://github.com/protocolbuffers/protobuf/blob/master/python/google/protobuf/internal/well_known_types.py#L81>`_
+    * `python_message.py <https://github.com/protocolbuffers/protobuf/blob/master/python/google/protobuf/internal/python_message.py#L1135>`_
 
         Raises:
             google.protobuf.message.DecodeError: If it can't deserialize the message object

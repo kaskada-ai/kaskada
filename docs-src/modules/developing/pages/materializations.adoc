@@ -20,8 +20,11 @@ Example configuration:
 [source,yaml]
 ----
 materializations:
+  # The name of the materialization
 - materialization_name: PulsarExample
+  # The epxression to materializa
   expression: PurchaseStats
+  # Where the expression's final results will be written 
   pulsar:
     broker_service_url: pulsar://127.0.0.1:6650
     tenant: public
@@ -65,15 +68,7 @@ materializations:
 ----
 ////
 
-== Managing Materializations with Python
-
-All methods on this page use from the `materialization` object. Be sure
-to import it before running any method:
-
-[source,python]
-----
-from kaskada import materialization
-----
+== Managing Materializations
 
 === Creating a Materialization
 
@@ -83,7 +78,13 @@ purchase statistics for each user. This definition depends on business
 logic and might require some iteration to get just right.
 
 [source,python]
+.with Python:
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 purchase_stats = """
 {
     time: Purchase.purchase_time,
@@ -114,7 +115,13 @@ for your user. An optional search string can filter the response set.
 Here is an example of listing tables:
 
 [source,python]
+.with Python:
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 materialization.list_materializations("Purchase")
 ----
 
@@ -123,7 +130,13 @@ materialization.list_materializations("Purchase")
 You can get a materialization using its name:
 
 [source,python]
+.with Python:
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 materialization.get_materialization("PurchaseStats")
 ----
 
@@ -138,8 +151,20 @@ new expression.
 You can delete a materialization using its name:
 
 [source,python]
+.with Python:
 ----
+from kaskada import materialization
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
 materialization.delete_materialization("PurchaseStats")
+----
+
+[source,bash]
+.with the CLI:
+----
+./kaskada-cli materialization delete -m PurchaseStats
 ----
 
 Deleting a materialization does not delete any data persisted in the

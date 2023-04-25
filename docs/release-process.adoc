@@ -78,7 +78,7 @@ Generally, releasing a component involves:
 1. Checking the link:{repo}/releases[release page] on GitHub to find the appropriate draft release and corresponding version number.
 2. Merging a `release` PR that updates version information of the corresponding components.
 3. Publishing the draft release, which automatically creates a tag and triggers the corresponding workflow to finish the release.
-4. Watching that the release has been created succesfully.
+4. Watching that the release has been created successfully.
 
 ### Engine Component Group
 

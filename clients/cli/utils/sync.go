@@ -93,7 +93,7 @@ func Apply(apiClient api.ApiClient, plan planResult) error {
 	}
 	for _, resource := range plan.resourcesToReplace {
 		subLogger := log.With().Str("kind", reflect.TypeOf(resource).String()).Str("name", api.GetName(resource)).Logger()
-		if err := apiClient.Delete(resource); err != nil {
+		if err := apiClient.Delete(resource, true); err != nil {
 			subLogger.Error().Err(err).Msg("issue deleting resource before re-create")
 			return err
 		}
