@@ -130,7 +130,10 @@ See xref:reference:expected-file-format[Expected File Format] for details.
 
 This loads the contents of the file to the Purchases table.
 
-The result of running `load()` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
+The result of running `load` is a `data_token_id`. 
+The data token ID is a unique reference to the data currently stored in the system. 
+Data tokens enable repeatable queries: queries performed against the same data token always run on the same input data.
+
 
 [source,bash]
 ----
