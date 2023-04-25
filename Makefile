@@ -41,7 +41,7 @@ proto/clean:
 buf_docker_fn = docker run --rm --network host --workdir /workspace/proto ${1} \
     --volume "$(shell pwd):/workspace" \
 	--volume "${HOME}/.cache:/root/.cache" \
-	bufbuild/buf:1.10.0
+	bufbuild/buf:1.17.0
 
 proto/fmt:
 	@ $(call buf_docker_fn) format -w

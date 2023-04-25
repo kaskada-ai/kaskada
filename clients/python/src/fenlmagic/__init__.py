@@ -3,7 +3,7 @@
     Raises:
         UsageError: when improper arguments are provided
 """
-
+# pylint: disable=no-member
 from __future__ import print_function
 
 import os
@@ -15,10 +15,9 @@ from IPython.core.error import UsageError
 from IPython.core.magic import Magics, cell_magic, line_cell_magic, magics_class
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
 
-import kaskada.client as client
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
-import kaskada.query as query
 from fenlmagic.utils import arg_to_response_type
+from kaskada import client, query
 
 
 class QueryResult(object):
