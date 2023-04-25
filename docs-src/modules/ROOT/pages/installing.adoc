@@ -2,14 +2,14 @@
 
 Kaskada is an event-processing engine comprised of two main components: 
 
-* The `kaskada-engine` component is a stately compute engine for transforming event data.
+* The `kaskada-engine` component is a stateful compute engine for transforming event data.
 * The `kaskada-manager` is an (optionally) stateful API for communicating with clients
 
 
 
 == Using Kaskada with Python
 
-To use Kaskada with PYthon you'll need to have Python version 3.6 or above installed.
+To use Kaskada with Python you'll need to have Python version 3.6 or above installed.
 Once you have Python installed ensure that you can run it. 
 Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
 
@@ -181,7 +181,7 @@ $ echo PATH
 ----
 
 Move the Kaskada binaries to one of the listed locations. 
-This command assumes that the binaries is currently in your working directory and that your `PATH`` includes `/usr/local/bin``, but you can customize it if your locations are different.
+This command assumes that the binaries are currently in your working directory and that your `PATH`` includes `/usr/local/bin`, but you can customize it if your locations are different.
 
 [source,bash]
 ----

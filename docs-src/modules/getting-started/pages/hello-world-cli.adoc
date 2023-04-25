@@ -34,7 +34,7 @@ echo PATH
 ----
 
 Move the Kaskada binaries to one of the listed locations. 
-This command assumes that the binaries is currently in your working directory and that your `PATH`` includes `/usr/local/bin``, but you can customize it if your locations are different.
+This command assumes that the binaries are currently in your working directory and that your `PATH`` includes `/usr/local/bin`, but you can customize it if your locations are different.
 
 [source,bash]
 ----
@@ -300,7 +300,7 @@ results in time:
 } | when(Purchase.customer_id == "patrick")
 ----
 
-This example adds fields to the record using additional the min and max aggregations.
+This example adds fields to the record using the `min` and `max` aggregations.
 Execute the query using the CLI as before.
 
 [source,bash]
