@@ -111,7 +111,7 @@ def create_query(
         response_as (ResponseType):
             Determines how the response is returned.  Either "parquet" (default) or "csv".
         data_token_id (str, optional):
-            Enables repeatable queries. 
+            Enables repeatable queries.
             Queries performed against the same dataToken are always run against the same input data.
         dry_run(bool, optional):
             When `True`, the query is validated and if there are no errors, the resultant schema is returned.
