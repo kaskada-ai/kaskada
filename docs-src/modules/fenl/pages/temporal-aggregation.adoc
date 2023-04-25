@@ -1,4 +1,4 @@
-= Temporal Aggregations
+= Temporal Computation
 
 Time plays a critical role when working with event-based data and
 event-based models. The ability to calculate point-in-time historical

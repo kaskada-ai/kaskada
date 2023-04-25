@@ -6,7 +6,7 @@ The xref:developing:tables.adoc[Tables] section of the reference docs has more i
 
 [IMPORTANT]
 ====
-A table must be created before data can be loaded into it.
+A table must be xref:developing:tables.adoc#creating-a-table[created] before data can be loaded into it.
 ====
 
 == File Format

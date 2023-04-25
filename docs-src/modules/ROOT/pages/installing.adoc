@@ -1,6 +1,25 @@
 = Installing Kaskada
 
+Kaskada is an event-processing engine comprised of two main components: 
+
+* The `kaskada-engine` component is a stately compute engine for transforming event data.
+* The `kaskada-manager` is an (optionally) stateful API for communicating with clients
+
+
+
 == Using Kaskada with Python
+
+To use Kaskada with PYthon you'll need to have Python version 3.6 or above installed.
+Once you have Python installed ensure that you can run it. 
+Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
+
+.Verifying Kaskada prerequisites. The output on your machine may vary.
+[source,bash]
+----
+python --version
+# Python 3.10.6
+----
+
 
 .Installing Kaskada using pip
 [source,bash]
@@ -24,8 +43,24 @@ from kaskada.api.session import LocalBuilder
 session = LocalBuilder().build()
 ----
 
-Creating a local session will download and run the Kaskada service, and configure the client to use the local endpoint.
+Creating a local session will download and run the Kaskada service as a non-persistent Python subprocess.
+To connect to an existing Kaskada process, initialize the client with the appropriate endpoint.
 
+.Creating a remote Kaskada session in Python
+[source,python]
+----
+from kaskada import client
+client.init(
+  # The host and port of the Kaskada manager API.
+  endpoint = "localhost:50051",
+
+  # If true, TLS encryption will be required for the API connection.
+  is_secure = False,
+
+  # An (optional) string identifying the client.
+  client_id = "python-client"
+)
+----
 
 == Using Kaskada with IPython (Jupyter)
 
@@ -33,6 +68,39 @@ IPython is an interactive Python runtime used by Jupyter and other
 notebooks to evaluate Python code blocks. IPython supports "magic
 extensions" for customizing how code blocks are interpreted. Kaskada
 provides a magic extension that simplifies querying Kaskada. 
+
+To use Kaskada within a Jupyter notebook you'll need to have the following pieces of software installed 
+
+. https://realpython.com/installing-python/[Python] (version 3.6 and above) 
+. https://docs.jupyter.org/en/latest/install/notebook-classic.html[Jupyter] 
+
+Once you have both prerequisites installed ensure that you can run them. 
+Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
+
+.Verifying Kaskada prerequisites. The output shown here is from an Ubuntu system--the output on your machine may vary.
+[source,bash]
+----
+python --version
+# Python 3.10.6
+
+
+jupyter --version
+# Selected Jupyter core packages...
+# IPython          : 7.34.0
+# ipykernel        : 6.17.0
+# bipywidgets       : 8.0.2
+# jupyter_client   : 7.4.4
+# jupyter_core     : 4.11.2
+# jupyter_server   : 1.21.0
+# jupyterlab       : 3.6.1
+# nbclient         : 0.7.0
+# nbconvert        : 7.2.3
+# nbformat         : 5.7.0
+# notebook         : 6.5.2
+# qtconsole        : 5.3.2
+# traitlets        : 5.5.0
+----
+
 
 Kaskada's python library includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks. 
 We need to enable these customizations first before we can use them. 
@@ -93,16 +161,34 @@ This example assumes you have installed `curl`.
 
 [source,bash]
 ----
-VERSION=0.4.1
-ARCH=$(uname -m | awk '{print tolower($0)}')
-OS=$(uname -s | awk '{print tolower($0)}')
-
-curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-cli-$OS-$ARCH" -o kaskada-cli
-curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-engine-$OS-$ARCH" -o kaskada-engine
-curl -L "https://github.com/kaskada-ai/kaskada/releases/download/engine%40v$VERSION/kaskada-manager-$OS-$ARCH" -o kaskada-manager
+curl -s https://api.github.com/repos/kaskada-ai/kaskada/releases/latest |\
+grep "browser_download_url.*" |\
+grep $(uname -m | sed 's/x86_64/amd64/') |\
+grep $(uname -s | tr '[:upper:]' '[:lower:]') |\
+cut -d ':' -f2,3 |\ 
+tr -d \" |\ 
+xargs -I {} sh -c 'curl -L {} -o $(basename {}| cut -d '-' -f1,2)'
 
 chmod +x kaskada-*
 ----
+
+To simplify running the Kaskada components you can move them to a directory in your path.
+First, print a colon-separated list of the directories in your `PATH`.
+
+[source,bash]
+----
+$ echo PATH
+----
+
+Move the Kaskada binaries to one of the listed locations. 
+This command assumes that the binaries is currently in your working directory and that your `PATH`` includes `/usr/local/bin``, but you can customize it if your locations are different.
+
+[source,bash]
+----
+$ mv kaskada-* /usr/local/bin/
+----
+
+For more information about adding binaries to your path, see https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix[this StackOverflow article].
 
 [TIP]
 .Authorizing applications on OSX
@@ -122,12 +208,12 @@ To verify they're installed correctly and executable, try running the following 
 
 [source,bash]
 ----
-./kaskada-cli -h
+kaskada-cli -h
 ----
 
 You should see output similar to the following:
 
-[source,bash]
+[source,]
 ----
 A CLI tool for interacting with the Kaskada API
 
@@ -154,6 +240,6 @@ You can start a local instance of the Kaskada service by running the manager and
 
 [source,bash]
 ----
-./kaskada-manager 2>&1 > manager.log 2>&1 &
-./kaskada-engine serve > engine.log 2>&1 &
+kaskada-manager 2>&1 > manager.log 2>&1 &
+kaskada-engine serve > engine.log 2>&1 &
 ----
