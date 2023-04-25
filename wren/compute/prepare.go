@@ -188,8 +188,8 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		subLogger.Debug().Interface("response", prepareRes).Msg("received prepare response")
 
 		for _, preparedFile := range prepareRes.PreparedFiles {
-			preparedFile.MetadataPath = ConvertURIForManager(preparedFile.MetadataPath)
-			preparedFile.Path = ConvertURIForManager(preparedFile.Path)
+			preparedFile.MetadataPath = preparedFile.MetadataPath
+			preparedFile.Path = preparedFile.Path
 			subLogger.Debug().Interface("prepared_file", preparedFile).Msg("these paths should be URIs")
 		}
 

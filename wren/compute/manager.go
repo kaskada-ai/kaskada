@@ -402,7 +402,7 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 	subLogger.Info().Bool("incremental_enabled", queryContext.compileResp.IncrementalEnabled).Bool("is_current_data_token", queryContext.isCurrentDataToken).Msg("Populating snapshot config if needed")
 	if queryContext.compileResp.IncrementalEnabled && queryContext.isCurrentDataToken && queryContext.compileResp.PlanHash != nil {
 		executeRequest.ComputeSnapshotConfig = &v1alpha.ExecuteRequest_ComputeSnapshotConfig{
-			OutputPrefix: ConvertURIForCompute(m.getComputeSnapshotDataURI(queryContext.owner, *snapshotCacheBuster, queryContext.compileResp.PlanHash.Hash, queryContext.dataToken.DataVersionID)),
+			OutputPrefix: m.getComputeSnapshotDataURI(queryContext.owner, *snapshotCacheBuster, queryContext.compileResp.PlanHash.Hash, queryContext.dataToken.DataVersionID),
 		}
 		subLogger.Info().Str("SnapshotPrefix", executeRequest.ComputeSnapshotConfig.OutputPrefix).Msg("Snapshot output prefix")
 
@@ -410,7 +410,7 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 		if err != nil {
 			log.Warn().Err(err).Msg("issue getting existing snapshot. query will execute from scratch")
 		} else if bestSnapshot != nil {
-			executeRequest.ComputeSnapshotConfig.ResumeFrom = &wrapperspb.StringValue{Value: ConvertURIForCompute(bestSnapshot.Path)}
+			executeRequest.ComputeSnapshotConfig.ResumeFrom = &wrapperspb.StringValue{Value: bestSnapshot.Path}
 			subLogger.Info().Str("ResumeFrom", executeRequest.ComputeSnapshotConfig.ResumeFrom.Value).Msg("Found snapshot to resume compute from")
 		} else {
 			subLogger.Info().Msg("no valid snapshot to resume from")
@@ -488,7 +488,7 @@ func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryRes
 func (m *Manager) SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ExecuteResponse_ComputeSnapshot) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.SaveComputeSnapshots").Logger()
 	for _, computeSnapshot := range computeSnapshots {
-		if err := m.kaskadaTableClient.SaveComputeSnapshot(queryContext.ctx, queryContext.owner, computeSnapshot.PlanHash.Hash, computeSnapshot.SnapshotVersion, queryContext.dataToken, ConvertURIForManager(computeSnapshot.Path), computeSnapshot.MaxEventTime.AsTime(), queryContext.GetTableIDs()); err != nil {
+		if err := m.kaskadaTableClient.SaveComputeSnapshot(queryContext.ctx, queryContext.owner, computeSnapshot.PlanHash.Hash, computeSnapshot.SnapshotVersion, queryContext.dataToken, computeSnapshot.Path, computeSnapshot.MaxEventTime.AsTime(), queryContext.GetTableIDs()); err != nil {
 			subLogger.Error().Err(err).Str("data_token_id", queryContext.dataToken.ID.String()).Msg("issue saving compute snapshot")
 		}
 	}
@@ -847,7 +847,7 @@ func (m *Manager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 // returns s3://root/computeSnapshots/<snapshot_cache_buster>/<owner_id>/<plan_hash>/<data_version>
 func (m *Manager) getComputeSnapshotDataURI(owner *ent.Owner, snapshotCacheBuster int32, planHash []byte, dataVersion int64) string {
 	subPath := path.Join("computeSnapshots", strconv.Itoa(int(snapshotCacheBuster)), owner.ID.String(), base64.RawURLEncoding.EncodeToString(planHash), utils.Int64ToString(dataVersion))
-	return ConvertURIForCompute(m.store.GetDataPathURI(subPath))
+	return m.store.GetDataPathURI(subPath)
 }
 
 func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error) {
@@ -884,15 +884,4 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 	}
 
 	return metadataRes.SourceMetadata.Schema, nil
-}
-
-func ConvertURIForCompute(URI string) string {
-	return strings.TrimPrefix(URI, "file://")
-}
-
-func ConvertURIForManager(URI string) string {
-	if strings.HasPrefix(URI, "/") {
-		return fmt.Sprintf("file://%s", URI)
-	}
-	return URI
 }
