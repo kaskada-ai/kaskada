@@ -85,6 +85,7 @@ class Timeline:
             x=data.time,
             y=self.name,
             source=source,
+            size=10,
             legend_group=data.entity,
             marker=factor_mark(data.entity, markers, data.entities),
             color=factor_cmap(data.entity, PALETTE, data.entities),
