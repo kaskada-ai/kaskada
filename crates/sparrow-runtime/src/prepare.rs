@@ -130,59 +130,76 @@ impl<'a> fmt::Display for SourceDataWrapper<'a> {
 pub async fn prepare_file(
     object_store_registry: &ObjectStoreRegistry,
     source_data: &SourceData,
-    output_path: &str,
-    output_prefix: &str,
+    output_path_prefix: &str,
+    output_file_prefix: &str,
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let output_url = ObjectStoreUrl::from_str(output_path)
-        .change_context_lazy(|| Error::InvalidUrl(output_path.to_owned()))?;
+    let output_url = ObjectStoreUrl::from_str(output_path_prefix)
+        .change_context_lazy(|| Error::InvalidUrl(output_path_prefix.to_owned()))?;
     let output_key = output_url
         .key()
         .change_context_lazy(|| Error::InvalidUrl(format!("{}", output_url)))?;
+
     let temp_dir = tempfile::tempdir()
         .into_report()
         .change_context(Error::Internal)?;
     let temp_dir = temp_dir.path().to_str().ok_or(Error::Internal)?;
+
     let path = format!(
         "/{}",
         output_url
             .path()
             .change_context_lazy(|| Error::InvalidUrl(format!("{}", output_url)))?
     );
-    let local_output_prefix = if output_key.eq(&ObjectStoreKey::Local) {
-        path::Path::new(&path)
-    } else {
-        path::Path::new(temp_dir)
+
+    // If the output path is to a local destination, we'll use that. If it's to
+    // a remote destination, we'll first write to a local temp file, then upload
+    // that to the remote destination.
+    let local_output_prefix = match output_key {
+        ObjectStoreKey::Local => path::Path::new(&path),
+        _ => path::Path::new(temp_dir),
     };
 
     let preparer = prepared_batches(source_data, table_config, slice).await?;
     let batch_count = std::sync::atomic::AtomicUsize::new(0);
 
     let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
-        let output = local_output_prefix.join(format!("{output_prefix}-{output_ordinal}.parquet"));
-        let output_file = create_file(&output)?;
+        // Defines the local path to the result file
+        let local_result_path =
+            local_output_prefix.join(format!("{output_file_prefix}-{output_ordinal}.parquet"));
+        let local_result_file = create_file(&local_result_path)?;
 
-        let metadata_output =
-            local_output_prefix.join(format!("{output_prefix}-{output_ordinal}-metadata.parquet"));
-        let metadata_output_file = create_file(&metadata_output)?;
+        // Defines the local path to the metadata file
+        let local_metadata_output = local_output_prefix.join(format!(
+            "{output_file_prefix}-{output_ordinal}-metadata.parquet"
+        ));
+        let local_metadata_file = create_file(&local_metadata_output)?;
 
-        write_batch(output_file, records).change_context(Error::WriteParquetData)?;
-        write_batch(metadata_output_file, metadata).change_context(Error::WriteMetadata)?;
+        // Defines the local path to the metadata yaml file
+        let metadata_yaml_output = local_output_prefix.join(format!(
+            "{output_file_prefix}-{output_ordinal}-metadata.yaml"
+        ));
+        let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
 
-        let prepared_metadata =
-            PreparedMetadata::try_from_local_parquet_path(&output, &metadata_output)
-                .into_report()
-                .change_context(Error::DetermineMetadata)?;
+        // Write batches to the local output files
+        write_batch(local_result_file, records).change_context(Error::WriteParquetData)?;
+        write_batch(local_metadata_file, metadata).change_context(Error::WriteMetadata)?;
+
+        let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
+            &local_result_path,
+            &local_metadata_output,
+        )
+        .into_report()
+        .change_context(Error::DetermineMetadata)?;
+
         let prepared_file: PreparedFile = prepared_metadata
             .to_owned()
             .try_into()
             .change_context(Error::Internal)?;
+
         tracing::info!("Prepared batch {output_ordinal} with metadata {prepared_metadata:?}");
 
-        let metadata_yaml_output =
-            local_output_prefix.join(format!("{output_prefix}-{output_ordinal}-metadata.yaml"));
-        let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
         serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
             .into_report()
             .change_context(Error::Internal)?;
@@ -211,13 +228,19 @@ pub async fn prepare_file(
     // unzip the stream of (prepared_file, prepared_metadata) into two vectors
     let (pm, pf): (Vec<_>, Vec<_>) = results.try_collect::<Vec<_>>().await?.into_iter().unzip();
     match output_key {
-        // No further action needs to be done for local/in-memory objects.
-        ObjectStoreKey::Local | ObjectStoreKey::Memory => Ok((pm, pf)),
-        // Need to upload the local files now.
+        ObjectStoreKey::Local | ObjectStoreKey::Memory => {
+            // Prepared files are stored locally
+            Ok((pm, pf))
+        }
         _ => {
-            let upload_results =
-                upload_prepared_files(object_store_registry, &pm, output_prefix, output_prefix)
-                    .await?;
+            // Upload the local prepared files to the remote destination
+            let upload_results = upload_prepared_files(
+                object_store_registry,
+                &pm,
+                output_path_prefix,
+                output_file_prefix,
+            )
+            .await?;
             Ok((pm, upload_results))
         }
     }
@@ -226,10 +249,13 @@ pub async fn prepare_file(
 async fn upload_prepared_files(
     object_store_registry: &ObjectStoreRegistry,
     prepared_metadata: &[PreparedMetadata],
-    output_prefix: &str,
+    output_path_prefix: &str,
     output_file_prefix: &str,
 ) -> error_stack::Result<Vec<PreparedFile>, Error> {
-    let span = tracing::info_span!("Uploading prepared files to object store", ?output_prefix);
+    let span = tracing::info_span!(
+        "Uploading prepared files to object store",
+        ?output_path_prefix
+    );
     let _enter = span.enter();
 
     let mut parquet_uploads: Vec<_> = Vec::new();
@@ -247,9 +273,9 @@ async fn upload_prepared_files(
             );
 
             let prepared_url =
-                format!("{output_prefix}/{output_file_prefix}-{batch_count}.parquet");
+                format!("{output_path_prefix}/{output_file_prefix}-{batch_count}.parquet");
             let metadata_prepared_url =
-                format!("{output_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet");
+                format!("{output_path_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet");
 
             let prepare_object_store_url = ObjectStoreUrl::from_str(prepared_url.as_str())
                 .change_context_lazy(|| Error::InvalidUrl(format!("{}", prepared_url.as_str())))?;
