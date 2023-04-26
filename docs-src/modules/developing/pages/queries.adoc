@@ -7,7 +7,6 @@ Kaskada queries are witten in a language called Fenl, which is designed to make 
 To learn more about Fenl:
 
 * The xref:fenl:fenl-quick-start.adoc[Quick Start] is an overview of the query language.
-* The xref:fenl:language-guide.adoc[Language Guide] explains the design and theory behind the languge.
 * The xref:fenl:catalog.adoc[Function Catalog] documents the operations and functions provided by Fenl.
 * The xref:fenl:fenl-faq.adoc[FAQ] answers some comment questions about using Fenl.
 
@@ -209,9 +208,7 @@ resp = query.create_query(expression=query, result_behavior="final-results")
 [source,bash]
 .Final queries in the CLI
 ----
-./kaskada-cli query run --result-behavior final-results <<EOS
-Purchase
-EOS
+cat query.txt | kaskada-cli query run --result-behavior final-results
 ----
 
 == Querying with Python

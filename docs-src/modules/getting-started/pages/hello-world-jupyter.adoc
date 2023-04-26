@@ -193,6 +193,11 @@ request_details {
 
 Now that we've created a table, we're ready to load some data into it.
 
+[IMPORTANT]
+====
+A table must be xref:#creating-a-table[created] before data can be loaded into it.
+====
+
 Data can be loaded into a table in multiple ways. In this example we'll
 load the contents of a Parquet file into the table. To learn about
 the different ways data can be loaded into a table, see the
@@ -254,6 +259,7 @@ query will return all of the columns and rows contained in a table:
 Purchase
 ----
 
+This query will return all of the columns and rows contained in a table.
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
