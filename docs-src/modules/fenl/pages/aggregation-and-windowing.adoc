@@ -27,7 +27,35 @@ Purchase.amount | sum()
 |2019-10-26 |4 |24
 |===
 
-image::basic-aggregation.png[] 
+[stream_viz,name=basic-sum]
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "13"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "| sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    }
+]
+....
 
 == Windowed Aggregations
 
@@ -80,8 +108,34 @@ is_valid(Purchase))
 |2019-10-26 |4 |17
 |===
 
-image::windowing-example1.png[]
-
+[stream_viz,name=sliding-sum]
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "13"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "| sum(window = sliding(2, Purchase)",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "15"},
+                {"t": 18, "v": "17"}
+            ]
+        ]
+    }
+]
+....
 
 The `yearly()` window generator can be used to compute the
 total of all purchases at the beginning of each year.
@@ -104,7 +158,48 @@ Purchase.amount | sum(window = since(yearly()))
 |2020-01-01 |4
 |===
 
-image::windowing-example2.png[]
+[stream_viz,name=yearly-sum]
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "13"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "yearly()",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 8, "v": ""},
+                {"t": 16, "v": ""}
+            ]
+        ]
+    },
+    {
+        "label": "| sum(window = since(yearly()))",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 8, "v": "0"},
+                {"t": 13, "v": "13"},
+                {"t": 16, "v": "0"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    }
+]
+....
+
 
 [NOTE]
 .Going Deeper
@@ -141,4 +236,44 @@ Purchase.amount | sum() | mean()
 |2019-10-26 |4 |24 |14
 |===
 
-image::windowing-example3.png[]
+[stream_viz,name=repeated-aggregation]
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "13"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "| sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    },
+    {
+        "label": "| mean()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "6"},
+                {"t": 13, "v": "10.666"},
+                {"t": 18, "v": "14"}
+            ]
+        ]
+    }
+]
+....
