@@ -194,7 +194,7 @@ jobs:
               uses: docker/setup-buildx-action@v2
       
             - name: Docker compose up for integration tests 
-              run: make ci/integration/tests/docker-compose-up-s3:
+              run: make ci/integration/tests/docker-compose-up-s3
             
             - name: Check docker containers (pulsar) healthcheck
               run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for pulssr container to be healthy..."; sleep 10; done'
