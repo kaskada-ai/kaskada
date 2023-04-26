@@ -198,7 +198,7 @@ Let's start by looking at the Purchase table without any filters.
 Begin by creating a text file with the following query:
 
 [source,Fenl]
-.query.txt
+.query.fenl
 ----
 Purchase
 ----
@@ -208,7 +208,7 @@ Run it by sending the query to `kaskada-cli query run`:
 
 [source,bash]
 ----
-cat query.txt | ./kaskada-cli query run --stdout --response-as csv
+cat query.fenl | ./kaskada-cli query run --stdout --response-as csv
 ----
 
 [NOTE]
@@ -229,7 +229,7 @@ It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
 [source,Fenl]
-.query.txt
+.query.fenl
 ----
 Purchase | when(Purchase.customer_id == "patrick")
 ----
@@ -240,14 +240,14 @@ Execute the query using the CLI as before.
 
 [source,bash]
 ----
-cat query.txt | kaskada-cli query run --stdout --response-as csv
+cat query.fenl | kaskada-cli query run --stdout --response-as csv
 ----
 
 As you begin to better understand your data you can start using
 aggregations over your data such as the `max()` function:
 
 [source,Fenl]
-.query.txt
+.query.fenl
 ----
 { max_purchase: Purchase.amount | max() } 
 | when(Purchase.customer_id == "patrick")
@@ -259,7 +259,7 @@ Execute the query using the CLI as before.
 
 [source,bash]
 ----
-cat query.txt | kaskada-cli query run --stdout --response-as csv
+cat query.fenl | kaskada-cli query run --stdout --response-as csv
 ----
 
 
@@ -290,7 +290,7 @@ the time and the entity with each query so that you can walk through the
 results in time:
 
 [source,Fenl]
-.query.txt
+.query.fenl
 ----
 {
     time: Purchase.purchase_time,
@@ -305,7 +305,7 @@ Execute the query using the CLI as before.
 
 [source,bash]
 ----
-cat query.txt | kaskada-cli query run --stdout --response-as csv
+cat query.fenl | kaskada-cli query run --stdout --response-as csv
 ----
 
 For more help writing queries, see xref:developing:queries.adoc[Reference -

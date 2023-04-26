@@ -208,7 +208,7 @@ resp = query.create_query(expression=query, result_behavior="final-results")
 [source,bash]
 .Final queries in the CLI
 ----
-cat query.txt | kaskada-cli query run --result-behavior final-results
+cat query.fenl | kaskada-cli query run --result-behavior final-results
 ----
 
 == Querying with Python
@@ -515,7 +515,7 @@ To query Kaskada using the CLI, the query string should be provided on `STDIN`.
 An easy way to define a query is to create a text file containing the query.
 
 [source,Fenl]
-.query.txt
+.query.fenl 
 ----
 { 
   time: Purchase.purchase_time, 
@@ -529,7 +529,7 @@ Run the query by piping it to the CLI.
 
 [source,bash]
 ----
-cat query.txt | kaskada-cli query run
+cat query.fenl | kaskada-cli query run
 ----
 
 Running this query will return a JSON-formatted https://buf.build/kaskada/kaskada/docs/main:kaskada.kaskada.v1alpha#kaskada.kaskada.v1alpha.CreateQueryResponse[query response] object.
@@ -555,7 +555,7 @@ To slice and/or filter JSON output we can use https://stedolan.github.io/jq/[jq]
 
 [source,bash]
 ----
-cat query.txt | kaskada-cli query run | jq '.outputTo.objectStore.outputPaths.paths'
+cat query.fenl | kaskada-cli query run | jq '.outputTo.objectStore.outputPaths.paths'
 ----
 
 This will return a list of result files.
@@ -571,7 +571,7 @@ For queries returning a small number of rows, it may be more convenient to outpu
 
 [source,bash]
 ----
-cat query.txt | kaskada-cli query run --stdout --response-as csv
+cat query.fenl | kaskada-cli query run --stdout --response-as csv
 ----
 
 You can see the full list of query arguments for the CLI with `kaskada-cli query run --help`.
