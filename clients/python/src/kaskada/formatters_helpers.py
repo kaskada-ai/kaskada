@@ -1,10 +1,11 @@
+# pylint: disable=no-member
 from datetime import datetime
 
 import pandas
 from domonic.html import b, pre, td, tr
 from google.protobuf.message import Message
 
-import kaskada.kaskada.v1alpha.schema_pb2 as schema_pb2
+from kaskada.kaskada.v1alpha import schema_pb2
 
 """
 NOTES:

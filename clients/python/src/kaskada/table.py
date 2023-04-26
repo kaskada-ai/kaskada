@@ -1,3 +1,4 @@
+# pylint: disable=no-member
 import logging
 import sys
 from pathlib import Path
