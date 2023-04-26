@@ -292,7 +292,6 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 	if err != nil {
 		return nil, errors.WithMessagef(err, "validating schema for file: %s on table: %s", fileInput, kaskadaTable.Name)
 	}
-
 	toPath := t.tableStore.GetFileSubPath(owner, kaskadaTable, fileInput.GetExtension())
 
 	newObject, err := t.objectStoreClient.CopyObjectIn(ctx, fileInput.GetURI(), toPath)
