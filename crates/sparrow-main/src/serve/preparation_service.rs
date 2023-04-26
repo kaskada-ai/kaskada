@@ -143,7 +143,7 @@ pub async fn convert_to_local_sourcedata(
                             let downloaded_path = download_source_file(
                                 &object_store_url,
                                 &object_store_registry,
-                                &local_path,
+                                local_path,
                             )
                             .await?;
                             Source::ParquetPath(downloaded_path)
@@ -169,7 +169,7 @@ pub async fn convert_to_local_sourcedata(
                             let downloaded_path = download_source_file(
                                 &object_store_url,
                                 &object_store_registry,
-                                &local_path,
+                                local_path,
                             )
                             .await?;
                             Source::CsvPath(downloaded_path)
@@ -197,7 +197,7 @@ async fn download_source_file(
         .into_report()
         .change_context(Error::Internal)?;
     object_store_url
-        .download(&object_store_registry, &local_path)
+        .download(object_store_registry, &local_path)
         .await
         .change_context_lazy(|| {
             Error::DownloadingObject(

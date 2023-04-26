@@ -123,7 +123,7 @@ impl RawMetadata {
             _ => {
                 let download_file = NamedTempFile::new().map_err(|_| Error::Download)?;
                 object_store_url
-                    .download(object_store_registry, &download_file.path())
+                    .download(object_store_registry, download_file.path())
                     .await
                     .change_context_lazy(|| Error::Download)?;
                 Self::try_from_parquet_path(download_file.path())
@@ -160,7 +160,7 @@ impl RawMetadata {
                     .into_report()
                     .change_context_lazy(|| Error::Download)?;
                 object_store_url
-                    .download(object_store_registry, &download_file.path())
+                    .download(object_store_registry, download_file.path())
                     .await
                     .change_context_lazy(|| Error::Download)?;
                 let file = file_from_path(download_file.path())
