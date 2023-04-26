@@ -49,8 +49,8 @@ kaskada-cli load \
 ----
 ====
 
-The result of running loading data is a `data_token_id`. 
-The data token ID is a unique reference to the data currently stored in the system. 
+The result of loading data is a `data_token_id`. 
+The data token ID is a unique reference to the data currently stored in Kaskada. 
 Data tokens enable repeatable queries: queries performed against the same data token always run on the same input data.
 
 
@@ -86,7 +86,7 @@ table.load(
 
 [IMPORTANT]
 ====
-The Python library infers file format from the extension of the file's path.
+The Python library infers a file's format from the extension of the file's path.
 Parquet file names must end in `.parquet`.
 ====
 --
@@ -131,7 +131,7 @@ table.load(
 
 [IMPORTANT]
 ====
-The Python library infers file format from the extension of the file's path.
+The Python library infers a file's format from the extension of the file's path.
 CSV file names must end in `.csv`.
 ====
 --
