@@ -137,6 +137,16 @@ If you have to release new versions for both engine and python components, do th
 ... check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
 ... check that the release is *not* marked as `latest`.
 ... check that https://pypi.org/project/kaskada/#description[Kaskada at PyPi] has the new version.
+.. Using the command line
+... Check out the repo at the commit that contains your changes to the version number in the `pyproject.toml` file.
+... Create a new tag with the appropriate version number (e.g. `git tag -a python@vX.Y.Z -m "Python Client vX.Y.Z"`). The values for X, Y and Z you should have gotten from the draft release.
+... Push the tag to GitHub (e.g. `git push origin`). 
+... This should kick off the CI workflow for a release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_python_client.yml[Python Release Workflow]
+... Once the workflow is complete, 
+.... check that the release was created successfully by going to link:{repo}/releases[releases]
+.... check that the release is *not* marked as `latest`.
+.... check that https://pypi.org/project/kaskada/#description[Kaskada at PyPi] has the new version.
+
 
 ### Patch Releases
 
