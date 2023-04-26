@@ -533,7 +533,7 @@ cat query.txt | kaskada-cli query run
 ----
 
 Running this query will return a JSON-formatted https://buf.build/kaskada/kaskada/docs/main:kaskada.kaskada.v1alpha#kaskada.kaskada.v1alpha.CreateQueryResponse[query response] object.
-By default, query results are written to a Parquet file: the location of these files are included along with additional query metadata in the query response.
+By default, query results are written to a Parquet file: the locations of these files are included along with additional query metadata in the query response.
 
 [source,json]
 ----
@@ -546,7 +546,12 @@ By default, query results are written to a Parquet file: the location of these f
 }
 ----
 
-To see the result files, you can use a JSON parser such as https://stedolan.github.io/jq/[jq] to inspect the `outputTo.objectStore.outputPaths.paths` array:
+The resulting files are stored in the JSON path `outputTo.objectStore.outputPaths.paths` as an array of paths. 
+
+[TIP]
+====
+To slice and/or filter JSON output we can use https://stedolan.github.io/jq/[jq]. 
+====
 
 [source,bash]
 ----
