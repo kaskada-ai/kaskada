@@ -29,7 +29,8 @@ services:
       - minio
     environment: 
       # for sparrow
-      AWS_ENDPOINT:                    http://minio:9000
+      AWS_ENDPOINT:                   http://minio:9000
+      AWS_ALLOW_HTTP:                 true
       # for wren
       OBJECT_STORE_TYPE:              "s3"
       OBJECT_STORE_BUCKET:            "integration"
@@ -39,6 +40,5 @@ services:
       # for both
       AWS_ACCESS_KEY_ID:              "kaskada"
       AWS_SECRET_ACCESS_KEY:          "kaskada123"
-      AWS_DEFAULT_REGION:             us-west-2
       AWS_REGION:                     us-west-2
       

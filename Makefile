@@ -108,12 +108,34 @@ wren/run:
 	cp NOTICE wren/
 	cd wren && go run main.go
 
+wren/run-s3-tests: 
+	cp NOTICE wren/
+	cd wren && \
+	AWS_ACCESS_KEY_ID=kaskada \
+	AWS_SECRET_ACCESS_KEY=kaskada123 \
+	AWS_REGION=us-west-2 \
+	OBJECT_STORE_TYPE=s3 \
+	OBJECT_STORE_BUCKET=integration \
+	OBJECT_STORE_PATH=/data \
+	OBJECT_STORE_DISABLE_SSL=true \
+	OBJECT_STORE_ENDPOINT=http://127.0.0.1:9000 \
+	OBJECT_STORE_FORCE_PATH_STYLE=true \
+	go run main.go
+
 wren/test:
 	cp NOTICE wren/
 	cd wren && go test ./...
 
 .PHONY: sparrow/run sparrow/run-release
 sparrow/run:
+	cargo run -p sparrow-main serve
+
+sparrow/run-s3-tests:
+	AWS_ENDPOINT=http://127.0.0.1:9000 \
+	AWS_ALLOW_HTTP=true \
+	AWS_ACCESS_KEY_ID=kaskada \
+	AWS_SECRET_ACCESS_KEY=kaskada123 \
+	AWS_REGION=us-west-2 \
 	cargo run -p sparrow-main serve
 
 sparrow/run-release:

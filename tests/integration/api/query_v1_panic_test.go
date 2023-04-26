@@ -56,6 +56,9 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 	})
 
 	AfterEach(func() {
+		if os.Getenv("LOCAL") == "true" {
+			Skip("tests running locally, skipping sparrow panic test")
+		}
 		// delete table
 		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 		Expect(err).ShouldNot(HaveOccurredGrpc())

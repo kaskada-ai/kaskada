@@ -274,11 +274,12 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}(computeTimerContext)
 
 	// start compute
-	computeStream, err := q.computeManager.InitiateQuery(queryContext)
+	computeClient, computeStream, err := q.computeManager.InitiateQuery(queryContext)
 	if err != nil {
 		subLogger.Warn().Err(err).Msg("issue initiating query")
 		return wrapErrorWithStatus(err, subLogger)
 	}
+	defer computeClient.Close()
 
 	success := true
 	for {

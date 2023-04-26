@@ -7,7 +7,7 @@ use derive_more::Display;
 use error_stack::{IntoReport, ResultExt};
 use hashbrown::HashMap;
 use object_store::ObjectStore;
-use tokio::fs;
+use tokio::{fs, io::AsyncWriteExt};
 use url::Url;
 
 use super::{object_store_url::ObjectStoreKey, ObjectStoreUrl};
@@ -73,6 +73,7 @@ impl ObjectStoreRegistry {
             .await
             .into_report()
             .change_context(Error::Internal)?;
+        writer.shutdown().await.into_report().change_context(Error::Internal)?;
         Ok(())
     }
 

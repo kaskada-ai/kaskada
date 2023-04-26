@@ -117,6 +117,7 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	}
 
 	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	defer queryClient.Close()
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
 	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
 	defer compileTimeoutCancel()
@@ -232,6 +233,7 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 	}
 
 	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	defer queryClient.Close()
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
 	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
 	defer compileTimeoutCancel()
@@ -315,6 +317,7 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compileRequest *v1alpha.CompileRequest) (*CompileQueryResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.RunCompileRequest").Logger()
 	computeClient := m.computeClients.ComputeServiceClient(ctx)
+	defer computeClient.Close()
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
 	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
 	defer compileTimeoutCancel()
@@ -376,7 +379,7 @@ func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {
 	return m.store.GetDataPathURI(subPath)
 }
 
-func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeService_ExecuteClient, error) {
+func (m *Manager) InitiateQuery(queryContext *QueryContext) (client.ComputeServiceClient, v1alpha.ComputeService_ExecuteClient, error) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.InitiateQuery").Logger()
 
 	executeRequest := &v1alpha.ExecuteRequest{
@@ -390,11 +393,11 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 
 	snapshotCacheBuster, err := m.getSnapshotCacheBuster(queryContext.ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prepareCacheBuster, err := m.getPrepareCacheBuster(queryContext.ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	queryClient := m.computeClients.ComputeServiceClient(queryContext.ctx)
@@ -428,18 +431,19 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 	executeClient, err := queryClient.Execute(queryContext.ctx, executeRequest)
 	if err != nil {
 		subLogger.Warn().Err(err).Msg("issue initiating streaming query compute request")
-		return nil, customerrors.NewComputeError(reMapSparrowError(queryContext.ctx, err))
+		return nil, nil, customerrors.NewComputeError(reMapSparrowError(queryContext.ctx, err))
 	}
-	return executeClient, nil
+	return queryClient, executeClient, nil
 }
 
 func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryResult, error) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.runMaterializationQuery").Logger()
 
-	stream, err := m.InitiateQuery(queryContext)
+	client, stream, err := m.InitiateQuery(queryContext)
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
 
 	result := &QueryResult{
 		DataTokenId: queryContext.dataToken.ID.String(),
@@ -836,6 +840,7 @@ func (m *Manager) getFormulas(ctx context.Context, owner *ent.Owner, requestView
 func (m *Manager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getSnapshotCacheBuster").Logger()
 	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	defer queryClient.Close()
 	res, err := queryClient.GetCurrentSnapshotVersion(ctx, &v1alpha.GetCurrentSnapshotVersionRequest{})
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting snapshot_cache_buster")
@@ -867,6 +872,7 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 	}
 
 	fileClient := m.computeClients.FileServiceClient(ctx)
+	defer fileClient.Close()
 	metadataReq := &v1alpha.GetMetadataRequest{
 		SourceData: sourceData,
 	}
