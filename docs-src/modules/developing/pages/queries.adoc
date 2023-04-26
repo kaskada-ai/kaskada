@@ -1,3 +1,5 @@
+:tabs-sync-option:
+
 = Queries
 
 Kaskada computes results from the data you've loaded by executing _queries_.
@@ -178,8 +180,11 @@ You determine which type of query to execute using the "result behavior" configu
 By default, historical results are returned.
 To return final results, you must configure the `final-results` behavior:
 
+[tabs]
+====
+Jupyter::
++
 [source,Fenl]
-.Final queries with fenlmagic
 ----
 %%fenl --result-behavior final-results
 {
@@ -190,8 +195,9 @@ To return final results, you must configure the `final-results` behavior:
 }
 ----
 
+Python::
++
 [source,python]
-.Final queries with Python
 ----
 from kaskada import compute
 
@@ -205,11 +211,26 @@ query = """{
 resp = query.create_query(expression=query, result_behavior="final-results")
 ----
 
+CLI::
++
+--
+[source,Fenl]
+----
+# query.txt
+{
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  max_amount: last(Purchase.amount) | max(),
+  min_amount: Purchase.amount | min()
+}
+----
+
 [source,bash]
-.Final queries in the CLI
 ----
 cat query.txt | kaskada-cli query run --result-behavior final-results
 ----
+--
+====
 
 == Querying with Python
 
