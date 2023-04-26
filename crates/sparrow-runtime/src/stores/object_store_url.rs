@@ -105,7 +105,7 @@ impl ObjectStoreUrl {
             .into_report()
             .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?
             .into_stream();
-        let mut file = tokio::fs::File::create(file_path.clone())
+        let mut file = tokio::fs::File::create(file_path)
             .await
             .into_report()
             .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;

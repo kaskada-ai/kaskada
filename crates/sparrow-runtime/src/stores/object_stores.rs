@@ -73,7 +73,11 @@ impl ObjectStoreRegistry {
             .await
             .into_report()
             .change_context(Error::Internal)?;
-        writer.shutdown().await.into_report().change_context(Error::Internal)?;
+        writer
+            .shutdown()
+            .await
+            .into_report()
+            .change_context(Error::Internal)?;
         Ok(())
     }
 
