@@ -82,11 +82,61 @@ Generally, releasing a component involves:
 
 ### Engine Component Group
 
-WARNING: TODO
+. Check the link:{repo}/releases[release page] on GitHub to find the appropriate draft release and corresponding version number for the Engine.
+. Create a PR updating version numbers for sparrow (`Cargo.toml`) and wren (`wren/.version`) to the appropriate version number from step 1. 
+. Merge the PR.
+. Create a new tag
+.. Using GitHub 
+... Go to link:{repo}/releases/new[releases/new].
+... Enter the tag name (e.g. `engine@vX.Y.Z`). The values for X, Y and Z you should have gotten from the draft release. 
+... Add a release title 
+... Add a description for this release 
+... Ensure that `Set as the latest release` check box *is selected*. 
+... Click `Publish release`. 
+... This should kick off the CI workflow for a release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_engine.yml[Engine Release Workflow]
+... Once the workflow is complete, check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
+.. Using the command line
+... Check out the repo at the commit that contains your changes to the version numbers in the `Cargo.toml` and `wren/.version` files.
+... Create a new tag with the appropriate version number (e.g. `git tag -a engine@vX.Y.Z -m "Engine vX.Y.Z"`). The values for X, Y and Z you should have gotten from the draft release.
+... Push the tag to GitHub (e.g. `git push origin`). 
+... This should kick off the CI workflow for a release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_engine.yml[Engine Release Workflow]
+... Once the workflow is complete, check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there *and marked as `latest`*.
+
 
 ### Python Component Group
 
-WARNING: TODO
+
+[IMPORTANT]
+====
+The Python client release relies on 
+
+. having the `latest` release on GitHub tagged for the engine with binary files for engine and manager present in the release
+.  there is not pending engine release happening at the same time. 
+
+
+If you have to release new versions for both engine and python components, do them serially, first the engine and then the python component.
+====
+
+. Check the link:{repo}/releases[release page] on GitHub to find the appropriate draft release and corresponding version number for the Python Client.
+. Make sure that there 
+.. is one release that is marked as `latest` *and is for the latest engine release*
+.. the engine release tagged as `latest` has the engine and manager binaries attached to it 
+.. there is no *pending engine release happening at the same time* 
+. Create a PR updating version numbers for the Python client (`clients/python/pyproject.toml`)
+. Merge the PR.
+. Create a new tag 
+.. Using GitHub
+.. Go to link:{repo}/releases/new[releases/new].
+.. Enter the tag name (e.g. `python@v.X.Y.Z`). The values for X, Y and Z you should have gotten from the draft release.
+.. Add a release title
+.. Add a description for this release
+.. Ensure that `Set as the latest release` check box *is NOT selected*.
+.. Click `Publish release`.
+.. This should kick off the CI workflow for a release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_python_client.yml[Python Release Workflow]
+.. Once the workflow is complete, 
+... check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
+... check that the release is *not* marked as `latest`.
+... check that https://pypi.org/project/kaskada/#description[Kaskada at PyPi] has the new version.
 
 ### Patch Releases
 
