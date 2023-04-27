@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -18,16 +19,17 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = Describe("Query V1 when Sparrow panics", func() {
+var _ = Describe("Query V1 when Sparrow panics", Ordered, Label("sparrow-panic"), func() {
 	var ctx context.Context
 	var cancel context.CancelFunc
 	var conn *grpc.ClientConn
+	var destination *v1alpha.Destination
 	var tableClient v1alpha.TableServiceClient
 	var queryClient v1alpha.QueryServiceClient
 	var tableName string
 
-	BeforeEach(func() {
-		if os.Getenv("LOCAL") == "true" {
+	BeforeAll(func() {
+		if strings.Contains(os.Getenv("ENV"), "local") {
 			Skip("tests running locally, skipping sparrow panic test")
 		}
 
@@ -53,9 +55,17 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+
+		destination = &v1alpha.Destination{
+			Destination: &v1alpha.Destination_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			},
+		}
 	})
 
-	AfterEach(func() {
+	AfterAll(func() {
 		// delete table
 		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
@@ -65,12 +75,6 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 	})
 
 	It("should be reported in a timely manner", func() {
-		destination := &v1alpha.Destination{}
-		destination.Destination = &v1alpha.Destination_ObjectStore{
-			ObjectStore: &v1alpha.ObjectStoreDestination{
-				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-			},
-		}
 		createQueryRequest := &v1alpha.CreateQueryRequest{
 			Query: &v1alpha.Query{
 				Expression:     "__INTERNAL_COMPILE_PANIC__",
@@ -98,40 +102,7 @@ var _ = Describe("Query V1 when Sparrow panics", func() {
 	})
 
 	It("should support queries after ", func() {
-		// First, cause a panic.
-		destination := &v1alpha.Destination{}
-		destination.Destination = &v1alpha.Destination_ObjectStore{
-			ObjectStore: &v1alpha.ObjectStoreDestination{
-				FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-			},
-		}
 		createQueryRequest := &v1alpha.CreateQueryRequest{
-			Query: &v1alpha.Query{
-				Expression:     "__INTERNAL_COMPILE_PANIC__",
-				Destination:    destination,
-				ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
-			},
-			QueryOptions: &v1alpha.QueryOptions{
-				PresignResults: true,
-			},
-		}
-
-		stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
-		Expect(err).ShouldNot(HaveOccurredGrpc())
-		Expect(stream).ShouldNot(BeNil())
-
-		res, err := helpers.GetMergedCreateQueryResponse(stream)
-		Expect(err).Should(HaveOccurred())
-		Expect(res).Should(BeNil())
-
-		// inspect error response
-		errStatus, ok := status.FromError(err)
-		Expect(ok).Should(BeTrue())
-		Expect(errStatus.Code()).Should(Equal(codes.Internal))
-		Expect(errStatus.Message()).Should(ContainSubstring("internal error"))
-
-		// Then, run a query and verify we get the right results
-		createQueryRequest = &v1alpha.CreateQueryRequest{
 			Query: &v1alpha.Query{
 				Expression: `
 {
@@ -148,11 +119,11 @@ min_amount: query_v1_panic.amount | min(),
 			},
 		}
 
-		stream, err = queryClient.CreateQuery(ctx, createQueryRequest)
+		stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 		Expect(stream).ShouldNot(BeNil())
 
-		res, err = helpers.GetMergedCreateQueryResponse(stream)
+		res, err := helpers.GetMergedCreateQueryResponse(stream)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		VerifyRequestDetails(res.RequestDetails)

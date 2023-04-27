@@ -168,6 +168,7 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 
 		// Send the preparation request to the prepare client
 		prepareClient := m.computeClients.PrepareServiceClient(ctx)
+		defer prepareClient.Close()
 		prepareReq := &v1alpha.PrepareDataRequest{
 			SourceData:       sourceData,
 			Config:           computeTable.Config,
@@ -267,6 +268,7 @@ func (m *Manager) getOrCreatePrepareJobs(ctx context.Context, owner *ent.Owner, 
 func (m *Manager) getPrepareCacheBuster(ctx context.Context) (*int32, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getPrepareCacheBuster").Logger()
 	prepareClient := m.computeClients.PrepareServiceClient(ctx)
+	defer prepareClient.Close()
 	res, err := prepareClient.GetCurrentPrepID(ctx, &v1alpha.GetCurrentPrepIDRequest{})
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting prepare_cache_buster")

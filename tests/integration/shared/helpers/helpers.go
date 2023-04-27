@@ -116,17 +116,22 @@ func downloadFile(url string) (localPath string, cleanup func()) {
 			err = os.Remove(tempFile.Name())
 			Expect(err).ShouldNot(HaveOccurred(), "Can't remove temp file")
 		}
-	} else if strings.HasPrefix(url, "file://") {
-		localPath = fmt.Sprintf("..%s", strings.TrimPrefix(url, "file://"))
-		cleanup = func() {}
-	} else {
-		localPath = fmt.Sprintf("..%s", url)
-		cleanup = func() {}
+		return
+	}
+	localPath = strings.TrimPrefix(url, "file://")
+	cleanup = func() {}
+	if os.Getenv("ENV") != "local-local" {
+		localPath = fmt.Sprintf("../%s", localPath)
 	}
 	return
 }
 
 func GetFileURI(fileName string) string {
+	if os.Getenv("ENV") == "local-local" {
+		workDir, err := os.Getwd()
+		Expect(err).ShouldNot(HaveOccurred())
+		return fmt.Sprintf("file://%s/../../../testdata/%s", workDir, fileName)
+	}
 	return fmt.Sprintf("file:///testdata/%s", fileName)
 }
 

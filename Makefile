@@ -64,23 +64,32 @@ test/int/docker-up:
 test/int/docker-up-s3:
 	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans
 
+test/int/docker-up-s3-only:
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans minio
+
 test/int/docker-up-postgres:
 	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml up --build --remove-orphans
 
 test/int/docker-up-postgres-s3:
 	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans
 
+test/int/run-api-docker:
+	cd tests/integration/api && ENV=local-docker go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
+
+test/int/run-api-s3-docker:
+	cd tests/integration/api && ENV=local-docker OBJECT_STORE_TYPE=s3 OBJECT_STORE_PATH=/data go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
+
+test/int/run-api-postgres-docker:
+	cd tests/integration/api && ENV=local-docker DB_DIALECT="postgres" go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
+
+test/int/run-api-postgres-s3-docker:
+	cd tests/integration/api && ENV=local-docker DB_DIALECT="postgres" OBJECT_STORE_TYPE=s3 OBJECT_STORE_PATH=/data go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
+
 test/int/run-api:
-	cd tests/integration/api && LOCAL=true go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
+	cd tests/integration/api && ENV=local-local go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
 test/int/run-api-s3:
-	cd tests/integration/api && LOCAL=true OBJECT_STORE_TYPE=s3 OBJECT_STORE_PATH=/data go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
-
-test/int/run-api-postgres:
-	cd tests/integration/api && LOCAL=true DB_DIALECT="postgres" go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
-
-test/int/run-api-postgres-s3:
-	cd tests/integration/api && LOCAL=true DB_DIALECT="postgres" OBJECT_STORE_TYPE=s3 OBJECT_STORE_PATH=/data go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
+	cd tests/integration/api && ENV=local-local OBJECT_STORE_TYPE=s3 OBJECT_STORE_PATH=/data go run github.com/onsi/ginkgo/v2/ginkgo -v ./...
 
 ####
 ## CI related targets
@@ -93,7 +102,7 @@ ci/integration/tests/docker-compose-down:
 	export DOCKER_BUILDKIT=1 
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
 
-ci/integration/tests/run/api: test/int/run-api
+ci/integration/tests/run/api: test/int/run-api-docker
 
 
 wren/build:
@@ -106,7 +115,26 @@ wren/lint:
 
 wren/run:
 	cp NOTICE wren/
-	cd wren && go run main.go
+	cd wren && \
+	DB_IN_MEMORY=false \
+	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	go run main.go
+
+wren/run-s3: 
+	cp NOTICE wren/
+	cd wren && \
+	AWS_ACCESS_KEY_ID=kaskada \
+	AWS_SECRET_ACCESS_KEY=kaskada123 \
+	AWS_REGION=us-west-2 \
+	DB_IN_MEMORY=false \
+	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	OBJECT_STORE_TYPE=s3 \
+	OBJECT_STORE_BUCKET=integration \
+	OBJECT_STORE_PATH=/data \
+	OBJECT_STORE_DISABLE_SSL=true \
+	OBJECT_STORE_ENDPOINT=http://127.0.0.1:9000 \
+	OBJECT_STORE_FORCE_PATH_STYLE=true \
+	go run main.go
 
 wren/test:
 	cp NOTICE wren/
@@ -114,6 +142,14 @@ wren/test:
 
 .PHONY: sparrow/run sparrow/run-release
 sparrow/run:
+	cargo run -p sparrow-main serve
+
+sparrow/run-s3:
+	AWS_ENDPOINT=http://127.0.0.1:9000 \
+	AWS_ALLOW_HTTP=true \
+	AWS_ACCESS_KEY_ID=kaskada \
+	AWS_SECRET_ACCESS_KEY=kaskada123 \
+	AWS_REGION=us-west-2 \
 	cargo run -p sparrow-main serve
 
 sparrow/run-release:

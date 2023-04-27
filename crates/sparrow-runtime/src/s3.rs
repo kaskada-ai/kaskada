@@ -132,7 +132,7 @@ impl S3Helper {
         let shared_config = aws_config::from_env().load().await;
 
         // Create the client.
-        let endpoint = std::env::var("S3_ENDPOINT");
+        let endpoint = std::env::var("AWS_ENDPOINT");
         let s3_config: aws_sdk_s3::config::Config = if let Ok(endpoint) = endpoint {
             // Oeverride the endpoint if needed
             let uri: Uri = endpoint.parse().unwrap();
