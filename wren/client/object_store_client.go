@@ -214,6 +214,15 @@ func (c objectStoreClient) DeleteObjects(ctx context.Context, subPath string) er
 	return nil
 }
 
+// true if the URI exists and is accessible, otherwise returns error
+func (c objectStoreClient) URIExists(ctx context.Context, URI string) (bool, error) {
+	file, err := newFile(URI)
+	if err != nil {
+		return false, err
+	}
+	return file.Exists()
+}
+
 // generates a presigned URL to download an object from our store.
 // Note the signing step will be skipped when the object-store-type is `local`
 func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI string) (presignedURL string, err error) {

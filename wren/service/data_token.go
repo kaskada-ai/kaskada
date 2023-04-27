@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -28,8 +28,16 @@ func NewDataTokenService(client *internal.DataTokenClient) pb.DataTokenServiceSe
 }
 
 func (d *dataTokenService) GetDataToken(ctx context.Context, req *pb.GetDataTokenRequest) (*pb.GetDataTokenResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "dataTokenService.GetDataToken").Logger()
+	resp, err := d.getDataToken(ctx, req)
+	if err != nil {
+		subLogger := log.Ctx(ctx).With().Str("method", "dataTokenService.GetDataToken").Logger()
+		return nil, wrapErrorWithStatus(err, subLogger)
+	}
+	return resp, nil
+}
 
+func (d *dataTokenService) getDataToken(ctx context.Context, req *pb.GetDataTokenRequest) (*pb.GetDataTokenResponse, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "dataTokenService.GetDataToken").Logger()
 	owner := auth.APIOwnerFromContext(ctx)
 
 	var (
@@ -48,13 +56,15 @@ func (d *dataTokenService) GetDataToken(ctx context.Context, req *pb.GetDataToke
 		}
 		dataToken, err = d.client.GetDataToken(ctx, owner, id)
 	}
-	if err != nil {
-		return nil, wrapErrorWithStatus(errors.Wrapf(err, "getting data_token: %s", req.DataTokenId), subLogger)
+	if err != nil { 
+		//could be NotFoundError or other error, already logged in GetDataToken
+		return nil, err
 	}
 
 	tableVersionMap, err := d.client.GetTableVersions(ctx, owner, dataToken)
 	if err != nil {
-		return nil, wrapErrorWithStatus(errors.Wrapf(err, "getting data_version for data_token: %s", req.DataTokenId), subLogger)
+		subLogger.Error().Err(err).Str("data_token_id", req.DataTokenId).Msg("issue getting data_version for data_token")
+		return nil, err
 	}
 
 	outputMap := map[string]int64{}
