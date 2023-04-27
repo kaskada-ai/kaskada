@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, str::FromStr};
 
 use anyhow::Context;
 use futures::TryStreamExt;
@@ -7,11 +7,14 @@ use sparrow_api::kaskada::v1alpha::execute_request::ComputeSnapshotConfig;
 use tokio_stream::wrappers::ReadDirStream;
 use tracing::{info, info_span, Instrument};
 
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
+
 use super::{S3Helper, S3Object};
 
 /// Downloads a compute snapshot from s3 to a local directory.
 pub(crate) async fn download_snapshot(
     s3_helper: &S3Helper,
+    object_store_registry: &ObjectStoreRegistry,
     storage_path: &Path,
     config: &ComputeSnapshotConfig,
 ) -> anyhow::Result<()> {
@@ -28,9 +31,17 @@ pub(crate) async fn download_snapshot(
 
     let span = info_span!("Downloading snapshot files", ?s3_uri, ?storage_path);
     let _enter = span.enter();
-    let snapshot_key_prefix = S3Object::try_from_uri(s3_uri)?.key;
+    let snapshot_key_prefix = ObjectStoreUrl::from_str(s3_uri)
+        .unwrap()
+        .path()
+        .unwrap()
+        .to_string();
 
     let snapshot_object = S3Object::try_from_uri(&config.output_prefix)?;
+
+    let obje = object_store_registry
+        .list_with_delimiter(&snapshot_object.bucket, &snapshot_key_prefix)
+        .await?;
     let s3_objects = s3_helper
         .list_prefix_delimited(&snapshot_object.bucket, &snapshot_key_prefix)
         .in_current_span()

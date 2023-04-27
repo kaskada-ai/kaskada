@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -9,7 +9,7 @@ use tempfile::TempDir;
 use uuid::Uuid;
 
 use super::{S3Helper, S3Object};
-use crate::execute::ComputeResult;
+use crate::{execute::ComputeResult, stores::ObjectStoreRegistry};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -28,7 +28,7 @@ impl error_stack::Context for Error {}
 ///
 /// The owned `TempDir` will be dropped on completion of uploading the snapshot.
 pub(crate) async fn upload_snapshot(
-    s3_helper: S3Helper,
+    object_store_registry: &ObjectStoreRegistry,
     storage_dir: TempDir,
     config: ComputeSnapshotConfig,
     compute_result: ComputeResult,
@@ -92,8 +92,8 @@ pub(crate) async fn upload_snapshot(
                 dest_path.key
             );
 
-            s3_helper
-                .upload_s3(dest_path, &source_path)
+            object_store_registry
+                .upload(dest_path, &source_path)
                 .await
                 .context("Uploading file to s3")
                 .into_report()

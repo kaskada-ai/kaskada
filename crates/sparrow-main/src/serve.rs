@@ -77,7 +77,11 @@ impl ServeCommand {
             None
         };
         let flight_record_path = Box::leak(Box::new(flight_record_path));
-        let compute_service = ComputeServiceImpl::new(flight_record_path, s3.clone());
+        let compute_service = ComputeServiceImpl::new(
+            flight_record_path,
+            s3.clone(),
+            object_store_registry.clone(),
+        );
         let preparation_service = PreparationServiceImpl::new(object_store_registry.clone());
 
         let (mut health_reporter, health_service) = tonic_health::server::health_reporter();

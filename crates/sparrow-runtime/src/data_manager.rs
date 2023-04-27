@@ -1,9 +1,11 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use async_once_cell::Lazy;
+use aws_sdk_s3::model::Object;
 use chrono::NaiveDateTime;
 use futures::FutureExt;
 use hashbrown::hash_map::EntryRef;
@@ -13,6 +15,7 @@ use tempfile::NamedTempFile;
 use tracing::{debug, error};
 
 use crate::s3::{self, S3Helper, S3Object};
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 
 /// Manages the data files on disk and being downloaded.
 ///
@@ -49,14 +52,14 @@ use crate::s3::{self, S3Helper, S3Object};
 /// runs out.
 #[derive(Debug)]
 pub struct DataManager {
-    s3_helper: S3Helper,
+    object_store_registry: Arc<ObjectStoreRegistry>,
     handles: HashMap<PreparedFile, Arc<DataHandle>>,
 }
 
 impl DataManager {
-    pub fn new(s3_helper: S3Helper) -> Self {
+    pub fn new(object_store_registry: Arc<ObjectStoreRegistry>) -> Self {
         Self {
-            s3_helper,
+            object_store_registry: object_store_registry.clone(),
             handles: HashMap::default(),
         }
     }
@@ -72,7 +75,10 @@ impl DataManager {
         match self.handles.entry_ref(prepared_file) {
             EntryRef::Occupied(occupied) => Ok(occupied.get().clone()),
             EntryRef::Vacant(vacant) => {
-                let handle = Arc::new(DataHandle::try_new(self.s3_helper.clone(), prepared_file)?);
+                let handle = Arc::new(DataHandle::try_new(
+                    self.object_store_registry.clone(),
+                    prepared_file,
+                )?);
                 Ok(vacant.insert(handle).clone())
             }
         }
@@ -129,12 +135,13 @@ impl DataHandle {
     ///
     /// Should generally be called via [DataManager]. Visible for testing.
     pub(crate) fn try_new(
-        s3_helper: S3Helper,
+        object_store_registry: Arc<ObjectStoreRegistry>,
         prepared_file: &PreparedFile,
     ) -> anyhow::Result<Self> {
         let data_path = if s3::is_s3_path(&prepared_file.path) {
-            let s3_object = S3Object::try_from_uri(&prepared_file.path)?;
-            DataPath::new_s3(s3_helper, s3_object)
+            // let s3_object = S3Object::try_from_uri(&prepared_file.path)?;
+            let object_url = ObjectStoreUrl::from_str(&prepared_file.path).unwrap();
+            DataPath::new_s3(&object_store_registry, object_url)
         } else {
             let local_path = PathBuf::from(&prepared_file.path);
             anyhow::ensure!(
@@ -242,12 +249,11 @@ impl DataHandle {
 }
 
 impl DataPath {
-    pub fn new_s3(s3_helper: S3Helper, s3_object: S3Object) -> Self {
-        let original_path = s3_object.get_formatted_key();
-        // TODO: Ideally, we wouldn't need to clone the s3_object at all.
+    pub fn new_s3(object_store_registry: &ObjectStoreRegistry, object_url: ObjectStoreUrl) -> Self {
+        // TODO: Ideally, we wouldn't need to clone the object at all.
         let local_file = Lazy::new(
             async move {
-                debug!("Downloading {:?}", s3_object);
+                debug!("Downloading {:?}", object_url);
                 let temp_file = tempfile::Builder::new()
                     .suffix(".parquet")
                     .tempfile()
@@ -255,12 +261,12 @@ impl DataPath {
                         error!("Failed to create temp file for download: {}", err);
                         DownloadError
                     })?;
-                s3_helper
-                    .download_s3(s3_object.clone(), temp_file.path())
+                object_store_registry
+                    .download(object_url, temp_file.path())
                     .await
                     .map_err(|err| {
                         // TODO: Determine if the download should be retried.
-                        error!("Failed to download '{:?}' to tempfile: {}", s3_object, err);
+                        error!("Failed to download '{:?}' to tempfile: {}", object_url, err);
                         DownloadError
                     })?;
 
@@ -270,7 +276,7 @@ impl DataPath {
         );
 
         Self::S3 {
-            original_path,
+            original_path: object_url.to_string(),
             local_file,
         }
     }

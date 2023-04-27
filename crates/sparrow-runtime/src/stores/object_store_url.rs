@@ -92,30 +92,6 @@ impl ObjectStoreUrl {
             }
         }
     }
-    pub async fn download(
-        &self,
-        object_store_registry: &ObjectStoreRegistry,
-        file_path: &Path,
-    ) -> error_stack::Result<(), Error> {
-        let path = self.path()?;
-        let object_store = object_store_registry.object_store(self.key()?)?;
-        let stream = object_store
-            .get(&path)
-            .await
-            .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?
-            .into_stream();
-        let mut file = tokio::fs::File::create(file_path)
-            .await
-            .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;
-        let mut body = StreamReader::new(stream);
-        tokio::io::copy(&mut body, &mut file)
-            .await
-            .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;
-        Ok(())
-    }
 }
 
 impl FromStr for ObjectStoreUrl {

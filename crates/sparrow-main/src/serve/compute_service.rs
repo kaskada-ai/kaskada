@@ -12,6 +12,7 @@ use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
 use sparrow_runtime::execute::Error;
 use sparrow_runtime::s3::{S3Helper, S3Object};
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use tempfile::NamedTempFile;
 use tonic::{Request, Response, Status};
 use tracing::{error, info, Instrument};
@@ -24,13 +25,19 @@ use crate::BuildInfo;
 pub(super) struct ComputeServiceImpl {
     flight_record_path: &'static Option<S3Object>,
     s3_helper: S3Helper,
+    object_store_registry: ObjectStoreRegistry,
 }
 
 impl ComputeServiceImpl {
-    pub(super) fn new(flight_record_path: &'static Option<S3Object>, s3_helper: S3Helper) -> Self {
+    pub(super) fn new(
+        flight_record_path: &'static Option<S3Object>,
+        s3_helper: S3Helper,
+        object_store_registry: ObjectStoreRegistry,
+    ) -> Self {
         Self {
             flight_record_path,
             s3_helper,
+            object_store_registry,
         }
     }
 }
@@ -78,6 +85,7 @@ impl ComputeService for ComputeServiceImpl {
             execute_impl(
                 self.flight_record_path,
                 self.s3_helper.clone(),
+                self.object_store_registry.clone(),
                 request.into_inner(),
             )
             .in_current_span(),
@@ -118,6 +126,7 @@ async fn compile_impl(
 async fn execute_impl(
     flight_record_path: &'static Option<S3Object>,
     s3_helper: S3Helper,
+    object_store_registry: ObjectStoreRegistry,
     request: ExecuteRequest,
 ) -> error_stack::Result<
     impl Stream<Item = Result<ExecuteResponse, Status>> + Send,
@@ -180,6 +189,7 @@ async fn execute_impl(
 
     let progress_stream = sparrow_runtime::execute::execute(
         request,
+        object_store_registry,
         s3_helper.clone(),
         flight_record_local_path,
         flight_record_header,

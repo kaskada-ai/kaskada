@@ -17,6 +17,7 @@ use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse}
 use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
 use crate::RuntimeOptions;
+use crate::stores::ObjectStoreRegistry;
 
 mod avro_arrow;
 mod compute_executor;
@@ -45,6 +46,7 @@ const STORE_PATH_PREFIX: &str = "compute_snapshot_";
 /// execute response.
 pub async fn execute(
     request: ExecuteRequest,
+    object_store_registry: Arc<ObjectStoreRegistry>,
     s3_helper: S3Helper,
     _flight_record_local_path: Option<std::path::PathBuf>,
     _flight_record_header: FlightRecordHeader,
@@ -100,7 +102,7 @@ pub async fn execute(
 
         // If a `resume_from` path is specified, download the existing state from s3.
         if config.resume_from.is_some() {
-            crate::s3::download_snapshot(&s3_helper, dir.path(), config)
+            crate::s3::download_snapshot(s3_helper.clone(), dir.path(), config)
                 .await
                 .into_report()
                 .change_context(Error::internal_msg("download snapshot"))?;
@@ -177,7 +179,7 @@ pub async fn execute(
         .into_report()
         .change_context(Error::internal_msg("get primary grouping ID"))?;
     key_hash_inverse
-        .add_from_data_context(&data_context, primary_group_id, s3_helper.clone())
+        .add_from_data_context(&data_context, primary_group_id, object_store_registry)
         .await
         .into_report()
         .change_context(Error::internal_msg("initialize key hash inverse"))?;
@@ -202,7 +204,7 @@ pub async fn execute(
     let context = OperationContext {
         plan,
         plan_hash,
-        data_manager: DataManager::new(s3_helper.clone()),
+        data_manager: DataManager::new(.clone()),
         data_context,
         compute_store,
         key_hash_inverse,
@@ -230,7 +232,7 @@ pub async fn execute(
     .change_context(Error::internal_msg("spawn compute executor"))?;
 
     Ok(compute_executor.execute_with_progress(
-        s3_helper,
+        object_store_registry,
         storage_dir,
         request.compute_snapshot_config,
     ))

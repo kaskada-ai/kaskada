@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, PrimitiveArray, UInt64Array};
@@ -13,6 +14,7 @@ use sparrow_plan::GroupId;
 use tempfile::NamedTempFile;
 
 use crate::s3::{self, S3Helper, S3Object};
+use crate::stores::ObjectStoreRegistry;
 
 /// Stores the mapping from key hash u64 to the position in the keys array.
 ///
@@ -68,7 +70,7 @@ impl KeyHashInverse {
         &mut self,
         data_context: &DataContext,
         primary_grouping: GroupId,
-        s3: S3Helper,
+        object_store_registry: Arc<ObjectStoreRegistry>,
     ) -> anyhow::Result<()> {
         let metadata_files = data_context
             .tables_for_grouping(primary_grouping)

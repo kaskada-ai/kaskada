@@ -8,6 +8,7 @@ use error_stack::{IntoReport, ResultExt};
 use hashbrown::HashMap;
 use object_store::ObjectStore;
 use tokio::{fs, io::AsyncWriteExt};
+use tokio_util::io::StreamReader;
 use url::Url;
 
 use super::{object_store_url::ObjectStoreKey, ObjectStoreUrl};
@@ -47,6 +48,76 @@ impl ObjectStoreRegistry {
             self.put_object_store(key, object_store.clone())?;
             Ok(object_store)
         }
+    }
+
+    // pub async fn download(
+    // &self,
+    //     source_url: ObjectStoreUrl,
+    //     local_dest: &path::Path,
+    // ) -> error_stack::Result<(), Error> {
+    //     let source_path = source_url.path()?;
+    //     let source_key = source_url.key()?;
+    //     let object_store = self.object_store(source_key)?;
+
+    //     let get_result = object_store
+    //         .get(&source_path)
+    //         .await
+    //         .into_report()
+    //         .change_context(Error::ReadWriteObjectStore)
+    //         .attach_printable_lazy(|| format!("failed to read object from path {}", source_path))?
+    //         .bytes()
+    //         .await
+    //         .into_report()
+    //         .change_context(Error::ReadWriteObjectStore)
+    //         .attach_printable_lazy(|| {
+    //             format!(
+    //                 "failed to translate object to bytes from path {}",
+    //                 source_path
+    //             )
+    //         })?;
+
+    //     tokio::fs::write(local_dest, get_result)
+    //         .await
+    //         .into_report()
+    //         .change_context(Error::Internal)?;
+    //     Ok(())
+    // }
+
+    pub async fn download(
+        &self,
+        source_url: ObjectStoreUrl,
+        local_dest: &path::Path,
+    ) -> error_stack::Result<(), Error> {
+        let source_path = source_url.path()?;
+        let source_key = source_url.key()?;
+        let object_store = self.object_store(source_key)?;
+
+        let stream = object_store
+            .get(&source_path)
+            .await
+            .into_report()
+            .change_context(Error::ReadWriteObjectStore)
+            .attach_printable_lazy(|| format!("failed to read object from path {}", source_path))?
+            .into_stream();
+        let mut file = tokio::fs::File::create(local_dest)
+            .await
+            .into_report()
+            .change_context(Error::ReadWriteObjectStore)
+            .attach_printable_lazy(|| format!("failed to read object from path {}", source_path))?;
+
+        let mut body = StreamReader::new(stream);
+        tokio::io::copy(&mut body, &mut file)
+            .await
+            .into_report()
+            .change_context(Error::ReadWriteObjectStore)
+            .attach_printable_lazy(|| {
+                format!(
+                    "failed to copy object to path {}",
+                    local_dest.to_string_lossy()
+                )
+            })?;
+
+        Ok(())
     }
 
     pub async fn upload(
