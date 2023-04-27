@@ -1,14 +1,91 @@
 = Getting Started
 
-Kaskada's query language xref:overview:what-is-kaskada.adoc[focuses on event-based data processing] making it easier to reason about when things happen, the state at specific points in time, and how results change over time.
-Kaskada queries are simple, declarative and composable providing a more expressive way to query event-based data.
+== Reasoning about events with timelines
 
-There are several ways to quickly get started with Kaskada.
+Kaskada is a unified event processing engine that provides stateful stream processing in a high-level query language designed specifically for reasoning about events in bulk and in real time.
+Kaskada is built on the idea of a _timeline_ - the history of how a value changes over time for a specific entity or group.
 
-* xref:getting-started:hello-world-jupyter.adoc[]: How to get up and running with Kaskada inside a Jupyter notebook running locally. 
-This quick tutorial will help you install and run Kaskada from within a Jupyter notebook, load some sample data into Kaskada, use Kaskada queries and Python within Jupyter to explore that data.
-* xref:getting-started:hello-world-cli.adoc[]: How to execute queries from the command line using the Kaskada CLI. 
-This quick tutorial will help you install and run Kaskada from the command line, load some sample data into Kaskada, and use Kaskada queries to explore that data all on the command line.
+[stream_viz,name=basic-sum]
+.Aggregating events as a timeline
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "13"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "Purchase.amount | sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    }
+]
+....
+
+Timelines give you declarative queries and the ability to reason about temporal context, time travel, sequencing, timeseries, and more.
+Transforming and combining timelines allow you to intuitively express computations over events.
+
+****
+⭢ Read more about timelines in xref:overview:what-is-kaskada.adoc[]
+****
+
+With Kaskada, it's timelines all the way down - every operation starts from timelines and produces timelines. 
+When you make a query, the resulting timeline is converted to a table in one of two ways: as a value history or as a value snapshot. 
+
+* *Value history* generates a row each time the timeline changes, and each row is associated with a different entity and point in time. 
+* *Value snapshot* generates a row for each entity at the _same_ point in time; each row is associated with a different entity, but all rows are associated with the same time.
+
+****
+⭢ Read more about converting to tables in xref:developing:queries.adoc#configuring-how-queries-are-computed[Queries]
+****
+
+== Kaskada's basic architecture
+
+Kaskada is implemented as a standalone service with two main components.
+
+* The *engine* is a stateful compute engine for transforming event data.
+* The *manager* is a stateful compute engine for transforming event data.
+
+These components are distributed as dependency-free binaries.
+Kaskada is managed using an API, and multiple clients exist to communicate with the API, including Python and a CLI binary.
+Kaskada can be configured to run as a remote service or as a local process.
+
+****
+⭢ Read more about installing Kaskada in xref:ROOT:installing.adoc[]
+****
+
+Kaskada stores data in tables. Tables consist of multiple rows, and each row is a value of the same type.
+Events must be loaded into a table before they can be queried.
+
+****
+⭢ Read more about loading data in xref:ROOT:loading-data.adoc[]
+****
+
+== Quick-starts
+
+The next section of the docs shows how to quickly get started with Kaskada.
+You'll see how to install Kaskada, create tables, load data, and make simple queries.
+You can pick the development environment that's most familiar to you.
+
+****
+⭢ Try out Kaskada using Jupyter in xref:getting-started:hello-world-jupyter.adoc[]
+
+⭢ Try out Kaskada using the CLI in xref:getting-started:hello-world-cli.adoc[]
+****
 
 [TIP]
 .Installing different clients
