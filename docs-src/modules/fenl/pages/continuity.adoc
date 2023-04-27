@@ -14,7 +14,47 @@ meaningful value at the set of times for which events exist. Similarly,
 simple operations such as field reference produce discrete results when
 applied to discrete expressions.
 
-image::discrete-expressions.png[]
+[stream_viz,name=discrete]
+....
+[
+    {
+        "label": "Purchase.amount",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "13"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "Review.stars",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 4, "v": "5"},
+                {"t": 15, "v": "1"},
+                {"t": 18, "v": "3"}
+            ]
+        ]
+    },
+    {
+        "label": "Purchase.amount + Review.stars",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "null"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "null"},
+                {"t": 15, "v": "null"},
+                {"t": 18, "v": "7"}
+            ]
+        ]
+    }
+]
+....
 
 Discrete expressions may be combined in various ways, for
 example by adding them together as shown.
@@ -34,7 +74,47 @@ their value. Aggregations generally produce continuous values.
 For example, at _any_ point in time we can describe the sum of all
 `Purchase.amount` values seen so far.
 
-image::continuous-expression.png[]
+[stream_viz,name=continuous]
+....
+[
+    {
+        "label": "Purchase.amount | sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    },
+    {
+        "label": "Review.stars | mean()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 4, "v": "5"},
+                {"t": 15, "v": "3"},
+                {"t": 18, "v": "3"}
+            ]
+        ]
+    },
+    {
+        "label": "sum(Purchase.amount) + mean(Review.stars)",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "null"},
+                {"t": 4, "v": "12"},
+                {"t": 13, "v": "25"},
+                {"t": 15, "v": "23"},
+                {"t": 18, "v": "27"}
+            ]
+        ]
+    }
+]
+....
 
 Continuous expressions _have_ a value at all times, but they
 _produce_ values at specific times. These times are illustrated above as
@@ -81,9 +161,49 @@ a binary operation between any pair is described in the following table.
 |===
 
 
-image::interactions-between-continuous-and-discrete.png[]
+[stream_viz,name=cts-and-discrete]
+....
+[
+    {
+        "label": "Purchase.amount | sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    },
+    {
+        "label": "Review.stars",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 4, "v": "5"},
+                {"t": 15, "v": "3"},
+                {"t": 18, "v": "3"}
+            ]
+        ]
+    },
+    {
+        "label": "sum(Purchase.amount) + Review.stars",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "null"},
+                {"t": 4, "v": "10"},
+                {"t": 13, "v": "null"},
+                {"t": 15, "v": "23"},
+                {"t": 18, "v": "27"}
+            ]
+        ]
+    }
+]
+....
 
- When a discrete expression is combined with a continuous
+When a discrete expression is combined with a continuous
 expression, each the value at time present in the discrete expression is
 combined with the value the continuous expression has at that same time
 to produce a result.
@@ -97,4 +217,41 @@ times at which an expression produces values. It works by producing the
 value of an expression whenever a predicate expression produces the
 value `true`.
 
-image::filtering.png[]
+[stream_viz,name=filtering]
+....
+[
+    {
+        "label": "Purchase.amount | sum()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "5"},
+                {"t": 4, "v": "7"},
+                {"t": 13, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    },
+    {
+        "label": "Review.stars &lt; 5",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 4, "v": "false"},
+                {"t": 15, "v": "true"},
+                {"t": 18, "v": "true"}
+            ]
+        ]
+    },
+    {
+        "label": "Purchase.amount | sum() | when(Review.stars &lt; 5)",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 15, "v": "20"},
+                {"t": 18, "v": "24"}
+            ]
+        ]
+    }
+]
+....

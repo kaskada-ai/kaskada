@@ -23,8 +23,22 @@ cut -d ':' -f2,3 |\
 tr -d \" |\ 
 xargs -I {} sh -c 'curl -L {} -o $(basename {}| cut -d '-' -f1,2)'
 
-
 chmod +x kaskada-*
+----
+
+Print a colon-separated list of the directories in your `PATH`.
+
+[source,bash]
+----
+echo PATH
+----
+
+Move the Kaskada binaries to one of the listed locations. 
+This command assumes that the binaries are currently in your working directory and that your `PATH`` includes `/usr/local/bin`, but you can customize it if your locations are different.
+
+[source,bash]
+----
+mv kaskada-* /usr/local/bin/
 ----
 
 [TIP]
@@ -44,8 +58,8 @@ You can start a local instance of the Kaskada service by running the manager and
 
 [source,bash]
 ----
-./kaskada-manager 2>&1 > manager.log 2>&1 &
-./kaskada-engine serve > engine.log 2>&1 &
+kaskada-manager 2>&1 > manager.log 2>&1 &
+kaskada-engine serve > engine.log 2>&1 &
 ----
 
 [TIP]
@@ -59,7 +73,7 @@ To verify they're installed correctly and executable, try running the following 
 
 [source,bash]
 ----
-./kaskada-cli sync export --all
+kaskada-cli sync export --all
 ----
 
 You should see output similar to the following:
@@ -146,6 +160,11 @@ You've now created your first table!
 
 Now that we've created a table, we're ready to load some data into it.
 
+[IMPORTANT]
+====
+A table must be xref:#creating-a-table[created] before data can be loaded into it.
+====
+
 Data can be loaded into a table in multiple ways. In this example we'll
 load the contents of a Parquet file into the table. To learn about
 the different ways data can be loaded into a table, see the
@@ -175,14 +194,21 @@ iterating it can be helpful to build up your queries as components
 as you go.  Once you'd like to persist a query, check out our
 article on sharing queries with xref:developing:views.adoc[Views].
 
-Let's start by looking at the Purchase table without any filters, this
-query will return all of the columns and rows contained in a table:
+Let's start by looking at the Purchase table without any filters.
+Begin by creating a text file with the following query:
+
+[source,Fenl]
+.query.txt
+----
+Purchase
+----
+
+This query will return all of the columns and rows contained in a table.
+Run it by sending the query to `kaskada-cli query run`:
 
 [source,bash]
 ----
-./kaskada-cli query run --stdout --response-as csv <<EOS
-Purchase
-EOS
+cat query.txt | ./kaskada-cli query run --stdout --response-as csv
 ----
 
 [NOTE]
@@ -198,30 +224,44 @@ CLI commands are organized into groups like `query`, `load`, and `sync` - each g
 2. In order to see the results of our query, we used the command flag `--stdout`; the default behavior is to write results to a file and return a JSON object describing the result of the query.
 3. Finally, we specified how to encode the results with the flag `--response-as csv`.
 CSV is a good format for writing results to STDOUT because it's relatively human-readible. The default is to encode results in Parquet, which is a much more efficient encoding for larger datasets.
-4. The query is enclosed between `<<EOS` and `EOS` - this is Bash syntax for "heredocs", which allow you to easily write multi-line strings and pass them into the CLI on STDIN.
-
 
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
+[source,Fenl]
+.query.txt
+----
+Purchase | when(Purchase.customer_id == "patrick")
+----
+
+In this example, we build a pipeline of functions using the `|` character.
+We begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"` using the `xref:fenl:catalog.adoc#when[when()]` function.
+Execute the query using the CLI as before.
+
 [source,bash]
 ----
-./kaskada-cli query run --stdout --response-as csv <<EOS
-Purchase | when(Purchase.customer_id == "patrick")
-EOS
+cat query.txt | kaskada-cli query run --stdout --response-as csv
 ----
 
 As you begin to better understand your data you can start using
 aggregations over your data such as the `max()` function:
 
+[source,Fenl]
+.query.txt
+----
+{ max_purchase: Purchase.amount | max() } 
+| when(Purchase.customer_id == "patrick")
+----
+
+Here we begin by constructing a record with a single field named `max_purchase` using curly brackets (i.e., `{key: value, key2: value2}`).
+The timeline describing how this record changes is filtered to the times associated with Patrick's purchases.
+Execute the query using the CLI as before.
+
 [source,bash]
 ----
-./kaskada-cli query run --stdout --response-as csv <<EOS
-{
-   max_purchase: Purchase.amount | max(),
-} | when(Purchase.customer_id == "patrick")
-EOS
+cat query.txt | kaskada-cli query run --stdout --response-as csv
 ----
+
 
 [IMPORTANT]
 ====
@@ -238,7 +278,7 @@ combining the result of different computations at different points in
 time. Because values can only travel forward in time, Fenl prevents
 information about the future from "leaking" into the past.
 
-Read more in the xref:fenl:language-guide.adoc[Fenl
+Read more in the xref:fenl:fenl-quick-start.adoc[Fenl
 Language Guide]
 ====
 
@@ -249,16 +289,23 @@ the below query. In order to debug your features, we recommend including
 the time and the entity with each query so that you can walk through the
 results in time:
 
-[source,bash]
+[source,Fenl]
+.query.txt
 ----
-./kaskada-cli query run --stdout --response-as csv <<EOS
 {
     time: Purchase.purchase_time,
     entity: Purchase.customer_id,
     max_amount: Purchase.amount | max(),
     min_amount: Purchase.amount | min(),
 } | when(Purchase.customer_id == "patrick")
-EOS
+----
+
+This example adds fields to the record using the `min` and `max` aggregations.
+Execute the query using the CLI as before.
+
+[source,bash]
+----
+cat query.txt | kaskada-cli query run --stdout --response-as csv
 ----
 
 For more help writing queries, see xref:developing:queries.adoc[Reference -
@@ -271,7 +318,7 @@ When you're done with this tutorial, you can delete the table you created in ord
 [source,bash]
 ----
 # Delete the Purchase table (which was created in the previous step)
-./kaskada-cli table delete --table Purchase
+kaskada-cli table delete --table Purchase
 ----
 
 The table is deleted and any files loaded into it are removed from the system.
