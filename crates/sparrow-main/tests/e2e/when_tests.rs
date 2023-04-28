@@ -34,6 +34,57 @@ async fn when_data_fixture() -> DataFixture {
         .unwrap()
 }
 
+pub(crate) async fn purchase_fixture() -> DataFixture {
+    DataFixture::new()
+        .with_table_from_csv(
+            TableConfig::new("Purchases", &Uuid::new_v4(), "time", None, "user", "user"),
+            indoc! {"
+    time,user
+    2022-10-27,Ben
+    2022-10-27,Davor
+    2022-11-02,Ben
+    2022-11-02,Davor
+    2022-11-27,Davor
+    2022-12-12,Ben
+    2023-01-01,Ben
+
+    "},
+        )
+        .await
+        .unwrap()
+        .with_table_from_csv(
+            TableConfig::new("PageViews", &Uuid::new_v4(), "time", None, "user", "user"),
+            indoc! {"
+    time,user
+    2022-10-25,Davor
+    2022-10-26,Ben
+    2022-10-28,Ben
+    2022-11-01,Ben
+    2022-11-01,Davor
+    2022-11-24,Davor
+    2022-11-25,Davor
+    2022-11-26,Davor
+    2022-12-10,Ben
+    2023-12-31,Ben
+    2023-01-01,Davor
+    2023-02-07,Ben
+   "},
+        )
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+#[ignore = "unexpected non-null behavior from when: https://github.com/kaskada-ai/kaskada/issues/292"]
+async fn test_when_output_resets_to_null() {
+    insta::assert_snapshot!(QueryFixture::new("{ \
+        count_page: count(PageViews), \
+        purchase_is_valid: is_valid(Purchases), \
+        count_when_valid: count(PageViews) | when(is_valid(Purchases)) }").run_to_csv(&purchase_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,sum_field
+    "###);
+}
+
 #[tokio::test]
 async fn test_boolean_when() {
     insta::assert_snapshot!(QueryFixture::new("{ when: WhenFixture.bool | when(WhenFixture.cond) }").run_to_csv(&when_data_fixture().await).await.unwrap(), @r###"
