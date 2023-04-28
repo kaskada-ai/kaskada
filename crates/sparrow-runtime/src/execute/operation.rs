@@ -28,6 +28,7 @@ mod single_consumer_helper;
 mod sorted_key_hash_map;
 mod spread;
 mod spread_zip;
+mod stream;
 #[cfg(test)]
 mod testing;
 mod tick;

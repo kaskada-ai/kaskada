@@ -21,18 +21,21 @@ use crate::execute::Error;
 use crate::key_hash_index::KeyHashIndex;
 use crate::{table_reader, Batch};
 
-pub(super) struct ScanOperation {
+/// Stream operations are long-lived processes that continually read input data from a stream.
+pub(super) struct StreamOperation {
     /// The schema of the scanned inputs.
     projected_schema: SchemaRef,
     /// The input stream of batches.
     input_stream: Pin<Box<dyn Stream<Item = error_stack::Result<Batch, Error>> + Send>>,
     key_hash_index: KeyHashIndex,
+    // TODO: I don't know if we have way to surface these - maybe we could just log them
+    // though, so could leave it.
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
 }
 
-impl std::fmt::Debug for ScanOperation {
+impl std::fmt::Debug for StreamOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ScanOperation")
+        f.debug_struct("StreamOperation")
             .field("projected_schema", &self.projected_schema)
             .field("key_hash_index", &self.key_hash_index)
             .finish_non_exhaustive()
@@ -40,18 +43,17 @@ impl std::fmt::Debug for ScanOperation {
 }
 
 #[async_trait]
-impl Operation for ScanOperation {
+impl Operation for StreamOperation {
     fn restore_from(
         &mut self,
         operation_index: u8,
         compute_store: &ComputeStore,
     ) -> anyhow::Result<()> {
-        self.key_hash_index
-            .restore_from(operation_index, compute_store)
+        todo!()
     }
 
     fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.key_hash_index.store_to(operation_index, compute_store)
+        todo!()
     }
 
     async fn execute(
@@ -78,7 +80,7 @@ impl Operation for ScanOperation {
                 .await
                 .is_err()
             {
-                tracing::info!("Progress stream closed. Ending scan");
+                tracing::error!("Unexpected: Progress stream closed. Ending stream");
                 break;
             };
 
@@ -94,22 +96,22 @@ impl Operation for ScanOperation {
     }
 }
 
-impl ScanOperation {
-    /// Create the stream of input batches for a scan operation.
+impl StreamOperation {
+    /// Create the stream of input batches for a stream operation.
     pub(super) fn create(
         context: &mut OperationContext,
-        scan_operation: operation_plan::ScanOperation,
+        stream_operation: operation_plan::StreamOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
     ) -> error_stack::Result<BoxedOperation, Error> {
         error_stack::ensure!(
             input_channels.is_empty(),
-            crate::execute::error::invalid_operation!("scan operations should take no input")
+            crate::execute::error::invalid_operation!("stream operations should take no input")
         );
 
         let input_column = input_columns.iter().exactly_one().map_err(|e| {
             crate::execute::error::invalid_operation!(
-                "scan operation should have one input column, but was {}",
+                "stream operation should have one input column, but was {}",
                 e.len()
             )
         })?;
@@ -121,11 +123,12 @@ impl ScanOperation {
             )
         );
 
+        // TODO: FRAZ - Should this be using `StreamId`? Or can we continue to represent them as pulsar-backed tables?
         let table_id = TableId::new(
-            scan_operation
+            stream_operation
                 .table_id
                 .ok_or_else(|| {
-                    crate::execute::error::invalid_operation!("scan operation missing table id")
+                    crate::execute::error::invalid_operation!("stream operation missing table id")
                 })?
                 .into(),
         );
@@ -136,7 +139,9 @@ impl ScanOperation {
             )
         })?;
 
-        let requested_slice = scan_operation
+        // TODO: FRAZ - slice plan? probably uhh just expect to not have any. Could we have a slice plan
+        // that filters on the stream of inputs?
+        let requested_slice = stream_operation
             .slice_plan
             .ok_or_else(|| {
                 crate::execute::error::invalid_operation!("scan operation missing slice plan")
@@ -144,16 +149,16 @@ impl ScanOperation {
             .slice;
 
         let projected_schema: SchemaRef = Arc::new(
-            scan_operation
+            stream_operation
                 .schema
                 .as_ref()
                 .ok_or_else(|| {
-                    crate::execute::error::invalid_operation!("scan operation missing schema")
+                    crate::execute::error::invalid_operation!("stream operation missing schema")
                 })?
                 .as_arrow_schema()
                 .into_report()
                 .change_context(crate::execute::error::invalid_operation!(
-                    "scan operation failed to convert schema to Arrow schema"
+                    "stream operation failed to convert schema to Arrow schema"
                 ))?,
         );
 
@@ -161,8 +166,9 @@ impl ScanOperation {
         //
         // TODO: Can we clean anything up by changing the table reader API
         // to accept the desired table schema?
+        // TODO: FRAz - not sure how this works.
         let projected_columns = Some(
-            scan_operation
+            stream_operation
                 .schema
                 .expect("already reported missing schema")
                 .fields
@@ -189,8 +195,7 @@ impl ScanOperation {
             .into_report()
             .change_context(Error::internal())?;
 
-        // TODO: FRAZ - This is where we add stream_reader. We need to add something that tells us
-        // whether we are reading from a file or from a stream.
+        // TODO: FRAZ - this would be "stream reader"
         let input_stream = table_reader(
             &mut context.data_manager,
             table_info,
@@ -263,7 +268,7 @@ mod tests {
     use itertools::Itertools;
     use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
     use sparrow_api::kaskada::v1alpha::operation_input_ref::{self, Column};
-    use sparrow_api::kaskada::v1alpha::operation_plan::ScanOperation;
+    use sparrow_api::kaskada::v1alpha::operation_plan::StreamOperation;
     use sparrow_api::kaskada::v1alpha::{self, data_type};
     use sparrow_api::kaskada::v1alpha::{
         expression_plan, literal, operation_plan, ComputePlan, ComputeTable, ExpressionPlan,
@@ -371,7 +376,7 @@ mod tests {
                     )),
                 },
             ],
-            operator: Some(operation_plan::Operator::Scan(ScanOperation {
+            operator: Some(operation_plan::Operator::Stream(StreamOperation {
                 table_id: Some(table_id.into()),
                 schema: Some(scan_schema),
                 slice_plan: Some(SlicePlan {

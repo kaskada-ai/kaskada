@@ -5,7 +5,9 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
-use sparrow_api::kaskada::v1alpha::{compute_table, ComputeTable, PreparedFile, TableConfig};
+use sparrow_api::kaskada::v1alpha::{
+    compute_table, ComputeTable, PreparedFile, PulsarConfig, TableConfig,
+};
 use sparrow_core::context_code;
 use sparrow_plan::{GroupId, TableId};
 use sparrow_syntax::Location;
@@ -24,6 +26,8 @@ pub struct DataContext {
 
     /// Information about each of the tables in the context.
     table_info: BTreeMap<TableId, TableInfo>,
+
+    stream_info: BTreeMap<TableId, StreamInfo>,
 }
 
 impl DataContext {
@@ -327,13 +331,6 @@ impl DataContext {
     }
 }
 
-/// Information about groups.
-#[derive(Debug)]
-pub struct GroupInfo {
-    name: String,
-    key_type: DataType,
-}
-
 /// Information about tables.
 #[derive(Clone, Debug)]
 pub struct TableInfo {
@@ -432,6 +429,73 @@ impl TableInfo {
             })
             .collect()
     }
+}
+
+/// Information about streams.
+#[derive(Clone, Debug)]
+pub struct StreamInfo {
+    table_id: TableId,
+    group_id: GroupId,
+    schema: SchemaRef,
+    config: Arc<PulsarConfig>,
+}
+
+impl StreamInfo {
+    pub fn try_new(
+        table_id: TableId,
+        group_id: GroupId,
+        schema: SchemaRef,
+        table: ComputeTable,
+    ) -> anyhow::Result<Self> {
+        let ComputeTable {
+            config, file_sets, ..
+        } = table;
+
+        let config = Arc::new(config.context("missing table config")?);
+
+        Ok(Self {
+            table_id,
+            group_id,
+            schema,
+            config,
+            file_sets,
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.config.name
+    }
+
+    pub fn uuid(&self) -> &str {
+        &self.config.uuid
+    }
+
+    pub fn table_id(&self) -> TableId {
+        self.table_id
+    }
+
+    pub fn group_id(&self) -> GroupId {
+        self.group_id
+    }
+
+    pub fn schema(&self) -> &SchemaRef {
+        &self.schema
+    }
+
+    pub fn config(&self) -> &Arc<TableConfig> {
+        &self.config
+    }
+
+    pub fn file_sets(&self) -> &[compute_table::FileSet] {
+        &self.file_sets
+    }
+}
+
+/// Information about groups.
+#[derive(Debug)]
+pub struct GroupInfo {
+    name: String,
+    key_type: DataType,
 }
 
 impl GroupInfo {
