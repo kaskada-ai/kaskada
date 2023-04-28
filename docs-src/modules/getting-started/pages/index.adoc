@@ -7,7 +7,7 @@ This document will show you how to quickly get started using Kaskada.
 [TIP]
 ====
 Before jumping in to writing queries in Kaskada, it's a good idea to take a minute understanding "how to think with Kaskada".
-Kaskada is built on simple, powerful abstrctions that may be different than what you're accustomed to.
+Kaskada is built on timelines - a simple, powerful abstraction that may be different than what you're accustomed to.
 
 If you'd prefer to jump right in, scroll down to the xref:#quick-starts[] section
 ====
@@ -47,20 +47,21 @@ Kaskada is built on the idea of a _timeline_ - the history of how a value change
 ]
 ....
 
-Timelines give you declarative queries and the ability to reason about temporal context, time travel, sequencing, time-series, and more.
-Transforming and combining timelines allow you to intuitively express computations over events.
+Timelines allow you to reason about temporal context, time travel, sequencing, time-series, and more. 
+They allow simple, composable, declarative queries over events. 
+Transforming and combining timelines allows you to intuitively express computations over events.
 
 ****
 ⭢ Read more about timelines in xref:overview:what-is-kaskada.adoc[]
 ****
 
-With Kaskada, it's timelines all the way down - every operation starts from timelines and produces timelines. 
-When you make a query, the resulting timeline is interpreted in one of two ways: as a _history_ or as a _snapshot_. 
+With Kaskada, it's timelines all the way down - every operation's inputs and outputs are timelines. 
+When you make a query, the resulting timeline is output in one of two ways: as a _history_ or as a _snapshot_. 
 
-* A timeline *History* generates a value each time the timeline changes, and each row is associated with a different entity and point in time. 
-* A timeline *Snapshot* generates a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows are associated with the same time.
+* A timeline *History* contains a value each time the timeline changes, and each row is associated with a different entity and point in time. 
+* A timeline *Snapshot* contains a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows are associated with the same time.
 
-These values may be output in different ways, for example they can be written as rows in a Parquet file, or sent as events to a stream.
+This output may be written in different ways -- for example, they may be written to a Parquet file or sent as events to a stream.
 
 ****
 ⭢ Read more about converting to tables in xref:developing:queries.adoc#configuring-how-queries-are-computed[Queries]
@@ -84,7 +85,8 @@ Kaskada can be configured to run as a remote service or as a local process.
 
 == Kaskada's data model
 
-Kaskada stores events in xref:developing:tables.adoc[tables]. 
+Timelines begin with xref:developing:tables.adoc[tables].
+Tables are how Kaskada stores input events.
 Tables consist of multiple events, and each event is a value of the same xref:fenl:data-model.adoc[type].
 
 [%header,cols=3*]
