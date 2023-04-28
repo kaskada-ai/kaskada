@@ -1,8 +1,19 @@
 = Getting Started
 
-== Reasoning about events with timelines
-
 Kaskada is a unified event processing engine that provides stateful stream processing in a high-level query language designed specifically for reasoning about events in bulk and in real time.
+
+This document will show you how to quickly get started using Kaskada.
+
+[TIP]
+====
+Before jumping in to writing queries in Kaskada, it's a good idea to take a minute understanding "how to think with Kaskada".
+Kaskada is built on simple, powerful abstrctions that may be different than what you're accustomed to.
+
+If you'd prefer to jump right in, scroll down to the xref:#quick-starts[] section
+====
+
+== Thinking with Kaskada's timelines
+
 Kaskada is built on the idea of a _timeline_ - the history of how a value changes over time for a specific entity or group.
 
 [stream_viz,name=basic-sum]
@@ -15,7 +26,7 @@ Kaskada is built on the idea of a _timeline_ - the history of how a value change
         "data": [
             [
                 {"t": 2, "v": "5"},
-                {"t": 4, "v": "2"},
+                {"t": 5, "v": "2"},
                 {"t": 13, "v": "13"},
                 {"t": 18, "v": "4"}
             ]
@@ -27,7 +38,7 @@ Kaskada is built on the idea of a _timeline_ - the history of how a value change
         "data": [
             [
                 {"t": 2, "v": "5"},
-                {"t": 4, "v": "7"},
+                {"t": 5, "v": "7"},
                 {"t": 13, "v": "20"},
                 {"t": 18, "v": "24"}
             ]
@@ -36,7 +47,7 @@ Kaskada is built on the idea of a _timeline_ - the history of how a value change
 ]
 ....
 
-Timelines give you declarative queries and the ability to reason about temporal context, time travel, sequencing, timeseries, and more.
+Timelines give you declarative queries and the ability to reason about temporal context, time travel, sequencing, time-series, and more.
 Transforming and combining timelines allow you to intuitively express computations over events.
 
 ****
@@ -44,10 +55,12 @@ Transforming and combining timelines allow you to intuitively express computatio
 ****
 
 With Kaskada, it's timelines all the way down - every operation starts from timelines and produces timelines. 
-When you make a query, the resulting timeline is converted to a table in one of two ways: as a value history or as a value snapshot. 
+When you make a query, the resulting timeline is interpreted in one of two ways: as a _history_ or as a _snapshot_. 
 
-* *Value history* generates a row each time the timeline changes, and each row is associated with a different entity and point in time. 
-* *Value snapshot* generates a row for each entity at the _same_ point in time; each row is associated with a different entity, but all rows are associated with the same time.
+* A timeline *History* generates a value each time the timeline changes, and each row is associated with a different entity and point in time. 
+* A timeline *Snapshot* generates a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows are associated with the same time.
+
+These values may be output in different ways, for example they can be written as rows in a Parquet file, or sent as events to a stream.
 
 ****
 ⭢ Read more about converting to tables in xref:developing:queries.adoc#configuring-how-queries-are-computed[Queries]
@@ -57,19 +70,56 @@ When you make a query, the resulting timeline is converted to a table in one of 
 
 Kaskada is implemented as a standalone service with two main components.
 
-* The *engine* is a stateful compute engine for transforming event data.
-* The *manager* is a stateful compute engine for transforming event data.
+* The *engine* is a stateless compute engine for transforming event data.
+* The *manager* is an (optionally) stateful API for communicating with clients.
 
-These components are distributed as dependency-free binaries.
-Kaskada is managed using an API, and multiple clients exist to communicate with the API, including Python and a CLI binary.
+These components are distributed as standalone, precompiled binaries.
+The Kaskada service is accessed using a gRPC API, and multiple clients exist.
+You can access the API using the provided Python client or using the CLI binary.
 Kaskada can be configured to run as a remote service or as a local process.
 
 ****
 ⭢ Read more about installing Kaskada in xref:ROOT:installing.adoc[]
 ****
 
-Kaskada stores data in tables. Tables consist of multiple rows, and each row is a value of the same type.
+== Kaskada's data model
+
+Kaskada stores events in xref:developing:tables.adoc[tables]. 
+Tables consist of multiple events, and each event is a value of the same xref:fenl:data-model.adoc[type].
+
+[%header,cols=3*]
+.Events in the `Purchase` table
+|===
+| time | entity | value
+| 8:20 | Alice | `{amount: 5}`
+| 9:45 | Alice | `{amount: 2}`
+| 2:10 | Alice | `{amount: 13}`
+| 8:52 | Alice | `{amount: 4}`
+|===
+
+When querying Kaskada, the contents of a table are interpreted as a xref:fenl:continuity.adoc[discrete timeline]: the value associated with each event corresponds to a value in the timeline.
+
+[stream_viz,name=purchase-timeline]
+.Discrete timeline describing the `Purchase` table
+....
+[
+    {
+        "label": "Purchase",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": "{amount: 5}"},
+                {"t": 5, "v": "{amount: 2}"},
+                {"t": 13, "v": "{amount: 13}"},
+                {"t": 18, "v": "{amount: 4}"}
+            ]
+        ]
+    }
+]
+....
+
 Events must be loaded into a table before they can be queried.
+You can load events into a table from various data sources, for example files formatted as Parquet or CSV, or by reading events from a stream.
 
 ****
 ⭢ Read more about loading data in xref:ROOT:loading-data.adoc[]
