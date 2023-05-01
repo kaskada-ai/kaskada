@@ -857,7 +857,7 @@ func (m *Manager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 // returns s3://root/computeSnapshots/<snapshot_cache_buster>/<owner_id>/<plan_hash>/<data_version>
 func (m *Manager) getComputeSnapshotDataURI(owner *ent.Owner, snapshotCacheBuster int32, planHash []byte, dataVersion int64) string {
 	subPath := path.Join("computeSnapshots", strconv.Itoa(int(snapshotCacheBuster)), owner.ID.String(), base64.RawURLEncoding.EncodeToString(planHash), utils.Int64ToString(dataVersion))
-	return ConvertURIForCompute(m.store.GetDataPathURI(subPath))
+	return m.store.GetDataPathURI(subPath)
 }
 
 func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error) {
