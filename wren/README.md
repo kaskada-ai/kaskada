@@ -9,7 +9,7 @@ Wren is the API layer between external client libraries, and Compute.  It also m
 * To manage dependences, wren uses [go-modules](https://golang.org/ref/mod).
   * The `go.mod` file is defined in the root wren folder.
 * To generate gRPC/protobuf libraries, wren uses [Buf](https://buf.build)
-  * The `buf.gen.yaml` and `buf.gen.sparrow.yaml` files are defined in the root wren folder
+  * The `buf.gen.yaml` files are defined in the root proto folder
 
 
 ### Building Wren

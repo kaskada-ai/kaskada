@@ -19,7 +19,7 @@ type ViewClient interface {
 	List() ([]*apiv1alpha.View, error)
 	Get(name string) (*apiv1alpha.View, error)
 	Create(item *apiv1alpha.View) error
-	Delete(name string) error
+	Delete(name string, force bool) error
 }
 
 func NewViewServiceClient(ctx context.Context, conn *grpc.ClientConn) ViewClient {
@@ -63,8 +63,8 @@ func (c viewClient) Create(item *apiv1alpha.View) error {
 	return nil
 }
 
-func (c viewClient) Delete(name string) error {
-	_, err := c.client.DeleteView(c.ctx, &apiv1alpha.DeleteViewRequest{ViewName: name, Force: true})
+func (c viewClient) Delete(name string, force bool) error {
+	_, err := c.client.DeleteView(c.ctx, &apiv1alpha.DeleteViewRequest{ViewName: name, Force: force})
 	if err != nil {
 		log.Debug().Err(err).Str("name", name).Msg("issue deleting view")
 		return err

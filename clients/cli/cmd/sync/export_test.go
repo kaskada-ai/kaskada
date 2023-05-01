@@ -1,4 +1,4 @@
-package cmd
+package sync
 
 import (
 	"reflect"
@@ -243,7 +243,7 @@ func (*mockApiClient) Create(item protoreflect.ProtoMessage) error {
 }
 
 // Delete implements api.ApiClient
-func (*mockApiClient) Delete(item protoreflect.ProtoMessage) error {
+func (*mockApiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 	panic("unimplemented")
 }
 

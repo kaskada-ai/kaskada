@@ -109,6 +109,8 @@ class LocalBuilder(Builder):
     KASKADA_MANAGER_BIN_NAME_DEFAULT = "kaskada-manager"
     KASKADA_ENGINE_BIN_NAME_DEFAULT = "kaskada-engine"
 
+    KASKADA_DISABLE_DOWNLOAD_ENV = "KASKADA_DISABLE_DOWNLOAD"
+
     def __init__(
         self,
         endpoint: str = KASKADA_ENDPOINT_DEFAULT,
@@ -125,7 +127,9 @@ class LocalBuilder(Builder):
             LocalBuilder.KASKADA_LOG_PATH_ENV, LocalBuilder.KASKADA_LOG_PATH_DEFAULT
         )
         self.endpoint(endpoint, is_secure)
-        self._download = True
+        self._download = (
+            os.getenv(LocalBuilder.KASKADA_DISABLE_DOWNLOAD_ENV, "false") != "true"
+        )
         self._manager_configs: Dict[str, Any] = {}
 
     def path(self, path: str):
@@ -199,14 +203,14 @@ class LocalBuilder(Builder):
         engine_cmd = [engine_binary_path, engine_command]
         logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
-        logger.info("Logging manager STDOUT to {manager_std_out}")
-        logger.info("Logging manager STDERR to {manager_std_err}")
+        logger.info(f"Logging manager STDOUT to {manager_std_out}")
+        logger.info(f"Logging manager STDERR to {manager_std_err}")
         manager_process = api_utils.run_subprocess(
             manager_cmd, manager_std_err, manager_std_out
         )
         logger.info("Initializing engine process")
-        logger.info("Logging engine STDOUT to {engine_std_out}")
-        logger.info("Logging engine STDERR to {engine_std_err}")
+        logger.info(f"Logging engine STDOUT to {engine_std_out}")
+        logger.info(f"Logging engine STDERR to {engine_std_err}")
         engine_process = api_utils.run_subprocess(
             engine_cmd, engine_std_err, engine_std_out
         )

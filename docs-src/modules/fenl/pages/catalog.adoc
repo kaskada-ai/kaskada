@@ -1,6 +1,6 @@
-= Fenl Catalog
+= Function Catalog
 
-== Functions
+== Function List
 
 [cols="<,<",options="header",]
 |===

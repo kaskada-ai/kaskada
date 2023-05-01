@@ -97,22 +97,6 @@ min_amount: query_v1_test_csv.amount | min(),
 	})
 
 	Context("When the table schema is created correctly", Ordered, func() {
-		Describe("Confirm reading CSV files works", func() {
-			It("should load the csv data into a string slice", func() {
-				results := helpers.DownloadCSV("/../../testdata/purchases/purchases_part3.csv")
-				Expect(results).Should(HaveLen(4))
-				headerRow := results[0]
-				firstRow := results[1]
-				middleRow := results[2]
-				lastRow := results[3]
-
-				Expect(headerRow[0]).Should(BeEquivalentTo("id"))
-				Expect(firstRow[2]).Should(BeEquivalentTo("patrick"))
-				Expect(middleRow[3]).Should(BeEquivalentTo("krusty_krab"))
-				Expect(lastRow[4]).Should(BeEquivalentTo("22"))
-			})
-		})
-
 		Describe("Run the streaming query using dry-run", func() {
 			It("should return a single response with schema info, but no results", func() {
 				createQueryRequest.QueryOptions.DryRun = true

@@ -1,8 +1,175 @@
+:tabs-sync-option:
+
 = Queries
 
-The following sections will help with writing queries.
+Kaskada computes results from the data you've loaded by executing _queries_.
+A query describes a computation to perform and configures how the query should be executed.
 
-== Final vs Historical Results
+Kaskada queries are witten in a language called Fenl, which is designed to make it easy to describe computations over events.
+To learn more about Fenl:
+
+* The xref:fenl:fenl-quick-start.adoc[Quick Start] is an overview of the query language.
+* The xref:fenl:catalog.adoc[Function Catalog] documents the operations and functions provided by Fenl.
+* The xref:fenl:fenl-faq.adoc[FAQ] answers some comment questions about using Fenl.
+
+== Query syntax quickstart
+
+Kaskada's query language builds on the lessons of 50+ years of query language design to provide a declarative, composable, easy-to-read, and type-safe way of describing computations related to time. 
+The following is a quick overview of the query language's main features and syntax.
+
+=== Viewing and filtering the contents of a table
+
+Kaskada queries are built by composing simple expressions. 
+Every expression returns a timeline.
+
+[source,Fenl]
+----
+Purchase | when(Purchase.amount > 10)
+----
+
+In this example we start with the expression `Purchase` (the timeline of all purchase events) then filter it using `xref:fenl:catalog.adoc#when[when()]`.
+The result is a timeline of purchase events whose amount is greater than 10.
+
+=== Stateful aggregations
+
+Aggregate events to produce a continuous timeline whose value can be observed at arbitrary points in time.
+
+[source,Fenl]
+----
+{ max_verified_review_to_date: Review.stars | when(Review.verified) | max() }
+----
+
+[TIP]
+.What are the curly brackets for?
+====
+Every query needs to return a xref:fenl:working-with-records.adoc[Record].
+Records allow one or more values to be grouped into a single row.
+You can create a record using the syntax `{key: value, key2: value2}`.
+====
+
+In this example we first filter the timeline of `Review` events to only include verified reviews, then aggregate the filtered results using the `xref:fenl:catalog.adoc#max[max()]` aggregation.
+The resulting timeline describes the maximum number of stars as-of every point in time.
+
+=== Automatic joins
+
+Every expression is associated with an xref:fenl:entities.adoc[entity], allowing tables and expressions to be automatically joined. Entities eliminate redundant boilerplate code.
+
+[source,Fenl]
+----
+{ purchases_per_page_view: count(Purchase) / count(Pageview) }
+----
+
+Here we've used the `xref:fenl:catalog.adoc#count[count()]` aggregation to divide the number of purchases up to each point in time by the number of pageviews up to the same point in time.
+The result is a timeline describing how each user's purchase-per-pageview changes over time.
+Since both the `Purchase` and `Pageview` tables have the same entity, we can easily combine them.
+
+=== Event-based windowing
+
+Collect events as you move through time, and aggregate them with respect to other events. Ordered aggregation makes it easy to describe temporal interactions.
+
+[source,Fenl]
+----
+{
+  pageviews_since_last_purchase:  count(Pageview, window=since(Purchase)),
+  spend_since_last_review:        count(Purchase, window=since(Review)),
+}
+----
+
+By default, aggregations are applied from the beginning of time, but here we've used the `xref:fenl:catalog.adoc#since[since()]` window function to configure the aggregation to reset each time there's a `Purchase` or `Review`, respectively.
+
+
+=== Pipelined operations
+
+Pipe syntax allows multiple operations to be chained together. Write your operations in the same order you think about them. It's timelines all the way down, making it easy to aggregate the results of aggregations.
+
+[source,Fenl]
+----
+{
+  largest_spend_over_2_purchases: purchase.amount
+  | when(Purchase.category == "food") 
+  | sum(window=sliding(2, Purchase.category == "food")) # Inner aggregation
+  | max()                                               # Outer aggregation
+}
+----
+
+=== Row generators
+
+Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.adoc#tick-functions[tick generators] such as `xref:fenl:catalog.adoc#daily[daily()]` produce rows even when there's no input, allowing you to react when something _doesn't_ happen.
+
+[source,Fenl]
+----
+{
+  signups_per_hour: count(Signups, window=since(daily()))
+  | when(daily())
+  | mean()
+}
+----
+
+=== Continuous expressions
+
+Observe the value of aggregations at arbitrary points in time. Timelines are either “xref:fenl:continuity.adoc#discrete-expressions[discrete]” (instantaneous values or events) or “xref:fenl:continuity.adoc#continuous-expressions[continuous]” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
+
+[source,Fenl]
+----
+let product_average = Review.stars
+| with_key(Review.product_id)
+| mean()
+
+in { average_product_review: product_average | lookup(Purchase.product_id)) }
+----
+
+In this example the `xref:fenl:catalog.adoc#lookup[lookup()]` function is used to observe a value computed for a different entity.
+The variable `product_average` computes the average review using the product's ID as entity.
+The lookup starts with each `purchase`, then looks up the current value of the product's average review, for the procduct ID specified in the purchase.
+
+=== Native time travel
+
+Shifting values forward (but not backward) in time, allows you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
+
+[source,Fenl]
+----
+let purchases_now = count(Purchase)
+let purchases_yesterday =
+   purchases_now | shift_by(days(1))
+
+in { purchases_in_last_day: purchases_now - purchases_yesterday }
+----
+
+In this example we take the timeline produced by `purchases_now` and move it forward in time by one day using the `xref:fenl:catalog.adoc#shift-by[shift_by()]` function. 
+We then subtract the shifted value from the original, unshifted value
+
+=== Simple, composable syntax
+
+It is functions all the way down. No global state, no dependencies to manage, and no spooky action at a distance. Quickly understand what a query is doing, and painlessly refactor to make it DRY.
+
+[source,Fenl]
+----
+# How many big purchases happen each hour and where?
+let cadence = hourly()
+# Anything can be named and re-used
+let hourly_big_purchases = Purchase
+| when(Purchase.amount > 10)
+# Filter anywhere 
+| count(window=since(cadence))
+# Aggregate anything
+| when(cadence)
+# No choosing between “when” & “having”
+
+in {hourly_big_purchases}
+# Records are just another type
+| extend({
+  # …modify them sequentially
+  last_visit_region: last(Pageview.region)
+})
+----
+
+== Configuring how queries are computed
+
+A given query can be computed in different ways.
+
+=== Configuring how timelines are converted into tables
+
+You can either return a table describing each change in the timeline, or a table describing the "final" value of the timeline.
 
 Every query produces a timeline which may be returned in two different ways -- the final results (at a specific time) or all historic results.
 The "result behavior" configures which results are produced.
@@ -13,10 +180,13 @@ You determine which type of query to execute using the "result behavior" configu
 By default, historical results are returned.
 To return final results, you must configure the `final-results` behavior:
 
+[tabs]
+====
+Jupyter::
++
 [source,Fenl]
-.Final queries with fenlmagic
 ----
-%%fenl --result_behavior final-results
+%%fenl --result-behavior final-results
 {
     time: Purchase.purchase_time,
     entity: Purchase.customer_id,
@@ -25,8 +195,9 @@ To return final results, you must configure the `final-results` behavior:
 }
 ----
 
+Python::
++
 [source,python]
-.Final queries with Python
 ----
 from kaskada import compute
 
@@ -40,34 +211,26 @@ query = """{
 resp = query.create_query(expression=query, result_behavior="final-results")
 ----
 
-[source,bash]
-.Final queries in the CLI
-----
-./kaskada-cli query run --result-behavior final-results <<EOS
-Purchase
-EOS
-----
-
-== Records
-
-All queries need to specify a record. A record is simply a set of named
-expressions inside squiggly (curly) brackets, i.e., `{ }`.
-
-An example record:
-
+CLI::
++
+--
 [source,Fenl]
 ----
-%%fenl
+# query.txt
 {
-    time: Purchase.purchase_time,
-    entity: Purchase.customer_id,
-    max_amount: Purchase.amount | max(),
-    min_amount: Purchase.amount | min(),
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  max_amount: last(Purchase.amount) | max(),
+  min_amount: Purchase.amount | min()
 }
 ----
 
-This record has 4 fields, `time`, `entity`, `max_amount` and
-`min_amount`
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run --result-behavior final-results
+----
+--
+====
 
 == Querying with Python
 
@@ -194,116 +357,6 @@ Views are useful any time you need to share or re-use expressions:
 
 For more help with tables and views, see xref:reference:tables[Working with Tables]
 and xref:reference:views[Working with Views].
-
-== Example Queries
-
-The following examples will cover some of the common optional parameters
-used when writing queries.
-
-=== Prerequisite: Table Setup
-
-First, we create two tables and load some data. The _purchases_ table
-contains a small amount of data loaded from 2 files. The _transactions_
-table contains 50000 rows of data loaded from a single file.
-
-[source,python]
-----
-from kaskada import table as kt
-
-def indent(text, amount, ch=' '):
-        padding = amount * ch
-        return ''.join(padding+line for line in str(text).splitlines(True))
-
-t_purchases = kt.create_table(
-    table_name =             "purchases",
-    time_column_name =       "purchase_time",
-    entity_key_column_name = "customer_id",
-    subsort_column_name =    "subsort_id",
-)
-file_purchases1 = kt.load(table_name="purchases", file="purchases_part1.parquet")
-file_purchases2 = kt.load(table_name=t_purchases, file="purchases_part2.parquet")
-print(f"SUCCESS: Created Purchases table and uploaded data.")
-print("\t Table Response:")
-print(indent(t_purchases, 2, "\t"))
-print("\t Upload Responses:")
-print(indent(file_purchases1, 2, "\t"))
-print(indent(file_purchases2, 2, "\t"))
-
-t_transactions = kt.create_table(
-    table_name =             "transactions",
-    time_column_name =       "transaction_time",
-    entity_key_column_name = "id",
-    subsort_column_name =    "idx",
-)
-file_transactions1 = kt.load(table_name=t_transactions, file="transactions_part1.parquet")
-print(f"SUCCESS: Created Transactions table and uploaded data.")
-print("\t Table Response:")
-print(indent(t_transactions, 2, "\t"))
-print("\t Upload Response:")
-print(indent(file_transactions1, 2, "\t"))
-----
-
-[source,json]
-----
-SUCCESS: Created Purchases table and uploaded data.
-     Table Response:
-        table {
-          table_id: "56437b49-4749-4d47-ad5e-ef680d34c750"
-          table_name: "purchases"
-          time_column_name: "purchase_time"
-          entity_key_column_name: "customer_id"
-          subsort_column_name: "subsort_id"
-          create_time {
-            seconds: 1638907853
-            nanos: 587268229
-          }
-          update_time {
-            seconds: 1638907853
-            nanos: 587268229
-          }
-        }
-        request_details {
-          request_id: "985a39f0851a50b1c23551660f0925f1"
-        }
-
-     Upload Responses:
-        data_token_id: "bdc9e595-a8a0-448c-9a95-c2e3d886b633"
-        request_details {
-          request_id: "dfcfa0026e4f0a99344329cfd80737ac"
-        }
-
-        data_token_id: "24c83cac-8cf4-4a45-98f0-dac8d5b303a2"
-        request_details {
-          request_id: "f36489c8eb48c8e01fd152bb95da4991"
-        }
-
-SUCCESS: Created Transactions table and uploaded data.
-     Table Response:
-        table {
-          table_id: "24fd3343-1c3d-4ad7-bc67-8b367019afd3"
-          table_name: "transactions"
-          time_column_name: "transaction_date"
-          entity_key_column_name: "msno"
-          subsort_column_name: "idx"
-          create_time {
-            seconds: 1638907856
-            nanos: 680641826
-          }
-          update_time {
-            seconds: 1638907856
-            nanos: 680641826
-          }
-        }
-        request_details {
-          request_id: "62a07d27133bedf8779dea9380e09a07"
-        }
-
-     Upload Response:
-        data_token_id: "7bd4e740-9e63-418e-ba9b-5582db010959"
-        request_details {
-          request_id: "872984a9097bd6c8dd53d88845615f07"
-        }
-----
 
 === Using `--data-token`
 
@@ -473,3 +526,99 @@ a single batch, but the batch had a size of 71599 rows. Note: Using
 full dataset to be processed, as all inputs must be processed to produce
 final results.
 ====
+
+
+== Querying with the CLI
+
+The CLI can be used to make queries with the `kaskada-cli query run` command.
+To query Kaskada using the CLI, the query string should be provided on `STDIN`.
+
+An easy way to define a query is to create a text file containing the query.
+
+[source,Fenl]
+.query.fenl 
+----
+{ 
+  time: Purchase.purchase_time, 
+  entity: Purchase.customer_id, 
+  max_amount: last(Purchase.amount) | max(), 
+  min_amount: Purchase.amount | min()
+}
+----
+
+Run the query by piping it to the CLI.
+
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run
+----
+
+Running this query will return a JSON-formatted https://buf.build/kaskada/kaskada/docs/main:kaskada.kaskada.v1alpha#kaskada.kaskada.v1alpha.CreateQueryResponse[query response] object.
+By default, query results are written to a Parquet file: the locations of these files are included along with additional query metadata in the query response.
+
+[source,json]
+----
+{
+	"state": "STATE_SUCCESS",
+	"config": {
+		"dataTokenId": "b5bc4597-47d4-4770-a772-0b94e0d12483"
+	},
+  // ...
+}
+----
+
+The resulting files are stored in the JSON path `outputTo.objectStore.outputPaths.paths` as an array of paths. 
+
+[TIP]
+====
+To slice and/or filter JSON output we can use https://stedolan.github.io/jq/[jq]. 
+====
+
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run | jq '.outputTo.objectStore.outputPaths.paths'
+----
+
+This will return a list of result files.
+
+[source,json]
+----
+[
+  "file:///<pwd>/data/results/3024b7ae-1429-4c12-867b-3a1f7e86099f/LfiWn-mIVspEbBE-G7yLYug3V2-dW4ASAGmV6g/6089a024-5d97-4f2c-9472-625791550505.parquet"
+]
+----
+
+For queries returning a small number of rows, it may be more convenient to output them to STDOUT formatted as CSV.
+
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run --stdout --response-as csv
+----
+
+You can see the full list of query arguments for the CLI with `kaskada-cli query run --help`.
+
+[source,]
+----
+Executes a query on kaskada
+
+Usage:
+  cli query run "query-text" [flags]
+
+Flags:
+      --changed-since-time int       (Optional) Unix timestamp bound (inclusive) after which results will be output. If 'response-behavior' is 'all-results', this will include rows for changes (events and ticks) after this time (inclusive). If it is 'final-results', this will include a final result for any entity that would be included in the changed results.
+      --data-token string            (Optional) A token to run queries against. Enables repeatable queries.
+      --dry-run true                 (Optional) If this is true, then the query is validated and if there are no errors, the resultant schema is returned. No actual computation of results is performed.
+      --experimental-features true   (Optional) If this is true, then experimental features are allowed.  Data returned when using this flag is not guaranteed to be correct.
+  -h, --help                         help for run
+      --preview-rows int             (Optional) Produces a preview of the results with at least this many rows.
+      --response-as string           (Optional) How to encode the results.  Either 'parquet' or 'csv'. (default "parquet")
+      --result-behavior string       (Optional) Determines how results are returned.  Either 'all-results' or 'final-results'. (default "all-results")
+      --stdout true                  (Optional) If this is true, output results are sent to STDOUT
+
+Global Flags:
+      --config string               config file (default is $HOME/.cli.yaml)
+  -d, --debug                       get debug log output
+      --kaskada-api-server string   Kaskada API Server
+      --kaskada-client-id string    Kaskada Client ID
+      --use-tls                     Use TLS when connecting to the Kaskada API (default true)
+----

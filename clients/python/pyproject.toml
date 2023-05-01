@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kaskada"
-version = "0.1.4"
+version = "0.1.6"
 description = "A client library for the Kaskada time travel machine learning service"
 authors = ["Kaskada <maintainers@kaskada.io>"]
 license = "Apache-2.0"
@@ -47,6 +47,7 @@ types-protobuf = "^4.21.0.5"
 Sphinx = "5.3.0"
 sphinx-rtd-theme = "1.2.0"
 sphinx-autodoc-typehints = "1.22"
+sphinx-autoapi = "2.1.0"
 tomli = "2.0.1"
 
 [tool.poe.tasks]
@@ -124,7 +125,7 @@ cmd = "sphinx-apidoc -f -E  -M -o docs/source src/ src/clients/python/kaskada/ka
 
 [tool.poe.tasks.docs]
 help = "Generated and build HTML docs"
-sequence = ["docs-generate", "docs-build"]
+sequence = ["docs-build"]
 
 [tool.isort]
 profile = "black"

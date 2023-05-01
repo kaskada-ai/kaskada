@@ -1,3 +1,5 @@
+:tabs-sync-option:
+
 = Loading Data into a Table
 
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
@@ -6,10 +8,8 @@ The xref:developing:tables.adoc[Tables] section of the reference docs has more i
 
 [IMPORTANT]
 ====
-A table must be created before data can be loaded into it.
+A table must be xref:developing:tables.adoc#creating-a-table[created] before data can be loaded into it.
 ====
-
-== File Format
 
 Any data loaded into a table must include all columns used in the table definition.
 The full schema of a table is inferred from the data loaded into it.
@@ -17,16 +17,14 @@ At the moment, all data loaded into a table must have the same schema.
 
 Additionally, it expects the following:
 
-* The `time_column` (and all other date-time columns in your dataset)
+* The time column (and all other date-time columns in your dataset)
 should be a type that can be xref:fenl:data-model.adoc#type-coercion[cast] to a xref:fenl:data-model.adoc#scalars[timestamp], for example an integer or RFC3330-formatted string.
 * If a subsort column is defined, the combination of the entity key column, time column and subsort column should guarantee that each row is unique.  
 
-=== Loading data from Parquet files into a table
-
-Events stored as a Parquet file can be loaded into a table by providing the file's xref:#File Location[location].
-The given location must be accessible to the Kaskada instance you wish to load the file into.
-
-.Loading a Parquet file using Python
+[tabs]
+====
+Python::
++
 [source,python]
 ----
 from kaskada import table
@@ -40,7 +38,8 @@ table.load(
 )
 ----
 
-.Loading a Parquet file using the CLI
+CLI::
++
 [source,bash]
 ----
 kaskada-cli load \
@@ -48,17 +47,75 @@ kaskada-cli load \
     --file-path file:///path/to/file.parquet \
     --file-type parquet
 ----
+====
 
-=== Loading data from CSV files into a table
+The result of loading data is a `data_token_id`. 
+The data token ID is a unique reference to the data currently stored in Kaskada. 
+Data tokens enable repeatable queries: queries performed against the same data token always run on the same input data.
 
-Events stored as a CSV file can be loaded into a table by providing the file's xref:#File Location[location].
-The given location must be accessible to the Kaskada instance you wish to load the file into.
+
+[source,bash]
+----
+data_token_id: "aa2***a6b9"
+----
+
+== Supported Formats
+
+=== Parquet
+
+Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval.
+Parquet is a good choice for large numbers of events.
+
+[tabs]
+=====
+Python::
++
+--
+[source,python]
+----
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.load(
+  table_name = "Purchase",
+  file = "/path/to/file.parquet", 
+)
+----
+
+[IMPORTANT]
+====
+The Python library infers a file's format from the extension of the file's path.
+Parquet file names must end in `.parquet`.
+====
+--
+
+CLI::
++
+[source,bash]
+----
+kaskada-cli load \
+    --table Purchase \
+    --file-path file:///path/to/file.parquet \
+    --file-type parquet
+----
+=====
+
+=== CSV
+
+A comma-separated values (CSV) file is a delimited text file that uses a comma to separate values. 
+Each line of the file is a data record.
+
 CSV files must include a header row, which is used to infer the file's schema.
-
 CSV type inference occurs when data is loaded.
 The schema is inferred by reading the first 1000 rows.
 
-.Loading a CSV file using Python
+[tabs]
+=====
+Python::
++
+--
 [source,python]
 ----
 from kaskada import table
@@ -72,7 +129,15 @@ table.load(
 )
 ----
 
-.Loading a CSV file using the CLI
+[IMPORTANT]
+====
+The Python library infers a file's format from the extension of the file's path.
+CSV file names must end in `.csv`.
+====
+--
+
+CLI::
++
 [source,bash]
 ----
 kaskada-cli load \
@@ -80,6 +145,7 @@ kaskada-cli load \
     --file-path file:///path/to/file.csv \
     --file-type csv
 ----
+=====
 
 == File Location
 
@@ -107,54 +173,3 @@ The following environment variables are used to configure credentials:
 * `AWS_SESSION_TOKEN`: The session token. Session tokens are required for credentials created by assuming an IAM role.
 * `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
 * `AWS_ALLOW_HTTP`: Set to “true” to permit HTTP connections without TLS
-
-== Loading data into a table with Python
-
-Data can be loaded into a table using the `table.load()` function
-
-[source,python]
-----
-from kaskada import table
-from kaskada.api.session import LocalBuilder
-
-session = LocalBuilder().build()
-
-fullPathToFile = "/content/drive/place/thing/purchases.parquet"
-table.load(table_name = "Purchases", file = fullPathToFile)
-----
-
-[TIP]
-.Required format
-The files must be in a specific format. 
-See xref:reference:expected-file-format[Expected File Format] for details.
-
-This loads the contents of the file to the Purchases table.
-
-The result of running `load()` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
-
-[source,bash]
-----
-data_token_id: "aa2***a6b9"
-----
-
-== Loading data into a table with the CLI
-
-Files can be loaded into a table using the CLI.
-When loading files with the CLI, the given path must be local to the Kaskada service.
-
-The file must be encoded as either CSV or Parquet.
-
-[source,bash]
-----
-kaskada-cli load \
-  --table Purchase \
-  --file-type csv \
-  --file-path file://path/to/purchases.csv
-----
-
-The result of running `cli load` is a `data_token_id``. The data token ID is a unique reference to the data currently stored in the system.
-
-[source,bash]
-----
-data_token_id: "aa2***a6b9"
-----

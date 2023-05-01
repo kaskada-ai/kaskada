@@ -7,25 +7,24 @@ managed:
       - buf.build/envoyproxy/protoc-gen-validate
       - buf.build/googleapis/googleapis
 plugins:
-  - remote: buf.build/protocolbuffers/plugins/go:v1.28.0-1
+  - plugin: buf.build/protocolbuffers/go:v1.30.0
     out: ../gen/proto/go
     opt:
       - paths=source_relative
-  - remote: buf.build/grpc/plugins/go:v1.2.0-1
+  - plugin: buf.build/grpc/go:v1.3.0
     out: ../gen/proto/go
     opt:
       - paths=source_relative
-  - remote: buf.build/grpc-ecosystem/plugins/grpc-gateway:v2.10.0-1
+  - plugin: buf.build/grpc-ecosystem/gateway:v2.15.2
     out: ../gen/proto/go
     opt:
       - paths=source_relative
-  - remote: buf.build/go-sdk/plugins/protoc-gen-validate:v0.6.7-1
+  - plugin: buf.build/bufbuild/validate-go:v0.10.1
     out: ../gen/proto/go
     opt:
       - paths=source_relative
-      - lang=go
 
-  - remote: buf.build/protocolbuffers/plugins/python:v3.19.3-1
+  - plugin: buf.build/protocolbuffers/python:v22.3
     out: ../clients/python/src
-  - remote: buf.build/grpc/plugins/python:v1.44.0-1
+  - plugin: buf.build/grpc/python:v1.54.0
     out: ../clients/python/src
