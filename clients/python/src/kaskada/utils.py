@@ -102,14 +102,19 @@ def handleGrpcError(rpc_error: grpc.Call):
 def to_uri(file: str) -> str:
     # Remote file stores are prefixed appropriately.
     if (
-        file.startswith("s3://")
-        or file.startswith("gs://")
-        or file.startswith("https://")
+        file.startswith("s3://")  # Amazon Web Services S3 file path provided
+        or file.startswith("gs://")  # Google Cloud Platform GS file path provided
+        or file.startswith("https://")  # HTTPS file path
+        or file.startswith("file:///")  # Absolute file path is provided
     ):
         return file
-    # TODO: Verify that the object actually exists locally
-    path = Path(file).absolute()
-    return f"file://{path}"
+    elif file.startswith("file://"):  # Convert local path to full path
+        path = file[7:]  # The length of file://
+        path = Path(path).absolute()
+        return f"file://{path}"
+    else:  # A non-prefixed file path was provided
+        path = Path(file).absolute()
+        return f"file://{path}"
 
 
 def unpack_details(grpc_detail):
