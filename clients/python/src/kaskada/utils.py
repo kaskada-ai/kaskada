@@ -99,6 +99,19 @@ def handleGrpcError(rpc_error: grpc.Call):
     raise Exception(errorMessage) from None
 
 
+def to_uri(file: str) -> str:
+    # Remote file stores are prefixed appropriately.
+    if (
+        file.startswith("s3://")
+        or file.startswith("gs://")
+        or file.startswith("https://")
+    ):
+        return file
+    # TODO: Verify that the object actually exists locally
+    path = Path(file).absolute()
+    return f"file://{path}"
+
+
 def unpack_details(grpc_detail):
     """Unpack a grpc status detail field (which is a 'google.protobuf.Any' type).
     `Unpack()` checks the descriptor of the passed-in message object against the stored one
