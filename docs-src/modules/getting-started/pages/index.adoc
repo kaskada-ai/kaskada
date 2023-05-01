@@ -56,10 +56,13 @@ Transforming and combining timelines allows you to intuitively express computati
 ****
 
 With Kaskada, it's timelines all the way down - every operation's inputs and outputs are timelines. 
-When you make a query, the resulting timeline is output in one of two ways: as a _history_ or as a _snapshot_. 
+The timeline is a flexible abstraction that can be used in different ways depending on your needs.
+In some cases, you may want to know what the timeline's value is at a specific point in time, in other cases you may want to know how the timeline's value changes over time.
 
-* A timeline *History* contains a value each time the timeline changes, and each row is associated with a different entity and point in time. 
-* A timeline *Snapshot* contains a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows are associated with the same time.
+When making a query, you configure how to use the query's output timeline: you can use the timeline as either a _history_ or as a _snapshot_.
+
+* A timeline *History* contains a value each time the timeline changes, and each row describes a different entity at a different point in time. 
+* A timeline *Snapshot* contains a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows reflect the same point in time.
 
 This output may be written in different ways -- for example, they may be written to a Parquet file or sent as events to a stream.
 
@@ -124,7 +127,7 @@ Events must be loaded into a table before they can be queried.
 You can load events into a table from various data sources, for example files formatted as Parquet or CSV, or by reading events from a stream.
 
 ****
-⭢ Read more about loading data in xref:ROOT:loading-data.adoc[]
+⭢ Read more about connecting to data in xref:ROOT:loading-data.adoc[]
 ****
 
 == Quick-starts
