@@ -6,6 +6,7 @@ import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
 import "kaskada/kaskada/v1alpha/pulsar.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
+import "kaskada/kaskada/v1alpha/sources.proto";
 
 // Configuration for a single source of data in a table.
 message SourceData {
@@ -87,6 +88,9 @@ message TableConfig {
   // TODO: Consider instead defaulting to a name derived from the type of the group
   // key. This would default to allowing implicit grouping amongst tables.
   string grouping = 5;
+
+  // The backing source for the table
+  Source source = 6;
 }
 
 message TableMetadata {

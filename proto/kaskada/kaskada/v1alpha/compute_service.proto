@@ -304,9 +304,68 @@ message ExecuteResponse {
   }
 }
 
+message StartMaterializationRequest {
+  // The materailization id
+  // provided by the client to identify the materialization.
+  string materialization_id = 1;
+
+  // The compiled compute plan.
+  ComputePlan plan = 2;
+
+  // Tables that are available to the query.
+  //
+  // This should have file sets and/or stream connection info for the necessary tables.
+  repeated ComputeTable tables = 3;
+
+  // Describes the destinations that results will be produced to.
+  //
+  // Note: Can make this a repeated field to support multiple destinations.
+  Destination destination = 4;
+}
+
+message StartMaterializationResponse {
+}
+
+message GetMaterializationStatusRequest{
+    // The materailization id
+    string materialization_id = 1;
+}
+
+message GetMaterializationStatusResponse{
+    // Number of input rows processed by this query.
+    int64 processed_input_rows = 1;
+
+    // Number of rows added to buffers.
+    int64 buffered_rows = 2;
+
+    // Number of buffered rows that have been processed.
+    int64 processed_buffered_rows = 3;
+
+    // Minimum event time present in input.
+    int64 min_event_time = 4;
+    // Maximum event time present in input.
+    int64 max_event_time = 5;
+    // Current event time present in output.
+    int64 output_time = 6;
+
+    // The number of output rows produced so far.
+    int64 produced_output_rows = 7;
+}
+
+message StopMaterializationRequest{
+  // The materailization id
+  string materialization_id = 1;
+}
+
+message StopMaterializationResponse{
+}
+
 service ComputeService {
   rpc Compile(CompileRequest) returns (CompileResponse);
   rpc Execute(ExecuteRequest) returns (stream ExecuteResponse);
+  rpc StartMaterialization(StartMaterializationRequest) returns (StartMaterializationResponse);
+  rpc GetMaterializationStatus(GetMaterializationStatusRequest) returns (GetMaterializationStatusResponse);
+  rpc StopMaterialization(StopMaterializationRequest) returns (StopMaterializationResponse);
 
   // Gets the current snapshot version.
   rpc GetCurrentSnapshotVersion(GetCurrentSnapshotVersionRequest) returns (GetCurrentSnapshotVersionResponse);
