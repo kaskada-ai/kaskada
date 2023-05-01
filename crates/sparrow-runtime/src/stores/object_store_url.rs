@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{path::Path, str::FromStr};
 
 use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
@@ -95,7 +95,7 @@ impl ObjectStoreUrl {
     pub async fn download(
         &self,
         object_store_registry: &ObjectStoreRegistry,
-        file_path: PathBuf,
+        file_path: &Path,
     ) -> error_stack::Result<(), Error> {
         let path = self.path()?;
         let object_store = object_store_registry.object_store(self.key()?)?;
@@ -103,17 +103,17 @@ impl ObjectStoreUrl {
             .get(&path)
             .await
             .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?
+            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?
             .into_stream();
-        let mut file = tokio::fs::File::create(file_path.clone())
+        let mut file = tokio::fs::File::create(file_path)
             .await
             .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
+            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;
         let mut body = StreamReader::new(stream);
         tokio::io::copy(&mut body, &mut file)
             .await
             .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.clone()))?;
+            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;
         Ok(())
     }
 }
@@ -125,6 +125,12 @@ impl FromStr for ObjectStoreUrl {
         Url::from_str(s)
             .into_report()
             .map(|it| ObjectStoreUrl { url: it })
+    }
+}
+
+impl std::fmt::Display for ObjectStoreUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.url.fmt(f)
     }
 }
 
