@@ -236,7 +236,7 @@ def load(
 
     Args:
         table_name (str): The name of the target table
-        file_uri (str): The path to the absolute path of a file, or a S3 / GCS / Azure Blob URI
+        file_uri (str): The path to a local file (absolute or relative), or a S3 / GCS / Azure Blob URI
         client (Optional[Client], optional): The Kaskada Client. Defaults to None.
 
     Returns:
