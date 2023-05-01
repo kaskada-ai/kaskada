@@ -109,9 +109,8 @@ def to_uri(file: str) -> str:
     ):
         return file
     elif file.startswith("file://"):  # Convert local path to full path
-        path = file[7:]  # The length of file://
-        path = Path(path).absolute()
-        return f"file://{path}"
+        file_suffix_path = file[7:]  # The length of file://
+        return f"file://{Path(file_suffix_path).absolute()}"
     else:  # A non-prefixed file path was provided
         path = Path(file).absolute()
         return f"file://{path}"
