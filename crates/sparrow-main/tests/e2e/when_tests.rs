@@ -75,7 +75,7 @@ pub(crate) async fn purchase_fixture() -> DataFixture {
 }
 
 #[tokio::test]
-#[ignore = "unexpected non-null behavior from when: https://github.com/kaskada-ai/kaskada/issues/292"]
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/292"]
 async fn test_when_output_resets_to_null() {
     insta::assert_snapshot!(QueryFixture::new("{ \
         count_page: count(PageViews), \
