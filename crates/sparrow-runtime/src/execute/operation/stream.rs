@@ -100,7 +100,7 @@ impl StreamOperation {
     /// Create the stream of input batches for a stream operation.
     pub(super) fn create(
         context: &mut OperationContext,
-        stream_operation: operation_plan::StreamOperation,
+        stream_operation: i64, // TODO: FRAZ
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
     ) -> error_stack::Result<BoxedOperation, Error> {

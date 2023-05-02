@@ -27,7 +27,7 @@ pub struct DataContext {
     /// Information about each of the tables in the context.
     table_info: BTreeMap<TableId, TableInfo>,
 
-    stream_info: BTreeMap<TableId, StreamInfo>,
+    // stream_info: BTreeMap<TableId, StreamInfo>,
 }
 
 impl DataContext {
@@ -457,17 +457,8 @@ impl StreamInfo {
             table_id,
             group_id,
             schema,
-            config,
-            file_sets,
+            config: todo!(),
         })
-    }
-
-    pub fn name(&self) -> &str {
-        &self.config.name
-    }
-
-    pub fn uuid(&self) -> &str {
-        &self.config.uuid
     }
 
     pub fn table_id(&self) -> TableId {
@@ -482,13 +473,6 @@ impl StreamInfo {
         &self.schema
     }
 
-    pub fn config(&self) -> &Arc<TableConfig> {
-        &self.config
-    }
-
-    pub fn file_sets(&self) -> &[compute_table::FileSet] {
-        &self.file_sets
-    }
 }
 
 /// Information about groups.

@@ -1,22 +1,27 @@
 use crate::prepare::Error;
 use crate::Batch;
 
+use arrow::array::{ArrayRef, TimestampNanosecondArray};
+use arrow::compute::SortColumn;
 use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
-use error_stack::{IntoReport, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::BoxStream;
 use futures::Stream;
 use futures_lite::stream::StreamExt;
+use itertools::Itertools;
 use pulsar::consumer::InitialPosition;
 
 use pulsar::{
     Authentication, Consumer, ConsumerOptions, DeserializeMessage, Payload, Pulsar, SubType,
     TokioExecutor,
 };
+use sparrow_core::downcast_primitive_array;
 
 use crate::execute::avro_arrow;
-use sparrow_api::kaskada::v1alpha::PulsarSubscription;
+use sparrow_api::kaskada::v1alpha::{PulsarSubscription, TableConfig};
+use std::collections::BTreeSet;
 use std::io::Cursor;
 
 use std::pin::Pin;
@@ -37,9 +42,10 @@ pub fn stream_for_execution(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
+    config: TableConfig,
 ) -> impl Stream<Item = error_stack::Result<RecordBatch, Error>> + Send {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema, consumer, last_publish_time);
+        let mut reader = PulsarReader::new(schema, consumer, last_publish_time, config);
         loop {
         // TODO: This should indefinitely loop. Errors are unexpected.
         // TODO: Implement the input buffer logic here too
@@ -53,7 +59,7 @@ pub fn stream_for_execution(
 
 
         // I also need to eventually add slice plans and stuff.
-            if let Some(next) = reader.next_result_async_2().await? {
+            if let Some(next) = reader.next_result_async_buffer().await? {
                 yield next
             } else {
                 // Keep looping
@@ -68,7 +74,8 @@ pub fn stream_for_prepare(
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema, consumer, last_publish_time);
+        let config = todo!();
+        let mut reader = PulsarReader::new(schema, consumer, last_publish_time, config);
         while let Some(next) = reader.next_result_async().await? {
             yield next
         }
@@ -79,6 +86,18 @@ struct PulsarReader {
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
+    // Bounded disorder assumes an allowed amount of lateness in events,
+    // which then allows this node to advance its watermark up to event
+    // time (t - delta).
+    bounded_lateness: i64,
+    watermark: i64,
+    leftovers: Vec<Vec<(String, Value)>>,
+    // TODO: leftovers is a recordbatch
+    // then I just uh...hm.
+    // I need to append the new batch to the leftovers.
+    // But I need to make sure I'm using the correct max event time
+    // which should come from the leftovers.
+    config: TableConfig,
 }
 
 #[derive(Debug)]
@@ -157,15 +176,22 @@ impl PulsarReader {
         schema: SchemaRef,
         consumer: Consumer<AvroWrapper, TokioExecutor>,
         last_publish_time: i64,
+        config: TableConfig,
     ) -> Self {
         PulsarReader {
             schema,
             consumer,
             last_publish_time,
+            bounded_lateness: todo!(),
+            watermark: todo!(),
+            leftovers: todo!(),
+            config,
         }
     }
 
-    async fn next_result_async_2(&mut self) -> error_stack::Result<Option<RecordBatch>, Error> {
+    async fn next_result_async_buffer(
+        &mut self,
+    ) -> error_stack::Result<Option<RecordBatch>, Error> {
         // TODO: FRAZ -
         // in the first iteration, maybe you just ignore timeouts as well
         // and you just do self.consumer.try_next().await?
@@ -175,6 +201,12 @@ impl PulsarReader {
         tracing::debug!("reading pulsar messages");
         let max_batch_size = 100000; // TODO make this adaptive based on the size of the messages
         let mut avro_values = Vec::with_capacity(max_batch_size);
+
+        // Add any leftovers to the new current batch
+        // TODO: make sure this is tested
+        // drain should drain everything each time
+        self.leftovers.drain(..).map(|i| avro_values.push(i));
+
         while avro_values.len() < max_batch_size {
             // read the next entry from the pulsar consumer.
             // this is fragile since tokio has no idea what is going on inside the consumer,
@@ -239,28 +271,7 @@ impl PulsarReader {
             }
         }
 
-        // ensure that _publish_time never goes backwards
-        for avro_value in &mut avro_values {
-            for (field_name, field_value) in avro_value {
-                if field_name == "_publish_time" {
-                    match field_value {
-                        Value::TimestampMillis(publish_time) => {
-                            if *publish_time < self.last_publish_time {
-                                *publish_time = self.last_publish_time;
-                            } else {
-                                self.last_publish_time = *publish_time;
-                            }
-                        }
-                        _ => {
-                            let e = error_stack::report!(DeserializeError::InternalError);
-                            error_stack::bail!(e.change_context(Error::ReadInput))
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-
+        // TODO: Split batch at time max_event_time - bounded_lateness
         tracing::debug!("read {} messages", avro_values.len());
         match avro_values.len() {
             0 => Ok(None),
@@ -269,7 +280,106 @@ impl PulsarReader {
                     avro_arrow::avro_to_arrow(avro_values).map_err(|e| Error::ReadInput)?;
                 let batch = RecordBatch::try_new(self.schema.clone(), arrow_data)
                     .map_err(|e| Error::ReadInput)?;
-                Ok(Some(batch))
+
+                // TODO: sort and take
+                let time_column = batch
+                    .column_by_name(&self.config.time_column_name)
+                    .ok_or(Error::ReadInput)?;
+                // TODO: Subsort column?
+
+                let key_column = batch
+                    .column_by_name(&self.config.group_column_name)
+                    .ok_or(Error::ReadInput)?;
+
+                let sort_indices = arrow::compute::lexsort_to_indices(
+                    &[
+                        SortColumn {
+                            values: time_column.clone(),
+                            options: None,
+                        },
+                        SortColumn {
+                            values: key_column.clone(),
+                            options: None,
+                        },
+                    ],
+                    None,
+                )
+                .into_report()
+                .change_context(Error::ReadInput)?;
+
+                let transform = |column: &ArrayRef| {
+                    arrow::compute::take(column.as_ref(), &sort_indices, None)
+                        .into_report()
+                        .change_context(Error::ReadInput)
+                };
+                let sorted_columns: Vec<_> = batch
+                    .columns()
+                    .iter()
+                    .map(|column| transform(column))
+                    .try_collect()?;
+
+                let sorted_batch = RecordBatch::try_new(self.schema.clone(), sorted_columns)
+                    .map_err(|_| Error::ReadInput)?;
+
+                // TODO: Take only up to max_event_time - bounded_lateness
+                if sorted_batch.num_rows() == 0 {
+                    return Ok(None);
+                }
+
+                let time_column = sorted_batch
+                    .column_by_name(&self.config.time_column_name)
+                    .ok_or(Error::ReadInput)?;
+                let time_column: &TimestampNanosecondArray =
+                    downcast_primitive_array(time_column.as_ref())
+                        .into_report()
+                        .change_context(Error::ReadInput)?;
+                let min_event_time = time_column.value(0);
+                let split_at = time_column.value(time_column.len() - 1) - self.bounded_lateness;
+
+                // If the min event time is greater than the (max_event_time - bounded_lateness),
+                // we cannot produce any rows.
+                if min_event_time >= split_at {
+                    // TODO: Add to leftovers
+                    // TODO: Also need to check leftovers when creating new batch here.
+                    Ok(None)
+                } else {
+                    // Split the batch at the max_event_time - bounded_lateness.
+                    let times = time_column.values();
+                    let split_point = match times.binary_search(&split_at) {
+                        Ok(mut found_index) => {
+                            // Just do a linear search for the first value less than split time.
+                            while found_index > 0 && times[found_index - 1] == split_at {
+                                found_index -= 1
+                            }
+                            found_index
+                        }
+                        Err(not_found_index) => not_found_index,
+                    };
+
+                    let lt = if split_point > 0 {
+                        let lt = sorted_batch.slice(0, split_point);
+                        Some(
+                            Batch::try_new_from_batch(lt)
+                                .into_report()
+                                .change_context(Error::ReadInput)?,
+                        )
+                    } else {
+                        None
+                    };
+
+                    let gte = if split_point < sorted_batch.num_rows() {
+                        let gte =
+                            sorted_batch.slice(split_point, sorted_batch.num_rows() - split_point);
+                        Some(
+                            Batch::try_new_from_batch(gte)
+                                .into_report()
+                                .change_context(Error::ReadInput)?,
+                        )
+                    } else {
+                        None
+                    };
+                    Ok((lt, gte))
+                }
             }
         }
     }

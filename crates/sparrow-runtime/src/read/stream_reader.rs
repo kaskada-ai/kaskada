@@ -82,6 +82,7 @@ pub fn stream_reader(
     // TODO: cloning table info is necessary since I use it to create the pulsar stream, meaning the reference must outlive the static lifetime of the stream.
     // Is there a better option?
     let table_info = table_info.clone();
+    let config = todo!(); // TODO: FRAZ
     let stream = async_stream::try_stream! {
             let consumer = pulsar_stream::consumer(&subscription, table_info.schema().clone())
                 .await
@@ -90,6 +91,7 @@ pub fn stream_reader(
                 table_info.schema().clone(),
                 consumer,
                 subscription.last_publish_time,
+                config,
             ));
 
     // TODO: This should indefinitely loop. Errors are unexpected.
