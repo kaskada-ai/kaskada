@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -457,11 +457,13 @@ func (q *queryV1Service) addMetricsIfRequested(request *v1alpha.CreateQueryReque
 }
 
 func (q *queryV1Service) presignResults(ctx context.Context, owner *ent.Owner, URIs []string) ([]string, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.presignResults").Logger()
 	presignedURIs := []string{}
 	for _, fromURI := range URIs {
 		presignedURI, err := q.objectStoreClient.GetPresignedDownloadURL(ctx, fromURI)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "presigning download url for: %s", presignedURI)
+			subLogger.Error().Err(err).Str("from_uri", fromURI).Msg("error presigning download url")
+			return nil, err
 		}
 		presignedURIs = append(presignedURIs, presignedURI)
 	}
@@ -480,13 +482,15 @@ func (q *queryV1Service) GetQuery(ctx context.Context, request *v1alpha.GetQuery
 
 // getQuery fetches a query by owner and query ID
 func (q *queryV1Service) getQuery(ctx context.Context, owner *ent.Owner, queryId string) (*v1alpha.GetQueryResponse, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.getQuery").Logger()
 	queryUUID, err := uuid.Parse(queryId)
 	if err != nil {
 		return nil, customerrors.NewInvalidArgumentError("query_id")
 	}
 	query, err := q.kaskadaQueryClient.GetKaskadaQuery(ctx, owner, queryUUID, false)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting query from db table")
+		subLogger.Error().Err(err).Str("query_id", queryId).Msg("issue getting query from db table")
+		return nil, err
 	}
 	return &v1alpha.GetQueryResponse{
 		Query: query.Query,

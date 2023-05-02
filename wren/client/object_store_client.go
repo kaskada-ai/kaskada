@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	aws_s3 "github.com/aws/aws-sdk-go/service/s3"
@@ -213,6 +214,15 @@ func (c objectStoreClient) DeleteObjects(ctx context.Context, subPath string) er
 	return nil
 }
 
+// true if the URI exists and is accessible, otherwise returns error
+func (c objectStoreClient) URIExists(ctx context.Context, URI string) (bool, error) {
+	file, err := newFile(URI)
+	if err != nil {
+		return false, err
+	}
+	return file.Exists()
+}
+
 // generates a presigned URL to download an object from our store.
 // Note the signing step will be skipped when the object-store-type is `local`
 func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI string) (presignedURL string, err error) {
@@ -225,6 +235,10 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 		return
 	}
 
+	bucket := file.Location().Volume()
+	path := file.Path()
+	duration := 60 * time.Minute
+
 	switch c.objectStoreType {
 	case object_store_type_local:
 		presignedURL = file.Path()
@@ -232,16 +246,35 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 
 	case object_store_type_s3:
 		getObjectInput := &aws_s3.GetObjectInput{
-			Bucket: aws.String(file.Location().Volume()),
-			Key:    aws.String(file.Path()),
+			Bucket: aws.String(bucket),
+			Key:    aws.String(path),
 		}
 		req, _ := c.awsS3.GetObjectRequest(getObjectInput)
-		presignedURL, err = req.Presign(60 * time.Minute)
+		presignedURL, err = req.Presign(duration)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue generating presigned download url for uri")
 		}
 		return
+	case object_store_type_gcs:
+		// Set up a GCS client
+		var gscClient *storage.Client
+		gscClient, err = storage.NewClient(ctx)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue creating GCS client")
+			return
+		}
+		defer gscClient.Close()
 
+		opts := &storage.SignedURLOptions{
+			Scheme:  storage.SigningSchemeV4,
+			Method:  "GET",
+			Expires: time.Now().Add(duration),
+		}
+		presignedURL, err = gscClient.Bucket(bucket).SignedURL(path, opts)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue generating presigned download url for uri")
+		}
+		return
 	default:
 		subLogger.Error().Str("type", c.objectStoreType).Msg("presigning download URLs is unimplemented for this object-store-type")
 		err = fmt.Errorf("presigning download URLs is unimplemented for object-store-type: %s", c.objectStoreType)
@@ -285,7 +318,25 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, object Objec
 		}
 		identifier = utils.TrimQuotes(*result.ETag)
 		return
+	case object_store_type_gcs:
+		// Set up a GCS client
+		var gscClient *storage.Client
+		gscClient, err = storage.NewClient(ctx)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue creating GCS client")
+			return
+		}
+		defer gscClient.Close()
 
+		// Retrieve object metadata
+		var attrs *storage.ObjectAttrs
+		attrs, err = gscClient.Bucket(file.Location().Volume()).Object(file.Path()).Attrs(ctx)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting object indentifier")
+			return
+		}
+		identifier = string(attrs.MD5)
+		return
 	default:
 		subLogger.Error().Str("type", c.objectStoreType).Msg("getting an object identifier is unimplemented for this object-store-type")
 		err = fmt.Errorf("getting an object identifier is unimplemented for object-store-type: %s", c.objectStoreType)

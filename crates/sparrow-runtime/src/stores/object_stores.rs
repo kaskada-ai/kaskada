@@ -1,5 +1,5 @@
 use std::{
-    path::PathBuf,
+    path::{self, PathBuf},
     sync::{Arc, RwLock},
 };
 
@@ -7,9 +7,10 @@ use derive_more::Display;
 use error_stack::{IntoReport, ResultExt};
 use hashbrown::HashMap;
 use object_store::ObjectStore;
+use tokio::{fs, io::AsyncWriteExt};
 use url::Url;
 
-use super::object_store_url::ObjectStoreKey;
+use super::{object_store_url::ObjectStoreKey, ObjectStoreUrl};
 
 /// Map from URL scheme to object store for that prefix.
 ///
@@ -46,6 +47,38 @@ impl ObjectStoreRegistry {
             self.put_object_store(key, object_store.clone())?;
             Ok(object_store)
         }
+    }
+
+    pub async fn upload(
+        &self,
+        target_url: ObjectStoreUrl,
+        local_file_path: &path::Path,
+    ) -> error_stack::Result<(), Error> {
+        let target_path = target_url.path()?;
+        let target_key = target_url.key()?;
+        let object_store = self.object_store(target_key)?;
+        let mut local_file = fs::File::open(local_file_path)
+            .await
+            .into_report()
+            .change_context(Error::Internal)?;
+        let (_id, mut writer) = object_store
+            .put_multipart(&target_path)
+            .await
+            .into_report()
+            .change_context(Error::ReadWriteObjectStore)
+            .attach_printable_lazy(|| {
+                format!("failed to write multipart upload to path {}", target_path)
+            })?;
+        tokio::io::copy(&mut local_file, &mut writer)
+            .await
+            .into_report()
+            .change_context(Error::Internal)?;
+        writer
+            .shutdown()
+            .await
+            .into_report()
+            .change_context(Error::Internal)?;
+        Ok(())
     }
 
     fn get_object_store(
@@ -105,6 +138,8 @@ pub enum Error {
     CreatingObjectStore(ObjectStoreKey),
     #[display(fmt = "downloading object for {_0:?}")]
     DownloadingObject(PathBuf),
+    #[display(fmt = "internal error")]
+    Internal,
 }
 
 impl error_stack::Context for Error {}

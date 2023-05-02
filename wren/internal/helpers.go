@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -24,7 +24,7 @@ func rollback(tx *ent.Tx, err error) error {
 func GetProtoMd5Sum(protoMessage protoreflect.ProtoMessage) ([]byte, error) {
 	marshalledProtoMessage, err := proto.Marshal(protoMessage)
 	if err != nil {
-		return nil, errors.Wrapf(err, "encoding slice plan")
+		return nil, err
 	}
 
 	md5Hash := md5.New()

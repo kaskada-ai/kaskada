@@ -17,7 +17,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.14
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/zerolog v1.26.0
@@ -55,6 +54,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/mattn/go-ieproxy v0.0.9 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -24,7 +23,7 @@ func wrapErrorWithStatus(err error, subLogger zerolog.Logger) error {
 			return err
 		}
 
-		switch originalErr := errors.Cause(err).(type) {
+		switch originalErr := err.(type) {
 		case *customerrors.AlreadyExistsError:
 			subLogger.Warn().Err(err).Stack().Msg("already exists")
 			return status.Error(codes.AlreadyExists, originalErr.Error())
