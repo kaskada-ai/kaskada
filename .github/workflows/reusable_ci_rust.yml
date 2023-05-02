@@ -43,7 +43,8 @@ jobs:
 
   rust_check:
     name: Rust Checks
-    runs-on: ubuntu-20.04
+    runs-on: 
+      group: linux-rust-builds
     needs: [rust_skip]
     steps:
       - name: Checkout sources
@@ -165,7 +166,7 @@ jobs:
   # that waiting to determine if we *should* skip it would be a waste.
   rust_format:
     name: Rust Format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -190,7 +191,7 @@ jobs:
   # that waiting to determine if we *should* skip it would be a waste.
   rust_audit:
     name: Rust Audits
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     # Audits don't need a toolchain or any of the dependencies, so we don't cache.
     # Restoring the cache takes 2m. Running `cargo deny` takes 10s.
