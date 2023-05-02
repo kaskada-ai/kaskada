@@ -1,4 +1,4 @@
-= Installing Kaskada
+= Installing
 
 Kaskada is an event-processing engine comprised of two main components: 
 
