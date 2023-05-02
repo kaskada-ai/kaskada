@@ -275,7 +275,7 @@ So in a new code cell input the following command and run this cell.
 ----
 
 Now we can start a code cell in our notebook with the first line being the string `%%fenl` to indicate that this cell will contain code in the Fenl language. 
-The special string `%%fenl`` will also connect to the Kaskada components that we installed that will execute the query and report back any results to our notebook.
+The special string `%%fenl` will also connect to the Kaskada components that we installed that will execute the query and report back any results to our notebook.
 
 === Writing Queries
 
