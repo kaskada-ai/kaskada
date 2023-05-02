@@ -14,7 +14,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes a view.",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.LogAndQuitIfErrorExists(api.NewApiClient().Delete(&apiv1alpha.View{ViewName: view}, force))
+		utils.LogAndQuitIfErrorExists(api.NewApiClient().Delete(&apiv1alpha.View{ViewName: viewName}, force))
 		log.Info().Msg("Success!")
 	},
 }

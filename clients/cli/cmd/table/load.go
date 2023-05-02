@@ -28,13 +28,9 @@ var loadCmd = &cobra.Command{
 			utils.LogAndQuitIfErrorExists(fmt.Errorf("unrecognized file type - must be one of 'parquet', 'csv'"))
 		}
 
-		if len(files) == 0 {
-			utils.LogAndQuitIfErrorExists(fmt.Errorf("at least one `file` flag must be set"))
-		}
-
 		apiClient := api.NewApiClient()
 		for _, file := range files {
-			err := apiClient.LoadFile(table, &apiv1alpha.FileInput{FileType: fileType, Uri: file})
+			err := apiClient.LoadFile(tableName, &apiv1alpha.FileInput{FileType: fileType, Uri: file})
 			utils.LogAndQuitIfErrorExists(err)
 		}
 		log.Info().Msg("Success!")
@@ -43,7 +39,10 @@ var loadCmd = &cobra.Command{
 
 var loadFileType string
 var files []string
+
 func init() {
-	loadCmd.Flags().StringVarP(&loadFileType, "file-type", "k", "parquet", "(Optional) The type of file to load.  Either 'parquet' or 'csv'.")
-	loadCmd.Flags().StringArrayVarP(&files, "file-path", "f", []string{}, "The path of the file to load on the Kaskada instance.")
+	initTableFlag(loadCmd, "The table to load the file into.")
+	loadCmd.Flags().StringVarP(&loadFileType, "kind", "k", "parquet", "(Optional) The kind of file to load.  Either 'parquet' or 'csv'.")
+	loadCmd.Flags().StringArrayVarP(&files, "file", "f", []string{}, "The path of the file to load on the Kaskada instance.")
+	loadCmd.MarkFlagRequired("file")
 }

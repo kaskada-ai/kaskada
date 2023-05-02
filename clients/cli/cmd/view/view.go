@@ -19,11 +19,14 @@ var ViewCmd = &cobra.Command{
 }
 
 func init() {
+	ViewCmd.AddCommand(createCmd)
 	ViewCmd.AddCommand(deleteCmd)
+	ViewCmd.AddCommand(getCmd)
 }
 
-var view string
+var viewName string
+
 func initViewFlag(cmd *cobra.Command, description string) {
-	cmd.Flags().StringVarP(&view, "view", "v", "", description)
+	cmd.Flags().StringVarP(&viewName, "view", "v", "", description)
 	cmd.MarkFlagRequired("view")
 }

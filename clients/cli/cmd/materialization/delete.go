@@ -14,7 +14,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes a materialization.",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.LogAndQuitIfErrorExists(api.NewApiClient().Delete(&apiv1alpha.Materialization{MaterializationName: materialization}, true))
+		utils.LogAndQuitIfErrorExists(api.NewApiClient().Delete(&apiv1alpha.Materialization{MaterializationName: materializationName}, true))
 		log.Info().Msg("Success!")
 	},
 }

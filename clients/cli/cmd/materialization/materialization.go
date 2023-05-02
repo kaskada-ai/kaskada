@@ -19,11 +19,13 @@ var MaterializationCmd = &cobra.Command{
 }
 
 func init() {
+	MaterializationCmd.AddCommand(createCmd)
 	MaterializationCmd.AddCommand(deleteCmd)
+	MaterializationCmd.AddCommand(getCmd)
 }
 
-var materialization string
+var materializationName string
 func initMaterializationFlag(cmd *cobra.Command, description string) {
-	cmd.Flags().StringVarP(&materialization, "materialization", "m", "", description)
+	cmd.Flags().StringVarP(&materializationName, "materialization", "m", "", description)
 	cmd.MarkFlagRequired("materialization")
 }

@@ -14,7 +14,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes a table.",
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.LogAndQuitIfErrorExists(api.NewApiClient().Delete(&apiv1alpha.Table{TableName: table}, force))
+		utils.LogAndQuitIfErrorExists(api.NewApiClient().Delete(&apiv1alpha.Table{TableName: tableName}, force))
 		log.Info().Msg("Success!")
 	},
 }

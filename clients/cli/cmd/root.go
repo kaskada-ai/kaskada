@@ -61,7 +61,7 @@ func init() {
 	rootCmd.PersistentFlags().String("kaskada-api-server", "", "Kaskada API Server")
 	rootCmd.PersistentFlags().String("kaskada-client-id", "", "Kaskada Client ID")
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "get debug log output")
-	rootCmd.PersistentFlags().Bool("use-tls", true, "Use TLS when connecting to the Kaskada API")
+	rootCmd.PersistentFlags().Bool("use-tls", false, "Use TLS when connecting to the Kaskada API")
 
 	viper.BindPFlag("kaskada-api-server", rootCmd.PersistentFlags().Lookup("kaskada-api-server"))
 	viper.BindPFlag("kaskada-client-id", rootCmd.PersistentFlags().Lookup("kaskada-client-id"))

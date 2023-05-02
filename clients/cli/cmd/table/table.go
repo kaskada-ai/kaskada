@@ -19,12 +19,15 @@ var TableCmd = &cobra.Command{
 }
 
 func init() {
-	TableCmd.AddCommand(loadCmd)
+	TableCmd.AddCommand(createCmd)
 	TableCmd.AddCommand(deleteCmd)
+	TableCmd.AddCommand(getCmd)
+	TableCmd.AddCommand(loadCmd)
 }
 
-var table string
+var tableName string
+
 func initTableFlag(cmd *cobra.Command, description string) {
-	cmd.Flags().StringVarP(&table, "table", "t", "", description)
+	cmd.Flags().StringVarP(&tableName, "table", "t", "", description)
 	cmd.MarkFlagRequired("table")
 }
