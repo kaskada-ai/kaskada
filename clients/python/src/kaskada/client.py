@@ -40,6 +40,13 @@ IPython.core.interactiveshell.InteractiveShell.showtraceback = showtraceback # t
 # fmt: on
 
 
+def reset():
+    KASKADA_DEFAULT_CLIENT = None
+    KASKADA_DEFAULT_SLICE = None
+    KASKADA_DEFAULT_ENDPOINT = "localhost:50051"
+    KASKADA_IS_SECURE = False
+
+
 def init(
     client_id: Optional[str] = None,
     endpoint: Optional[str] = KASKADA_DEFAULT_ENDPOINT,
@@ -99,6 +106,11 @@ class Client(object):
         self.query_stub = query_grpc.QueryServiceStub(channel)
         self.materialization_stub = mat_grpc.MaterializationServiceStub(channel)
         self.client_id = client_id
+        self.channel = channel
+
+    def __del__(self):
+        if self.channel is not None:
+            self.channel.close()
 
     def get_metadata(self) -> List[Tuple[str, str]]:
         """
