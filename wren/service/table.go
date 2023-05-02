@@ -283,11 +283,11 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 	// first validate we can access the file
 	exists, err := t.objectStoreClient.URIExists(ctx, fileInput.GetURI())
 	if err != nil {
-		subLogger.Error().Err(err).Msg("issue checking if file exists")
-		return nil, err
+		subLogger.Info().Err(err).Msg("issue checking if file exists")
+		return nil, customerrors.NewPermissionDeniedError(fmt.Sprintf("file: %s is not accessible by the kaskada service. The provider returned this error: %s", fileInput.GetURI(), err.Error()))
 	}
 	if !exists {
-		return nil, customerrors.NewNotFoundError(fmt.Sprintf("file: %s does not exist or is not accessible by the kaskada service", fileInput.GetURI()))
+		return nil, customerrors.NewNotFoundErrorWithCustomText(fmt.Sprintf("file: %s not found by the kaskada service", fileInput.GetURI()))
 	}
 
 	fileSchema, err := t.validateFileSchema(ctx, *kaskadaTable, fileInput)

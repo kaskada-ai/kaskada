@@ -118,6 +118,7 @@ wren/run:
 	cd wren && \
 	DB_IN_MEMORY=false \
 	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \
 	go run main.go
 
 wren/run-s3: 
@@ -130,7 +131,7 @@ wren/run-s3:
 	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
 	OBJECT_STORE_TYPE=s3 \
 	OBJECT_STORE_BUCKET=integration \
-	OBJECT_STORE_PATH=/data \
+	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \
 	OBJECT_STORE_DISABLE_SSL=true \
 	OBJECT_STORE_ENDPOINT=http://127.0.0.1:9000 \
 	OBJECT_STORE_FORCE_PATH_STYLE=true \
