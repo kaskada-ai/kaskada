@@ -135,7 +135,7 @@ jobs:
       - name: Docker compose down for integration tests 
         run: make ci/integration/tests/docker-compose-down
 
-  run_integration_tests_postrges_s3: 
+  run_integration_tests_s3: 
           name: Run Postgres + S3 integration tests
           needs: [integration_skip, build_wren, build_sparrow]
           runs-on: ubuntu-latest
@@ -202,9 +202,6 @@ jobs:
             - name: Check docker containers (minio) healthcheck
               run: timeout 240s sh -c 'until docker ps | grep minio | grep -q healthy; do echo "Waiting for minio container to be healthy..."; sleep 10; done'
 
-            - name: Check docker containers (postgress) healthcheck
-              run: timeout 240s sh -c 'until docker ps | grep postgres | grep -q healthy; do echo "Waiting for postgres container to be healthy..."; sleep 10; done'
-      
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
             # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
@@ -217,7 +214,7 @@ jobs:
                 ls -laR tests/integration/data
                 echo "::endgroup::"
       
-                make ci/integration/tests/run/api-postgres-s3
+                make ci/integration/tests/run/api-s3
       
             - name: Docker compose down for integration tests 
               run: make ci/integration/tests/docker-compose-down-postgres-s3
