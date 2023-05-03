@@ -116,7 +116,7 @@ ci/integration/tests/docker-compose-down-s3:
 	export DOCKER_BUILDKIT=1
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml down
 
-ci/integration/tests/run/api-s3: test/int/run-api-s3
+ci/integration/tests/run/api-s3: test/int/run-api-s3-docker
 
 ####
 ## Postgres CI Integration Tests
