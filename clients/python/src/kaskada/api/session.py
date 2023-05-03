@@ -2,8 +2,8 @@ import logging
 import os
 import sys
 import time
-import uuid
 from abc import ABC
+from datetime import datetime
 from pathlib import Path
 from subprocess import Popen
 from typing import Any, Dict, Optional, Tuple
@@ -20,14 +20,12 @@ class Session:
         self,
         endpoint: str,
         is_secure: bool,
-        name: str,
         client_id: Optional[str] = None,
         manager_process: Optional[Popen] = None,
         engine_process: Optional[Popen] = None,
     ) -> None:
         self._endpoint = endpoint
         self._is_secure = is_secure
-        self._name = name
         self._client_id = client_id
         self._client = self.connect()
         self._manager_process = manager_process
@@ -71,13 +69,13 @@ class Builder(ABC):
         self,
         endpoint: Optional[str] = None,
         is_secure: Optional[bool] = None,
-        name: str = str(uuid.uuid4()),
+        name: Optional[str] = None,
         client_id: Optional[str] = None,
     ) -> None:
         super().__init__()
         self._endpoint: Optional[str] = endpoint
         self._is_secure: Optional[bool] = is_secure
-        self._name: str = name
+        self._name: Optional[str] = name
         self._client_id: Optional[str] = client_id
 
     def endpoint(self, endpoint: str, is_secure: bool):
@@ -167,15 +165,17 @@ class LocalBuilder(Builder):
             raise ValueError("no path provided and KASKADA_PATH was not set")
         if self._log_path is None:
             raise ValueError("no log path provided and KASKADA_LOG_PATH was not set")
-        log_path = Path(
-            "{}/{}/{}".format(self._path, self._log_path, self._name)
-        ).expanduser()
+        log_path = Path("{}/{}".format(self._path, self._log_path)).expanduser()
+        if self._name is not None:
+            log_path = log_path / self._name
         log_path.mkdir(parents=True, exist_ok=True)
         return log_path / file_name
 
-    def __get_std_paths(self, prefix: str) -> Tuple[Path, Path]:
-        stderr = self.__get_log_path(f"{prefix}_stderr.txt")
-        stdout = self.__get_log_path(f"{prefix}_stdout.txt")
+    def __get_std_paths(self, service_name: str) -> Tuple[Path, Path]:
+        current_time = datetime.now()
+        timestamp_format = current_time.strftime("%Y-%m-%dT%H-%M-%S")
+        stderr = self.__get_log_path(f"{timestamp_format}-{service_name}-stderr.log")
+        stdout = self.__get_log_path(f"{timestamp_format}-{service_name}-stdout.log")
         return (stderr, stdout)
 
     def __get_binary_path(self) -> Path:
@@ -203,14 +203,14 @@ class LocalBuilder(Builder):
         engine_cmd = [engine_binary_path, engine_command]
         logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
-        logger.info(f"Logging manager STDOUT to {manager_std_out}")
-        logger.info(f"Logging manager STDERR to {manager_std_err}")
+        logger.info(f"Logging manager STDOUT to {manager_std_out.absolute()}")
+        logger.info(f"Logging manager STDERR to {manager_std_err.absolute()}")
         manager_process = api_utils.run_subprocess(
             manager_cmd, manager_std_err, manager_std_out
         )
         logger.info("Initializing engine process")
-        logger.info(f"Logging engine STDOUT to {engine_std_out}")
-        logger.info(f"Logging engine STDERR to {engine_std_err}")
+        logger.info(f"Logging engine STDOUT to {engine_std_out.absolute()}")
+        logger.info(f"Logging engine STDERR to {engine_std_err.absolute()}")
         engine_process = api_utils.run_subprocess(
             engine_cmd, engine_std_err, engine_std_out
         )
@@ -255,7 +255,6 @@ class LocalBuilder(Builder):
         return Session(
             self._endpoint,
             self._is_secure,
-            self._name,
             client_id=self._client_id,
             manager_process=manager_process,
             engine_process=engine_process,
@@ -267,6 +266,4 @@ class RemoteBuilder(Builder):
         super().__init__()
 
     def build(self):
-        return Session(
-            self._endpoint, self._is_secure, self._name, client_id=self._client_id
-        )
+        return Session(self._endpoint, self._is_secure, client_id=self._client_id)
