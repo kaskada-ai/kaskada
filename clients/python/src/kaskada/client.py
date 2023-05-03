@@ -106,6 +106,11 @@ class Client(object):
         self.query_stub = query_grpc.QueryServiceStub(channel)
         self.materialization_stub = mat_grpc.MaterializationServiceStub(channel)
         self.client_id = client_id
+        self.channel = channel
+
+    def __del__(self):
+        if self.channel is not None:
+            self.channel.close()
 
     def get_metadata(self) -> List[Tuple[str, str]]:
         """
