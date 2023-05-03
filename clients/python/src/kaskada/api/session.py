@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 import sys
 import time
 import uuid
@@ -33,7 +34,7 @@ class Session:
         self._manager_process = manager_process
         self._engine_process = engine_process
 
-    def __del__(self):
+    def close(self):
         if self._manager_process is not None:
             logger.info(
                 "Stopping Kaskada Manager service"
@@ -45,6 +46,11 @@ class Session:
                 "Stopping Kaskada Engine service"
             ) if logger is not None else None
             self._engine_process.kill()
+
+        if self._client is not None:
+            logger.info("Removing Kaskada local client") if logger is not None else None
+            self._client = None
+            kaskada.client.reset()
 
     def connect(self):
         attempt = 0
@@ -214,7 +220,17 @@ class LocalBuilder(Builder):
         engine_process = api_utils.run_subprocess(
             engine_cmd, engine_std_err, engine_std_out
         )
-        return (manager_process, engine_process)
+        try:
+            # If the subprocess returns within 5 seconds, the services are no longer running and the client cannot connect to the service.
+            # After the 5 seconds, the wait method raises a TimeoutExpired exception which is caught to indicate a successful launch.
+            # The client will then connect to verify the services.
+            manager_result = manager_process.wait(5)
+            engine_result = engine_process.wait(5)
+            raise RuntimeError(
+                f"Unable to launch the Manager (Code: {manager_result}) and Engine (Code: {engine_result}). Please check the logs. If another session is running, call the close() method on the existing session to terminate."
+            )
+        except subprocess.TimeoutExpired:
+            return (manager_process, engine_process)
 
     def __download_latest_release(self):
         """Downloads the latest release version to the binary path."""

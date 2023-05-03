@@ -40,6 +40,13 @@ IPython.core.interactiveshell.InteractiveShell.showtraceback = showtraceback # t
 # fmt: on
 
 
+def reset():
+    KASKADA_DEFAULT_CLIENT = None
+    KASKADA_DEFAULT_SLICE = None
+    KASKADA_DEFAULT_ENDPOINT = "localhost:50051"
+    KASKADA_IS_SECURE = False
+
+
 def init(
     client_id: Optional[str] = None,
     endpoint: Optional[str] = KASKADA_DEFAULT_ENDPOINT,
