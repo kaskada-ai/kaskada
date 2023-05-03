@@ -1,3 +1,5 @@
+:tabs-sync-option:
+
 = Queries
 
 Kaskada computes results from the data you've loaded by executing _queries_.
@@ -7,7 +9,6 @@ Kaskada queries are witten in a language called Fenl, which is designed to make 
 To learn more about Fenl:
 
 * The xref:fenl:fenl-quick-start.adoc[Quick Start] is an overview of the query language.
-* The xref:fenl:language-guide.adoc[Language Guide] explains the design and theory behind the languge.
 * The xref:fenl:catalog.adoc[Function Catalog] documents the operations and functions provided by Fenl.
 * The xref:fenl:fenl-faq.adoc[FAQ] answers some comment questions about using Fenl.
 
@@ -179,8 +180,11 @@ You determine which type of query to execute using the "result behavior" configu
 By default, historical results are returned.
 To return final results, you must configure the `final-results` behavior:
 
+[tabs]
+====
+Jupyter::
++
 [source,Fenl]
-.Final queries with fenlmagic
 ----
 %%fenl --result-behavior final-results
 {
@@ -191,8 +195,9 @@ To return final results, you must configure the `final-results` behavior:
 }
 ----
 
+Python::
++
 [source,python]
-.Final queries with Python
 ----
 from kaskada import compute
 
@@ -206,13 +211,26 @@ query = """{
 resp = query.create_query(expression=query, result_behavior="final-results")
 ----
 
+CLI::
++
+--
+[source,Fenl]
+----
+# query.txt
+{
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  max_amount: last(Purchase.amount) | max(),
+  min_amount: Purchase.amount | min()
+}
+----
+
 [source,bash]
-.Final queries in the CLI
 ----
-./kaskada-cli query run --result-behavior final-results <<EOS
-Purchase
-EOS
+cat query.fenl | kaskada-cli query run --result-behavior final-results
 ----
+--
+====
 
 == Querying with Python
 
@@ -508,3 +526,99 @@ a single batch, but the batch had a size of 71599 rows. Note: Using
 full dataset to be processed, as all inputs must be processed to produce
 final results.
 ====
+
+
+== Querying with the CLI
+
+The CLI can be used to make queries with the `kaskada-cli query run` command.
+To query Kaskada using the CLI, the query string should be provided on `STDIN`.
+
+An easy way to define a query is to create a text file containing the query.
+
+[source,Fenl]
+.query.fenl 
+----
+{ 
+  time: Purchase.purchase_time, 
+  entity: Purchase.customer_id, 
+  max_amount: last(Purchase.amount) | max(), 
+  min_amount: Purchase.amount | min()
+}
+----
+
+Run the query by piping it to the CLI.
+
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run
+----
+
+Running this query will return a JSON-formatted https://buf.build/kaskada/kaskada/docs/main:kaskada.kaskada.v1alpha#kaskada.kaskada.v1alpha.CreateQueryResponse[query response] object.
+By default, query results are written to a Parquet file: the locations of these files are included along with additional query metadata in the query response.
+
+[source,json]
+----
+{
+	"state": "STATE_SUCCESS",
+	"config": {
+		"dataTokenId": "b5bc4597-47d4-4770-a772-0b94e0d12483"
+	},
+  // ...
+}
+----
+
+The resulting files are stored in the JSON path `outputTo.objectStore.outputPaths.paths` as an array of paths. 
+
+[TIP]
+====
+To slice and/or filter JSON output we can use https://stedolan.github.io/jq/[jq]. 
+====
+
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run | jq '.outputTo.objectStore.outputPaths.paths'
+----
+
+This will return a list of result files.
+
+[source,json]
+----
+[
+  "file:///<pwd>/data/results/3024b7ae-1429-4c12-867b-3a1f7e86099f/LfiWn-mIVspEbBE-G7yLYug3V2-dW4ASAGmV6g/6089a024-5d97-4f2c-9472-625791550505.parquet"
+]
+----
+
+For queries returning a small number of rows, it may be more convenient to output them to STDOUT formatted as CSV.
+
+[source,bash]
+----
+cat query.fenl | kaskada-cli query run --stdout --response-as csv
+----
+
+You can see the full list of query arguments for the CLI with `kaskada-cli query run --help`.
+
+[source,]
+----
+Executes a query on kaskada
+
+Usage:
+  cli query run "query-text" [flags]
+
+Flags:
+      --changed-since-time int       (Optional) Unix timestamp bound (inclusive) after which results will be output. If 'response-behavior' is 'all-results', this will include rows for changes (events and ticks) after this time (inclusive). If it is 'final-results', this will include a final result for any entity that would be included in the changed results.
+      --data-token string            (Optional) A token to run queries against. Enables repeatable queries.
+      --dry-run true                 (Optional) If this is true, then the query is validated and if there are no errors, the resultant schema is returned. No actual computation of results is performed.
+      --experimental-features true   (Optional) If this is true, then experimental features are allowed.  Data returned when using this flag is not guaranteed to be correct.
+  -h, --help                         help for run
+      --preview-rows int             (Optional) Produces a preview of the results with at least this many rows.
+      --response-as string           (Optional) How to encode the results.  Either 'parquet' or 'csv'. (default "parquet")
+      --result-behavior string       (Optional) Determines how results are returned.  Either 'all-results' or 'final-results'. (default "all-results")
+      --stdout true                  (Optional) If this is true, output results are sent to STDOUT
+
+Global Flags:
+      --config string               config file (default is $HOME/.cli.yaml)
+  -d, --debug                       get debug log output
+      --kaskada-api-server string   Kaskada API Server
+      --kaskada-client-id string    Kaskada Client ID
+      --use-tls                     Use TLS when connecting to the Kaskada API (default true)
+----

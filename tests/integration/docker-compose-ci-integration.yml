@@ -13,9 +13,9 @@ services:
   #  ports:
   #  - "6379:6379"
 
-  pulsar-integration:
+  pulsar:
     image: apachepulsar/pulsar:2.11.0
-    container_name: pulsar-integration
+    container_name: pulsar
     hostname: pulsar
     ports:
       - "6650:6650"
@@ -38,25 +38,15 @@ services:
       context: ../../
       dockerfile: Dockerfile.integration
     depends_on:
-      - pulsar-integration
+      - pulsar
     environment:
       # for sparrow
-      SPARROW_GRPC_ADDR: 0.0.0.0:50052
       SPARROW_LOG_FILTER: "egg::=warn,sparrow_=info,info"
       # for wren
-      DB_DIALECT: "sqlite"
       DB_PATH: "/data/kaskada.db"
       DB_IN_MEMORY: "false"
       DEBUG: "true"
-      ENV: docker-compose
-      FILE_SERVICE_HOST: localhost
-      FILE_SERVICE_PORT: "50052"
-      OBJECT_STORE_TYPE: "local"
       OBJECT_STORE_PATH: "/data"
-      PREPARE_SERVICE_HOST: localhost
-      PREPARE_SERVICE_PORT: "50052"
-      QUERY_SERVICE_HOST: localhost
-      QUERY_SERVICE_PORT: "50052"
       # for both
       TMPDIR: "/data/tmp"
     logging:

@@ -111,10 +111,38 @@ Run `cargo build --release -p sparrow-main` to build a release (optimized) binar
 
 ### Running integration tests
 
+Note: All of the commands below should be run from the root of the repository.
+
+#### in docker, with the local backend
+
 * run `make test/int/docker-up` in one terminal window to get the Kaskada service and dependencies up
-* run `make test/int/run-api` in another terminal window to run the manager integration tests
+* run `make test/int/run-api-docker` in another terminal window to run the integration tests
 
 After making code changes, `ctrl-c` in the services window and restart it.
+
+#### in docker, with the s3 backend
+
+* run `make test/int/docker-up-s3` in one terminal window to get the Kaskada service and dependencies up
+* run `make test/int/run-api-s3-docker` in another terminal window to run the integration tests
+
+After making code changes, `ctrl-c` in the services window and restart it.
+
+#### locally, with the local backend
+
+* run `make sparrow/run` in one terminal window to get the Engine service up
+* run `make wren/run` in a second terminal window to get the Manager service up
+* run `make test/int/run-api` in a third another terminal window to run the integration tests
+
+After making code changes, `ctrl-c` in the proper service window and restart it.
+
+#### locally, with the s3 backend
+
+* run `make test/int/docker-up-s3-only` in one terminal window to get the dependencies up
+* run `make sparrow/run-s3` in a second terminal window to get the Engine service up
+* run `make wren/run-s3` in a third terminal window to get the Manager service up
+* run `make test/int/run-api-s3` in a fourth terminal window to run the integration tests
+
+After making code changes, `ctrl-c` in the proper service window and restart it.
 
 **Note:** that there are also other make commands to test the other supported object stores and databases. Append any of the following on your make commands to test other scenarios:
 * `-s3`: s3 object storage (minio) with sqlite db

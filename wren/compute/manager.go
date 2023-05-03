@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -76,12 +76,14 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.CompileQuery").Logger()
 	formulas, err := m.getFormulas(ctx, owner, requestViews)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting views")
+		subLogger.Error().Err(err).Msg("issue getting formulas")
+		return nil, err
 	}
 
 	tables, err := m.getTablesForCompile(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting tables for compile")
+		subLogger.Error().Err(err).Msg("issue getting tables for compile")
+		return nil, err
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
@@ -117,6 +119,8 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	}
 
 	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	defer queryClient.Close()
+
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
 	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
 	defer compileTimeoutCancel()
@@ -128,6 +132,7 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 
 // gets the set of passed views and system views available for a query
 func (m *Manager) GetFormulas(ctx context.Context, owner *ent.Owner, views *v2alpha.QueryViews) ([]*v1alpha.Formula, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetFormulas").Logger()
 	requestViews := []*v1alpha.WithView{}
 	for _, queryView := range views.Views {
 		requestViews = append(requestViews, &v1alpha.WithView{
@@ -138,7 +143,8 @@ func (m *Manager) GetFormulas(ctx context.Context, owner *ent.Owner, views *v2al
 
 	formulas, err := m.getFormulas(ctx, owner, requestViews)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting views")
+		subLogger.Error().Err(err).Msg("issue getting formulas")
+		return nil, err
 	}
 	return formulas, nil
 }
@@ -167,7 +173,8 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 
 	tables, err := m.getTablesForCompile(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting tables for compile")
+		subLogger.Error().Err(err).Msg("issue getting tables for compile")
+		return nil, err
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
@@ -232,6 +239,8 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 	}
 
 	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	defer queryClient.Close()
+
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
 	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
 	defer compileTimeoutCancel()
@@ -268,12 +277,14 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.CreateCompileRequest").Logger()
 	formulas, err := m.getFormulas(ctx, owner, request.RequestViews)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting views")
+		subLogger.Error().Err(err).Msg("issue getting formulas")
+		return nil, err
 	}
 
 	tables, err := m.getTablesForCompile(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting tables for compile")
+		subLogger.Error().Err(err).Msg("issue getting tables for compile")
+		return nil, err
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
@@ -315,9 +326,12 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compileRequest *v1alpha.CompileRequest) (*CompileQueryResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.RunCompileRequest").Logger()
 	computeClient := m.computeClients.ComputeServiceClient(ctx)
+	defer computeClient.Close()
+
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
 	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
 	defer compileTimeoutCancel()
+
 	computeCompileResponse, err := computeClient.Compile(compileTimeoutCtx, compileRequest)
 	subLogger.Info().Err(err).
 		Interface("fenl_diagnostics", computeCompileResponse.FenlDiagnostics).
@@ -351,10 +365,12 @@ func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compi
 }
 
 func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenId string) (*ent.DataToken, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetDataToken").Logger()
 	if dataTokenId == "" {
 		dataToken, err := m.dataTokenClient.GetCurrentDataToken(ctx, owner)
 		if err != nil {
-			return nil, errors.WithMessage(err, "getting current data_token")
+			subLogger.Error().Err(err).Msg("issue getting current data_token")
+			return nil, err
 		}
 		return dataToken, nil
 	} else {
@@ -364,7 +380,8 @@ func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenI
 		} else {
 			dataToken, err := m.dataTokenClient.GetDataToken(ctx, owner, id)
 			if err != nil {
-				return nil, errors.WithMessagef(err, "getting data_token: %s", dataTokenId)
+				subLogger.Error().Err(err).Msg("issue getting data_token")
+				return nil, err
 			}
 			return dataToken, nil
 		}
@@ -376,7 +393,7 @@ func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {
 	return m.store.GetDataPathURI(subPath)
 }
 
-func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeService_ExecuteClient, error) {
+func (m *Manager) InitiateQuery(queryContext *QueryContext) (client.ComputeServiceClient, v1alpha.ComputeService_ExecuteClient, error) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.InitiateQuery").Logger()
 
 	executeRequest := &v1alpha.ExecuteRequest{
@@ -390,11 +407,11 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 
 	snapshotCacheBuster, err := m.getSnapshotCacheBuster(queryContext.ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prepareCacheBuster, err := m.getPrepareCacheBuster(queryContext.ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	queryClient := m.computeClients.ComputeServiceClient(queryContext.ctx)
@@ -428,18 +445,19 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (v1alpha.ComputeServ
 	executeClient, err := queryClient.Execute(queryContext.ctx, executeRequest)
 	if err != nil {
 		subLogger.Warn().Err(err).Msg("issue initiating streaming query compute request")
-		return nil, customerrors.NewComputeError(reMapSparrowError(queryContext.ctx, err))
+		return nil, nil, customerrors.NewComputeError(reMapSparrowError(queryContext.ctx, err))
 	}
-	return executeClient, nil
+	return queryClient, executeClient, nil
 }
 
 func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryResult, error) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.runMaterializationQuery").Logger()
 
-	stream, err := m.InitiateQuery(queryContext)
+	client, stream, err := m.InitiateQuery(queryContext)
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
 
 	result := &QueryResult{
 		DataTokenId: queryContext.dataToken.ID.String(),
@@ -697,11 +715,13 @@ func (m *Manager) ReMapAnalysisError(ctx context.Context, analysis *v1alpha.Anal
 }
 
 func (m *Manager) getTablesForCompile(ctx context.Context, owner *ent.Owner) ([]*v1alpha.ComputeTable, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.getTablesForCompile").Logger()
 	computeTables := []*v1alpha.ComputeTable{}
 
 	kaskadaTables, err := m.kaskadaTableClient.GetAllKaskadaTables(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "getting all tables")
+		subLogger.Error().Err(err).Msg("error getting all tables")
+		return nil, err
 	}
 
 	for _, kaskadaTable := range kaskadaTables {
@@ -775,7 +795,7 @@ func (m *Manager) GetTablesForCompute(ctx context.Context, owner *ent.Owner, dat
 	err = m.parallelPrepare(ctx, owner, sliceTableMap)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue preparing tables")
-		return nil, errors.WithMessagef(err, "preparing tables")
+		return nil, err
 	}
 
 	//refresh prepareJobs after prepare complete
@@ -801,9 +821,11 @@ func (m *Manager) GetTablesForCompute(ctx context.Context, owner *ent.Owner, dat
 // converts request views and persisted views to formulas.  if a request view has the same name as a persisted view
 // the request view is used.
 func (m *Manager) getFormulas(ctx context.Context, owner *ent.Owner, requestViews []*v1alpha.WithView) ([]*v1alpha.Formula, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.getFormulas").Logger()
 	persistedViews, err := m.kaskadaViewClient.GetAllKaskadaViews(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "listing all views")
+		subLogger.Error().Err(err).Msg("issue getting persisted views")
+		return nil, err
 	}
 
 	formulas := []*v1alpha.Formula{}
@@ -836,6 +858,8 @@ func (m *Manager) getFormulas(ctx context.Context, owner *ent.Owner, requestView
 func (m *Manager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getSnapshotCacheBuster").Logger()
 	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	defer queryClient.Close()
+
 	res, err := queryClient.GetCurrentSnapshotVersion(ctx, &v1alpha.GetCurrentSnapshotVersionRequest{})
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting snapshot_cache_buster")
@@ -847,7 +871,7 @@ func (m *Manager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 // returns s3://root/computeSnapshots/<snapshot_cache_buster>/<owner_id>/<plan_hash>/<data_version>
 func (m *Manager) getComputeSnapshotDataURI(owner *ent.Owner, snapshotCacheBuster int32, planHash []byte, dataVersion int64) string {
 	subPath := path.Join("computeSnapshots", strconv.Itoa(int(snapshotCacheBuster)), owner.ID.String(), base64.RawURLEncoding.EncodeToString(planHash), utils.Int64ToString(dataVersion))
-	return ConvertURIForCompute(m.store.GetDataPathURI(subPath))
+	return m.store.GetDataPathURI(subPath)
 }
 
 func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error) {
@@ -867,6 +891,8 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 	}
 
 	fileClient := m.computeClients.FileServiceClient(ctx)
+	defer fileClient.Close()
+
 	metadataReq := &v1alpha.GetMetadataRequest{
 		SourceData: sourceData,
 	}

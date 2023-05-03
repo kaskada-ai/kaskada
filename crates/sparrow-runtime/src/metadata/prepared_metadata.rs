@@ -9,7 +9,6 @@ use sparrow_api::kaskada::v1alpha::PreparedFile;
 use sparrow_core::TableSchema;
 
 use crate::metadata::file_from_path;
-use crate::s3::S3Object;
 
 #[non_exhaustive]
 #[derive(Clone, Debug)]
@@ -133,16 +132,13 @@ impl PreparedMetadata {
         })
     }
 
-    pub fn with_s3_path(self, s3_path: &S3Object) -> Self {
-        Self {
-            path: s3_path.get_formatted_key(),
-            ..self
-        }
+    pub fn with_path(self, path: String) -> Self {
+        Self { path, ..self }
     }
 
-    pub fn with_s3_metadata_path(self, s3_path: &S3Object) -> Self {
+    pub fn with_metadata_path(self, path: String) -> Self {
         Self {
-            metadata_path: s3_path.get_formatted_key(),
+            metadata_path: path,
             ..self
         }
     }

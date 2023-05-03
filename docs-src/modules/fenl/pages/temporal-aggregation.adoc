@@ -1,4 +1,4 @@
-= Temporal Aggregations
+= Temporal Computation
 
 Time plays a critical role when working with event-based data and
 event-based models. The ability to calculate point-in-time historical
@@ -57,7 +57,37 @@ made?" might be the following table:
 |2019-10-26 |4
 |===
 
-image::value-stream.png[]
+[stream_viz,name=value-stream]
+....
+[
+    {
+        "label": "Purchase",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 2, "v": ""},
+                {"t": 4, "v": ""},
+                {"t": 13, "v": ""},
+                {"t": 18, "v": ""}
+            ]
+        ]
+    },
+    {
+        "label": "| count()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "1"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "3"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    }
+]
+....
+
+
 
 From this table we can see that if the question was asked in
 2015 the answer would be "the user has made _two_ purchases", but if the
@@ -78,9 +108,32 @@ following:
 |2019-10-26 |4
 |===
 
-
-image::final-results.png[]
-
+[stream_viz,name=value-stream-final]
+....
+[
+    {
+        "label": "| count()",
+        "kind": "continuous",
+        "data": [
+            [
+                {"t": 2, "v": "1"},
+                {"t": 4, "v": "2"},
+                {"t": 13, "v": "3"},
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    },
+    {
+        "label": "[final] | count()",
+        "kind": "discrete",
+        "data": [
+            [
+                {"t": 18, "v": "4"}
+            ]
+        ]
+    }
+]
+....
 
 Final queries make it possible to know the "current" value of
 a query. Incremental queries and materializations always use final
