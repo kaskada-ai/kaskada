@@ -14,8 +14,6 @@ from kaskada.api import api_utils, release
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-CURRENT_SESSION = None
-
 
 class Session:
     def __init__(
@@ -41,19 +39,12 @@ class Session:
                 "Stopping Kaskada Manager service"
             ) if logger is not None else None
             self._manager_process.kill()
-            self._manager_process = None
 
         if self._engine_process is not None:
             logger.info(
                 "Stopping Kaskada Engine service"
             ) if logger is not None else None
             self._engine_process.kill()
-            self._engine_process = None
-
-        if self._client is not None:
-            logger.info("Removing Kaskada local client") if logger is not None else None
-            self._client = None
-            kaskada.client.reset()
 
     def connect(self):
         attempt = 0
@@ -253,34 +244,22 @@ class LocalBuilder(Builder):
         Returns:
             Session: The local session object
         """
-        global CURRENT_SESSION
-        # No previous sessions exist, create a new session and update the module current session
-        if CURRENT_SESSION is None:
-            if self._download:
-                self.__download_latest_release()
-            manager_process, engine_process = self.__start()
-            if self._endpoint is None:
-                raise ValueError("endpoint was not set")
-            if self._is_secure is None:
-                raise ValueError("is_secure was not set")
+        if self._download:
+            self.__download_latest_release()
+        manager_process, engine_process = self.__start()
+        if self._endpoint is None:
+            raise ValueError("endpoint was not set")
+        if self._is_secure is None:
+            raise ValueError("is_secure was not set")
 
-            CURRENT_SESSION = Session(
-                self._endpoint,
-                self._is_secure,
-                self._name,
-                client_id=self._client_id,
-                manager_process=manager_process,
-                engine_process=engine_process,
-            )
-            return CURRENT_SESSION
-        else:
-            logger.warn("Detected an existing session. Terminating previous session.")
-            # Explicitly call the delete method on the current session instead of waiting for garbage collection.
-            # This is required since `del CURRENT_SESSION` is not synchronous and just updates the reference counters.
-            # Therefore, the garbage collection is not guaranteed to occur prior to creating a new session.
-            CURRENT_SESSION.__del__()
-            CURRENT_SESSION = None
-            self.build()
+        return Session(
+            self._endpoint,
+            self._is_secure,
+            self._name,
+            client_id=self._client_id,
+            manager_process=manager_process,
+            engine_process=engine_process,
+        )
 
 
 class RemoteBuilder(Builder):
