@@ -217,7 +217,7 @@ jobs:
 
             - name: DEBUG - Check docker containers 
               run: | 
-                docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t -f kaskada  
+                docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t  kaskada  
 
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
@@ -232,6 +232,11 @@ jobs:
                 echo "::endgroup::"
       
                 make ci/integration/tests/run/api-s3
-      
+                
+            - name: DEBUG - Check docker containers 
+                run: | 
+                  docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t  kaskada  
+  
+
             - name: Docker compose down for integration tests 
               run: make ci/integration/tests/docker-compose-down-postgres-s3
