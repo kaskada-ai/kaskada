@@ -268,7 +268,7 @@ func (*mockApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMes
 }
 
 // List implements api.ApiClient
-func (*mockApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*mockApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	switch item.(type) {
 	case *apiv1alpha.ListMaterializationsRequest:
 		return []protoreflect.ProtoMessage{

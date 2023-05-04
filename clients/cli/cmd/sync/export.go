@@ -80,7 +80,7 @@ var exportCmd = &cobra.Command{
 }
 
 func exportMaterializations(apiClient api.ApiClient) ([]*apiv1alpha.Materialization, error) {
-	protos, err := apiClient.List(&apiv1alpha.ListMaterializationsRequest{})
+	protos, err := apiClient.List(&apiv1alpha.ListMaterializationsRequest{}, "", 100, "")
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func exportMaterializations(apiClient api.ApiClient) ([]*apiv1alpha.Materializat
 }
 
 func exportTables(apiClient api.ApiClient) ([]*apiv1alpha.Table, error) {
-	protos, err := apiClient.List(&apiv1alpha.ListTablesRequest{})
+	protos, err := apiClient.List(&apiv1alpha.ListTablesRequest{}, "", 100, "")
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func exportTables(apiClient api.ApiClient) ([]*apiv1alpha.Table, error) {
 }
 
 func exportViews(apiClient api.ApiClient) ([]*apiv1alpha.View, error) {
-	protos, err := apiClient.List(&apiv1alpha.ListViewsRequest{})
+	protos, err := apiClient.List(&apiv1alpha.ListViewsRequest{}, "", 100, "")
 	if err != nil {
 		return nil, err
 	}

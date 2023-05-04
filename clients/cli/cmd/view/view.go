@@ -5,6 +5,8 @@ import (
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
 
 const view = "view"
@@ -27,11 +29,17 @@ func init() {
 	ViewCmd.AddCommand(createCmd)
 	ViewCmd.AddCommand(deleteCmd)
 	ViewCmd.AddCommand(getCmd)
+	ViewCmd.AddCommand(listCmd)
+}
+
+func getViewFromItem(item protoreflect.ProtoMessage) *apiv1alpha.View {
+	view, err := api.ProtoToView(item)
+	utils.LogAndQuitIfErrorExists(err)
+	return view
 }
 
 func printView(item protoreflect.ProtoMessage) {
-	view, err := api.ProtoToView(item)
-	utils.LogAndQuitIfErrorExists(err)
+	view := getViewFromItem(item)
 	yaml, err := utils.ProtoToYaml(view)
 	utils.LogAndQuitIfErrorExists(err)
 	utils.PrintSuccessf("%s", yaml)

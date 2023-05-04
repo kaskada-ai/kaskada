@@ -17,7 +17,7 @@ type viewClient struct {
 }
 
 type ViewClient interface {
-	List() ([]*apiv1alpha.View, error)
+	List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.View, error)
 	Get(name string) (*apiv1alpha.View, error)
 	Create(item *apiv1alpha.View) (*apiv1alpha.View, error)
 	Delete(name string, force bool) error
@@ -30,8 +30,12 @@ func NewViewServiceClient(ctx context.Context, conn *grpc.ClientConn) ViewClient
 	}
 }
 
-func (c viewClient) List() ([]*apiv1alpha.View, error) {
-	resp, err := c.client.ListViews(c.ctx, &apiv1alpha.ListViewsRequest{})
+func (c viewClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.View, error) {
+	resp, err := c.client.ListViews(c.ctx, &apiv1alpha.ListViewsRequest{
+		Search:    search,
+		PageSize:  pageSize,
+		PageToken: pageToken,
+	})
 	if err != nil {
 		log.Debug().Err(err).Msg("issue listing views")
 		return nil, err

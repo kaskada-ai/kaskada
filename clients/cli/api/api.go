@@ -30,7 +30,7 @@ type ApiClient interface {
 	Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
 	Delete(item protoreflect.ProtoMessage, force bool) error
 	Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
-	List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error)
+	List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error)
 	Query(*apiv1alpha.CreateQueryRequest) (*apiv1alpha.CreateQueryResponse, error)
 }
 
@@ -97,28 +97,28 @@ func (c apiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessag
 	}
 }
 
-func (c apiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (c apiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	kind := reflect.TypeOf(item).String()
 	results := make([]protoreflect.ProtoMessage, 0)
 	switch item.(type) {
-	case *apiv1alpha.ListMaterializationsRequest:
-		materializations, err := c.materialization.List()
+	case *apiv1alpha.Materialization:
+		materializations, err := c.materialization.List(search, pageSize, pageToken)
 		if err != nil {
 			return nil, err
 		}
 		for _, m := range materializations {
 			results = append(results, m)
 		}
-	case *apiv1alpha.ListTablesRequest:
-		tables, err := c.table.List()
+	case *apiv1alpha.Table:
+		tables, err := c.table.List(search, pageSize, pageToken)
 		if err != nil {
 			return nil, err
 		}
 		for _, t := range tables {
 			results = append(results, t)
 		}
-	case *apiv1alpha.ListViewsRequest:
-		views, err := c.view.List()
+	case *apiv1alpha.View:
+		views, err := c.view.List(search, pageSize, pageToken)
 		if err != nil {
 			return nil, err
 		}

@@ -17,7 +17,7 @@ type materializationClient struct {
 }
 
 type MaterializationClient interface {
-	List() ([]*apiv1alpha.Materialization, error)
+	List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Materialization, error)
 	Get(name string) (*apiv1alpha.Materialization, error)
 	Create(item *apiv1alpha.Materialization) (*apiv1alpha.Materialization, error)
 	Delete(name string, force bool) error
@@ -30,8 +30,12 @@ func NewMaterializationServiceClient(ctx context.Context, conn *grpc.ClientConn)
 	}
 }
 
-func (c materializationClient) List() ([]*apiv1alpha.Materialization, error) {
-	resp, err := c.client.ListMaterializations(c.ctx, &apiv1alpha.ListMaterializationsRequest{})
+func (c materializationClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Materialization, error) {
+	resp, err := c.client.ListMaterializations(c.ctx, &apiv1alpha.ListMaterializationsRequest{
+		Search:     search,
+		PageSize:   pageSize,
+		PageToken:  pageToken,
+	})
 	if err != nil {
 		log.Debug().Err(err).Msg("issue listing materializations")
 		return nil, err

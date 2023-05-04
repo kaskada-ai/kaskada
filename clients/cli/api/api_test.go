@@ -353,7 +353,7 @@ func Test_apiClient_List(t *testing.T) {
 				table:           tt.fields.table,
 				view:            tt.fields.view,
 			}
-			got, err := c.List(tt.args.item)
+			got, err := c.List(tt.args.item, "", 10, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("apiClient.List() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -392,7 +392,7 @@ func (*mockMaterializationClient) Get(name string) (*apiv1alpha.Materialization,
 }
 
 // List implements MaterializationClient
-func (*mockMaterializationClient) List() ([]*apiv1alpha.Materialization, error) {
+func (*mockMaterializationClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Materialization, error) {
 	materializations := make([]*apiv1alpha.Materialization, 0, 1)
 	materializations = append(materializations, &apiv1alpha.Materialization{})
 	return materializations, nil
@@ -405,7 +405,7 @@ func (*mockTableClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) e
 }
 
 // Create implements TableClient
-func (*mockTableClient) Create(item *apiv1alpha.Table)  (*apiv1alpha.Table, error) {
+func (*mockTableClient) Create(item *apiv1alpha.Table) (*apiv1alpha.Table, error) {
 	return nil, nil
 }
 
@@ -422,7 +422,7 @@ func (*mockTableClient) Get(name string) (*apiv1alpha.Table, error) {
 }
 
 // List implements TableClient
-func (*mockTableClient) List() ([]*apiv1alpha.Table, error) {
+func (*mockTableClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Table, error) {
 	tables := make([]*apiv1alpha.Table, 0, 1)
 	tables = append(tables, &apiv1alpha.Table{})
 	return tables, nil
@@ -431,7 +431,7 @@ func (*mockTableClient) List() ([]*apiv1alpha.Table, error) {
 type mockViewClient struct{}
 
 // Create implements ViewClient
-func (*mockViewClient) Create(item *apiv1alpha.View)  (*apiv1alpha.View, error) {
+func (*mockViewClient) Create(item *apiv1alpha.View) (*apiv1alpha.View, error) {
 	return nil, nil
 }
 
@@ -448,7 +448,7 @@ func (*mockViewClient) Get(name string) (*apiv1alpha.View, error) {
 }
 
 // List implements ViewClient
-func (*mockViewClient) List() ([]*apiv1alpha.View, error) {
+func (*mockViewClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.View, error) {
 	views := make([]*apiv1alpha.View, 0, 1)
 	views = append(views, &apiv1alpha.View{})
 	return views, nil

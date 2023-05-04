@@ -29,12 +29,18 @@ func init() {
 	TableCmd.AddCommand(createCmd)
 	TableCmd.AddCommand(deleteCmd)
 	TableCmd.AddCommand(getCmd)
+	TableCmd.AddCommand(listCmd)
 	TableCmd.AddCommand(loadCmd)
 }
 
-func printTable(item protoreflect.ProtoMessage) {
+func getTableFromItem(item protoreflect.ProtoMessage) *apiv1alpha.Table {
 	table, err := api.ProtoToTable(item)
 	utils.LogAndQuitIfErrorExists(err)
+	return table
+}
+
+func printTable(item protoreflect.ProtoMessage) {
+	table := getTableFromItem(item)
 	switch table.Source.Source.(type) {
 	case *apiv1alpha.Source_Kaskada:
 		table.Source = nil

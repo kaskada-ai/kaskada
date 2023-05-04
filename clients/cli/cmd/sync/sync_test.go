@@ -90,7 +90,7 @@ func (*errorGetApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.Prot
 }
 
 // List implements api.ApiClient
-func (*errorGetApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*errorGetApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -122,7 +122,7 @@ func (*notFoundGetApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.P
 }
 
 // List implements api.ApiClient
-func (*notFoundGetApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*notFoundGetApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -156,7 +156,7 @@ func (*getApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMess
 }
 
 // List implements api.ApiClient
-func (*getApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*getApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 

@@ -5,6 +5,8 @@ import (
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
 
 const materialization = "materialization"
@@ -27,11 +29,17 @@ func init() {
 	MaterializationCmd.AddCommand(createCmd)
 	MaterializationCmd.AddCommand(deleteCmd)
 	MaterializationCmd.AddCommand(getCmd)
+	MaterializationCmd.AddCommand(listCmd)
+}
+
+func getMaterializationFromItem(item protoreflect.ProtoMessage) *apiv1alpha.Materialization {
+	materialization, err := api.ProtoToMaterialization(item)
+	utils.LogAndQuitIfErrorExists(err)
+	return materialization
 }
 
 func printMaterialization(item protoreflect.ProtoMessage) {
-	materialization, err := api.ProtoToMaterialization(item)
-	utils.LogAndQuitIfErrorExists(err)
+	materialization := getMaterializationFromItem(item)
 	yaml, err := utils.ProtoToYaml(materialization)
 	utils.LogAndQuitIfErrorExists(err)
 	utils.PrintSuccessf("%s", yaml)

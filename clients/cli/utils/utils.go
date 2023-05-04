@@ -50,8 +50,8 @@ func SetupStandardResourceCmd(cmd *cobra.Command, method string, item string, ad
 }
 
 func SetupListResourceCmd(cmd *cobra.Command, item string) {
-	cmd.Use = item
-	cmd.Short = fmt.Sprintf("Lists %s.", item)
+	cmd.Use = "list"
+	cmd.Short = fmt.Sprintf("Lists %ss. Currently only the first page of %ss is returned", item, item)
 	cmd.Args = cobra.NoArgs
 }
 

@@ -16,7 +16,7 @@ type tableClient struct {
 }
 
 type TableClient interface {
-	List() ([]*apiv1alpha.Table, error)
+	List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Table, error)
 	Get(name string) (*apiv1alpha.Table, error)
 	Create(item *apiv1alpha.Table) (*apiv1alpha.Table, error)
 	Delete(name string, force bool) error
@@ -30,8 +30,12 @@ func NewTableServiceClient(ctx context.Context, conn *grpc.ClientConn) TableClie
 	}
 }
 
-func (c tableClient) List() ([]*apiv1alpha.Table, error) {
-	resp, err := c.client.ListTables(c.ctx, &apiv1alpha.ListTablesRequest{})
+func (c tableClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Table, error) {
+	resp, err := c.client.ListTables(c.ctx, &apiv1alpha.ListTablesRequest{
+		Search:     search,
+		PageSize:   pageSize,
+		PageToken:  pageToken,
+	})
 	if err != nil {
 		log.Debug().Err(err).Msg("issue listing tables")
 		return nil, err
