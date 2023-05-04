@@ -217,8 +217,8 @@ jobs:
 
             - name: DEBUG - Check docker containers 
               run: | 
-                docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t -f kaskada logs 
-                
+                docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t -f kaskada  
+
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
             # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
