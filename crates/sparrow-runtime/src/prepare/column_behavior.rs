@@ -363,7 +363,9 @@ impl ColumnBehavior {
                     .into_report()
                     .change_context(Error::PreparingColumn)?;
                 // 2. Update key hash table
-                key_hash_inverse.add(keys.clone(), &key_hashes);
+                futures::executor::block_on(key_hash_inverse.add(keys.clone(), &key_hashes))
+                    .into_report()
+                    .change_context(Error::Internal)?;
 
                 Arc::new(key_hashes)
             }

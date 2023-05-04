@@ -1,24 +1,18 @@
 use std::pin::Pin;
-use std::sync::{Arc, PoisonError};
+use std::sync::PoisonError;
 use std::task::Poll;
 
-use anyhow::{anyhow, Context};
-use arrow::array::{Array, ArrayRef, UInt64Array};
+use anyhow::Context;
 use arrow::compute::SortColumn;
-use arrow::datatypes::{
-    ArrowPrimitiveType, DataType, Field, Schema, SchemaRef, TimestampNanosecondType,
-};
+use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
+use error_stack::{IntoReport, Report, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
-use hashbrown::HashSet;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{slice_plan, TableConfig};
-use sparrow_core::utils::make_null_array;
-use sparrow_core::{context_code, TableSchema};
-use sparrow_kernels::order_preserving_cast_to_u64;
+use sparrow_core::TableSchema;
 
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
