@@ -149,6 +149,7 @@ jobs:
               run: | 
                 mkdir -p ci-bin/wren
                 wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=12wFl2LF1xrOFwHOt8MB5pUgnGOePnOzC' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=12wFl2LF1xrOFwHOt8MB5pUgnGOePnOzC" -O wren-binary && rm -rf /tmp/cookies.txt
+                mv wren-binary ci-bin/wren/wren-binary
                 chmod +x ci-bin/wren/wren-binary
               # uses: actions/download-artifact@v3
               # with:
@@ -159,6 +160,7 @@ jobs:
               run: | 
                 mkdir -p ci-bin/engine
                 wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ZVGA6iTv6sMGdKIGzOPENJMQeDU9sHie' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1ZVGA6iTv6sMGdKIGzOPENJMQeDU9sHie" -O sparrow-main && rm -rf /tmp/cookies.txt
+                mv sparrow-main ci-bin/engine/sparrow-main
                 chmod +x ci-bin/engine/sparrow-main
       
       
