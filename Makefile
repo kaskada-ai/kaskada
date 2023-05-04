@@ -125,8 +125,9 @@ ci/integration/tests/docker-compose-down-s3:
 
 ci/integration/tests/docker-compose-s3-logs-kaskada-only:
 	 docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t kaskada
+
 ci/integration/tests/docker-compose-s3-logs:
- docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t 
+	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t 
 
 ci/integration/tests/run/api-s3: test/int/run-api-s3-docker
 
