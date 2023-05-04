@@ -66,25 +66,6 @@ struct PulsarReader {
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
-    // Bounded disorder assumes an allowed amount of lateness in events,
-    // which then allows this node to advance its watermark up to event
-    // time (t - delta).
-    //
-    // This simple bound is a good start, but we can improve on this hueristic
-    // by statistically modeling event behavior and adapting the watermark accordingly.
-    // bounded_lateness: i64,
-    // The watermark represents a timestamp beyond which the system assumes
-    // that all data with earlier timestamps has been produced.
-    // watermark: i64,
-    // The leftovers are events that have been read from the stream but have not
-    // been produced, as the watermark has not advanced far enough.
-    // leftovers: Vec<Vec<(String, Value)>>,
-    // TODO: leftovers is a recordbatch
-    // then I just uh...hm.
-    // I need to append the new batch to the leftovers.
-    // But I need to make sure I'm using the correct max event time
-    // which should come from the leftovers.
-    // config: TableConfig,
     /// Whether the reader requires the stream to be ordered by _publish_time.
     ///
     /// The _publish_time is an internal pulsar metadata timestamp that is populated
