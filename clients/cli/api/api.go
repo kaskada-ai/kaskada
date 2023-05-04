@@ -27,7 +27,7 @@ type apiClient struct {
 
 type ApiClient interface {
 	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
-	Create(item protoreflect.ProtoMessage) error
+	Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
 	Delete(item protoreflect.ProtoMessage, force bool) error
 	Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
 	List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error)
@@ -52,7 +52,7 @@ func (c apiClient) Query(req *apiv1alpha.CreateQueryRequest) (*apiv1alpha.Create
 	return c.query.Query(req)
 }
 
-func (c apiClient) Create(item protoreflect.ProtoMessage) error {
+func (c apiClient) Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	kind := reflect.TypeOf(item).String()
 	switch t := item.(type) {
 	case *apiv1alpha.Materialization:
@@ -63,7 +63,7 @@ func (c apiClient) Create(item protoreflect.ProtoMessage) error {
 		return c.view.Create(t)
 	default:
 		log.Fatal().Str("kind", kind).Msg("unknown item kind for create")
-		return nil
+		return nil, nil
 	}
 }
 
@@ -184,10 +184,9 @@ func ClearOutputOnlyFieldsList[M protoreflect.ProtoMessage](messages []M) []M {
 	return output
 }
 
-
 func getContextAndConnection() (context.Context, *grpc.ClientConn) {
 	ctx := context.Background()
-	
+
 	clientId := viper.GetString("kaskada-client-id")
 	if clientId == "" {
 		log.Debug().Msg("no client-id found, initiating request without passing client-id header.")

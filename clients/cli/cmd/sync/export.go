@@ -6,7 +6,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/kaskada-ai/kaskada/clients/cli/api"
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
@@ -22,7 +21,7 @@ var exportCmd = &cobra.Command{
 		    can be used with the 'plan' and 'apply' commands
 		    to update your infrastructure.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Msg("starting export")
+		log.Debug().Msg("starting export")
 
 		var (
 			err              error
@@ -32,11 +31,6 @@ var exportCmd = &cobra.Command{
 		)
 
 		apiClient := api.NewApiClient()
-
-		getAll := viper.GetBool("all")
-		materializationNames := viper.GetStringSlice("materialization")
-		tableNames := viper.GetStringSlice("table")
-		viewNames := viper.GetStringSlice("view")
 
 		if !getAll && len(materializationNames)+len(tableNames)+len(viewNames) == 0 {
 			utils.LogAndQuitIfErrorExists(fmt.Errorf("either `all`, `materialization`, `table`, or `view` flag needs to be set at least once"))
@@ -76,13 +70,12 @@ var exportCmd = &cobra.Command{
 		yamlData, err := utils.ProtoToYaml(spec)
 		utils.LogAndQuitIfErrorExists(err)
 
-		filePath := viper.GetString("file-path")
 		if filePath == "" {
 			fmt.Printf("%s\n", yamlData)
 		} else {
 			utils.LogAndQuitIfErrorExists(os.WriteFile(filePath, yamlData, 0666))
 		}
-		log.Info().Msg("Success!")
+		log.Debug().Msg("Success!")
 	},
 }
 
@@ -170,16 +163,16 @@ func exportView(apiClient api.ApiClient, viewName string) (*apiv1alpha.View, err
 	return api.ProtoToView(api.ClearOutputOnlyFields(proto))
 }
 
-func init() {
-	exportCmd.Flags().Bool("all", false, "set this flag to export all tables, views, and materializations in the system")
-	exportCmd.Flags().StringP("file-path", "f", "", "specify a file path to export the resources to, instead of exporting to std-out")
-	exportCmd.Flags().StringArrayP("materialization", "m", []string{}, "the name of the `materialization` resource to export.  This flag can be set multiple times to specify multiple materialization.")
-	exportCmd.Flags().StringArrayP("table", "t", []string{}, "the name of the `table` resource to export.  This flag can be set multiple times to specify multiple tables.")
-	exportCmd.Flags().StringArrayP("view", "v", []string{}, "the name of the `view` resource to export.  This flag can be set multiple times to specify multiple views.")
+var (
+	getAll                                      bool
+	filePath                                    string
+	materializationNames, tableNames, viewNames []string
+)
 
-	viper.BindPFlag("all", exportCmd.Flags().Lookup("all"))
-	viper.BindPFlag("file-path", exportCmd.Flags().Lookup("file-path"))
-	viper.BindPFlag("materialization", exportCmd.Flags().Lookup("materialization"))
-	viper.BindPFlag("table", exportCmd.Flags().Lookup("table"))
-	viper.BindPFlag("view", exportCmd.Flags().Lookup("view"))
+func init() {
+	exportCmd.Flags().BoolVar(&getAll, "all", false, "set this flag to export all tables, views, and materializations in the system")
+	exportCmd.Flags().StringVarP(&filePath, "file-path", "f", "", "specify a file path to export the resources to, instead of exporting to std-out")
+	exportCmd.Flags().StringArrayVarP(&materializationNames, "materialization", "m", []string{}, "the name of the `materialization` resource to export.  This flag can be set multiple times to specify multiple materialization.")
+	exportCmd.Flags().StringArrayVarP(&tableNames, "table", "t", []string{}, "the name of the `table` resource to export.  This flag can be set multiple times to specify multiple tables.")
+	exportCmd.Flags().StringArrayVarP(&viewNames, "view", "v", []string{}, "the name of the `view` resource to export.  This flag can be set multiple times to specify multiple views.")
 }

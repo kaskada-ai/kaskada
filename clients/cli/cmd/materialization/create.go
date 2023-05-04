@@ -11,16 +11,14 @@ import (
 
 // createCmd represents the materialization create command
 var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Creates a materialization.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if objectStoreKind != "parquet" && objectStoreKind != "csv" {
 			log.Fatal().Msg("file-kind must be one of: parquet, or csv")
 		}
 
 		newMaterialization := &apiv1alpha.Materialization{
-			MaterializationName: materializationName,
-			Expression:          expression,
+			MaterializationName: args[0],
+			Expression:          args[1],
 		}
 
 		if objectStoreDestination != "" {
@@ -38,23 +36,20 @@ var createCmd = &cobra.Command{
 				},
 			}
 		}
-
-		utils.LogAndQuitIfErrorExists(api.NewApiClient().Create(newMaterialization))
-		log.Info().Msg("Success!")
+		newItem, err := api.NewApiClient().Create(newMaterialization)
+		utils.LogAndQuitIfErrorExists(err)
+		printMaterialization(newItem)
 	},
 }
 
-var expression string
 var objectStoreDestination string
 var objectStoreKind string
 
 func init() {
-	initMaterializationFlag(createCmd, "The name of the materialization to create.")
+	utils.SetupStandardResourceCmd(createCmd, "create", materialization, "expression")
 
-	createCmd.Flags().StringVar(&expression, "expression", "", "A Fenl expression to compute.")
 	createCmd.Flags().StringVarP(&objectStoreDestination, "path-uri", "u", "", "The path uri of where to push output to. Examples: s3://my-bucket/path/to/results/, file:///local/path/to/results/, etc. The kaskada service must have access to the destination.")
-	createCmd.Flags().StringVarP(&objectStoreKind, "file-kind", "k", "", "The kind of file to output. Should be one of: csv, or parquet. Defaults to parquet.")
+	createCmd.Flags().StringVarP(&objectStoreKind, "file-kind", "k", "csv", "The kind of file to output. Should be one of: csv, or parquet. Defaults to csv.")
 
-	createCmd.MarkFlagRequired("expression")
 	createCmd.MarkFlagRequired("path-uri")
 }

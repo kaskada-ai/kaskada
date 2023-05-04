@@ -18,7 +18,7 @@ type tableClient struct {
 type TableClient interface {
 	List() ([]*apiv1alpha.Table, error)
 	Get(name string) (*apiv1alpha.Table, error)
-	Create(item *apiv1alpha.Table) error
+	Create(item *apiv1alpha.Table) (*apiv1alpha.Table, error)
 	Delete(name string, force bool) error
 	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
 }
@@ -49,13 +49,13 @@ func (c tableClient) Get(name string) (*apiv1alpha.Table, error) {
 	return resp.Table, nil
 }
 
-func (c tableClient) Create(item *apiv1alpha.Table) error {
-	_, err := c.client.CreateTable(c.ctx, &apiv1alpha.CreateTableRequest{Table: item})
+func (c tableClient) Create(item *apiv1alpha.Table) (*apiv1alpha.Table, error) {
+	resp, err := c.client.CreateTable(c.ctx, &apiv1alpha.CreateTableRequest{Table: item})
 	if err != nil {
 		log.Debug().Err(err).Str("name", item.TableName).Msg("issue creating table")
-		return err
+		return nil, err
 	}
-	return nil
+	return resp.Table, nil
 }
 
 func (c tableClient) Delete(name string, force bool) error {

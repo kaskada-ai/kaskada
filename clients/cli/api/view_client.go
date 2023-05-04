@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -18,7 +19,7 @@ type viewClient struct {
 type ViewClient interface {
 	List() ([]*apiv1alpha.View, error)
 	Get(name string) (*apiv1alpha.View, error)
-	Create(item *apiv1alpha.View) error
+	Create(item *apiv1alpha.View) (*apiv1alpha.View, error)
 	Delete(name string, force bool) error
 }
 
@@ -48,19 +49,17 @@ func (c viewClient) Get(name string) (*apiv1alpha.View, error) {
 	return resp.View, nil
 }
 
-func (c viewClient) Create(item *apiv1alpha.View) error {
-	view, err := c.client.CreateView(c.ctx, &apiv1alpha.CreateViewRequest{View: item})
+func (c viewClient) Create(item *apiv1alpha.View) (*apiv1alpha.View, error) {
+	resp, err := c.client.CreateView(c.ctx, &apiv1alpha.CreateViewRequest{View: item})
 	if err != nil {
 		log.Debug().Err(err).Str("name", item.ViewName).Msg("issue creating view")
-		return err
+		return nil, err
 	}
-	if view.Analysis != nil && view.Analysis.FenlDiagnostics != nil && view.Analysis.FenlDiagnostics.NumErrors > 0 {
-		for _, diag := range view.Analysis.FenlDiagnostics.FenlDiagnostics {
-			log.Error().Msg(diag.Formatted)
-			return fmt.Errorf("found %d errors in view creation", view.Analysis.FenlDiagnostics.NumErrors)
-		}
+	if resp.Analysis != nil && resp.Analysis.FenlDiagnostics != nil && resp.Analysis.FenlDiagnostics.NumErrors > 0 {
+		utils.PrintProtoMessage(resp)
+		return nil, fmt.Errorf("found %d errors in view creation", resp.Analysis.FenlDiagnostics.NumErrors)
 	}
-	return nil
+	return resp.View, nil
 }
 
 func (c viewClient) Delete(name string, force bool) error {

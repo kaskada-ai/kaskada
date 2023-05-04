@@ -3,7 +3,6 @@ package table
 import (
 	"github.com/kaskada-ai/kaskada/clients/cli/api"
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -16,11 +15,9 @@ var timeHelpText = "The name of the time column within the table. Parquet files 
 
 // createCmd represents the table create command
 var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Creates a table.",
 	Run: func(cmd *cobra.Command, args []string) {
 		newTable := &apiv1alpha.Table{
-			TableName:           tableName,
+			TableName:           args[0],
 			TimeColumnName:      timeColumnName,
 			EntityKeyColumnName: entityKeyColumnName,
 			GroupingId:          groupingId,
@@ -29,8 +26,9 @@ var createCmd = &cobra.Command{
 			newTable.SubsortColumnName = &wrapperspb.StringValue{Value: subsortColumnName}
 		}
 
-		utils.LogAndQuitIfErrorExists(api.NewApiClient().Create(newTable))
-		log.Info().Msg("Success!")
+		newItem, err := api.NewApiClient().Create(newTable)
+		utils.LogAndQuitIfErrorExists(err)
+		printTable(newItem)
 	},
 }
 
@@ -40,12 +38,12 @@ var subsortColumnName string
 var groupingId string
 
 func init() {
-	initTableFlag(createCmd, "The name of the table to create.")
+	utils.SetupStandardResourceCmd(createCmd, "create", "table")
 
-	createCmd.Flags().StringVar(&timeColumnName, "timeColumn", "", timeHelpText)
-	createCmd.Flags().StringVar(&entityKeyColumnName, "entityKeyColumn", "", entityKeyHelpText)
-	createCmd.Flags().StringVar(&subsortColumnName, "subsortColumn", "", subsortHelpText)
-	createCmd.Flags().StringVar(&groupingId, "groupingId", "", "Optional field to enforce joins between multiple tables.")
+	createCmd.Flags().StringVarP(&timeColumnName, "timeColumn", "t", "", timeHelpText)
+	createCmd.Flags().StringVarP(&entityKeyColumnName, "entityKeyColumn", "e", "", entityKeyHelpText)
+	createCmd.Flags().StringVarP(&subsortColumnName, "subsortColumn", "s", "", subsortHelpText)
+	createCmd.Flags().StringVarP(&groupingId, "groupingId", "g", "", "Optional field to enforce joins between multiple tables.")
 
 	createCmd.MarkFlagRequired("timeColumn")
 	createCmd.MarkFlagRequired("entityKeyColumn")

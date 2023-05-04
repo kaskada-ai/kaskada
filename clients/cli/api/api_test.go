@@ -154,7 +154,7 @@ func Test_apiClient_Create(t *testing.T) {
 				table:           tt.fields.table,
 				view:            tt.fields.view,
 			}
-			if err := c.Create(tt.args.item); (err != nil) != tt.wantErr {
+			if _, err := c.Create(tt.args.item); (err != nil) != tt.wantErr {
 				t.Errorf("apiClient.Create() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -375,8 +375,8 @@ func (*mockQueryClient) Query(request *apiv1alpha.CreateQueryRequest) (*apiv1alp
 type mockMaterializationClient struct{}
 
 // Create implements MaterializationClient
-func (*mockMaterializationClient) Create(item *apiv1alpha.Materialization) error {
-	return nil
+func (*mockMaterializationClient) Create(item *apiv1alpha.Materialization) (*apiv1alpha.Materialization, error) {
+	return nil, nil
 }
 
 // Delete implements MaterializationClient
@@ -405,8 +405,8 @@ func (*mockTableClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) e
 }
 
 // Create implements TableClient
-func (*mockTableClient) Create(item *apiv1alpha.Table) error {
-	return nil
+func (*mockTableClient) Create(item *apiv1alpha.Table)  (*apiv1alpha.Table, error) {
+	return nil, nil
 }
 
 // Delete implements TableClient
@@ -431,8 +431,8 @@ func (*mockTableClient) List() ([]*apiv1alpha.Table, error) {
 type mockViewClient struct{}
 
 // Create implements ViewClient
-func (*mockViewClient) Create(item *apiv1alpha.View) error {
-	return nil
+func (*mockViewClient) Create(item *apiv1alpha.View)  (*apiv1alpha.View, error) {
+	return nil, nil
 }
 
 // Delete implements ViewClient

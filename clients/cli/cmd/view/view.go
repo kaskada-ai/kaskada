@@ -1,12 +1,17 @@
 package view
 
 import (
+	"github.com/kaskada-ai/kaskada/clients/cli/api"
+	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+const view = "view"
 
 // ViewCmd represents the view command
 var ViewCmd = &cobra.Command{
-	Use:   "view",
+	Use:   view,
 	Short: "A set of commands for interacting with kaskada views",
 	/*
 		Long: `A longer description that spans multiple lines and likely contains examples
@@ -24,9 +29,10 @@ func init() {
 	ViewCmd.AddCommand(getCmd)
 }
 
-var viewName string
-
-func initViewFlag(cmd *cobra.Command, description string) {
-	cmd.Flags().StringVarP(&viewName, "view", "v", "", description)
-	cmd.MarkFlagRequired("view")
+func printView(item protoreflect.ProtoMessage) {
+	view, err := api.ProtoToView(item)
+	utils.LogAndQuitIfErrorExists(err)
+	yaml, err := utils.ProtoToYaml(view)
+	utils.LogAndQuitIfErrorExists(err)
+	utils.PrintSuccessf("%s", yaml)
 }

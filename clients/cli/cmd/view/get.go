@@ -1,8 +1,6 @@
 package view
 
 import (
-	"fmt"
-
 	"github.com/kaskada-ai/kaskada/clients/cli/api"
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/spf13/cobra"
@@ -12,19 +10,13 @@ import (
 
 // getCmd represents the view get command
 var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Gets a view.",
 	Run: func(cmd *cobra.Command, args []string) {
-		item, err := api.NewApiClient().Get(&apiv1alpha.View{ViewName: viewName})
+		item, err := api.NewApiClient().Get(&apiv1alpha.View{ViewName: args[0]})
 		utils.LogAndQuitIfErrorExists(err)
-		view, err := api.ProtoToView(item)
-		utils.LogAndQuitIfErrorExists(err)
-		yaml, err := utils.ProtoToYaml(view)
-		utils.LogAndQuitIfErrorExists(err)
-		fmt.Printf("\n%s\n", yaml)
+		printView(item)
 	},
 }
 
 func init() {
-	initViewFlag(getCmd, "The view to get.")
+	utils.SetupStandardResourceCmd(getCmd, "get", view)
 }
