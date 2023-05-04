@@ -7,24 +7,21 @@ Including relevant segments from the logs when you open an issue can greatly hel
 
 
 Log files are located in the user's home folder `~/.cache/kaskada/logs`. 
-Each time the engine and/or manager is started, a new folder is created with a UUID as the folder name. 
-Inside this folder you should be able to find 2 logs per application the standard output log and the standard error log. 
+For each of the services (engine and manager), a standard output log and standard error log are created prefixed by the launch timestamp.
 
-Here is an example with 2 folders from two separate runs of the engine and manager.
+Here is an example with two separate runs of the engine and manager.
 
 
 ....
 /home/therapon/.cache/kaskada/logs
-├── 1ed25c9e-8914-4527-92a9-9ee716a59847
-│   ├── engine_stderr.txt
-│   ├── engine_stdout.txt
-│   ├── manager_stderr.txt
-│   └── manager_stdout.txt
-└── ff16bd01-5d19-4da2-b645-a959868ac681
-    ├── engine_stderr.txt
-    ├── engine_stdout.txt
-    ├── manager_stderr.txt
-    └── manager_stdout.txt
+├── 2023-05-03T15-53-45-engine-stderr.log
+├── 2023-05-03T15-53-45-engine-stdout.log
+├── 2023-05-03T15-53-45-manager-stderr.log
+├── 2023-05-03T15-53-45-manager-stdout.log
+├── 2023-05-04T12-12-33-engine-stderr.log
+├── 2023-05-04T12-12-33-engine-stdout.log
+├── 2023-05-04T12-12-33-manager-stderr.log
+├── 2023-05-04T12-12-33-manager-stdout.log
 ....
 
 The standard output log contains the output of the application (info, warn etc.) and the standard error log contains any errors that occurred during the run.
@@ -33,5 +30,5 @@ The standard output log contains the output of the application (info, warn etc.)
 ====
 On Unix systems the `tail` command is very convenient for viewing the last few lines of multiple files at a time. 
 For example, to view new lines of the standard output logs for the engine and manager you can run the following command from the logs folder:
-`tail -f engine_stdout.txt manager_stdout.txt`
+`tail -f <timestamp>-engine-stdout.log <timestamp>-engine-stderr.log`
 ====
