@@ -46,7 +46,7 @@ class Data:
         return self.source
 
 class Timeline:
-    def __init__(self, name, data = None, label = None, continuous = False):
+    def __init__(self, name, data = None, label = None, continuous = False, legend_location = None):
         """Create a timeline.
 
         Parameters:
@@ -62,6 +62,7 @@ class Timeline:
         self.data = data
         self.label = label or name
         self.continuous = continuous
+        self.legend_location = legend_location or 'top_left'
 
     def __repr__(self):
         return f"Timeline({self.name}, {self.data}, {self.label}, {self.continuous})"
@@ -105,7 +106,7 @@ class Timeline:
             # https://github.com/bokeh/bokeh/issues/9087 - May be able to fix once this issue
             # is addressed, by providing a custom "filter".
             mode = "mouse"))
-        plot.legend.location = 'top_left'
+        plot.legend.location = self.legend_location
 
         if self.continuous:
             last_time = data.prev(data.time)
