@@ -315,7 +315,7 @@ func Test_apiClient_List(t *testing.T) {
 			name:   "should call materialization client on list with materialization",
 			fields: fields{materialization: &mockMaterializationClient{}},
 			args: args{
-				item: &apiv1alpha.ListMaterializationsRequest{},
+				item: &apiv1alpha.Materialization{},
 			},
 			want: []protoreflect.ProtoMessage{
 				&apiv1alpha.Materialization{},
@@ -326,7 +326,7 @@ func Test_apiClient_List(t *testing.T) {
 			name:   "should call table client on list with table",
 			fields: fields{table: &mockTableClient{}},
 			args: args{
-				item: &apiv1alpha.ListTablesRequest{},
+				item: &apiv1alpha.Table{},
 			},
 			want: []protoreflect.ProtoMessage{
 				&apiv1alpha.Table{},
@@ -337,7 +337,7 @@ func Test_apiClient_List(t *testing.T) {
 			name:   "should call view client on list with view",
 			fields: fields{view: &mockViewClient{}},
 			args: args{
-				item: &apiv1alpha.ListViewsRequest{},
+				item: &apiv1alpha.View{},
 			},
 			want: []protoreflect.ProtoMessage{
 				&apiv1alpha.View{},
