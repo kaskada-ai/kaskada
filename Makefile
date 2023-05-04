@@ -98,6 +98,12 @@ ci/integration/tests/docker-compose-up:
 	export DOCKER_BUILDKIT=1 
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build --detach
 
+ci/integration/tests/docker-compose-logs: 
+	docker compose -f ./tests/integration/docker-compose-ci-integration.yml logs -t
+
+ci/integration/tests/docker-compose-logs-kaskada-only:
+	docker compose -f ./tests/integration/docker-compose-ci-integration.yml logs -t kaskada
+
 ci/integration/tests/docker-compose-down:
 	export DOCKER_BUILDKIT=1 
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
@@ -115,6 +121,12 @@ ci/integration/tests/docker-compose-up-s3:
 ci/integration/tests/docker-compose-down-s3:
 	export DOCKER_BUILDKIT=1
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml down
+
+
+ci/integration/tests/docker-compose-s3-logs-kaskada-only:
+	 docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t kaskada
+ci/integration/tests/docker-compose-s3-logs:
+ docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t 
 
 ci/integration/tests/run/api-s3: test/int/run-api-s3-docker
 
