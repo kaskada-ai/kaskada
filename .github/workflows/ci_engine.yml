@@ -207,17 +207,18 @@ jobs:
               uses: docker/setup-buildx-action@v2
       
             - name: Docker compose up for integration tests 
-              run: make ci/integration/tests/docker-compose-up-postgres-s3
+              run: make ci/integration/tests/docker-compose-up-s3
             
             - name: Check docker containers (pulsar) healthcheck
-              run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for pulssr container to be healthy..."; sleep 10; done'
+              run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for pulsar container to be healthy..."; sleep 10; done'
 
             - name: Check docker containers (minio) healthcheck
               run: timeout 240s sh -c 'until docker ps | grep minio | grep -q healthy; do echo "Waiting for minio container to be healthy..."; sleep 10; done'
 
             - name: DEBUG - Check docker containers 
-              run: docker ps
-
+              run: | 
+                docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t -f kaskada logs 
+                
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
             # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
