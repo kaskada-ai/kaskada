@@ -232,9 +232,9 @@ jobs:
                 echo "::endgroup::"
       
                 make ci/integration/tests/run/api-s3
-                
+
             - name: DEBUG - Check docker containers 
-                run: | 
+              run: | 
                   docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t  kaskada  
   
 
