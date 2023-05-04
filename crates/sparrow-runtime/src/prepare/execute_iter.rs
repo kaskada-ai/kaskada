@@ -21,6 +21,12 @@ use crate::RawMetadata;
 
 use super::column_behavior::ColumnBehavior;
 
+/// The bounded lateness parameter, which configures the delay in watermark time.
+///
+/// In practical terms, this allows for items in the stream to be within 1 second
+/// compared to the max timestamp read.
+const BOUNDED_LATENESS: i64 = 1000;
+
 /// An iterator over prepare batches. TODO
 ///
 /// In addition to iterating, this is responsible for the following:
@@ -149,7 +155,7 @@ impl<'a> std::fmt::Debug for ExecuteIter<'a> {
 impl<'a> ExecuteIter<'a> {
     pub fn try_new(
         reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
-        config: &TableConfig,
+        config: &'a TableConfig,
         raw_metadata: RawMetadata,
         prepare_hash: u64,
         slice: &Option<slice_plan::Slice>,
@@ -208,9 +214,9 @@ impl<'a> ExecuteIter<'a> {
             slice_preparer,
             key_hash_inverse,
             table_config: config,
-            bounded_lateness: todo!(),
-            watermark: todo!(),
-            leftovers: todo!(),
+            bounded_lateness: BOUNDED_LATENESS,
+            watermark: 0,
+            leftovers: None,
         })
     }
 
