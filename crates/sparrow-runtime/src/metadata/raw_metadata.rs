@@ -13,10 +13,10 @@ use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
 use sparrow_api::kaskada::v1alpha::PulsarConfig;
 use tracing::info;
 
-use crate::execute::pulsar_schema;
 use crate::metadata::file_from_path;
 use crate::stores::object_store_url::ObjectStoreKey;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
+use crate::streams::pulsar_schema;
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {

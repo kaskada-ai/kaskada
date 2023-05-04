@@ -8,9 +8,9 @@ use sparrow_api::kaskada::v1alpha::PulsarDestination;
 use sparrow_api::kaskada::v1alpha::{destination, PulsarConfig};
 
 use crate::execute::progress_reporter::ProgressUpdate;
+use crate::streams::pulsar_schema;
 use error_stack::{IntoReport, ResultExt};
 
-use crate::execute::pulsar_schema;
 use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
 
 #[derive(Debug, derive_more::Display)]
