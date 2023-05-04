@@ -223,7 +223,8 @@ jobs:
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
             # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
             # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.  
-            - name: Run integration tests
+            - name: Run S3 integration tests
+              id: s3-integration-tests
               run: | 
                 echo "::group::Data Dir"
                 sudo chown -R $USER:$(id -g -n $USER) tests/integration/data
@@ -233,9 +234,10 @@ jobs:
       
                 make ci/integration/tests/run/api-s3
 
-            - name: DEBUG - Check docker containers 
+            - name: Show container logs for kaskada in case of failure
+              if: failure() && steps.s3-integration-tests.outcome != 'success' 
               run: | 
-                  docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t  kaskada  
+                  docker compose -f  ./tests/integration/docker-compose-ci-integration.yml logs -t    
   
 
             - name: Docker compose down for integration tests 
