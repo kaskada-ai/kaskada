@@ -46,13 +46,13 @@ jobs:
           paths: '["tests/integration/**", "Dockerfile.integration",   ".github/workflows/ci_engine.yml"]'
           do_not_skip: '["schedule"]'
 
-  build_wren:
-    name: Build wren (golang)
-    uses: ./.github/workflows/reusable_ci_wren.yml
+  # build_wren:
+  #   name: Build wren (golang)
+  #   uses: ./.github/workflows/reusable_ci_wren.yml
 
-  build_sparrow:
-    name: Build sparrow (rust)
-    uses: ./.github/workflows/reusable_ci_rust.yml
+  # build_sparrow:
+  #   name: Build sparrow (rust)
+  #   uses: ./.github/workflows/reusable_ci_rust.yml
 
   # run_integration_tests: 
   #   name: Run integration tests
@@ -135,11 +135,9 @@ jobs:
   #     - name: Docker compose down for integration tests 
   #       run: make ci/integration/tests/docker-compose-down
 
-  #run_integration_tests_s3:
-   run_integration_tests:
+  run_integration_tests_s3: 
           name: Run S3 integration tests
-          # needs: [integration_skip, build_wren, build_sparrow]
-           needs: [integration_skip]
+          needs: [integration_skip, build_wren, build_sparrow]
           runs-on: ubuntu-latest
           if: ${{ needs.integration_sklp.outputs.should_skip != true || needs.build_wren.outputs.should_skip != true || needs.build_sparrow.outputs.should_skip != true }}
           steps:
@@ -215,7 +213,7 @@ jobs:
               run: timeout 240s sh -c 'until docker ps | grep minio | grep -q healthy; do echo "Waiting for minio container to be healthy..."; sleep 10; done'
 
             - name: DEBUG - Check docker containers 
-              run: docker ps 
+              run: docker ps
 
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 

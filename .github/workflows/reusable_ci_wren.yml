@@ -37,69 +37,67 @@ jobs:
     needs: [wren_skip]
     runs-on: ubuntu-20.04
     steps:
-       - name: DEBUG skip
-         run: echo "Skipped"
-      # - name: Checkout sources
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   uses: actions/checkout@v3
+      - name: Checkout sources
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        uses: actions/checkout@v3
 
-      # - name: Install Buf
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   uses: bufbuild/buf-setup-action@v1.12.0
-      #   with:
-      #     version: "1.17.0"
-      #     buf_user: ${{ secrets.BUF_USER }}
-      #     buf_api_token: ${{ secrets.BUF_API_TOKEN }}
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Buf
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        uses: bufbuild/buf-setup-action@v1.12.0
+        with:
+          version: "1.17.0"
+          buf_user: ${{ secrets.BUF_USER }}
+          buf_api_token: ${{ secrets.BUF_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Generate Protos
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   run: buf generate
-      #   working-directory: proto
+      - name: Generate Protos
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        run: buf generate
+        working-directory: proto
 
-      # - name: Install GoLang
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   uses: actions/setup-go@v3
-      #   with:
-      #     go-version: "1.19"
-      #     cache: true
-      #     cache-dependency-path: wren/go.sum
+      - name: Install GoLang
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.19"
+          cache: true
+          cache-dependency-path: wren/go.sum
 
-      # - name: Generate ent
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   run: go generate ./ent
-      #   working-directory: wren
+      - name: Generate ent
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        run: go generate ./ent
+        working-directory: wren
 
-      # - name: Copy NOTICE
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   run: cp NOTICE ./wren/
+      - name: Copy NOTICE
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        run: cp NOTICE ./wren/
 
-      # - name: Build
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   run: go build -o wren-binary main.go
-      #   working-directory: wren
+      - name: Build
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        run: go build -o wren-binary main.go
+        working-directory: wren
 
-      # - name: Unit Tests
-      #   if: needs.wren_skip.outputs.should_skip != 'true'
-      #   run: go test ./...
-      #   working-directory: wren
+      - name: Unit Tests
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        run: go test ./...
+        working-directory: wren
 
-      # - name: Fetch Artifacts (if skipping)
-      #   id: download-artifact
-      #   if: needs.wren_skip.outputs.should_skip == 'true'
-      #   uses: dawidd6/action-download-artifact@v2
-      #   with:
-      #     run_id: ${{needs.wren_skip.outputs.run_id}}
-      #     name: wren-binary
-      #     # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
-      #     # Required, if the artifact is from a different repo
-      #     # Required, if the repo is private a Personal Access Token with `repo` scope is needed
-      #     github_token: ${{secrets.GITHUB_TOKEN}}
-      #     path: wren/
+      - name: Fetch Artifacts (if skipping)
+        id: download-artifact
+        if: needs.wren_skip.outputs.should_skip == 'true'
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{needs.wren_skip.outputs.run_id}}
+          name: wren-binary
+          # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
+          # Required, if the artifact is from a different repo
+          # Required, if the repo is private a Personal Access Token with `repo` scope is needed
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          path: wren/
 
-      # - name: Upload Wren Artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: wren-binary
-      #     retention-days: 5
-      #     path: wren/wren-binary
+      - name: Upload Wren Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: wren-binary
+          retention-days: 5
+          path: wren/wren-binary
