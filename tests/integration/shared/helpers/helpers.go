@@ -182,7 +182,7 @@ func newEntClient(dbDialect *string) *ent.Client {
 		Expect(err).ShouldNot(HaveOccurred())
 		return client
 	} else if *dbDialect == "sqlite" {
-		client, err := ent.Open("sqlite3", "file:../data/kaskada.db?mode=rw&_fk=1&_auth&_auth_user=kaskada&_auth_pass=kaskada123")
+		client, err := ent.Open("sqlite3", "file:../data/kaskada.db?mode=rwc&_fk=1&_auth&_auth_user=kaskada&_auth_pass=kaskada123")
 		Expect(err).ShouldNot(HaveOccurred())
 		return client
 	} else {
