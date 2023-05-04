@@ -46,13 +46,13 @@ jobs:
           paths: '["tests/integration/**", "Dockerfile.integration",   ".github/workflows/ci_engine.yml"]'
           do_not_skip: '["schedule"]'
 
-  # build_wren:
-  #   name: Build wren (golang)
-  #   uses: ./.github/workflows/reusable_ci_wren.yml
+  build_wren:
+    name: Build wren (golang)
+    uses: ./.github/workflows/reusable_ci_wren.yml
 
-  # build_sparrow:
-  #   name: Build sparrow (rust)
-  #   uses: ./.github/workflows/reusable_ci_rust.yml
+  build_sparrow:
+    name: Build sparrow (rust)
+    uses: ./.github/workflows/reusable_ci_rust.yml
 
   # run_integration_tests: 
   #   name: Run integration tests
@@ -135,7 +135,8 @@ jobs:
   #     - name: Docker compose down for integration tests 
   #       run: make ci/integration/tests/docker-compose-down
 
-  run_integration_tests_s3: 
+  #run_integration_tests_s3:
+   run_integration_tests:
           name: Run S3 integration tests
           # needs: [integration_skip, build_wren, build_sparrow]
            needs: [integration_skip]
