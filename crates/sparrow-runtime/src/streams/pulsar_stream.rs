@@ -1,5 +1,4 @@
 use crate::prepare::Error;
-
 use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
@@ -20,17 +19,43 @@ use std::io::Cursor;
 use std::time::Duration;
 use tokio::time::timeout;
 
+use super::pulsar_schema;
+
 pub struct AvroWrapper {
     value: Value,
 }
 
-pub fn read_pulsar_stream(
+/// Creates a pulsar stream to be used during execution in a long-lived process.
+///
+/// This stream should not close naturally. It continually reads messages from the
+/// stream, batches them, and passes them to the runtime layer.
+///
+/// Note that this stream does not do any filtering or ordering of events.
+pub fn stream_for_execution(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema, consumer, last_publish_time);
+        let mut reader = PulsarReader::new(schema, consumer, last_publish_time, false);
+        loop {
+            // Indefinitely reads messages from the stream
+            if let Some(next) = reader.next_result_async().await? {
+                yield next
+            } else {
+                // Keep looping - this may happen if we timed out trying to read from the stream
+            }
+        }
+    }
+}
+
+pub fn stream_for_prepare(
+    schema: SchemaRef,
+    consumer: Consumer<AvroWrapper, TokioExecutor>,
+    last_publish_time: i64,
+) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
+    async_stream::try_stream! {
+        let mut reader = PulsarReader::new(schema, consumer, last_publish_time, true);
         while let Some(next) = reader.next_result_async().await? {
             yield next
         }
@@ -41,6 +66,31 @@ struct PulsarReader {
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
+    // Bounded disorder assumes an allowed amount of lateness in events,
+    // which then allows this node to advance its watermark up to event
+    // time (t - delta).
+    //
+    // This simple bound is a good start, but we can improve on this hueristic
+    // by statistically modeling event behavior and adapting the watermark accordingly.
+    // bounded_lateness: i64,
+    // The watermark represents a timestamp beyond which the system assumes
+    // that all data with earlier timestamps has been produced.
+    // watermark: i64,
+    // The leftovers are events that have been read from the stream but have not
+    // been produced, as the watermark has not advanced far enough.
+    // leftovers: Vec<Vec<(String, Value)>>,
+    // TODO: leftovers is a recordbatch
+    // then I just uh...hm.
+    // I need to append the new batch to the leftovers.
+    // But I need to make sure I'm using the correct max event time
+    // which should come from the leftovers.
+    // config: TableConfig,
+    /// Whether the reader requires the stream to be ordered by _publish_time.
+    ///
+    /// The _publish_time is an internal pulsar metadata timestamp that is populated
+    /// when publishing a message at the client. There is a chance that the broker
+    /// reorders messages internally.
+    require_ordered_publish_time: bool,
 }
 
 #[derive(Debug)]
@@ -119,15 +169,17 @@ impl PulsarReader {
         schema: SchemaRef,
         consumer: Consumer<AvroWrapper, TokioExecutor>,
         last_publish_time: i64,
+        require_ordered_publish_time: bool,
     ) -> Self {
         PulsarReader {
             schema,
             consumer,
             last_publish_time,
+            require_ordered_publish_time,
         }
     }
 
-    // using ArrowError is not a great fit but that is what PrepareIter requires
+    // Using ArrowError is not a great fit but that is what PrepareIter requires
     async fn next_result_async(&mut self) -> Result<Option<RecordBatch>, ArrowError> {
         tracing::debug!("reading pulsar messages");
         let max_batch_size = 100000; // TODO make this adaptive based on the size of the messages
@@ -193,26 +245,28 @@ impl PulsarReader {
             }
         }
 
-        // ensure that _publish_time never goes backwards
-        for avro_value in &mut avro_values {
-            for (field_name, field_value) in avro_value {
-                if field_name == "_publish_time" {
-                    match field_value {
-                        Value::TimestampMillis(publish_time) => {
-                            if *publish_time < self.last_publish_time {
-                                *publish_time = self.last_publish_time;
-                            } else {
-                                self.last_publish_time = *publish_time;
+        if self.require_ordered_publish_time {
+            // ensure that _publish_time never goes backwards
+            for avro_value in &mut avro_values {
+                for (field_name, field_value) in avro_value {
+                    if field_name == "_publish_time" {
+                        match field_value {
+                            Value::TimestampMillis(publish_time) => {
+                                if *publish_time < self.last_publish_time {
+                                    *publish_time = self.last_publish_time;
+                                } else {
+                                    self.last_publish_time = *publish_time;
+                                }
+                            }
+                            _ => {
+                                let e = error_stack::report!(DeserializeError::InternalError);
+                                return Err(ArrowError::from_external_error(Box::new(
+                                    DeserializeErrorWrapper::from(e),
+                                )));
                             }
                         }
-                        _ => {
-                            let e = error_stack::report!(DeserializeError::InternalError);
-                            return Err(ArrowError::from_external_error(Box::new(
-                                DeserializeErrorWrapper::from(e),
-                            )));
-                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
@@ -229,7 +283,7 @@ impl PulsarReader {
     }
 }
 
-pub(crate) async fn pulsar_consumer(
+pub async fn consumer(
     subscription: &PulsarSubscription,
     schema: SchemaRef,
 ) -> error_stack::Result<Consumer<AvroWrapper, TokioExecutor>, Error> {
@@ -240,7 +294,7 @@ pub(crate) async fn pulsar_consumer(
         config.tenant, config.namespace, config.topic_name
     );
 
-    let auth_token = crate::execute::pulsar_schema::pulsar_auth_token(config.auth_params.as_str())
+    let auth_token = pulsar_schema::pulsar_auth_token(config.auth_params.as_str())
         .change_context(Error::CreatePulsarReader)?;
     let auth = Authentication {
         name: "token".to_string(),
@@ -253,8 +307,8 @@ pub(crate) async fn pulsar_consumer(
         .into_report()
         .change_context(Error::CreatePulsarReader)?;
 
-    let formatted_schema = crate::execute::pulsar_schema::format_schema(schema)
-        .change_context(Error::CreatePulsarReader)?;
+    let formatted_schema =
+        pulsar_schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),

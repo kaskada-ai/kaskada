@@ -105,7 +105,7 @@ impl KeyHashInverse {
     /// values are aligned to map from a key to a hash per index. The
     /// current implementation eagerly adds the keys and hashes to the
     /// inverse but can be optimized to perform the addition lazily.
-    fn add(&mut self, keys: ArrayRef, key_hashes: &UInt64Array) -> anyhow::Result<()> {
+    pub fn add(&mut self, keys: ArrayRef, key_hashes: &UInt64Array) -> anyhow::Result<()> {
         // Since the keys map to the key hashes directly, both arrays need to be the
         // same length
         anyhow::ensure!(keys.len() == key_hashes.len());

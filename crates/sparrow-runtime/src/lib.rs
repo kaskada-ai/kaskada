@@ -33,6 +33,7 @@ pub mod prepare;
 mod read;
 pub mod s3;
 pub mod stores;
+mod streams;
 mod util;
 
 use std::path::PathBuf;

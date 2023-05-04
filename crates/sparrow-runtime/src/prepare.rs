@@ -18,18 +18,23 @@ use sparrow_api::kaskada::v1alpha::{
     slice_plan, source_data, PreparedFile, PulsarSubscription, SourceData, TableConfig,
 };
 
+mod column_behavior;
 mod error;
+mod execute_iter;
 mod prepare_iter;
+mod prepare_metadata;
 mod slice_preparer;
 
+pub(crate) use column_behavior::*;
 pub use error::*;
 pub use prepare_iter::*;
+pub(crate) use prepare_metadata::*;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use tracing::Instrument;
 
-use crate::execute::pulsar_reader::read_pulsar_stream;
 use crate::stores::object_store_url::ObjectStoreKey;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
+use crate::streams::pulsar_stream;
 use crate::{PreparedMetadata, RawMetadata};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
@@ -86,10 +91,8 @@ async fn reader_from_pulsar<'a>(
         .await
         .change_context(Error::CreatePulsarReader)?;
 
-    let consumer =
-        crate::execute::pulsar_reader::pulsar_consumer(pulsar_subscription, pm.user_schema.clone())
-            .await?;
-    let stream = read_pulsar_stream(
+    let consumer = pulsar_stream::consumer(pulsar_subscription, pm.user_schema.clone()).await?;
+    let stream = pulsar_stream::stream_for_prepare(
         pm.sparrow_metadata.raw_schema.clone(),
         consumer,
         pulsar_subscription.last_publish_time,
