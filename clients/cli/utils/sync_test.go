@@ -151,6 +151,7 @@ func (*getApiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 func (*getApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	return &apiv1alpha.View{
 		ViewName: "view",
+		ViewId: "should_ignore_this_field",
 	}, nil
 }
 

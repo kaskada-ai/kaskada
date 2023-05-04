@@ -37,7 +37,7 @@ func (c tableClient) List() ([]*apiv1alpha.Table, error) {
 		return nil, err
 	}
 	// TODO: Pagination
-	return clearOutputOnlyList(resp.Tables), nil
+	return resp.Tables, nil
 }
 
 func (c tableClient) Get(name string) (*apiv1alpha.Table, error) {
@@ -46,7 +46,7 @@ func (c tableClient) Get(name string) (*apiv1alpha.Table, error) {
 		log.Debug().Err(err).Str("name", name).Msg("issue getting table")
 		return nil, err
 	}
-	return clearOutputOnly(resp.Table), nil
+	return resp.Table, nil
 }
 
 func (c tableClient) Create(item *apiv1alpha.Table) error {

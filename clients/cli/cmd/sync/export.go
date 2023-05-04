@@ -91,6 +91,8 @@ func exportMaterializations(apiClient api.ApiClient) ([]*apiv1alpha.Materializat
 	if err != nil {
 		return nil, err
 	}
+	api.ClearOutputOnlyFieldsList(protos)
+
 	materializations := make([]*apiv1alpha.Materialization, 0)
 	for _, p := range protos {
 		m, err := api.ProtoToMaterialization(p)
@@ -107,6 +109,8 @@ func exportTables(apiClient api.ApiClient) ([]*apiv1alpha.Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	api.ClearOutputOnlyFieldsList(protos)
+
 	tables := make([]*apiv1alpha.Table, 0)
 	for _, p := range protos {
 		t, err := api.ProtoToTable(p)
@@ -123,6 +127,8 @@ func exportViews(apiClient api.ApiClient) ([]*apiv1alpha.View, error) {
 	if err != nil {
 		return nil, err
 	}
+	api.ClearOutputOnlyFieldsList(protos)
+
 	views := make([]*apiv1alpha.View, 0)
 	for _, p := range protos {
 		v, err := api.ProtoToView(p)
@@ -141,7 +147,7 @@ func exportMaterialization(apiClient api.ApiClient, materializationName string) 
 	if err != nil {
 		return nil, err
 	}
-	return api.ProtoToMaterialization(proto)
+	return api.ProtoToMaterialization(api.ClearOutputOnlyFields(proto))
 }
 
 func exportTable(apiClient api.ApiClient, tableName string) (*apiv1alpha.Table, error) {
@@ -151,7 +157,7 @@ func exportTable(apiClient api.ApiClient, tableName string) (*apiv1alpha.Table, 
 	if err != nil {
 		return nil, err
 	}
-	return api.ProtoToTable(proto)
+	return api.ProtoToTable(api.ClearOutputOnlyFields(proto))
 }
 
 func exportView(apiClient api.ApiClient, viewName string) (*apiv1alpha.View, error) {
@@ -161,7 +167,7 @@ func exportView(apiClient api.ApiClient, viewName string) (*apiv1alpha.View, err
 	if err != nil {
 		return nil, err
 	}
-	return api.ProtoToView(proto)
+	return api.ProtoToView(api.ClearOutputOnlyFields(proto))
 }
 
 func init() {

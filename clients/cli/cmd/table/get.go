@@ -5,6 +5,7 @@ import (
 
 	"github.com/kaskada-ai/kaskada/clients/cli/api"
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
@@ -23,6 +24,7 @@ var getCmd = &cobra.Command{
 		case *apiv1alpha.Source_Kaskada:
 			table.Source = nil
 		}
+		log.Info().Interface("item", item).Interface("table", table.Schema).Msg("Table retrieved.")
 
 		yaml, err := utils.ProtoToYaml(table)
 		utils.LogAndQuitIfErrorExists(err)

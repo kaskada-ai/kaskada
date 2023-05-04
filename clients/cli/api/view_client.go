@@ -36,7 +36,7 @@ func (c viewClient) List() ([]*apiv1alpha.View, error) {
 		return nil, err
 	}
 	// TODO: Pagination
-	return clearOutputOnlyList(resp.Views), nil
+	return resp.Views, nil
 }
 
 func (c viewClient) Get(name string) (*apiv1alpha.View, error) {
@@ -45,7 +45,7 @@ func (c viewClient) Get(name string) (*apiv1alpha.View, error) {
 		log.Debug().Err(err).Str("name", name).Msg("issue getting view")
 		return nil, err
 	}
-	return clearOutputOnly(resp.View), nil
+	return resp.View, nil
 }
 
 func (c viewClient) Create(item *apiv1alpha.View) error {

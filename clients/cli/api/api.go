@@ -146,7 +146,7 @@ func GetName(item protoreflect.ProtoMessage) string {
 	}
 }
 
-func clearOutputOnly[M protoreflect.ProtoMessage](message M) M {
+func ClearOutputOnlyFields[M protoreflect.ProtoMessage](message M) M {
 	msg := message.ProtoReflect()
 	// Iterate over each field in the message
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
@@ -176,10 +176,10 @@ func clearOutputOnly[M protoreflect.ProtoMessage](message M) M {
 	return msg.Interface().(M)
 }
 
-func clearOutputOnlyList[M protoreflect.ProtoMessage](messages []M) []M {
+func ClearOutputOnlyFieldsList[M protoreflect.ProtoMessage](messages []M) []M {
 	output := make([]M, 0, len(messages))
 	for _, m := range messages {
-		output = append(output, clearOutputOnly(m))
+		output = append(output, ClearOutputOnlyFields(m))
 	}
 	return output
 }

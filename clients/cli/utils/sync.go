@@ -130,7 +130,7 @@ func compareResource(apiClient api.ApiClient, desired protoreflect.ProtoMessage)
 		}
 	}
 
-	actualYaml, err := ProtoToYaml(actual)
+	actualYaml, err := ProtoToYaml(api.ClearOutputOnlyFields(actual))
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue converting actual resource to yaml for diff, skipping it")
 		return Error

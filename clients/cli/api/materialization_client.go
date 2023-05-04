@@ -36,7 +36,7 @@ func (c materializationClient) List() ([]*apiv1alpha.Materialization, error) {
 		return nil, err
 	}
 	// TODO: Pagination
-	return clearOutputOnlyList(resp.Materializations), nil
+	return resp.Materializations, nil
 }
 
 func (c materializationClient) Get(name string) (*apiv1alpha.Materialization, error) {
@@ -45,7 +45,7 @@ func (c materializationClient) Get(name string) (*apiv1alpha.Materialization, er
 		log.Debug().Err(err).Str("name", name).Msg("issue getting materialization")
 		return nil, err
 	}
-	return clearOutputOnly(resp.Materialization), nil
+	return resp.Materialization, nil
 }
 
 func (c materializationClient) Create(item *apiv1alpha.Materialization) error {
