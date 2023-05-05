@@ -1,5 +1,6 @@
-= Materializations
+:tabs-sync-option:
 
+= Materializations
 
 The results of a Fenl query can be written to an external data store and
 kept up to date as the data underlying the query changes using
@@ -46,28 +47,6 @@ materializations:
     output_prefix_location: s3://my-bucket/path/to/results/
 ----
 
-////
-=== Redis
-
-Example configuration:
-
-[source,yaml]
-----
-materializations:
-- materialization_name: PulsarExample
-  expression: PurchaseStats
-  redis:
-    host_name: localhost
-    port: 6379
-    use_tls: true
-    database_number: 1
-    password: sekret
-    tls_cert: -----BEGIN CERTIFICATE----- ...
-    tls_ca_cert: -----BEGIN CERTIFICATE----- ...
-    insecure_skip_verify: false
-----
-////
-
 == Managing Materializations
 
 === Creating a Materialization
@@ -77,8 +56,11 @@ we'd like to materialize. In this case, we're interested in some
 purchase statistics for each user. This definition depends on business
 logic and might require some iteration to get just right.
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -107,30 +89,59 @@ materialization.create_materialization(
 )
 ----
 
+CLI::
++
+[source,bash]
+----
+kaskada-cli materialization create PurchaseStats \
+    "{time: Purchase.purchase_time,entity: Purchase.customer_id,max_amount: Purchase.amount | max(),min_amount: Purchase.amount | min()}" \
+    --path-uri "file:///path/on/your/machine/"   
+----
+====
+
+[NOTE]
+====
+Currently the CLI can only create materializaitons that use the *Object Store* destination type.
+====
+
 === List Materializations
 
 The list materializations method returns all materializations defined
 for your user. An optional search string can filter the response set.
 
-Here is an example of listing tables:
+Here is an example of listing materializations:
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
 
 session = LocalBuilder().build()
 
-materialization.list_materializations("Purchase")
+materialization.list_materializations()
 ----
+
+CLI::
++
+[source,bash]
+----
+kaskada-cli materialization list
+----
+====
 
 === Get Materialization
 
 You can get a materialization using its name:
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -139,6 +150,14 @@ session = LocalBuilder().build()
 
 materialization.get_materialization("PurchaseStats")
 ----
+
+CLI::
++
+[source,bash]
+----
+kaskada-cli materialization get PurchaseStats
+----
+====
 
 === Updating a Materialization
 
@@ -150,8 +169,11 @@ new expression.
 
 You can delete a materialization using its name:
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import materialization
 from kaskada.api.session import LocalBuilder
@@ -161,11 +183,13 @@ session = LocalBuilder().build()
 materialization.delete_materialization("PurchaseStats")
 ----
 
+CLI::
++
 [source,bash]
-.with the CLI:
 ----
-./kaskada-cli materialization delete -m PurchaseStats
+kaskada-cli materialization delete PurchaseStats
 ----
+====
 
 Deleting a materialization does not delete any data persisted in the
 external data store.

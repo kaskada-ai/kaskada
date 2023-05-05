@@ -1,0 +1,241 @@
+:tabs-sync-option:
+
+= Spec Files 
+
+In addition to modifiying resources directly, you can also use a *spec file* to describe the desired state of Kaskada.
+
+A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+
+The `sync` command is used to update the state of your system to match the file. 
+
+[NOTE]
+====
+Currently `sync` is only supported in the CLI client.
+====
+
+== Spec File Format
+
+Tables are described in a spec file as a list of table objects under the `tables` key:
+
+[source,yaml]
+----
+tables: 
+  # The name of the table
+- tableName: GamePlay
+  # A field containing the time associated with each event
+  timeColumnName: event_at
+  # An initial entity key associated with each event
+  entityKeyColumnName: entity_key
+  # An (optional) subsort column associated with each event
+  subsortColumnName: offset
+  # A name describing the entity key
+  groupingId: User
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
+  source:
+    kaskada: {}
+
+  # The name of the table
+- tableName: Purchase
+  # A field containing the time associated with each event
+  timeColumnName: event_at
+  # An initial entity key associated with each event
+  entityKeyColumnName: entity_id
+  # A name describing the entity key
+  groupingId: User
+  # Where the table's data will be stored
+  # The default storage location is 'kaskada', and uses local files to store events.
+  source:
+    kaskada: {}
+----
+
+Views are described in a spec file as a list of view objects under the `views` key:
+
+[source,yaml]
+----
+views:
+  # A name used to refer to the view in queries
+- view_name: PurchaseStats
+  # The expression to substitute anywhere the view's name is used
+  expression: |
+    {
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+        count: CountPurchase,
+    }
+
+  # A name used to refer to the view in queries
+- view_name: CountPurchase
+  # The expression to substitute anywhere the view's name is used
+  expression: count(Purchase)
+----
+
+
+Materializations are described in a spec file as a list of materialization objects under the `materializations` key:
+
+[source,yaml]
+----
+materializations:
+- materializationName: PurchaseStats
+  expression: |
+    {
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+        count: CountPurchase,
+    }
+  destination:
+    objectStore:
+      fileType: FILE_TYPE_PARQUET
+      outputPrefixUri: s3://my-bucket/materialization-output-prefix/
+  slice: {}
+----
+
+== Exporting the current resources as a spec file.
+
+You can create a spec file from all the resources currently defined in the system using the `sync export` command with the `--all` flag.
+
+[tabs]
+====
+CLI::
++
+[source,bash]
+----
+kaskada-cli sync export --all
+----
+====
+
+An example export result is shown below
+
+[source,yaml]
+----
+tables:
+- tableName: GamePlay
+  timeColumnName: event_at
+  entityKeyColumnName: entity_key
+  subsortColumnName: offset
+  groupingId: User
+  source:
+    kaskada: {}
+- tableName: Purchase
+  timeColumnName: event_at
+  entityKeyColumnName: entity_id
+  groupingId: User
+  source:
+    kaskada: {}
+views:
+- view_name: CountPurchase
+  expression: count(Purchase)
+materializations:
+- materializationName: PurchaseStats
+  expression: |
+    {
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+        count: CountPurchase,
+    }
+  destination:
+    objectStore:
+      fileType: FILE_TYPE_PARQUET
+      outputPrefixUri: s3://my-bucket/materialization-output-prefix/
+  slice: {}
+----
+
+Alternately, if you know a specific table, view, or materialization you'd like to export you can specify it explicitly.
+
+[tabs]
+====
+CLI::
++
+[source,bash]
+----
+kaskada-cli sync export --table Purchase
+kaskada-cli sync export --view CountPurchase
+kaskada-cli sync export --materialization PurchaseStats
+----
+====
+
+[source,yaml]
+----
+tables:
+- tableName: Purchase
+  timeColumnName: event_at
+  entityKeyColumnName: entity_id
+  groupingId: User
+  source:
+    kaskada: {}
+
+views:
+- view_name: CountPurchase
+  expression: count(Purchase)
+
+materializations:
+- materializationName: PurchaseStats
+  expression: |
+    {
+        time: Purchase.purchase_time,
+        entity: Purchase.customer_id,
+        max_amount: Purchase.amount | max(),
+        min_amount: Purchase.amount | min(),
+        count: CountPurchase,
+    }
+  destination:
+    objectStore:
+      fileType: FILE_TYPE_PARQUET
+      outputPrefixUri: s3://my-bucket/materialization-output-prefix/
+  slice: {}
+----
+
+== Updating Kaskada to reflect the contents of a spec file
+
+To upteda a resource (table, view, or materialization), you first modify the resource in your spec file, 
+then use the `spec plan` command to preview the changes that will be made to the system. To make the 
+acutal changes, use the `spec apply` command.
+
+When a spec file is update, the CLI inspects all of the server's resources and all of the resources
+defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
+Applying a spec can create new resources, or update resources by deleting them & then recreating them.
+
+Note, if you remove a resource from a spec file, it will not be deleted from the system. Instead you 
+must delete those resources using the standard delete commands.
+
+[WARNING]
+.Table updates are destructive
+====
+Tables are currently immutable. 
+When the CLI updates a table, it does so by deleting the table and re-creating it.
+When this happens, all data previously loaded into the table is lost.
+====
+
+=== Previewing the changes
+
+[source,bash]
+----
+kaskada-cli sync plan --file spec.yaml
+
+# > 2:18PM INF starting plan
+# > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:18PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=Purchase
+# > 2:18PM INF Success!
+----
+
+Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
+
+=== Applying the changes
+
+[source,bash]
+----
+kaskada-cli sync apply --file spec.yaml
+
+# > 2:25PM INF starting apply
+# > 2:25PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:25PM INF resource not found on system, will create it kind=*kaskadav1alpha.Table name=Purchase
+# > 2:25PM INF created resource with provided spec kind=*kaskadav1alpha.Table name=GamePlay
+# > 2:25PM INF created resource with provided spec kind=*kaskadav1alpha.Table name=Purchase
+# > 2:25PM INF Success!
+----

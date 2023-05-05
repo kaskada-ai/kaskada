@@ -4,5 +4,6 @@
 ** xref:slices.adoc[] 
 ** xref:views.adoc[] 
 ** xref:materializations.adoc[] 
+** xref:specFiles.adoc[]
 ** https://kaskada.readthedocs.io/en/latest/autoapi/kaskada/index.html[Python client ↪]
 ** https://buf.build/kaskada/kaskada[Protobuf API ↪]
