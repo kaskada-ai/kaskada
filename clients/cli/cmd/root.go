@@ -60,7 +60,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cli.yaml)")
 	rootCmd.PersistentFlags().String("kaskada-api-server", "", "Kaskada API Server")
 	rootCmd.PersistentFlags().String("kaskada-client-id", "", "Kaskada Client ID")
-	rootCmd.PersistentFlags().BoolP("debug", "d", false, "get debug log output")
+	rootCmd.PersistentFlags().Bool("debug", false, "get debug log output")
 	rootCmd.PersistentFlags().Bool("use-tls", false, "Use TLS when connecting to the Kaskada API")
 
 	viper.BindPFlag("kaskada-api-server", rootCmd.PersistentFlags().Lookup("kaskada-api-server"))
