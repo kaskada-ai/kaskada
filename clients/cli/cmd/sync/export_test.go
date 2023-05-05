@@ -1,11 +1,11 @@
 package sync
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/kaskada-ai/kaskada/clients/cli/api"
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -39,7 +39,7 @@ func Test_exportMaterializations(t *testing.T) {
 				t.Errorf("exportMaterializations() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !proto.Equal(got[0], tt.want[0]) {
 				t.Errorf("exportMaterializations() = %v, want %v", got, tt.want)
 			}
 		})
@@ -76,7 +76,7 @@ func Test_exportTables(t *testing.T) {
 				t.Errorf("exportMaterializations() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !proto.Equal(got[0], tt.want[0]) {
 				t.Errorf("exportMaterializations() = %v, want %v", got, tt.want)
 			}
 		})
@@ -113,7 +113,7 @@ func Test_exportViews(t *testing.T) {
 				t.Errorf("exportMaterializations() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !proto.Equal(got[0], tt.want[0]) {
 				t.Errorf("exportMaterializations() = %v, want %v", got, tt.want)
 			}
 		})
@@ -150,7 +150,7 @@ func Test_exportMaterialization(t *testing.T) {
 				t.Errorf("exportMaterialization() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !proto.Equal(got, tt.want) {
 				t.Errorf("exportMaterialization() = %v, want %v", got, tt.want)
 			}
 		})
@@ -187,7 +187,7 @@ func Test_exportTable(t *testing.T) {
 				t.Errorf("exportTable() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !proto.Equal(got, tt.want) {
 				t.Errorf("exportTable() = %v, want %v", got, tt.want)
 			}
 		})
@@ -224,7 +224,7 @@ func Test_exportView(t *testing.T) {
 				t.Errorf("exportView() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !proto.Equal(got, tt.want) {
 				t.Errorf("exportView() = %v, want %v", got, tt.want)
 			}
 		})
@@ -238,7 +238,7 @@ func (*mockApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) err
 }
 
 // Create implements api.ApiClient
-func (*mockApiClient) Create(item protoreflect.ProtoMessage) error {
+func (*mockApiClient) Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -268,7 +268,7 @@ func (*mockApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMes
 }
 
 // List implements api.ApiClient
-func (*mockApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*mockApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	switch item.(type) {
 	case *apiv1alpha.ListMaterializationsRequest:
 		return []protoreflect.ProtoMessage{

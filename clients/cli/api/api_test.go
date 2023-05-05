@@ -154,7 +154,7 @@ func Test_apiClient_Create(t *testing.T) {
 				table:           tt.fields.table,
 				view:            tt.fields.view,
 			}
-			if err := c.Create(tt.args.item); (err != nil) != tt.wantErr {
+			if _, err := c.Create(tt.args.item); (err != nil) != tt.wantErr {
 				t.Errorf("apiClient.Create() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -315,7 +315,7 @@ func Test_apiClient_List(t *testing.T) {
 			name:   "should call materialization client on list with materialization",
 			fields: fields{materialization: &mockMaterializationClient{}},
 			args: args{
-				item: &apiv1alpha.ListMaterializationsRequest{},
+				item: &apiv1alpha.Materialization{},
 			},
 			want: []protoreflect.ProtoMessage{
 				&apiv1alpha.Materialization{},
@@ -326,7 +326,7 @@ func Test_apiClient_List(t *testing.T) {
 			name:   "should call table client on list with table",
 			fields: fields{table: &mockTableClient{}},
 			args: args{
-				item: &apiv1alpha.ListTablesRequest{},
+				item: &apiv1alpha.Table{},
 			},
 			want: []protoreflect.ProtoMessage{
 				&apiv1alpha.Table{},
@@ -337,7 +337,7 @@ func Test_apiClient_List(t *testing.T) {
 			name:   "should call view client on list with view",
 			fields: fields{view: &mockViewClient{}},
 			args: args{
-				item: &apiv1alpha.ListViewsRequest{},
+				item: &apiv1alpha.View{},
 			},
 			want: []protoreflect.ProtoMessage{
 				&apiv1alpha.View{},
@@ -353,7 +353,7 @@ func Test_apiClient_List(t *testing.T) {
 				table:           tt.fields.table,
 				view:            tt.fields.view,
 			}
-			got, err := c.List(tt.args.item)
+			got, err := c.List(tt.args.item, "", 10, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("apiClient.List() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -375,8 +375,8 @@ func (*mockQueryClient) Query(request *apiv1alpha.CreateQueryRequest) (*apiv1alp
 type mockMaterializationClient struct{}
 
 // Create implements MaterializationClient
-func (*mockMaterializationClient) Create(item *apiv1alpha.Materialization) error {
-	return nil
+func (*mockMaterializationClient) Create(item *apiv1alpha.Materialization) (*apiv1alpha.Materialization, error) {
+	return nil, nil
 }
 
 // Delete implements MaterializationClient
@@ -392,7 +392,7 @@ func (*mockMaterializationClient) Get(name string) (*apiv1alpha.Materialization,
 }
 
 // List implements MaterializationClient
-func (*mockMaterializationClient) List() ([]*apiv1alpha.Materialization, error) {
+func (*mockMaterializationClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Materialization, error) {
 	materializations := make([]*apiv1alpha.Materialization, 0, 1)
 	materializations = append(materializations, &apiv1alpha.Materialization{})
 	return materializations, nil
@@ -405,8 +405,8 @@ func (*mockTableClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) e
 }
 
 // Create implements TableClient
-func (*mockTableClient) Create(item *apiv1alpha.Table) error {
-	return nil
+func (*mockTableClient) Create(item *apiv1alpha.Table) (*apiv1alpha.Table, error) {
+	return nil, nil
 }
 
 // Delete implements TableClient
@@ -422,7 +422,7 @@ func (*mockTableClient) Get(name string) (*apiv1alpha.Table, error) {
 }
 
 // List implements TableClient
-func (*mockTableClient) List() ([]*apiv1alpha.Table, error) {
+func (*mockTableClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Table, error) {
 	tables := make([]*apiv1alpha.Table, 0, 1)
 	tables = append(tables, &apiv1alpha.Table{})
 	return tables, nil
@@ -431,8 +431,8 @@ func (*mockTableClient) List() ([]*apiv1alpha.Table, error) {
 type mockViewClient struct{}
 
 // Create implements ViewClient
-func (*mockViewClient) Create(item *apiv1alpha.View) error {
-	return nil
+func (*mockViewClient) Create(item *apiv1alpha.View) (*apiv1alpha.View, error) {
+	return nil, nil
 }
 
 // Delete implements ViewClient
@@ -448,7 +448,7 @@ func (*mockViewClient) Get(name string) (*apiv1alpha.View, error) {
 }
 
 // List implements ViewClient
-func (*mockViewClient) List() ([]*apiv1alpha.View, error) {
+func (*mockViewClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.View, error) {
 	views := make([]*apiv1alpha.View, 0, 1)
 	views = append(views, &apiv1alpha.View{})
 	return views, nil

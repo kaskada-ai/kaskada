@@ -1,12 +1,19 @@
 package materialization
 
 import (
+	"github.com/kaskada-ai/kaskada/clients/cli/api"
+	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
+
+const materialization = "materialization"
 
 // MaterializationCmd represents the materialization command
 var MaterializationCmd = &cobra.Command{
-	Use:   "materialization",
+	Use:   materialization,
 	Short: "A set of commands for interacting with kaskada materializations",
 	/*
 		Long: `A longer description that spans multiple lines and likely contains examples
@@ -19,11 +26,21 @@ var MaterializationCmd = &cobra.Command{
 }
 
 func init() {
+	MaterializationCmd.AddCommand(createCmd)
 	MaterializationCmd.AddCommand(deleteCmd)
+	MaterializationCmd.AddCommand(getCmd)
+	MaterializationCmd.AddCommand(listCmd)
 }
 
-var materialization string
-func initMaterializationFlag(cmd *cobra.Command, description string) {
-	cmd.Flags().StringVarP(&materialization, "materialization", "m", "", description)
-	cmd.MarkFlagRequired("materialization")
+func getMaterializationFromItem(item protoreflect.ProtoMessage) *apiv1alpha.Materialization {
+	materialization, err := api.ProtoToMaterialization(item)
+	utils.LogAndQuitIfErrorExists(err)
+	return materialization
+}
+
+func printMaterialization(item protoreflect.ProtoMessage) {
+	materialization := getMaterializationFromItem(item)
+	yaml, err := utils.ProtoToYaml(materialization)
+	utils.LogAndQuitIfErrorExists(err)
+	utils.PrintSuccessf("%s", yaml)
 }

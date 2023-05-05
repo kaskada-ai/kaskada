@@ -5,7 +5,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/kaskada-ai/kaskada/clients/cli/api"
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
@@ -24,23 +23,23 @@ var applyCmd = &cobra.Command{
 		to quickly create a Cobra application.`,
 	*/
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Msg("starting apply")
+		log.Debug().Msg("starting apply")
 
-		files := viper.GetStringSlice("apply_file")
-		log.Debug().Interface("files", files).Send()
-		if len(files) == 0 {
+		log.Debug().Interface("files", applyFiles).Send()
+		if len(applyFiles) == 0 {
 			utils.LogAndQuitIfErrorExists(fmt.Errorf("at least one `file` flag must be set"))
 		}
 
 		apiClient := api.NewApiClient()
-		planResult, err := utils.Plan(apiClient, files)
+		planResult, err := plan(apiClient, applyFiles)
 		utils.LogAndQuitIfErrorExists(err)
-		utils.LogAndQuitIfErrorExists(utils.Apply(apiClient, *planResult))
-		log.Info().Msg("Success!")
+		utils.LogAndQuitIfErrorExists(apply(apiClient, *planResult))
+		utils.PrintSuccessf("Successfully applied %d changes", len(planResult.resourcesToCreate)+len(planResult.resourcesToSkip))
 	},
 }
 
+var applyFiles []string
+
 func init() {
-	applyCmd.Flags().StringArrayP("file", "f", []string{}, "specify one or more file-paths of yaml spec files")
-	viper.BindPFlag("apply_file", applyCmd.Flags().Lookup("file"))
+	applyCmd.Flags().StringArrayVarP(&applyFiles, "file", "f", []string{}, "specify one or more file-paths of yaml spec files")
 }

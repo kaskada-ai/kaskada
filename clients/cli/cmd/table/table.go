@@ -1,12 +1,19 @@
 package table
 
 import (
+	"github.com/kaskada-ai/kaskada/clients/cli/api"
+	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
+
+const table = "table"
 
 // TableCmd represents the table command
 var TableCmd = &cobra.Command{
-	Use:   "table",
+	Use:   table,
 	Short: "A set of commands for interacting with kaskada tables",
 	/*
 		Long: `A longer description that spans multiple lines and likely contains examples
@@ -19,12 +26,27 @@ var TableCmd = &cobra.Command{
 }
 
 func init() {
-	TableCmd.AddCommand(loadCmd)
+	TableCmd.AddCommand(createCmd)
 	TableCmd.AddCommand(deleteCmd)
+	TableCmd.AddCommand(getCmd)
+	TableCmd.AddCommand(listCmd)
+	TableCmd.AddCommand(loadCmd)
 }
 
-var table string
-func initTableFlag(cmd *cobra.Command, description string) {
-	cmd.Flags().StringVarP(&table, "table", "t", "", description)
-	cmd.MarkFlagRequired("table")
+func getTableFromItem(item protoreflect.ProtoMessage) *apiv1alpha.Table {
+	table, err := api.ProtoToTable(item)
+	utils.LogAndQuitIfErrorExists(err)
+	return table
+}
+
+func printTable(item protoreflect.ProtoMessage) {
+	table := getTableFromItem(item)
+	switch table.Source.Source.(type) {
+	case *apiv1alpha.Source_Kaskada:
+		table.Source = nil
+	}
+
+	yaml, err := utils.ProtoToYaml(table)
+	utils.LogAndQuitIfErrorExists(err)
+	utils.PrintSuccessf("%s", yaml)
 }

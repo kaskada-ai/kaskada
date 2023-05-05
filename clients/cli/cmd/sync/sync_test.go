@@ -1,4 +1,4 @@
-package utils
+package sync
 
 import (
 	"errors"
@@ -75,7 +75,7 @@ func (*errorGetApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput)
 }
 
 // Create implements api.ApiClient
-func (*errorGetApiClient) Create(item protoreflect.ProtoMessage) error {
+func (*errorGetApiClient) Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -90,7 +90,7 @@ func (*errorGetApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.Prot
 }
 
 // List implements api.ApiClient
-func (*errorGetApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*errorGetApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -107,7 +107,7 @@ func (*notFoundGetApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInp
 }
 
 // Create implements api.ApiClient
-func (*notFoundGetApiClient) Create(item protoreflect.ProtoMessage) error {
+func (*notFoundGetApiClient) Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -122,7 +122,7 @@ func (*notFoundGetApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.P
 }
 
 // List implements api.ApiClient
-func (*notFoundGetApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*notFoundGetApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -138,7 +138,7 @@ func (*getApiClient) LoadFile(name string, fileInput *apiv1alpha.FileInput) erro
 }
 
 // Create implements api.ApiClient
-func (*getApiClient) Create(item protoreflect.ProtoMessage) error {
+func (*getApiClient) Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
@@ -151,11 +151,12 @@ func (*getApiClient) Delete(item protoreflect.ProtoMessage, force bool) error {
 func (*getApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	return &apiv1alpha.View{
 		ViewName: "view",
+		ViewId:   "should_ignore_this_field",
 	}, nil
 }
 
 // List implements api.ApiClient
-func (*getApiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (*getApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	panic("unimplemented")
 }
 
