@@ -25,9 +25,12 @@ use super::column_behavior::ColumnBehavior;
 ///
 /// In practical terms, this allows for items in the stream to be within 1 second
 /// compared to the max timestamp read.
+///
+/// This is hard-coded for now, but could easily be made configurable as a parameter
+/// to the table.
 const BOUNDED_LATENESS: i64 = 1000;
 
-/// An iterator over prepare batches. TODO
+/// An iterator over prepare batches.
 ///
 /// In addition to iterating, this is responsible for the following:
 ///
@@ -35,6 +38,7 @@ const BOUNDED_LATENESS: i64 = 1000;
 ///    the batch
 /// 2. Casts required columns
 /// 3. Sorts the record batches by the time column, subsort column, and key hash
+/// 4. Handling late data
 pub struct ExecuteIter<'a> {
     reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     /// The final schema to produce, including the 3 key columns
@@ -51,18 +55,18 @@ pub struct ExecuteIter<'a> {
     /// which then allows this node to advance its watermark up to event
     /// time (t - delta).
     ///
-    /// This simple bound is a good start, but we can improve on this hueristic
+    /// This simple hueristic is a good start, but we can improve on this
     /// by statistically modeling event behavior and adapting the watermark accordingly.
     bounded_lateness: i64,
     /// The watermark represents a timestamp beyond which the system assumes
-    /// that all data with earlier timestamps has been produced.
+    /// that all data with earlier timestamps has been produced. No data past
+    /// the watermark can be processed.
     watermark: i64,
     /// The leftovers are events that have been read from the stream but have not
     /// been produced, as the watermark has not advanced far enough.
     ///
     /// Note this implies that if a period of inactivity in the stream occurs, we
-    /// cannot produce the last n events until the watermark advances when new
-    /// events are produced to the stream.
+    /// cannot produce the last n events until the watermark advances.
     leftovers: Option<RecordBatch>,
 }
 
@@ -71,7 +75,7 @@ impl<'a> Stream for ExecuteIter<'a> {
     /// the underlying stream, but the watermark has not advanced far enough to
     /// produce any messages.
     ///
-    /// The correct behavior for a consumer would be to ignore the empty message
+    /// The correct behavior for a consumer is to ignore the empty message
     /// and continue polling the stream.
     type Item = Result<Option<RecordBatch>, ExecuteIterWrapper>;
 
@@ -158,8 +162,9 @@ impl<'a> ExecuteIter<'a> {
         config: &'a TableConfig,
         raw_metadata: RawMetadata,
         prepare_hash: u64,
-        slice: &Option<slice_plan::Slice>,
+        slice: Option<&slice_plan::Slice>,
         key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
+        bounded_lateness: i64,
     ) -> anyhow::Result<Self> {
         // This is a "hacky" way of adding the 3 key columns. We may just want
         // to manually do that (as part of deprecating `TableSchema`)?
@@ -203,7 +208,7 @@ impl<'a> ExecuteIter<'a> {
         let (source_index, field) = raw_metadata
             .raw_schema
             .column_with_name(&config.group_column_name)
-            .unwrap();
+            .expect("group column");
         let slice_preparer =
             SlicePreparer::try_new(source_index, field.data_type().clone(), slice)?;
 
@@ -214,33 +219,32 @@ impl<'a> ExecuteIter<'a> {
             slice_preparer,
             key_hash_inverse,
             table_config: config,
-            bounded_lateness: BOUNDED_LATENESS,
+            bounded_lateness,
             watermark: 0,
             leftovers: None,
         })
     }
 
     /// Convert a read batch to the merged batch format.
+    ///
+    /// This method drops "late data" from each batch using a simplistic
+    /// watermark heuristic.
     fn prepare_next_batch(
         &mut self,
         unfiltered_batch: RecordBatch,
     ) -> error_stack::Result<Option<RecordBatch>, Error> {
+        error_stack::ensure!(unfiltered_batch.num_rows() > 0, Error::Internal);
         // Keep a buffer of values with a bounded disorder window. This simple
-        // hueristic allows for us to produce unordered values directly from a stream, dropping
-        // "late data" that is outside of the disorder window. The disorder window is
-        // configured as the max_event_time minus the max allowed lateness.
+        // hueristic allows for us to process unordered values directly from a stream, dropping
+        // "late data" that is outside of the disorder window. The watermark is
+        // configured as the max_event_time minus the bounded_lateness.
         //
-        // The pulsar reader _could_ do some of the work of dropping "late" rows,
+        // The stream reader _could_ do some of the work of dropping "late" rows,
         // but then the execute_iter would still be responsible for handling the "leftover"
         // batch that needs to be persisted, and I'd rather keep the input buffer
         // responsibilities in a single place.
 
         // 1. Drop all "late data" from the batch
-        // The watermark is the max event time minus the max allowed lateness,
-        // carried over from the previous batch.
-
-        // Cast the original time column to a timestampnanosecond array so we can compare
-        // the times against the watermark
         let time_column = unfiltered_batch
             .column_by_name(&self.table_config.time_column_name)
             .expect("time column");
@@ -251,21 +255,26 @@ impl<'a> ExecuteIter<'a> {
             .into_report()
             .change_context(Error::PreparingColumn)?;
 
-        let watermark = if self.watermark != 0 {
-            self.watermark
-        } else {
+        if self.watermark < 0 {
+            debug_assert!(
+                time_column.value(0) - self.bounded_lateness > 0,
+                "invalid time; below 0",
+            );
             // If there's no watermark yet, initialize it to the first event time - the bounded lateness
-            time_column.value(0) - self.bounded_lateness
+            self.watermark = time_column.value(0) - self.bounded_lateness
         };
+
+        // Find which indices to take from the batch (the non-late data)
         let take_indices = time_column
             .iter()
             .enumerate()
             .filter_map(|(index, time)| {
                 let time = time.expect("valid time");
-                if time >= watermark {
-                    self.watermark = std::cmp::max(watermark, time - self.bounded_lateness);
+                if time >= self.watermark {
+                    self.watermark = std::cmp::max(self.watermark, time - self.bounded_lateness);
                     Some(index as u64)
                 } else {
+                    // Late data - drop it
                     None
                 }
             })
@@ -302,6 +311,7 @@ impl<'a> ExecuteIter<'a> {
         // 4. After preparing the batch, concatenate the leftovers from the previous batch
         // Note this is done after slicing, since the leftovers were already sliced.
         let record_batch = if let Some(leftovers) = self.leftovers.take() {
+            debug_assert!(self.leftovers.is_none());
             arrow::compute::concat_batches(&self.prepared_schema, &[leftovers, record_batch])
                 .into_report()
                 .change_context(Error::PreparingColumn)?
@@ -310,7 +320,7 @@ impl<'a> ExecuteIter<'a> {
             record_batch
         };
 
-        // 5. Pull out the time, subsort and key hash columns to sort the record batch
+        // 5. Pull out the time, subsort, and key hash columns to sort the record batch
         let time_column = record_batch.column(0);
         let subsort_column = record_batch.column(1);
         let key_hash_column = record_batch.column(2);
@@ -350,7 +360,7 @@ impl<'a> ExecuteIter<'a> {
 
         // 7. Store the leftovers for the next batch
         // We cannot produce the entire batch; the watermark cannot advance past the max time in the batch,
-        // and  we cannot produce rows past the watermark.
+        // and we cannot produce rows past the watermark.
         let time_column: &TimestampNanosecondArray =
             downcast_primitive_array(record_batch.column(0).as_ref())
                 .into_report()
@@ -400,34 +410,57 @@ mod tests {
     use arrow::array::{Int64Array, StringArray, TimestampNanosecondArray, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
+    use sparrow_api::kaskada::v1alpha::TableConfig;
+    use sparrow_core::downcast_primitive_array;
     use static_init::dynamic;
+    use uuid::Uuid;
 
-    use crate::prepare::PrepareMetadata;
+    use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
+    use crate::RawMetadata;
 
-    use super::ColumnBehavior;
+    use super::{ExecuteIter, BOUNDED_LATENESS};
 
     #[dynamic]
-    static COMPLETE_SCHEMA: SchemaRef = {
+    static RAW_SCHEMA: SchemaRef = {
         Arc::new(Schema::new(vec![
             Field::new(
-                "_time",
+                "time",
                 DataType::Timestamp(TimeUnit::Nanosecond, None),
                 false,
             ),
-            Field::new("_subsort", DataType::UInt64, false),
-            Field::new("_key_hash", DataType::UInt64, false),
+            Field::new("subsort", DataType::UInt64, false),
+            Field::new("key", DataType::UInt64, false),
             Field::new("a", DataType::Int64, true),
         ]))
     };
 
-    fn make_test_batch(num_rows: usize) -> RecordBatch {
-        let time = TimestampNanosecondArray::from_iter_values(0..num_rows as i64);
-        let subsort = UInt64Array::from_iter_values(0..num_rows as u64);
-        let key = UInt64Array::from_iter_values(0..num_rows as u64);
-        let a = Int64Array::from_iter_values(0..num_rows as i64);
+    fn default_iter<'a>(config: &'a TableConfig, bounded_lateness: i64) -> ExecuteIter<'a> {
+        let reader = Box::pin(futures::stream::iter(vec![]));
+        let raw_schema = RAW_SCHEMA.clone();
+        let raw_metadata = RawMetadata::from_raw_schema(raw_schema.clone());
+        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
+            KeyHashInverse::from_data_type(DataType::UInt64),
+        ));
+        ExecuteIter::try_new(
+            reader,
+            config,
+            raw_metadata,
+            0,
+            None,
+            key_hash_inverse,
+            bounded_lateness,
+        )
+        .unwrap()
+    }
+
+    fn make_time_batch(times: &[i64]) -> RecordBatch {
+        let time = TimestampNanosecondArray::from_iter_values(times.iter().copied());
+        let subsort = UInt64Array::from_iter_values(0..times.len() as u64);
+        let key = UInt64Array::from_iter_values(std::iter::repeat(0).take(times.len()));
+        let a = Int64Array::from_iter_values(0..times.len() as i64);
 
         RecordBatch::try_new(
-            COMPLETE_SCHEMA.clone(),
+            RAW_SCHEMA.clone(),
             vec![
                 Arc::new(time),
                 Arc::new(subsort),
@@ -436,5 +469,67 @@ mod tests {
             ],
         )
         .unwrap()
+    }
+
+    #[test]
+    fn test_sequence_of_batches_prepared() {
+        let config = TableConfig::new(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            Some("subsort"),
+            "key",
+            "",
+        );
+        let mut execute_iter = default_iter(&config, 5);
+        let batch1 = make_time_batch(&[0, 3, 1, 10, 4, 7]);
+        let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
+        let batch3 = make_time_batch(&[20]);
+
+        let prepared1 = execute_iter.prepare_next_batch(batch1).unwrap().unwrap();
+        let prepared2 = execute_iter.prepare_next_batch(batch2).unwrap().unwrap();
+        let prepared3 = execute_iter.prepare_next_batch(batch3).unwrap().unwrap();
+
+        let times1: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
+        assert_eq!(&[0, 1, 3], times1.values());
+
+        let times2: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared2.column(0).as_ref()).unwrap();
+        assert_eq!(&[6, 7, 10, 10], times2.values());
+
+        let times3: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
+        assert_eq!(&[12, 12], times3.values())
+    }
+
+    #[test]
+    fn test_when_watermark_does_not_advance() {
+        let config = TableConfig::new(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            Some("subsort"),
+            "key",
+            "",
+        );
+        let mut execute_iter = default_iter(&config, 5);
+        let batch1 = make_time_batch(&[0, 1, 3, 10]);
+        let batch2 = make_time_batch(&[6, 7, 8, 9, 10]);
+        let batch3 = make_time_batch(&[20]);
+
+        let prepared1 = execute_iter.prepare_next_batch(batch1).unwrap().unwrap();
+
+        let times1: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
+        assert_eq!(&[0, 1, 3], times1.values());
+
+        let prepared2 = execute_iter.prepare_next_batch(batch2).unwrap();
+        assert!(prepared2.is_none());
+
+        let prepared3 = execute_iter.prepare_next_batch(batch3).unwrap().unwrap();
+        let times3: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
+        assert_eq!(&[6, 7, 8, 9, 10, 10], times3.values())
     }
 }
