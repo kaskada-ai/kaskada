@@ -147,9 +147,6 @@ When creating a table, you must tell Kaskada which columns contain the time and 
 ⭢ Read more about the expected structure of input files in xref:ROOT:loading-data.adoc#file-format[Expected File Format]
 ****
 
-
-
-
 [source,python]
 ----
 from kaskada import table
@@ -210,7 +207,7 @@ names.
 
 
 
-=== Loading Data
+=== Loading data
 
 Now that we've created a table, we're ready to load some data into it.
 
@@ -257,7 +254,7 @@ request_details {
 ----
 ====
 
-The file is transferred to Kaskada and it's content added to the table.
+The file's content is added to the table.
 
 == Querying Data
 
