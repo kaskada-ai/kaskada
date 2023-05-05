@@ -27,7 +27,7 @@ impl SlicePreparer {
     pub(super) fn try_new(
         entity_column_index: usize,
         entity_type: DataType,
-        slice: &Option<slice_plan::Slice>,
+        slice: Option<&slice_plan::Slice>,
     ) -> anyhow::Result<Self> {
         let prepare_filter = match slice {
             None => PrepareFilter::NoFilter,

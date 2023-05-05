@@ -166,7 +166,7 @@ impl<'a> PrepareIter<'a> {
             .column_with_name(&config.group_column_name)
             .unwrap();
         let slice_preparer =
-            SlicePreparer::try_new(source_index, field.data_type().clone(), slice)?;
+            SlicePreparer::try_new(source_index, field.data_type().clone(), slice.as_ref())?;
 
         let (_, entity_key_column) = raw_metadata
             .raw_schema
