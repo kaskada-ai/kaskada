@@ -233,7 +233,7 @@ cat query.fenl | ./kaskada-cli query run --stdout --response-as csv
 In this example, we build a pipeline of functions using the `|` character.
 We begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"` using the `xref:fenl:catalog.adoc#when[when()]` function.
 
-Kaskada's query language provides a rich set of operations for reasoning about time.
+Kaskada's query language provides a rich set of xref:fenl:catalog.adoc[operations] for reasoning about time.
 Here's a more sophisticated example that touches on many of the unique features of Kaskada queries:
 
 [source,Fenl]
