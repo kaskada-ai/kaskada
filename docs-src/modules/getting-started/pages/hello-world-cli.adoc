@@ -278,7 +278,7 @@ You can configure how a query is executed by providing arguments to the CLI comm
 
 When you make a query, the resulting timeline is interpreted in one of two ways: as a history or as a snapshot.
 
-* A timeline *History* generates a value each time the timeline changes, and each row is associated with a different entity and point in time.
+* A timeline *History* generates a value each time there is a change in the value for the entity, and each row is associated with a different entity and point in time.
 * A timeline *Snapshot* generates a value for each entity at the same point in time; each row is associated with a different entity, but all rows are associated with the same time.
 
 By default, timelines are output as histories.
