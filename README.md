@@ -45,8 +45,9 @@ See the [docs](https://kaskada.io/docs-site/) to get started in a [Jupyter Noteb
 - **Native time travel**: Shift values forward (but not backward) in time, allowing you to combine different temporal contexts without the risk of temporal leakage. Shifted values make it easy to compare a value “now” to a value from the past.
 - **Simple, composable syntax**: It is functions all the way down. No global state, no dependencies to manage, and no spooky action at a distance. Quickly understand what a query is doing, and painlessly refactor to make it DRY.
 
-## Getting Help
-For general questions, the best place to go is [GitHub discussions](https://github.com/kaskada-ai/kaskada/discussions).
+## Join Us!
+We're building an active, inclusive community of users and contributors. 
+Come get to know us on [Slack](https://join.slack.com/t/kaskada-hq/shared_invite/zt-1t1lms085-bqs2jtGO2TYr9kuuam~c9w) - we'd love to meed you!
 
 For specific problems, file an [issue](https://github.com/kaskada-ai/kaskada/issues).
 
