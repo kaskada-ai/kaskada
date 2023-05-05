@@ -21,7 +21,7 @@ var exportCmd = &cobra.Command{
 		    can be used with the 'plan' and 'apply' commands
 		    to update your infrastructure.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Debug().Msg("starting export")
+		log.Info().Msg("starting export")
 
 		var (
 			err              error
@@ -75,7 +75,7 @@ var exportCmd = &cobra.Command{
 		} else {
 			utils.LogAndQuitIfErrorExists(os.WriteFile(filePath, yamlData, 0666))
 		}
-		log.Debug().Msg("Success!")
+		log.Info().Msg("Success!")
 	},
 }
 
