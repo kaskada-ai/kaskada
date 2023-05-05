@@ -31,6 +31,7 @@ pub struct AvroWrapper {
 /// stream, batches them, and passes them to the runtime layer.
 ///
 /// Note that this stream does not do any filtering or ordering of events.
+#[allow(unused)]
 pub fn stream_for_execution(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,

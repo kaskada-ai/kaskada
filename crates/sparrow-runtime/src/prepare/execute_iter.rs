@@ -28,7 +28,8 @@ use super::column_behavior::ColumnBehavior;
 ///
 /// This is hard-coded for now, but could easily be made configurable as a parameter
 /// to the table.
-const BOUNDED_LATENESS: i64 = 1000;
+#[allow(unused)]
+const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 
 /// An iterator over prepare batches.
 ///
@@ -157,6 +158,7 @@ impl<'a> std::fmt::Debug for ExecuteIter<'a> {
 }
 
 impl<'a> ExecuteIter<'a> {
+    #[allow(unused)]
     pub fn try_new(
         reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
         config: &'a TableConfig,
@@ -290,10 +292,9 @@ impl<'a> ExecuteIter<'a> {
             .try_collect()
             .into_report()
             .change_context(Error::PreparingColumn)?;
-        let record_batch =
-            RecordBatch::try_new(unfiltered_batch.schema().clone(), filtered_columns)
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
+        let record_batch = RecordBatch::try_new(unfiltered_batch.schema(), filtered_columns)
+            .into_report()
+            .change_context(Error::PreparingColumn)?;
 
         // 2. Slicing may reduce the number of entities to operate and sort on.
         let record_batch = self.slice_preparer.slice_batch(record_batch)?;
@@ -407,7 +408,7 @@ impl<'a> ExecuteIter<'a> {
 mod tests {
     use std::sync::Arc;
 
-    use arrow::array::{Int64Array, StringArray, TimestampNanosecondArray, UInt64Array};
+    use arrow::array::{Int64Array, TimestampNanosecondArray, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
     use sparrow_api::kaskada::v1alpha::TableConfig;
@@ -418,7 +419,7 @@ mod tests {
     use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
     use crate::RawMetadata;
 
-    use super::{ExecuteIter, BOUNDED_LATENESS};
+    use super::ExecuteIter;
 
     #[dynamic]
     static RAW_SCHEMA: SchemaRef = {

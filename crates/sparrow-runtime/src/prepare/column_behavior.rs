@@ -187,6 +187,7 @@ impl ColumnBehavior {
     ///
     /// # Errors
     /// Internal error if the source field doesn't exist.
+    #[allow(unused)]
     pub fn try_new_execute_entity_key(
         source_schema: &SchemaRef,
         source_name: &str,
