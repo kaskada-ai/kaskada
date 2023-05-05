@@ -25,7 +25,6 @@ mod prepare_iter;
 mod prepare_metadata;
 mod slice_preparer;
 
-pub(crate) use column_behavior::*;
 pub use error::*;
 pub use prepare_iter::*;
 pub(crate) use prepare_metadata::*;
