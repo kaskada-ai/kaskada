@@ -22,9 +22,10 @@ should be a type that can be xref:fenl:data-model.adoc#type-coercion[cast] to a 
 * If a subsort column is defined, the combination of the entity key column, time column and subsort column should guarantee that each row is unique.  
 
 [tabs]
-====
+=====
 Python::
 +
+--
 [source,python]
 ----
 from kaskada import table
@@ -38,16 +39,29 @@ table.load(
 )
 ----
 
+[IMPORTANT]
+====
+The Python library infers a file's format from the extension of the file's path.
+Parquet file names must end in `.parquet`. CSV file names must end in `.csv`.
+====
+--
+
 CLI::
 +
+--
 [source,bash]
 ----
-kaskada-cli load \
-    --table Purchase \
-    --file-path file:///path/to/file.parquet \
-    --file-type parquet
+kaskada-cli table load Purchase file:///path/to/file.parquet
 ----
+
+[IMPORTANT]
 ====
+The CLI client infers a file's format from the extension of the file's path.
+Parquet file names must end in `.parquet`. CSV file names must end in `.csv`.
+The `--type` flag can also be used to force a file to be treated as Parquet or CSV.
+====
+--
+=====
 
 The result of loading data is a `data_token_id`. 
 The data token ID is a unique reference to the data currently stored in Kaskada. 
@@ -93,13 +107,18 @@ Parquet file names must end in `.parquet`.
 
 CLI::
 +
+--
 [source,bash]
 ----
-kaskada-cli load \
-    --table Purchase \
-    --file-path file:///path/to/file.parquet \
-    --file-type parquet
+kaskada-cli table load Purchase file:///path/to/file.parquet
 ----
+
+[IMPORTANT]
+====
+The CLI client infers a file's format from the extension of the file's path.
+The `--type parquet` flag can also be used to force a file to be treated as Parquet.
+====
+--
 =====
 
 === CSV
@@ -138,14 +157,20 @@ CSV file names must end in `.csv`.
 
 CLI::
 +
+--
 [source,bash]
 ----
-kaskada-cli load \
-    --table Purchase \
-    --file-path file:///path/to/file.csv \
-    --file-type csv
+kaskada-cli table load Purchase file:///path/to/file.csv
 ----
+
+[IMPORTANT]
+====
+The CLI client infers a file's format from the extension of the file's path.
+The `--type csv` flag can also be used to force a file to be treated as CSV.
+====
+--
 =====
+
 
 == File Location
 

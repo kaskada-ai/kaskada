@@ -313,7 +313,7 @@ Here's a more sophisticated example that touches on many of the unique features 
 let cadence = hourly()
 
 # Anything can be named and re-used
-let hourly_big_purchases = purchase
+let hourly_big_purchases = Purchase
 | when(Purchase.amount > 10)
 
 # Filter anywhere
@@ -402,6 +402,23 @@ query_result.expression
 ⭢  
 Read more about configuring queries in xref:developing:queries.adoc#configuring-how-queries-are-computed[Configuring Queries]
 ****
+
+== Cleaning Up
+
+When you're done with this tutorial, you can delete the table you created in order to free up resources. Note that this also deletes all of the data loaded into the table.
+
+[source,python]
+----
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.delete_table(
+  # The table's name
+  table_name = "Purchase",
+)
+----
 
 == Conclusion
 

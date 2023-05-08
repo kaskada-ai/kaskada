@@ -61,7 +61,7 @@ CLI::
 +
 [source,bash]
 ----
-kaskada-cli table create Purchase --timeColumn purchase_time --entityKeyColum customer_id
+kaskada-cli table create Purchase --timeColumn purchase_time --entityKeyColumn customer_id
 ----
 ====
 
