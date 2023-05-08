@@ -26,6 +26,11 @@ xargs -I {} sh -c 'curl -L {} -o $(basename {}| cut -d '-' -f1,2)'
 chmod +x kaskada-*
 ----
 
+
+== Update PATH (optional)
+
+Update your environment's `PATH` to include the downloaded binaries. If this is not preferred, skip this section.
+
 Print a colon-separated list of the directories in your `PATH`.
 
 [source,bash]
@@ -54,12 +59,14 @@ xattr -dr com.apple.quarantine <path to file>
 ----
 ====
 
+== Start the services 
+
 You can start a local instance of the Kaskada service by running the manager and engine:
 
 [source,bash]
 ----
-kaskada-manager 2>&1 > manager.log 2>&1 &
-kaskada-engine serve > engine.log 2>&1 &
+./kaskada-manager 2>&1 > manager.log 2>&1 &
+./kaskada-engine serve > engine.log 2>&1 &
 ----
 
 [TIP]
