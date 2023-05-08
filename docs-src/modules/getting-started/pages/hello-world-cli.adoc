@@ -198,7 +198,9 @@ curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBh
 The file's content is added to the table.
 
 == Querying data
+Data loaded into Kaskada is accessed by performing Fenl Queries.
 
+=== Identity query
 Let's start by looking at the Purchase table without any filters.
 Begin by creating a text file with the following query:
 
@@ -216,7 +218,32 @@ Run it by sending the query to `kaskada-cli query run`:
 cat query.fenl | ./kaskada-cli query run --stdout --response-as csv
 ----
 
-This query will return all of the columns and rows contained in a table.
+.Show result
+[%collapsible]
+====
+[source,]
+----
+Enter the expression to run and then press CTRL+D to execute it, or CTRL+C to cancel:
+
+
+
+Executing query...
+
+_time,_subsort,_key_hash,_key,id,purchase_time,customer_id,vendor_id,amount,subsort_id
+2020-01-01T00:00:00.000000000,12232903146196084293,10966214875107816766,karen,cb_001,2020-01-01T00:00:00.000000000,karen,chum_bucket,9,0
+2020-01-01T00:00:00.000000000,12232903146196084294,15119067519137142314,patrick,kk_001,2020-01-01T00:00:00.000000000,patrick,krusty_krab,3,1
+2020-01-02T00:00:00.000000000,12232903146196084295,10966214875107816766,karen,cb_002,2020-01-02T00:00:00.000000000,karen,chum_bucket,2,2
+2020-01-02T00:00:00.000000000,12232903146196084296,15119067519137142314,patrick,kk_002,2020-01-02T00:00:00.000000000,patrick,krusty_krab,5,3
+2020-01-03T00:00:00.000000000,12232903146196084297,10966214875107816766,karen,cb_003,2020-01-03T00:00:00.000000000,karen,chum_bucket,4,4
+2020-01-03T00:00:00.000000000,12232903146196084298,15119067519137142314,patrick,kk_003,2020-01-03T00:00:00.000000000,patrick,krusty_krab,12,5
+2020-01-04T00:00:00.000000000,12232903146196084299,15119067519137142314,patrick,cb_004,2020-01-04T00:00:00.000000000,patrick,chum_bucket,5000,6
+2020-01-04T00:00:00.000000000,12232903146196084300,10966214875107816766,karen,cb_005,2020-01-04T00:00:00.000000000,karen,chum_bucket,3,7
+2020-01-05T00:00:00.000000000,12232903146196084301,10966214875107816766,karen,cb_006,2020-01-05T00:00:00.000000000,karen,chum_bucket,5,8
+2020-01-05T00:00:00.000000000,12232903146196084302,15119067519137142314,patrick,kk_004,2020-01-05T00:00:00.000000000,patrick,krusty_krab,9,9
+----
+====
+
+=== Filtering by a single Entity
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
@@ -230,6 +257,28 @@ Purchase | when(Purchase.customer_id == "patrick")
 ----
 cat query.fenl | ./kaskada-cli query run --stdout --response-as csv
 ----
+
+.Show result
+[%collapsible]
+====
+[source,]
+----
+Enter the expression to run and then press CTRL+D to execute it, or CTRL+C to cancel:
+
+
+
+Executing query...
+
+_time,_subsort,_key_hash,_key,id,purchase_time,customer_id,vendor_id,amount,subsort_id
+2020-01-01T00:00:00.000000000,12232903146196084294,15119067519137142314,patrick,kk_001,2020-01-01T00:00:00.000000000,patrick,krusty_krab,3,1
+2020-01-02T00:00:00.000000000,12232903146196084296,15119067519137142314,patrick,kk_002,2020-01-02T00:00:00.000000000,patrick,krusty_krab,5,3
+2020-01-03T00:00:00.000000000,12232903146196084298,15119067519137142314,patrick,kk_003,2020-01-03T00:00:00.000000000,patrick,krusty_krab,12,5
+2020-01-04T00:00:00.000000000,12232903146196084299,15119067519137142314,patrick,cb_004,2020-01-04T00:00:00.000000000,patrick,chum_bucket,5000,6
+2020-01-05T00:00:00.000000000,12232903146196084302,15119067519137142314,patrick,kk_004,2020-01-05T00:00:00.000000000,patrick,krusty_krab,9,9
+====
+
+=== Complex Examples with Fenl functions
+
 In this example, we build a pipeline of functions using the `|` character.
 We begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"` using the `xref:fenl:catalog.adoc#when[when()]` function.
 
