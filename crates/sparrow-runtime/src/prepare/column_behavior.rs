@@ -35,12 +35,15 @@ pub enum ColumnBehavior {
     /// Hash the given column.
     ///
     /// This field is used for preparing the key column during preparation.
+    /// During prepare, metadata files are generated alongside the prepared files
+    /// that contain additional information, such as the key hash mapping.
     PrepareEntityKey { index: usize, nullable: bool },
     /// Hash the given column.
     ///
     /// This field is used for preparing the key column during execution.
     ExecuteEntityKey { index: usize, nullable: bool },
-    /// A random column
+    /// Generates a row of monotically increasing u64s, starting
+    /// at the defined offset.
     SequentialU64 { next_offset: u64 },
     /// Create a column of nulls.
     ///
