@@ -191,8 +191,8 @@ curl -L "https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBh
 
 # Load the file into the Purchase table (which was created in the previous step)
 ./kaskada-cli table load \
-    --table Purchase \
-    --file-path file://${PWD}/purchase.parquet
+     Purchase \
+     file://${PWD}/purchase.parquet
 ----
 
 The file's content is added to the table.
