@@ -4,16 +4,20 @@
 
 In addition to modifiying resources directly, you can also use a *spec file* to describe the desired state of Kaskada.
 
-A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
+A spec file is a YAML file describing a set of Kaskada resources, inlcuding tables, views, and materializations.
 
 The `sync` command is used to update the state of your Kaskada system to match the resource descriptions in the spec file. 
 
 [NOTE]
 ====
-Currently `sync` is only supported in the CLI client.
+Currently the `sync` command is only supported in the CLI client.
 ====
 
 == Spec File Format
+
+A spec file can contain any of the following keys: `tables`, `views`, `materializations`. Each key contains a list of objects describing the resources to be created or updated.
+
+=== Tables
 
 Tables are described in a spec file as a list of table objects under the `tables` key:
 
@@ -49,6 +53,8 @@ tables:
     kaskada: {}
 ----
 
+=== Views
+
 Views are described in a spec file as a list of view objects under the `views` key:
 
 [source,yaml]
@@ -72,6 +78,7 @@ views:
   expression: count(Purchase)
 ----
 
+=== Materializations
 
 Materializations are described in a spec file as a list of materialization objects under the `materializations` key:
 
@@ -216,6 +223,8 @@ When this happens, all data previously loaded into the table is lost.
 
 === Previewing the changes
 
+Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
+
 [source,bash]
 ----
 kaskada-cli sync plan --file spec.yaml
@@ -226,9 +235,10 @@ kaskada-cli sync plan --file spec.yaml
 # > 2:18PM INF Success!
 ----
 
-Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
 
 === Applying the changes
+
+Running this command will apply the changes to the server.
 
 [source,bash]
 ----

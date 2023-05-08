@@ -101,7 +101,7 @@ kaskada-cli materialization create PurchaseStats \
 
 [NOTE]
 ====
-Currently the CLI can only create materializaitons that use the *Object Store* destination type.
+Currently the CLI can only create materializaitons that use the *Object Store* destination type.  This is done using the `--path-uri` option.
 ====
 
 === List Materializations
