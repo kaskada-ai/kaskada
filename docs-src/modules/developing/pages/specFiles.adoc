@@ -211,8 +211,10 @@ Applying a spec can create new resources, or update resources by deleting them &
 [NOTE]
 ====
 If you remove a resource from a spec file, it will **not** be deleted from the system. Instead you 
-must delete those resources using the standard delete commands.
+must delete those resources using the standard delete commands: xref:developing:tables.adoc#deleting-a-table[Delete Table] , xref:developing:views.adoc#deleting-a-view[Delete View], or xref:developing:materializations.adoc#deleting-a-materialization[Delete Materialization].
 ====
+
+
 [WARNING]
 .Table updates are destructive
 ====
