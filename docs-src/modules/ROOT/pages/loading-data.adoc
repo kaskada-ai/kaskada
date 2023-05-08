@@ -42,10 +42,7 @@ CLI::
 +
 [source,bash]
 ----
-kaskada-cli load \
-    --table Purchase \
-    --file-path file:///path/to/file.parquet \
-    --file-type parquet
+kaskada-cli table load Purchase file:///path/to/file.parquet
 ----
 ====
 
@@ -95,11 +92,14 @@ CLI::
 +
 [source,bash]
 ----
-kaskada-cli load \
-    --table Purchase \
-    --file-path file:///path/to/file.parquet \
-    --file-type parquet
+kaskada-cli table load Purchase file:///path/to/file.parquet
 ----
+
+[IMPORTANT]
+====
+The CLI client infers a file's format from the extension of the file's path.
+The `--type parquet` flag can also be used to force a file to be treated as CSV.
+====
 =====
 
 === CSV
@@ -140,12 +140,17 @@ CLI::
 +
 [source,bash]
 ----
-kaskada-cli load \
-    --table Purchase \
-    --file-path file:///path/to/file.csv \
-    --file-type csv
+kaskada-cli table load Purchase file:///path/to/file.csv
 ----
+
+[IMPORTANT]
+====
+The CLI client infers a file's format from the extension of the file's path.
+The `--type csv` flag can also be used to force a file to be treated as CSV.
+====
 =====
+
+
 
 == File Location
 
