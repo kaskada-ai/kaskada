@@ -18,5 +18,4 @@ WORKDIR ${HOME}
 RUN pip install pulsar-client
 
 # Install the kaskada python client
-RUN pip install kaskada==0.1.1a9
-
+RUN pip install kaskada==0.1.7
