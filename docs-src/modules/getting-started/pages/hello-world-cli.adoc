@@ -34,7 +34,7 @@ echo $PATH
 ----
 
 Move the Kaskada binaries to one of the listed locations. 
-This command assumes that the binaries are currently in your working directory and that your `PATH`` includes `/usr/local/bin`, but you can customize it if your locations are different.
+This command assumes that the binaries are currently in your working directory and that your `PATH` includes `/usr/local/bin`, but you can customize it if your locations are different.
 
 [source,bash]
 ----
