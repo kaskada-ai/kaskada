@@ -80,7 +80,7 @@ To verify they're installed correctly and executable, try running the following 
 
 [source,bash]
 ----
-kaskada-cli sync export --all
+./kaskada-cli sync export --all
 ----
 
 You should see output similar to the following:
