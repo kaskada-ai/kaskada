@@ -270,19 +270,19 @@ func (*mockApiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMes
 // List implements api.ApiClient
 func (*mockApiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	switch item.(type) {
-	case *apiv1alpha.ListMaterializationsRequest:
+	case *apiv1alpha.Materialization:
 		return []protoreflect.ProtoMessage{
 			&apiv1alpha.Materialization{
 				MaterializationName: "materialization",
 			},
 		}, nil
-	case *apiv1alpha.ListTablesRequest:
+	case *apiv1alpha.Table:
 		return []protoreflect.ProtoMessage{
 			&apiv1alpha.Table{
 				TableName: "table",
 			},
 		}, nil
-	case *apiv1alpha.ListViewsRequest:
+	case *apiv1alpha.View:
 		return []protoreflect.ProtoMessage{
 			&apiv1alpha.View{
 				ViewName: "view",

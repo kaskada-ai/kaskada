@@ -23,7 +23,7 @@ var applyCmd = &cobra.Command{
 		to quickly create a Cobra application.`,
 	*/
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Debug().Msg("starting apply")
+		log.Info().Msg("starting apply")
 
 		log.Debug().Interface("files", applyFiles).Send()
 		if len(applyFiles) == 0 {

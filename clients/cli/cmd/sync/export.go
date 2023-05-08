@@ -21,7 +21,7 @@ var exportCmd = &cobra.Command{
 		    can be used with the 'plan' and 'apply' commands
 		    to update your infrastructure.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Debug().Msg("starting export")
+		log.Info().Msg("starting export")
 
 		var (
 			err              error
@@ -75,12 +75,12 @@ var exportCmd = &cobra.Command{
 		} else {
 			utils.LogAndQuitIfErrorExists(os.WriteFile(filePath, yamlData, 0666))
 		}
-		log.Debug().Msg("Success!")
+		log.Info().Msg("Success!")
 	},
 }
 
 func exportMaterializations(apiClient api.ApiClient) ([]*apiv1alpha.Materialization, error) {
-	protos, err := apiClient.List(&apiv1alpha.ListMaterializationsRequest{}, "", 100, "")
+	protos, err := apiClient.List(&apiv1alpha.Materialization{}, "", 100, "")
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func exportMaterializations(apiClient api.ApiClient) ([]*apiv1alpha.Materializat
 }
 
 func exportTables(apiClient api.ApiClient) ([]*apiv1alpha.Table, error) {
-	protos, err := apiClient.List(&apiv1alpha.ListTablesRequest{}, "", 100, "")
+	protos, err := apiClient.List(&apiv1alpha.Table{}, "", 100, "")
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func exportTables(apiClient api.ApiClient) ([]*apiv1alpha.Table, error) {
 }
 
 func exportViews(apiClient api.ApiClient) ([]*apiv1alpha.View, error) {
-	protos, err := apiClient.List(&apiv1alpha.ListViewsRequest{}, "", 100, "")
+	protos, err := apiClient.List(&apiv1alpha.View{}, "", 100, "")
 	if err != nil {
 		return nil, err
 	}
