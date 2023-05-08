@@ -31,7 +31,7 @@ use super::column_behavior::ColumnBehavior;
 #[allow(unused)]
 const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 
-/// An iterator over prepare batches.
+/// An iterator over batches during execution.
 ///
 /// In addition to iterating, this is responsible for the following:
 ///
@@ -39,7 +39,7 @@ const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 ///    the batch
 /// 2. Casts required columns
 /// 3. Sorts the record batches by the time column, subsort column, and key hash
-/// 4. Handling late data
+/// 4. Handles late data
 pub struct ExecuteIter<'a> {
     reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     /// The final schema to produce, including the 3 key columns
