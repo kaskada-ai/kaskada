@@ -189,11 +189,11 @@ kaskada-cli view delete PurchaseStats
 ----
 ====
 
-A failed precondition error is returned if another view and/or
+A failed precondition error is returned when another view and/or
 materialization references the view. To continue with the deletion of
-the view, delete the dependent resources or supply the `force` flag to
+the view we can either, delete the dependent resources manually with another delete operation, or, supply the `force` flag to
 delete the view forcefully. Forcefully deleting a view without
-deleting the dependent resources may result in the dependent resources
+deleting its dependent resources may result in its dependent resources
 functioning incorrectly.
 
 [tabs]

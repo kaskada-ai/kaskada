@@ -6,7 +6,7 @@ In addition to modifiying resources directly, you can also use a *spec file* to 
 
 A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
 
-The `sync` command is used to update the state of your system to match the file. 
+The `sync` command is used to update the state of your Kaskada system to match the resource descriptions in the spec file. 
 
 [NOTE]
 ====
@@ -193,17 +193,19 @@ materializations:
 
 == Updating Kaskada to reflect the contents of a spec file
 
-To upteda a resource (table, view, or materialization), you first modify the resource in your spec file, 
+To update a resource (table, view, or materialization), you first modify the resource in your spec file, 
 then use the `spec plan` command to preview the changes that will be made to the system. To make the 
 acutal changes, use the `spec apply` command.
 
-When a spec file is update, the CLI inspects all of the server's resources and all of the resources
+When a spec file is updated, the CLI inspects all of the server's resources and all of the resources
 defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
 Applying a spec can create new resources, or update resources by deleting them & then recreating them.
 
-Note, if you remove a resource from a spec file, it will not be deleted from the system. Instead you 
+[NOTE]
+====
+If you remove a resource from a spec file, it will **not** be deleted from the system. Instead you 
 must delete those resources using the standard delete commands.
-
+====
 [WARNING]
 .Table updates are destructive
 ====
