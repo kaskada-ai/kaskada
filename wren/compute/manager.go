@@ -418,7 +418,7 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (client.ComputeServi
 
 	subLogger.Info().Bool("incremental_enabled", queryContext.compileResp.IncrementalEnabled).Bool("is_current_data_token", queryContext.isCurrentDataToken).Msg("Populating snapshot config if needed")
 	if queryContext.compileResp.IncrementalEnabled && queryContext.isCurrentDataToken && queryContext.compileResp.PlanHash != nil {
-		executeRequest.ComputeSnapshotConfig = &v1alpha.ExecuteRequest_ComputeSnapshotConfig{
+		executeRequest.ComputeSnapshotConfig = &v1alpha.ComputeSnapshotConfig{
 			OutputPrefix: ConvertURIForCompute(m.getComputeSnapshotDataURI(queryContext.owner, *snapshotCacheBuster, queryContext.compileResp.PlanHash.Hash, queryContext.dataToken.DataVersionID)),
 		}
 		subLogger.Info().Str("SnapshotPrefix", executeRequest.ComputeSnapshotConfig.OutputPrefix).Msg("Snapshot output prefix")
@@ -503,7 +503,7 @@ func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryRes
 	return result, nil
 }
 
-func (m *Manager) SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ExecuteResponse_ComputeSnapshot) {
+func (m *Manager) SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ComputeSnapshot) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.SaveComputeSnapshots").Logger()
 	for _, computeSnapshot := range computeSnapshots {
 		if err := m.kaskadaTableClient.SaveComputeSnapshot(queryContext.ctx, queryContext.owner, computeSnapshot.PlanHash.Hash, computeSnapshot.SnapshotVersion, queryContext.dataToken, ConvertURIForManager(computeSnapshot.Path), computeSnapshot.MaxEventTime.AsTime(), queryContext.GetTableIDs()); err != nil {
