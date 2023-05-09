@@ -6,7 +6,9 @@
 # pylint: disable=no-member
 from __future__ import print_function
 
+import logging
 import os
+import sys
 
 import IPython
 import pandas
@@ -18,6 +20,9 @@ from IPython.core.magic_arguments import argument, magic_arguments, parse_argstr
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
 from fenlmagic.utils import arg_to_response_type
 from kaskada import client, query
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class QueryResult(object):
@@ -40,6 +45,7 @@ class FenlMagics(Magics):
     def __init__(self, shell, client):
         super(FenlMagics, self).__init__(shell)
         self.client = client
+        logger.info("extension loaded")
 
     @magic_arguments()
     @argument(
