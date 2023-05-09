@@ -323,26 +323,24 @@ message StartMaterializationRequest {
   Destination destination = 4;
 }
 
-message StartMaterializationResponse {
-}
+message StartMaterializationResponse {}
 
-message GetMaterializationStatusRequest{
-    // The materailization id
-    string materialization_id = 1;
-}
-
-message GetMaterializationStatusResponse{
-  // Progress information included in every message.
-  ProgressInformation progress = 1;
-}
-
-message StopMaterializationRequest{
+message GetMaterializationStatusRequest {
   // The materailization id
   string materialization_id = 1;
 }
 
-message StopMaterializationResponse{
+message GetMaterializationStatusResponse {
+  // Progress information included in every message.
+  ProgressInformation progress = 1;
 }
+
+message StopMaterializationRequest {
+  // The materailization id
+  string materialization_id = 1;
+}
+
+message StopMaterializationResponse {}
 
 service ComputeService {
   rpc Compile(CompileRequest) returns (CompileResponse);
