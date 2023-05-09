@@ -64,7 +64,7 @@ async fn get_metadata(
     let file_metadata = match request.source_data {
         Some(source_data) => get_source_metadata(&object_store_registry, &source_data)
             .await
-            .or_else(|_| anyhow::bail!("failed getting source metadata")),
+            .or_else(|e| anyhow::bail!("failed getting source metadata: {}", e)),
         None => anyhow::bail!("missing request source"),
     }?;
 
@@ -90,7 +90,10 @@ pub(crate) async fn get_source_metadata(
     let metadata = RawMetadata::try_from(source, object_store_registry)
         .await
         .attach_printable_lazy(|| format!("Source: {:?}", source))
-        .change_context(Error::Schema("unable to get raw metadata".to_owned()))?;
+        .change_context(Error::Schema(format!(
+            "unable to read schema from: {:?}",
+            source
+        )))?;
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
         .attach_printable_lazy(|| {

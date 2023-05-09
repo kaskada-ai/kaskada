@@ -11,7 +11,6 @@ use tempfile::NamedTempFile;
 use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
 
 use sparrow_api::kaskada::v1alpha::PulsarConfig;
-use tracing::info;
 
 use crate::execute::pulsar_schema;
 use crate::metadata::file_from_path;
@@ -32,8 +31,10 @@ pub enum Error {
     ReadSchema,
     #[display(fmt = "pulsar subscription error")]
     PulsarSubscription,
-    #[display(fmt = "Failed to get pulsar schema: {_0}")]
+    #[display(fmt = "failed to get pulsar schema: {_0}")]
     PulsarSchema(String),
+    #[display(fmt = "unsupport column detected: '{_0}")]
+    UnsupportedColumn(String),
 }
 
 impl error_stack::Context for Error {}
@@ -85,14 +86,14 @@ impl RawMetadata {
     }
 
     /// Create `RawMetadata` from a raw schema.
-    pub fn from_raw_schema(raw_schema: SchemaRef) -> Self {
+    pub fn from_raw_schema(raw_schema: SchemaRef) -> error_stack::Result<Self, Error> {
         // Convert the raw schema to a table schema.
-        let table_schema = convert_schema(raw_schema.as_ref());
+        let table_schema = convert_schema(raw_schema.as_ref())?;
 
-        Self {
+        Ok(Self {
             raw_schema,
             table_schema,
-        }
+        })
     }
 
     /// Create a `RawMetadata` from a parquet string path and object store registry
@@ -117,8 +118,6 @@ impl RawMetadata {
                 let path = format!("/{}", path);
                 let path = std::path::Path::new(&path);
                 Self::try_from_parquet_path(path)
-                    .into_report()
-                    .change_context_lazy(|| Error::ReadSchema)
             }
             _ => {
                 let download_file = NamedTempFile::new().map_err(|_| Error::Download)?;
@@ -127,8 +126,6 @@ impl RawMetadata {
                     .await
                     .change_context_lazy(|| Error::Download)?;
                 Self::try_from_parquet_path(download_file.path())
-                    .into_report()
-                    .change_context_lazy(|| Error::ReadSchema)
             }
         }
     }
@@ -195,16 +192,20 @@ impl RawMetadata {
 
         Ok(PulsarMetadata {
             user_schema: Arc::new(pulsar_schema),
-            sparrow_metadata: Self::from_raw_schema(Arc::new(Schema::new(new_fields))),
+            sparrow_metadata: Self::from_raw_schema(Arc::new(Schema::new(new_fields)))?,
         })
     }
 
     /// Create a `RawMetadata` fram a Parquet file path.
-    fn try_from_parquet_path(path: &std::path::Path) -> anyhow::Result<Self> {
-        let file = file_from_path(path)?;
-        let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?;
+    fn try_from_parquet_path(path: &std::path::Path) -> error_stack::Result<Self, Error> {
+        let file = file_from_path(path)
+            .into_report()
+            .change_context_lazy(|| Error::LocalFile)?;
+        let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)
+            .into_report()
+            .change_context_lazy(|| Error::ReadSchema)?;
         let raw_schema = parquet_reader.schema();
-        Ok(Self::from_raw_schema(raw_schema.clone()))
+        Self::from_raw_schema(raw_schema.clone())
     }
 
     /// Create a `RawMetadata` from a reader of a CSV file or string.
@@ -229,12 +230,20 @@ impl RawMetadata {
             .change_context_lazy(|| Error::ReadSchema)?;
 
         let raw_schema = raw_reader.schema();
-        Ok(Self::from_raw_schema(raw_schema))
+        Self::from_raw_schema(raw_schema)
     }
 }
 
-/// Converts the schema to special case Timestamps fields.
-///
+/// Converts the schema to a table schema
+fn convert_schema(schema: &Schema) -> error_stack::Result<SchemaRef, Error> {
+    let fields = schema
+        .fields()
+        .iter()
+        .map(convert_field)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Arc::new(Schema::new(fields)))
+}
+
 /// Arrow doesn't support time zones very well; it assumes all have a time zone
 /// of `None`, which will use system time. Sparrow only operates on
 /// [arrow::datatypes::TimestampNanosecondType], and currently cannot pass
@@ -246,36 +255,31 @@ impl RawMetadata {
 /// Arrow also does not support Decimal types. As of now, we are currently
 /// dropping the columns that are Decimal types since we do not support at query
 /// time either.
-fn convert_schema(schema: &Schema) -> SchemaRef {
-    let fields = schema
-        .fields()
-        .iter()
-        .filter_map(|field| {
-            match field.data_type() {
-                DataType::Timestamp(time_unit, Some(tz)) => {
-                    // TODO: We discard this because the conversion from an Arrow
-                    // schema to the Schema protobuf currently fails on such timestamp columns.
-                    info!(
-                        "Discarding time zone {:?} on timestamp column '{}'",
-                        tz,
-                        field.name()
-                    );
-                    Some(Field::new(
-                        field.name(),
-                        DataType::Timestamp(time_unit.clone(), None),
-                        field.is_nullable(),
-                    ))
-                }
-                DataType::Decimal128(_, _) | DataType::Decimal256(_, _) => {
-                    // TODO: Support decimal columns
-                    info!("Discarding decimal column '{}'", field.name());
-                    None
-                }
-                _ => Some(field.clone()),
-            }
-        })
-        .collect();
-    Arc::new(Schema::new(fields))
+fn convert_field(field: &Field) -> error_stack::Result<Field, Error> {
+    match field.data_type() {
+        DataType::Timestamp(time_unit, Some(tz)) => {
+            // TODO: We discard this because the conversion from an Arrow
+            // schema to the Schema protobuf currently fails on such timestamp columns.
+            tracing::warn!(
+                "Time zones are unsupported. Interpreting column '{}' with time zone '{}' as UTC",
+                tz,
+                field.name()
+            );
+            Ok(Field::new(
+                field.name(),
+                DataType::Timestamp(time_unit.clone(), None),
+                field.is_nullable(),
+            ))
+        }
+        DataType::Decimal128(_, _) | DataType::Decimal256(_, _) => {
+            tracing::warn!("Decimal columns are unsupported: '{}'", field.name());
+            error_stack::bail!(Error::UnsupportedColumn(format!(
+                "Decimal columns are unsupported: {}",
+                field.name()
+            )))
+        }
+        _ => Ok(field.clone()),
+    }
 }
 
 #[cfg(test)]
@@ -301,7 +305,7 @@ mod tests {
             Field::new("c", DataType::Int64, true),
         ]));
 
-        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone()).unwrap();
         assert_eq!(metadata.raw_schema, raw_schema);
         assert_eq!(metadata.table_schema, raw_schema);
     }
@@ -316,8 +320,6 @@ mod tests {
                 DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".to_owned())),
                 false,
             ),
-            // Decimal column should be dropped.
-            Field::new("decimal", DataType::Decimal128(10, 12), false),
             Field::new("subsort", DataType::UInt64, false),
             Field::new("key", DataType::UInt64, false),
             Field::new("a", DataType::Int64, true),
@@ -339,7 +341,7 @@ mod tests {
             Field::new("c", DataType::Int64, true),
         ]));
 
-        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone()).unwrap();
         assert_eq!(metadata.raw_schema, raw_schema);
         assert_eq!(metadata.table_schema, converted_schema);
     }
@@ -395,8 +397,28 @@ mod tests {
             ),
         ]));
 
-        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone()).unwrap();
         assert_eq!(metadata.raw_schema, raw_schema);
         assert_eq!(metadata.table_schema, converted_schema);
+    }
+
+    #[test]
+    fn test_raw_metadata_decimal_errors() {
+        let raw_schema = Arc::new(Schema::new(vec![Field::new(
+            "decimal_col",
+            DataType::Decimal128(0, 0),
+            false,
+        )]));
+
+        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
+        match metadata {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(e) => {
+                assert_eq!(
+                    e.as_error().to_string(),
+                    "unsupport column detected: 'Decimal columns are unsupported: decimal_col"
+                )
+            }
+        }
     }
 }
