@@ -90,7 +90,7 @@ message TableConfig {
   string grouping = 5;
 
   // The backing source for the table
-  Source source = 6;
+  Source source = 7;
 }
 
 message TableMetadata {
