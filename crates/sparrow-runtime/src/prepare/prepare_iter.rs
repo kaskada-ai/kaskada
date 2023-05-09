@@ -3,10 +3,12 @@ use std::sync::PoisonError;
 use std::task::Poll;
 
 use anyhow::Context;
+use arrow::array::ArrayRef;
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
+use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
@@ -42,29 +44,29 @@ pub struct PrepareIter<'a> {
     metadata: PrepareMetadata,
 }
 
-impl<'a> Stream for PrepareIter<'a> {
-    type Item = Result<(RecordBatch, RecordBatch), PrepareErrorWrapper>;
+// impl<'a> Stream for PrepareIter<'a> {
+//     type Item = Result<(RecordBatch, RecordBatch), PrepareErrorWrapper>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        let reader = &mut self.reader;
-        Pin::new(reader).poll_next(cx).map(|opt| match opt {
-            Some(Ok(batch)) => {
-                let result = self
-                    .get_mut()
-                    .prepare_next_batch(batch)
-                    .map_err(|err| err.change_context(Error::ReadingBatch).into());
-                Some(result)
-            }
-            Some(Err(err)) => Some(Err(Report::new(err)
-                .change_context(Error::ReadingBatch)
-                .into())),
-            None => None,
-        })
-    }
-}
+//     fn poll_next(
+//         mut self: Pin<&mut Self>,
+//         cx: &mut std::task::Context<'_>,
+//     ) -> Poll<Option<Self::Item>> {
+//         let reader = &mut self.reader;
+//         Pin::new(reader).poll_next(cx).map(|opt| match opt {
+//             Some(Ok(batch)) => {
+//                 let result = self
+//                     .get_mut()
+//                     .prepare_next_batch(batch)
+//                     .map_err(|err| err.change_context(Error::ReadingBatch).into());
+//                 Some(result)
+//             }
+//             Some(Err(err)) => Some(Err(Report::new(err)
+//                 .change_context(Error::ReadingBatch)
+//                 .into())),
+//             None => None,
+//         })
+//     }
+// }
 
 /// the Stream API works best with Result types that include an actual
 /// std::error::Error.  Simple things work okay with arbitrary Results,
@@ -115,6 +117,39 @@ impl<'a> std::fmt::Debug for PrepareIter<'a> {
 }
 
 impl<'a> PrepareIter<'a> {
+    // pub fn stream(
+    //     self,
+    // ) -> impl Stream<Item = error_stack::Result<(RecordBatch, RecordBatch), Error>> {
+    //     // ) -> BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>> {
+    //     // let reader = self.reader;
+    //     async_stream::try_stream! {
+    //         let mut reader = self.reader;
+    //         while let Some(Ok(batch)) = reader.next().await {
+    //             let result: (RecordBatch, RecordBatch) = self
+    //                 .prepare_next_batch(batch)
+    //                 .await?;
+    //                 // .map_err(|err| err.change_context(Error::ReadingBatch));
+    //             yield result;
+    //         }
+    //     }
+    //     // .boxed()
+    // }
+
+    pub fn stream(
+        mut self,
+    ) -> impl Stream<Item = error_stack::Result<(RecordBatch, RecordBatch), Error>> {
+        let reader = &mut self.reader;
+        async_stream::try_stream! {
+            while let Some(Ok(batch)) = reader.next().await {
+                let result: (RecordBatch, RecordBatch) = self
+                    .prepare_next_batch(batch)
+                    .await?;
+                    // .map_err(|err| err.change_context(Error::ReadingBatch));
+                yield result;
+            }
+        }
+    }
+
     pub fn try_new(
         reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
         config: &TableConfig,
@@ -185,7 +220,7 @@ impl<'a> PrepareIter<'a> {
     }
 
     /// Convert a read batch to the merged batch format.
-    fn prepare_next_batch(
+    async fn prepare_next_batch(
         &mut self,
         read_batch: RecordBatch,
     ) -> error_stack::Result<(RecordBatch, RecordBatch), Error> {
@@ -193,11 +228,13 @@ impl<'a> PrepareIter<'a> {
         let read_batch = self.slice_preparer.slice_batch(read_batch)?;
 
         // 2. Prepare each of the columns by getting the column behavior result
-        let prepared_columns: Vec<_> = self
-            .columns
-            .iter_mut()
-            .map(|column| column.get_result(Some(&mut self.metadata), None, &read_batch))
-            .try_collect()?;
+        let mut prepared_columns = Vec::new();
+        for c in self.columns.iter_mut() {
+            let result = c
+                .get_result(Some(&mut self.metadata), None, &read_batch)
+                .await?;
+            prepared_columns.push(result);
+        }
 
         // 3. Pull out the time, subsort and key hash columns to sort the record batch
         let time_column = &prepared_columns[0];
@@ -237,50 +274,5 @@ impl<'a> PrepareIter<'a> {
             .change_context(Error::Internal)?;
         let metadata = self.metadata.get_flush_metadata()?;
         Ok((batch, metadata))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use arrow::array::{Int64Array, StringArray, TimestampNanosecondArray, UInt64Array};
-    use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
-    use arrow::record_batch::RecordBatch;
-    use static_init::dynamic;
-
-    use crate::prepare::ColumnBehavior;
-    use crate::prepare::PrepareMetadata;
-
-    #[dynamic]
-    static COMPLETE_SCHEMA: SchemaRef = {
-        Arc::new(Schema::new(vec![
-            Field::new(
-                "_time",
-                DataType::Timestamp(TimeUnit::Nanosecond, None),
-                false,
-            ),
-            Field::new("_subsort", DataType::UInt64, false),
-            Field::new("_key_hash", DataType::UInt64, false),
-            Field::new("a", DataType::Int64, true),
-        ]))
-    };
-
-    fn make_test_batch(num_rows: usize) -> RecordBatch {
-        let time = TimestampNanosecondArray::from_iter_values(0..num_rows as i64);
-        let subsort = UInt64Array::from_iter_values(0..num_rows as u64);
-        let key = UInt64Array::from_iter_values(0..num_rows as u64);
-        let a = Int64Array::from_iter_values(0..num_rows as i64);
-
-        RecordBatch::try_new(
-            COMPLETE_SCHEMA.clone(),
-            vec![
-                Arc::new(time),
-                Arc::new(subsort),
-                Arc::new(key),
-                Arc::new(a),
-            ],
-        )
-        .unwrap()
     }
 }

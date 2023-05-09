@@ -25,6 +25,9 @@ mod prepare_iter;
 mod prepare_metadata;
 mod slice_preparer;
 
+#[cfg(test)]
+pub(crate) use column_behavior::*;
+
 pub use error::*;
 pub use prepare_iter::*;
 pub(crate) use prepare_metadata::*;
@@ -163,7 +166,7 @@ pub async fn prepare_file(
         _ => path::Path::new(temp_dir),
     };
 
-    let preparer = prepared_batches(source_data, table_config, slice).await?;
+    let mut preparer = prepared_batches(source_data, table_config, slice).await?;
     let batch_count = std::sync::atomic::AtomicUsize::new(0);
 
     let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
@@ -210,7 +213,8 @@ pub async fn prepare_file(
         Ok((prepared_metadata, prepared_file))
     };
 
-    let results = preparer.filter_map(|r| {
+    let prepare_stream = preparer.stream();
+    let results = prepare_stream.filter_map(|r| {
         let n = batch_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         async move {
             match r {
@@ -222,7 +226,7 @@ pub async fn prepare_file(
                     }
                     Some(write_results(n, records, metadata))
                 }
-                Err(e) => Some(Err(Report::new(e).change_context(Error::Internal))),
+                Err(e) => Some(Err(e.change_context(Error::Internal))),
             }
         }
     });

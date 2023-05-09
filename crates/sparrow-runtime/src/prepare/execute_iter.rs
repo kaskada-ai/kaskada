@@ -2,7 +2,7 @@ use std::pin::Pin;
 use std::sync::{Arc, PoisonError};
 use std::task::Poll;
 
-use arrow::array::{PrimitiveArray, TimestampNanosecondArray};
+use arrow::array::{ArrayRef, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType, UInt64Type};
 use arrow::error::ArrowError;
@@ -71,43 +71,43 @@ pub struct ExecuteIter<'a> {
     leftovers: Option<RecordBatch>,
 }
 
-impl<'a> Stream for ExecuteIter<'a> {
-    /// This stream may return None in the case where messages were read from
-    /// the underlying stream, but the watermark has not advanced far enough to
-    /// produce any messages.
-    ///
-    /// The correct behavior for a consumer is to ignore the empty message
-    /// and continue polling the stream.
-    type Item = Result<Option<RecordBatch>, ExecuteIterWrapper>;
+// impl<'a> Stream for ExecuteIter<'a> {
+//     /// This stream may return None in the case where messages were read from
+//     /// the underlying stream, but the watermark has not advanced far enough to
+//     /// produce any messages.
+//     ///
+//     /// The correct behavior for a consumer is to ignore the empty message
+//     /// and continue polling the stream.
+//     type Item = Result<Option<RecordBatch>, ExecuteIterWrapper>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        let reader = &mut self.reader;
-        Pin::new(reader).poll_next(cx).map(|opt| match opt {
-            Some(Ok(batch)) => {
-                let result = self
-                    .get_mut()
-                    .prepare_next_batch(batch)
-                    .map_err(|err| err.change_context(Error::ReadingBatch).into());
-                Some(result)
-            }
-            Some(Err(err)) => Some(Err(Report::new(err)
-                .change_context(Error::ReadingBatch)
-                .into())),
-            None => {
-                // Indicates that the stream has likely closed unexpectedly
-                tracing::error!(
-                    "Unexpected empty message from stream - likely the stream has closed"
-                );
-                Some(Err(Report::new(Error::ReadInput)
-                    .change_context(Error::Internal)
-                    .into()))
-            }
-        })
-    }
-}
+//     fn poll_next(
+//         mut self: Pin<&mut Self>,
+//         cx: &mut std::task::Context<'_>,
+//     ) -> Poll<Option<Self::Item>> {
+//         let reader = &mut self.reader;
+//         Pin::new(reader).poll_next(cx).map(|opt| match opt {
+//             Some(Ok(batch)) => {
+//                 let result = self
+//                     .get_mut()
+//                     .prepare_next_batch(batch)
+//                     .map_err(|err| err.change_context(Error::ReadingBatch).into());
+//                 Some(result)
+//             }
+//             Some(Err(err)) => Some(Err(Report::new(err)
+//                 .change_context(Error::ReadingBatch)
+//                 .into())),
+//             None => {
+//                 // Indicates that the stream has likely closed unexpectedly
+//                 tracing::error!(
+//                     "Unexpected empty message from stream - likely the stream has closed"
+//                 );
+//                 Some(Err(Report::new(Error::ReadInput)
+//                     .change_context(Error::Internal)
+//                     .into()))
+//             }
+//         })
+//     }
+// }
 
 /// the Stream API works best with Result types that include an actual
 /// std::error::Error.  Simple things work okay with arbitrary Results,
@@ -231,7 +231,7 @@ impl<'a> ExecuteIter<'a> {
     ///
     /// This method drops "late data" from each batch using a simplistic
     /// watermark heuristic.
-    fn prepare_next_batch(
+    async fn prepare_next_batch(
         &mut self,
         unfiltered_batch: RecordBatch,
     ) -> error_stack::Result<Option<RecordBatch>, Error> {
@@ -300,11 +300,20 @@ impl<'a> ExecuteIter<'a> {
         let record_batch = self.slice_preparer.slice_batch(record_batch)?;
 
         // 3. Prepare each of the columns by getting the column behavior result
-        let prepared_columns: Vec<_> = self
-            .columns
-            .iter_mut()
-            .map(|column| column.get_result(None, Some(&self.key_hash_inverse), &record_batch))
-            .try_collect()?;
+        // let prepared_columns: Vec<ArrayRef> = self
+        //     .columns
+        //     .iter_mut()
+        //     .map(|column| column.get_result(None, Some(&self.key_hash_inverse), &record_batch))
+        //     .try_collect()?;
+
+        let mut prepared_columns: Vec<ArrayRef> = Vec::new();
+        for c in self.columns.iter_mut() {
+            let batch = c
+                .get_result(None, Some(&self.key_hash_inverse), &record_batch)
+                .await?;
+            prepared_columns.push(batch);
+        }
+
         let record_batch = RecordBatch::try_new(self.prepared_schema.clone(), prepared_columns)
             .into_report()
             .change_context(Error::PreparingColumn)?;

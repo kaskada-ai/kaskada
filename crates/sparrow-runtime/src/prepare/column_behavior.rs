@@ -262,7 +262,7 @@ impl ColumnBehavior {
         }
     }
 
-    pub fn get_result(
+    pub async fn get_result(
         &mut self,
         metadata: Option<&mut PrepareMetadata>,
         key_hash_inverse: Option<&ThreadSafeKeyHashInverse>,
@@ -367,7 +367,9 @@ impl ColumnBehavior {
                     .into_report()
                     .change_context(Error::PreparingColumn)?;
                 // 2. Update key hash table
-                futures::executor::block_on(key_hash_inverse.add(keys.clone(), &key_hashes))
+                key_hash_inverse
+                    .add(keys.clone(), &key_hashes)
+                    .await
                     .into_report()
                     .change_context(Error::Internal)?;
 
