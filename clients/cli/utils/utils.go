@@ -19,6 +19,10 @@ func InitLogging() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
+func FormatHelp(textWithNewLines string) string {
+	return strings.ReplaceAll(strings.Trim(textWithNewLines, "\n"), "\n", " ")
+}
+
 func LogAndQuitIfErrorExists(err error) {
 	if err != nil {
 		log.Fatal().Err(err).Send()
