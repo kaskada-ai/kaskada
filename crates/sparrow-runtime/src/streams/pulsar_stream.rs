@@ -50,6 +50,7 @@ pub fn stream_for_execution(
     }
 }
 
+/// The `schema` is the raw schema - what is in the stream.
 pub fn stream_for_prepare(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,

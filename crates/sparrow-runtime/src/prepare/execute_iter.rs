@@ -40,7 +40,7 @@ const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 /// 2. Casts required columns
 /// 3. Sorts the record batches by the time column, subsort column, and key hash
 /// 4. Handles late data
-pub struct ExecuteIter<'a> {
+pub(crate) struct ExecuteIter<'a> {
     reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     /// The final schema to produce, including the 3 key columns
     prepared_schema: SchemaRef,
@@ -51,7 +51,7 @@ pub struct ExecuteIter<'a> {
     /// The key hash inverse table
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     /// The table config
-    table_config: &'a TableConfig,
+    table_config: Arc<TableConfig>,
     /// Bounded disorder assumes an allowed amount of lateness in events,
     /// which then allows this node to advance its watermark up to event
     /// time (t - delta).
@@ -161,7 +161,7 @@ impl<'a> ExecuteIter<'a> {
     #[allow(unused)]
     pub fn try_new(
         reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
-        config: &'a TableConfig,
+        config: Arc<TableConfig>,
         raw_metadata: RawMetadata,
         prepare_hash: u64,
         slice: Option<&slice_plan::Slice>,
@@ -220,7 +220,7 @@ impl<'a> ExecuteIter<'a> {
             columns,
             slice_preparer,
             key_hash_inverse,
-            table_config: config,
+            table_config: config.clone(),
             bounded_lateness,
             watermark: 0,
             leftovers: None,
@@ -435,7 +435,7 @@ mod tests {
         ]))
     };
 
-    fn default_iter<'a>(config: &'a TableConfig, bounded_lateness: i64) -> ExecuteIter<'a> {
+    fn default_iter<'a>(config: Arc<TableConfig>, bounded_lateness: i64) -> ExecuteIter<'a> {
         let reader = Box::pin(futures::stream::iter(vec![]));
         let raw_schema = RAW_SCHEMA.clone();
         let raw_metadata = RawMetadata::from_raw_schema(raw_schema.clone());
@@ -444,7 +444,7 @@ mod tests {
         ));
         ExecuteIter::try_new(
             reader,
-            config,
+            config.clone(),
             raw_metadata,
             0,
             None,
@@ -482,7 +482,7 @@ mod tests {
             "key",
             "",
         );
-        let mut execute_iter = default_iter(&config, 5);
+        let mut execute_iter = default_iter(Arc::new(config), 5);
         let batch1 = make_time_batch(&[0, 3, 1, 10, 4, 7]);
         let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
         let batch3 = make_time_batch(&[20]);

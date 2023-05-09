@@ -89,6 +89,7 @@ impl TableConfig {
         subsort_column_name: Option<&str>,
         group_column_name: &str,
         grouping: &str,
+        source: &Source,
     ) -> Self {
         Self {
             name: name.to_owned(),
@@ -97,6 +98,7 @@ impl TableConfig {
             subsort_column_name: subsort_column_name.map(|s| s.to_owned()),
             group_column_name: group_column_name.to_owned(),
             grouping: grouping.to_owned(),
+            source: Some(source.clone()),
         }
     }
 
@@ -106,6 +108,7 @@ impl TableConfig {
         subsort_column_name: Option<&str>,
         group_column_name: &str,
         grouping: &str,
+        source: &Source,
     ) -> Self {
         Self::new(
             name,
@@ -114,6 +117,7 @@ impl TableConfig {
             subsort_column_name,
             group_column_name,
             grouping,
+            source,
         )
     }
 }

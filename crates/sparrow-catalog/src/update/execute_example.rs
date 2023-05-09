@@ -2,10 +2,12 @@ use std::fs::File;
 
 use error_stack::{IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
+use sparrow_api::kaskada::v1alpha;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::destination;
 use sparrow_api::kaskada::v1alpha::source_data;
 use sparrow_api::kaskada::v1alpha::Destination;
+use sparrow_api::kaskada::v1alpha::KaskadaSource;
 use sparrow_api::kaskada::v1alpha::SourceData;
 use sparrow_api::kaskada::v1alpha::{
     compute_table, CompileRequest, ComputeTable, ExecuteRequest, FeatureSet, FenlDiagnostics,
@@ -173,10 +175,21 @@ impl ExampleInputPreparer {
         tables: &[ExampleTable],
     ) -> error_stack::Result<Vec<ComputeTable>, Error> {
         let mut prepared_tables = Vec::with_capacity(tables.len() + 1);
+        let source = v1alpha::Source {
+            source: Some(v1alpha::source::Source::Kaskada(KaskadaSource {})),
+        };
         if let Some(input_csv) = input_csv {
             prepared_tables.push(
                 self.prepare_input(
-                    TableConfig::new("Input", &Uuid::new_v4(), "time", None, "key", "grouping"),
+                    TableConfig::new(
+                        "Input",
+                        &Uuid::new_v4(),
+                        "time",
+                        None,
+                        "key",
+                        "grouping",
+                        &source,
+                    ),
                     input_csv,
                 )
                 .await

@@ -20,7 +20,7 @@ use sparrow_api::kaskada::v1alpha::{
 
 mod column_behavior;
 mod error;
-mod execute_iter;
+pub(crate) mod execute_iter;
 mod prepare_iter;
 mod prepare_metadata;
 mod slice_preparer;

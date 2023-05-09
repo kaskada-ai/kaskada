@@ -60,8 +60,9 @@ impl PrepareMetadata {
 
 #[cfg(test)]
 mod tests {
+    use crate::prepare::column_behavior::ColumnBehavior;
+
     use super::*;
-    use crate::prepare::ColumnBehavior;
     use arrow::array::{StringArray, UInt64Array};
 
     #[test]

@@ -7,19 +7,21 @@ use async_trait::async_trait;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::{operation_input_ref, operation_plan};
+use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
 use sparrow_core::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use sparrow_plan::TableId;
 use sparrow_qfr::FlightRecorder;
 
 use super::BoxedOperation;
+use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::{InputBatch, Operation, OperationContext};
 use crate::execute::progress_reporter::ProgressUpdate;
 use crate::execute::Error;
 use crate::key_hash_index::KeyHashIndex;
-use crate::{table_reader, Batch};
+use crate::streams::pulsar_stream;
+use crate::{stream_reader, table_reader, Batch};
 
 pub(super) struct ScanOperation {
     /// The schema of the scanned inputs.
@@ -28,6 +30,7 @@ pub(super) struct ScanOperation {
     input_stream: Pin<Box<dyn Stream<Item = error_stack::Result<Batch, Error>> + Send>>,
     key_hash_index: KeyHashIndex,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
+    key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
 }
 
 impl std::fmt::Debug for ScanOperation {
@@ -171,43 +174,71 @@ impl ScanOperation {
                 .collect(),
         );
 
-        // Send initial progress information.
-        let total_num_rows = table_info
-            .prepared_files_for_slice(&requested_slice)
-            .into_report()
-            .change_context(crate::execute::error::invalid_operation!(
+        // Scans can read from tables (files) or streams.
+        let backing_source = match table_info.config().source.as_ref() {
+            Some(v1alpha::Source { source }) => source,
+            _ => error_stack::bail!(Error::Internal("expected source")),
+        };
+
+        let input_stream = match backing_source {
+            None => error_stack::bail!(Error::Internal("expected source")),
+            Some(v1alpha::source::Source::Kaskada(k)) => {
+                // Send initial progress information.
+                let total_num_rows = table_info
+                    .prepared_files_for_slice(&requested_slice)
+                    .into_report()
+                    .change_context(crate::execute::error::invalid_operation!(
                 "scan operation references undefined slice {requested_slice:?} for table '{}'",
                 table_info.name()
             ))?
-            .iter()
-            .map(|file| file.num_rows as usize)
-            .sum();
+                    .iter()
+                    .map(|file| file.num_rows as usize)
+                    .sum();
 
-        context
-            .progress_updates_tx
-            .try_send(ProgressUpdate::InputMetadata { total_num_rows })
-            .into_report()
-            .change_context(Error::internal())?;
+                context
+                    .progress_updates_tx
+                    .try_send(ProgressUpdate::InputMetadata { total_num_rows })
+                    .into_report()
+                    .change_context(Error::internal())?;
 
-        let input_stream = table_reader(
-            &mut context.data_manager,
-            table_info,
-            &requested_slice,
-            projected_columns,
-            // TODO: Fix flight recorder
-            FlightRecorder::disabled(),
-            context.max_event_in_snapshot,
-            context.output_at_time,
-        )
-        .change_context(Error::internal_msg("failed to create table reader"))?
-        .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
-        .boxed();
+                let input_stream = table_reader(
+                    &mut context.data_manager,
+                    table_info,
+                    &requested_slice,
+                    projected_columns,
+                    // TODO: Fix flight recorder
+                    FlightRecorder::disabled(),
+                    context.max_event_in_snapshot,
+                    context.output_at_time,
+                )
+                .change_context(Error::internal_msg("failed to create table reader"))?
+                .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+                .boxed();
+                input_stream
+            }
+            Some(v1alpha::source::Source::Pulsar(p)) => {
+                let input_stream = stream_reader(
+                    &context,
+                    table_info,
+                    requested_slice.as_ref(),
+                    projected_columns,
+                    // TODO: Fix flight recorder
+                    FlightRecorder::disabled(),
+                    p,
+                )
+                .change_context(Error::internal_msg("failed to create table reader"))?
+                .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+                .boxed();
+                input_stream
+            }
+        };
 
         Ok(Box::new(Self {
             projected_schema,
             input_stream,
             key_hash_index: KeyHashIndex::default(),
             progress_updates_tx: context.progress_updates_tx.clone(),
+            key_hash_inverse: context.key_hash_inverse.clone(),
         }))
     }
 
@@ -262,7 +293,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
     use sparrow_api::kaskada::v1alpha::operation_input_ref::{self, Column};
     use sparrow_api::kaskada::v1alpha::operation_plan::ScanOperation;
-    use sparrow_api::kaskada::v1alpha::{self, data_type};
+    use sparrow_api::kaskada::v1alpha::{self, data_type, KaskadaSource};
     use sparrow_api::kaskada::v1alpha::{
         expression_plan, literal, operation_plan, ComputePlan, ComputeTable, ExpressionPlan,
         Literal, OperationInputRef, OperationPlan, PlanHash, PreparedFile, SlicePlan, TableConfig,
@@ -301,6 +332,9 @@ mod tests {
             Field::new("b", DataType::Utf8, true),
         ]);
         let table_schema = v1alpha::Schema::try_from(&table_schema).unwrap();
+        let source = v1alpha::Source {
+            source: Some(v1alpha::source::Source::Kaskada(KaskadaSource {})),
+        };
 
         data_context
             .add_table(ComputeTable {
@@ -311,6 +345,7 @@ mod tests {
                     subsort_column_name: None,
                     group_column_name: "key".to_owned(),
                     grouping: "grouping".to_owned(),
+                    source: Some(source),
                 }),
                 metadata: Some(TableMetadata {
                     schema: Some(table_schema),

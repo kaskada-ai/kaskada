@@ -249,9 +249,6 @@ mod tests {
     use arrow::record_batch::RecordBatch;
     use static_init::dynamic;
 
-    use crate::prepare::ColumnBehavior;
-    use crate::prepare::PrepareMetadata;
-
     #[dynamic]
     static COMPLETE_SCHEMA: SchemaRef = {
         Arc::new(Schema::new(vec![

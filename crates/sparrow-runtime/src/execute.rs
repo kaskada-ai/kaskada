@@ -23,7 +23,7 @@ mod compute_executor;
 mod error;
 mod input_prefetch;
 pub(crate) mod key_hash_inverse;
-mod operation;
+pub(crate) mod operation;
 pub(crate) mod output;
 mod progress_reporter;
 mod spawner;

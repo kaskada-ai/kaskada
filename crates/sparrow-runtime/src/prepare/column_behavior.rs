@@ -41,6 +41,9 @@ pub enum ColumnBehavior {
     /// Hash the given column.
     ///
     /// This field is used for preparing the key column during execution.
+    /// This behavior differs from the [PrepareEntityKey] in that since we
+    /// are preparing messages directly from a stream to a RecordBatch, we
+    /// aren't writing any files.
     ExecuteEntityKey { index: usize, nullable: bool },
     /// Generates a row of monotically increasing u64s, starting
     /// at the defined offset.
