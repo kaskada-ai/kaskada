@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -337,7 +338,7 @@ func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.
 	fileSchema, err := t.computeManager.GetFileSchema(ctx, fileInput)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting schema for file")
-		return nil, err
+		return nil, reMapSparrowError(ctx, err)
 	}
 
 	if kaskadaTable.MergedSchema != nil && !proto.Equal(kaskadaTable.MergedSchema, fileSchema) {
@@ -363,6 +364,34 @@ func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.
 		return nil, customerrors.NewFailedPreconditionError(fmt.Sprintf("file does not contain time column: '%s'", kaskadaTable.TimeColumnName))
 	}
 	return fileSchema, nil
+}
+
+func reMapSparrowError(ctx context.Context, err error) error {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.reMapSparrowError").Logger()
+	subLogger.Info().Msg(fmt.Sprintf("Sparrow Error: %v", err))
+
+	inStatus, ok := status.FromError(err)
+	if !ok {
+		subLogger.Error().Msg("unexpected: compute error did not include error-status")
+		return err
+	}
+	outStatus := status.New(inStatus.Code(), inStatus.Message())
+	subLogger.Info().Msg(fmt.Sprintf("Error Out Status: %v", outStatus))
+
+	for _, detail := range inStatus.Details() {
+		subLogger.Info().Msg(fmt.Sprintf("Error Detail: %v", detail))
+		switch t := detail.(type) {
+		case protoiface.MessageV1:
+			outStatus, err = outStatus.WithDetails(t)
+			subLogger.Info().Msg(fmt.Sprintf("Error Out Status: %v", outStatus))
+			if err != nil {
+				subLogger.Error().Err(err).Interface("detail", t).Msg("unable to add detail to re-mapped error details")
+			}
+		default:
+			subLogger.Error().Err(err).Interface("detail", t).Msg("unexpected: detail from compute doesn't implement the protoifam.MessageV1 interface")
+		}
+	}
+	return outStatus.Err()
 }
 
 func (t *tableService) getProtoFromDB(ctx context.Context, table *ent.KaskadaTable) *v1alpha.Table {
