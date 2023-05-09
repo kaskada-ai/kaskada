@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_api::kaskada::v1alpha::execute_request::ComputeSnapshotConfig;
-use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
+use sparrow_api::kaskada::v1alpha::{ComputeSnapshot, ComputeSnapshotConfig};
 use sparrow_instructions::ComputeStore;
 use tempfile::TempDir;
 use uuid::Uuid;

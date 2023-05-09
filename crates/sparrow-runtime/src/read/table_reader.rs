@@ -837,7 +837,7 @@ mod tests {
     }
 
     #[dynamic]
-    static CONFIG: TableConfig = TableConfig::new(
+    static CONFIG: TableConfig = TableConfig::new_with_table_source(
         "TestTable",
         &Uuid::new_v4(),
         "time",

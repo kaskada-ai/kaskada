@@ -241,7 +241,7 @@ impl DataContext {
 
         data_context
             .add_table(ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "Table1",
                     &Uuid::from_u64_pair(0, 0),
                     "time",
@@ -265,7 +265,7 @@ impl DataContext {
 
         data_context
             .add_table(ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "Table2",
                     &Uuid::from_u64_pair(0, 1),
                     "time",
@@ -288,7 +288,7 @@ impl DataContext {
         let schema3: Schema = Schema::try_from(&schema3).expect("Invalid schema for test");
         data_context
             .add_table(ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "Table3",
                     &Uuid::from_u64_pair(0, 2),
                     "time",

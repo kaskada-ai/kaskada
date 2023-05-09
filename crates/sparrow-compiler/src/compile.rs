@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn test_hash_plan_table_order_one_used() {
         let table1 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table1",
                 &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
                 "time",
@@ -250,7 +250,7 @@ mod tests {
             }),
         };
         let table2 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table2",
                 &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A9").unwrap(),
                 "time",
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn test_hash_plan_extra_views_unused() {
         let table1 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table1",
                 &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
                 "time",
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn test_hash_plan_extra_views_unordered() {
         let table1 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table1",
                 &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
                 "time",
@@ -365,7 +365,7 @@ mod tests {
     #[test]
     fn test_hash_plan_extra_tables_one_used() {
         let table1 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table1",
                 &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
                 "time",
@@ -380,7 +380,7 @@ mod tests {
             }),
         };
         let table2 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table2",
                 &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A9").unwrap(),
                 "time",
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn test_hash_plan_final_independent_of_grouping_order() {
         let table1 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table1",
                 &Uuid::parse_str("e4511dc4-5e96-47b9-9e8f-fb792f289d49").unwrap(),
                 "time",
@@ -424,7 +424,7 @@ mod tests {
         };
 
         let table2 = ComputeTable {
-            config: Some(TableConfig::new(
+            config: Some(TableConfig::new_with_table_source(
                 "Table2",
                 &Uuid::parse_str("9c48f082-66fd-4c23-bdb4-99d9a993bd18").unwrap(),
                 "time",

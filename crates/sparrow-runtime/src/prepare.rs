@@ -555,7 +555,7 @@ mod tests {
             source: Some(input_path),
         };
 
-        let table_config = TableConfig::new(
+        let table_config = TableConfig::new_with_table_source(
             "Event",
             &Uuid::new_v4(),
             "timestamp",
@@ -590,7 +590,7 @@ mod tests {
             source: Some(input_path),
         };
 
-        let table_config = TableConfig::new(
+        let table_config = TableConfig::new_with_table_source(
             "Segment",
             &Uuid::new_v4(),
             "timestamp",

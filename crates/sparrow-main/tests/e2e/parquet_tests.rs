@@ -63,7 +63,7 @@ use crate::{DataFixture, QueryFixture};
 pub(crate) async fn decimal_fixed_len_multipart_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers",
                 &Uuid::new_v4(),
                 "time",
@@ -133,7 +133,14 @@ async fn test_timestamp_microseconds() {
 
     let data_fixture = DataFixture::new()
         .with_table_from_parquet(
-            TableConfig::new("Events", &Uuid::new_v4(), "time", None, "user_id", "user"),
+            TableConfig::new_with_table_source(
+                "Events",
+                &Uuid::new_v4(),
+                "time",
+                None,
+                "user_id",
+                "user",
+            ),
             table,
         )
         .await
@@ -152,7 +159,7 @@ async fn test_timestamp_microseconds() {
 async fn test_multi_file_purchases() {
     let data_fixture = DataFixture::new()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Purchases",
                 &Uuid::new_v4(),
                 "purchase_time",

@@ -245,7 +245,7 @@ mod tests {
         let schema = sparrow_api::kaskada::v1alpha::Schema::try_from(&schema).unwrap();
         data_context
             .add_table(ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "A",
                     &table_a_uuid,
                     "",
@@ -262,7 +262,7 @@ mod tests {
             .unwrap();
         data_context
             .add_table(ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "B",
                     &table_b_uuid,
                     "",
@@ -280,7 +280,7 @@ mod tests {
 
         data_context
             .add_table(ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "C",
                     &table_c_uuid,
                     "",
