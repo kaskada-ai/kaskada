@@ -48,7 +48,7 @@ pub struct ComputeResult {
 
 impl ComputeExecutor {
     /// Spawns the compute tasks using the new operation based executor.
-    pub fn try_spawn(
+    pub async fn try_spawn(
         mut context: OperationContext,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,

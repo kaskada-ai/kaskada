@@ -226,6 +226,7 @@ pub async fn execute(
         progress_updates_rx,
         destination,
     )
+    .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
 
     Ok(compute_executor.execute_with_progress(
