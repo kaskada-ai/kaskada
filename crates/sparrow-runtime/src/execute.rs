@@ -18,7 +18,6 @@ use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
 use crate::RuntimeOptions;
 
-pub(crate) mod avro_arrow;
 mod compute_executor;
 mod error;
 mod input_prefetch;

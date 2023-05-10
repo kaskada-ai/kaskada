@@ -17,6 +17,7 @@ avro = ["avro-schema"]
 [dependencies]
 arrow.workspace = true
 avro-schema = { workspace = true, optional = true }
+avro-rs = { workspace = true }
 derive_more.workspace = true
 error-stack.workspace = true
 itertools.workspace = true

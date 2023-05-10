@@ -4571,6 +4571,7 @@ name = "sparrow-arrow"
 version = "0.6.2"
 dependencies = [
  "arrow",
+ "avro-rs",
  "avro-schema",
  "derive_more",
  "error-stack",

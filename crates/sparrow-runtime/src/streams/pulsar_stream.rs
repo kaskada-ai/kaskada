@@ -12,7 +12,6 @@ use pulsar::{
     TokioExecutor,
 };
 
-use crate::execute::avro_arrow;
 use sparrow_api::kaskada::v1alpha::PulsarSubscription;
 use std::io::Cursor;
 
@@ -257,7 +256,7 @@ impl PulsarReader {
         match avro_values.len() {
             0 => Ok(None),
             _ => {
-                let arrow_data = avro_arrow::avro_to_arrow(avro_values)
+                let arrow_data = sparrow_arrow::avro::avro_to_arrow(avro_values)
                     .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
                 RecordBatch::try_new(self.schema.clone(), arrow_data).map(Some)
             }
