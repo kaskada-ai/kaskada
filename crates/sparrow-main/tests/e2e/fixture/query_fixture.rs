@@ -9,8 +9,9 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::execute_request::{ComputeSnapshotConfig, Limits};
-use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
+use sparrow_api::kaskada::v1alpha::execute_request::Limits;
+use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
+use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
 use sparrow_api::kaskada::v1alpha::{destination, Destination};
 use sparrow_api::kaskada::v1alpha::{
     CompileRequest, ExecuteRequest, FeatureSet, FileType, Formula, ObjectStoreDestination,
