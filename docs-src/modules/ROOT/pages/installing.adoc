@@ -62,7 +62,7 @@ client.init(
 )
 ----
 
-For more information, please check out the xref:url:https://kaskada.readthedocs.io/en/latest/autoapi/kaskada/index.html[Kaskada Python Client] documentation.
+For more information, please check out the https://kaskada.readthedocs.io/en/latest/autoapi/kaskada/index.html[Kaskada Python Client] documentation.
 
 == Using Kaskada with IPython (Jupyter)
 
