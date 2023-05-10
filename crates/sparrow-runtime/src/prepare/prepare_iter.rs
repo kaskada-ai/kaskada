@@ -117,37 +117,18 @@ impl<'a> std::fmt::Debug for PrepareIter<'a> {
 }
 
 impl<'a> PrepareIter<'a> {
-    // pub fn stream(
-    //     self,
-    // ) -> impl Stream<Item = error_stack::Result<(RecordBatch, RecordBatch), Error>> {
-    //     // ) -> BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>> {
-    //     // let reader = self.reader;
-    //     async_stream::try_stream! {
-    //         let mut reader = self.reader;
-    //         while let Some(Ok(batch)) = reader.next().await {
-    //             let result: (RecordBatch, RecordBatch) = self
-    //                 .prepare_next_batch(batch)
-    //                 .await?;
-    //                 // .map_err(|err| err.change_context(Error::ReadingBatch));
-    //             yield result;
-    //         }
-    //     }
-    //     // .boxed()
-    // }
-
     pub fn stream(
-        mut self,
-    ) -> impl Stream<Item = error_stack::Result<(RecordBatch, RecordBatch), Error>> {
-        let reader = &mut self.reader;
+        &mut self,
+    ) -> BoxStream<'_, error_stack::Result<(RecordBatch, RecordBatch), Error>> {
         async_stream::try_stream! {
-            while let Some(Ok(batch)) = reader.next().await {
+            while let Some(Ok(batch)) = self.reader.next().await {
                 let result: (RecordBatch, RecordBatch) = self
                     .prepare_next_batch(batch)
                     .await?;
-                    // .map_err(|err| err.change_context(Error::ReadingBatch));
                 yield result;
             }
         }
+        .boxed()
     }
 
     pub fn try_new(
