@@ -128,7 +128,8 @@ class LocalBuilder(Builder):
         self._download = (
             os.getenv(LocalBuilder.KASKADA_DISABLE_DOWNLOAD_ENV, "false") != "true"
         )
-        self._manager_configs: Dict[str, Any] = {}
+        self._manager_configs: Dict[str, Any] = {"-no-color": "1"}
+        self._engine_configs: Dict[str, Any] = {"--log-no-color": "1"}
 
     def path(self, path: str):
         self._path = path
@@ -157,6 +158,12 @@ class LocalBuilder(Builder):
     def __get_manager_configs_as_args(self):
         configs = []
         for key, value in self._manager_configs.items():
+            configs.append(f"{key}={value}")
+        return configs
+
+    def __get_engine_configs_as_args(self):
+        configs = []
+        for key, value in self._engine_configs.items():
             configs.append(f"{key}={value}")
         return configs
 
@@ -200,7 +207,7 @@ class LocalBuilder(Builder):
 
         manager_cmd = [str(manager_binary_path)] + self.__get_manager_configs_as_args()
         logger.debug(f"Manager start command: {manager_cmd}")
-        engine_cmd = [engine_binary_path, engine_command]
+        engine_cmd = [engine_binary_path, engine_command] + self.__get_engine_configs_as_args()
         logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
         logger.info(f"Logging manager STDOUT to {manager_std_out.absolute()}")

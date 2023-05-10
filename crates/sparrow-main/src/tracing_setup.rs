@@ -50,6 +50,12 @@ pub struct TracingOptions {
     /// messages and omit parent spans information.
     #[arg(long, env = "SPARROW_LOG_JSON")]
     log_json: bool,
+
+    /// Whether to disable color output in logs.
+    /// 
+    /// Set to `1` to disable color output.
+    #[arg(long, default_value = "0", env = "NO_COLOR")]
+    log_no_color: i8,
 }
 
 impl TracingOptions {
@@ -106,14 +112,14 @@ pub fn setup_tracing(config: &TracingOptions) {
     // since the type of logs (JSON or not) affects the type of the
     // format layer and registry.
     if config.log_json {
-        let fmt_layer = tracing_subscriber::fmt::layer().event_format(RequestIdFormat);
+        let fmt_layer = tracing_subscriber::fmt::layer().with_ansi(config.log_no_color != 1).event_format(RequestIdFormat);
         registry
             .with(fmt_layer)
             .with(config.create_tracer())
             .try_init()
             .unwrap();
     } else {
-        let fmt_layer = tracing_subscriber::fmt::layer().with_target(false);
+        let fmt_layer = tracing_subscriber::fmt::layer().with_ansi(config.log_no_color != 1).with_target(false);
         registry
             .with(fmt_layer)
             .with(config.create_tracer())
