@@ -8,7 +8,7 @@ use sparrow_api::kaskada::v1alpha::PulsarDestination;
 use sparrow_api::kaskada::v1alpha::{destination, PulsarConfig};
 
 use crate::execute::progress_reporter::ProgressUpdate;
-use crate::streams::pulsar_schema;
+use crate::streams;
 use error_stack::{IntoReport, ResultExt};
 
 use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
@@ -66,9 +66,9 @@ pub(super) async fn write(
     };
 
     let topic_url = format_topic_url(&pulsar)?;
-    let output_schema =
-        pulsar_schema::get_output_schema(schema).change_context(Error::SchemaSerialization)?;
-    let formatted_schema = pulsar_schema::format_schema(output_schema.clone())
+    let output_schema = streams::pulsar::schema::get_output_schema(schema)
+        .change_context(Error::SchemaSerialization)?;
+    let formatted_schema = streams::pulsar::schema::format_schema(output_schema.clone())
         .change_context(Error::SchemaSerialization)?;
 
     tracing::info!("Creating pulsar topic {topic_url} with schema: {formatted_schema}");

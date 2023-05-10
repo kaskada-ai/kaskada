@@ -15,7 +15,7 @@ use sparrow_api::kaskada::v1alpha::PulsarConfig;
 use crate::metadata::file_from_path;
 use crate::stores::object_store_url::ObjectStoreKey;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
-use crate::streams::pulsar_schema;
+use crate::streams;
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -173,7 +173,7 @@ impl RawMetadata {
         config: &PulsarConfig,
     ) -> error_stack::Result<PulsarMetadata, Error> {
         // the user-defined schema in the topic
-        let pulsar_schema = pulsar_schema::get_pulsar_schema(
+        let pulsar_schema = streams::pulsar::schema::get_pulsar_schema(
             config.admin_service_url.as_str(),
             config.tenant.as_str(),
             config.namespace.as_str(),

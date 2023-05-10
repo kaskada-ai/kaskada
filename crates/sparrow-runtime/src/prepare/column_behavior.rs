@@ -403,7 +403,7 @@ impl ColumnBehavior {
 mod tests {
     use std::sync::Arc;
 
-    use arrow::array::{Int64Array, StringArray, TimestampNanosecondArray, UInt64Array};
+    use arrow::array::{Int64Array, TimestampNanosecondArray, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
     use static_init::dynamic;

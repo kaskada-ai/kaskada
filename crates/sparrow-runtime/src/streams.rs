@@ -1,2 +1,1 @@
-pub(crate) mod pulsar_schema;
-pub(crate) mod pulsar_stream;
+pub(crate) mod pulsar;

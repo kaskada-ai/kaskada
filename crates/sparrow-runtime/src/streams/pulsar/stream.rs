@@ -18,8 +18,6 @@ use std::io::Cursor;
 use std::time::Duration;
 use tokio::time::timeout;
 
-use super::pulsar_schema;
-
 pub struct AvroWrapper {
     value: Value,
 }
@@ -275,7 +273,7 @@ pub async fn consumer(
         config.tenant, config.namespace, config.topic_name
     );
 
-    let auth_token = pulsar_schema::pulsar_auth_token(config.auth_params.as_str())
+    let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
         .change_context(Error::CreatePulsarReader)?;
     let auth = Authentication {
         name: "token".to_string(),
@@ -289,7 +287,7 @@ pub async fn consumer(
         .change_context(Error::CreatePulsarReader)?;
 
     let formatted_schema =
-        pulsar_schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
+        super::schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),

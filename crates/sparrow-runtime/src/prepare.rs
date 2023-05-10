@@ -36,8 +36,7 @@ use tracing::Instrument;
 
 use crate::stores::object_store_url::ObjectStoreKey;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
-use crate::streams::pulsar_stream;
-use crate::{PreparedMetadata, RawMetadata};
+use crate::{streams, PreparedMetadata, RawMetadata};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 
@@ -93,8 +92,9 @@ async fn reader_from_pulsar<'a>(
         .await
         .change_context(Error::CreatePulsarReader)?;
 
-    let consumer = pulsar_stream::consumer(pulsar_subscription, pm.user_schema.clone()).await?;
-    let stream = pulsar_stream::stream_for_prepare(
+    let consumer =
+        streams::pulsar::stream::consumer(pulsar_subscription, pm.user_schema.clone()).await?;
+    let stream = streams::pulsar::stream::stream_for_prepare(
         pm.sparrow_metadata.raw_schema.clone(),
         consumer,
         pulsar_subscription.last_publish_time,
