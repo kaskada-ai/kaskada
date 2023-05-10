@@ -56,7 +56,7 @@ var (
 	objectStoreDisableSSL     = flag.Bool("object-store-disable-ssl", false, "set true to disable SSL when connecting to the object store")
 	objectStoreEndpoint       = flag.String("object-store-endpoint", "", "the endpoint for accessing the object store.  will use the object store default if this is not defined.")
 	objectStoreForcePathStyle = flag.Bool("object-store-force-path-style", false, "set to true to access the bucket as a path instead via a sub-domain. required when using minio as the object store.")
-	objectStorePath           = flag.String("object-store-path", "./data", "the path or prefix for storing data objects. can be a relative path if the `object-store-type` is `local`.")
+	objectStorePath           = flag.String("object-store-path", "~/.cache/kaskada/data", "the path or prefix for storing data objects. can be a relative path if the `object-store-type` is `local`.")
 
 	debug                    = flag.Bool("debug", false, "sets log level to debug")
 	debugGrpc                = flag.Bool("debug-grpc", false, "logs grpc connection debug info")
