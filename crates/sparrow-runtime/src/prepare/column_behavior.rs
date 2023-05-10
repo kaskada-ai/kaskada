@@ -444,8 +444,8 @@ mod tests {
         .unwrap()
     }
 
-    #[test]
-    fn test_sequential_u64_zero() {
+    #[tokio::test]
+    async fn test_sequential_u64_zero() {
         let mut behavior = ColumnBehavior::SequentialU64 { next_offset: 0 };
         assert_eq!(
             behavior
@@ -454,6 +454,7 @@ mod tests {
                     None,
                     &make_test_batch(5)
                 )
+                .await
                 .unwrap()
                 .as_ref(),
             &UInt64Array::from(vec![0, 1, 2, 3, 4])
@@ -465,14 +466,15 @@ mod tests {
                     None,
                     &make_test_batch(3)
                 )
+                .await
                 .unwrap()
                 .as_ref(),
             &UInt64Array::from(vec![5, 6, 7])
         );
     }
 
-    #[test]
-    fn test_sequential_u64_overflow() {
+    #[tokio::test]
+    async fn test_sequential_u64_overflow() {
         let mut behavior = ColumnBehavior::SequentialU64 {
             next_offset: u64::MAX - 3,
         };
@@ -484,6 +486,7 @@ mod tests {
                     None,
                     &make_test_batch(5)
                 )
+                .await
                 .unwrap()
                 .as_ref(),
             &UInt64Array::from(vec![0, 1, 2, 3, 4])
@@ -495,14 +498,15 @@ mod tests {
                     None,
                     &make_test_batch(3)
                 )
+                .await
                 .unwrap()
                 .as_ref(),
             &UInt64Array::from(vec![5, 6, 7])
         );
     }
 
-    #[test]
-    fn test_sequential_u64_nonzero() {
+    #[tokio::test]
+    async fn test_sequential_u64_nonzero() {
         let mut behavior = ColumnBehavior::SequentialU64 { next_offset: 100 };
         assert_eq!(
             behavior
@@ -511,6 +515,7 @@ mod tests {
                     None,
                     &make_test_batch(5)
                 )
+                .await
                 .unwrap()
                 .as_ref(),
             &UInt64Array::from(vec![100, 101, 102, 103, 104])
@@ -522,6 +527,7 @@ mod tests {
                     None,
                     &make_test_batch(3)
                 )
+                .await
                 .unwrap()
                 .as_ref(),
             &UInt64Array::from(vec![105, 106, 107])

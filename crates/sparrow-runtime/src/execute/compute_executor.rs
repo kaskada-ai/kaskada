@@ -136,13 +136,15 @@ impl ComputeExecutor {
             spawner.spawn(
                 format!("{operation_label}[op={index}]"),
                 info_span!("Operation", ?index, operation_label),
-                operation.execute(
-                    index,
-                    &mut context,
-                    inputs,
-                    max_event_time_tx.clone(),
-                    late_bindings,
-                ).await?,
+                operation
+                    .execute(
+                        index,
+                        &mut context,
+                        inputs,
+                        max_event_time_tx.clone(),
+                        late_bindings,
+                    )
+                    .await?,
             );
         }
 

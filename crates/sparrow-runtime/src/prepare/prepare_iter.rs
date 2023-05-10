@@ -1,14 +1,10 @@
-use std::pin::Pin;
 use std::sync::PoisonError;
-use std::task::Poll;
 
 use anyhow::Context;
-use arrow::array::ArrayRef;
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
-use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
@@ -43,30 +39,6 @@ pub struct PrepareIter<'a> {
     /// The metadata tracked during prepare
     metadata: PrepareMetadata,
 }
-
-// impl<'a> Stream for PrepareIter<'a> {
-//     type Item = Result<(RecordBatch, RecordBatch), PrepareErrorWrapper>;
-
-//     fn poll_next(
-//         mut self: Pin<&mut Self>,
-//         cx: &mut std::task::Context<'_>,
-//     ) -> Poll<Option<Self::Item>> {
-//         let reader = &mut self.reader;
-//         Pin::new(reader).poll_next(cx).map(|opt| match opt {
-//             Some(Ok(batch)) => {
-//                 let result = self
-//                     .get_mut()
-//                     .prepare_next_batch(batch)
-//                     .map_err(|err| err.change_context(Error::ReadingBatch).into());
-//                 Some(result)
-//             }
-//             Some(Err(err)) => Some(Err(Report::new(err)
-//                 .change_context(Error::ReadingBatch)
-//                 .into())),
-//             None => None,
-//         })
-//     }
-// }
 
 /// the Stream API works best with Result types that include an actual
 /// std::error::Error.  Simple things work okay with arbitrary Results,
@@ -117,20 +89,6 @@ impl<'a> std::fmt::Debug for PrepareIter<'a> {
 }
 
 impl<'a> PrepareIter<'a> {
-    pub fn stream(
-        &mut self,
-    ) -> BoxStream<'_, error_stack::Result<(RecordBatch, RecordBatch), Error>> {
-        async_stream::try_stream! {
-            while let Some(Ok(batch)) = self.reader.next().await {
-                let result: (RecordBatch, RecordBatch) = self
-                    .prepare_next_batch(batch)
-                    .await?;
-                yield result;
-            }
-        }
-        .boxed()
-    }
-
     pub fn try_new(
         reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
         config: &TableConfig,
@@ -198,6 +156,21 @@ impl<'a> PrepareIter<'a> {
             slice_preparer,
             metadata,
         })
+    }
+
+    /// Creates a stream of prepared batches from the underlying reader.
+    pub fn stream(
+        &mut self,
+    ) -> BoxStream<'_, error_stack::Result<(RecordBatch, RecordBatch), Error>> {
+        async_stream::try_stream! {
+            while let Some(Ok(batch)) = self.reader.next().await {
+                let result: (RecordBatch, RecordBatch) = self
+                    .prepare_next_batch(batch)
+                    .await?;
+                yield result;
+            }
+        }
+        .boxed()
     }
 
     /// Convert a read batch to the merged batch format.

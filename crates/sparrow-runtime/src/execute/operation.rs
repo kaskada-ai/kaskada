@@ -208,7 +208,8 @@ impl OperationExecutor {
             operator,
             input_channels,
             expression_executor.input_columns(),
-        ).await?;
+        )
+        .await?;
 
         let mut last_upper_bound = None;
 

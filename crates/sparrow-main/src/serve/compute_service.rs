@@ -545,6 +545,7 @@ mod tests {
         )
         .await
         .unwrap()
+        .stream()
         .collect()
         .await;
 

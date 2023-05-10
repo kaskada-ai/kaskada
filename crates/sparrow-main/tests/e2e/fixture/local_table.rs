@@ -82,11 +82,13 @@ impl LocalTestTable {
             //
             // TODO: Simulate the actual interaction with prepare (eg., collect raw files
             // and run prepare in response to analysis).
-            let mut iter = prepared_batches(source_data, &self.config, &None)
+            let mut prepared_iter = prepared_batches(source_data, &self.config, &None)
                 .await
                 .map_err(|e| e.into_error())?;
+            let mut iter = prepared_iter.stream();
             while let Some(prepared_batch) = iter.next().await {
-                let (prepared_batch, metadata) = prepared_batch?;
+                let (prepared_batch, metadata) = prepared_batch
+                    .map_err(|err| anyhow::anyhow!("failed getting batch {:?}", err))?;
 
                 let prepared_file = tempfile::Builder::new()
                     .suffix(".parquet")

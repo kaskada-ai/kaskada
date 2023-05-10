@@ -7,7 +7,7 @@ use std::str::FromStr;
 use std::{fmt, path};
 
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
@@ -572,10 +572,10 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+        let mut prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
             .await
             .unwrap();
-        let prepared_batches = prepared_batches.collect::<Vec<_>>().await;
+        let prepared_batches = prepared_batches.stream().collect::<Vec<_>>().await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
@@ -607,10 +607,10 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+        let mut prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
             .await
             .unwrap();
-        let prepared_batches = prepared_batches.collect::<Vec<_>>().await;
+        let prepared_batches = prepared_batches.stream().collect::<Vec<_>>().await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();

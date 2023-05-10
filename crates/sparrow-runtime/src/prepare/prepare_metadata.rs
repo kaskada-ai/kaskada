@@ -64,8 +64,8 @@ mod tests {
     use crate::prepare::ColumnBehavior;
     use arrow::array::{StringArray, UInt64Array};
 
-    #[test]
-    fn test_entity_key_mapping() {
+    #[tokio::test]
+    async fn test_entity_key_mapping() {
         let mut behavior = ColumnBehavior::PrepareEntityKey {
             index: 0,
             nullable: false,
@@ -76,13 +76,14 @@ mod tests {
         let mut metadata = PrepareMetadata::new(DataType::Utf8.clone());
         behavior
             .get_result(Some(&mut metadata), None, &batch)
+            .await
             .unwrap();
         assert_eq!(metadata.get_flush_metadata().unwrap().num_rows(), 3);
         assert!(metadata.previous_keys.is_empty());
         assert!(metadata.metadata_batches.is_empty());
     }
-    #[test]
-    fn test_entity_key_mapping_int() {
+    #[tokio::test]
+    async fn test_entity_key_mapping_int() {
         let mut behavior = ColumnBehavior::PrepareEntityKey {
             index: 0,
             nullable: false,
@@ -93,6 +94,7 @@ mod tests {
         let mut metadata = PrepareMetadata::new(DataType::UInt64.clone());
         behavior
             .get_result(Some(&mut metadata), None, &batch)
+            .await
             .unwrap();
         assert_eq!(metadata.get_flush_metadata().unwrap().num_rows(), 3);
         assert!(metadata.previous_keys.is_empty());

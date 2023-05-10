@@ -1,13 +1,11 @@
-use std::pin::Pin;
-use std::sync::{Arc, PoisonError};
-use std::task::Poll;
+use std::sync::Arc;
 
-use arrow::array::{ArrayRef, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
+use arrow::array::{ArrayRef, PrimitiveArray, TimestampNanosecondArray};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType, UInt64Type};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, Report, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use itertools::Itertools;
@@ -109,50 +107,12 @@ pub struct ExecuteIter<'a> {
 //     }
 // }
 
-/// the Stream API works best with Result types that include an actual
-/// std::error::Error.  Simple things work okay with arbitrary Results,
-/// but things like TryForEach do not.  Since error_stack Errors do
-/// not implement std::error::Error, we wrap them in this.
-#[derive(Debug)]
-pub struct ExecuteIterWrapper(pub Report<Error>);
-
-impl std::fmt::Display for ExecuteIterWrapper {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl std::error::Error for ExecuteIterWrapper {}
-
-impl From<Report<Error>> for ExecuteIterWrapper {
-    fn from(error: Report<Error>) -> Self {
-        ExecuteIterWrapper(error)
-    }
-}
-
-impl<T> From<PoisonError<T>> for ExecuteIterWrapper {
-    fn from(error: PoisonError<T>) -> Self {
-        ExecuteIterWrapper(Report::new(Error::Internal).attach_printable(format!("{:?}", error)))
-    }
-}
-
-impl From<std::io::Error> for ExecuteIterWrapper {
-    fn from(error: std::io::Error) -> Self {
-        ExecuteIterWrapper(Report::new(Error::Internal).attach_printable(format!("{:?}", error)))
-    }
-}
-
-impl From<anyhow::Error> for ExecuteIterWrapper {
-    fn from(error: anyhow::Error) -> Self {
-        ExecuteIterWrapper(Report::new(Error::Internal).attach_printable(format!("{:?}", error)))
-    }
-}
-
 impl<'a> std::fmt::Debug for ExecuteIter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExecuteIter")
             .field("prepared_schema", &self.prepared_schema)
             .field("columns", &self.columns)
+            // TODO: FRAZ add new fields
             .finish_non_exhaustive()
     }
 }
@@ -227,10 +187,23 @@ impl<'a> ExecuteIter<'a> {
         })
     }
 
+    /// Creates a stream of prepared batches from the underlying reader.
+    #[allow(unused)]
+    pub fn stream(&mut self) -> BoxStream<'_, error_stack::Result<Option<RecordBatch>, Error>> {
+        async_stream::try_stream! {
+            while let Some(Ok(batch)) = self.reader.next().await {
+                let result = self.prepare_next_batch(batch).await?;
+                yield result;
+            }
+        }
+        .boxed()
+    }
+
     /// Convert a read batch to the merged batch format.
     ///
     /// This method drops "late data" from each batch using a simplistic
     /// watermark heuristic.
+    #[allow(unused)]
     async fn prepare_next_batch(
         &mut self,
         unfiltered_batch: RecordBatch,
@@ -481,8 +454,8 @@ mod tests {
         .unwrap()
     }
 
-    #[test]
-    fn test_sequence_of_batches_prepared() {
+    #[tokio::test]
+    async fn test_sequence_of_batches_prepared() {
         let config = TableConfig::new(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
@@ -496,9 +469,21 @@ mod tests {
         let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
         let batch3 = make_time_batch(&[20]);
 
-        let prepared1 = execute_iter.prepare_next_batch(batch1).unwrap().unwrap();
-        let prepared2 = execute_iter.prepare_next_batch(batch2).unwrap().unwrap();
-        let prepared3 = execute_iter.prepare_next_batch(batch3).unwrap().unwrap();
+        let prepared1 = execute_iter
+            .prepare_next_batch(batch1)
+            .await
+            .unwrap()
+            .unwrap();
+        let prepared2 = execute_iter
+            .prepare_next_batch(batch2)
+            .await
+            .unwrap()
+            .unwrap();
+        let prepared3 = execute_iter
+            .prepare_next_batch(batch3)
+            .await
+            .unwrap()
+            .unwrap();
 
         let times1: &TimestampNanosecondArray =
             downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
@@ -513,8 +498,8 @@ mod tests {
         assert_eq!(&[12, 12], times3.values())
     }
 
-    #[test]
-    fn test_when_watermark_does_not_advance() {
+    #[tokio::test]
+    async fn test_when_watermark_does_not_advance() {
         let config = TableConfig::new(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
@@ -528,16 +513,24 @@ mod tests {
         let batch2 = make_time_batch(&[6, 7, 8, 9, 10]);
         let batch3 = make_time_batch(&[20]);
 
-        let prepared1 = execute_iter.prepare_next_batch(batch1).unwrap().unwrap();
+        let prepared1 = execute_iter
+            .prepare_next_batch(batch1)
+            .await
+            .unwrap()
+            .unwrap();
 
         let times1: &TimestampNanosecondArray =
             downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
         assert_eq!(&[0, 1, 3], times1.values());
 
-        let prepared2 = execute_iter.prepare_next_batch(batch2).unwrap();
+        let prepared2 = execute_iter.prepare_next_batch(batch2).await.unwrap();
         assert!(prepared2.is_none());
 
-        let prepared3 = execute_iter.prepare_next_batch(batch3).unwrap().unwrap();
+        let prepared3 = execute_iter
+            .prepare_next_batch(batch3)
+            .await
+            .unwrap()
+            .unwrap();
         let times3: &TimestampNanosecondArray =
             downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
         assert_eq!(&[6, 7, 8, 9, 10, 10], times3.values())
