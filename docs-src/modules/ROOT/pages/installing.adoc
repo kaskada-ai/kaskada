@@ -150,7 +150,7 @@ optional arguments:
                         name. The QueryResponse contains result_url, query and dataframe. 
 ----
 
-For more information, please check out the xref:url:https://kaskada.readthedocs.io/en/latest/autoapi/fenlmagic/index.html[Fenlmagic Client] documentation.
+For more information, please check out the https://kaskada.readthedocs.io/en/latest/autoapi/fenlmagic/index.html[Fenlmagic Client] documentation.
 
 == Using Kaskada with the command line (CLI)
 
