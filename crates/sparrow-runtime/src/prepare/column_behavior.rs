@@ -41,6 +41,13 @@ pub enum ColumnBehavior {
     /// Hash the given column.
     ///
     /// This field is used for preparing the key column during execution.
+    /// During execution, no files are prepared, so the key hash mapping is
+    /// updated dynamically in memory, and thus needs a different preparation
+    /// method than during prepare.
+    ///
+    /// Note that we could likely combine the two by just creating the key hash
+    /// array in this step, then require a later step for creating metadata files
+    /// or updating the in-memory key hash mapping.
     ExecuteEntityKey { index: usize, nullable: bool },
     /// Generates a row of monotically increasing u64s, starting
     /// at the defined offset.

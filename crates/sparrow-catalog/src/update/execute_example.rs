@@ -214,7 +214,6 @@ impl ExampleInputPreparer {
             sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
                 .await
                 .change_context(Error::PrepareInput)?
-                .stream()
                 .collect::<Vec<_>>()
                 .await;
 

@@ -29,16 +29,16 @@ use super::column_behavior::ColumnBehavior;
 #[allow(unused)]
 const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 
-/// An iterator over batches during execution.
+/// A stream of input batches ready for processing.
 ///
-/// In addition to iterating, this is responsible for the following:
-///
+/// This stream reads unordered, unprepared batches from its `reader`, and
+/// is responsible for the following:
 /// 1. Inserting the time column, subsort column, and key hash from source to
 ///    the batch
-/// 2. Casts required columns
-/// 3. Sorts the record batches by the time column, subsort column, and key hash
-/// 4. Handles late data
-pub struct ExecuteIter<'a> {
+/// 2. Casting required columns
+/// 3. Sorting the record batches by the time column, subsort column, and key hash
+/// 4. Handling late data
+pub struct ExecutionInputStream<'a> {
     reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     /// The final schema to produce, including the 3 key columns
     prepared_schema: SchemaRef,
@@ -69,47 +69,9 @@ pub struct ExecuteIter<'a> {
     leftovers: Option<RecordBatch>,
 }
 
-// impl<'a> Stream for ExecuteIter<'a> {
-//     /// This stream may return None in the case where messages were read from
-//     /// the underlying stream, but the watermark has not advanced far enough to
-//     /// produce any messages.
-//     ///
-//     /// The correct behavior for a consumer is to ignore the empty message
-//     /// and continue polling the stream.
-//     type Item = Result<Option<RecordBatch>, ExecuteIterWrapper>;
-
-//     fn poll_next(
-//         mut self: Pin<&mut Self>,
-//         cx: &mut std::task::Context<'_>,
-//     ) -> Poll<Option<Self::Item>> {
-//         let reader = &mut self.reader;
-//         Pin::new(reader).poll_next(cx).map(|opt| match opt {
-//             Some(Ok(batch)) => {
-//                 let result = self
-//                     .get_mut()
-//                     .prepare_next_batch(batch)
-//                     .map_err(|err| err.change_context(Error::ReadingBatch).into());
-//                 Some(result)
-//             }
-//             Some(Err(err)) => Some(Err(Report::new(err)
-//                 .change_context(Error::ReadingBatch)
-//                 .into())),
-//             None => {
-//                 // Indicates that the stream has likely closed unexpectedly
-//                 tracing::error!(
-//                     "Unexpected empty message from stream - likely the stream has closed"
-//                 );
-//                 Some(Err(Report::new(Error::ReadInput)
-//                     .change_context(Error::Internal)
-//                     .into()))
-//             }
-//         })
-//     }
-// }
-
-impl<'a> std::fmt::Debug for ExecuteIter<'a> {
+impl<'a> std::fmt::Debug for ExecutionInputStream<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ExecuteIter")
+        f.debug_struct("ExecuteInputStream")
             .field("prepared_schema", &self.prepared_schema)
             .field("columns", &self.columns)
             // TODO: FRAZ add new fields
@@ -117,7 +79,7 @@ impl<'a> std::fmt::Debug for ExecuteIter<'a> {
     }
 }
 
-impl<'a> ExecuteIter<'a> {
+impl<'a> ExecutionInputStream<'a> {
     #[allow(unused)]
     pub fn try_new(
         reader: impl Stream<Item = Result<RecordBatch, ArrowError>> + Send + 'static,
@@ -401,7 +363,7 @@ mod tests {
     use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
     use crate::RawMetadata;
 
-    use super::ExecuteIter;
+    use super::ExecutionInputStream;
 
     #[dynamic]
     static RAW_SCHEMA: SchemaRef = {
@@ -417,14 +379,17 @@ mod tests {
         ]))
     };
 
-    fn default_iter<'a>(config: &'a TableConfig, bounded_lateness: i64) -> ExecuteIter<'a> {
+    fn default_iter<'a>(
+        config: &'a TableConfig,
+        bounded_lateness: i64,
+    ) -> ExecutionInputStream<'a> {
         let reader = Box::pin(futures::stream::iter(vec![]));
         let raw_schema = RAW_SCHEMA.clone();
         let raw_metadata = RawMetadata::from_raw_schema(raw_schema.clone());
         let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
             KeyHashInverse::from_data_type(DataType::UInt64),
         ));
-        ExecuteIter::try_new(
+        ExecutionInputStream::try_new(
             reader,
             config,
             raw_metadata,

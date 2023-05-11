@@ -8,6 +8,7 @@ use std::{fmt, path};
 
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use futures::stream::BoxStream;
 use futures::{StreamExt, TryStreamExt};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::ArrowWriter;
@@ -20,8 +21,8 @@ use sparrow_api::kaskada::v1alpha::{
 
 mod column_behavior;
 mod error;
-mod execute_iter;
-mod prepare_iter;
+mod execute_input_stream;
+mod prepare_input_stream;
 mod prepare_metadata;
 mod slice_preparer;
 
@@ -29,7 +30,6 @@ mod slice_preparer;
 pub(crate) use column_behavior::*;
 
 pub use error::*;
-pub use prepare_iter::*;
 pub(crate) use prepare_metadata::*;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use tracing::Instrument;
@@ -48,7 +48,8 @@ pub async fn prepared_batches<'a>(
     source_data: &SourceData,
     config: &'a TableConfig,
     slice: &'a Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter<'a>, Error> {
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
     let prepare_hash = get_prepare_hash(source_data)?;
     let prepare_iter = match source_data.source.as_ref() {
         None => error_stack::bail!(Error::MissingField("source")),
@@ -60,17 +61,17 @@ pub async fn prepared_batches<'a>(
                     .into_report()
                     .change_context(Error::Internal)?
                     .len();
-                reader_from_parquet(config, reader, file_size, prepare_hash, slice)?
+                reader_from_parquet(config, reader, file_size, prepare_hash, slice).await?
             }
             source_data::Source::CsvPath(source) => {
                 let file = open_file(source)?;
                 let reader = BufReader::new(file);
-                reader_from_csv(config, reader, prepare_hash, slice)?
+                reader_from_csv(config, reader, prepare_hash, slice).await?
             }
             source_data::Source::CsvData(content) => {
                 let content = Cursor::new(content.to_string());
                 let reader = BufReader::new(content);
-                reader_from_csv(config, reader, prepare_hash, slice)?
+                reader_from_csv(config, reader, prepare_hash, slice).await?
             }
             source_data::Source::PulsarSubscription(ps) => {
                 reader_from_pulsar(config, ps, prepare_hash, slice).await?
@@ -86,7 +87,8 @@ async fn reader_from_pulsar<'a>(
     pulsar_subscription: &PulsarSubscription,
     prepare_hash: u64,
     slice: &'a Option<Slice>,
-) -> error_stack::Result<PrepareIter<'a>, Error> {
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
     let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
     let pm = RawMetadata::try_from_pulsar(pulsar_config)
         .await
@@ -99,9 +101,16 @@ async fn reader_from_pulsar<'a>(
         consumer,
         pulsar_subscription.last_publish_time,
     );
-    PrepareIter::try_new(stream, config, pm.sparrow_metadata, prepare_hash, slice)
-        .into_report()
-        .change_context(Error::CreatePulsarReader)
+    prepare_input_stream::try_new(
+        stream.boxed(),
+        config,
+        pm.sparrow_metadata,
+        prepare_hash,
+        slice,
+    )
+    .await
+    .into_report()
+    .change_context(Error::CreatePulsarReader)
 }
 
 // this is to avoid putting pulsar auth info in the logs
@@ -166,7 +175,7 @@ pub async fn prepare_file(
         _ => path::Path::new(temp_dir),
     };
 
-    let mut preparer = prepared_batches(source_data, table_config, slice).await?;
+    let prepare_stream = prepared_batches(source_data, table_config, slice).await?;
     let batch_count = std::sync::atomic::AtomicUsize::new(0);
 
     let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
@@ -213,7 +222,6 @@ pub async fn prepare_file(
         Ok((prepared_metadata, prepared_file))
     };
 
-    let prepare_stream = preparer.stream();
     let results = prepare_stream.filter_map(|r| {
         let n = batch_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         async move {
@@ -417,13 +425,14 @@ fn get_batch_size(num_rows: i64, num_files: usize) -> usize {
     (num_rows + num_files - 1) / num_files
 }
 
-fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
+async fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
     config: &'a TableConfig,
     reader: R,
     file_size: u64,
     prepare_hash: u64,
     slice: &'a Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter<'a>, Error> {
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
     let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(reader)
         .into_report()
         .change_context(Error::CreateParquetReader)?;
@@ -441,19 +450,27 @@ fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
     // create a Stream from reader
     let stream_reader = futures::stream::iter(reader);
 
-    PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)
-        .into_report()
-        .change_context(Error::CreateParquetReader)
+    prepare_input_stream::try_new(
+        stream_reader.boxed(),
+        config,
+        raw_metadata,
+        prepare_hash,
+        slice,
+    )
+    .await
+    .into_report()
+    .change_context(Error::CreateParquetReader)
 }
 
 const BATCH_SIZE: usize = 1_000_000;
 
-fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
+async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
     config: &'a TableConfig,
     reader: R,
     prepare_hash: u64,
     slice: &'a Option<slice_plan::Slice>,
-) -> error_stack::Result<PrepareIter<'a>, Error> {
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
     use arrow::csv::ReaderBuilder;
 
     // Create the CSV reader.
@@ -468,9 +485,16 @@ fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
         RawMetadata::from_raw_schema(reader.schema()).change_context_lazy(|| Error::ReadSchema)?;
     let stream_reader = futures::stream::iter(reader);
 
-    PrepareIter::try_new(stream_reader, config, raw_metadata, prepare_hash, slice)
-        .into_report()
-        .change_context(Error::CreateCsvReader)
+    prepare_input_stream::try_new(
+        stream_reader.boxed(),
+        config,
+        raw_metadata,
+        prepare_hash,
+        slice,
+    )
+    .await
+    .into_report()
+    .change_context(Error::CreateCsvReader)
 }
 
 pub fn file_sourcedata(path: source_data::Source) -> SourceData {
@@ -572,10 +596,11 @@ mod tests {
             "user",
         );
 
-        let mut prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
             .await
-            .unwrap();
-        let prepared_batches = prepared_batches.stream().collect::<Vec<_>>().await;
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
@@ -607,10 +632,11 @@ mod tests {
             "user",
         );
 
-        let mut prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
+        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
             .await
-            .unwrap();
-        let prepared_batches = prepared_batches.stream().collect::<Vec<_>>().await;
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
