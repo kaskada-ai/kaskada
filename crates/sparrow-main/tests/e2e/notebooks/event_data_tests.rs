@@ -9,7 +9,7 @@ use crate::{DataFixture, QueryFixture};
 async fn sample_event_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Events",
                 &Uuid::new_v4(),
                 "timestamp",
@@ -215,7 +215,7 @@ async fn test_multiple_distinct_partitions() {
     let data = sample_event_data_fixture()
         .await
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "EventsByLocale",
                 &Uuid::new_v4(),
                 "timestamp",
@@ -355,7 +355,7 @@ async fn test_consistent_result_count_with_when() {
 async fn event_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Events",
                 &Uuid::new_v4(),
                 "timestamp",

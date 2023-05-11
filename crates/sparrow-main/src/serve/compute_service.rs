@@ -2,7 +2,12 @@ use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeService;
-
+use sparrow_api::kaskada::v1alpha::GetMaterializationStatusRequest;
+use sparrow_api::kaskada::v1alpha::GetMaterializationStatusResponse;
+use sparrow_api::kaskada::v1alpha::StartMaterializationRequest;
+use sparrow_api::kaskada::v1alpha::StartMaterializationResponse;
+use sparrow_api::kaskada::v1alpha::StopMaterializationRequest;
+use sparrow_api::kaskada::v1alpha::StopMaterializationResponse;
 use sparrow_api::kaskada::v1alpha::{
     CompileRequest, CompileResponse, ExecuteRequest, ExecuteResponse,
     GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState,
@@ -92,6 +97,25 @@ impl ComputeService for ComputeServiceImpl {
                 Err(tonic::Status::internal("panic during prepare"))
             }
         }
+    }
+
+    async fn start_materialization(
+        &self,
+        _request: Request<StartMaterializationRequest>,
+    ) -> Result<Response<StartMaterializationResponse>, Status> {
+        Err(tonic::Status::internal("unsupported"))
+    }
+    async fn stop_materialization(
+        &self,
+        _request: Request<StopMaterializationRequest>,
+    ) -> Result<Response<StopMaterializationResponse>, Status> {
+        Err(tonic::Status::internal("unsupported"))
+    }
+    async fn get_materialization_status(
+        &self,
+        _request: Request<GetMaterializationStatusRequest>,
+    ) -> Result<Response<GetMaterializationStatusResponse>, Status> {
+        Err(tonic::Status::internal("unsupported"))
     }
 }
 
@@ -361,7 +385,7 @@ mod tests {
 
         let result = compile_impl(tonic::Request::new(CompileRequest {
             tables: vec![ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "Table1",
                     &Uuid::new_v4(),
                     "time",
@@ -396,7 +420,7 @@ mod tests {
 
         let result = compile_impl(tonic::Request::new(CompileRequest {
             tables: vec![ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "Table1",
                     &Uuid::new_v4(),
                     "time",
@@ -431,7 +455,7 @@ mod tests {
 
         let result = compile_impl(tonic::Request::new(CompileRequest {
             tables: vec![ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     "Table1",
                     &Uuid::new_v4(),
                     "time",
@@ -496,7 +520,7 @@ mod tests {
         let file_path = "eventdata/event_data.parquet";
         let s3_helper = S3Helper::new().await;
         let part1_file_path = sparrow_testing::testdata_path(file_path);
-        let table = TableConfig::new(
+        let table = TableConfig::new_with_table_source(
             "Events",
             &Uuid::new_v4(),
             "timestamp",

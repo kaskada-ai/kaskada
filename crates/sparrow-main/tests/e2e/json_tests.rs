@@ -13,7 +13,14 @@ use crate::QueryFixture;
 pub(crate) async fn json_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Json", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Json",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! { r#"
     time,subsort,key,json
     1996-12-19T16:39:57-08:00,0,A,"{""a"": 10, ""b"": ""dog""}"
@@ -35,7 +42,14 @@ pub(crate) async fn json_data_fixture() -> DataFixture {
 pub(crate) async fn invalid_json_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Json", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Json",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! { r#"
     time,subsort,key,json
     1996-12-19T16:39:57-08:00,0,A,"{a: 10, ""b"": ""dog""}"

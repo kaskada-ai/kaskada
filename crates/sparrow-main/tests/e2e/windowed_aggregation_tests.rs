@@ -12,7 +12,14 @@ use crate::{DataFixture, QueryFixture};
 async fn window_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T16:39:57-08:00,0,A,10,arugula,true
@@ -32,7 +39,14 @@ async fn window_data_fixture() -> DataFixture {
 async fn window_data_fixture_with_nulls() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T16:39:57-08:00,0,A,10,arugula,true
@@ -556,7 +570,7 @@ async fn test_sliding_count_final_results() {
     // as new in later aggregations (such as the `last` added for final results)
     let data_fixture = DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers",
                 &Uuid::new_v4(),
                 "time",

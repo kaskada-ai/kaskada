@@ -120,7 +120,7 @@ async fn test_record_select() {
 async fn test_record_select_unused_key() {
     let data_fixture = DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Input", &Uuid::new_v4(), "time", None, "key", ""),
+            TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", None, "key", ""),
             indoc::indoc! {"
             time,key,a,b,c
             2021-01-01T00:00:00.000000000Z,A,5,1.2,true

@@ -10,7 +10,7 @@ use crate::QueryFixture;
 pub(crate) async fn multiple_table_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers",
                 &Uuid::new_v4(),
                 "time",
@@ -31,7 +31,7 @@ pub(crate) async fn multiple_table_fixture() -> DataFixture {
         .await
         .unwrap()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers2",
                 &Uuid::new_v4(),
                 "time",
