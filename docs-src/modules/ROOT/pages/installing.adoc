@@ -62,6 +62,8 @@ client.init(
 )
 ----
 
+For more information, please check out the https://kaskada.readthedocs.io/en/latest/autoapi/kaskada/index.html[Kaskada Python Client] documentation.
+
 == Using Kaskada with IPython (Jupyter)
 
 IPython is an interactive Python runtime used by Jupyter and other
@@ -147,6 +149,8 @@ optional arguments:
   --var VAR             Assigns the QueryResponse to a local variable with the given
                         name. The QueryResponse contains result_url, query and dataframe. 
 ----
+
+For more information, please check out the https://kaskada.readthedocs.io/en/latest/autoapi/fenlmagic/index.html[Fenlmagic Client] documentation.
 
 == Using Kaskada with the command line (CLI)
 

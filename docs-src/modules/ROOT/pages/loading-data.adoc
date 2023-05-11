@@ -198,3 +198,14 @@ The following environment variables are used to configure credentials:
 * `AWS_SESSION_TOKEN`: The session token. Session tokens are required for credentials created by assuming an IAM role.
 * `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
 * `AWS_ALLOW_HTTP`: Set to “true” to permit HTTP connections without TLS
+
+=== GCP GS Storage
+
+Data can be loaded from GCP GS using the `gs:` protocol. Like the AWS S3 Storage configuration, the
+Kaskada service must be configured with credentials.
+
+The following environment variables are used to configure credentials:
+* `GOOGLE_SERVICE_ACCOUNT`: location of service account file
+* `GOOGLE_SERVICE_ACCOUNT_PATH`: (alias) location of service account file
+* `SERVICE_ACCOUNT`: (alias) location of service account file
+* `GOOGLE_SERVICE_ACCOUNT_KEY`: JSON serialized service account key

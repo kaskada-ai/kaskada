@@ -1,0 +1,10 @@
+= Input / Output
+
+Kaskada supports a variety of input sources and output sinks.
+For details on using a specific connector, refer to the corresponding page.
+
+** xref:apache-pulsar.adoc[Apache Pulsar] is supported as a source and sink.
+** xref:apache-cassandra.adoc[Apache Cassandra] is supported as a destination using the Apache Pulsar sink and a Pulsar to Cassandra connector.
+** xref:redis.adoc[Redis] is supported as a destination using the Apache Pulsar sink and a Pulsar to Redis connector.
+** xref:aws-redshift.adoc[AWS Redshift] is supported as a destination using the Parquet sink, followed by loading the Parquet files into Redshift.
+** xref:snowflake.adoc[Snowflake] is supported as a destination using the Parquet sink, followed by loading the Parquet files into Snowflake.

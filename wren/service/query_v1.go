@@ -118,23 +118,9 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	// Update the request views with only the views required for the query.
 	request.Query.Views = compileResponse.Views
 
-	dataTokenId := ""
-	if request.Query.DataTokenId != nil {
-		dataTokenId = request.Query.DataTokenId.GetValue()
-	}
-	dataToken, err := q.computeManager.GetDataToken(ctx, owner, dataTokenId)
-	if err != nil {
-		subLogger.Debug().Msg("returning from GetDataToken")
-		return wrapErrorWithStatus(err, subLogger)
-	}
-	request.Query.DataTokenId = &wrapperspb.StringValue{
-		Value: dataToken.ID.String(),
-	}
-
 	analysisResponse := &v1alpha.CreateQueryResponse{
 		State: v1alpha.CreateQueryResponse_STATE_ANALYSIS,
 		Config: &v1alpha.CreateQueryResponse_Config{
-			DataTokenId:  dataToken.ID.String(),
 			SliceRequest: request.Query.Slice,
 		},
 		Analysis: &v1alpha.CreateQueryResponse_Analysis{
@@ -142,6 +128,22 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 			Schema:     compileResponse.ComputeResponse.ResultType.GetStruct(),
 		},
 		FenlDiagnostics: compileResponse.ComputeResponse.FenlDiagnostics,
+	}
+
+	dataTokenId := ""
+	if request.Query.DataTokenId != nil {
+		dataTokenId = request.Query.DataTokenId.GetValue()
+	}
+	dataToken, err := q.computeManager.GetDataToken(ctx, owner, dataTokenId)
+	if err != nil {
+		subLogger.Debug().Err(err).Msg("returning from GetDataToken")
+	}
+
+	if dataToken != nil {
+		request.Query.DataTokenId = &wrapperspb.StringValue{
+			Value: dataToken.ID.String(),
+		}
+		analysisResponse.Config.DataTokenId = dataToken.ID.String()
 	}
 
 	metrics := &v1alpha.CreateQueryResponse_Metrics{}

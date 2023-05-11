@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -688,30 +687,6 @@ func reMapSparrowError(ctx context.Context, err error) error {
 		}
 	}
 	return outStatus.Err()
-}
-
-// converts diagnostics in non-executable responses into error details to preserve legacy behavior
-// TODO: update the python client to be able to handle non-executable responses in the response body
-// TODO: remove this and pass back non-executable responses in the response body instead of as an error
-func (m *Manager) ReMapAnalysisError(ctx context.Context, analysis *v1alpha.Analysis) error {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.reMapAnalysisError").Logger()
-	if analysis != nil {
-		if !analysis.CanExecute {
-			if analysis.FenlDiagnostics != nil {
-				diagCount := len(analysis.FenlDiagnostics.FenlDiagnostics)
-				if diagCount > 0 {
-					outStatus := status.New(codes.InvalidArgument, fmt.Sprintf("%d errors in Fenl statements; see error details", diagCount))
-					outStatus, err := outStatus.WithDetails(analysis.FenlDiagnostics)
-					if err != nil {
-						subLogger.Error().Err(err).Interface("fenl_diagnostics", analysis.FenlDiagnostics).Msg("unable to add diagnostic to re-mapped error details")
-					}
-					return outStatus.Err()
-				}
-			}
-			return status.Error(codes.Internal, "internal compute error")
-		}
-	}
-	return nil
 }
 
 func (m *Manager) getTablesForCompile(ctx context.Context, owner *ent.Owner) ([]*v1alpha.ComputeTable, error) {

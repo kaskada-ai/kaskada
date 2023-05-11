@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
 
+#[tokio::test]
 /// Create a table from a Parquet Decimal column backed by a fixed length array.
 ///
 /// This uses multiple files to ensure we trigger merge code which may have
@@ -60,8 +61,8 @@ use crate::{DataFixture, QueryFixture};
 /// ```
 ///
 /// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#decimal
-pub(crate) async fn decimal_fixed_len_multipart_data_fixture() -> DataFixture {
-    DataFixture::new()
+async fn test_decimal_column_fails_prepare() {
+    let data_fixture = DataFixture::new()
         .with_table_from_files(
             TableConfig::new_with_table_source(
                 "Numbers",
@@ -76,48 +77,11 @@ pub(crate) async fn decimal_fixed_len_multipart_data_fixture() -> DataFixture {
                 "regressions/decimal_fixed_len_part2.parquet",
             ],
         )
-        .await
-        .unwrap()
-}
-
-#[tokio::test]
-async fn test_decimal_fixed_len_ignored() {
-    // This test shows that a query with decimal columns and multiple files works.
-    // This requires ignoring the fields because they can't be merged.
-    insta::assert_snapshot!(QueryFixture::new("Numbers").run_to_csv(&decimal_fixed_len_multipart_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,time,subsort,key,x
-    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1996-12-20T00:39:57.000000000,0,A,5.0
-    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1996-12-20T00:39:58.000000000,0,B,8.0
-    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,1996-12-20T00:39:59.000000000,0,A,10.0
-    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,1996-12-20T00:40:00.000000000,0,A,
-    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,1996-12-20T00:40:01.000000000,0,A,11.0
-    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,1996-12-20T00:40:02.000000000,0,A,
-    1997-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,1997-12-20T00:39:57.000000000,0,A,5.0
-    1997-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,1997-12-20T00:39:58.000000000,0,B,8.0
-    1997-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,1997-12-20T00:39:59.000000000,0,A,10.0
-    1997-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,1997-12-20T00:40:00.000000000,0,A,
-    1997-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,1997-12-20T00:40:01.000000000,0,A,11.0
-    1997-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,1997-12-20T00:40:02.000000000,0,A,
-    "###)
-}
-
-#[tokio::test]
-async fn test_decimal_fixed_len_unused() {
-    insta::assert_snapshot!(QueryFixture::new("{ x: Numbers.x, sqrt_x: sqrt(Numbers.x) }").run_to_csv(&decimal_fixed_len_multipart_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,x,sqrt_x
-    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.0,2.23606797749979
-    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,8.0,2.8284271247461903
-    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,10.0,3.1622776601683795
-    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,,
-    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,11.0,3.3166247903554
-    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,,
-    1997-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5.0,2.23606797749979
-    1997-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,8.0,2.8284271247461903
-    1997-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,10.0,3.1622776601683795
-    1997-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,,
-    1997-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,11.0,3.3166247903554
-    1997-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,,
-    "###)
+        .await;
+    assert_eq!(
+        data_fixture.err().unwrap().to_string(),
+        "Internal error: invalid schema provided\n"
+    );
 }
 
 #[tokio::test]

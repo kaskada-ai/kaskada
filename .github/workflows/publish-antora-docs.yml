@@ -1,14 +1,12 @@
 on:
-  # Once we figure out the flow for docs in PRs we can uncomment pull_requests
-  # pull_request:
-  #   branches: ["main"]
-  push:
-    branches: ["main"]
-  # Allow manual triggering of this workflow
-  workflow_dispatch:
-
   pull_request:
     branches: [main]
+  merge_group:
+    branches: [main]
+  push:
+    branches: [main]
+  # Allow manual triggering of this workflow
+  workflow_dispatch:
 
 # In cases of concurrent workflows running (consecutive pushes to PR)
 # leave the latest workflow and cancel the other (older) workflows
@@ -21,7 +19,7 @@ permissions:
   actions: write
   contents: read
 
-name: Publish Antora Docs
+name: Antora Docs
 
 jobs:
   docs_skip:
@@ -37,27 +35,47 @@ jobs:
         uses: fkirc/skip-duplicate-actions@v5
         with:
           concurrent_skipping: "never"
-          skip_after_successful_duplicate: "true"
-          paths: '["docs-src/**"]'
+          skip_after_successful_duplicate: "false"
+          paths: '["docs-src/**", ".github/workflows/publish-antora-docs.yml"]'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
 
   run_antora_build:
-            name: Run Build Workflow at kaskada-ai/docs-site
-            needs: [docs_skip]
-            runs-on: ubuntu-latest
-            if: needs.docs_skip.outputs.should_skip != 'true' && github.ref != 'refs/heads/main'
-            steps:
-              - run: gh workflow run pull_request.yml -R kaskada-ai/docs-site
-                env:
-                  GH_TOKEN: ${{ secrets.DOCS_TOKEN }}
-  
+    name: Run Build Workflow at kaskada-ai/docs-site
+    needs: [docs_skip]
+    runs-on: ubuntu-latest
+    if: needs.docs_skip.outputs.should_skip != 'true' && github.event_name == 'pull_request'
+    steps: 
+      - name: Call PR workflow in kaskada-ai/docs-site
+        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: kaskada-ai
+          repo: docs-site
+          github_token: ${{ secrets.DOCS_TOKEN }}
+          workflow_file_name: pull_request.yml
+          ref: main
+          client_payload: '{"branch": "${{ github.head_ref }}"}'
+          wait_interval: 10
+          propagate_failure: true
+          trigger_workflow: true
+          wait_workflow: true
+
+
   run_antora_publish:
     name: Run Publish Workflow at kaskada-ai/docs-site
     needs: [docs_skip]
     runs-on: ubuntu-latest
     if: needs.docs_skip.outputs.should_skip != 'true' && github.ref == 'refs/heads/main'
-    steps:
-      - run: gh workflow run publish.yml -R kaskada-ai/docs-site
-        env:
-          GH_TOKEN: ${{ secrets.DOCS_TOKEN }}
+    steps: 
+        - name: Call PR workflow in kaskada-ai/docs-site
+          uses: convictional/trigger-workflow-and-wait@v1.6.5
+          with:
+            owner: kaskada-ai
+            repo: docs-site
+            github_token: ${{ secrets.DOCS_TOKEN }}
+            workflow_file_name: publish.yml
+            ref: main
+            wait_interval: 10
+            propagate_failure: true
+            trigger_workflow: true
+            wait_workflow: true
