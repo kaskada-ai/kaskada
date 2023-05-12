@@ -43,7 +43,8 @@ jobs:
 
   rust_check:
     name: Rust Checks
-    runs-on: ubuntu-20.04
+    runs-on: 
+      group: linux-rust-builds
     needs: [rust_skip]
     steps:
       - name: Checkout sources
