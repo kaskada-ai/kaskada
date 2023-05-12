@@ -26,9 +26,6 @@ mod prepare_input_stream;
 mod prepare_metadata;
 mod slice_preparer;
 
-#[allow(unused_imports)]
-pub(crate) use column_behavior::*;
-
 pub use error::*;
 pub(crate) use prepare_metadata::*;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;

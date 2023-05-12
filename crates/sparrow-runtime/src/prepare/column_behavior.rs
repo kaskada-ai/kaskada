@@ -150,7 +150,7 @@ impl ColumnBehavior {
     }
 
     /// Create a column behavior that hashes the given field (and index) to
-    /// `u64`. This is only used for the entity key during prepare.
+    /// `u64`. This is only used for the entity key.
     ///
     /// # Errors
     /// Internal error if the source field doesn't exist.
