@@ -45,7 +45,7 @@ var (
 	dbHost     = flag.String("db-host", "postgres", "database hostname (only for postgres)")
 	dbInMemory = flag.Bool("db-in-memory", true, "use an in-memory database (only for sqlite)")
 	dbName     = flag.String("db-name", "wren", "database name (only for postgres)")
-	dbPath     = flag.String("db-path", "./data/wren.db", "the path database file, when `db-in-memory` is false (only for sqlite)")
+	dbPath     = flag.String("db-path", "~/.cache/kaskada/data/wren.db", "the path database file, when `db-in-memory` is false (only for sqlite)")
 	dbPass     = flag.String("db-pass", "wren123", "database password")
 	dbPort     = flag.Int("db-port", 5432, "database port (only for postgres)")
 	dbUseSSL   = flag.Bool("db-use-ssl", false, "the ssl mode to use when connection to the database (only for postgres)")
