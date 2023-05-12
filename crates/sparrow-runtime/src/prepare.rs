@@ -26,7 +26,7 @@ mod prepare_input_stream;
 mod prepare_metadata;
 mod slice_preparer;
 
-#[cfg(test)]
+#[allow(unused_imports)]
 pub(crate) use column_behavior::*;
 
 pub use error::*;
@@ -101,7 +101,7 @@ async fn reader_from_pulsar<'a>(
         consumer,
         pulsar_subscription.last_publish_time,
     );
-    prepare_input_stream::try_new(
+    prepare_input_stream::prepare_input(
         stream.boxed(),
         config,
         pm.sparrow_metadata,
@@ -450,7 +450,7 @@ async fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static
     // create a Stream from reader
     let stream_reader = futures::stream::iter(reader);
 
-    prepare_input_stream::try_new(
+    prepare_input_stream::prepare_input(
         stream_reader.boxed(),
         config,
         raw_metadata,
@@ -485,7 +485,7 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
         RawMetadata::from_raw_schema(reader.schema()).change_context_lazy(|| Error::ReadSchema)?;
     let stream_reader = futures::stream::iter(reader);
 
-    prepare_input_stream::try_new(
+    prepare_input_stream::prepare_input(
         stream_reader.boxed(),
         config,
         raw_metadata,

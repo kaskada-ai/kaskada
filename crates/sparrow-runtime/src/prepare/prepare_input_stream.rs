@@ -1,14 +1,17 @@
+use std::borrow::BorrowMut;
+
 use anyhow::Context;
+use arrow::array::{ArrayRef, UInt64Array};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{slice_plan, TableConfig};
-use sparrow_core::TableSchema;
+use sparrow_core::{downcast_primitive_array, TableSchema};
 
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
@@ -17,16 +20,15 @@ use crate::RawMetadata;
 use super::column_behavior::ColumnBehavior;
 use super::PrepareMetadata;
 
-/// An stream over prepare batches and corresponding key hash metadata.
+/// Creates a stream over unordered, unprepared batches that is responsible
+/// for the following actions:
 ///
-/// This stream reads unordered, unprepared batches from the `reader`, and is
-/// responsible for:
 /// 1. Inserting the time column, subsort column, and key hash from source to
 ///    the batch
 /// 2. Casting required columns
 /// 3. Sorting the record batches by the time column, subsort column, and key hash
 /// 4. Computing the key-hash and key batch metadata.
-pub async fn try_new<'a>(
+pub async fn prepare_input<'a>(
     mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     config: &TableConfig,
     raw_metadata: RawMetadata,
@@ -55,7 +57,7 @@ pub async fn try_new<'a>(
         columns.push(ColumnBehavior::try_default_subsort(prepare_hash)?);
     }
 
-    columns.push(ColumnBehavior::try_new_prepare_entity_key(
+    columns.push(ColumnBehavior::try_new_entity_key(
         &raw_metadata.raw_schema,
         &config.group_column_name,
         false,
@@ -94,8 +96,10 @@ pub async fn try_new<'a>(
             let mut prepared_columns = Vec::new();
             for c in columns.iter_mut() {
                 let result = c
-                    .get_result(Some(&mut metadata), None, &read_batch)
+                    .get_result(&read_batch)
                     .await?;
+
+                update_key_metadata(c, &read_batch, &result, &mut metadata)?;
                 prepared_columns.push(result);
             }
 
@@ -141,4 +145,135 @@ pub async fn try_new<'a>(
         }
     }
     .boxed())
+}
+
+fn update_key_metadata(
+    c: &mut ColumnBehavior,
+    original_batch: &RecordBatch,
+    key_hashes: &ArrayRef,
+    metadata: &mut PrepareMetadata,
+) -> error_stack::Result<(), Error> {
+    match c {
+        ColumnBehavior::EntityKey { index, .. } => {
+            // Update the metadata with the key hash mapping
+            let key_column = original_batch.column(*index);
+            let previous_keys = &mut metadata.previous_keys.borrow_mut();
+            let result: &UInt64Array = downcast_primitive_array(key_hashes.as_ref())
+                .into_report()
+                .change_context(Error::PreparingColumn)?;
+            let indices: UInt64Array = result
+                .into_iter()
+                .flatten()
+                .enumerate()
+                .filter_map(|(index, key_hash)| {
+                    if previous_keys.insert(key_hash) {
+                        Some(index as u64)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            let new_hash_keys = arrow::compute::take(&result, &indices, None)
+                .into_report()
+                .change_context(Error::PreparingColumn)?;
+            let new_keys = arrow::compute::take(key_column, &indices, None)
+                .into_report()
+                .change_context(Error::PreparingColumn)?;
+            metadata
+                .add_entity_keys(new_hash_keys, new_keys)
+                .into_report()
+                .change_context(Error::PreparingColumn)?;
+        }
+        _ => (),
+    };
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::prepare::prepare_input_stream;
+    use arrow::{
+        array::{StringArray, TimestampNanosecondArray, UInt64Array},
+        datatypes::{DataType, Field, Schema, TimeUnit},
+    };
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn test_entity_key_mapping() {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new(
+                "time",
+                DataType::Timestamp(TimeUnit::Nanosecond, None),
+                false,
+            ),
+            Field::new("id", DataType::Utf8, true),
+        ]));
+        let raw_metadata = RawMetadata::from_raw_schema(schema.clone());
+        let time = TimestampNanosecondArray::from(vec![1, 3, 3, 7, 5, 6, 7]);
+        let keys = StringArray::from(vec![
+            "awkward", "tacos", "awkward", "tacos", "apples", "tacos", "tacos",
+        ]);
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(time), Arc::new(keys)]).unwrap();
+        let reader = futures::stream::iter(vec![Ok(batch)]);
+        let config = TableConfig::new(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            None,
+            "id",
+            "grouping",
+        );
+        let stream =
+            prepare_input_stream::prepare_input(reader.boxed(), &config, raw_metadata, 0, &None)
+                .await
+                .unwrap();
+        let batches = stream.collect::<Vec<_>>().await;
+        assert_eq!(batches.len(), 1);
+        let (batch, metadata) = batches[0].as_ref().unwrap();
+        let time: &TimestampNanosecondArray =
+            downcast_primitive_array(batch.column(0).as_ref()).unwrap();
+
+        assert_eq!(vec![1, 3, 3, 5, 6, 7, 7], time.values());
+        assert_eq!(metadata.num_rows(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_entity_key_mapping_int() {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new(
+                "time",
+                DataType::Timestamp(TimeUnit::Nanosecond, None),
+                false,
+            ),
+            Field::new("id", DataType::UInt64, true),
+        ]));
+        let raw_metadata = RawMetadata::from_raw_schema(schema.clone());
+        let time = TimestampNanosecondArray::from(vec![1, 3, 3, 7, 5, 6, 7]);
+        let keys = UInt64Array::from(vec![1, 2, 3, 1, 2, 3, 4]);
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(time), Arc::new(keys)]).unwrap();
+        let reader = futures::stream::iter(vec![Ok(batch)]);
+        let config = TableConfig::new(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            None,
+            "id",
+            "grouping",
+        );
+        let stream =
+            prepare_input_stream::prepare_input(reader.boxed(), &config, raw_metadata, 0, &None)
+                .await
+                .unwrap();
+        let batches = stream.collect::<Vec<_>>().await;
+        assert_eq!(batches.len(), 1);
+        let (batch, metadata) = batches[0].as_ref().unwrap();
+        let time: &TimestampNanosecondArray =
+            downcast_primitive_array(batch.column(0).as_ref()).unwrap();
+
+        assert_eq!(vec![1, 3, 3, 5, 6, 7, 7], time.values());
+        assert_eq!(metadata.num_rows(), 4);
+    }
 }

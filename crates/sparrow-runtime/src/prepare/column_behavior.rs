@@ -6,8 +6,7 @@ use arrow::{
 };
 use sparrow_core::context_code;
 
-use super::PrepareMetadata;
-use std::{borrow::BorrowMut, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use arrow::array::{Array, UInt64Array};
@@ -16,7 +15,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use sparrow_core::utils::make_null_array;
 use sparrow_kernels::order_preserving_cast_to_u64;
 
-use crate::{execute::key_hash_inverse::ThreadSafeKeyHashInverse, prepare::Error};
+use crate::prepare::Error;
 
 /// Defines how each column in the resulting prepared batch
 /// is computed.
@@ -33,22 +32,7 @@ pub enum ColumnBehavior {
     /// Reference the given column.
     Reference { index: usize, nullable: bool },
     /// Hash the given column.
-    ///
-    /// This field is used for preparing the key column during preparation.
-    /// During prepare, metadata files are generated alongside the prepared files
-    /// that contain additional information, such as the key hash mapping.
-    PrepareEntityKey { index: usize, nullable: bool },
-    /// Hash the given column.
-    ///
-    /// This field is used for preparing the key column during execution.
-    /// During execution, no files are prepared, so the key hash mapping is
-    /// updated dynamically in memory, and thus needs a different preparation
-    /// method than during prepare.
-    ///
-    /// Note that we could likely combine the two by just creating the key hash
-    /// array in this step, then require a later step for creating metadata files
-    /// or updating the in-memory key hash mapping.
-    ExecuteEntityKey { index: usize, nullable: bool },
+    EntityKey { index: usize, nullable: bool },
     /// Generates a row of monotically increasing u64s, starting
     /// at the defined offset.
     SequentialU64 { next_offset: u64 },
@@ -170,7 +154,7 @@ impl ColumnBehavior {
     ///
     /// # Errors
     /// Internal error if the source field doesn't exist.
-    pub fn try_new_prepare_entity_key(
+    pub fn try_new_entity_key(
         source_schema: &SchemaRef,
         source_name: &str,
         nullable: bool,
@@ -186,35 +170,7 @@ impl ColumnBehavior {
                 )
             })?;
 
-        Ok(Self::PrepareEntityKey {
-            index: source_index,
-            nullable,
-        })
-    }
-
-    /// Create a column behavior that hashes the given field (and index) to
-    /// `u64`. This is only used for the entity key during execution.
-    ///
-    /// # Errors
-    /// Internal error if the source field doesn't exist.
-    #[allow(unused)]
-    pub fn try_new_execute_entity_key(
-        source_schema: &SchemaRef,
-        source_name: &str,
-        nullable: bool,
-    ) -> anyhow::Result<Self> {
-        let (source_index, _) = source_schema
-            .column_with_name(source_name)
-            .with_context(|| {
-                context_code!(
-                    tonic::Code::Internal,
-                    "entity key column '{}' not present in schema {:?}",
-                    source_name,
-                    source_schema
-                )
-            })?;
-
-        Ok(Self::ExecuteEntityKey {
+        Ok(Self::EntityKey {
             index: source_index,
             nullable,
         })
@@ -271,8 +227,6 @@ impl ColumnBehavior {
 
     pub async fn get_result(
         &mut self,
-        metadata: Option<&mut PrepareMetadata>,
-        key_hash_inverse: Option<&ThreadSafeKeyHashInverse>,
         batch: &RecordBatch,
     ) -> error_stack::Result<ArrayRef, Error> {
         let result = match self {
@@ -318,8 +272,7 @@ impl ColumnBehavior {
                 );
                 column.clone()
             }
-            ColumnBehavior::PrepareEntityKey { index, nullable } => {
-                let metadata = metadata.expect("metadata");
+            ColumnBehavior::EntityKey { index, nullable } => {
                 let column = batch.column(*index);
                 error_stack::ensure!(
                     *nullable || column.null_count() == 0,
@@ -328,59 +281,12 @@ impl ColumnBehavior {
                         null_count: column.null_count()
                     }
                 );
-                let previous_keys = metadata.previous_keys.borrow_mut();
-                // 1. Hash the current entity key column to a UInt64Array
+
                 let entity_column = sparrow_kernels::hash::hash(column)
                     .into_report()
                     .change_context(Error::PreparingColumn)?;
-                // 2. Convert the hash column specifically to a UInt64Array from a dyn array.
-                let indices: UInt64Array = entity_column
-                    .iter()
-                    .flatten()
-                    .enumerate()
-                    .filter_map(|(index, key_hash)| {
-                        if previous_keys.insert(key_hash) {
-                            Some(index as u64)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                let new_hash_keys = arrow::compute::take(&entity_column, &indices, None)
-                    .into_report()
-                    .change_context(Error::PreparingColumn)?;
-                let new_keys = arrow::compute::take(column, &indices, None)
-                    .into_report()
-                    .change_context(Error::PreparingColumn)?;
-                metadata
-                    .add_entity_keys(new_hash_keys, new_keys)
-                    .into_report()
-                    .change_context(Error::PreparingColumn)?;
-                Arc::new(entity_column)
-            }
-            ColumnBehavior::ExecuteEntityKey { index, nullable } => {
-                // Hash the entity column and update the key hash table.
-                let key_hash_inverse = key_hash_inverse.expect("key_hash_inverse");
-                let keys = batch.column(*index);
-                error_stack::ensure!(
-                    *nullable || keys.null_count() == 0,
-                    Error::NullInNonNullableColumn {
-                        field: batch.schema().field(*index).name().to_owned(),
-                        null_count: keys.null_count()
-                    }
-                );
-                // 1. Hash the current entity key column to a UInt64Array
-                let key_hashes = sparrow_kernels::hash::hash(keys)
-                    .into_report()
-                    .change_context(Error::PreparingColumn)?;
-                // 2. Update key hash table
-                key_hash_inverse
-                    .add(keys.clone(), &key_hashes)
-                    .await
-                    .into_report()
-                    .change_context(Error::Internal)?;
 
-                Arc::new(key_hashes)
+                Arc::new(entity_column)
             }
             ColumnBehavior::Null(result_type) => make_null_array(result_type, batch.num_rows()),
             ColumnBehavior::SequentialU64 { next_offset } => {
@@ -410,14 +316,11 @@ impl ColumnBehavior {
 mod tests {
     use std::sync::Arc;
 
+    use super::ColumnBehavior;
     use arrow::array::{Int64Array, TimestampNanosecondArray, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
     use static_init::dynamic;
-
-    use crate::prepare::prepare_metadata::PrepareMetadata;
-
-    use super::ColumnBehavior;
 
     #[dynamic]
     static COMPLETE_SCHEMA: SchemaRef = {
@@ -456,11 +359,7 @@ mod tests {
         let mut behavior = ColumnBehavior::SequentialU64 { next_offset: 0 };
         assert_eq!(
             behavior
-                .get_result(
-                    Some(&mut PrepareMetadata::new(DataType::UInt64.clone())),
-                    None,
-                    &make_test_batch(5)
-                )
+                .get_result(&make_test_batch(5))
                 .await
                 .unwrap()
                 .as_ref(),
@@ -468,11 +367,7 @@ mod tests {
         );
         assert_eq!(
             behavior
-                .get_result(
-                    Some(&mut PrepareMetadata::new(DataType::UInt64.clone())),
-                    None,
-                    &make_test_batch(3)
-                )
+                .get_result(&make_test_batch(3))
                 .await
                 .unwrap()
                 .as_ref(),
@@ -488,11 +383,7 @@ mod tests {
         // Current behavior is to immediately wrap.
         assert_eq!(
             behavior
-                .get_result(
-                    Some(&mut PrepareMetadata::new(DataType::UInt64.clone())),
-                    None,
-                    &make_test_batch(5)
-                )
+                .get_result(&make_test_batch(5))
                 .await
                 .unwrap()
                 .as_ref(),
@@ -500,11 +391,7 @@ mod tests {
         );
         assert_eq!(
             behavior
-                .get_result(
-                    Some(&mut PrepareMetadata::new(DataType::UInt64.clone())),
-                    None,
-                    &make_test_batch(3)
-                )
+                .get_result(&make_test_batch(3))
                 .await
                 .unwrap()
                 .as_ref(),
@@ -517,11 +404,7 @@ mod tests {
         let mut behavior = ColumnBehavior::SequentialU64 { next_offset: 100 };
         assert_eq!(
             behavior
-                .get_result(
-                    Some(&mut PrepareMetadata::new(DataType::UInt64.clone())),
-                    None,
-                    &make_test_batch(5)
-                )
+                .get_result(&make_test_batch(5))
                 .await
                 .unwrap()
                 .as_ref(),
@@ -529,11 +412,7 @@ mod tests {
         );
         assert_eq!(
             behavior
-                .get_result(
-                    Some(&mut PrepareMetadata::new(DataType::UInt64.clone())),
-                    None,
-                    &make_test_batch(3)
-                )
+                .get_result(&make_test_batch(3))
                 .await
                 .unwrap()
                 .as_ref(),
