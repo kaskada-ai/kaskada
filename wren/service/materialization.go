@@ -31,17 +31,17 @@ type materializationService struct {
 	kaskadaViewClient     internal.KaskadaViewClient
 	dataTokenClient       internal.DataTokenClient
 	materializationClient internal.MaterializationClient
-	computeManager        *compute.Manager
+	computeManager        compute.ComputeManager
 }
 
 // NewMaterializationService creates a new materialization service
-func NewMaterializationService(computeManager *compute.Manager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
+func NewMaterializationService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
 	return &materializationService{
 		kaskadaTableClient:    *kaskadaTableClient,
 		kaskadaViewClient:     *kaskadaViewClient,
 		dataTokenClient:       *dataTokenClient,
 		materializationClient: *materializationClient,
-		computeManager:        computeManager,
+		computeManager:        *computeManager,
 	}
 }
 
@@ -180,6 +180,26 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	if err != nil {
 		return nil, err
 	}
+
+	matType := "unspecified"
+	for _, table := range tableMap {
+		var newMatType string
+		switch table.Source.Source.(type) {
+		case *v1alpha.Source_Kaskada:
+			newMatType = "files"
+		case *v1alpha.Source_Pulsar:
+			newMatType = "streams"
+		default:
+			log.Error().Msgf("unknown source type %T", table.Source.Source)
+			return nil, customerrors.NewInternalError("unknown table source type")
+		}
+		if matType == "unspecified" {
+			matType = newMatType
+		} else if matType != newMatType {
+			return nil, customerrors.NewInvalidArgumentErrorWithCustomText("cannot materialize tables from different source types")
+		}
+	}
+
 	viewMap, err := s.kaskadaViewClient.GetKaskadaViewsFromNames(ctx, owner, compileResp.FreeNames)
 	if err != nil {
 		return nil, err

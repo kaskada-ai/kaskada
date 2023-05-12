@@ -287,10 +287,10 @@ func main() {
 		metricsProvider.RegisterGrpc(grpcServer)
 
 		dependencyAnalyzerService := service.NewDependencyAnalyzer(&kaskadaViewClient, &materializationClient)
-		tableService := service.NewTableService(computeManager, &kaskadaTableClient, &objectStoreClient, tableStore, &dependencyAnalyzerService)
-		viewService := service.NewViewService(computeManager, &kaskadaTableClient, &kaskadaViewClient, &dependencyAnalyzerService)
-		materializationService := service.NewMaterializationService(computeManager, &kaskadaTableClient, &kaskadaViewClient, &dataTokenClient, &materializationClient)
-		queryV1Service := service.NewQueryV1Service(computeManager, &kaskadaQueryClient, &objectStoreClient)
+		tableService := service.NewTableService(&computeManager, &kaskadaTableClient, &objectStoreClient, tableStore, &dependencyAnalyzerService)
+		viewService := service.NewViewService(&computeManager, &kaskadaTableClient, &kaskadaViewClient, &dependencyAnalyzerService)
+		materializationService := service.NewMaterializationService(&computeManager, &kaskadaTableClient, &kaskadaViewClient, &dataTokenClient, &materializationClient)
+		queryV1Service := service.NewQueryV1Service(&computeManager, &dataTokenClient, &kaskadaQueryClient, &objectStoreClient)
 
 		// Register the grpc services
 		v1alpha.RegisterDataTokenServiceServer(grpcServer, service.NewDataTokenService(&dataTokenClient))
@@ -299,7 +299,7 @@ func main() {
 		v1alpha.RegisterMaterializationServiceServer(grpcServer, materializationService)
 		v1alpha.RegisterQueryServiceServer(grpcServer, queryV1Service)
 
-		queryV2Service := service.NewQueryV2Service(computeManager, &dataTokenClient, &kaskadaQueryClient)
+		queryV2Service := service.NewQueryV2Service(&computeManager, &dataTokenClient, &kaskadaQueryClient)
 		v2alpha.RegisterQueryServiceServer(grpcServer, queryV2Service)
 
 		// Register reflection service on gRPC server.

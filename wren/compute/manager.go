@@ -40,6 +40,21 @@ const (
 	compileTimeoutSeconds = 10
 )
 
+type ComputeManager interface {
+	CompileQuery(ctx context.Context, owner *ent.Owner, query string, requestViews []*v1alpha.WithView, isFormula bool, isExperimental bool, sliceRequest *v1alpha.SliceRequest, resultBehavior v1alpha.Query_ResultBehavior) (*v1alpha.CompileResponse, error)
+	GetFormulas(ctx context.Context, owner *ent.Owner, views *v2alpha.QueryViews) ([]*v1alpha.Formula, error)
+	GetUsedViews(formulas []*v1alpha.Formula, compileResponse *v1alpha.CompileResponse) *v2alpha.QueryViews
+	CompileQueryV2(ctx context.Context, owner *ent.Owner, expression string, formulas []*v1alpha.Formula, config *v2alpha.QueryConfig) (*v1alpha.CompileResponse, error)
+	CreateCompileRequest(ctx context.Context, owner *ent.Owner, request *QueryRequest, options *QueryOptions) (*v1alpha.CompileRequest, error)
+	RunCompileRequest(ctx context.Context, owner *ent.Owner, compileRequest *v1alpha.CompileRequest) (*CompileQueryResponse, error)
+	GetOutputURI(owner *ent.Owner, planHash []byte) string
+	InitiateQuery(queryContext *QueryContext) (client.ComputeServiceClient, v1alpha.ComputeService_ExecuteClient, error)
+	SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ComputeSnapshot)
+	RunMaterializations(requestCtx context.Context, owner *ent.Owner)
+	GetTablesForCompute(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken, slicePlans []*v1alpha.SlicePlan) (map[uuid.UUID]*internal.SliceTable, error)
+	GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error)
+}
+
 type Manager struct {
 	computeClients        *client.ComputeClients
 	errGroup              *errgroup.Group
@@ -55,7 +70,7 @@ type Manager struct {
 }
 
 // NewManager creates a new compute manager
-func NewManager(errGroup *errgroup.Group, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) *Manager {
+func NewManager(errGroup *errgroup.Group, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) ComputeManager {
 	return &Manager{
 		computeClients:        computeClients,
 		errGroup:              errGroup,
@@ -363,30 +378,6 @@ func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compi
 	return &compileResponse, err
 }
 
-func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenId string) (*ent.DataToken, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetDataToken").Logger()
-	if dataTokenId == "" {
-		dataToken, err := m.dataTokenClient.GetCurrentDataToken(ctx, owner)
-		if err != nil {
-			subLogger.Error().Err(err).Msg("issue getting current data_token")
-			return nil, err
-		}
-		return dataToken, nil
-	} else {
-		id, err := uuid.Parse(dataTokenId)
-		if err != nil {
-			return nil, customerrors.NewInvalidArgumentError("data_token")
-		} else {
-			dataToken, err := m.dataTokenClient.GetDataToken(ctx, owner, id)
-			if err != nil {
-				subLogger.Error().Err(err).Msg("issue getting data_token")
-				return nil, err
-			}
-			return dataToken, nil
-		}
-	}
-}
-
 func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {
 	subPath := path.Join("results", owner.ID.String(), base64.RawURLEncoding.EncodeToString(planHash))
 	return m.store.GetDataPathURI(subPath)
@@ -641,12 +632,6 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		_, err = m.materializationClient.UpdateDataVersion(ctx, materialization, queryContext.dataToken.DataVersionID)
 		if err != nil {
 			matLogger.Error().Err(err).Str("name", materialization.Name).Int64("previousDataVersion", dataVersionID).Int64("newDataVersion", queryContext.dataToken.DataVersionID).Msg("error updating materialization with new data version")
-			return nil
-		}
-		// Update the version for this materialization.
-		_, err = m.materializationClient.IncrementVersion(ctx, materialization)
-		if err != nil {
-			matLogger.Error().Err(err).Str("name", materialization.Name).Msg("error updating materialization version")
 			return nil
 		}
 	}

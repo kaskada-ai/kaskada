@@ -295,7 +295,6 @@ type MaterializationClient interface {
 	GetAllMaterializations(ctx context.Context, owner *ent.Owner) ([]*ent.Materialization, error)
 	GetMaterialization(ctx context.Context, owner *ent.Owner, id uuid.UUID) (*ent.Materialization, error)
 	GetMaterializationByName(ctx context.Context, owner *ent.Owner, name string) (*ent.Materialization, error)
-	GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error)
 	GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error)
 	ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error)
 }
@@ -323,10 +322,6 @@ func (*errorListMaterializationClient) GetMaterializationByName(ctx context.Cont
 	panic("unimplemented")
 }
 
-func (*errorListMaterializationClient) GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error) {
-	panic("unimplemented")
-}
-
 func (*errorListMaterializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	return nil, errors.New("some list materializations error")
 }
@@ -335,18 +330,9 @@ func (*errorListMaterializationClient) ListMaterializations(ctx context.Context,
 	panic("unimplemented")
 }
 
-func (*errorListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+func (*errorListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	panic("unimplemented")
 }
-
-func (*errorListMaterializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error)  {
-	panic("unimplemented")
-}
-
-func (*errorListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) { 
-	panic("unimplemented")
-}
-
 
 type emptyListMaterializationClient struct{}
 
@@ -370,10 +356,6 @@ func (*emptyListMaterializationClient) GetMaterializationByName(ctx context.Cont
 	panic("unimplemented")
 }
 
-func (*emptyListMaterializationClient) GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error) {
-	panic("unimplemented")
-}
-
 func (*emptyListMaterializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	return []*ent.Materialization{}, nil
 }
@@ -382,18 +364,9 @@ func (*emptyListMaterializationClient) ListMaterializations(ctx context.Context,
 	return nil, errors.New("some list materializations error")
 }
 
-func (*emptyListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
+func (*emptyListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	panic("unimplemented")
 }
-
-func (*emptyListMaterializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error)  {
-	panic("unimplemented")
-}
-
-func (*emptyListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) { 
-	panic("unimplemented")
-}
-
 
 type singleListMaterializationClient struct{}
 
@@ -417,10 +390,6 @@ func (*singleListMaterializationClient) GetMaterializationByName(ctx context.Con
 	panic("unimplemented")
 }
 
-func (*singleListMaterializationClient) GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error) {
-	panic("unimplemented")
-}
-
 func (*singleListMaterializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	return []*ent.Materialization{
 		{
@@ -437,14 +406,6 @@ func (*singleListMaterializationClient) ListMaterializations(ctx context.Context
 	return nil, errors.New("some list materializations error")
 }
 
-func (*singleListMaterializationClient) UpdateMaterializationDataVersion(ctx context.Context, owner *ent.Owner, id uuid.UUID, newDataVersion int64) (*ent.Materialization, error) {
-	panic("unimplemented")
-}
-
-func (*singleListMaterializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error)  {
-	panic("unimplemented")
-}
-
-func (*singleListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) { 
+func (*singleListMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	panic("unimplemented")
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/ent"
 	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/ent/materializationdependency"
-	"github.com/kaskada-ai/kaskada/wren/ent/predicate"
 	"github.com/kaskada-ai/kaskada/wren/ent/schema"
 )
 
@@ -57,6 +56,7 @@ func (c *materializationClient) CreateMaterialization(ctx context.Context, owner
 		SetAnalysis(newMaterialization.Analysis).
 		SetDataVersionID(newMaterialization.DataVersionID).
 		SetVersion(newMaterialization.Version).
+		SetSourceType(newMaterialization.SourceType).
 		Save(ctx)
 
 	if err != nil {
@@ -155,32 +155,6 @@ func (c *materializationClient) GetMaterializationByName(ctx context.Context, ow
 	return materialization, nil
 }
 
-func (c *materializationClient) GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error) {
-	subLogger := log.Ctx(ctx).With().
-		Str("method", "materializationClient.GetMaterializationsFromNames").
-		Logger()
-
-	predicates := make([]predicate.Materialization, 0, len(names))
-
-	for _, name := range names {
-		predicates = append(predicates, materialization.Name(name))
-	}
-
-	materializations, err := owner.QueryMaterializations().Where(materialization.Or(predicates...)).All(ctx)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting materializations")
-		return nil, err
-	}
-
-	materializationMap := map[string]*ent.Materialization{}
-
-	for _, materialization := range materializations {
-		materializationMap[materialization.Name] = materialization
-	}
-
-	return materializationMap, nil
-}
-
 func (c *materializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	subLogger := log.Ctx(ctx).With().
 		Str("method", "materializationClient.GetMaterializationsWithDependency").
@@ -234,7 +208,7 @@ func (c *materializationClient) ListMaterializations(ctx context.Context, owner 
 func (c *materializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.UpdateDateVersion").Logger()
 
-	updated_materialization, err := materialization.Update().SetDataVersionID(newDataVersion).Save(ctx)
+	updated_materialization, err := materialization.Update().SetDataVersionID(newDataVersion).SetVersion(materialization.Version + 1).Save(ctx)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue updating materialization data version id")
 		return nil, err
@@ -243,14 +217,3 @@ func (c *materializationClient) UpdateDataVersion(ctx context.Context, materiali
 	return updated_materialization, nil
 }
 
-func (c *materializationClient) IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "materializationClient.IncrementVersion").Logger()
-
-	updated_materialization, err := materialization.Update().SetVersion(materialization.Version + 1).Save(ctx)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue updating materialization version")
-		return nil, err
-	}
-
-	return updated_materialization, nil
-}

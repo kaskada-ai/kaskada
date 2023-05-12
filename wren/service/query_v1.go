@@ -36,17 +36,43 @@ const (
 type queryV1Service struct {
 	v1alpha.UnimplementedQueryServiceServer
 
-	computeManager     *compute.Manager
+	computeManager     compute.ComputeManager
+	dataTokenClient    internal.DataTokenClient
 	kaskadaQueryClient internal.KaskadaQueryClient
 	objectStoreClient  client.ObjectStoreClient
 }
 
 // NewQueryV1Service creates a new query service
-func NewQueryV1Service(computeManager *compute.Manager, kaskadaQueryClient *internal.KaskadaQueryClient, objectStoreClient *client.ObjectStoreClient) v1alpha.QueryServiceServer {
+func NewQueryV1Service(computeManager *compute.ComputeManager, dataTokenClient *internal.DataTokenClient, kaskadaQueryClient *internal.KaskadaQueryClient, objectStoreClient *client.ObjectStoreClient) v1alpha.QueryServiceServer {
 	return &queryV1Service{
-		computeManager:     computeManager,
+		computeManager:     *computeManager,
+		dataTokenClient:    *dataTokenClient,
 		kaskadaQueryClient: *kaskadaQueryClient,
 		objectStoreClient:  *objectStoreClient,
+	}
+}
+
+func (q *queryV1Service) getDataToken(ctx context.Context, owner *ent.Owner, dataTokenId string) (*ent.DataToken, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "queryservice.getDataToken").Logger()
+	if dataTokenId == "" {
+		dataToken, err := q.dataTokenClient.GetCurrentDataToken(ctx, owner)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting current data_token")
+			return nil, err
+		}
+		return dataToken, nil
+	} else {
+		id, err := uuid.Parse(dataTokenId)
+		if err != nil {
+			return nil, customerrors.NewInvalidArgumentError("data_token")
+		} else {
+			dataToken, err := q.dataTokenClient.GetDataToken(ctx, owner, id)
+			if err != nil {
+				subLogger.Error().Err(err).Msg("issue getting data_token")
+				return nil, err
+			}
+			return dataToken, nil
+		}
 	}
 }
 
@@ -134,9 +160,9 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	if request.Query.DataTokenId != nil {
 		dataTokenId = request.Query.DataTokenId.GetValue()
 	}
-	dataToken, err := q.computeManager.GetDataToken(ctx, owner, dataTokenId)
+	dataToken, err := q.getDataToken(ctx, owner, dataTokenId)
 	if err != nil {
-		subLogger.Debug().Err(err).Msg("returning from GetDataToken")
+		subLogger.Debug().Err(err).Msg("returning from getDataToken")
 	}
 
 	if dataToken != nil {

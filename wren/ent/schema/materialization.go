@@ -31,6 +31,7 @@ func (Materialization) Fields() []ent.Field {
 		field.Bytes("slice_request").GoType(&v1alpha.SliceRequest{}).Immutable(),
 		field.Bytes("analysis").GoType(&v1alpha.Analysis{}).Immutable(),
 		field.Int64("data_version_id"),
+		field.Enum("source_type").Values("unspecified", "files", "streams").Default("unspecified"),
 	}
 }
 
