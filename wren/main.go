@@ -45,7 +45,7 @@ var (
 	dbHost     = flag.String("db-host", "postgres", "database hostname (only for postgres)")
 	dbInMemory = flag.Bool("db-in-memory", true, "use an in-memory database (only for sqlite)")
 	dbName     = flag.String("db-name", "wren", "database name (only for postgres)")
-	dbPath     = flag.String("db-path", "./data/wren.db", "the path database file, when `db-in-memory` is false (only for sqlite)")
+	dbPath     = flag.String("db-path", "~/.cache/kaskada/data/wren.db", "the path database file, when `db-in-memory` is false (only for sqlite)")
 	dbPass     = flag.String("db-pass", "wren123", "database password")
 	dbPort     = flag.Int("db-port", 5432, "database port (only for postgres)")
 	dbUseSSL   = flag.Bool("db-use-ssl", false, "the ssl mode to use when connection to the database (only for postgres)")
@@ -56,7 +56,7 @@ var (
 	objectStoreDisableSSL     = flag.Bool("object-store-disable-ssl", false, "set true to disable SSL when connecting to the object store")
 	objectStoreEndpoint       = flag.String("object-store-endpoint", "", "the endpoint for accessing the object store.  will use the object store default if this is not defined.")
 	objectStoreForcePathStyle = flag.Bool("object-store-force-path-style", false, "set to true to access the bucket as a path instead via a sub-domain. required when using minio as the object store.")
-	objectStorePath           = flag.String("object-store-path", "./data", "the path or prefix for storing data objects. can be a relative path if the `object-store-type` is `local`.")
+	objectStorePath           = flag.String("object-store-path", "~/.cache/kaskada/data", "the path or prefix for storing data objects. can be a relative path if the `object-store-type` is `local`.")
 
 	debug                    = flag.Bool("debug", false, "sets log level to debug")
 	debugGrpc                = flag.Bool("debug-grpc", false, "logs grpc connection debug info")
