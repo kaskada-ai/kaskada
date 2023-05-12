@@ -96,7 +96,7 @@ impl Operation for ScanOperation {
 
 impl ScanOperation {
     /// Create the stream of input batches for a scan operation.
-    pub(super) fn create(
+    pub(super) async fn create(
         context: &mut OperationContext,
         scan_operation: operation_plan::ScanOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
@@ -412,6 +412,7 @@ mod tests {
 
         executor
             .execute(0, &mut context, vec![], max_event_tx, &Default::default())
+            .await
             .unwrap()
             .await
             .unwrap();

@@ -2,7 +2,6 @@ use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{Schema, SchemaRef, TimestampMicrosecondType};
 
 use error_stack::{IntoReport, Result, ResultExt};
-use serde;
 use std::sync::Arc;
 
 #[derive(Debug, derive_more::Display)]

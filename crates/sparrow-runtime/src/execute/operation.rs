@@ -159,7 +159,7 @@ impl OperationExecutor {
     /// This function will not return until the operation is complete -- either
     /// because all inputs have been processed or because it has been
     /// interrupted due to an error or reaching a preview-rows limit, etc.
-    pub fn execute(
+    pub async fn execute(
         self,
         operation_index: usize,
         context: &mut OperationContext,
@@ -208,7 +208,8 @@ impl OperationExecutor {
             operator,
             input_channels,
             expression_executor.input_columns(),
-        )?;
+        )
+        .await?;
 
         let mut last_upper_bound = None;
 
@@ -371,7 +372,7 @@ impl OperationExecutor {
 // such an approach is that it would "spread out" how channels are
 // created. Another option would be to have a struct that combines the
 // input and the channel.
-fn create_operation(
+async fn create_operation(
     context: &mut OperationContext,
     operator: operation_plan::Operator,
     incoming_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
@@ -379,7 +380,7 @@ fn create_operation(
 ) -> Result<BoxedOperation, Error> {
     match operator {
         operation_plan::Operator::Scan(scan_operation) => {
-            ScanOperation::create(context, scan_operation, incoming_channels, input_columns)
+            ScanOperation::create(context, scan_operation, incoming_channels, input_columns).await
         }
         operation_plan::Operator::Merge(merge_operation) => {
             MergeOperation::create(merge_operation, incoming_channels, input_columns)

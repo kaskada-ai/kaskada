@@ -86,7 +86,8 @@ impl LocalTestTable {
                 .await
                 .map_err(|e| e.into_error())?;
             while let Some(prepared_batch) = iter.next().await {
-                let (prepared_batch, metadata) = prepared_batch?;
+                let (prepared_batch, metadata) = prepared_batch
+                    .map_err(|err| anyhow::anyhow!("failed getting batch {:?}", err))?;
 
                 let prepared_file = tempfile::Builder::new()
                     .suffix(".parquet")

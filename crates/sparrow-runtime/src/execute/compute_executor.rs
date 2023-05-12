@@ -48,7 +48,7 @@ pub struct ComputeResult {
 
 impl ComputeExecutor {
     /// Spawns the compute tasks using the new operation based executor.
-    pub fn try_spawn(
+    pub async fn try_spawn(
         mut context: OperationContext,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
@@ -136,13 +136,15 @@ impl ComputeExecutor {
             spawner.spawn(
                 format!("{operation_label}[op={index}]"),
                 info_span!("Operation", ?index, operation_label),
-                operation.execute(
-                    index,
-                    &mut context,
-                    inputs,
-                    max_event_time_tx.clone(),
-                    late_bindings,
-                )?,
+                operation
+                    .execute(
+                        index,
+                        &mut context,
+                        inputs,
+                        max_event_time_tx.clone(),
+                        late_bindings,
+                    )
+                    .await?,
             );
         }
 
