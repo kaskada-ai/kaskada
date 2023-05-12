@@ -3,6 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -62,6 +65,20 @@ func NewEntConfig(dbDialect string, dbName *string, dbHost *string, inMemory *bo
 		}
 	} else {
 		log.Fatal().Msg("Flag: `db-dialect` must be set to either `postgres` or `sqlite`.")
+	}
+
+	if dbPath != nil && strings.HasPrefix(*dbPath, "~/") {
+		usr, err := user.Current()
+		if err != nil {
+			log.Fatal().Msgf("unable to get local user account: %v", err)
+		}
+		dir := usr.HomeDir
+		path := filepath.Join(dir, (*dbPath)[2:])
+		err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
+		if err != nil {
+			log.Fatal().Msgf("unable to create directories to path: %v", err)
+		}
+		dbPath = &path
 	}
 
 	return EntConfig{

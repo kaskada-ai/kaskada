@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/url"
 	go_os "os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
@@ -56,12 +57,19 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 
 	switch objectStoreType {
 	case object_store_type_local:
+		if strings.HasPrefix(path, "~/") {
+			usr, err := user.Current()
+			if err != nil {
+				log.Fatal().Msgf("unable to get local user account")
+			}
+			dir := usr.HomeDir
+			path = filepath.Join(dir, path[2:])
+		}
 		absPath, err := filepath.Abs(path)
 		if err != nil {
 			log.Fatal().Msgf("could not locate local data path: %s", path)
 		}
 		path = vfs_utils.EnsureTrailingSlash(absPath)
-		log.Debug().Msgf("objectStorePath: %s", path)
 	case object_store_type_azure, object_store_type_gcs, object_store_type_s3:
 		if bucket == "" {
 			log.Fatal().Msgf("when using %s for the `object-store-type`, `object-store-bucket` is requried.", objectStoreType)
@@ -72,6 +80,7 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 	default:
 		log.Fatal().Msg("invalid value set for `object-store-type`. Should be  `local`, `s3`, `gcs`, or `azure`")
 	}
+	log.Info().Msgf("objectStorePath: %s", path)
 
 	var (
 		rootObjectStore vfs.FileSystem
