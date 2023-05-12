@@ -96,6 +96,10 @@ func NewNotFoundError(item string) *NotFoundError {
 	return &NotFoundError{Err: fmt.Errorf("%s not found", item)}
 }
 
+func NewNotFoundErrorWithCustomText(text string) *NotFoundError {
+	return &NotFoundError{Err: fmt.Errorf(text)}
+}
+
 type PermissionDeniedError struct {
 	Err error
 }

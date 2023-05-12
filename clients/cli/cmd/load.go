@@ -7,20 +7,20 @@ import (
 	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
 
 // LoadCmd represents the load command
 var LoadCmd = &cobra.Command{
-	Use:   "load",
-	Short: "(deprecated) Use `table load` instead. Loads data into a table.",
+	Deprecated: "use `table load` instead",
+	Use:        "load",
+	Short:      "Loads data into a table.",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Msg("starting load")
+		log.Debug().Msg("starting load")
 
 		var fileType apiv1alpha.FileType
-		switch viper.GetString("file-type") {
+		switch fileTypeIn {
 		case "parquet", "":
 			fileType = apiv1alpha.FileType_FILE_TYPE_PARQUET
 		case "csv":
@@ -28,24 +28,27 @@ var LoadCmd = &cobra.Command{
 		default:
 			utils.LogAndQuitIfErrorExists(fmt.Errorf("unrecognized file type - must be one of 'parquet', 'csv'"))
 		}
-		table := viper.GetString("table")
-		files := viper.GetStringSlice("file-path")
 
-		if len(files) == 0 {
+		if len(filePaths) == 0 {
 			utils.LogAndQuitIfErrorExists(fmt.Errorf("at least one `file` flag must be set"))
 		}
 
 		apiClient := api.NewApiClient()
-		for _, file := range files {
-			err := apiClient.LoadFile(table, &apiv1alpha.FileInput{FileType: fileType, Uri: file})
+		for _, file := range filePaths {
+			err := apiClient.LoadFile(tableName, &apiv1alpha.FileInput{FileType: fileType, Uri: file})
 			utils.LogAndQuitIfErrorExists(err)
 		}
-		log.Info().Msg("Success!")
+		log.Debug().Msg("Success!")
 	},
 }
 
+var (
+	fileTypeIn, tableName string
+	filePaths             []string
+)
+
 func init() {
-	LoadCmd.Flags().String("file-type", "parquet", "(Optional) The type of file to load.  Either 'parquet' or 'csv'.")
-	LoadCmd.Flags().String("table", "", "The table to load data into.")
-	LoadCmd.Flags().String("file-path", "", "The path of the file to load on the Kaskada instance.")
+	LoadCmd.Flags().StringVar(&fileTypeIn, "file-type", "parquet", "(Optional) The type of file to load.  Either 'parquet' or 'csv'.")
+	LoadCmd.Flags().StringVar(&tableName, "table", "", "The table to load data into.")
+	LoadCmd.Flags().StringSliceVar(&filePaths, "file-path", []string{}, "The path of the file to load on the Kaskada instance.")
 }

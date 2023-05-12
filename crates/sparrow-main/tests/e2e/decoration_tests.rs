@@ -213,7 +213,7 @@ async fn test_sum_i64_all_filtered_final_at_time() {
 async fn shift_data_fixture_at_time() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "ShiftFixture",
                 &Uuid::new_v4(),
                 "time",

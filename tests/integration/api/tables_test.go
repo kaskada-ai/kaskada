@@ -189,6 +189,45 @@ var _ = Describe("Tables", Ordered, func() {
 	})
 
 	Describe("Add a file to the first table", func() {
+		It("Should error when adding a missing local file", func() {
+			res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
+				TableName: table1.TableName,
+				SourceData: &v1alpha.LoadDataRequest_FileInput{
+					FileInput: &v1alpha.FileInput{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+						Uri:      "file:///missing.parquet",
+					},
+				},
+			})
+			Expect(err).Should(HaveOccurredGrpc())
+			Expect(res).Should(BeNil())
+
+			//inspect error response
+			errStatus, ok := status.FromError(err)
+			Expect(ok).Should(BeTrue())
+			Expect(errStatus.Code()).Should(Equal(codes.NotFound))
+			Expect(errStatus.Message()).Should(ContainSubstring("not found"))
+		})
+		It("Should error when adding a missing object-store file", func() {
+			res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
+				TableName: table1.TableName,
+				SourceData: &v1alpha.LoadDataRequest_FileInput{
+					FileInput: &v1alpha.FileInput{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+						Uri:      "s3://this-bucket-does-not-exist/missing.parquet",
+					},
+				},
+			})
+			Expect(err).Should(HaveOccurredGrpc())
+			Expect(res).Should(BeNil())
+
+			//inspect error response
+			errStatus, ok := status.FromError(err)
+			Expect(ok).Should(BeTrue())
+			Expect(errStatus.Code()).Should(Equal(codes.PermissionDenied))
+			Expect(errStatus.Message()).Should(ContainSubstring("not accessible"))
+		})
+
 		It("Should work without error", func() {
 			time.Sleep(time.Millisecond * 2) //so table create & update times are different
 

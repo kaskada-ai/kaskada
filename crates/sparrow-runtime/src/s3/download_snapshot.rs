@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Context;
 use futures::TryStreamExt;
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::execute_request::ComputeSnapshotConfig;
+use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
 use tokio_stream::wrappers::ReadDirStream;
 use tracing::{info, info_span, Instrument};
 

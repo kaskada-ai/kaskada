@@ -26,6 +26,8 @@ pub enum Error {
     SortingBatch,
     #[display(fmt = "determine metadata")]
     DetermineMetadata,
+    #[display(fmt = "invalid schema provided")]
+    ReadSchema,
     #[display(fmt = "failed to write Parquet file")]
     WriteParquetData,
     #[display(fmt = "failed to write metadata file")]

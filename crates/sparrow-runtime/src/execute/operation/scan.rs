@@ -262,6 +262,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
     use sparrow_api::kaskada::v1alpha::operation_input_ref::{self, Column};
     use sparrow_api::kaskada::v1alpha::operation_plan::ScanOperation;
+    use sparrow_api::kaskada::v1alpha::KaskadaSource;
     use sparrow_api::kaskada::v1alpha::{self, data_type};
     use sparrow_api::kaskada::v1alpha::{
         expression_plan, literal, operation_plan, ComputePlan, ComputeTable, ExpressionPlan,
@@ -301,6 +302,9 @@ mod tests {
             Field::new("b", DataType::Utf8, true),
         ]);
         let table_schema = v1alpha::Schema::try_from(&table_schema).unwrap();
+        let source = v1alpha::Source {
+            source: Some(v1alpha::source::Source::Kaskada(KaskadaSource {})),
+        };
 
         data_context
             .add_table(ComputeTable {
@@ -311,6 +315,7 @@ mod tests {
                     subsort_column_name: None,
                     group_column_name: "key".to_owned(),
                     grouping: "grouping".to_owned(),
+                    source: Some(source),
                 }),
                 metadata: Some(TableMetadata {
                     schema: Some(table_schema),

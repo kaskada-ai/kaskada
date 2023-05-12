@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -54,7 +54,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
-			err:     errors.New("invalid query_id provided"),
+			err:     fmt.Errorf("invalid query_id provided"),
 		},
 		{
 			name: "empty query id should throw UUID parsing error",
@@ -68,7 +68,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
-			err:     errors.New("invalid query_id provided"),
+			err:     fmt.Errorf("invalid query_id provided"),
 		},
 		{
 			name: "invalid uuid as query id should throw UUID parsing error",
@@ -82,7 +82,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
-			err:     errors.New("invalid query_id provided"),
+			err:     fmt.Errorf("invalid query_id provided"),
 		},
 		{
 			name: "returns the results from the query client",

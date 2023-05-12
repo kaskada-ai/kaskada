@@ -1,3 +1,5 @@
+:tabs-sync-option:
+
 = Views 
 
 Fenl expressions can be shared and re-used by creating a _view_. A view
@@ -24,8 +26,11 @@ name. In this case, we're interested in some purchase statistics for
 each user. This definition depends on business logic and might require
 some iteration to get just right.
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import view
 from kaskada.api.session import LocalBuilder
@@ -42,6 +47,16 @@ view.create_view(
     }"
 )
 ----
+
+CLI::
++
+[source,bash]
+----
+kaskada-cli view create PurchaseStats \
+    "{time: Purchase.purchase_time,entity: Purchase.customer_id,max_amount: Purchase.amount | max(),min_amount: Purchase.amount | min()}"
+----
+====
+
 
 This creates a view names `PurchaseStats`.
 
@@ -93,25 +108,39 @@ view.create_view(
 The list views method returns all views defined for your user. An
 optional search string can filter the response set.
 
-Here is an example of listing tables:
+Here is an example of listing views:
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import view
 from kaskada.api.session import LocalBuilder
 
 session = LocalBuilder().build()
 
-view.list_views("Purchase")
+view.list_views()
 ----
+
+CLI::
++
+[source,bash]
+----
+kaskada-cli view list
+----
+====
 
 === Get View
 
 You can get a view using its name:
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import view
 from kaskada.api.session import LocalBuilder
@@ -120,6 +149,14 @@ session = LocalBuilder().build()
 
 view.get_view("PurchaseStats")
 ----
+
+CLI::
++
+[source,bash]
+----
+kaskada-cli view get PurchaseStats
+----
+====
 
 === Updating a View
 
@@ -130,8 +167,11 @@ view and then re-creating it.
 
 You can delete a view using its name:
 
+[tabs]
+====
+Python::
++
 [source,python]
-.with Python:
 ----
 from kaskada import view
 from kaskada.api.session import LocalBuilder
@@ -141,106 +181,39 @@ session = LocalBuilder().build()
 view.delete_view("PurchaseStats")
 ----
 
-[source,bash]
-.with the CLI:
-----
-./kaskada-cli view delete -v PurchaseStats
-----
-
-== Managing views with the CLI and Spec files
-
-The CLI manages Kaskada resources declaratively by managing spec files.
-A spec file is a YAML file describing a set of Kaskada resources, for examples tables and views.
-
-=== Creating, updating and deleting views with the CLI
-
-
-The CLI uses a "declarative" API - rather than modifying resources directly you describe the desired state of Kaskada, and the `kaskada-cli sync` command makes whatever changes are needed to achieve this state.
-To create a view, add the view's description to your spec file and run `kaskada-cli sync apply`.
-To update a view, change the view's description in your spec file and run `kaskada-cli sync apply`.
-To delete a view, see xref:deleting-a-view[Deleting a view].
-
-=== The format of views in a spec file.
-
-Views are described in a spec file as a list of view objects under the `views` key:
-
-[source,yaml]
-----
-views:
-      # A name used to refer to the view in queries
-    - view_name: PurchaseStats
-      # The expression to substitute anywhere the view's name is used
-      expression: |
-        {
-            time: Purchase.purchase_time,
-            entity: Purchase.customer_id,
-            max_amount: Purchase.amount | max(),
-            min_amount: Purchase.amount | min(),
-            count: CountPurchase,
-        } 
-      # A name used to refer to the view in queries
-    - view_name: CountPurchase
-      # The expression to substitute anywhere the view's name is used
-      expression: count(Purchase)
-----
-
-
-=== Exporting the current views as a spec file.
-
-You can export all the views currently defined using the CLI.
-
+CLI::
++
 [source,bash]
 ----
-kaskada-cli sync export --all
+kaskada-cli view delete PurchaseStats
 ----
-
-The export result is shown below
-
-[source,yaml]
-----
-tables:
-    # ...
-views:
-    - view_id: dd61...70e9
-      view_name: CountPurchase
-      expression: count(Purchase)
-----
-
-Alternately, if you know a specific view you'd like to export you can specify it explicitly.
-
-[source,bash]
-----
-kaskada-cli sync export --view PurchaseStats
-----
-
-=== Updating Kaskada to reflect the contents of a spec file
-
-To change a view with the CLI, you first modify the view in a spec file, then "apply" the spec file with the CLI.
-When a spec file is applied, the CLI inspects all of the server's resources and all of the resources
-defined in your spec file, then takes whatever actions are necessary to reconcile the server's state.
-Applying a spec can create new views, change a view's mutable fields, or delete views.
-
-[WARNING]
-.View updates are destructive
-====
-Vies are currently immutable. 
-When the CLI updates a view, it does so by deleting the view and re-creating it.
-When this happens, the view may be temporarily unavailable to queries.
 ====
 
-Before applying a spec file, it's a good idea to see what changes will be made. 
-You can see these changes by creating an apply plan.
+A failed precondition error is returned when another view and/or
+materialization references the view. To continue with the deletion of
+the view we can either, delete the dependent resources manually with another delete operation, or, supply the `force` flag to
+delete the view forcefully. Forcefully deleting a view without
+deleting its dependent resources may result in its dependent resources
+functioning incorrectly.
 
+[tabs]
+====
+Python::
++
+[source,python]
+----
+from kaskada import view
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+view.delete_view("PurchaseStats", force = True)
+----
+
+CLI::
++
 [source,bash]
 ----
-kaskada-cli sync plan --file spec.yaml
+kaskada-cli view delete PurchaseStats --force
 ----
-
-Running this command will not make any changes to the server, but will print out the changes that will be made if you apply the given spec file.
-
-You can apply a spec file using the CLI.
-
-[source,bash]
-----
-kaskada-cli sync apply --file spec.yaml
-----
+====

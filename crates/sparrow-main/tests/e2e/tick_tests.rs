@@ -11,7 +11,14 @@ use crate::{DataFixture, QueryFixture};
 async fn data_fixture_over_minutes() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T16:39:57-08:00,0,A,10,arugula,true
@@ -34,7 +41,14 @@ async fn data_fixture_over_minutes() -> DataFixture {
 async fn data_fixture_over_hours() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T23:39:57-08:00,0,A,10,arugula,true
@@ -56,7 +70,14 @@ async fn data_fixture_over_hours() -> DataFixture {
 async fn data_fixture_over_hours_end_on_hour() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T23:39:57-08:00,0,A,10,arugula,true
@@ -78,7 +99,14 @@ async fn data_fixture_over_hours_end_on_hour() -> DataFixture {
 async fn data_days_for_else() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T12:39:57-08:00,0,A,10,arugula,true
@@ -99,7 +127,14 @@ async fn data_days_for_else() -> DataFixture {
 async fn data_fixture_over_days() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T12:39:57-08:00,0,A,10,arugula,true
@@ -121,7 +156,14 @@ async fn data_fixture_over_days() -> DataFixture {
 async fn data_fixture_over_months() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T12:39:57-08:00,0,A,10,arugula,true
@@ -143,7 +185,14 @@ async fn data_fixture_over_months() -> DataFixture {
 async fn data_fixture_over_years() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Foo", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Foo",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,vegetable,bool
     1996-12-19T12:39:57-08:00,0,A,10,arugula,true

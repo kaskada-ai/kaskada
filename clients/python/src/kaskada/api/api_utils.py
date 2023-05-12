@@ -7,7 +7,11 @@ from typing import List
 
 
 def run_subprocess(cmd: List[str], stderr: Path, stdout: Path):
-    return subprocess.Popen(cmd, stderr=open(stderr, "w"), stdout=open(stdout, "w"))
+    return subprocess.Popen(
+        cmd,
+        stderr=open(stderr, "w", encoding="utf-8"),
+        stdout=open(stdout, "w", encoding="utf-8"),
+    )
 
 
 def check_socket(endpoint: str) -> bool:

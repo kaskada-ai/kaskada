@@ -225,6 +225,42 @@ def test_table_load_csv(mockClient):
 
 
 @patch("kaskada.client.Client")
+def test_table_load_csv_file_prefix(mockClient):
+    table_name = "test_table"
+    path = "local.csv"
+    local_file = f"file://{path}"
+    expected_request = table_pb.LoadDataRequest(
+        table_name=table_name,
+        file_input=common_pb.FileInput(
+            file_type="FILE_TYPE_CSV", uri=f"file://{Path(path).absolute()}"
+        ),
+    )
+
+    kaskada.table.load(table_name, local_file, client=mockClient)
+    mockClient.table_stub.LoadData.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
+def test_table_load_from_absolute_path(mockClient):
+    table_name = "test_table"
+    path = "local.csv"
+    local_file = f"file:///{path}"
+    expected_request = table_pb.LoadDataRequest(
+        table_name=table_name,
+        file_input=common_pb.FileInput(
+            file_type="FILE_TYPE_CSV", uri=f"file:///{path}"
+        ),
+    )
+
+    kaskada.table.load(table_name, local_file, client=mockClient)
+    mockClient.table_stub.LoadData.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
 def test_table_load_csv_azure(mockClient):
     table_name = "test_table"
     azure_file = "https://myaccount.blob.core.windows.net/mycontainer/myblob.csv"

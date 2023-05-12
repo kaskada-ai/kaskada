@@ -36,7 +36,7 @@ impl TestScript {
             .tables
             .into_iter()
             .map(|table| ComputeTable {
-                config: Some(TableConfig::new(
+                config: Some(TableConfig::new_with_table_source(
                     &table.name,
                     &table.id,
                     "",

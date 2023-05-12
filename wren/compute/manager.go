@@ -12,13 +12,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -76,12 +75,14 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.CompileQuery").Logger()
 	formulas, err := m.getFormulas(ctx, owner, requestViews)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting views")
+		subLogger.Error().Err(err).Msg("issue getting formulas")
+		return nil, err
 	}
 
 	tables, err := m.getTablesForCompile(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting tables for compile")
+		subLogger.Error().Err(err).Msg("issue getting tables for compile")
+		return nil, err
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
@@ -130,6 +131,7 @@ func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query stri
 
 // gets the set of passed views and system views available for a query
 func (m *Manager) GetFormulas(ctx context.Context, owner *ent.Owner, views *v2alpha.QueryViews) ([]*v1alpha.Formula, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetFormulas").Logger()
 	requestViews := []*v1alpha.WithView{}
 	for _, queryView := range views.Views {
 		requestViews = append(requestViews, &v1alpha.WithView{
@@ -140,7 +142,8 @@ func (m *Manager) GetFormulas(ctx context.Context, owner *ent.Owner, views *v2al
 
 	formulas, err := m.getFormulas(ctx, owner, requestViews)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting views")
+		subLogger.Error().Err(err).Msg("issue getting formulas")
+		return nil, err
 	}
 	return formulas, nil
 }
@@ -169,7 +172,8 @@ func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expressi
 
 	tables, err := m.getTablesForCompile(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting tables for compile")
+		subLogger.Error().Err(err).Msg("issue getting tables for compile")
+		return nil, err
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
@@ -272,12 +276,14 @@ func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, re
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.CreateCompileRequest").Logger()
 	formulas, err := m.getFormulas(ctx, owner, request.RequestViews)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting views")
+		subLogger.Error().Err(err).Msg("issue getting formulas")
+		return nil, err
 	}
 
 	tables, err := m.getTablesForCompile(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "getting tables for compile")
+		subLogger.Error().Err(err).Msg("issue getting tables for compile")
+		return nil, err
 	}
 
 	var perEntityBehavior v1alpha.PerEntityBehavior
@@ -358,10 +364,12 @@ func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compi
 }
 
 func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenId string) (*ent.DataToken, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetDataToken").Logger()
 	if dataTokenId == "" {
 		dataToken, err := m.dataTokenClient.GetCurrentDataToken(ctx, owner)
 		if err != nil {
-			return nil, errors.WithMessage(err, "getting current data_token")
+			subLogger.Error().Err(err).Msg("issue getting current data_token")
+			return nil, err
 		}
 		return dataToken, nil
 	} else {
@@ -371,7 +379,8 @@ func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenI
 		} else {
 			dataToken, err := m.dataTokenClient.GetDataToken(ctx, owner, id)
 			if err != nil {
-				return nil, errors.WithMessagef(err, "getting data_token: %s", dataTokenId)
+				subLogger.Error().Err(err).Msg("issue getting data_token")
+				return nil, err
 			}
 			return dataToken, nil
 		}
@@ -408,7 +417,7 @@ func (m *Manager) InitiateQuery(queryContext *QueryContext) (client.ComputeServi
 
 	subLogger.Info().Bool("incremental_enabled", queryContext.compileResp.IncrementalEnabled).Bool("is_current_data_token", queryContext.isCurrentDataToken).Msg("Populating snapshot config if needed")
 	if queryContext.compileResp.IncrementalEnabled && queryContext.isCurrentDataToken && queryContext.compileResp.PlanHash != nil {
-		executeRequest.ComputeSnapshotConfig = &v1alpha.ExecuteRequest_ComputeSnapshotConfig{
+		executeRequest.ComputeSnapshotConfig = &v1alpha.ComputeSnapshotConfig{
 			OutputPrefix: ConvertURIForCompute(m.getComputeSnapshotDataURI(queryContext.owner, *snapshotCacheBuster, queryContext.compileResp.PlanHash.Hash, queryContext.dataToken.DataVersionID)),
 		}
 		subLogger.Info().Str("SnapshotPrefix", executeRequest.ComputeSnapshotConfig.OutputPrefix).Msg("Snapshot output prefix")
@@ -493,7 +502,7 @@ func (m *Manager) runMaterializationQuery(queryContext *QueryContext) (*QueryRes
 	return result, nil
 }
 
-func (m *Manager) SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ExecuteResponse_ComputeSnapshot) {
+func (m *Manager) SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ComputeSnapshot) {
 	subLogger := log.Ctx(queryContext.ctx).With().Str("method", "manager.SaveComputeSnapshots").Logger()
 	for _, computeSnapshot := range computeSnapshots {
 		if err := m.kaskadaTableClient.SaveComputeSnapshot(queryContext.ctx, queryContext.owner, computeSnapshot.PlanHash.Hash, computeSnapshot.SnapshotVersion, queryContext.dataToken, ConvertURIForManager(computeSnapshot.Path), computeSnapshot.MaxEventTime.AsTime(), queryContext.GetTableIDs()); err != nil {
@@ -680,36 +689,14 @@ func reMapSparrowError(ctx context.Context, err error) error {
 	return outStatus.Err()
 }
 
-// converts diagnostics in non-executable responses into error details to preserve legacy behavior
-// TODO: update the python client to be able to handle non-executable responses in the response body
-// TODO: remove this and pass back non-executable responses in the response body instead of as an error
-func (m *Manager) ReMapAnalysisError(ctx context.Context, analysis *v1alpha.Analysis) error {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.reMapAnalysisError").Logger()
-	if analysis != nil {
-		if !analysis.CanExecute {
-			if analysis.FenlDiagnostics != nil {
-				diagCount := len(analysis.FenlDiagnostics.FenlDiagnostics)
-				if diagCount > 0 {
-					outStatus := status.New(codes.InvalidArgument, fmt.Sprintf("%d errors in Fenl statements; see error details", diagCount))
-					outStatus, err := outStatus.WithDetails(analysis.FenlDiagnostics)
-					if err != nil {
-						subLogger.Error().Err(err).Interface("fenl_diagnostics", analysis.FenlDiagnostics).Msg("unable to add diagnostic to re-mapped error details")
-					}
-					return outStatus.Err()
-				}
-			}
-			return status.Error(codes.Internal, "internal compute error")
-		}
-	}
-	return nil
-}
-
 func (m *Manager) getTablesForCompile(ctx context.Context, owner *ent.Owner) ([]*v1alpha.ComputeTable, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.getTablesForCompile").Logger()
 	computeTables := []*v1alpha.ComputeTable{}
 
 	kaskadaTables, err := m.kaskadaTableClient.GetAllKaskadaTables(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "getting all tables")
+		subLogger.Error().Err(err).Msg("error getting all tables")
+		return nil, err
 	}
 
 	for _, kaskadaTable := range kaskadaTables {
@@ -783,7 +770,7 @@ func (m *Manager) GetTablesForCompute(ctx context.Context, owner *ent.Owner, dat
 	err = m.parallelPrepare(ctx, owner, sliceTableMap)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue preparing tables")
-		return nil, errors.WithMessagef(err, "preparing tables")
+		return nil, err
 	}
 
 	//refresh prepareJobs after prepare complete
@@ -809,9 +796,11 @@ func (m *Manager) GetTablesForCompute(ctx context.Context, owner *ent.Owner, dat
 // converts request views and persisted views to formulas.  if a request view has the same name as a persisted view
 // the request view is used.
 func (m *Manager) getFormulas(ctx context.Context, owner *ent.Owner, requestViews []*v1alpha.WithView) ([]*v1alpha.Formula, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.getFormulas").Logger()
 	persistedViews, err := m.kaskadaViewClient.GetAllKaskadaViews(ctx, owner)
 	if err != nil {
-		return nil, errors.WithMessage(err, "listing all views")
+		subLogger.Error().Err(err).Msg("issue getting persisted views")
+		return nil, err
 	}
 
 	formulas := []*v1alpha.Formula{}

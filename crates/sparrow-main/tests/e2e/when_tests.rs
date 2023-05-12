@@ -12,7 +12,7 @@ use crate::{DataFixture, QueryFixture};
 async fn when_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "WhenFixture",
                 &Uuid::new_v4(),
                 "time",
@@ -37,7 +37,14 @@ async fn when_data_fixture() -> DataFixture {
 pub(crate) async fn purchase_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Purchases", &Uuid::new_v4(), "time", None, "user", "user"),
+            TableConfig::new_with_table_source(
+                "Purchases",
+                &Uuid::new_v4(),
+                "time",
+                None,
+                "user",
+                "user",
+            ),
             indoc! {"
     time,user
     2022-10-27,Ben
@@ -53,7 +60,14 @@ pub(crate) async fn purchase_fixture() -> DataFixture {
         .await
         .unwrap()
         .with_table_from_csv(
-            TableConfig::new("PageViews", &Uuid::new_v4(), "time", None, "user", "user"),
+            TableConfig::new_with_table_source(
+                "PageViews",
+                &Uuid::new_v4(),
+                "time",
+                None,
+                "user",
+                "user",
+            ),
             indoc! {"
     time,user
     2022-10-25,Davor

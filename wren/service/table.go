@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -106,12 +106,7 @@ func (t *tableService) listTables(ctx context.Context, owner *ent.Owner, request
 		Tables: make([]*v1alpha.Table, 0, len(tables)),
 	}
 	for _, table := range tables {
-		protoTable, err := t.getProtoFromDB(ctx, table)
-		if err != nil {
-			return nil, errors.WithMessage(err, "coverting db table to proto table")
-		}
-
-		response.Tables = append(response.Tables, protoTable)
+		response.Tables = append(response.Tables, t.getProtoFromDB(ctx, table))
 	}
 
 	if len(tables) > 0 && len(tables) == pageSize {
@@ -147,11 +142,7 @@ func (t *tableService) getTable(ctx context.Context, owner *ent.Owner, request *
 	if err != nil {
 		return nil, err
 	}
-	table, err := t.getProtoFromDB(ctx, kaskadaTable)
-	if err != nil {
-		return nil, errors.WithMessage(err, "getting proto from db table")
-	}
-	return &v1alpha.GetTableResponse{Table: table}, nil
+	return &v1alpha.GetTableResponse{Table: t.getProtoFromDB(ctx, kaskadaTable)}, nil
 }
 
 func (t *tableService) CreateTable(ctx context.Context, request *v1alpha.CreateTableRequest) (*v1alpha.CreateTableResponse, error) {
@@ -190,12 +181,7 @@ func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, reques
 		return nil, err
 	}
 
-	table, err = t.getProtoFromDB(ctx, kaskadaTable)
-	if err != nil {
-		return nil, errors.WithMessage(err, "getting proto from db table")
-	}
-
-	return &v1alpha.CreateTableResponse{Table: table}, nil
+	return &v1alpha.CreateTableResponse{Table: t.getProtoFromDB(ctx, kaskadaTable)}, nil
 }
 
 func (t *tableService) DeleteTable(ctx context.Context, request *v1alpha.DeleteTableRequest) (*v1alpha.DeleteTableResponse, error) {
@@ -235,7 +221,9 @@ func (t *tableService) deleteTable(ctx context.Context, owner *ent.Owner, reques
 	tablePath := t.tableStore.GetTableSubPath(owner, kaskadaTable)
 	err = t.objectStoreClient.DeleteObjects(ctx, tablePath)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "deleting files for table: %s", request.TableName)
+		subLogger := log.Ctx(ctx).With().Str("method", "table.deleteTable").Str("table_name", kaskadaTable.Name).Str("table_id", kaskadaTable.ID.String()).Logger()
+		subLogger.Error().Err(err).Msg("issue deleting files for table")
+		return nil, err
 	}
 
 	return &v1alpha.DeleteTableResponse{
@@ -286,22 +274,39 @@ func (t *tableService) loadData(ctx context.Context, owner *ent.Owner, request *
 }
 
 func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, fileInput internal.FileInput, kaskadaTable *ent.KaskadaTable) (*ent.DataToken, error) {
-	//subLogger := log.Ctx(ctx).With().Str("method", "table.loadFileIntoTable").Logger()
+	subLogger := log.Ctx(ctx).With().
+		Str("method", "table.loadFileIntoTable").
+		Str("table_name", kaskadaTable.Name).
+		Str("table_id", kaskadaTable.ID.String()).
+		Str("file_uri", fileInput.GetURI()).
+		Logger()
+
+	// first validate we can access the file
+	exists, err := t.objectStoreClient.URIExists(ctx, fileInput.GetURI())
+	if err != nil {
+		subLogger.Info().Err(err).Msg("issue checking if file exists")
+		return nil, customerrors.NewPermissionDeniedError(fmt.Sprintf("file: %s is not accessible by the kaskada service. The provider returned this error: %s", fileInput.GetURI(), err.Error()))
+	}
+	if !exists {
+		return nil, customerrors.NewNotFoundErrorWithCustomText(fmt.Sprintf("file: %s not found by the kaskada service", fileInput.GetURI()))
+	}
 
 	fileSchema, err := t.validateFileSchema(ctx, *kaskadaTable, fileInput)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "validating schema for file: %s on table: %s", fileInput, kaskadaTable.Name)
+		return nil, err
 	}
 	toPath := t.tableStore.GetFileSubPath(owner, kaskadaTable, fileInput.GetExtension())
 
 	newObject, err := t.objectStoreClient.CopyObjectIn(ctx, fileInput.GetURI(), toPath)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "loading file: %s into table: %s", fileInput, kaskadaTable.Name)
+		subLogger.Error().Err(err).Msg("issue copying file into table")
+		return nil, err
 	}
 
 	fileIdentifier, err := t.objectStoreClient.GetObjectIdentifier(ctx, newObject)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "getting identifier for file: %s in table: %s", fileInput, kaskadaTable.Name)
+		subLogger.Error().Err(err).Msg("issue getting identifier for file")
+		return nil, err
 	}
 
 	newFiles := []internal.AddFileProps{}
@@ -332,7 +337,8 @@ func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.
 
 	fileSchema, err := t.computeManager.GetFileSchema(ctx, fileInput)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "getting schema for file: %s", fileInput)
+		subLogger.Error().Err(err).Msg("issue getting schema for file")
+		return nil, reMapSparrowError(ctx, err)
 	}
 
 	if kaskadaTable.MergedSchema != nil && !proto.Equal(kaskadaTable.MergedSchema, fileSchema) {
@@ -360,7 +366,37 @@ func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.
 	return fileSchema, nil
 }
 
-func (t *tableService) getProtoFromDB(ctx context.Context, table *ent.KaskadaTable) (*v1alpha.Table, error) {
+func reMapSparrowError(ctx context.Context, err error) error {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.reMapSparrowError").Logger()
+	subLogger.Info().Msg(fmt.Sprintf("Sparrow Error: %v", err))
+
+	inStatus, ok := status.FromError(err)
+	if !ok {
+		subLogger.Error().Msg("unexpected: compute error did not include error-status")
+		return err
+	}
+	outStatus := status.New(inStatus.Code(), inStatus.Message())
+	subLogger.Info().Msg(fmt.Sprintf("Error Out Status: %v", outStatus))
+
+	for _, detail := range inStatus.Details() {
+		subLogger.Info().Msg(fmt.Sprintf("Error Detail: %v", detail))
+		switch t := detail.(type) {
+		case protoiface.MessageV1:
+			outStatus, err = outStatus.WithDetails(t)
+			subLogger.Info().Msg(fmt.Sprintf("Error Out Status: %v", outStatus))
+			if err != nil {
+				subLogger.Error().Err(err).Interface("detail", t).Msg("unable to add detail to re-mapped error details")
+			}
+		default:
+			subLogger.Error().Err(err).Interface("detail", t).Msg("unexpected: detail from compute doesn't implement the protoifam.MessageV1 interface")
+		}
+	}
+	return outStatus.Err()
+}
+
+func (t *tableService) getProtoFromDB(ctx context.Context, table *ent.KaskadaTable) *v1alpha.Table {
+	subLogger := log.Ctx(ctx).With().Str("method", "table.getProtoFromDB").Str("table_name", table.Name).Str("table_id", table.ID.String()).Logger()
+
 	output := &v1alpha.Table{
 		TableId:             table.ID.String(),
 		TableName:           table.Name,
@@ -375,7 +411,7 @@ func (t *tableService) getProtoFromDB(ctx context.Context, table *ent.KaskadaTab
 
 	version, err := t.kaskadaTableClient.GetKaskadaTableVersion(ctx, table)
 	if err != nil {
-		return nil, err
+		subLogger.Error().Err(err).Msg("issue getting table version")
 	}
 	if version != nil {
 		output.Version = version.ID
@@ -387,5 +423,5 @@ func (t *tableService) getProtoFromDB(ctx context.Context, table *ent.KaskadaTab
 		}
 	}
 
-	return output, nil
+	return output
 }

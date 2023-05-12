@@ -19,7 +19,7 @@ use crate::DataFixture;
 pub(crate) async fn i64_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers",
                 &Uuid::new_v4(),
                 "time",
@@ -55,7 +55,7 @@ pub(crate) async fn i64_data_fixture() -> DataFixture {
 pub(crate) async fn f64_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers",
                 &Uuid::new_v4(),
                 "time",
@@ -92,7 +92,7 @@ pub(crate) async fn f64_data_fixture() -> DataFixture {
 pub(crate) async fn strings_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Strings",
                 &Uuid::new_v4(),
                 "time",
@@ -121,7 +121,7 @@ pub(crate) async fn strings_data_fixture() -> DataFixture {
 pub(crate) async fn boolean_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Booleans",
                 &Uuid::new_v4(),
                 "time",
@@ -159,7 +159,14 @@ pub(crate) async fn boolean_data_fixture() -> DataFixture {
 pub(crate) async fn timestamp_ns_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Times", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Times",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,n,m,other_time,fruit
     1994-12-19T16:39:57-08:00,0,A,2,4,2003-12-19T16:39:57-08:00,pear

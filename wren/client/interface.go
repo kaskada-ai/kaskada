@@ -94,6 +94,9 @@ type ObjectStoreClient interface {
 
 	// returns the absolute URI of a path inside our object store
 	GetDataPathURI(path string) string
+
+	// true if the URI exists and is accessible, otherwise returns error
+	URIExists(ctx context.Context, URI string) (bool, error)
 }
 
 // ObjectStoreClientProvider creates ObjectStoreClients
