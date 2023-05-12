@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use arrow::array::{ArrayRef, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type};
@@ -112,11 +113,15 @@ pub async fn prepare_input<'a>(
     }
 
     // we've already checked that the group column exists so we can just unwrap it here
-    let (source_index, field) = raw_metadata
+    let (entity_column_index, entity_key_column) = raw_metadata
         .raw_schema
         .column_with_name(&config.group_column_name)
-        .expect("group column");
-    let slice_preparer = SlicePreparer::try_new(source_index, field.data_type().clone(), slice)?;
+        .with_context(|| "")?;
+    let slice_preparer = SlicePreparer::try_new(
+        entity_column_index,
+        entity_key_column.data_type().clone(),
+        slice,
+    )?;
 
     Ok(async_stream::try_stream! {
         let mut input_buffer = InputBuffer::new();
@@ -192,15 +197,19 @@ pub async fn prepare_input<'a>(
             let mut prepared_columns: Vec<ArrayRef> = Vec::new();
             for c in columns.iter_mut() {
                 let result = c.get_result(&record_batch).await?;
-                update_key_inverse(c, &record_batch, &result, key_hash_inverse.clone()).await?;
                 prepared_columns.push(result);
             }
+
+            // 4. Update the key hash mappings
+            let key_column = record_batch.column(entity_column_index);
+            let key_hashes = prepared_columns.get(2).expect("key column");
+            update_key_inverse(key_column, key_hashes, key_hash_inverse.clone()).await?;
 
             let record_batch = RecordBatch::try_new(prepared_schema.clone(), prepared_columns)
                 .into_report()
                 .change_context(Error::PreparingColumn)?;
 
-            // 4. After preparing the batch, concatenate the leftovers from the previous batch
+            // 5. After preparing the batch, concatenate the leftovers from the previous batch
             // Note this is done after slicing, since the leftovers were already sliced.
             let record_batch = if let Some(leftovers) = input_buffer.leftovers.take() {
                 debug_assert!(input_buffer.leftovers.is_none());
@@ -212,7 +221,7 @@ pub async fn prepare_input<'a>(
                 record_batch
             };
 
-            // 5. Pull out the time, subsort, and key hash columns to sort the record batch
+            // 6. Pull out the time, subsort, and key hash columns to sort the record batch
             let time_column = record_batch.column(0);
             let subsort_column = record_batch.column(1);
             let key_hash_column = record_batch.column(2);
@@ -236,7 +245,7 @@ pub async fn prepare_input<'a>(
             .into_report()
             .change_context(Error::SortingBatch)?;
 
-            // 6. Produce the fully ordered record batch by taking the indices out from the columns
+            // 7. Produce the fully ordered record batch by taking the indices out from the columns
             let sorted_columns: Vec<_> = record_batch
                 .columns()
                 .iter()
@@ -249,7 +258,7 @@ pub async fn prepare_input<'a>(
                 .into_report()
                 .change_context(Error::Internal)?;
 
-            // 7. Store the leftovers for the next batch
+            // 8. Store the leftovers for the next batch
             // We cannot produce the entire batch; the watermark cannot advance past the max time in the batch,
             // and we cannot produce rows past the watermark.
             let time_column: &TimestampNanosecondArray =
@@ -297,26 +306,19 @@ pub async fn prepare_input<'a>(
 }
 
 async fn update_key_inverse(
-    c: &mut ColumnBehavior,
-    original_batch: &RecordBatch,
+    keys: &ArrayRef,
     key_hashes: &ArrayRef,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
 ) -> error_stack::Result<(), Error> {
-    match c {
-        ColumnBehavior::EntityKey { index, .. } => {
-            let keys = original_batch.column(*index);
-            let key_hashes: &UInt64Array = downcast_primitive_array(key_hashes.as_ref())
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
-            key_hash_inverse
-                .add(keys.clone(), key_hashes)
-                .await
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
-            Ok(())
-        }
-        _ => Ok(()),
-    }
+    let key_hashes: &UInt64Array = downcast_primitive_array(key_hashes.as_ref())
+        .into_report()
+        .change_context(Error::PreparingColumn)?;
+    key_hash_inverse
+        .add(keys.clone(), key_hashes)
+        .await
+        .into_report()
+        .change_context(Error::PreparingColumn)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -370,7 +372,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sequence_of_batches_prepared() {
-        let config = TableConfig::new(
+        let config = TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
@@ -386,7 +388,7 @@ mod tests {
             KeyHashInverse::from_data_type(DataType::UInt64),
         ));
 
-        let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone());
+        let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
             &config,
@@ -418,7 +420,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_when_watermark_does_not_advance() {
-        let config = TableConfig::new(
+        let config = TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
@@ -435,7 +437,7 @@ mod tests {
             KeyHashInverse::from_data_type(DataType::UInt64),
         ));
 
-        let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone());
+        let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
             &config,

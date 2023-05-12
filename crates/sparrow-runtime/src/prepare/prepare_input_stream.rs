@@ -74,17 +74,15 @@ pub async fn prepare_input<'a>(
     }
 
     // we've already checked that the group column exists so we can just unwrap it here
-    let (source_index, field) = raw_metadata
-        .raw_schema
-        .column_with_name(&config.group_column_name)
-        .unwrap();
-    let slice_preparer =
-        SlicePreparer::try_new(source_index, field.data_type().clone(), slice.as_ref())?;
-
-    let (_, entity_key_column) = raw_metadata
+    let (entity_column_index, entity_key_column) = raw_metadata
         .raw_schema
         .column_with_name(&config.group_column_name)
         .with_context(|| "")?;
+    let slice_preparer = SlicePreparer::try_new(
+        entity_column_index,
+        entity_key_column.data_type().clone(),
+        slice.as_ref(),
+    )?;
 
     let mut metadata = PrepareMetadata::new(entity_key_column.data_type().clone());
 
@@ -99,11 +97,16 @@ pub async fn prepare_input<'a>(
                     .get_result(&read_batch)
                     .await?;
 
-                update_key_metadata(c, &read_batch, &result, &mut metadata)?;
+                // update_key_metadata(c, &read_batch, &result, &mut metadata)?;
                 prepared_columns.push(result);
             }
 
-            // 3. Pull out the time, subsort and key hash columns to sort the record batch
+            // 3. Update the key hash mappings
+            let key_column = read_batch.column(entity_column_index);
+            let key_hashes = prepared_columns.get(2).expect("key column");
+            update_key_metadata(key_column, key_hashes, &mut metadata)?;
+
+            // 4. Pull out the time, subsort and key hash columns to sort the record batch
             let time_column = &prepared_columns[0];
             let subsort_column = &prepared_columns[1];
             let key_hash_column = &prepared_columns[2];
@@ -127,7 +130,7 @@ pub async fn prepare_input<'a>(
             .into_report()
             .change_context(Error::SortingBatch)?;
 
-            // Produce the fully ordered record batch by taking the indices out from the
+            // 5. Produce the fully ordered record batch by taking the indices out from the
             // columns
             let prepared_columns: Vec<_> = prepared_columns
                 .iter()
@@ -147,45 +150,38 @@ pub async fn prepare_input<'a>(
     .boxed())
 }
 
+// Update the metadata with the key hash mapping
 fn update_key_metadata(
-    c: &mut ColumnBehavior,
-    original_batch: &RecordBatch,
+    keys: &ArrayRef,
     key_hashes: &ArrayRef,
     metadata: &mut PrepareMetadata,
 ) -> error_stack::Result<(), Error> {
-    match c {
-        ColumnBehavior::EntityKey { index, .. } => {
-            // Update the metadata with the key hash mapping
-            let key_column = original_batch.column(*index);
-            let previous_keys = &mut metadata.previous_keys.borrow_mut();
-            let result: &UInt64Array = downcast_primitive_array(key_hashes.as_ref())
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
-            let indices: UInt64Array = result
-                .into_iter()
-                .flatten()
-                .enumerate()
-                .filter_map(|(index, key_hash)| {
-                    if previous_keys.insert(key_hash) {
-                        Some(index as u64)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            let new_hash_keys = arrow::compute::take(&result, &indices, None)
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
-            let new_keys = arrow::compute::take(key_column, &indices, None)
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
-            metadata
-                .add_entity_keys(new_hash_keys, new_keys)
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
-        }
-        _ => (),
-    };
+    let previous_keys = &mut metadata.previous_keys.borrow_mut();
+    let key_hashes: &UInt64Array = downcast_primitive_array(key_hashes.as_ref())
+        .into_report()
+        .change_context(Error::PreparingColumn)?;
+    let indices: UInt64Array = key_hashes
+        .into_iter()
+        .flatten()
+        .enumerate()
+        .filter_map(|(index, key_hash)| {
+            if previous_keys.insert(key_hash) {
+                Some(index as u64)
+            } else {
+                None
+            }
+        })
+        .collect();
+    let new_hash_keys = arrow::compute::take(&key_hashes, &indices, None)
+        .into_report()
+        .change_context(Error::PreparingColumn)?;
+    let new_keys = arrow::compute::take(keys, &indices, None)
+        .into_report()
+        .change_context(Error::PreparingColumn)?;
+    metadata
+        .add_entity_keys(new_hash_keys, new_keys)
+        .into_report()
+        .change_context(Error::PreparingColumn)?;
     Ok(())
 }
 
@@ -212,14 +208,14 @@ mod tests {
             ),
             Field::new("id", DataType::Utf8, true),
         ]));
-        let raw_metadata = RawMetadata::from_raw_schema(schema.clone());
+        let raw_metadata = RawMetadata::from_raw_schema(schema.clone()).unwrap();
         let time = TimestampNanosecondArray::from(vec![1, 3, 3, 7, 5, 6, 7]);
         let keys = StringArray::from(vec![
             "awkward", "tacos", "awkward", "tacos", "apples", "tacos", "tacos",
         ]);
         let batch = RecordBatch::try_new(schema, vec![Arc::new(time), Arc::new(keys)]).unwrap();
         let reader = futures::stream::iter(vec![Ok(batch)]);
-        let config = TableConfig::new(
+        let config = TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
@@ -251,12 +247,12 @@ mod tests {
             ),
             Field::new("id", DataType::UInt64, true),
         ]));
-        let raw_metadata = RawMetadata::from_raw_schema(schema.clone());
+        let raw_metadata = RawMetadata::from_raw_schema(schema.clone()).unwrap();
         let time = TimestampNanosecondArray::from(vec![1, 3, 3, 7, 5, 6, 7]);
         let keys = UInt64Array::from(vec![1, 2, 3, 1, 2, 3, 4]);
         let batch = RecordBatch::try_new(schema, vec![Arc::new(time), Arc::new(keys)]).unwrap();
         let reader = futures::stream::iter(vec![Ok(batch)]);
-        let config = TableConfig::new(
+        let config = TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
