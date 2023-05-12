@@ -43,7 +43,7 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["tests/integration/**", "Dockerfile.integration",   ".github/workflows/ci_engine.yml"]'
+          paths: '["tests/integration/**", "Dockerfile.release", ".github/workflows/ci_engine.yml"]'
           do_not_skip: '["schedule"]'
 
   build_wren:
@@ -66,14 +66,14 @@ jobs:
       - name: Get wren binary
         uses: actions/download-artifact@v3
         with:
-          name: wren-binary
-          path: ci-bin/wren/
+          name: manager-binary
+          path: release/linux/amd64/
 
       - name: Get Sparrow binary
         uses: actions/download-artifact@v3
         with:
           name: engine-debug
-          path: ci-bin/engine/
+          path: release/linux/amd64/
 
       - name: Install Buf
         uses: bufbuild/buf-setup-action@v1.12.0
@@ -155,14 +155,14 @@ jobs:
             - name: Get wren binary
               uses: actions/download-artifact@v3
               with:
-                name: wren-binary
-                path: ci-bin/wren/
+                name: manager-binary
+                path: release/linux/amd64/
       
             - name: Get Sparrow binary
               uses: actions/download-artifact@v3
               with:
                 name: engine-debug
-                path: ci-bin/engine/
+                path: release/linux/amd64/
       
             - name: Install Buf
               uses: bufbuild/buf-setup-action@v1.12.0

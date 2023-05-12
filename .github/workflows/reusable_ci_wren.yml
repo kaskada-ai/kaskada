@@ -74,7 +74,7 @@ jobs:
 
       - name: Build
         if: needs.wren_skip.outputs.should_skip != 'true'
-        run: go build -o wren-binary main.go
+        run: go build -o wren main.go
         working-directory: wren
 
       - name: Unit Tests
@@ -88,7 +88,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           run_id: ${{needs.wren_skip.outputs.run_id}}
-          name: wren-binary
+          name: manager-binary
           # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
           # Required, if the artifact is from a different repo
           # Required, if the repo is private a Personal Access Token with `repo` scope is needed
@@ -98,6 +98,6 @@ jobs:
       - name: Upload Wren Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: wren-binary
+          name: manager-binary
           retention-days: 5
-          path: wren/wren-binary
+          path: wren/wren
