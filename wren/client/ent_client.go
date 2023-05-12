@@ -67,7 +67,7 @@ func NewEntConfig(dbDialect string, dbName *string, dbHost *string, inMemory *bo
 		log.Fatal().Msg("Flag: `db-dialect` must be set to either `postgres` or `sqlite`.")
 	}
 
-	if strings.HasPrefix(*dbPath, "~/") {
+	if dbPath != nil && strings.HasPrefix(*dbPath, "~/") {
 		usr, err := user.Current()
 		if err != nil {
 			log.Fatal().Msgf("unable to get local user account: %v", err)
