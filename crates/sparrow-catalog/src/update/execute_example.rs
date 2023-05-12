@@ -176,7 +176,14 @@ impl ExampleInputPreparer {
         if let Some(input_csv) = input_csv {
             prepared_tables.push(
                 self.prepare_input(
-                    TableConfig::new("Input", &Uuid::new_v4(), "time", None, "key", "grouping"),
+                    TableConfig::new_with_table_source(
+                        "Input",
+                        &Uuid::new_v4(),
+                        "time",
+                        None,
+                        "key",
+                        "grouping",
+                    ),
                     input_csv,
                 )
                 .await

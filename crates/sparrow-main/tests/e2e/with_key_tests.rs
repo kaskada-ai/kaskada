@@ -21,7 +21,14 @@ use crate::{DataFixture, QueryFixture};
 pub(crate) async fn with_key_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Table", &Uuid::new_v4(), "time", Some("subsort"), "key", ""),
+            TableConfig::new_with_table_source(
+                "Table",
+                &Uuid::new_v4(),
+                "time",
+                Some("subsort"),
+                "key",
+                "",
+            ),
             indoc! {"
     time,subsort,key,foreign_key_i64,foreign_key_str,n
     1996-12-19T16:39:57-08:00,0,A,0,B,0

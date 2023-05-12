@@ -117,7 +117,7 @@ async fn test_table_no_source_files() {
         Field::new("group", DataType::Int64, false),
     ]);
     let data_fixture = DataFixture::new().with_table_metadata(
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Sent",
             &Uuid::new_v4(),
             "time",
@@ -164,7 +164,7 @@ async fn test_invalid_key_columns() {
         Field::new("key", DataType::Int64, false),
     ]);
     let data_fixture = DataFixture::new().with_table_metadata(
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Miscapitalized",
             &Uuid::new_v4(),
             "Time",

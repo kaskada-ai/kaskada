@@ -12,7 +12,7 @@ use crate::{DataFixture, QueryFixture};
 async fn shift_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "ShiftFixture",
                 &Uuid::new_v4(),
                 "time",
@@ -266,7 +266,7 @@ async fn test_shift_to_sparse() {
     // lower bound of the shift to outputs based on the first element.
     let data = DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "ShiftFixture",
                 &Uuid::new_v4(),
                 "time",
@@ -301,7 +301,14 @@ async fn test_shift_to_sparse() {
 async fn tables() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("T", &Uuid::new_v4(), "time", Some("sub_sort"), "id", ""),
+            TableConfig::new_with_table_source(
+                "T",
+                &Uuid::new_v4(),
+                "time",
+                Some("sub_sort"),
+                "id",
+                "",
+            ),
             indoc! {"
         time,sub_sort,id,v
         2000-01-01T00:00:00.000000000,0,a,111
@@ -338,7 +345,7 @@ async fn shift_to() {
         .run_to_csv(
             &DataFixture::new()
                 .with_table_from_csv(
-                    TableConfig::new("Input", &Uuid::new_v4(), "time", Some("sub_sort"), "key", "grouping"),
+                    TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", Some("sub_sort"), "key", "grouping"),
                     indoc! ("
                     time,key,sub_sort,date,n
                     1996-03-21T00:00:00-00:00,Ben,0,1996-08-19T00:00:00-00:00,1

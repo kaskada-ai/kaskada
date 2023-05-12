@@ -22,7 +22,7 @@ event_at,entity_id,duration,won
 async fn gaming_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "GamePlay",
                 &Uuid::new_v4(),
                 "event_at",

@@ -89,7 +89,7 @@ async fn test_basic_resumeable_final() {
         QueryFixture::new("{ key: last(Numbers.key), m: Numbers.m, sum_m: sum(Numbers.m) }");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -130,7 +130,7 @@ async fn test_resumeable_entity_reordered() {
         QueryFixture::new("{ key: last(Numbers.key), m: Numbers.m, sum_m: sum(Numbers.m) }");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -172,7 +172,7 @@ async fn test_resumeable_with_unordered_file_sets() {
 
     let query =
         QueryFixture::new("{ key: last(Numbers.key), m: Numbers.m, sum_m: sum(Numbers.m) }");
-    let config = TableConfig::new(
+    let config = TableConfig::new_with_table_source(
         "Numbers",
         &Uuid::new_v4(),
         "time",
@@ -255,7 +255,7 @@ async fn test_resumeable_ticks_old_entities() {
     );
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -314,7 +314,7 @@ async fn test_resumeable_when() {
     );
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -359,7 +359,7 @@ async fn test_resumeable_lookup() {
     );
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -403,7 +403,7 @@ async fn test_resumeable_with_key() {
     let query_fixture = QueryFixture::new("Numbers | with_key(Numbers.m)");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -457,7 +457,7 @@ async fn test_resumeable_shift_to_literal() {
         QueryFixture::new("Numbers | shift_to(time=851060636000000001 as timestamp_ns)");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -507,7 +507,7 @@ async fn test_resumeable_shift_to_column() {
         QueryFixture::new("{ shifted: Numbers.time | shift_to(add_time(seconds(10))) }");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -552,7 +552,7 @@ async fn test_resumeable_lag_basic() {
         QueryFixture::new("{ lag_1_m: Numbers.m | lag(1), lag_2_n: Numbers.n | lag(2) }");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -605,7 +605,7 @@ async fn test_resumeable_final_no_new_data() {
     .with_rocksdb(snapshot_dir.path(), None)
     .with_final_results();
 
-    let config = TableConfig::new(
+    let config = TableConfig::new_with_table_source(
         "Numbers",
         &Uuid::new_v4(),
         "time",
@@ -690,7 +690,7 @@ async fn test_resumeable_with_preview_rows() {
     );
     let result = assert_final_incremental_same_as_complete(
         query_fixture.with_preview_rows(100),
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",
@@ -733,7 +733,7 @@ async fn test_shift_until() {
     let query_fixture = QueryFixture::new("{ key: Numbers.key } | shift_until(count(Numbers) > 3)");
     let result = assert_final_incremental_same_as_complete(
         query_fixture,
-        TableConfig::new(
+        TableConfig::new_with_table_source(
             "Numbers",
             &Uuid::new_v4(),
             "time",

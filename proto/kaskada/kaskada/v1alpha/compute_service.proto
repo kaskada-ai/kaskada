@@ -81,6 +81,64 @@ message PlanHash {
   bytes hash = 1;
 }
 
+message ProgressInformation {
+  // Total input rows to be processed by this query.
+  int64 total_input_rows = 1;
+  // Number of input rows processed by this query.
+  int64 processed_input_rows = 2;
+
+  // Number of rows added to buffers.
+  int64 buffered_rows = 3;
+
+  // Number of buffered rows that have been processed.
+  //
+  // Note: Not all buffered rows *will* be processed.
+  // For example, `shift_until`` with a predicate that is never `true`.
+  // This exists to provide an indication of work remaining *after*
+  // processed_input_rows == total_input_rows.
+  int64 processed_buffered_rows = 8;
+
+  // Minimum event time present in input.
+  int64 min_event_time = 4;
+  // Maximum event time present in input.
+  int64 max_event_time = 5;
+  // Current event time present in output.
+  int64 output_time = 6;
+
+  // The number of output rows produced so far.
+  int64 produced_output_rows = 7;
+}
+
+message ComputeSnapshotConfig {
+  // S3 URI prefix where *all* snapshots should be written.
+  // This should be unique to the query hash.
+  // Snapshots will be written to this prefix.
+  //
+  // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data`.
+  string output_prefix = 1;
+
+  // If set, the S3 URI prefix of a snapshot to resume from.
+  //
+  // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data/<snapshotId>`.
+  google.protobuf.StringValue resume_from = 2;
+}
+
+message ComputeSnapshot {
+  // Full S3 URI path to the snapshot.
+  // A snapshot is a set of RocksDB files
+  // Example: `s3://<bucket>/<request.snapshot.prefix>/<snapshot_id>`
+  string path = 1;
+
+  // The maximum event time included in the snapshot.
+  google.protobuf.Timestamp max_event_time = 2;
+
+  // The plan hash the snapshot was taken for.
+  PlanHash plan_hash = 3;
+
+  // The snapshot version
+  int32 snapshot_version = 4;
+}
+
 message GetCurrentSnapshotVersionRequest {}
 message GetCurrentSnapshotVersionResponse {
   // The current snapshot version.
@@ -214,20 +272,6 @@ message ExecuteRequest {
     // Default value (0) indicates all rows should be produced.
     int64 preview_rows = 1;
   }
-
-  message ComputeSnapshotConfig {
-    // S3 URI prefix where *all* snapshots should be written.
-    // This should be unique to the query hash.
-    // Snapshots will be written to this prefix.
-    //
-    // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data`.
-    string output_prefix = 1;
-
-    // If set, the S3 URI prefix of a snapshot to resume from.
-    //
-    // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data/<snapshotId>`.
-    google.protobuf.StringValue resume_from = 2;
-  }
 }
 
 message ExecuteResponse {
@@ -258,55 +302,52 @@ message ExecuteResponse {
 
   // Information on where results are produced.
   Destination destination = 7;
-
-  message ProgressInformation {
-    // Total input rows to be processed by this query.
-    int64 total_input_rows = 1;
-    // Number of input rows processed by this query.
-    int64 processed_input_rows = 2;
-
-    // Number of rows added to buffers.
-    int64 buffered_rows = 3;
-
-    // Number of buffered rows that have been processed.
-    //
-    // Note: Not all buffered rows *will* be processed.
-    // For example, `shift_until`` with a predicate that is never `true`.
-    // This exists to provide an indication of work remaining *after*
-    // processed_input_rows == total_input_rows.
-    int64 processed_buffered_rows = 8;
-
-    // Minimum event time present in input.
-    int64 min_event_time = 4;
-    // Maximum event time present in input.
-    int64 max_event_time = 5;
-    // Current event time present in output.
-    int64 output_time = 6;
-
-    // The number of output rows produced so far.
-    int64 produced_output_rows = 7;
-  }
-
-  message ComputeSnapshot {
-    // Full S3 URI path to the snapshot.
-    // A snapshot is a set of RocksDB files
-    // Example: `s3://<bucket>/<request.snapshot.prefix>/<snapshot_id>`
-    string path = 1;
-
-    // The maximum event time included in the snapshot.
-    google.protobuf.Timestamp max_event_time = 2;
-
-    // The plan hash the snapshot was taken for.
-    PlanHash plan_hash = 3;
-
-    // The snapshot version
-    int32 snapshot_version = 4;
-  }
 }
+
+message StartMaterializationRequest {
+  // The materailization id
+  // provided by the client to identify the materialization.
+  string materialization_id = 1;
+
+  // The compiled compute plan.
+  ComputePlan plan = 2;
+
+  // Tables that are available to the query.
+  //
+  // This should have file sets and/or stream connection info for the necessary tables.
+  repeated ComputeTable tables = 3;
+
+  // Describes the destinations that results will be produced to.
+  //
+  // Note: Can make this a repeated field to support multiple destinations.
+  Destination destination = 4;
+}
+
+message StartMaterializationResponse {}
+
+message GetMaterializationStatusRequest {
+  // The materailization id
+  string materialization_id = 1;
+}
+
+message GetMaterializationStatusResponse {
+  // Progress information included in every message.
+  ProgressInformation progress = 1;
+}
+
+message StopMaterializationRequest {
+  // The materailization id
+  string materialization_id = 1;
+}
+
+message StopMaterializationResponse {}
 
 service ComputeService {
   rpc Compile(CompileRequest) returns (CompileResponse);
   rpc Execute(ExecuteRequest) returns (stream ExecuteResponse);
+  rpc StartMaterialization(StartMaterializationRequest) returns (StartMaterializationResponse);
+  rpc GetMaterializationStatus(GetMaterializationStatusRequest) returns (GetMaterializationStatusResponse);
+  rpc StopMaterialization(StopMaterializationRequest) returns (StopMaterializationResponse);
 
   // Gets the current snapshot version.
   rpc GetCurrentSnapshotVersion(GetCurrentSnapshotVersionRequest) returns (GetCurrentSnapshotVersionResponse);

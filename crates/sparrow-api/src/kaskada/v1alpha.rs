@@ -82,7 +82,9 @@ impl FeatureSet {
 }
 
 impl TableConfig {
-    pub fn new(
+    /// Creates a table config with the given parameters and a `KaskadaSource`,
+    /// which represents a file-backed table.
+    pub fn new_with_table_source(
         name: &str,
         uuid: &uuid::Uuid,
         time_column_name: &str,
@@ -97,6 +99,9 @@ impl TableConfig {
             subsort_column_name: subsort_column_name.map(|s| s.to_owned()),
             group_column_name: group_column_name.to_owned(),
             grouping: grouping.to_owned(),
+            source: Some(Source {
+                source: Some(source::Source::Kaskada(KaskadaSource {})),
+            }),
         }
     }
 
@@ -107,7 +112,7 @@ impl TableConfig {
         group_column_name: &str,
         grouping: &str,
     ) -> Self {
-        Self::new(
+        Self::new_with_table_source(
             name,
             &uuid::Uuid::new_v4(),
             time_column_name,

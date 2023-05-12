@@ -19,7 +19,7 @@ async fn test_prepare_default_subsort_parquet() {
 
     let data_fixture = DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new("Numbers", &Uuid::new_v4(), "time", None, "key", ""),
+            TableConfig::new_with_table_source("Numbers", &Uuid::new_v4(), "time", None, "key", ""),
             table,
         )
         .await
@@ -50,7 +50,7 @@ async fn test_prepare_key_columns_parquet() {
 
     let data_fixture = DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Numbers",
                 &Uuid::new_v4(),
                 "time",
@@ -94,7 +94,14 @@ async fn test_u64_key() {
 
     let data_fixture = DataFixture::new()
         .with_table_from_parquet(
-            TableConfig::new("Events", &Uuid::new_v4(), "time", None, "user_id", "user"),
+            TableConfig::new_with_table_source(
+                "Events",
+                &Uuid::new_v4(),
+                "time",
+                None,
+                "user_id",
+                "user",
+            ),
             table,
         )
         .await

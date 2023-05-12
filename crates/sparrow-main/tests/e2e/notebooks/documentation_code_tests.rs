@@ -29,7 +29,7 @@ in shifted | extend(lookup($input.entity, target))
 async fn data_fixture_purchases_and_fraud() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Purchase",
                 &Uuid::new_v4(),
                 "purchase_time",
@@ -42,7 +42,7 @@ async fn data_fixture_purchases_and_fraud() -> DataFixture {
         .await
         .unwrap()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "PurchaseByCustomer",
                 &Uuid::new_v4(),
                 "purchase_time",
@@ -55,7 +55,7 @@ async fn data_fixture_purchases_and_fraud() -> DataFixture {
         .await
         .unwrap()
         .with_table_from_files(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "FraudReport",
                 &Uuid::new_v4(),
                 "time",
