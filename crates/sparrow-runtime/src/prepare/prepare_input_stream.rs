@@ -199,6 +199,7 @@ mod tests {
         array::{StringArray, TimestampNanosecondArray, UInt64Array},
         datatypes::{DataType, Field, Schema, TimeUnit},
     };
+    use sparrow_api::kaskada::v1alpha::TableConfig;
     use uuid::Uuid;
 
     #[tokio::test]
