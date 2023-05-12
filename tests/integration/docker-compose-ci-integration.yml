@@ -36,7 +36,7 @@ services:
   kaskada:
     build:
       context: ../../
-      dockerfile: Dockerfile.integration
+      dockerfile: Dockerfile.release
     depends_on:
       - pulsar
     environment:

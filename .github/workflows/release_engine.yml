@@ -24,7 +24,8 @@ permissions:
   discussions: write
 
 env:
-  IMAGE: ghcr.io/${{ github.repository }}/engine
+  IMAGE_ENGINE: ghcr.io/${{ github.repository }}/engine
+  IMAGE_JUPYTER: ghcr.io/${{ github.repository }}/jupyter
 
 name: Engine Release
 jobs:
@@ -271,17 +272,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker images
+      - name: Build and push Docker images for Engine
         uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64, linux/arm64
           file: Dockerfile.release
           push: true
-          tags: ${{ env.IMAGE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE }}:latest
+          tags: ${{ env.IMAGE_ENGINE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_ENGINE }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine 
             org.opencontainers.image.description=The kaskada engine
+            org.opencontainers.image.url=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - name: Build and push Docker images for Jupyter
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64, linux/arm64
+          file: Dockerfile.release
+          push: true
+          tags: ${{ env.IMAGE_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_JUPYTER }}:latest
+          labels: |
+            org.opencontainers.image.title=kaskada engine with Jupyter
+            org.opencontainers.image.description=The kaskada engine with pre-installed Jupyter notebook environment
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}

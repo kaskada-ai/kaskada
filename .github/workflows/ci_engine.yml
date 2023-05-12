@@ -43,7 +43,7 @@ jobs:
         with:
           concurrent_skipping: "never"
           skip_after_successful_duplicate: "true"
-          paths: '["tests/integration/**", "Dockerfile.integration",   ".github/workflows/ci_engine.yml"]'
+          paths: '["tests/integration/**", "Dockerfile.release", ".github/workflows/ci_engine.yml"]'
           do_not_skip: '["schedule"]'
 
   build_wren:
