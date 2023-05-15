@@ -2,7 +2,9 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	grpc_zerolog "github.com/cheapRoc/grpc-zerolog"
@@ -12,6 +14,20 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+)
+
+const (
+	colorBlack = iota + 30
+	colorRed
+	colorGreen
+	colorYellow
+	colorBlue
+	colorMagenta
+	colorCyan
+	colorWhite
+
+	colorBold     = 1
+	colorDarkGray = 90
 )
 
 // LoggingProvider injects the current request trace-id into logs and error responses
@@ -28,8 +44,8 @@ type loggingProvider struct {
 }
 
 // NewLoggingProvider initializes logging for wren
-func NewLoggingProvider(debug bool, debugGrpc bool, formatJson bool, logHealthCheck bool, env string) LoggingProvider {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+func NewLoggingProvider(debug bool, debugGrpc bool, formatJson bool, logHealthCheck bool, noColor bool, env string) LoggingProvider {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMicro
 
 	if debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -41,8 +57,16 @@ func NewLoggingProvider(debug bool, debugGrpc bool, formatJson bool, logHealthCh
 		grpclog.SetLoggerV2(grpc_zerolog.New(log.Logger))
 	}
 
-	if !formatJson { // Output in-line & colorized logs instead of json
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	if formatJson {
+		zerolog.TimeFieldFormat = "2006-01-02T15:04:05.000000Z"
+	} else {
+		// Output in-line logs instead of json
+		log.Logger = log.Output(zerolog.ConsoleWriter{
+			Out:         os.Stdout,
+			TimeFormat:  "2006-01-02T15:04:05.000000Z",
+			NoColor:     noColor,
+			FormatLevel: consoleFormatLevel(noColor),
+		})
 	}
 	return &loggingProvider{
 		loggingOptions: []logging.Option{
@@ -95,4 +119,46 @@ func (lp *loggingProvider) StreamInterceptor(srv interface{}, ss grpc.ServerStre
 func (lp *loggingProvider) StreamPayloadInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	interceptor := PayloadStreamServerInterceptor(grpc_middleware_zerolog.InterceptorLogger(log.Logger), lp.payloadDecider, time.RFC3339)
 	return interceptor(srv, ss, info, handler)
+}
+
+// based on https://github.com/rs/zerolog/blob/8981d80ed338dab0fc9bec56587e0bd0e3c4c40d/console.go#L372
+func consoleFormatLevel(noColor bool) zerolog.Formatter {
+	return func(i interface{}) string {
+		var l string
+		if ll, ok := i.(string); ok {
+			switch ll {
+			case zerolog.LevelTraceValue:
+				l = colorize("TRACE", colorMagenta, noColor)
+			case zerolog.LevelDebugValue:
+				l = colorize("DEBUG", colorBlue, noColor)
+			case zerolog.LevelInfoValue:
+				l = colorize(" INFO", colorGreen, noColor)
+			case zerolog.LevelWarnValue:
+				l = colorize(" WARN", colorYellow, noColor)
+			case zerolog.LevelErrorValue:
+				l = colorize("ERROR", colorRed, noColor)
+			case zerolog.LevelFatalValue:
+				l = colorize(colorize("FATAL", colorRed, noColor), colorBold, noColor)
+			case zerolog.LevelPanicValue:
+				l = colorize(colorize("PANIC", colorRed, noColor), colorBold, noColor)
+			default:
+				l = colorize(ll, colorBold, noColor)
+			}
+		} else {
+			if i == nil {
+				l = colorize("???", colorBold, noColor)
+			} else {
+				l = strings.ToUpper(fmt.Sprintf("%s", i))[0:3]
+			}
+		}
+		return l
+	}
+}
+
+// colorize returns the string s wrapped in ANSI code c, unless disabled is true.
+func colorize(s interface{}, c int, disabled bool) string {
+	if disabled {
+		return fmt.Sprintf("%s", s)
+	}
+	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }

@@ -40,7 +40,8 @@ def test_local_builder_defaults():
     assert builder._bin_path == session.LocalBuilder.KASKADA_BIN_PATH_DEFAULT
     assert builder._log_path == session.LocalBuilder.KASKADA_LOG_PATH_DEFAULT
     assert builder._download == True
-    assert builder._manager_configs == {}
+    assert builder._manager_configs == {'-no-color': '1'}
+    assert builder._engine_configs == {'--log-no-color': '1'}
 
 
 def test_local_builder_set_path_sets_path():

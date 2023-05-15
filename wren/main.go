@@ -59,6 +59,7 @@ var (
 	objectStorePath           = flag.String("object-store-path", "~/.cache/kaskada/data", "the path or prefix for storing data objects. can be a relative path if the `object-store-type` is `local`.")
 
 	debug                    = flag.Bool("debug", false, "sets log level to debug")
+	debugDB                  = flag.Bool("debug-db", false, "logs database debug info")
 	debugGrpc                = flag.Bool("debug-grpc", false, "logs grpc connection debug info")
 	defaultClientID          = flag.String("default-client-id", "default-client-id", "the default client-id to use when one isn't passed in the request")
 	env                      = flag.String("env", "prod", "the environment the service is running in")
@@ -70,6 +71,7 @@ var (
 	fileServiceUseTLS        = flag.Bool("file-service-use-tls", false, "should TLS be used to connect to the file service")
 	logFormatJson            = flag.Bool("log-format-json", false, "if enabled, logs will be outputted in json")
 	logHealthCheck           = flag.Bool("log-health-check", false, "if enabled, output logs for health-check API calls")
+	logNoColor               = flag.Int("no-color", 0, "set to `1` to disable color output in logs")
 	prepareParallelizeFactor = flag.Int("prepare-parallelize-factor", 2, "the number of parallel prepare requests that are made per api request")
 	prepareServiceHost       = flag.String("prepare-service-host", "localhost", "the hostname of the prepare service")
 	prepareServicePort       = flag.Int("prepare-service-port", 50052, "the port of the prepare service")
@@ -81,7 +83,6 @@ var (
 	queryServiceUseTLS       = flag.Bool("query-service-use-tls", false, "should TLS be used to connect to the query service")
 	restPort                 = flag.Int("rest-port", 3365, "the port of the REST listener")
 	safeShutdownSeconds      = flag.Int("safe-shutdown-seconds", 120, "the maximum duration in seconds to try to perform a safe shutdown before killing in-flight requests")
-	serviceName              = flag.String("service-name", "api", "the name of this service")
 
 	license = flag.Bool("license", false, "prints the software's license")
 	version = flag.Bool("version", false, "prints the software's version")
@@ -128,8 +129,6 @@ func main() {
 		return
 	}
 
-	log.Info().Msgf("Starting %s...", *serviceName)
-
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -138,13 +137,16 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(interrupt)
 
-	logProvider := telemetry.NewLoggingProvider(*debug, *debugGrpc, *logFormatJson, *logHealthCheck, *env)
+	noColor := *logNoColor == 1
+	logProvider := telemetry.NewLoggingProvider(*debug, *debugGrpc, *logFormatJson, *logHealthCheck, noColor, *env)
 	metricsProvider := telemetry.NewMetricsProvider()
 
 	traceProvider, shutdownTrace := telemetry.NewTracingProvider(ctx, *otelEndpoint)
 	defer shutdownTrace()
 
 	g, ctx := errgroup.WithContext(ctx)
+
+	log.Info().Msg("starting manager")
 
 	// setup compute clients
 	if *fileServiceHost != "" {
@@ -173,7 +175,7 @@ func main() {
 
 	entConfig := client.NewEntConfig(*dbDialect, dbName, dbHost, dbInMemory, dbPath, dbPass, dbPort, dbUser, dbUseSSL)
 	entClient := client.NewEntClient(ctx, entConfig)
-	if *debug {
+	if *debugDB {
 		entClient = entClient.Debug()
 	}
 	defer entClient.Close()
@@ -305,7 +307,7 @@ func main() {
 
 		log.Info().Int("grpcPort", *grpcPort).Msg("gRPC server is online")
 
-		healthServer.SetServingStatus(fmt.Sprintf("grpc.health.v1.%s", *serviceName), healthpb.HealthCheckResponse_SERVING)
+		healthServer.SetServingStatus("grpc.health.v1.manager", healthpb.HealthCheckResponse_SERVING)
 
 		return grpcServer.Serve(lis)
 	})
@@ -360,7 +362,7 @@ func main() {
 	cancel()
 	log.Info().Msg("canceled the main context")
 
-	healthServer.SetServingStatus(fmt.Sprintf("grpc.health.v1.%s", *serviceName), healthpb.HealthCheckResponse_NOT_SERVING)
+	healthServer.SetServingStatus("grpc.health.v1.manager", healthpb.HealthCheckResponse_NOT_SERVING)
 	log.Info().Msg("set gRPC-health status to not-serving")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(*safeShutdownSeconds)*time.Second)
@@ -373,7 +375,7 @@ func main() {
 	gracefulStopGrpcServer(grpcHealthServer, "gRPC-health")
 
 	if err := g.Wait(); err != nil {
-		log.Fatal().Err(err).Msgf("%s terminated!", *serviceName)
+		log.Fatal().Err(err).Msg("manager terminated!")
 	}
 }
 

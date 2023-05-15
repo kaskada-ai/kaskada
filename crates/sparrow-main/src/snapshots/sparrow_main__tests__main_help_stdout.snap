@@ -39,6 +39,14 @@ Options:
           
           [env: SPARROW_LOG_JSON=]
 
+      --log-no-color <LOG_NO_COLOR>
+          Whether to disable color output in logs.
+          
+          Set to `1` to disable color output.
+          
+          [env: NO_COLOR=]
+          [default: 0]
+
       --disable-log-panic-handler
           Enables a custom panic handler which logs panics.
           
