@@ -1,5 +1,8 @@
 #![allow(clippy::large_enum_variant)] // Could box the pulsar subscription, but for now just allowing this.
-#![allow(clippy::derive_partial_eq_without_eq)] // stop clippy erroring on generated code from tonic (proto)
+#![allow(clippy::derive_partial_eq_without_eq)]
+use std::str::FromStr;
+
+// stop clippy erroring on generated code from tonic (proto)
 use itertools::Itertools;
 
 use crate::kaskada::v1alpha::object_store_destination::ResultPaths;
@@ -119,6 +122,17 @@ impl TableConfig {
             subsort_column_name,
             group_column_name,
             grouping,
+        )
+    }
+
+    pub fn with_table_source(self) -> Self {
+        Self::new_with_table_source(
+            &self.name,
+            &uuid::Uuid::from_str(&self.uuid).unwrap(),
+            &self.time_column_name,
+            self.subsort_column_name.as_ref().map(|x| x.as_str()),
+            &self.group_column_name,
+            &self.grouping,
         )
     }
 }

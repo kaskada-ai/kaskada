@@ -192,8 +192,9 @@ impl ExampleInputPreparer {
         }
 
         for table in tables {
+            let table_config = table.table_config.clone().with_table_source();
             prepared_tables.push(
-                self.prepare_input(table.table_config.clone(), &table.input_csv)
+                self.prepare_input(table_config, &table.input_csv)
                     .await
                     .attach_printable_lazy(|| TableName(table.table_config.name.clone()))?,
             );

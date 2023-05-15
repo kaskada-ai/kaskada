@@ -28,8 +28,7 @@ pub struct AvroWrapper {
 /// stream, batches them, and passes them to the runtime layer.
 ///
 /// Note that this stream does not do any filtering or ordering of events.
-#[allow(unused)]
-pub fn stream_for_execution(
+pub fn execution_stream(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
@@ -47,7 +46,11 @@ pub fn stream_for_execution(
     }
 }
 
-pub fn stream_for_prepare(
+/// Creates a pulsar stream to be used during preparation.
+///
+/// This stream reads messages until it times out, which (generally) indicates that
+/// no more messages exist on the stream at that point in time.
+pub fn preparation_stream(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,

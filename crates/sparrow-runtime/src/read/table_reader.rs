@@ -21,6 +21,7 @@ use tracing::info;
 use crate::data_manager::{DataHandle, DataManager};
 use crate::merge::{homogeneous_merge, GatheredBatches, Gatherer};
 use crate::min_heap::{HasPriority, MinHeap};
+use crate::read::error::Error;
 use crate::read::parquet_stream::{self, new_parquet_stream};
 use crate::Batch;
 
@@ -187,52 +188,6 @@ fn gather_next_output(
     activation.report_metric(REMAINING_FILES, gatherer.remaining_sources());
     Ok(next_output)
 }
-
-#[derive(derive_more::Display, Debug)]
-pub enum Error {
-    #[display(fmt = "failed to create input stream")]
-    CreateStream,
-    #[display(fmt = "failed to read next batch")]
-    ReadNextBatch,
-    #[display(fmt = "unsupported: {_0}")]
-    Unsupported(&'static str),
-    #[display(fmt = "internal error: ")]
-    Internal,
-    #[display(
-        fmt = "internal error: min next time ({min_next_time}) must be <= next lower bound {lower_bound}"
-    )]
-    MinNextGreaterThanNextLowerBound {
-        min_next_time: i64,
-        lower_bound: i64,
-    },
-    #[display(
-        fmt = "internal error: max event time ({max_event_time}) must be > next upper bound {upper_bound}"
-    )]
-    MaxEventTimeLessThanNextUpperBound {
-        max_event_time: i64,
-        upper_bound: i64,
-    },
-    #[display(fmt = "failed to select necessary prepared files")]
-    SelectPreparedFiles,
-    #[display(fmt = "failed to queue download of necessary prepared files")]
-    QueueFileDownloads,
-    #[display(
-        fmt = "unexpected file '{file:?}' in table '{table_name}' with data partially before the snapshot time {snapshot_time:?}"
-    )]
-    PartialOverlap {
-        file: Arc<DataHandle>,
-        table_name: String,
-        snapshot_time: Option<NaiveDateTime>,
-    },
-    #[display(fmt = "failed to skip to minimum event")]
-    SkippingToMinEvent,
-    #[display(fmt = "failed to load table schema")]
-    LoadTableSchema,
-    #[display(fmt = "failed to determine projected schema")]
-    DetermineProjectedSchema,
-}
-
-impl error_stack::Context for Error {}
 
 /// Select the necessary prepared files for the given silce.
 fn select_prepared_files(
@@ -610,7 +565,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "FinalAtTime unsupported"]
     async fn test_max_event_timestamp_lte_middle() {
         // Batch 1 contains times from [0, 2]
         let (_file1, prepared1) = mk_file(&[
@@ -633,7 +587,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "FinalAtTime unsupported"]
     async fn test_max_event_timestamp_no_results() {
         // Batch 1 contains times from [0, 2]
         let (_file1, prepared1) = mk_file(&[
@@ -656,7 +609,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "FinalAtTime unsupported"]
     async fn test_max_event_timestamp_all_results() {
         // Batch 1 contains times from [0, 2]
         let (_file1, prepared1) = mk_file(&[

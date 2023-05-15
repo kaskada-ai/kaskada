@@ -67,7 +67,7 @@ impl InputBuffer {
 #[allow(unused)]
 pub async fn prepare_input<'a>(
     mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
-    config: &'a TableConfig,
+    config: Arc<TableConfig>,
     raw_metadata: RawMetadata,
     prepare_hash: u64,
     slice: Option<&slice_plan::Slice>,
@@ -372,14 +372,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_sequence_of_batches_prepared() {
-        let config = TableConfig::new_with_table_source(
+        let config = Arc::new(TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
             Some("subsort"),
             "key",
             "",
-        );
+        ));
         let batch1 = make_time_batch(&[0, 3, 1, 10, 4, 7]);
         let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
         let batch3 = make_time_batch(&[20]);
@@ -391,7 +391,7 @@ mod tests {
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
-            &config,
+            config,
             raw_metadata,
             0,
             None,
@@ -420,14 +420,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_when_watermark_does_not_advance() {
-        let config = TableConfig::new_with_table_source(
+        let config = Arc::new(TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
             Some("subsort"),
             "key",
             "",
-        );
+        ));
         let batch1 = make_time_batch(&[0, 1, 3, 10]);
         let batch2 = make_time_batch(&[6, 7, 8, 9, 10]);
         let batch3 = make_time_batch(&[20]);
@@ -440,7 +440,7 @@ mod tests {
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
-            &config,
+            config,
             raw_metadata,
             0,
             None,
