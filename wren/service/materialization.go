@@ -153,13 +153,20 @@ func (s *materializationService) CreateMaterialization(ctx context.Context, requ
 }
 
 func (s *materializationService) createMaterialization(ctx context.Context, owner *ent.Owner, request *v1alpha.CreateMaterializationRequest) (*v1alpha.CreateMaterializationResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
+	if request.Materialization == nil {
+		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization definition")
+	}
+
+	if request.Materialization.Expression == "" {
+		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization expression")
+	}
 
 	if request.Materialization.Destination == nil {
 		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization destination")
 	}
 
 	isExperimental := false
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
 	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.Materialization.Expression, request.Materialization.WithViews, false, isExperimental, request.Materialization.Slice, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling materialization")

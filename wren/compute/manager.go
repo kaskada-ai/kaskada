@@ -40,6 +40,7 @@ const (
 	compileTimeoutSeconds = 10
 )
 
+//go:generate mockery --name=ComputeManger
 type ComputeManager interface {
 	CompileQuery(ctx context.Context, owner *ent.Owner, query string, requestViews []*v1alpha.WithView, isFormula bool, isExperimental bool, sliceRequest *v1alpha.SliceRequest, resultBehavior v1alpha.Query_ResultBehavior) (*v1alpha.CompileResponse, error)
 	GetFormulas(ctx context.Context, owner *ent.Owner, views *v2alpha.QueryViews) ([]*v1alpha.Formula, error)
