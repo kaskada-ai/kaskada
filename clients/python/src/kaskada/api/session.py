@@ -207,10 +207,11 @@ class LocalBuilder(Builder):
 
         manager_cmd = [str(manager_binary_path)] + self.__get_manager_configs_as_args()
         logger.debug(f"Manager start command: {manager_cmd}")
-        engine_cmd = [
-            engine_binary_path,
-            engine_command,
-        ] + self.__get_engine_configs_as_args()
+        engine_cmd = (
+            [str(engine_binary_path)]
+            + self.__get_engine_configs_as_args()
+            + [str(engine_command)]
+        )
         logger.debug(f"Engine start command: {engine_cmd}")
         logger.info("Initializing manager process")
         logger.info(f"Logging manager STDOUT to {manager_std_out.absolute()}")
