@@ -64,20 +64,22 @@ pub(crate) async fn stream_reader(
         subscription_id: pulsar_subscription,
         last_publish_time: 0,
     };
+    let raw_metadata = RawMetadata::try_from_pulsar(pulsar_config)
+        .await
+        .change_context(Error::CreateStream)?;
 
     let consumer =
         streams::pulsar::stream::consumer(&pulsar_subscription, table_info.schema().clone())
             .await
             .change_context(Error::CreateStream)?;
     let stream = streams::pulsar::stream::execution_stream(
-        table_info.schema().clone(),
+        raw_metadata.sparrow_metadata.raw_schema.clone(),
         consumer,
         pulsar_subscription.last_publish_time,
     );
 
-    let raw_metadata = RawMetadata::from_raw_schema(table_info.schema().clone())
-        .change_context(Error::CreateStream)?;
-
+    // let raw_metadata = RawMetadata::from_raw_schema(table_info.schema().clone())
+    //     .change_context(Error::CreateStream)?;
     // TODO: FRAZ prepare hash?
     // TODO: FRAZ - Figure out where you want to do the projected columns work:
     // 1. In prepare_input
@@ -88,7 +90,7 @@ pub(crate) async fn stream_reader(
     let mut input_stream = prepare::execute_input_stream::prepare_input(
         stream.boxed(),
         table_config,
-        raw_metadata,
+        raw_metadata.sparrow_metadata,
         0,
         requested_slice,
         context.key_hash_inverse.clone(),

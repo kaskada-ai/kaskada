@@ -125,7 +125,9 @@ pub async fn prepare_input<'a>(
 
     Ok(async_stream::try_stream! {
         let mut input_buffer = InputBuffer::new();
-        while let Some(Ok(unfiltered_batch)) = reader.next().await {
+        while let Some(unfiltered_batch) = reader.next().await {
+            let unfiltered_batch = unfiltered_batch.into_report().change_context(Error::PreparingColumn)?;
+
             // Keep a buffer of values with a bounded disorder window. This simple
             // hueristic allows for us to process unordered values directly from a stream, dropping
             // "late data" that is outside of the disorder window. The watermark is

@@ -254,12 +254,15 @@ impl PulsarReader {
         }
 
         tracing::debug!("read {} messages", avro_values.len());
+        tracing::debug!("Messages: {:?}", avro_values);
         match avro_values.len() {
             0 => Ok(None),
             _ => {
                 let arrow_data = sparrow_arrow::avro::avro_to_arrow(avro_values)
                     .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
-                RecordBatch::try_new(self.schema.clone(), arrow_data).map(Some)
+                let batch = RecordBatch::try_new(self.schema.clone(), arrow_data).map(Some)?;
+                tracing::debug!("Serialized batch: {:?}", batch);
+                Ok(batch)
             }
         }
     }
@@ -276,14 +279,15 @@ pub async fn consumer(
         config.tenant, config.namespace, config.topic_name
     );
 
-    let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
-        .change_context(Error::CreatePulsarReader)?;
-    let auth = Authentication {
-        name: "token".to_string(),
-        data: auth_token.as_bytes().to_vec(),
-    };
+    // TODO: FRAZ - auth
+    // let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
+    //     .change_context(Error::CreatePulsarReader)?;
+    // let auth = Authentication {
+    //     name: "token".to_string(),
+    //     data: auth_token.as_bytes().to_vec(),
+    // };
     let client = Pulsar::builder(&config.broker_service_url, TokioExecutor)
-        .with_auth(auth)
+        // .with_auth(auth)
         .build()
         .await
         .into_report()

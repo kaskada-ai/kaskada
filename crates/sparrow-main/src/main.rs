@@ -12,7 +12,7 @@ use clap::{command, Parser};
 use error_stack::{FutureExt, ResultExt};
 use opentelemetry::global;
 use sparrow_main::tracing_setup::{setup_tracing, TracingOptions};
-use sparrow_main::{BatchCommand, PrepareCommand, ServeCommand};
+use sparrow_main::{BatchCommand, MaterializeCommand, PrepareCommand, ServeCommand};
 use tracing::error;
 
 #[cfg(not(target_os = "windows"))]
@@ -47,6 +47,8 @@ enum Command {
     Batch(BatchCommand),
     /// Prepare a file for use as part of a table.
     Prepare(PrepareCommand),
+    /// Create a long-running process that materializes results to a destination.
+    Materialize(MaterializeCommand),
     /// License report and notice.
     License,
 }
@@ -86,6 +88,7 @@ async fn main_body(options: SparrowOptions) -> error_stack::Result<(), Error> {
         Command::License => {
             println!("{NOTICE}");
         }
+        Command::Materialize(materialize) => materialize.execute().await.change_context(Error)?,
     };
 
     Ok(())

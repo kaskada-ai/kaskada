@@ -31,6 +31,7 @@ impl DataContext {
     pub fn try_from_tables(tables: Vec<ComputeTable>) -> anyhow::Result<Self> {
         let mut data_context = DataContext::default();
         for table in tables {
+            println!("FRAZ: Table: {:?}", table);
             data_context.add_table(table)?;
         }
         Ok(data_context)

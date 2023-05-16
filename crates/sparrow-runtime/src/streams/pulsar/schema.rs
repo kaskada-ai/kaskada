@@ -117,10 +117,10 @@ pub async fn get_pulsar_schema(
     let client = reqwest::Client::new();
     let text = client
         .get(&url)
-        .header(
-            reqwest::header::AUTHORIZATION,
-            format!("Bearer {}", pulsar_auth_token(auth_params)?),
-        )
+        // .header(
+        //     reqwest::header::AUTHORIZATION,
+        //     format!("Bearer {}", pulsar_auth_token(auth_params)?),
+        // )
         .send()
         .await
         .into_report()
