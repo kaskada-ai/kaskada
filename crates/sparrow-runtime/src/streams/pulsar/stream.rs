@@ -295,6 +295,10 @@ pub async fn consumer(
 
     let formatted_schema =
         super::schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
+    tracing::debug!(
+        "FRAZ:: pulsar schema: {:?}",
+        formatted_schema.as_bytes().to_vec()
+    );
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),

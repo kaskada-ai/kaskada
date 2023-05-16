@@ -94,24 +94,26 @@ pub(crate) async fn stream_reader(
         0,
         requested_slice,
         context.key_hash_inverse.clone(),
-        0,
+        1, // TODO: FRAZ bounded lateness
     )
     .await
     .into_report()
     .change_context(Error::CreateStream)?;
 
     Ok(async_stream::try_stream! {
-        while let Some(next_input) = input_stream.next().await {
-            let next_input = next_input.change_context(Error::Internal)?;
-            match next_input {
-                None => break,
-                Some(input) => {
-                    yield Batch::try_new_from_batch(input).into_report().change_context(Error::Internal)?
+        loop {
+            if let Some(next_input) = input_stream.next().await {
+                let next_input = next_input.change_context(Error::ReadNextBatch)?;
+                match next_input {
+                    None => continue,
+                    Some(input) => {
+                        yield Batch::try_new_from_batch(input).into_report().change_context(Error::Internal)?
+                    }
                 }
+            } else {
+                // Loop indefinitely - it's possible a batch was not produced because the watermark did not advance.
             }
         }
-
-        tracing::error!("unexpected - underlying stream should never produce empty message. Materialization must be restarted.");
     })
 }
 

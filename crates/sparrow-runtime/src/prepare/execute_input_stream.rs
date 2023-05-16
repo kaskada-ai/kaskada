@@ -64,7 +64,6 @@ impl InputBuffer {
 /// 2. Casting required columns
 /// 3. Sorting the record batches by the time column, subsort column, and key hash
 /// 4. Handling late data
-#[allow(unused)]
 pub async fn prepare_input<'a>(
     mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     config: Arc<TableConfig>,
@@ -127,6 +126,7 @@ pub async fn prepare_input<'a>(
         let mut input_buffer = InputBuffer::new();
         while let Some(unfiltered_batch) = reader.next().await {
             let unfiltered_batch = unfiltered_batch.into_report().change_context(Error::PreparingColumn)?;
+            tracing::debug!("FRAZ - execute input stream saw unfiltered batch: {:?}", unfiltered_batch);
 
             // Keep a buffer of values with a bounded disorder window. This simple
             // hueristic allows for us to process unordered values directly from a stream, dropping
@@ -154,14 +154,12 @@ pub async fn prepare_input<'a>(
                 .into_report()
                 .change_context(Error::PreparingColumn)?;
 
-            if input_buffer.watermark < 0 {
-                debug_assert!(
-                    time_column.value(0) - bounded_lateness > 0,
-                    "invalid time; below 0",
-                );
+            if input_buffer.watermark <= 0 {
                 // If there's no watermark yet, initialize it to the first event time - the bounded lateness
-                input_buffer.watermark = time_column.value(0) - bounded_lateness
+                // (or 0, if that goes below 0).
+                input_buffer.watermark = std::cmp::max(time_column.value(0) - bounded_lateness, 0);
             };
+            tracing::debug!("Watermark: {:?}", input_buffer.watermark);
 
             // Find which indices to take from the batch (the non-late data)
             let take_indices = time_column
@@ -169,8 +167,10 @@ pub async fn prepare_input<'a>(
                 .enumerate()
                 .filter_map(|(index, time)| {
                     let time = time.expect("valid time");
-                    if time >= input_buffer.watermark {
+                    tracing::debug!("FRAZ: Time column time: {:?}, bounded lateness: {:?}", time, bounded_lateness);
+                    if time > input_buffer.watermark {
                         input_buffer.watermark = std::cmp::max(input_buffer.watermark, time - bounded_lateness);
+                        tracing::debug!("FRAZ: New watermark: {:?}", input_buffer.watermark);
                         Some(index as u64)
                     } else {
                         // Late data - drop it
@@ -191,6 +191,7 @@ pub async fn prepare_input<'a>(
             let record_batch = RecordBatch::try_new(unfiltered_batch.schema(), filtered_columns)
                 .into_report()
                 .change_context(Error::PreparingColumn)?;
+            tracing::debug!("Fraz: filtered batch with no late data: {:?}", record_batch);
 
             // 2. Slicing may reduce the number of entities to operate and sort on.
             let record_batch = slice_preparer.slice_batch(record_batch)?;
@@ -303,6 +304,8 @@ pub async fn prepare_input<'a>(
             };
             yield record_batch
         }
+
+        tracing::error!("unexpected - loop has exited");
     }
     .boxed())
 }
