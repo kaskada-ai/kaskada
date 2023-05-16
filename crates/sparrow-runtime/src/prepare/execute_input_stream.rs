@@ -126,7 +126,7 @@ pub async fn prepare_input<'a>(
         let mut input_buffer = InputBuffer::new();
         while let Some(unfiltered_batch) = reader.next().await {
             let unfiltered_batch = unfiltered_batch.into_report().change_context(Error::PreparingColumn)?;
-            tracing::debug!("FRAZ - execute input stream saw unfiltered batch: {:?}", unfiltered_batch);
+            let unfiltered_rows = unfiltered_batch.num_rows();
 
             // Keep a buffer of values with a bounded disorder window. This simple
             // hueristic allows for us to process unordered values directly from a stream, dropping
@@ -155,11 +155,9 @@ pub async fn prepare_input<'a>(
                 .change_context(Error::PreparingColumn)?;
 
             if input_buffer.watermark <= 0 {
-                // If there's no watermark yet, initialize it to the first event time - the bounded lateness
-                // (or 0, if that goes below 0).
-                input_buffer.watermark = std::cmp::max(time_column.value(0) - bounded_lateness, 0);
+                // Initial watermark is the first event time - bounded lateness (or 0).
+                input_buffer.watermark = std::cmp::max(0, time_column.value(0) - bounded_lateness);
             };
-            tracing::debug!("Watermark: {:?}", input_buffer.watermark);
 
             // Find which indices to take from the batch (the non-late data)
             let take_indices = time_column
@@ -167,10 +165,8 @@ pub async fn prepare_input<'a>(
                 .enumerate()
                 .filter_map(|(index, time)| {
                     let time = time.expect("valid time");
-                    tracing::debug!("FRAZ: Time column time: {:?}, bounded lateness: {:?}", time, bounded_lateness);
                     if time > input_buffer.watermark {
                         input_buffer.watermark = std::cmp::max(input_buffer.watermark, time - bounded_lateness);
-                        tracing::debug!("FRAZ: New watermark: {:?}", input_buffer.watermark);
                         Some(index as u64)
                     } else {
                         // Late data - drop it
@@ -179,6 +175,8 @@ pub async fn prepare_input<'a>(
                 })
                 .collect::<Vec<u64>>();
             let take_indices: PrimitiveArray<UInt64Type> = PrimitiveArray::from_iter_values(take_indices);
+
+            tracing::debug!("Watermark: {:?}", input_buffer.watermark);
 
             // Drop all rows with late data from each column
             let filtered_columns = unfiltered_batch
@@ -191,7 +189,7 @@ pub async fn prepare_input<'a>(
             let record_batch = RecordBatch::try_new(unfiltered_batch.schema(), filtered_columns)
                 .into_report()
                 .change_context(Error::PreparingColumn)?;
-            tracing::debug!("Fraz: filtered batch with no late data: {:?}", record_batch);
+            tracing::debug!("Dropped {} late messages", unfiltered_rows - record_batch.num_rows());
 
             // 2. Slicing may reduce the number of entities to operate and sort on.
             let record_batch = slice_preparer.slice_batch(record_batch)?;
@@ -471,5 +469,16 @@ mod tests {
         let times3: &TimestampNanosecondArray =
             downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
         assert_eq!(&[6, 7, 8, 9, 10, 10], times3.values())
+    }
+
+    #[tokio::test]
+    async fn test_initial_watermark() {
+        // Test that we are consistent with behavior when we have single initial batches
+        // or immediately out of order batch but it's within the bounds
+        // 1. We don't want to produce the first batch if it has a single row,
+        // or if it has a batch like [10,9,8] (but we don't want to drop [9,8], assuming the bounded lateness if 5)
+        // - can't set watermark to first event time.
+        // - set to first event time - bounded_lateness, obviously.
+        // 2. Test when bounded_lateness is 0.
     }
 }

@@ -66,8 +66,6 @@ impl Operation for ScanOperation {
             .await
             .change_context(Error::GetNextInput)?
         {
-            tracing::debug!("FRAZ: Execute loop has seen incoming: {:?}", incoming);
-
             let input = self
                 .create_input(incoming)
                 .into_report()
@@ -93,8 +91,6 @@ impl Operation for ScanOperation {
                 .into_report()
                 .change_context(Error::internal_msg("send next output"))?;
         }
-
-        tracing::debug!("FRAZ: Scan execute loop has exited");
 
         Ok(())
     }
@@ -246,7 +242,6 @@ impl ScanOperation {
     }
 
     fn create_input(&mut self, batch: Batch) -> anyhow::Result<InputBatch> {
-        tracing::debug!("FRAZ: Scan input: {:?}", batch);
         debug_assert_eq!(batch.schema().field(0).name(), "_time");
         debug_assert_eq!(batch.schema().field(1).name(), "_subsort");
         debug_assert_eq!(batch.schema().field(2).name(), "_key_hash");
@@ -267,7 +262,6 @@ impl ScanOperation {
                 .map(|(field, array)| (field.clone(), array.clone()))
                 .collect::<Vec<_>>(),
         ));
-        tracing::debug!("FRAZ: Scan output: {:?}", input);
 
         let grouping = self
             .key_hash_index

@@ -115,12 +115,18 @@ pub async fn get_pulsar_schema(
     );
     tracing::debug!("requesting schema from {}", url);
     let client = reqwest::Client::new();
-    let text = client
-        .get(&url)
-        // .header(
-        //     reqwest::header::AUTHORIZATION,
-        //     format!("Bearer {}", pulsar_auth_token(auth_params)?),
-        // )
+    let mut request_builder = client.get(&url);
+
+    // Auth is generally recommended, but some local builds may be run
+    // without auth for exploration/testing purposes.
+    if !auth_params.is_empty() {
+        request_builder = request_builder.header(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", pulsar_auth_token(auth_params)?),
+        )
+    }
+
+    let text = request_builder
         .send()
         .await
         .into_report()

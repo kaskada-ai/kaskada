@@ -1,10 +1,13 @@
 use std::path::PathBuf;
 
 use error_stack::{IntoReport, ResultExt};
-use futures::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
-use sparrow_api::kaskada::v1alpha::{CompileRequest, ExecuteRequest, FenlDiagnostics};
+use sparrow_api::kaskada::v1alpha::{
+    self, destination, CompileRequest, ExecuteRequest, FenlDiagnostics,
+};
+use sparrow_api::kaskada::v1alpha::{Destination, ObjectStoreDestination};
 use sparrow_compiler::CompilerOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_runtime::s3::S3Helper;
@@ -127,15 +130,35 @@ impl MaterializeCommand {
         // For the CLI, we use stdout to print information.
         #[allow(clippy::print_stdout)]
         {
-            let output_files: Vec<_> = result_stream
+            // Output file vec if the destination is an object store.
+            let mut output_files: Vec<_> = Vec::new();
+            let _: Vec<_> = result_stream
                 .inspect_ok(|next| {
-                    println!(
-                        "{} rows produced so far",
-                        next.progress
-                            .as_ref()
-                            .expect("progress")
-                            .produced_output_rows
-                    )
+                    let rows_produced = next
+                        .progress
+                        .as_ref()
+                        .expect("progress")
+                        .produced_output_rows;
+                    let destination = next.destination.as_ref().expect("destination");
+                    match &destination.destination {
+                        Some(destination::Destination::ObjectStore(o)) => {
+                            match &o.output_paths {
+                                Some(paths) => {
+                                    paths
+                                        .paths
+                                        .clone()
+                                        .into_iter()
+                                        .for_each(|p| output_files.push(p));
+                                }
+                                _ => (),
+                            };
+                            println!(
+                                "{} rows produced so far to files {:?}",
+                                rows_produced, output_files
+                            );
+                        }
+                        _ => (),
+                    };
                 })
                 .try_filter_map(|next| async move {
                     match next.output_paths() {
@@ -146,8 +169,6 @@ impl MaterializeCommand {
                 .try_collect()
                 .await
                 .change_context(Error::Execution)?;
-
-            println!("Output files: {output_files:?}");
         }
         Ok(())
     }

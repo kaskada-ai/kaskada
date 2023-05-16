@@ -279,26 +279,32 @@ pub async fn consumer(
         config.tenant, config.namespace, config.topic_name
     );
 
-    // TODO: FRAZ - auth
-    // let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
-    //     .change_context(Error::CreatePulsarReader)?;
-    // let auth = Authentication {
-    //     name: "token".to_string(),
-    //     data: auth_token.as_bytes().to_vec(),
-    // };
-    let client = Pulsar::builder(&config.broker_service_url, TokioExecutor)
-        // .with_auth(auth)
-        .build()
-        .await
-        .into_report()
-        .change_context(Error::CreatePulsarReader)?;
+    // Auth is generally recommended, but some local builds may be run
+    // without auth for exploration/testing purposes.
+    let client = if !config.auth_params.is_empty() {
+        let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
+            .change_context(Error::CreatePulsarReader)?;
+        let auth = Authentication {
+            name: "token".to_string(),
+            data: auth_token.as_bytes().to_vec(),
+        };
+
+        Pulsar::builder(&config.broker_service_url, TokioExecutor)
+            .with_auth(auth)
+            .build()
+            .await
+            .into_report()
+            .change_context(Error::CreatePulsarReader)?
+    } else {
+        Pulsar::builder(&config.broker_service_url, TokioExecutor)
+            .build()
+            .await
+            .into_report()
+            .change_context(Error::CreatePulsarReader)?
+    };
 
     let formatted_schema =
         super::schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
-    tracing::debug!(
-        "FRAZ:: pulsar schema: {:?}",
-        formatted_schema.as_bytes().to_vec()
-    );
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),
