@@ -4537,7 +4537,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-api"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4568,7 +4568,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-arrow"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "arrow",
  "avro-rs",
@@ -4583,7 +4583,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-catalog"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "arrow",
  "clap 4.2.1",
@@ -4620,7 +4620,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-compiler"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4671,7 +4671,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-core"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4690,7 +4690,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-instructions"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4726,7 +4726,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-kernels"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4745,7 +4745,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-main"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4804,7 +4804,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-plan"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4826,7 +4826,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "cpu-time",
  "derive_more",
@@ -4852,7 +4852,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr-tool"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "clap 4.2.1",
  "cpu-time",
@@ -4878,7 +4878,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-runtime"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4949,7 +4949,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-syntax"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4975,7 +4975,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-testing"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "arrow-array",
  "arrow-csv",
