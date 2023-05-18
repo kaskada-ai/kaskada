@@ -20,17 +20,6 @@ use crate::RawMetadata;
 
 use super::column_behavior::ColumnBehavior;
 
-/// The bounded lateness parameter, which configures the delay in watermark time.
-///
-/// In practical terms, this allows for items in the stream to be within 1 second
-/// compared to the max timestamp read.
-///
-/// This is hard-coded for now, but could easily be made configurable as a parameter
-/// to the table. This simple hueristic is a good start, but we can improve on this
-/// by statistically modeling event behavior and adapting the watermark accordingly.
-#[allow(unused)]
-const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
-
 /// Struct to store logic for handling late data with a watermark and
 /// bounded lateness.
 struct InputBuffer {
@@ -472,13 +461,49 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_initial_watermark() {
-        // Test that we are consistent with behavior when we have single initial batches
-        // or immediately out of order batch but it's within the bounds
-        // 1. We don't want to produce the first batch if it has a single row,
-        // or if it has a batch like [10,9,8] (but we don't want to drop [9,8], assuming the bounded lateness if 5)
-        // - can't set watermark to first event time.
-        // - set to first event time - bounded_lateness, obviously.
-        // 2. Test when bounded_lateness is 0.
+    async fn test_when_first_batch_has_single_row() {
+        let config = Arc::new(TableConfig::new_with_table_source(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            Some("subsort"),
+            "key",
+            "",
+        ));
+        let batch1 = make_time_batch(&[10]);
+        let batch2 = make_time_batch(&[4]);
+        let batch3 = make_time_batch(&[7, 17]);
+
+        let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
+        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
+            KeyHashInverse::from_data_type(DataType::UInt64),
+        ));
+
+        let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
+        let mut stream = execute_input_stream::prepare_input(
+            reader.boxed(),
+            config,
+            raw_metadata,
+            0,
+            None,
+            key_hash_inverse.clone(),
+            5,
+        )
+        .await
+        .unwrap();
+
+        let prepared1 = stream.next().await.unwrap().unwrap();
+        let prepared2 = stream.next().await.unwrap().unwrap();
+        let prepared3 = stream.next().await.unwrap().unwrap().unwrap();
+
+        // Can't produce single row
+        assert!(prepared1.is_none());
+        // contained late data, so nothing to produce
+        assert!(prepared2.is_none());
+
+        // watermark advances, so produce the leftovers that are before the new watermark
+        let times3: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
+        assert_eq!(&[7, 10], times3.values())
     }
 }

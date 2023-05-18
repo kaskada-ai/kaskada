@@ -174,7 +174,6 @@ impl ScanOperation {
         );
 
         // Scans can read from tables (files) or streams.
-        println!("Table info: {:?}", table_info.config());
         let backing_source = match table_info.config().source.as_ref() {
             Some(v1alpha::Source {
                 source: Some(source),

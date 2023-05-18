@@ -101,7 +101,7 @@ pub(crate) async fn stream_reader(
         0,
         requested_slice,
         context.key_hash_inverse.clone(),
-        1,
+        BOUNDED_LATENESS_NS,
     )
     .await
     .into_report()
