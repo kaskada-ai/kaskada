@@ -10,7 +10,7 @@ use sparrow_api::kaskada::v1alpha::{PulsarSubscription, SourceData};
 
 use sparrow_runtime::stores::ObjectStoreRegistry;
 
-use crate::batch::{Schema, ScriptPath};
+use crate::script::{Schema, ScriptPath};
 use crate::serve;
 
 /// Options for the Prepare command.

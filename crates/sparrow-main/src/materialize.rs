@@ -13,11 +13,9 @@ use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_runtime::s3::S3Helper;
 use tracing::{info, info_span};
 
-mod script;
+use crate::script::{Schema, Script, ScriptPath};
 
-pub(crate) use script::{Schema, Script, ScriptPath};
-
-/// Options for the Batch command.
+/// Options for the Materialize command.
 #[derive(clap::Args, Debug)]
 #[command(version, rename_all = "kebab-case")]
 pub struct MaterializeCommand {

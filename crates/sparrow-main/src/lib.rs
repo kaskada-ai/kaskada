@@ -11,6 +11,7 @@
 pub(crate) mod batch;
 mod materialize;
 mod prepare;
+mod script;
 mod serve;
 pub mod tracing_setup;
 

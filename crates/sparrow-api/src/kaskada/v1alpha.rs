@@ -1,8 +1,7 @@
 #![allow(clippy::large_enum_variant)] // Could box the pulsar subscription, but for now just allowing this.
 #![allow(clippy::derive_partial_eq_without_eq)]
-use std::str::FromStr;
+use std::str::FromStr; // stop clippy erroring on generated code from tonic (proto)
 
-// stop clippy erroring on generated code from tonic (proto)
 use itertools::Itertools;
 
 use crate::kaskada::v1alpha::object_store_destination::ResultPaths;
