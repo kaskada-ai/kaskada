@@ -76,11 +76,14 @@ impl MaterializeCommand {
         let script = Script::try_from(&self.script)
             .change_context(Error::InvalidScript)
             .attach_printable_lazy(|| ScriptPath(self.script.clone()))?;
-        println!("Fraz: Script: {:?}", script);
         let schema = Schema::try_from(&self.schema)
             .change_context(Error::InvalidSchema)
             .attach_printable_lazy(|| ScriptPath(self.schema.clone()))?;
-        println!("Fraz: Schema: {:?}", schema);
+        tracing::debug!(
+            "Materializing with script: {:?}\nand schema: {:?}",
+            script,
+            schema
+        );
 
         let tables = schema.tables.clone();
         let output_to = script.output_to.clone();
@@ -109,7 +112,7 @@ impl MaterializeCommand {
 
         let s3_helper = S3Helper::new().await;
 
-        // TODO: FRAZ - it might be cleaner to create a separate entry point here, but for now, it's okay.
+        // Note: it might be cleaner to create a separate entry point for materialize, but for now it's ok.
         let result_stream = sparrow_runtime::execute::execute(
             ExecuteRequest {
                 plan: Some(plan),
@@ -132,6 +135,7 @@ impl MaterializeCommand {
         {
             // Output file vec if the destination is an object store.
             let mut output_files: Vec<_> = Vec::new();
+
             let _: Vec<_> = result_stream
                 .inspect_ok(|next| {
                     let rows_produced = next
@@ -152,9 +156,26 @@ impl MaterializeCommand {
                                 }
                                 _ => (),
                             };
+                            // TODO: The output paths are empty because we currently don't
+                            // report that a file is being written to until we've closed it.
+                            // Since in a streaming world, we don't close it, we'll indefinitely write
+                            // to a single file.
+                            // We need to:
+                            // 1. Write to multiple output files
+                            // 2. Add to output_files, then log when a new file is produced
+                            println!("{} rows produced so far", rows_produced);
+                        }
+                        Some(destination::Destination::Pulsar(p)) => {
+                            let config = p.config.as_ref().expect("config");
+                            // TODO: we can avoid creating this string each progress update by moving
+                            // this above the stream
+                            let topic_url =
+                                sparrow_runtime::execute::output::pulsar::format_topic_url(config)
+                                    .expect("already created topic url during compilation");
+
                             println!(
-                                "{} rows produced so far to files {:?}",
-                                rows_produced, output_files
+                                "{} rows produced so far to topic {}",
+                                rows_produced, topic_url
                             );
                         }
                         _ => (),

@@ -23,7 +23,7 @@ mod object_store;
 mod parquet;
 mod redis;
 
-pub(crate) mod pulsar;
+pub mod pulsar;
 
 #[derive(Debug, derive_more::Display)]
 pub enum Error {

@@ -101,7 +101,6 @@ impl ProgressTracker {
                 self.progress.produced_output_rows += num_rows as i64;
             }
             ProgressUpdate::FilesProduced { mut paths } => {
-                tracing::debug!("\nFRAZ - files produces: {:?}", paths);
                 self.output_paths.append(&mut paths);
             }
             ProgressUpdate::ExecutionComplete { .. } | ProgressUpdate::ExecutionFailed { .. } => {

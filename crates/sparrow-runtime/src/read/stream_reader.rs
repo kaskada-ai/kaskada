@@ -47,6 +47,16 @@ static REGISTRATION: Registration = Registration::new(|| {
 
 inventory::submit!(&REGISTRATION);
 
+/// The bounded lateness parameter, which configures the delay in watermark time.
+///
+/// In practical terms, this allows for items in the stream to be within 1 second
+/// compared to the max timestamp read.
+///
+/// This is hard-coded for now, but could easily be made configurable as a parameter
+/// to the table. This simple hueristic is a good start, but we can improve on this
+/// by statistically modeling event behavior and adapting the watermark accordingly.
+const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
+
 /// Create a stream that continually reads messages from a stream.
 pub(crate) async fn stream_reader(
     context: &OperationContext,
@@ -78,9 +88,6 @@ pub(crate) async fn stream_reader(
         pulsar_subscription.last_publish_time,
     );
 
-    // let raw_metadata = RawMetadata::from_raw_schema(table_info.schema().clone())
-    //     .change_context(Error::CreateStream)?;
-    // TODO: FRAZ prepare hash?
     // TODO: FRAZ - Figure out where you want to do the projected columns work:
     // 1. In prepare_input
     // 2. Here, in the final stream.
@@ -94,7 +101,7 @@ pub(crate) async fn stream_reader(
         0,
         requested_slice,
         context.key_hash_inverse.clone(),
-        1, // TODO: FRAZ bounded lateness
+        1,
     )
     .await
     .into_report()
