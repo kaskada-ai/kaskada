@@ -1,0 +1,32 @@
+tables:
+  - config: 
+      name: "Foo"
+      uuid: "67e924b6-47d4-48a9-aa60-4bbf18ab0d42"
+      time_column_name: "time"
+      group_column_name: "id"
+      grouping: ""
+      source:
+        source: !Pulsar
+            config:
+              broker_service_url: "pulsar://127.0.0.1:6650"
+              admin_service_url: "http://127.0.0.1:8080"
+              auth_plugin: ""
+              auth_params: ""
+              tenant: "public"
+              namespace: "default"
+              topic_name: "my_topic_name"
+    metadata:
+      schema: 
+        fields:
+          - name: "time"
+            data_type: 
+              kind: !Primitive 6
+          - name: "id"
+            data_type:
+              kind: !Primitive 6
+        
+      file_count: 0
+    file_sets: 
+
+
+

@@ -127,7 +127,6 @@ fn projected_schema(
     schema: SchemaRef,
     columns: &[String],
 ) -> error_stack::Result<SchemaRef, Error> {
-    // if let Some(columns) = columns {
     let columns: HashSet<&str> = columns.iter().map(|x| x.as_ref()).collect();
     let projected_data_fields: Vec<_> = schema
         .fields()
@@ -138,7 +137,4 @@ fn projected_schema(
 
     debug_assert_eq!(projected_data_fields.len(), columns.len());
     Ok(Arc::new(Schema::new(projected_data_fields)))
-    // } else {
-    // Ok(schema)
-    // }
 }
