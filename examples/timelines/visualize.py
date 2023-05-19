@@ -1,13 +1,11 @@
 from bokeh.models import CategoricalAxis, ColumnDataSource, Range1d, Span, Segment, NormalHead, Arrow
 from bokeh.models.tools import HoverTool
-from bokeh.palettes import Category10_3
+from bokeh.palettes import Category10_6
 from bokeh.plotting import figure, output_file, show
 from bokeh.transform import factor_cmap, factor_mark
 from bokeh.layouts import column
 import pandas as pd
 import numpy as np
-
-PALETTE = Category10_3
 
 class Data:
     def __init__(self, df, time = None, entity = None):
@@ -46,7 +44,7 @@ class Data:
         return self.source
 
 class Timeline:
-    def __init__(self, name, data = None, label = None, continuous = False, legend_location = None):
+    def __init__(self, name, data = None, label = None, continuous = False, legend_location = None, shift_palette = None):
         """Create a timeline.
 
         Parameters:
@@ -63,12 +61,22 @@ class Timeline:
         self.label = label or name
         self.continuous = continuous
         self.legend_location = legend_location or 'top_left'
+        self.shift_palette = shift_palette
 
     def __repr__(self):
         return f"Timeline({self.name}, {self.data}, {self.label}, {self.continuous})"
 
-    def plot(self, data, x_range, markers, height, width):
+    def plot(self, data, x_range, height, width, entities):
         data = self.data or data
+        palette = Category10_6
+        markers = ['circle', 'triangle', 'diamond', 'square']
+        if self.shift_palette:
+            shift_palette = self.shift_palette % 6
+            palette = palette[shift_palette:] + palette[:shift_palette]
+            shift_markers = self.shift_palette % len(markers)
+            markers = markers[shift_markers:] + markers[:shift_markers]
+        markers = markers * int(len(data.entities) / len(markers) + 1)
+
         if not data:
             raise TypeError('missing data for timeline "{}"'.format(self.name))
 
@@ -88,8 +96,8 @@ class Timeline:
             source=source,
             size=10,
             legend_group=data.entity,
-            marker=factor_mark(data.entity, markers, data.entities),
-            color=factor_cmap(data.entity, PALETTE, data.entities),
+            marker=factor_mark(data.entity, markers, entities),
+            color=factor_cmap(data.entity, palette, entities),
         )
 
         plot.add_tools(HoverTool(
@@ -114,19 +122,18 @@ class Timeline:
             # Draw horizontal lines between the last change time and the next change time.
             plot.add_glyph(source, Segment(
                 x0=last_time, x1=data.time, y0=last_value, y1=last_value,
-                line_color=factor_cmap(data.entity, PALETTE, data.entities)))
+                line_color=factor_cmap(data.entity, palette, entities)))
             # Draw vertical dashed lines between last value and the new value (at new time).
             plot.add_glyph(source, Segment(
                 x0=data.time, x1=data.time, y0=last_value, y1=self.name,
                 line_dash='dotted',
-                line_color=factor_cmap(data.entity, PALETTE, data.entities)))
+                line_color=factor_cmap(data.entity, palette, entities)))
 
             # Print the arrows for continuity.
-            entities = list(data.entities)
             ends = data.last_value(self.name)
             for index, row in ends.iterrows():
-                index = entities.index(row['entity'])
-                color = PALETTE[index % len(PALETTE)]
+                index = entities.searchsorted(row['entity'])
+                color = palette[index % len(palette)]
                 plot.add_layout(Arrow(
                     x_start=row['time'], y_start=row['value'], x_end=x_range.end, y_end=row['value'],
                     end=NormalHead(line_color=color, fill_color=color, size=5),
@@ -148,18 +155,16 @@ def plot_timelines(timelines, data = None, width = None, height = None):
     width = width or 600
     height = height or 250
 
-    max_entities = None
     min_time = None
     max_time = None
+    entities = []
     if isinstance(data, pd.DataFrame):
        data = Data(data)
     if isinstance(data, Data):
-        max_entities = len(data.entities)
         min_time = data.min_time
         max_time = data.max_time
     for timeline in timelines:
         if isinstance(timeline.data, Data):
-            max_entities = max(max_entities, len(timeline.data.entities))
             if min_time:
                 min_time = timeline.data.min_time
             else:
@@ -168,17 +173,21 @@ def plot_timelines(timelines, data = None, width = None, height = None):
 
         # Make sure the "previous" values are defined before we create the source.
         timeline_data = timeline.data or data
+        entities.append(timeline_data.entities)
         if timeline.continuous:
             timeline_data.prev(timeline_data.time)
             timeline_data.prev(timeline.name)
 
-    MARKERS = ['circle', 'triangle', 'diamond', 'square'] * int(max_entities / 4 + 1)
+    entities = np.concatenate(entities)
+    entities = np.unique(entities)
+    entities = np.sort(entities)
+
     x_range_padding = 0.03 * (max_time - min_time)
     x_range = Range1d(min_time - x_range_padding, max_time + x_range_padding)
 
     plots = []
     for timeline in timelines:
-        plot = timeline.plot(data, x_range, MARKERS, height, width)
+        plot = timeline.plot(data, x_range, height, width, entities)
         plots.append(plot)
 
     return column(plots)
