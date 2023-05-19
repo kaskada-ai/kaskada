@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::array::{ArrayRef, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
 use arrow::compute::SortColumn;
-use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type};
+use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType, UInt64Type};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -16,7 +16,6 @@ use sparrow_core::{downcast_primitive_array, TableSchema};
 use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
-use crate::RawMetadata;
 
 use super::column_behavior::ColumnBehavior;
 
@@ -48,15 +47,17 @@ impl InputBuffer {
 ///
 /// This stream reads unordered, unprepared batches from its `reader`, and
 /// is responsible for the following:
-/// 1. Inserting the time column, subsort column, and key hash from source to
+/// * Inserting the time column, subsort column, and key hash from source to
 ///    the batch
-/// 2. Casting required columns
-/// 3. Sorting the record batches by the time column, subsort column, and key hash
-/// 4. Handling late data
+/// * Casting required columns
+/// * Dropping all but projected columns
+/// * Sorting the record batches by the time column, subsort column, and key hash
+/// * Handling late data
 pub async fn prepare_input<'a>(
     mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     config: Arc<TableConfig>,
-    raw_metadata: RawMetadata,
+    raw_schema: SchemaRef,
+    projected_schema: SchemaRef,
     prepare_hash: u64,
     slice: Option<&slice_plan::Slice>,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
@@ -64,20 +65,20 @@ pub async fn prepare_input<'a>(
 ) -> anyhow::Result<BoxStream<'a, error_stack::Result<Option<RecordBatch>, Error>>> {
     // This is a "hacky" way of adding the 3 key columns. We may just want
     // to manually do that (as part of deprecating `TableSchema`)?
-    let prepared_schema = TableSchema::try_from_data_schema(raw_metadata.table_schema.clone())?;
+    let prepared_schema = TableSchema::try_from_data_schema(projected_schema.clone())?;
     let prepared_schema = prepared_schema.schema_ref().clone();
 
     // Add column behaviors for each of the 3 key columns.
     let mut columns = Vec::with_capacity(prepared_schema.fields().len());
     columns.push(ColumnBehavior::try_new_cast(
-        &raw_metadata.raw_schema,
+        &raw_schema,
         &config.time_column_name,
         &TimestampNanosecondType::DATA_TYPE,
         false,
     )?);
     if let Some(subsort_column_name) = &config.subsort_column_name {
         columns.push(ColumnBehavior::try_new_subsort(
-            &raw_metadata.raw_schema,
+            &raw_schema,
             subsort_column_name,
         )?);
     } else {
@@ -85,7 +86,7 @@ pub async fn prepare_input<'a>(
     }
 
     columns.push(ColumnBehavior::try_new_entity_key(
-        &raw_metadata.raw_schema,
+        &raw_schema,
         &config.group_column_name,
         false,
     )?);
@@ -93,16 +94,15 @@ pub async fn prepare_input<'a>(
     // Add column behaviors for each column.  This means we include the key columns
     // redundantly, but cleaning that up is a big refactor.
     // See https://github.com/riptano/kaskada/issues/90
-    for field in raw_metadata.table_schema.fields() {
+    for field in projected_schema.fields() {
         columns.push(ColumnBehavior::try_cast_or_reference_or_null(
-            &raw_metadata.raw_schema,
+            &raw_schema,
             field,
         )?);
     }
 
     // we've already checked that the group column exists so we can just unwrap it here
-    let (entity_column_index, entity_key_column) = raw_metadata
-        .raw_schema
+    let (entity_column_index, entity_key_column) = raw_schema
         .column_with_name(&config.group_column_name)
         .with_context(|| "")?;
     let slice_preparer = SlicePreparer::try_new(
@@ -384,7 +384,8 @@ mod tests {
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
             config,
-            raw_metadata,
+            raw_metadata.raw_schema.clone(),
+            raw_metadata.table_schema.clone(),
             0,
             None,
             key_hash_inverse.clone(),
@@ -433,7 +434,8 @@ mod tests {
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
             config,
-            raw_metadata,
+            raw_metadata.raw_schema.clone(),
+            raw_metadata.table_schema.clone(),
             0,
             None,
             key_hash_inverse.clone(),
@@ -483,7 +485,8 @@ mod tests {
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
             config,
-            raw_metadata,
+            raw_metadata.raw_schema.clone(),
+            raw_metadata.table_schema.clone(),
             0,
             None,
             key_hash_inverse.clone(),

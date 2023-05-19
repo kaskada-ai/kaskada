@@ -40,7 +40,7 @@ use std::path::PathBuf;
 
 pub use batch::*;
 pub use metadata::*;
-pub use read::*;
+use read::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 
 #[derive(Debug, Default, Clone)]

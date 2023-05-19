@@ -181,14 +181,6 @@ impl DataHandle {
         self.max_event_time
     }
 
-    pub fn num_rows(&self) -> usize {
-        self.num_rows
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.num_rows > 0
-    }
-
     /// Returns true if the future is already available.
     pub fn is_ready(&self) -> bool {
         match &self.data_path {

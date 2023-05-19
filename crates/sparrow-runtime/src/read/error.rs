@@ -10,6 +10,7 @@ pub enum Error {
     CreateStream,
     #[display(fmt = "failed to read next batch")]
     ReadNextBatch,
+    #[allow(unused)]
     #[display(fmt = "unsupported: {_0}")]
     Unsupported(&'static str),
     #[display(fmt = "internal error: ")]

@@ -1,13 +1,11 @@
 use std::path::PathBuf;
 
-use error_stack::{IntoReport, ResultExt};
-use futures::{StreamExt, TryStreamExt};
+use error_stack::ResultExt;
+use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
-use sparrow_api::kaskada::v1alpha::execute_request::Limits;
-use sparrow_api::kaskada::v1alpha::{
-    self, destination, CompileRequest, ExecuteRequest, FenlDiagnostics,
-};
-use sparrow_api::kaskada::v1alpha::{Destination, ObjectStoreDestination};
+
+use sparrow_api::kaskada::v1alpha::{destination, CompileRequest, ExecuteRequest, FenlDiagnostics};
+
 use sparrow_compiler::CompilerOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_runtime::s3::S3Helper;
