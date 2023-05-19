@@ -14,6 +14,7 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/property"
 )
 
+//go:generate mockery --name=DataTokenClient
 type DataTokenClient interface {
 	// gets the current dataToken for an owner
 	GetCurrentDataToken(ctx context.Context, owner *ent.Owner) (*ent.DataToken, error)
@@ -31,6 +32,7 @@ type DataTokenClient interface {
 // DataTokenClientProvider creates DataTokenClients
 type DataTokenClientProvider func(entClient *ent.Client) DataTokenClient
 
+//go:generate mockery --name=OwnerClient
 type OwnerClient interface {
 	GetOwner(ctx context.Context, id uuid.UUID) (*ent.Owner, error)
 	GetOwnerFromClientID(ctx context.Context, clientID string) (*ent.Owner, error)
@@ -39,6 +41,7 @@ type OwnerClient interface {
 // OwnerClientProvider creates OwnerClients
 type OwnerClientProvider func(entClient *ent.Client) OwnerClient
 
+//go:generate mockery --name=KaskadaTableClient
 type KaskadaTableClient interface {
 	CreateKaskadaTable(ctx context.Context, owner *ent.Owner, newTable *ent.KaskadaTable) (*ent.KaskadaTable, error)
 	DeleteKaskadaTable(ctx context.Context, owner *ent.Owner, kaskadaTable *ent.KaskadaTable) (*ent.DataToken, error)
@@ -62,6 +65,7 @@ type KaskadaTableClient interface {
 // KaskadaTableClientProvider creates KaskadaTableClients
 type KaskadaTableClientProvider func(entClient *ent.Client) KaskadaTableClient
 
+//go:generate mockery --name=KaskadaViewClient
 type KaskadaViewClient interface {
 	CreateKaskadaView(ctx context.Context, owner *ent.Owner, newView *ent.KaskadaView, dependencies []*ent.ViewDependency) (*ent.KaskadaView, error)
 	DeleteKaskadaView(ctx context.Context, owner *ent.Owner, view *ent.KaskadaView) error
@@ -76,6 +80,7 @@ type KaskadaViewClient interface {
 // KaskadaViewClientProvider creates ViewClients
 type KaskadaViewClientProvider func(entClient *ent.Client) KaskadaViewClient
 
+//go:generate mockery --name=MaterializationClient
 type MaterializationClient interface {
 	CreateMaterialization(ctx context.Context, owner *ent.Owner, newMaterialization *ent.Materialization, dependencies []*ent.MaterializationDependency) (*ent.Materialization, error)
 	DeleteMaterialization(ctx context.Context, owner *ent.Owner, view *ent.Materialization) error
@@ -90,6 +95,7 @@ type MaterializationClient interface {
 // MaterializationClientProvider creates MaterializationClients
 type MaterializationClientProvider func(entClient *ent.Client) MaterializationClient
 
+//go:generate mockery --name=PrepareJobClient
 type PrepareJobClient interface {
 	// creates a new prepareJob, with the passed params
 	CreatePrepareJob(ctx context.Context, kaskadaFiles []*ent.KaskadaFile, sliceInfo *SliceInfo, prepareCacheBuster int32, state property.PrepareJobState) (*ent.PrepareJob, error)
@@ -111,6 +117,7 @@ type PrepareJobClient interface {
 // PrepareJobClientProvider creates PrepareJobClientClients
 type PrepareJobClientProvider func(entClient *ent.Client) PrepareJobClient
 
+//go:generate mockery --name=KaskadaQueryClient
 type KaskadaQueryClient interface {
 	CreateKaskadaQuery(ctx context.Context, owner *ent.Owner, newQuery *ent.KaskadaQuery, isV2 bool) (*ent.KaskadaQuery, error)
 	DeleteKaskadaQuery(ctx context.Context, owner *ent.Owner, id uuid.UUID, isV2 bool) error
