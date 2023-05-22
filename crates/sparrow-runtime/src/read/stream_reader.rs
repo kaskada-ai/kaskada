@@ -79,7 +79,7 @@ pub(crate) async fn stream_reader(
     // timestamp column, dropped decimal columns, etc.
     // i.e. any changes we make to the raw schema to be able to process rows.
     let projected_schema = if let Some(columns) = &projected_columns {
-        projected_schema(raw_metadata.sparrow_metadata.table_schema, &columns)
+        projected_schema(raw_metadata.sparrow_metadata.table_schema, columns)
             .change_context(Error::CreateStream)?
     } else {
         raw_metadata.sparrow_metadata.table_schema
@@ -158,8 +158,8 @@ fn verify_schema_match(
     error_stack::ensure!(
         user_schema.fields().len() == table_schema.fields().len(),
         Error::SchemaMismatch {
-            expected_schema: table_schema.clone(),
-            actual_schema: user_schema.clone(),
+            expected_schema: table_schema,
+            actual_schema: user_schema,
             context: "stream schema did not match provided table schema".to_owned(),
         }
     );

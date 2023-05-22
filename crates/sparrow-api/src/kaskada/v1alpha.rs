@@ -129,7 +129,7 @@ impl TableConfig {
             &self.name,
             &uuid::Uuid::from_str(&self.uuid).unwrap(),
             &self.time_column_name,
-            self.subsort_column_name.as_ref().map(|x| x.as_str()),
+            self.subsort_column_name.as_deref(),
             &self.group_column_name,
             &self.grouping,
         )

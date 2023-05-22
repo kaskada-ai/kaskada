@@ -144,16 +144,14 @@ impl MaterializeCommand {
                     let destination = next.destination.as_ref().expect("destination");
                     match &destination.destination {
                         Some(destination::Destination::ObjectStore(o)) => {
-                            match &o.output_paths {
-                                Some(paths) => {
-                                    paths
-                                        .paths
-                                        .clone()
-                                        .into_iter()
-                                        .for_each(|p| output_files.push(p));
-                                }
-                                _ => (),
+                            if let Some(paths) = &o.output_paths {
+                                paths
+                                    .paths
+                                    .clone()
+                                    .into_iter()
+                                    .for_each(|p| output_files.push(p));
                             };
+
                             // TODO: The output paths are empty because we currently don't
                             // report that a file is being written to until we've closed it.
                             // Since in a streaming world, we don't close it, we'll indefinitely write

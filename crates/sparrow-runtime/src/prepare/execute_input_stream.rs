@@ -53,6 +53,7 @@ impl InputBuffer {
 /// * Dropping all but projected columns
 /// * Sorting the record batches by the time column, subsort column, and key hash
 /// * Handling late data
+#[allow(clippy::too_many_arguments)]
 pub async fn prepare_input<'a>(
     mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
     config: Arc<TableConfig>,
