@@ -75,6 +75,7 @@ impl MaterializeCommand {
         let schema = Schema::try_from(&self.schema)
             .change_context(Error::InvalidSchema)
             .attach_printable_lazy(|| ScriptPath(self.schema.clone()))?;
+
         tracing::debug!(
             "Materializing with script: {:?}\nand schema: {:?}",
             script,
@@ -120,6 +121,7 @@ impl MaterializeCommand {
                 final_result_time: None,
             },
             s3_helper,
+            Some(script.bounded_lateness_ns),
             self.flight_record_path,
             FlightRecordHeader::default(),
         )

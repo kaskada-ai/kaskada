@@ -108,6 +108,7 @@ pub(super) async fn execute_example(
         },
         s3_helper,
         None,
+        None,
         FlightRecordHeader::default(),
     )
     .await

@@ -18,10 +18,12 @@ pub(crate) struct Schema {
 /// This allows creating "scripts" that compute specific features.
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Script {
-    // / The destination to output results to.
+    /// The destination to output results to.
     pub(crate) output_to: Destination,
     /// The features to be computed for the query.
     pub(crate) feature_set: FeatureSet,
+    /// The allowed lateness for input data.
+    pub(crate) bounded_lateness_ns: i64,
 }
 
 #[derive(derive_more::Display, Debug)]

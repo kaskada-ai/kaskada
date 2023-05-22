@@ -95,6 +95,10 @@ pub(crate) struct OperationContext {
     ///
     /// If set, the user supplied a specific time to produce values at.
     pub output_at_time: Option<NaiveDateTime>,
+    /// The allowed lateness for input data.
+    ///
+    /// If not set, defaults to the [BOUNDED_LATENESS_NS] const.
+    pub bounded_lateness_ns: Option<i64>,
 }
 
 impl OperationContext {

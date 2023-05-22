@@ -207,6 +207,7 @@ pub(super) async fn run_operation(
         max_event_in_snapshot: None,
         progress_updates_tx,
         output_at_time: None,
+        bounded_lateness_ns: None,
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())
@@ -259,6 +260,7 @@ pub(super) async fn run_operation_json(
         max_event_in_snapshot: None,
         progress_updates_tx,
         output_at_time: None,
+        bounded_lateness_ns: None,
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())

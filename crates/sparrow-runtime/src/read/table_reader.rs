@@ -780,11 +780,14 @@ mod tests {
         .try_collect()
         .await?;
 
-        assert_eq!(expected.schema(), actual[0].schema());
-        let actual: Vec<_> = actual.into_iter().map(|b| b.data).collect();
-        let actual = arrow::compute::concat_batches(&expected.schema(), &actual).unwrap();
-
-        assert_eq!(actual, expected);
+        if expected.num_rows() > 0 {
+            assert_eq!(expected.schema(), actual[0].schema());
+            let actual: Vec<_> = actual.into_iter().map(|b| b.data).collect();
+            let actual = arrow::compute::concat_batches(&expected.schema(), &actual).unwrap();
+            assert_eq!(actual, expected);
+        } else {
+            assert_eq!(actual.len(), 0);
+        };
         Ok(())
     }
 

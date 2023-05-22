@@ -43,6 +43,7 @@ const STORE_PATH_PREFIX: &str = "compute_snapshot_";
 pub async fn execute(
     request: ExecuteRequest,
     s3_helper: S3Helper,
+    bounded_lateness_ns: Option<i64>,
     _flight_record_local_path: Option<std::path::PathBuf>,
     _flight_record_header: FlightRecordHeader,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
@@ -207,6 +208,7 @@ pub async fn execute(
         max_event_in_snapshot: None,
         progress_updates_tx,
         output_at_time: output_datetime,
+        bounded_lateness_ns,
     };
 
     // Start executing the query. We pass the response channel to the

@@ -29,14 +29,14 @@ csv format.
 4. The expected log output should show the consumer attempting to read messages from your stream. Look for the log: "Writing to output file: <path_to_your_repo>/materialize_output/<output_file>". This is where results will be materialized to.
 5. In another terminal window, go to your pulsar directory, and publish messages to your input topic:
 
-  `bin/pulsar-client produce persistent://public/default/my_input_topic -f "../messages/msg1.avro,../messages/msg2.avro,../messages/msg3.avro`
+  `bin/pulsar-client produce persistent://public/default/my_input_topic -f "../messages/msg1.avro,../messages/msg2.avro,../messages/msg3.avro"`
  
 6. Back in the materialization window, logs should indicate that rows were processed. 
 7. Check your output file to verify rows are produced.
 
 
 #### Late Data Handling
-You may notice that only 2 rows were written to your output file, but 3 messages were sent to the topic. This is due to how Kaskada handles late data - it keeps an input buffer of messages that advances the watermark (a timestamp) as messages are read. Once the watermark advances past the time an input event occurred, that message can be processed. 
+You may notice that only 2 rows were written to your output file, but 3 messages were sent to the topic. This is due to how Kaskada handles late data - it keeps an input buffer of messages that advances the watermark (a timestamp) as messages are read. Once the watermark advances past the time an input event occurred, that message can be processed. This parameter is configured from the `bounded_lateness_ns` integer in the `materialize_script.yaml`. 
 
 #### Updating your schema
 1. Update the topic schema definition to the desired schema.

@@ -134,6 +134,7 @@ impl BatchCommand {
                     final_result_time: None,
                 },
                 s3_helper,
+                None,
                 self.flight_record_path,
                 FlightRecordHeader::default(),
             )

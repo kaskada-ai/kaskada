@@ -11,4 +11,5 @@ feature_set:
     - name: count_foo
       formula: "Foo | count()"
   query: "{ last_id: last_foo_id, last_time: last_foo_time, count_foo: count_foo }"
+bounded_lateness_ns: 3
 

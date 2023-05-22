@@ -289,6 +289,7 @@ impl QueryFixture {
             request,
             s3_helper,
             None,
+            None,
             FlightRecordHeader::default(),
         )
         .await?

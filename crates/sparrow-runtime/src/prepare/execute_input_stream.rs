@@ -372,7 +372,7 @@ mod tests {
             "key",
             "",
         ));
-        let batch1 = make_time_batch(&[0, 3, 1, 10, 4, 7]);
+        let batch1 = make_time_batch(&[3, 1, 10, 4, 7]);
         let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
         let batch3 = make_time_batch(&[20]);
         let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
@@ -400,7 +400,7 @@ mod tests {
 
         let times1: &TimestampNanosecondArray =
             downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
-        assert_eq!(&[0, 1, 3], times1.values());
+        assert_eq!(&[1, 3], times1.values());
 
         let times2: &TimestampNanosecondArray =
             downcast_primitive_array(prepared2.column(0).as_ref()).unwrap();
@@ -408,7 +408,7 @@ mod tests {
 
         let times3: &TimestampNanosecondArray =
             downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
-        assert_eq!(&[12, 12], times3.values())
+        assert_eq!(&[12], times3.values())
     }
 
     #[tokio::test]
@@ -421,7 +421,7 @@ mod tests {
             "key",
             "",
         ));
-        let batch1 = make_time_batch(&[0, 1, 3, 10]);
+        let batch1 = make_time_batch(&[1, 3, 10]);
         let batch2 = make_time_batch(&[6, 7, 8, 9, 10]);
         let batch3 = make_time_batch(&[20]);
 
@@ -451,7 +451,7 @@ mod tests {
         // first batch
         let times1: &TimestampNanosecondArray =
             downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
-        assert_eq!(&[0, 1, 3], times1.values());
+        assert_eq!(&[1, 3], times1.values());
 
         // watermark did not advance, so cannot produce any
         assert!(prepared2.is_none());

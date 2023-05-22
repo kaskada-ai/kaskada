@@ -97,6 +97,12 @@ pub(crate) async fn stream_reader(
     );
 
     let table_config = table_info.config().clone();
+    let bounded_lateness = if let Some(bounded_lateness) = context.bounded_lateness_ns {
+        bounded_lateness
+    } else {
+        BOUNDED_LATENESS_NS
+    };
+
     let mut input_stream = prepare::execute_input_stream::prepare_input(
         stream.boxed(),
         table_config,
@@ -105,7 +111,7 @@ pub(crate) async fn stream_reader(
         0,
         requested_slice,
         context.key_hash_inverse.clone(),
-        BOUNDED_LATENESS_NS,
+        bounded_lateness,
     )
     .await
     .into_report()

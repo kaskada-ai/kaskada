@@ -437,6 +437,7 @@ mod tests {
             max_event_in_snapshot: None,
             progress_updates_tx,
             output_at_time: None,
+            bounded_lateness_ns: None,
         };
 
         executor
