@@ -216,7 +216,7 @@ jobs:
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
             # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
             # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
-            # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.  
+            # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.
             - name: Run S3 integration tests
               id: s3-integration-tests
               run: | 
