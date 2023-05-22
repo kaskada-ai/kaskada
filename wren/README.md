@@ -23,6 +23,20 @@ Note that building wren currently requires docker.  Docker is used for generatin
 * `make wren/build`
   * generates the wren executable
 
+## Testing Wren
+
+### Generating Mocks
+
+#### Adding
+To add mocks for additional interfaces in wren, update the `.mockery.yaml` file and then run `make wren/generate-mocks` from the root folder of the monorepo.
+
+#### Updating
+To update the existing mocks for recent interface changes, run `make wren/generate-mocks` from the from the root folder of the monorepo.
+
+### Running Unit Tests
+
+From the root of the monorepo, run `make wren/test`
+
 ## Standards
 
 The following standards are used in the design of the Wren API:

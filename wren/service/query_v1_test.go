@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -34,6 +35,10 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 		DataTokenId: &wrapperspb.StringValue{},
 		Views:       []*v1alpha.View{},
 	}
+
+	mockKaskadaQueryClient := internal.NewMockKaskadaQueryClient(t)
+	mockKaskadaQueryClient.EXPECT().GetKaskadaQuery(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&ent.KaskadaQuery{Query: sampleKaskadaQuery}, nil)
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -46,7 +51,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			name: "invalid query id should throw UUID parsing error",
 			fields: fields{
 				UnimplementedQueryServiceServer: v1alpha.UnimplementedQueryServiceServer{},
-				kaskadaQueryClient:              &MockKaskadaQueryClient{},
+				kaskadaQueryClient:              mockKaskadaQueryClient,
 			},
 			args: args{
 				owner:   &ent.Owner{},
@@ -60,7 +65,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			name: "empty query id should throw UUID parsing error",
 			fields: fields{
 				UnimplementedQueryServiceServer: v1alpha.UnimplementedQueryServiceServer{},
-				kaskadaQueryClient:              &MockKaskadaQueryClient{},
+				kaskadaQueryClient:              mockKaskadaQueryClient,
 			},
 			args: args{
 				owner:   &ent.Owner{},
@@ -74,7 +79,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			name: "invalid uuid as query id should throw UUID parsing error",
 			fields: fields{
 				UnimplementedQueryServiceServer: v1alpha.UnimplementedQueryServiceServer{},
-				kaskadaQueryClient:              &MockKaskadaQueryClient{},
+				kaskadaQueryClient:              mockKaskadaQueryClient,
 			},
 			args: args{
 				owner:   &ent.Owner{},
@@ -88,7 +93,7 @@ func Test_queryV1Service_getQuery(t *testing.T) {
 			name: "returns the results from the query client",
 			fields: fields{
 				UnimplementedQueryServiceServer: v1alpha.UnimplementedQueryServiceServer{},
-				kaskadaQueryClient:              &MockKaskadaQueryClient{},
+				kaskadaQueryClient:              mockKaskadaQueryClient,
 			},
 			args: args{
 				owner:   &ent.Owner{},
@@ -153,6 +158,11 @@ func Test_queryV1Service_listQueries(t *testing.T) {
 	}
 	listQueries := make([]*v1alpha.Query, 0)
 	listQueries = append(listQueries, sampleKaskadaQuery)
+
+	mockKaskadaQueryClient := internal.NewMockKaskadaQueryClient(t)
+	mockKaskadaQueryClient.EXPECT().ListKaskadaQueries(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*ent.KaskadaQuery{{Query:sampleKaskadaQuery}}, nil)
+
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -204,7 +214,7 @@ func Test_queryV1Service_listQueries(t *testing.T) {
 			name: "should return the results of list queries",
 			fields: fields{
 				UnimplementedQueryServiceServer: v1alpha.UnimplementedQueryServiceServer{},
-				kaskadaQueryClient:              &MockKaskadaQueryClient{},
+				kaskadaQueryClient:              mockKaskadaQueryClient,
 			},
 			args: args{},
 			want: &v1alpha.ListQueriesResponse{
@@ -237,46 +247,4 @@ func Test_queryV1Service_listQueries(t *testing.T) {
 			}
 		})
 	}
-}
-
-type MockKaskadaQueryClient struct{}
-
-func (m *MockKaskadaQueryClient) CreateKaskadaQuery(ctx context.Context, owner *ent.Owner, newQuery *ent.KaskadaQuery, isV2 bool) (*ent.KaskadaQuery, error) {
-	return nil, nil
-}
-
-func (m *MockKaskadaQueryClient) DeleteKaskadaQuery(ctx context.Context, owner *ent.Owner, id uuid.UUID, isV2 bool) error {
-	return nil
-}
-
-func (m *MockKaskadaQueryClient) GetAllKaskadaQueries(ctx context.Context, owner *ent.Owner, isV2 bool) ([]*ent.KaskadaQuery, error) {
-	return nil, nil
-}
-
-func (m *MockKaskadaQueryClient) GetKaskadaQuery(ctx context.Context, owner *ent.Owner, id uuid.UUID, isV2 bool) (*ent.KaskadaQuery, error) {
-	sampleKaskadaQuery := &ent.KaskadaQuery{
-		Query: &v1alpha.Query{
-			QueryId:     "e8c1b897-7b37-4773-bd07-44df5eb2b8b9",
-			Expression:  "some-fenl-expression",
-			Destination: nil,
-			DataTokenId: &wrapperspb.StringValue{},
-			Views:       []*v1alpha.View{},
-		},
-	}
-	return sampleKaskadaQuery, nil
-}
-
-func (m *MockKaskadaQueryClient) ListKaskadaQueries(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int, isV2 bool) ([]*ent.KaskadaQuery, error) {
-	sampleKaskadaQuery := &ent.KaskadaQuery{
-		Query: &v1alpha.Query{
-			QueryId:     "e8c1b897-7b37-4773-bd07-44df5eb2b8b9",
-			Expression:  "some-fenl-expression",
-			Destination: nil,
-			DataTokenId: &wrapperspb.StringValue{},
-			Views:       []*v1alpha.View{},
-		},
-	}
-	queries := make([]*ent.KaskadaQuery, 0)
-	queries = append(queries, sampleKaskadaQuery)
-	return queries, nil
 }

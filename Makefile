@@ -161,6 +161,9 @@ wren/build:
 	cp NOTICE wren/
 	cd wren && go build main.go
 
+wren/generate-mocks:
+	docker run -v $(shell pwd)/wren:/src/wren -v$(shell pwd)/gen:/src/gen -w /src/wren vektra/mockery
+
 wren/lint:
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	staticcheck ./...
