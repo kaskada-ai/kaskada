@@ -44,7 +44,7 @@ inventory::submit!(&REGISTRATION);
 /// This is hard-coded for now, but could easily be made configurable as a parameter
 /// to the table. This simple hueristic is a good start, but we can improve on this
 /// by statistically modeling event behavior and adapting the watermark accordingly.
-const BOUNDED_LATENESS_NS: i64 = 3;
+const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 
 /// Create a stream that continually reads messages from a stream.
 pub(crate) async fn stream_reader(
@@ -68,6 +68,12 @@ pub(crate) async fn stream_reader(
     let raw_metadata = RawMetadata::try_from_pulsar(pulsar_config)
         .await
         .change_context(Error::CreateStream)?;
+
+    // Verify the provided table schema matches the topic schema
+    verify_schema_match(
+        raw_metadata.user_schema.clone(),
+        table_info.schema().clone(),
+    )?;
 
     // The projected schema should come from the table_schema, which includes converted
     // timestamp column, dropped decimal columns, etc.
@@ -137,4 +143,28 @@ fn projected_schema(
 
     debug_assert_eq!(projected_data_fields.len(), columns.len());
     Ok(Arc::new(Schema::new(projected_data_fields)))
+}
+
+fn verify_schema_match(
+    user_schema: SchemaRef,
+    table_schema: SchemaRef,
+) -> error_stack::Result<(), Error> {
+    error_stack::ensure!(
+        user_schema.fields().len() == table_schema.fields().len(),
+        Error::SchemaMismatch {
+            expected_schema: table_schema.clone(),
+            actual_schema: user_schema.clone(),
+            context: "stream schema did not match provided table schema".to_owned(),
+        }
+    );
+    for field in user_schema.fields() {
+        table_schema
+            .field_with_name(field.name())
+            .map_err(|_| Error::SchemaMismatch {
+                expected_schema: table_schema.clone(),
+                actual_schema: user_schema.clone(),
+                context: "stream schema did not match provided table schema".to_owned(),
+            })?;
+    }
+    Ok(())
 }

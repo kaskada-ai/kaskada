@@ -10,7 +10,11 @@ output_to:
       topic_name: "output1"
 feature_set:
   formulas:
-    - name: my_formula
-      formula: "Foo"
-  query: "my_formula"
+    - name: last_foo_id
+      formula: "Foo.id | last()"
+    - name: last_foo_time
+      formula: "Foo.time | last()"
+    - name: count_foo
+      formula: "Foo | count()"
+  query: "{ last_id: last_foo_id, last_time: last_foo_time, count_foo: count_foo }"
 

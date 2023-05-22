@@ -14,7 +14,7 @@ tables:
               auth_params: ""
               tenant: "public"
               namespace: "default"
-              topic_name: "my_topic_name"
+              topic_name: "my_input_topic"
     metadata:
       schema: 
         fields:
@@ -22,6 +22,9 @@ tables:
             data_type: 
               kind: !Primitive 6
           - name: "id"
+            data_type:
+              kind: !Primitive 6
+          - name: "my_val"
             data_type:
               kind: !Primitive 6
         

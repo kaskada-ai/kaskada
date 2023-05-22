@@ -37,7 +37,7 @@ pub fn execution_stream(
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(raw_schema, projected_schema,consumer, last_publish_time, false);
+        let mut reader = PulsarReader::new(raw_schema, projected_schema, consumer, last_publish_time, false);
         loop {
             // Indefinitely reads messages from the stream
             if let Some(next) = reader.next_result_async().await? {

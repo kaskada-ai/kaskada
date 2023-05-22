@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use arrow::datatypes::SchemaRef;
 use chrono::NaiveDateTime;
 
 use crate::data_manager::DataHandle;
@@ -47,6 +48,12 @@ pub enum Error {
     LoadTableSchema,
     #[display(fmt = "failed to determine projected schema")]
     DetermineProjectedSchema,
+    #[display(fmt = "{context}. Saw '{actual_schema}' but expected '{expected_schema}'.")]
+    SchemaMismatch {
+        expected_schema: SchemaRef,
+        actual_schema: SchemaRef,
+        context: String,
+    },
 }
 
 impl error_stack::Context for Error {}

@@ -6,16 +6,16 @@ This command allows you to spin up a long-lived materialization process that ind
 1. Starting in the `examples/materialize_cli/` directory, download the Pulsar distribution and run a standalone cluster: https://pulsar.apache.org/docs/3.0.x/getting-started-standalone/
 2. From the pulsar directory, create an input topic: 
 
- `bin/pulsar-admin topics create persistent://public/default/my_input_topic`
+  `bin/pulsar-admin topics create persistent://public/default/my_input_topic`
 
 3. Using the provided schema definition, upload a schema definition to the topic:
 
   `bin/pulsar-admin schemas upload -f ../topic_schema_definition public/default/my_input_topic`
 
   * This schema definition is an example, and matches the other provided schemas and messages. Modifying this schema requires modifying the others as well
-4.  Check the schema is set: 
+4. Check the schema is set: 
 
-`bin/pulsar-admin schemas get persistent://public/default/my_input_topic`
+  `bin/pulsar-admin schemas get persistent://public/default/my_input_topic`
 
 #### Running Materialize
 1. Inspect the `materialize_schema.yaml` to ensure the schema is as expected.
@@ -24,12 +24,12 @@ This command allows you to spin up a long-lived materialization process that ind
 csv format.
 3. From the Kaskada root directory, run the materialize command:
 
- `cargo run --bin sparrow-main -- materialize --schema=examples/materialize_cli/materialize_schema.yaml --script=examples/materialize_cli/materialize_script.yaml`
+  `cargo run --bin sparrow-main -- materialize --schema=examples/materialize_cli/materialize_schema.yaml --script=examples/materialize_cli/materialize_script.yaml`
 
 4. The expected log output should show the consumer attempting to read messages from your stream. Look for the log: "Writing to output file: <path_to_your_repo>/materialize_output/<output_file>". This is where results will be materialized to.
 5. In another terminal window, go to your pulsar directory, and publish messages to your input topic:
 
- `bin/pulsar-client produce persistent://public/default/input1 -f msg1.avro, msg2.avro, msg3.avro`
+  `bin/pulsar-client produce persistent://public/default/my_input_topic -f "../messages/msg1.avro,../messages/msg2.avro,../messages/msg3.avro`
  
 6. Back in the materialization window, logs should indicate that rows were processed. 
 7. Check your output file to verify rows are produced.
@@ -42,12 +42,12 @@ You may notice that only 2 rows were written to your output file, but 3 messages
 1. Update the topic schema definition to the desired schema.
 2. Either create a new topic and assign the schema to the new topic, or delete and re-upload the new schema. 
 
-`bin/pulsar-admin schemas delete persistent://public/default/my_input_topic`
+  `bin/pulsar-admin schemas delete persistent://public/default/my_input_topic`
 
 3. Update the schema defined in `materialize_schema.yaml`. Datatype definitions can be found in the protobuf registry defined here: https://buf.build/kaskada/kaskada/docs/main:kaskada.kaskada.v1alpha#kaskada.kaskada.v1alpha.DataType.PrimitiveType
 4. Create new messages to produce to your topic. As an example, this can be done by creating the corresponding messages as json files, then converting to avro using avro-tools:
 
- `avro-tools fromjson --schema-file schema_filemsg.json > msg.avro`
+  `avro-tools fromjson --schema-file schema_filemsg.json > msg.avro`
  
 Example schema_file:
 ```
