@@ -61,6 +61,10 @@ Installing kaskada for the first time can take 10-15 minutes while some external
 Subsequent installs and upgrades are generally faster.
 ====
 
+****
+⭢ Read more about installing Kaskada in xref:ROOT:installing.adoc[]
+****
+
 Now that we have everything installed let's fire up a notebook and get the remaining components of Kaskada installed.
 
 Using a terminal start a new Jupyter notebook using the command 
@@ -91,6 +95,10 @@ This is the first time we are running the builder on this machine.
 The builder will download (if needed) the latest release of Kaskada's components from GitHub and then run these components on your local machine. 
 The command will generate some output during the download, install and run process. 
 
+****
+⭢ Read more about connecting to Kaskada in xref:ROOT:installing.adoc#using-kaskada-with-python[Installing]
+****
+
 Let's now create a small table and write a simple query to see that everything is working correctly with our setup. 
 
 === Enable the Kaskada magic command 
@@ -115,6 +123,7 @@ Congratulations, you now have Kaskada locally installed and you can start loadin
 
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
+When querying Kaskada, the contents of a table are interpreted as a xref:fenl:continuity.adoc[discrete timeline]: the value associated with each event corresponds to a value in the timeline.
 
 === Creating a Table
 
@@ -132,8 +141,11 @@ When creating a table, you must tell Kaskada which columns contain the time and 
   The entity key should identify a _thing_ in the world that each event is associated with.
   Don't worry too much about picking the "right" value - it's easy to change the entity using the `xref:fenl:catalog.adoc#with-key[with_key()]` function.
 
-For more information about configuring tables, see xref:developing:tables.adoc#creating-a-table[].
-For more information about the expected structure of input files, see xref:ROOT:loading-data.adoc#file-format[Expected File Format]
+****
+⭢ Read more about configuring tables in xref:developing:tables.adoc[]
+
+⭢ Read more about the expected structure of input files in xref:ROOT:loading-data.adoc#file-format[Expected File Format]
+****
 
 [source,python]
 ----
@@ -152,18 +164,9 @@ table.create_table(
 )
 ----
 
-This creates a table named `Purchase`. Any data loaded into this table
-must have a timestamp field named `purchase_time`, a field named
-`customer_id`, and a field named `subsort_id`.
-
-[TIP]
-.Idiomatic Kaskada
+.Show result
+[%collapsible]
 ====
-We like to use CamelCase to name tables because it
-helps distinguish data sources from transformed values and function
-names.
-====
-
 The response from the `create_table` is a `table` object with contents
 similar to:
 
@@ -188,16 +191,37 @@ request_details {
   request_id: "fe6bed41fa29cea6ca85fe20bea6ef4a"
 }
 ----
+====
 
-=== Loading Data
+This creates a table named `Purchase`. Any data loaded into this table
+must have a timestamp field named `purchase_time`, a field named
+`customer_id`, and a field named `subsort_id`.
+
+[TIP]
+.Idiomatic Kaskada
+====
+We like to use CamelCase to name tables because it
+helps distinguish data sources from transformed values and function
+names.
+====
+
+
+
+=== Loading data
 
 Now that we've created a table, we're ready to load some data into it.
 
+[IMPORTANT]
+====
+A table must be xref:#creating-a-table[created] before data can be loaded into it.
+====
+
 Data can be loaded into a table in multiple ways. In this example we'll
-load the contents of a Parquet file into the table. To learn about
-the different ways data can be loaded into a table, see the
-xref:ROOT:loading-data.adoc[Loading Data]
-section of the docs.
+load the contents of a Parquet file into the table. 
+
+****
+⭢  Read more about the different ways to load data in xref:ROOT:loading-data.adoc[Loading Data]
+****
 
 [source,python]
 ----
@@ -214,11 +238,12 @@ purchases_path = "/absolute/path/to/purchases.parquet"
 table.load(table_name = "Purchase", file = purchases_path)
 ----
 
+.Show result
+[%collapsible]
+====
 The result of running `load` is a `data_token_id`. 
 The data token ID is a unique reference to the data currently stored in the system. 
 Data tokens enable repeatable queries: queries performed against the same data token always run on the same input data.
-
-
 
 [source,json]
 ----
@@ -227,25 +252,36 @@ request_details {
   request_id: "fe6bed41fa29cea6ca85fe20bea6ef4b"
 }
 ----
+====
 
-The file is transferred to Kaskada and it's content added to the table.
+The file's content is added to the table.
 
 == Querying Data
 
-=== Writing Queries
+=== Enabling the Kaskada "magic" command
 
-You can write queries in a number of ways with Kaskada. Here we start
-with fenlmagic because these queries are not persistent. As you are
-iterating in Jupyter it can be helpful to build up your feature and time
-selection as you go, once you'd like to persist a query, check out our
-article on sharing queries with xref:developing:views.adoc[Views].
+Kaskada’s client includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks. 
+We need to enable these customizations first before we can use them.
+
+So in a new code cell input the following command and run this cell.
+
+.Enable fenlmagic in this notebook
+[source,IPython]
+----
+%load_ext fenlmagic
+----
+
+Now we can start a code cell in our notebook with the first line being the string `%%fenl` to indicate that this cell will contain code in the Fenl language. 
+The special string `%%fenl` will also connect to the Kaskada components that we installed that will execute the query and report back any results to our notebook.
+
+=== Writing Queries
 
 You can make Fenl queries by prefixing a query block with `%%fenl`. The
 query results will be computed and returned as a Pandas dataframe. The
 query content starts on the next line and includes the rest of the code
 block's contents.
 
-Let's start by looking at the Purchase table without any filters, this
+Let's start by looking at the `Purchase` table without any filters, this
 query will return all of the columns and rows contained in a table:
 
 [source,Fenl]
@@ -254,6 +290,7 @@ query will return all of the columns and rows contained in a table:
 Purchase
 ----
 
+This query will return all of the columns and rows contained in a table.
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
@@ -276,7 +313,7 @@ Here's a more sophisticated example that touches on many of the unique features 
 let cadence = hourly()
 
 # Anything can be named and re-used
-let hourly_big_purchases = purchase
+let hourly_big_purchases = Purchase
 | when(Purchase.amount > 10)
 
 # Filter anywhere
@@ -298,20 +335,24 @@ in { hourly_big_purchases, purchases_in_last_day: purchases_now - purchases_yest
 })
 ----
 
-For more information about writing queries, see xref:developing:queries.adoc[Reference -
-Queries]
+****
+⭢  Read more about writing queries in xref:developing:queries.adoc[]
+****
 
-=== Configuring queries
+=== Configuring query execution
 
 A given query can be computed in different ways.
 You can configure how a query is executed by providing flags to the `%%fenl` block.
 
-==== Changing how the result timeline is converted to a table
+==== Changing how the result timeline is output
 
-You can either return a table describing each change in the timeline, or a table describing the "final" value of the timeline.
-By default, queries return each change in the timeline.
+When you make a query, the resulting timeline is interpreted in one of two ways: as a history or as a snapshot.
 
-You can change the results to only include the final values:
+* A timeline *History* generates a value each time the timeline changes, and each row is associated with a different entity and point in time.
+* A timeline *Snapshot* generates a value for each entity at the same point in time; each row is associated with a different entity, but all rows are associated with the same time.
+
+By default, timelines are output as histories.
+You can output a timeline as a snapshot by setting the `--result-behavior` fenlmagic argument to `final-results`.
 
 [source,Fenl]
 ----
@@ -357,5 +398,40 @@ query_result.dataframe
 query_result.expression
 ----
 
-For more information about configuring queries, see xref:developing:queries.adoc#configuring-how-queries-are-computed[Reference -
-Configuring Queries]
+****
+⭢  
+Read more about configuring queries in xref:developing:queries.adoc#configuring-how-queries-are-computed[Configuring Queries]
+****
+
+== Cleaning Up
+
+When you're done with this tutorial, you can delete the table you created in order to free up resources. Note that this also deletes all of the data loaded into the table.
+
+[source,python]
+----
+from kaskada import table
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().build()
+
+table.delete_table(
+  # The table's name
+  table_name = "Purchase",
+)
+----
+
+== Conclusion
+
+Congratulations, you've begun processing events with Kaskada!
+
+Where you go now is up to you
+
+****
+⭢  Read about Kaskada's query language in xref:fenl:fenl-quick-start.adoc[Query Syntax > Introduction]
+
+⭢  Read about real-time ML in xref:tools-and-resources:training-realtime-ml-models.adoc[]
+
+⭢  Explore some code samples in https://github.com/kaskada-ai/kaskada/tree/main/examples[the examples directory (Github)]
+
+⭢  Check out the source code on https://github.com/kaskada-ai/kaskada[Github]
+****

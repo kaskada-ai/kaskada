@@ -26,6 +26,8 @@ pub enum Error {
     SortingBatch,
     #[display(fmt = "determine metadata")]
     DetermineMetadata,
+    #[display(fmt = "invalid schema provided")]
+    ReadSchema,
     #[display(fmt = "failed to write Parquet file")]
     WriteParquetData,
     #[display(fmt = "failed to write metadata file")]
@@ -47,6 +49,10 @@ pub enum Error {
     ReadInput,
     #[display(fmt = "failed to upload result")]
     UploadResult,
+    #[display(fmt = "downloading object {_0} to path {_0}")]
+    DownloadingObject(String, String),
+    #[display(fmt = "invalid url: {_0}")]
+    InvalidUrl(String),
 }
 
 impl error_stack::Context for Error {}

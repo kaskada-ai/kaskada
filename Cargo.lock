@@ -4537,7 +4537,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-api"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4568,9 +4568,10 @@ dependencies = [
 
 [[package]]
 name = "sparrow-arrow"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "arrow",
+ "avro-rs",
  "avro-schema",
  "derive_more",
  "error-stack",
@@ -4582,7 +4583,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-catalog"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "arrow",
  "clap 4.2.1",
@@ -4619,7 +4620,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-compiler"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4670,7 +4671,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-core"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4689,7 +4690,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-instructions"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4725,7 +4726,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-kernels"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4744,7 +4745,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-main"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4803,7 +4804,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-plan"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4825,7 +4826,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "cpu-time",
  "derive_more",
@@ -4851,7 +4852,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr-tool"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "clap 4.2.1",
  "cpu-time",
@@ -4877,7 +4878,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-runtime"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4948,7 +4949,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-syntax"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4974,7 +4975,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-testing"
-version = "0.6.0"
+version = "0.6.4"
 dependencies = [
  "arrow-array",
  "arrow-csv",
@@ -5691,9 +5692,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.3.16"
+version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6176eae26dd70d0c919749377897b54a9276bd7061339665dd68777926b5a70"
+checksum = "30a651bc37f915e81f087d86e62a18eec5f79550c7faff886f7090b4ea757c77"
 dependencies = [
  "matchers",
  "nu-ansi-term",

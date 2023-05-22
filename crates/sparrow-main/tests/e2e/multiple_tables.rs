@@ -85,7 +85,7 @@ static SUPERSET: &str = indoc!(
 );
 
 fn make_table_config(name: &str) -> TableConfig {
-    TableConfig::new(
+    TableConfig::new_with_table_source(
         name,
         &Uuid::new_v4(),
         "time",

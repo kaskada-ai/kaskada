@@ -210,6 +210,7 @@ pub(super) async fn run_operation(
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())
+        .await
         .unwrap()
         .await
         .unwrap();
@@ -261,6 +262,7 @@ pub(super) async fn run_operation_json(
     };
     executor
         .execute(0, &mut context, inputs, max_event_tx, &Default::default())
+        .await
         .unwrap()
         .await
         .unwrap();

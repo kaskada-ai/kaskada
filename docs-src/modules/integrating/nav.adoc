@@ -1,4 +1,4 @@
-* Integrating
+* xref:index.adoc[Integrations]
 ** xref:apache-pulsar.adoc[Apache Pulsar]
 ** xref:apache-cassandra.adoc[Apache Cassandra]
 ** xref:redis.adoc[Redis]

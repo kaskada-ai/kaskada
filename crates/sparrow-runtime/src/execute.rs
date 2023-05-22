@@ -18,7 +18,6 @@ use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
 use crate::RuntimeOptions;
 
-mod avro_arrow;
 mod compute_executor;
 mod error;
 mod input_prefetch;
@@ -26,8 +25,6 @@ pub(crate) mod key_hash_inverse;
 mod operation;
 pub(crate) mod output;
 mod progress_reporter;
-pub(crate) mod pulsar_reader;
-pub(crate) mod pulsar_schema;
 mod spawner;
 
 pub use compute_executor::*;
@@ -176,6 +173,7 @@ pub async fn execute(
         .get_or_create_group_id(&plan.primary_grouping, &primary_grouping_key_type)
         .into_report()
         .change_context(Error::internal_msg("get primary grouping ID"))?;
+
     key_hash_inverse
         .add_from_data_context(&data_context, primary_group_id, s3_helper.clone())
         .await
@@ -227,6 +225,7 @@ pub async fn execute(
         progress_updates_rx,
         destination,
     )
+    .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
 
     Ok(compute_executor.execute_with_progress(

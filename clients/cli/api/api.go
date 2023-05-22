@@ -27,10 +27,10 @@ type apiClient struct {
 
 type ApiClient interface {
 	LoadFile(name string, fileInput *apiv1alpha.FileInput) error
-	Create(item protoreflect.ProtoMessage) error
+	Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
 	Delete(item protoreflect.ProtoMessage, force bool) error
 	Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error)
-	List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error)
+	List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error)
 	Query(*apiv1alpha.CreateQueryRequest) (*apiv1alpha.CreateQueryResponse, error)
 }
 
@@ -52,7 +52,7 @@ func (c apiClient) Query(req *apiv1alpha.CreateQueryRequest) (*apiv1alpha.Create
 	return c.query.Query(req)
 }
 
-func (c apiClient) Create(item protoreflect.ProtoMessage) error {
+func (c apiClient) Create(item protoreflect.ProtoMessage) (protoreflect.ProtoMessage, error) {
 	kind := reflect.TypeOf(item).String()
 	switch t := item.(type) {
 	case *apiv1alpha.Materialization:
@@ -63,7 +63,7 @@ func (c apiClient) Create(item protoreflect.ProtoMessage) error {
 		return c.view.Create(t)
 	default:
 		log.Fatal().Str("kind", kind).Msg("unknown item kind for create")
-		return nil
+		return nil, nil
 	}
 }
 
@@ -97,28 +97,28 @@ func (c apiClient) Get(item protoreflect.ProtoMessage) (protoreflect.ProtoMessag
 	}
 }
 
-func (c apiClient) List(item protoreflect.ProtoMessage) ([]protoreflect.ProtoMessage, error) {
+func (c apiClient) List(item protoreflect.ProtoMessage, search string, pageSize int32, pageToken string) ([]protoreflect.ProtoMessage, error) {
 	kind := reflect.TypeOf(item).String()
 	results := make([]protoreflect.ProtoMessage, 0)
 	switch item.(type) {
-	case *apiv1alpha.ListMaterializationsRequest:
-		materializations, err := c.materialization.List()
+	case *apiv1alpha.Materialization:
+		materializations, err := c.materialization.List(search, pageSize, pageToken)
 		if err != nil {
 			return nil, err
 		}
 		for _, m := range materializations {
 			results = append(results, m)
 		}
-	case *apiv1alpha.ListTablesRequest:
-		tables, err := c.table.List()
+	case *apiv1alpha.Table:
+		tables, err := c.table.List(search, pageSize, pageToken)
 		if err != nil {
 			return nil, err
 		}
 		for _, t := range tables {
 			results = append(results, t)
 		}
-	case *apiv1alpha.ListViewsRequest:
-		views, err := c.view.List()
+	case *apiv1alpha.View:
+		views, err := c.view.List(search, pageSize, pageToken)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +146,7 @@ func GetName(item protoreflect.ProtoMessage) string {
 	}
 }
 
-func clearOutputOnly[M protoreflect.ProtoMessage](message M) M {
+func ClearOutputOnlyFields[M protoreflect.ProtoMessage](message M) M {
 	msg := message.ProtoReflect()
 	// Iterate over each field in the message
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
@@ -176,18 +176,17 @@ func clearOutputOnly[M protoreflect.ProtoMessage](message M) M {
 	return msg.Interface().(M)
 }
 
-func clearOutputOnlyList[M protoreflect.ProtoMessage](messages []M) []M {
+func ClearOutputOnlyFieldsList[M protoreflect.ProtoMessage](messages []M) []M {
 	output := make([]M, 0, len(messages))
 	for _, m := range messages {
-		output = append(output, clearOutputOnly(m))
+		output = append(output, ClearOutputOnlyFields(m))
 	}
 	return output
 }
 
-
 func getContextAndConnection() (context.Context, *grpc.ClientConn) {
 	ctx := context.Background()
-	
+
 	clientId := viper.GetString("kaskada-client-id")
 	if clientId == "" {
 		log.Debug().Msg("no client-id found, initiating request without passing client-id header.")

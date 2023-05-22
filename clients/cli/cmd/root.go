@@ -60,8 +60,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cli.yaml)")
 	rootCmd.PersistentFlags().String("kaskada-api-server", "", "Kaskada API Server")
 	rootCmd.PersistentFlags().String("kaskada-client-id", "", "Kaskada Client ID")
-	rootCmd.PersistentFlags().BoolP("debug", "d", false, "get debug log output")
-	rootCmd.PersistentFlags().Bool("use-tls", true, "Use TLS when connecting to the Kaskada API")
+	rootCmd.PersistentFlags().Bool("debug", false, "get debug log output")
+	rootCmd.PersistentFlags().Bool("use-tls", false, "Use TLS when connecting to the Kaskada API")
 
 	viper.BindPFlag("kaskada-api-server", rootCmd.PersistentFlags().Lookup("kaskada-api-server"))
 	viper.BindPFlag("kaskada-client-id", rootCmd.PersistentFlags().Lookup("kaskada-client-id"))
@@ -96,7 +96,7 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		log.Info().Msgf("Using config file: %s", viper.ConfigFileUsed())
+		log.Debug().Msgf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
 	if viper.GetBool("debug") {

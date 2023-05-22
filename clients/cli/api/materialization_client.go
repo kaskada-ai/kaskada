@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kaskada-ai/kaskada/clients/cli/utils"
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -16,9 +17,9 @@ type materializationClient struct {
 }
 
 type MaterializationClient interface {
-	List() ([]*apiv1alpha.Materialization, error)
+	List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Materialization, error)
 	Get(name string) (*apiv1alpha.Materialization, error)
-	Create(item *apiv1alpha.Materialization) error
+	Create(item *apiv1alpha.Materialization) (*apiv1alpha.Materialization, error)
 	Delete(name string, force bool) error
 }
 
@@ -29,14 +30,18 @@ func NewMaterializationServiceClient(ctx context.Context, conn *grpc.ClientConn)
 	}
 }
 
-func (c materializationClient) List() ([]*apiv1alpha.Materialization, error) {
-	resp, err := c.client.ListMaterializations(c.ctx, &apiv1alpha.ListMaterializationsRequest{})
+func (c materializationClient) List(search string, pageSize int32, pageToken string) ([]*apiv1alpha.Materialization, error) {
+	resp, err := c.client.ListMaterializations(c.ctx, &apiv1alpha.ListMaterializationsRequest{
+		Search:     search,
+		PageSize:   pageSize,
+		PageToken:  pageToken,
+	})
 	if err != nil {
 		log.Debug().Err(err).Msg("issue listing materializations")
 		return nil, err
 	}
 	// TODO: Pagination
-	return clearOutputOnlyList(resp.Materializations), nil
+	return resp.Materializations, nil
 }
 
 func (c materializationClient) Get(name string) (*apiv1alpha.Materialization, error) {
@@ -45,22 +50,20 @@ func (c materializationClient) Get(name string) (*apiv1alpha.Materialization, er
 		log.Debug().Err(err).Str("name", name).Msg("issue getting materialization")
 		return nil, err
 	}
-	return clearOutputOnly(resp.Materialization), nil
+	return resp.Materialization, nil
 }
 
-func (c materializationClient) Create(item *apiv1alpha.Materialization) error {
-	mat, err := c.client.CreateMaterialization(c.ctx, &apiv1alpha.CreateMaterializationRequest{Materialization: item})
+func (c materializationClient) Create(item *apiv1alpha.Materialization) (*apiv1alpha.Materialization, error) {
+	resp, err := c.client.CreateMaterialization(c.ctx, &apiv1alpha.CreateMaterializationRequest{Materialization: item})
 	if err != nil {
 		log.Debug().Err(err).Str("name", item.MaterializationName).Msg("issue creating materialization")
-		return err
+		return nil, err
 	}
-	if mat.Analysis != nil && mat.Analysis.FenlDiagnostics != nil && mat.Analysis.FenlDiagnostics.NumErrors > 0 {
-		for _, diag := range mat.Analysis.FenlDiagnostics.FenlDiagnostics {
-			log.Error().Msg(diag.Formatted)
-			return fmt.Errorf("found %d errors in materialization creation", mat.Analysis.FenlDiagnostics.NumErrors)
-		}
+	if resp.Analysis != nil && resp.Analysis.FenlDiagnostics != nil && resp.Analysis.FenlDiagnostics.NumErrors > 0 {
+		utils.PrintProtoMessage(resp)
+		return nil, fmt.Errorf("found %d errors in materialization creation", resp.Analysis.FenlDiagnostics.NumErrors)
 	}
-	return nil
+	return resp.Materialization, nil
 }
 
 func (c materializationClient) Delete(name string, force bool) error {

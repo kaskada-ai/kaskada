@@ -4,7 +4,7 @@ use opentelemetry::trace::TraceContextExt;
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_opentelemetry::OtelData;
-use tracing_serde::{AsSerde, SerdeMapVisitor};
+use tracing_serde::SerdeMapVisitor;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
 use tracing_subscriber::registry::{LookupSpan, SpanRef};
@@ -32,8 +32,8 @@ where
             let mut serializer = serde_json::Serializer::new(WriteAdaptor::new(&mut writer));
 
             let mut serializer = serializer.serialize_map(None)?;
+            serializer.serialize_entry("level", &meta.level().as_str().to_lowercase())?;
             serializer.serialize_entry("timestamp", &chrono::Utc::now())?;
-            serializer.serialize_entry("level", &meta.level().as_serde())?;
             serializer.serialize_entry("line", &meta.line())?;
             serializer.serialize_entry("module", &meta.module_path())?;
             serializer.serialize_entry("target", meta.target())?;

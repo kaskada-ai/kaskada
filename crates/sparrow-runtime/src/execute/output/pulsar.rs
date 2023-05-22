@@ -8,9 +8,9 @@ use sparrow_api::kaskada::v1alpha::PulsarDestination;
 use sparrow_api::kaskada::v1alpha::{destination, PulsarConfig};
 
 use crate::execute::progress_reporter::ProgressUpdate;
+use crate::streams;
 use error_stack::{IntoReport, ResultExt};
 
-use crate::execute::pulsar_schema;
 use pulsar::{message::proto, producer, Pulsar, TokioExecutor};
 
 #[derive(Debug, derive_more::Display)]
@@ -66,18 +66,18 @@ pub(super) async fn write(
     };
 
     let topic_url = format_topic_url(&pulsar)?;
-    let output_schema =
-        pulsar_schema::get_output_schema(schema).change_context(Error::SchemaSerialization)?;
-    let formatted_schema = pulsar_schema::format_schema(output_schema.clone())
+    let output_schema = streams::pulsar::schema::get_output_schema(schema)
+        .change_context(Error::SchemaSerialization)?;
+    let avro_schema = streams::pulsar::schema::format_schema(output_schema.clone())
         .change_context(Error::SchemaSerialization)?;
 
-    tracing::info!("Creating pulsar topic {topic_url} with schema: {formatted_schema}");
+    tracing::info!("Creating pulsar topic {topic_url} with schema: {avro_schema}");
     // Note: Pulsar works natively in Avro - move towards serializing
     // results in Avro instead of Json. This is supported (with
     // some type restrictions) in Arrow2.
     let schema = proto::Schema {
         r#type: proto::schema::Type::Json as i32,
-        schema_data: formatted_schema.as_bytes().to_vec(),
+        schema_data: avro_schema.as_bytes().to_vec(),
         ..Default::default()
     };
 

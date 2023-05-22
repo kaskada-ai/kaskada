@@ -1,0 +1,7 @@
+*
+!release/linux/amd64/sparrow-main
+!release/linux/amd64/wren
+!release/linux/amd64/cli
+!release/linux/arm64/sparrow-main
+!release/linux/arm64/wren
+!release/linux/arm64/cli

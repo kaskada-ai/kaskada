@@ -31,7 +31,7 @@ async fn lookup_account_data_fixture() -> DataFixture {
 
     DataFixture::new()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Sent",
                 &Uuid::new_v4(),
                 "time",
@@ -44,7 +44,7 @@ async fn lookup_account_data_fixture() -> DataFixture {
         .await
         .unwrap()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "Received",
                 &Uuid::new_v4(),
                 "time",
@@ -57,7 +57,7 @@ async fn lookup_account_data_fixture() -> DataFixture {
         .await
         .unwrap()
         .with_table_from_csv(
-            TableConfig::new(
+            TableConfig::new_with_table_source(
                 "CodeName",
                 &Uuid::new_v4(),
                 "time",

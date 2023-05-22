@@ -1,0 +1,36 @@
+FROM jupyter/scipy-notebook:python-3.10.9
+
+# autofilled by buildkit. Do not set explicitely in your docker build/run command, use --platform instead
+ARG TARGETARCH 
+ARG TARGETOS
+
+USER root
+RUN apt update && apt install jq -y
+
+# Install libssl1.1 from bullseye
+RUN BULLSEYE_VERSION=$(wget -qO- 'https://sources.debian.org/api/src/openssl/' | jq -r '.versions[] | select(.suites[]=="bullseye") | .version') && \
+    wget -q "http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_${BULLSEYE_VERSION}_${TARGETARCH}.deb" -O /tmp/libssl1.1.deb && \
+    dpkg -i /tmp/libssl1.1.deb && \
+    rm /tmp/libssl1.1.deb
+
+# Install grpc-health-probe binary into container
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.11 && \
+    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-${TARGETARCH}&& \
+    chmod +x /bin/grpc_health_probe
+
+# Create user with a home directory
+USER jovyan
+ENV USER jovyan
+ENV HOME /home/jovyan
+WORKDIR ${HOME}
+
+# Install the pulsar python client and the kaskada python client
+RUN pip install pulsar-client kaskada --no-cache-dir
+
+# Install the kaskada cli and the kaskada services
+RUN mkdir -p /home/jovyan/.cache/kaskada/bin
+COPY --chmod=755 ./release/${TARGETOS}/${TARGETARCH}/cli            /home/jovyan/.cache/kaskada/bin/kaskada-cli
+COPY --chmod=755 ./release/${TARGETOS}/${TARGETARCH}/wren           /home/jovyan/.cache/kaskada/bin/kaskada-manager
+COPY --chmod=755 ./release/${TARGETOS}/${TARGETARCH}/sparrow-main   /home/jovyan/.cache/kaskada/bin/kaskada-engine
+
+ENV KASKADA_DISABLE_DOWNLOAD=true

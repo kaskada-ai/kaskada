@@ -8,7 +8,6 @@ def test_builder_defaults():
     assert builder._endpoint is None
     assert builder._is_secure is None
     assert builder._client_id is None
-    assert builder._name is not None
 
 
 def test_builder_set_endpoint_sets_endpoint_and_is_secure():
@@ -18,7 +17,6 @@ def test_builder_set_endpoint_sets_endpoint_and_is_secure():
     assert builder._endpoint == endpoint
     assert builder._is_secure == is_secure
     assert builder._client_id is None
-    assert builder._name is not None
 
 
 def test_builder_set_name_sets_name():
@@ -38,12 +36,12 @@ def test_local_builder_defaults():
     assert builder._endpoint == session.KASKADA_ENDPOINT_DEFAULT
     assert builder._is_secure == session.KASKADA_IS_SECURE_DEFAULT
     assert builder._client_id is None
-    assert builder._name is not None
     assert builder._path == session.LocalBuilder.KASKADA_PATH_DEFAULT
     assert builder._bin_path == session.LocalBuilder.KASKADA_BIN_PATH_DEFAULT
     assert builder._log_path == session.LocalBuilder.KASKADA_LOG_PATH_DEFAULT
     assert builder._download == True
-    assert builder._manager_configs == {}
+    assert builder._manager_configs == {"-no-color": "1"}
+    assert builder._engine_configs == {"--log-no-color": "1"}
 
 
 def test_local_builder_set_path_sets_path():

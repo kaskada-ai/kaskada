@@ -2,11 +2,11 @@ use std::time::Duration;
 
 use futures::Stream;
 use sparrow_api::kaskada::v1alpha::destination;
-use sparrow_api::kaskada::v1alpha::execute_response::ComputeSnapshot;
-use sparrow_api::kaskada::v1alpha::execute_response::ProgressInformation;
 use sparrow_api::kaskada::v1alpha::object_store_destination::ResultPaths;
+use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::Destination;
 use sparrow_api::kaskada::v1alpha::ObjectStoreDestination;
+use sparrow_api::kaskada::v1alpha::ProgressInformation;
 use sparrow_api::kaskada::v1alpha::PulsarConfig;
 use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LongQueryState};
 use tokio_stream::StreamExt;
