@@ -175,10 +175,7 @@ impl ScanOperation {
 
         // Scans can read from tables (files) or streams.
         let backing_source = match table_info.config().source.as_ref() {
-            Some(v1alpha::Source {
-                source: Some(source),
-            }) => source,
-            Some(v1alpha::Source { source }) => source.as_ref().unwrap(),
+            Some(v1alpha::Source { source }) => source.as_ref().expect("source"),
             _ => error_stack::bail!(Error::Internal("expected source")),
         };
 
