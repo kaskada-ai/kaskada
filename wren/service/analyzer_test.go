@@ -10,6 +10,7 @@ import (
 
 	pb "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/ent/schema"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 )
@@ -326,6 +327,10 @@ func (*errorListMaterializationClient) GetMaterializationsWithDependency(ctx con
 	return nil, errors.New("some list materializations error")
 }
 
+func (*errorListMaterializationClient) GetMaterializationsBySourceType(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType) ([]*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
 func (*errorListMaterializationClient) ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error) {
 	panic("unimplemented")
 }
@@ -358,6 +363,10 @@ func (*emptyListMaterializationClient) GetMaterializationByName(ctx context.Cont
 
 func (*emptyListMaterializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	return []*ent.Materialization{}, nil
+}
+
+func (*emptyListMaterializationClient) GetMaterializationsBySourceType(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType) ([]*ent.Materialization, error) {
+	panic("unimplemented")
 }
 
 func (*emptyListMaterializationClient) ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error) {
@@ -401,6 +410,11 @@ func (*singleListMaterializationClient) GetMaterializationsWithDependency(ctx co
 		},
 	}, nil
 }
+
+func (*singleListMaterializationClient) GetMaterializationsBySourceType(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType) ([]*ent.Materialization, error) {
+	panic("unimplemented")
+}
+
 
 func (*singleListMaterializationClient) ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error) {
 	return nil, errors.New("some list materializations error")

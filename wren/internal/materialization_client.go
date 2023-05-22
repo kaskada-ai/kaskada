@@ -180,6 +180,20 @@ func (c *materializationClient) GetMaterializationsWithDependency(ctx context.Co
 	return materializations, nil
 }
 
+func (c *materializationClient) GetMaterializationsBySourceType(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType) ([]*ent.Materialization, error) {
+	subLogger := log.Ctx(ctx).With().
+		Str("method", "materializationClient.GetMaterializationsBySourceType").
+		Str("source_type", string(sourceType)).
+		Logger()
+
+	materializations, err := owner.QueryMaterializations().Where(materialization.SourceTypeEQ(sourceType)).All(ctx)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue listing materializations")
+		return nil, err
+	}
+	return materializations, nil
+}
+
 func (c *materializationClient) ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error) {
 	subLogger := log.Ctx(ctx).With().
 		Str("method", "materializationClient.ListMaterializations").

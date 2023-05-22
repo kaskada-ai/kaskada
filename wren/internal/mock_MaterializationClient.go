@@ -6,6 +6,8 @@ import (
 	context "context"
 
 	ent "github.com/kaskada-ai/kaskada/wren/ent"
+	materialization "github.com/kaskada-ai/kaskada/wren/ent/materialization"
+
 	mock "github.com/stretchr/testify/mock"
 
 	schema "github.com/kaskada-ai/kaskada/wren/ent/schema"
@@ -294,6 +296,62 @@ func (_c *MockMaterializationClient_GetMaterializationByName_Call) RunAndReturn(
 	return _c
 }
 
+// GetMaterializationsBySourceType provides a mock function with given fields: ctx, owner, sourceType
+func (_m *MockMaterializationClient) GetMaterializationsBySourceType(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType) ([]*ent.Materialization, error) {
+	ret := _m.Called(ctx, owner, sourceType)
+
+	var r0 []*ent.Materialization
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *ent.Owner, materialization.SourceType) ([]*ent.Materialization, error)); ok {
+		return rf(ctx, owner, sourceType)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *ent.Owner, materialization.SourceType) []*ent.Materialization); ok {
+		r0 = rf(ctx, owner, sourceType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Materialization)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *ent.Owner, materialization.SourceType) error); ok {
+		r1 = rf(ctx, owner, sourceType)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockMaterializationClient_GetMaterializationsBySourceType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMaterializationsBySourceType'
+type MockMaterializationClient_GetMaterializationsBySourceType_Call struct {
+	*mock.Call
+}
+
+// GetMaterializationsBySourceType is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner *ent.Owner
+//   - sourceType materialization.SourceType
+func (_e *MockMaterializationClient_Expecter) GetMaterializationsBySourceType(ctx interface{}, owner interface{}, sourceType interface{}) *MockMaterializationClient_GetMaterializationsBySourceType_Call {
+	return &MockMaterializationClient_GetMaterializationsBySourceType_Call{Call: _e.mock.On("GetMaterializationsBySourceType", ctx, owner, sourceType)}
+}
+
+func (_c *MockMaterializationClient_GetMaterializationsBySourceType_Call) Run(run func(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType)) *MockMaterializationClient_GetMaterializationsBySourceType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*ent.Owner), args[2].(materialization.SourceType))
+	})
+	return _c
+}
+
+func (_c *MockMaterializationClient_GetMaterializationsBySourceType_Call) Return(_a0 []*ent.Materialization, _a1 error) *MockMaterializationClient_GetMaterializationsBySourceType_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockMaterializationClient_GetMaterializationsBySourceType_Call) RunAndReturn(run func(context.Context, *ent.Owner, materialization.SourceType) ([]*ent.Materialization, error)) *MockMaterializationClient_GetMaterializationsBySourceType_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetMaterializationsWithDependency provides a mock function with given fields: ctx, owner, name, dependencyType
 func (_m *MockMaterializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	ret := _m.Called(ctx, owner, name, dependencyType)
@@ -409,17 +467,17 @@ func (_c *MockMaterializationClient_ListMaterializations_Call) RunAndReturn(run 
 	return _c
 }
 
-// UpdateDataVersion provides a mock function with given fields: ctx, materialization, newDataVersion
-func (_m *MockMaterializationClient) UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
-	ret := _m.Called(ctx, materialization, newDataVersion)
+// UpdateDataVersion provides a mock function with given fields: ctx, _a1, newDataVersion
+func (_m *MockMaterializationClient) UpdateDataVersion(ctx context.Context, _a1 *ent.Materialization, newDataVersion int64) (*ent.Materialization, error) {
+	ret := _m.Called(ctx, _a1, newDataVersion)
 
 	var r0 *ent.Materialization
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, *ent.Materialization, int64) (*ent.Materialization, error)); ok {
-		return rf(ctx, materialization, newDataVersion)
+		return rf(ctx, _a1, newDataVersion)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, *ent.Materialization, int64) *ent.Materialization); ok {
-		r0 = rf(ctx, materialization, newDataVersion)
+		r0 = rf(ctx, _a1, newDataVersion)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Materialization)
@@ -427,7 +485,7 @@ func (_m *MockMaterializationClient) UpdateDataVersion(ctx context.Context, mate
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, *ent.Materialization, int64) error); ok {
-		r1 = rf(ctx, materialization, newDataVersion)
+		r1 = rf(ctx, _a1, newDataVersion)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -442,13 +500,13 @@ type MockMaterializationClient_UpdateDataVersion_Call struct {
 
 // UpdateDataVersion is a helper method to define mock.On call
 //   - ctx context.Context
-//   - materialization *ent.Materialization
+//   - _a1 *ent.Materialization
 //   - newDataVersion int64
-func (_e *MockMaterializationClient_Expecter) UpdateDataVersion(ctx interface{}, materialization interface{}, newDataVersion interface{}) *MockMaterializationClient_UpdateDataVersion_Call {
-	return &MockMaterializationClient_UpdateDataVersion_Call{Call: _e.mock.On("UpdateDataVersion", ctx, materialization, newDataVersion)}
+func (_e *MockMaterializationClient_Expecter) UpdateDataVersion(ctx interface{}, _a1 interface{}, newDataVersion interface{}) *MockMaterializationClient_UpdateDataVersion_Call {
+	return &MockMaterializationClient_UpdateDataVersion_Call{Call: _e.mock.On("UpdateDataVersion", ctx, _a1, newDataVersion)}
 }
 
-func (_c *MockMaterializationClient_UpdateDataVersion_Call) Run(run func(ctx context.Context, materialization *ent.Materialization, newDataVersion int64)) *MockMaterializationClient_UpdateDataVersion_Call {
+func (_c *MockMaterializationClient_UpdateDataVersion_Call) Run(run func(ctx context.Context, _a1 *ent.Materialization, newDataVersion int64)) *MockMaterializationClient_UpdateDataVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(*ent.Materialization), args[2].(int64))
 	})
