@@ -55,7 +55,7 @@ type Manager struct {
 }
 
 // NewManager creates a new compute manager
-func NewManager(errGroup *errgroup.Group, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) *Manager {
+func NewManager(errGroup *errgroup.Group, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) ComputeManager {
 	return &Manager{
 		computeClients:        computeClients,
 		errGroup:              errGroup,
@@ -361,30 +361,6 @@ func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compi
 	}
 
 	return &compileResponse, err
-}
-
-func (m *Manager) GetDataToken(ctx context.Context, owner *ent.Owner, dataTokenId string) (*ent.DataToken, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetDataToken").Logger()
-	if dataTokenId == "" {
-		dataToken, err := m.dataTokenClient.GetCurrentDataToken(ctx, owner)
-		if err != nil {
-			subLogger.Error().Err(err).Msg("issue getting current data_token")
-			return nil, err
-		}
-		return dataToken, nil
-	} else {
-		id, err := uuid.Parse(dataTokenId)
-		if err != nil {
-			return nil, customerrors.NewInvalidArgumentError("data_token")
-		} else {
-			dataToken, err := m.dataTokenClient.GetDataToken(ctx, owner, id)
-			if err != nil {
-				subLogger.Error().Err(err).Msg("issue getting data_token")
-				return nil, err
-			}
-			return dataToken, nil
-		}
-	}
 }
 
 func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {

@@ -31,17 +31,17 @@ type materializationService struct {
 	kaskadaViewClient     internal.KaskadaViewClient
 	dataTokenClient       internal.DataTokenClient
 	materializationClient internal.MaterializationClient
-	computeManager        *compute.Manager
+	computeManager        compute.ComputeManager
 }
 
 // NewMaterializationService creates a new materialization service
-func NewMaterializationService(computeManager *compute.Manager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
+func NewMaterializationService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
 	return &materializationService{
 		kaskadaTableClient:    *kaskadaTableClient,
 		kaskadaViewClient:     *kaskadaViewClient,
 		dataTokenClient:       *dataTokenClient,
 		materializationClient: *materializationClient,
-		computeManager:        computeManager,
+		computeManager:        *computeManager,
 	}
 }
 

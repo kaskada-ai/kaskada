@@ -25,15 +25,15 @@ import (
 type queryV2Service struct {
 	apiv2alpha.UnimplementedQueryServiceServer
 
-	computeManager     *compute.Manager
+	computeManager     compute.ComputeManager
 	dataTokenClient    internal.DataTokenClient
 	kaskadaQueryClient internal.KaskadaQueryClient
 }
 
 // NewQueryV2Service creates a new query service
-func NewQueryV2Service(computeManager *compute.Manager, dataTokenClient *internal.DataTokenClient, kaskadaQueryClient *internal.KaskadaQueryClient) apiv2alpha.QueryServiceServer {
+func NewQueryV2Service(computeManager *compute.ComputeManager, dataTokenClient *internal.DataTokenClient, kaskadaQueryClient *internal.KaskadaQueryClient) apiv2alpha.QueryServiceServer {
 	return &queryV2Service{
-		computeManager:     computeManager,
+		computeManager:     *computeManager,
 		dataTokenClient:    *dataTokenClient,
 		kaskadaQueryClient: *kaskadaQueryClient,
 	}
