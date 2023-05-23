@@ -500,7 +500,7 @@ mod tests {
         let prepared2 = stream.next().await.unwrap().unwrap();
         let prepared3 = stream.next().await.unwrap().unwrap().unwrap();
 
-        // Can't produce single row
+        // Can't produce row due to watermark not advancing past the row
         assert!(prepared1.is_none());
         // contained late data, so nothing to produce
         assert!(prepared2.is_none());

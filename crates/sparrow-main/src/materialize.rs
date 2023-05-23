@@ -98,12 +98,14 @@ impl MaterializeCommand {
         .await
         .change_context(Error::Compilation)?;
 
-        let diagnostics = compile_result.fenl_diagnostics.unwrap_or_default();
         #[allow(clippy::print_stdout)]
         let plan = if let Some(plan) = compile_result.plan {
+            let diagnostics = compile_result.fenl_diagnostics.unwrap_or_default();
             println!("{diagnostics}");
             plan
         } else {
+            tracing::debug!("Compile result: {:?}", &compile_result);
+            let diagnostics = compile_result.fenl_diagnostics.unwrap_or_default();
             error_stack::bail!(Error::InvalidQuery(diagnostics));
         };
 
