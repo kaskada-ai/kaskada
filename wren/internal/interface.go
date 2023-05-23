@@ -81,6 +81,7 @@ type MaterializationClient interface {
 	CreateMaterialization(ctx context.Context, owner *ent.Owner, newMaterialization *ent.Materialization, dependencies []*ent.MaterializationDependency) (*ent.Materialization, error)
 	DeleteMaterialization(ctx context.Context, owner *ent.Owner, view *ent.Materialization) error
 	GetAllMaterializations(ctx context.Context, owner *ent.Owner) ([]*ent.Materialization, error)
+	GetAllMaterializationsBySourceType(ctx context.Context, sourceType materialization.SourceType) ([]*ent.Materialization, error)
 	GetMaterialization(ctx context.Context, owner *ent.Owner, id uuid.UUID) (*ent.Materialization, error)
 	GetMaterializationByName(ctx context.Context, owner *ent.Owner, name string) (*ent.Materialization, error)
 	GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error)

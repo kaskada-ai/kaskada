@@ -347,6 +347,18 @@ func main() {
 		return nil
 	})
 
+	// materialization reconciliation loop
+	g.Go(func() error {
+		for {
+			time.Sleep(5 * time.Second)
+
+			err := computeManager.ReconcileMaterialzations(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	})
+
 	// wait until shutdown signal occurs
 	select {
 	case <-interrupt:

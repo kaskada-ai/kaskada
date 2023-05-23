@@ -187,7 +187,21 @@ func (c *materializationClient) GetMaterializationsBySourceType(ctx context.Cont
 		Str("source_type", string(sourceType)).
 		Logger()
 
-	materializations, err := owner.QueryMaterializations().Where(materialization.SourceTypeEQ(sourceType)).All(ctx)
+	materializations, err := owner.QueryMaterializations().Where(materialization.SourceTypeEQ(sourceType)).WithOwner().All(ctx)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue listing materializations")
+		return nil, err
+	}
+	return materializations, nil
+}
+
+func (c *materializationClient) GetAllMaterializationsBySourceType(ctx context.Context, sourceType materialization.SourceType) ([]*ent.Materialization, error) {
+	subLogger := log.Ctx(ctx).With().
+		Str("method", "materializationClient.GetAllMaterializationsBySourceType").
+		Str("source_type", string(sourceType)).
+		Logger()
+
+	materializations, err := c.entClient.Materialization.Query().Where(materialization.SourceTypeEQ(sourceType)).All(ctx)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue listing materializations")
 		return nil, err

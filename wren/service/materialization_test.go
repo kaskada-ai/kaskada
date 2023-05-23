@@ -225,7 +225,6 @@ var _ = Describe("MaterializationService", func() {
 					FreeNames:       freeNames,
 				}
 				mockComputeManager.EXPECT().CompileQuery(mock.Anything, owner, expression, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(expectedCompileResponse, nil)
-				mockComputeManager.EXPECT().RunMaterializations(mock.Anything, owner)
 
 				mockKaskadaTableClient := internal.NewMockKaskadaTableClient(GinkgoT())
 				tablesResponse := map[string]*ent.KaskadaTable{
@@ -260,6 +259,8 @@ var _ = Describe("MaterializationService", func() {
 
 				mockMaterializationClient.EXPECT().CreateMaterialization(mock.Anything, owner, mock.Anything, mock.Anything).Return(newMaterializationResponse, nil)
 				mockMaterializationClient.EXPECT().GetMaterialization(mock.Anything, owner, newMaterializationResponse.ID).Return(newMaterializationResponse, nil)
+
+				mockComputeManager.EXPECT().StartMaterialization(mock.Anything, owner, newMaterializationResponse.ID.String(), expectedCompileResponse, objectStoreDestination).Return(nil)
 
 				mockDataTokenClient := internal.NewMockDataTokenClient(GinkgoT())
 				dataTokenFromVersionResponse := &ent.DataToken{ID: uuid.New()}

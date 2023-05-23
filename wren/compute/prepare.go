@@ -188,12 +188,6 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		}
 		subLogger.Debug().Interface("response", prepareRes).Msg("received prepare response")
 
-		for _, preparedFile := range prepareRes.PreparedFiles {
-			preparedFile.MetadataPath = preparedFile.MetadataPath
-			preparedFile.Path = preparedFile.Path
-			subLogger.Debug().Interface("prepared_file", preparedFile).Msg("these paths should be URIs")
-		}
-
 		err = m.prepareJobClient.AddFilesToPrepareJob(ctx, prepareJob, prepareRes.PreparedFiles, kaskadaFile)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue adding prepared_files to prepare_job")
