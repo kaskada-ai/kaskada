@@ -14,6 +14,7 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/compute"
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/ent/schema"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 )
@@ -153,13 +154,20 @@ func (s *materializationService) CreateMaterialization(ctx context.Context, requ
 }
 
 func (s *materializationService) createMaterialization(ctx context.Context, owner *ent.Owner, request *v1alpha.CreateMaterializationRequest) (*v1alpha.CreateMaterializationResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
+	if request.Materialization == nil {
+		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization definition")
+	}
+
+	if request.Materialization.Expression == "" {
+		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization expression")
+	}
 
 	if request.Materialization.Destination == nil {
 		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization destination")
 	}
 
 	isExperimental := false
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
 	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.Materialization.Expression, request.Materialization.WithViews, false, isExperimental, request.Materialization.Slice, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling materialization")
@@ -180,6 +188,27 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	if err != nil {
 		return nil, err
 	}
+
+
+	matType := materialization.SourceTypeUnspecified
+	for _, table := range tableMap {
+		var newMatType materialization.SourceType
+		switch table.Source.Source.(type) {
+		case *v1alpha.Source_Kaskada:
+			newMatType = materialization.SourceTypeFiles
+		case *v1alpha.Source_Pulsar:
+			newMatType = materialization.SourceTypeStreams
+		default:
+			log.Error().Msgf("unknown source type %T", table.Source.Source)
+			return nil, customerrors.NewInternalError("unknown table source type")
+		}
+		if matType == materialization.SourceTypeUnspecified {
+			matType = newMatType
+		} else if matType != newMatType {
+			return nil, customerrors.NewInvalidArgumentErrorWithCustomText("cannot materialize tables from different source types")
+		}
+	}
+
 	viewMap, err := s.kaskadaViewClient.GetKaskadaViewsFromNames(ctx, owner, compileResp.FreeNames)
 	if err != nil {
 		return nil, err
