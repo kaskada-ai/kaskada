@@ -1,28 +1,4 @@
 import platform
-import socket
-import subprocess
-from contextlib import closing
-from pathlib import Path
-from typing import List
-
-
-def run_subprocess(cmd: List[str], stderr: Path, stdout: Path):
-    return subprocess.Popen(
-        cmd,
-        stderr=open(stderr, "w", encoding="utf-8"),
-        stdout=open(stdout, "w", encoding="utf-8"),
-    )
-
-
-def check_socket(endpoint: str) -> bool:
-    parse = endpoint.split(":")
-    if len(parse) != 2:
-        raise ValueError("endpoint is not formatted correctly. host:port")
-
-    host = parse[0]
-    port = int(parse[1])
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        return sock.connect_ex((host, port)) == 0
 
 
 def get_platform_details() -> str:

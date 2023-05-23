@@ -1,18 +1,30 @@
 import logging
 import os
-import sys
 import time
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
-from subprocess import Popen
 from typing import Any, Dict, Optional, Tuple
 
 import kaskada.client
-from kaskada.api import api_utils, release
+from kaskada.api import release
+from kaskada.api.local_session.local_service import KaskadaLocalService
+from kaskada.api.local_session.local_session_keep_alive import LocalSessionKeepAlive
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+KASKADA_PATH_ENV = "KASKADA_PATH"
+KASKADA_PATH_DEFAULT = "~/.cache/kaskada"
+KASKADA_LOG_PATH_DEFAULT = "logs"
+KASKADA_LOG_PATH_ENV = "KASKADA_LOG_PATH"
+KASKADA_BIN_PATH_DEFAULT = "bin"
+KASKADA_BIN_PATH_ENV = "KASKADA_BIN_PATH"
+
+KASKADA_MANAGER_BIN_NAME_DEFAULT = "kaskada-manager"
+KASKADA_ENGINE_BIN_NAME_DEFAULT = "kaskada-engine"
+
+KASKADA_DISABLE_DOWNLOAD_ENV = "KASKADA_DISABLE_DOWNLOAD"
 
 
 class Session:
@@ -21,47 +33,84 @@ class Session:
         endpoint: str,
         is_secure: bool,
         client_id: Optional[str] = None,
-        manager_process: Optional[Popen] = None,
-        engine_process: Optional[Popen] = None,
+        client_factory: Optional[kaskada.client.ClientFactory] = None,
     ) -> None:
         self._endpoint = endpoint
         self._is_secure = is_secure
         self._client_id = client_id
-        self._client = self.connect()
-        self._manager_process = manager_process
-        self._engine_process = engine_process
-
-    def __del__(self):
-        if self._manager_process is not None:
-            logger.info(
-                "Stopping Kaskada Manager service"
-            ) if logger is not None else None
-            self._manager_process.kill()
-
-        if self._engine_process is not None:
-            logger.info(
-                "Stopping Kaskada Engine service"
-            ) if logger is not None else None
-            self._engine_process.kill()
-
-    def connect(self):
-        attempt = 0
-        is_valid_session = False
-        while attempt < 3 and not is_valid_session:
-            logger.debug(f"Attempting (try #{attempt}) to connect to {self._endpoint}")
-            if api_utils.check_socket(self._endpoint):
-                logger.info(f"Successfully connected to session.")
-                is_valid_session = True
-            attempt += 1
-            # Sleep with exponential backoff
-            time.sleep(1.5**attempt)
-        if is_valid_session == False:
-            raise ConnectionError(
-                "unable to connect to Manager or Engine after {} attempts".format(
-                    attempt
-                )
+        self.client: Optional[kaskada.client.Client] = None
+        if client_factory is None:
+            self.client_factory = kaskada.client.ClientFactory(
+                self._client_id, self._endpoint, self._is_secure
             )
-        return kaskada.client.init(self._client_id, self._endpoint, self._is_secure)
+        else:
+            self.client_factory = client_factory
+
+    def stop(self):
+        kaskada.client.reset()
+        global KASKADA_SESSION
+        KASKADA_SESSION = None
+
+    def connect(self) -> kaskada.client.Client:
+        self.client = self.client_factory.get_client()
+        assert self.client is not None
+        kaskada.client.set_default_client(self.client)
+        return self.client
+
+
+class LocalSession(Session):
+    """An extension of a kaskada.api.Session that is executed locally. The local session is kept alive by using the LocalSessionKeepAlive."""
+
+    keep_alive_watcher: Optional[LocalSessionKeepAlive] = None
+
+    def __init__(
+        self,
+        endpoint: str,
+        is_secure: bool,
+        manager_service: KaskadaLocalService,
+        engine_service: KaskadaLocalService,
+        client_id: Optional[str] = None,
+        should_keep_alive: bool = True,
+    ):
+        """Instantiates a LocalSession.
+
+        Args:
+            endpoint (str): The endpoint of the manager service
+            is_secure (bool): True to use TLS or False to use an insecure connection
+            manager_service (KaskadaLocalService): The manager service resource
+            engine_service (KaskadaLocalService): The engine service resource
+            client_id (Optional[str], optional): A custom client ID. Defaults to None.
+        """
+        super().__init__(endpoint, is_secure, client_id)
+        self.manager_service = manager_service
+        self.engine_service = engine_service
+        self.should_keep_alive = should_keep_alive
+
+    def start(self):
+        """Starts the local session by calling start on all services and connect on the client."""
+        self.manager_service.start()
+        self.engine_service.start()
+        client = self.connect()
+        self.keep_alive_watcher = LocalSessionKeepAlive(
+            self.manager_service,
+            self.engine_service,
+            client,
+            should_check=self.should_keep_alive,
+        )
+        self.keep_alive_watcher.start()
+
+    def stop(self):
+        """Stops the local session by calling stop on all services and stops the keep alive watcher."""
+        self.keep_alive_watcher.stop()
+        self.keep_alive_watcher.join()
+        self.client.disconnect()
+        super().stop()
+        self.manager_service.stop()
+        self.engine_service.stop()
+        logger.info("Local session successfully stopped.")
+
+
+KASKADA_SESSION: Optional[LocalSession] = None
 
 
 class Builder(ABC):
@@ -92,44 +141,26 @@ class Builder(ABC):
         return self
 
 
-KASKADA_ENDPOINT_DEFAULT = "localhost:50051"
-KASKADA_IS_SECURE_DEFAULT = False
-
-
 class LocalBuilder(Builder):
-    KASKADA_PATH_ENV = "KASKADA_PATH"
-    KASKADA_PATH_DEFAULT = "~/.cache/kaskada"
-    KASKADA_LOG_PATH_DEFAULT = "logs"
-    KASKADA_LOG_PATH_ENV = "KASKADA_LOG_PATH"
-    KASKADA_BIN_PATH_DEFAULT = "bin"
-    KASKADA_BIN_PATH_ENV = "KASKADA_BIN_PATH"
 
-    KASKADA_MANAGER_BIN_NAME_DEFAULT = "kaskada-manager"
-    KASKADA_ENGINE_BIN_NAME_DEFAULT = "kaskada-engine"
-
-    KASKADA_DISABLE_DOWNLOAD_ENV = "KASKADA_DISABLE_DOWNLOAD"
+    manager_configs: Dict[str, Any]
+    engine_configs: Dict[str, Any]
 
     def __init__(
         self,
-        endpoint: str = KASKADA_ENDPOINT_DEFAULT,
-        is_secure: bool = KASKADA_IS_SECURE_DEFAULT,
+        endpoint: str = kaskada.client.KASKADA_DEFAULT_ENDPOINT,
+        is_secure: bool = kaskada.client.KASKADA_IS_SECURE,
     ) -> None:
         super().__init__()
-        self._path: str = os.getenv(
-            LocalBuilder.KASKADA_PATH_ENV, LocalBuilder.KASKADA_PATH_DEFAULT
-        )
-        self._bin_path: str = os.getenv(
-            LocalBuilder.KASKADA_BIN_PATH_ENV, LocalBuilder.KASKADA_BIN_PATH_DEFAULT
-        )
-        self._log_path: str = os.getenv(
-            LocalBuilder.KASKADA_LOG_PATH_ENV, LocalBuilder.KASKADA_LOG_PATH_DEFAULT
-        )
+        self.manager_configs = {"-no-color": "1"}
+        self._path: str = os.getenv(KASKADA_PATH_ENV, KASKADA_PATH_DEFAULT)
+        self._bin_path: str = os.getenv(KASKADA_BIN_PATH_ENV, KASKADA_BIN_PATH_DEFAULT)
+        self._log_path: str = os.getenv(KASKADA_LOG_PATH_ENV, KASKADA_LOG_PATH_DEFAULT)
         self.endpoint(endpoint, is_secure)
-        self._download = (
-            os.getenv(LocalBuilder.KASKADA_DISABLE_DOWNLOAD_ENV, "false") != "true"
-        )
-        self._manager_configs: Dict[str, Any] = {"-no-color": "1"}
-        self._engine_configs: Dict[str, Any] = {"--log-no-color": "1"}
+        self._download = os.getenv(KASKADA_DISABLE_DOWNLOAD_ENV, "false") != "true"
+        self.in_memory(False)
+        self.engine_configs: Dict[str, Any] = {"--log-no-color": "1"}
+        self.keep_alive(True)
 
     def path(self, path: str):
         self._path = path
@@ -147,25 +178,26 @@ class LocalBuilder(Builder):
         self._download = download
         return self
 
+    def keep_alive(self, keep_alive: bool):
+        self._keep_alive = keep_alive
+        return self
+
+    def in_memory(self, in_memory: bool):
+        self.manager_configs["-db-in-memory"] = "1" if in_memory else "0"
+        return self
+
+    def database_path(self, path: str):
+        self.manager_configs["-db-path"] = path
+        self.in_memory(False)
+        return self
+
     def manager_rest_port(self, port: int):
-        self._manager_configs["-rest-port"] = port
+        self.manager_configs["-rest-port"] = port
         return self
 
     def manager_grpc_port(self, port: int):
-        self._manager_configs["-grpc-port"] = port
+        self.manager_configs["-grpc-port"] = port
         return self
-
-    def __get_manager_configs_as_args(self):
-        configs = []
-        for key, value in self._manager_configs.items():
-            configs.append(f"{key}={value}")
-        return configs
-
-    def __get_engine_configs_as_args(self):
-        configs = []
-        for key, value in self._engine_configs.items():
-            configs.append(f"{key}={value}")
-        return configs
 
     def __get_log_path(self, file_name: str) -> Path:
         if self._path is None:
@@ -194,38 +226,31 @@ class LocalBuilder(Builder):
         bin_path.mkdir(parents=True, exist_ok=True)
         return bin_path
 
-    def __start(self):
+    def __get_local_services(self) -> Tuple[KaskadaLocalService, KaskadaLocalService]:
         manager_binary_path = (
-            self.__get_binary_path() / self.KASKADA_MANAGER_BIN_NAME_DEFAULT
+            self.__get_binary_path() / KASKADA_MANAGER_BIN_NAME_DEFAULT
         )
         manager_std_err, manager_std_out = self.__get_std_paths("manager")
-        engine_binary_path = (
-            self.__get_binary_path() / self.KASKADA_ENGINE_BIN_NAME_DEFAULT
-        )
+        engine_binary_path = self.__get_binary_path() / KASKADA_ENGINE_BIN_NAME_DEFAULT
         engine_std_err, engine_std_out = self.__get_std_paths("engine")
         engine_command = "serve"
-
-        manager_cmd = [str(manager_binary_path)] + self.__get_manager_configs_as_args()
-        logger.debug(f"Manager start command: {manager_cmd}")
-        engine_cmd = (
-            [str(engine_binary_path)]
-            + self.__get_engine_configs_as_args()
-            + [str(engine_command)]
+        manager_service = KaskadaLocalService(
+            "manager",
+            str(manager_binary_path),
+            "",
+            manager_std_err,
+            manager_std_out,
+            self.manager_configs,
         )
-        logger.debug(f"Engine start command: {engine_cmd}")
-        logger.info("Initializing manager process")
-        logger.info(f"Logging manager STDOUT to {manager_std_out.absolute()}")
-        logger.info(f"Logging manager STDERR to {manager_std_err.absolute()}")
-        manager_process = api_utils.run_subprocess(
-            manager_cmd, manager_std_err, manager_std_out
+        engine_service = KaskadaLocalService(
+            "engine",
+            str(engine_binary_path),
+            engine_command,
+            engine_std_err,
+            engine_std_out,
+            self.engine_configs,
         )
-        logger.info("Initializing engine process")
-        logger.info(f"Logging engine STDOUT to {engine_std_out.absolute()}")
-        logger.info(f"Logging engine STDERR to {engine_std_err.absolute()}")
-        engine_process = api_utils.run_subprocess(
-            engine_cmd, engine_std_err, engine_std_out
-        )
-        return (manager_process, engine_process)
+        return (manager_service, engine_service)
 
     def __download_latest_release(self):
         """Downloads the latest release version to the binary path."""
@@ -234,8 +259,8 @@ class LocalBuilder(Builder):
         download_path.mkdir(parents=True, exist_ok=True)
         local_release = client.download_latest_release(
             download_path,
-            self.KASKADA_MANAGER_BIN_NAME_DEFAULT,
-            self.KASKADA_ENGINE_BIN_NAME_DEFAULT,
+            KASKADA_MANAGER_BIN_NAME_DEFAULT,
+            KASKADA_ENGINE_BIN_NAME_DEFAULT,
         )
         logger.debug(f"Download Path: {local_release._download_path}")
         logger.debug(f"Manager Path: {local_release._manager_path}")
@@ -249,27 +274,45 @@ class LocalBuilder(Builder):
         os.chmod(local_release._manager_path, 0o755)
         os.chmod(local_release._engine_path, 0o755)
 
-    def build(self) -> Session:
+    def build(self) -> LocalSession:
         """Builds the local session. Starts by downloading the latest release and starting the local binaries.
 
         Returns:
-            Session: The local session object
+            LocalSession: The local session object
         """
-        if self._download:
-            self.__download_latest_release()
-        manager_process, engine_process = self.__start()
         if self._endpoint is None:
             raise ValueError("endpoint was not set")
         if self._is_secure is None:
             raise ValueError("is_secure was not set")
 
-        return Session(
+        global KASKADA_SESSION
+        if KASKADA_SESSION is not None and KASKADA_SESSION.client is not None:
+            logger.info("Detected an existing session.")
+            is_ready = KASKADA_SESSION.client.is_ready()
+            if is_ready:
+                logger.info(
+                    "Existing session is available and ready to accept requests. Reusing existing session."
+                )
+                return KASKADA_SESSION
+            else:
+                logger.warn(
+                    "Existing session is no longer available. Creating a new session."
+                )
+
+        if self._download:
+            self.__download_latest_release()
+
+        manager_process, engine_process = self.__get_local_services()
+        session = LocalSession(
             self._endpoint,
             self._is_secure,
+            manager_process,
+            engine_process,
             client_id=self._client_id,
-            manager_process=manager_process,
-            engine_process=engine_process,
         )
+        session.start()
+        KASKADA_SESSION = session
+        return session
 
 
 class RemoteBuilder(Builder):
