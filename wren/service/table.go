@@ -37,7 +37,7 @@ type TableService interface {
 type tableService struct {
 	v1alpha.UnimplementedTableServiceServer
 
-	computeManager     *compute.Manager
+	computeManager     compute.ComputeManager
 	kaskadaTableClient internal.KaskadaTableClient
 	objectStoreClient  client.ObjectStoreClient
 	tableStore         *store.TableStore
@@ -45,9 +45,9 @@ type tableService struct {
 }
 
 // NewTableService creates a new table service
-func NewTableService(computeManager *compute.Manager, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, tableStore *store.TableStore, dependencyAnalyzer *Analyzer) *tableService {
+func NewTableService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, tableStore *store.TableStore, dependencyAnalyzer *Analyzer) *tableService {
 	return &tableService{
-		computeManager:     computeManager,
+		computeManager:     *computeManager,
 		kaskadaTableClient: *kaskadaTableClient,
 		objectStoreClient:  *objectStoreClient,
 		tableStore:         tableStore,

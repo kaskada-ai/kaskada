@@ -29,16 +29,16 @@ type ViewService interface {
 
 type viewService struct {
 	pb.UnimplementedViewServiceServer
-	computeManager     *compute.Manager
+	computeManager     compute.ComputeManager
 	kaskadaTableClient internal.KaskadaTableClient
 	kaskadaViewClient  internal.KaskadaViewClient
 	dependencyAnalyzer Analyzer
 }
 
 // NewViewService creates a new view service
-func NewViewService(computeManager *compute.Manager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dependencyAnalyzer *Analyzer) *viewService {
+func NewViewService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dependencyAnalyzer *Analyzer) *viewService {
 	return &viewService{
-		computeManager:     computeManager,
+		computeManager:     *computeManager,
 		kaskadaTableClient: *kaskadaTableClient,
 		kaskadaViewClient:  *kaskadaViewClient,
 		dependencyAnalyzer: *dependencyAnalyzer,
