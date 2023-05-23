@@ -53,22 +53,25 @@ type Manager struct {
 	store                 client.ObjectStoreClient
 	tableStore            store.TableStore
 	tr                    trace.Tracer
+
+	runningMaterailizations map[string]struct{}
 }
 
 // NewManager creates a new compute manager
 func NewManager(errGroup *errgroup.Group, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) ComputeManager {
 	return &Manager{
-		computeClients:        computeClients,
-		errGroup:              errGroup,
-		dataTokenClient:       *dataTokenClient,
-		kaskadaTableClient:    *kaskadaTableClient,
-		kaskadaViewClient:     *kaskadaViewClient,
-		materializationClient: *materializationClient,
-		parallelizeConfig:     parallelizeConfig,
-		prepareJobClient:      prepareJobClient,
-		store:                 *objectStoreClient,
-		tableStore:            tableStore,
-		tr:                    otel.Tracer("ComputeManager"),
+		computeClients:          computeClients,
+		errGroup:                errGroup,
+		dataTokenClient:         *dataTokenClient,
+		kaskadaTableClient:      *kaskadaTableClient,
+		kaskadaViewClient:       *kaskadaViewClient,
+		materializationClient:   *materializationClient,
+		parallelizeConfig:       parallelizeConfig,
+		prepareJobClient:        prepareJobClient,
+		store:                   *objectStoreClient,
+		tableStore:              tableStore,
+		tr:                      otel.Tracer("ComputeManager"),
+		runningMaterailizations: map[string]struct{}{},
 	}
 }
 
