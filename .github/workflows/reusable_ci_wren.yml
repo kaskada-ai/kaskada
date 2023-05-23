@@ -68,6 +68,10 @@ jobs:
         run: go generate ./ent
         working-directory: wren
 
+      - name: Generate mocks
+        if: needs.wren_skip.outputs.should_skip != 'true'
+        run: make wren/generate-mocks
+
       - name: Copy NOTICE
         if: needs.wren_skip.outputs.should_skip != 'true'
         run: cp NOTICE ./wren/

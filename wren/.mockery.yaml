@@ -1,0 +1,14 @@
+with-expecter: True
+inpackage: True
+packages:
+  github.com/kaskada-ai/kaskada/wren/internal:
+    config:
+      dir: "{{.InterfaceDir}}"
+    interfaces:
+      DataTokenClient:
+      KaskadaQueryClient:
+      KaskadaTableClient:
+      KaskadaViewClient:
+      MaterializationClient:
+      OwnerClient:
+      PrepareJobClient:

@@ -12,6 +12,9 @@ sparrow-main/test-storage
 # ignore notice files copied to the wren folder during local builds
 wren/NOTICE
 
+# ingnore mocked golang files
+**/mock_*.go
+
 # Created by https://www.toptal.com/developers/gitignore/api/go,git,osx,rust,python,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,git,osx,rust,python,visualstudiocode
 
