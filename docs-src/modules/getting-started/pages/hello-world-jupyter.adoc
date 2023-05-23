@@ -4,7 +4,7 @@
 
 To use Kaskada within a Jupyter notebook you'll need to have the following pieces of software installed 
 
-. https://realpython.com/installing-python/[Python] (version 3.6 and above) 
+. https://realpython.com/installing-python/[Python] (version 3.8 and above) 
 . https://docs.jupyter.org/en/latest/install/notebook-classic.html[Jupyter] 
 
 Once you have both prerequisites installed ensure that you can run them. 
@@ -98,6 +98,21 @@ The command will generate some output during the download, install and run proce
 ****
 ⭢ Read more about connecting to Kaskada in xref:ROOT:installing.adoc#using-kaskada-with-python[Installing]
 ****
+
+[NOTE]
+.Auto Recovery
+====
+Built into the local session, there are health check watchers that monitor the status of local services in case of failure or unavailability. If the services
+fail or are no longer available, the local session will attempt to automatically recover from failure. To disable this feature, use the `keep_alive(False)` builder argument.
+
+[source,python]
+----
+from kaskada.api.session import LocalBuilder
+
+session = LocalBuilder().keep_alive(False).build()
+----
+
+====
 
 Let's now create a small table and write a simple query to see that everything is working correctly with our setup. 
 
