@@ -30,6 +30,7 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
 	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/kaskada-ai/kaskada/wren/store"
 	"github.com/kaskada-ai/kaskada/wren/utils"
@@ -511,7 +512,7 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		return nil
 	}
 
-	materializations, err := m.materializationClient.GetAllMaterializations(ctx, owner)
+	materializations, err := m.materializationClient.GetMaterializationsBySourceType(ctx, owner, materialization.SourceTypeFiles)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("error listing materializations")
 		return nil
