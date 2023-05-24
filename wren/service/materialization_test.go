@@ -88,18 +88,23 @@ var _ = Describe("MaterializationService", func() {
 			})
 		})
 
-		Context("the compiled query includes both pulsar and object store sources", func() {
+		Context("the compiled materialization includes both pulsar and object store sources", func() {
 			It("should throw error", func() {
 				freeNames := []string{"file_backed_source", "pulsar_backed_source"}
 
-				mockComputeManager := compute.NewMockComputeManager(GinkgoT())
-				expectedCompileResponse := v1alpha.CompileResponse{
+				mockMaterializationManager := compute.NewMockMaterializationManager(GinkgoT())
+				newMaterialization := &v1alpha.Materialization{
+					Expression:  "nachos",
+					Destination: pulsarDestination,
+				}
+
+				expectedCompileResponse := &v1alpha.CompileResponse{
 					MissingNames:    []string{},
 					FenlDiagnostics: nil,
 					Plan:            &v1alpha.ComputePlan{},
 					FreeNames:       freeNames,
 				}
-				mockComputeManager.EXPECT().CompileQuery(mock.Anything, owner, "nachos", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&expectedCompileResponse, nil)
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization).Return(expectedCompileResponse, nil, nil)
 
 				mockKaskadaTableClient := internal.NewMockKaskadaTableClient(GinkgoT())
 				tablesResponse := map[string]*ent.KaskadaTable{
@@ -117,15 +122,13 @@ var _ = Describe("MaterializationService", func() {
 
 				materializationService := &materializationService{
 					UnimplementedMaterializationServiceServer: v1alpha.UnimplementedMaterializationServiceServer{},
-					computeManager:     mockComputeManager,
-					kaskadaTableClient: mockKaskadaTableClient,
+					computeManager:         nil,
+					materializationManager: mockMaterializationManager,
+					kaskadaTableClient:     mockKaskadaTableClient,
 				}
 
 				response, err := materializationService.createMaterialization(context.Background(), owner, &v1alpha.CreateMaterializationRequest{
-					Materialization: &v1alpha.Materialization{
-						Expression:  "nachos",
-						Destination: pulsarDestination,
-					},
+					Materialization: newMaterialization,
 				})
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).Should(Equal("cannot materialize tables from different source types"))
@@ -139,14 +142,22 @@ var _ = Describe("MaterializationService", func() {
 				expression := "file_backed_to_pulsar"
 				materializationName := "NAME_" + expression
 
-				mockComputeManager := compute.NewMockComputeManager(GinkgoT())
+				newMaterialization := &v1alpha.Materialization{
+					MaterializationName: materializationName,
+					Expression:          expression,
+					Destination:         pulsarDestination,
+				}
+
+				mockMaterializationManager := compute.NewMockMaterializationManager(GinkgoT())
 				expectedCompileResponse := &v1alpha.CompileResponse{
 					MissingNames:    []string{},
 					FenlDiagnostics: nil,
 					Plan:            &v1alpha.ComputePlan{},
 					FreeNames:       freeNames,
 				}
-				mockComputeManager.EXPECT().CompileQuery(mock.Anything, owner, expression, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(expectedCompileResponse, nil)
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization).Return(expectedCompileResponse, nil, nil)
+
+				mockComputeManager := compute.NewMockComputeManager(GinkgoT())
 				mockComputeManager.EXPECT().RunMaterializations(mock.Anything, owner)
 
 				mockKaskadaTableClient := internal.NewMockKaskadaTableClient(GinkgoT())
@@ -189,19 +200,16 @@ var _ = Describe("MaterializationService", func() {
 
 				materializationService := &materializationService{
 					UnimplementedMaterializationServiceServer: v1alpha.UnimplementedMaterializationServiceServer{},
-					computeManager:        mockComputeManager,
-					dataTokenClient:       mockDataTokenClient,
-					materializationClient: mockMaterializationClient,
-					kaskadaTableClient:    mockKaskadaTableClient,
-					kaskadaViewClient:     mockKaskadaViewClient,
+					computeManager:         mockComputeManager,
+					materializationManager: mockMaterializationManager,
+					dataTokenClient:        mockDataTokenClient,
+					materializationClient:  mockMaterializationClient,
+					kaskadaTableClient:     mockKaskadaTableClient,
+					kaskadaViewClient:      mockKaskadaViewClient,
 				}
 
 				response, err := materializationService.createMaterialization(context.Background(), owner, &v1alpha.CreateMaterializationRequest{
-					Materialization: &v1alpha.Materialization{
-						MaterializationName: materializationName,
-						Expression:          expression,
-						Destination:         pulsarDestination,
-					},
+					Materialization: newMaterialization,
 				})
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(response).ShouldNot(BeNil())
@@ -217,14 +225,20 @@ var _ = Describe("MaterializationService", func() {
 				expression := "puslar_backed_to_object_store"
 				materializationName := "NAME_" + expression
 
-				mockComputeManager := compute.NewMockComputeManager(GinkgoT())
+				newMaterialization := &v1alpha.Materialization{
+					MaterializationName: materializationName,
+					Expression:          expression,
+					Destination:         pulsarDestination,
+				}
+
+				mockMaterializationManager := compute.NewMockMaterializationManager(GinkgoT())
 				expectedCompileResponse := &v1alpha.CompileResponse{
 					MissingNames:    []string{},
 					FenlDiagnostics: nil,
 					Plan:            &v1alpha.ComputePlan{},
 					FreeNames:       freeNames,
 				}
-				mockComputeManager.EXPECT().CompileQuery(mock.Anything, owner, expression, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(expectedCompileResponse, nil)
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization).Return(expectedCompileResponse, nil, nil)
 
 				mockKaskadaTableClient := internal.NewMockKaskadaTableClient(GinkgoT())
 				tablesResponse := map[string]*ent.KaskadaTable{
@@ -260,7 +274,7 @@ var _ = Describe("MaterializationService", func() {
 				mockMaterializationClient.EXPECT().CreateMaterialization(mock.Anything, owner, mock.Anything, mock.Anything).Return(newMaterializationResponse, nil)
 				mockMaterializationClient.EXPECT().GetMaterialization(mock.Anything, owner, newMaterializationResponse.ID).Return(newMaterializationResponse, nil)
 
-				mockComputeManager.EXPECT().StartMaterialization(mock.Anything, owner, newMaterializationResponse.ID.String(), expectedCompileResponse, objectStoreDestination).Return(nil)
+				mockMaterializationManager.EXPECT().StartMaterialization(mock.Anything, owner, newMaterializationResponse.ID.String(), expectedCompileResponse, objectStoreDestination).Return(nil)
 
 				mockDataTokenClient := internal.NewMockDataTokenClient(GinkgoT())
 				dataTokenFromVersionResponse := &ent.DataToken{ID: uuid.New()}
@@ -268,19 +282,16 @@ var _ = Describe("MaterializationService", func() {
 
 				materializationService := &materializationService{
 					UnimplementedMaterializationServiceServer: v1alpha.UnimplementedMaterializationServiceServer{},
-					computeManager:        mockComputeManager,
-					dataTokenClient:       mockDataTokenClient,
-					materializationClient: mockMaterializationClient,
-					kaskadaTableClient:    mockKaskadaTableClient,
-					kaskadaViewClient:     mockKaskadaViewClient,
+					computeManager:         nil,
+					materializationManager: mockMaterializationManager,
+					dataTokenClient:        mockDataTokenClient,
+					materializationClient:  mockMaterializationClient,
+					kaskadaTableClient:     mockKaskadaTableClient,
+					kaskadaViewClient:      mockKaskadaViewClient,
 				}
 
 				response, err := materializationService.createMaterialization(context.Background(), owner, &v1alpha.CreateMaterializationRequest{
-					Materialization: &v1alpha.Materialization{
-						MaterializationName: materializationName,
-						Expression:          expression,
-						Destination:         pulsarDestination,
-					},
+					Materialization: newMaterialization,
 				})
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(response).ShouldNot(BeNil())

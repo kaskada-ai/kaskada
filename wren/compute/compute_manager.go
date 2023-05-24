@@ -8,8 +8,6 @@ import (
 	"math"
 	"path"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -18,13 +16,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	v2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
 	"github.com/kaskada-ai/kaskada/wren/auth"
 	"github.com/kaskada-ai/kaskada/wren/client"
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
@@ -41,330 +36,57 @@ const (
 	compileTimeoutSeconds = 10
 )
 
+type ComputeManager interface {
+	CompileManager
+
+	// execute related
+	GetOutputURI(owner *ent.Owner, planHash []byte) string
+	GetTablesForCompute(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken, slicePlans []*v1alpha.SlicePlan) (map[uuid.UUID]*internal.SliceTable, error)
+	InitiateQuery(queryContext *QueryContext) (client.ComputeServiceClient, v1alpha.ComputeService_ExecuteClient, error)
+	SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ComputeSnapshot)
+
+	// materialization related
+	RunMaterializations(ctx context.Context, owner *ent.Owner)
+
+	// metadata related
+	GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error)
+}
+
 type Manager struct {
+	CompileManager
+
 	computeClients        *client.ComputeClients
 	errGroup              *errgroup.Group
 	dataTokenClient       internal.DataTokenClient
 	kaskadaTableClient    internal.KaskadaTableClient
-	kaskadaViewClient     internal.KaskadaViewClient
 	materializationClient internal.MaterializationClient
 	prepareJobClient      internal.PrepareJobClient
 	parallelizeConfig     utils.ParallelizeConfig
 	store                 client.ObjectStoreClient
 	tableStore            store.TableStore
 	tr                    trace.Tracer
-
-	runningMaterailizations map[string]struct{}
 }
 
 // NewManager creates a new compute manager
-func NewManager(errGroup *errgroup.Group, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) ComputeManager {
+func NewManager(errGroup *errgroup.Group, compileManager *CompileManager, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, materializationClient *internal.MaterializationClient, prepareJobClient internal.PrepareJobClient, objectStoreClient *client.ObjectStoreClient, tableStore store.TableStore, parallelizeConfig utils.ParallelizeConfig) ComputeManager {
 	return &Manager{
-		computeClients:          computeClients,
-		errGroup:                errGroup,
-		dataTokenClient:         *dataTokenClient,
-		kaskadaTableClient:      *kaskadaTableClient,
-		kaskadaViewClient:       *kaskadaViewClient,
-		materializationClient:   *materializationClient,
-		parallelizeConfig:       parallelizeConfig,
-		prepareJobClient:        prepareJobClient,
-		store:                   *objectStoreClient,
-		tableStore:              tableStore,
-		tr:                      otel.Tracer("ComputeManager"),
-		runningMaterailizations: map[string]struct{}{},
+		CompileManager:        *compileManager,
+		computeClients:        computeClients,
+		errGroup:              errGroup,
+		dataTokenClient:       *dataTokenClient,
+		kaskadaTableClient:    *kaskadaTableClient,
+		materializationClient: *materializationClient,
+		parallelizeConfig:     parallelizeConfig,
+		prepareJobClient:      prepareJobClient,
+		store:                 *objectStoreClient,
+		tableStore:            tableStore,
+		tr:                    otel.Tracer("ComputeManager"),
 	}
 }
 
-func (m *Manager) CompileQuery(ctx context.Context, owner *ent.Owner, query string, requestViews []*v1alpha.WithView, isFormula bool, isExperimental bool, sliceRequest *v1alpha.SliceRequest, resultBehavior v1alpha.Query_ResultBehavior) (*v1alpha.CompileResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.CompileQuery").Logger()
-	formulas, err := m.getFormulas(ctx, owner, requestViews)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting formulas")
-		return nil, err
-	}
-
-	tables, err := m.getTablesForCompile(ctx, owner)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting tables for compile")
-		return nil, err
-	}
-
-	var perEntityBehavior v1alpha.PerEntityBehavior
-	switch resultBehavior {
-	case v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_UNSPECIFIED
-	case v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_ALL
-	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL
-	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
-	default:
-		subLogger.Error().Str("resultBehavior", resultBehavior.String()).Msg("unexpected resultBehavior")
-		return nil, fmt.Errorf("unexpected resultBehavior: %s", resultBehavior.String())
-	}
-
-	compileRequest := &v1alpha.CompileRequest{
-		Experimental: isExperimental,
-		FeatureSet: &v1alpha.FeatureSet{
-			Formulas: formulas,
-			Query:    query,
-		},
-		PerEntityBehavior: perEntityBehavior,
-		SliceRequest:      sliceRequest,
-		Tables:            tables,
-	}
-
-	if isFormula {
-		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_FORMULA
-	} else {
-		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE
-	}
-
-	queryClient := m.computeClients.ComputeServiceClient(ctx)
-	defer queryClient.Close()
-
-	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
-	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
-	defer compileTimeoutCancel()
-	compileResponse, err := queryClient.Compile(compileTimeoutCtx, compileRequest)
-	subLogger.Info().Err(err).Interface("response", compileResponse).Msg("received compile respone")
-
-	return compileResponse, err
-}
-
-// gets the set of passed views and system views available for a query
-func (m *Manager) GetFormulas(ctx context.Context, owner *ent.Owner, views *v2alpha.QueryViews) ([]*v1alpha.Formula, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetFormulas").Logger()
-	requestViews := []*v1alpha.WithView{}
-	for _, queryView := range views.Views {
-		requestViews = append(requestViews, &v1alpha.WithView{
-			Name:       queryView.ViewName,
-			Expression: queryView.Expression,
-		})
-	}
-
-	formulas, err := m.getFormulas(ctx, owner, requestViews)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting formulas")
-		return nil, err
-	}
-	return formulas, nil
-}
-
-// gets the actual set of views used in a compiled query
-func (m *Manager) GetUsedViews(formulas []*v1alpha.Formula, compileResponse *v1alpha.CompileResponse) *v2alpha.QueryViews {
-	formulaMap := make(map[string]string, len(formulas))
-
-	for _, formula := range formulas {
-		formulaMap[formula.Name] = formula.Formula
-	}
-
-	views := []*v2alpha.QueryView{}
-
-	for _, freeName := range compileResponse.FreeNames {
-		if formula, found := formulaMap[freeName]; found {
-			views = append(views, &v2alpha.QueryView{ViewName: freeName, Expression: formula})
-		}
-	}
-
-	return &v2alpha.QueryViews{Views: views}
-}
-
-func (m *Manager) CompileQueryV2(ctx context.Context, owner *ent.Owner, expression string, formulas []*v1alpha.Formula, config *v2alpha.QueryConfig) (*v1alpha.CompileResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.CompileQueryV2").Logger()
-
-	tables, err := m.getTablesForCompile(ctx, owner)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting tables for compile")
-		return nil, err
-	}
-
-	var perEntityBehavior v1alpha.PerEntityBehavior
-	switch config.ResultBehavior.ResultBehavior.(type) {
-	case *v2alpha.ResultBehavior_AllResults:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_ALL
-	case *v2alpha.ResultBehavior_FinalResults:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL
-	case *v2alpha.ResultBehavior_FinalResultsAtTime:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
-	default:
-		subLogger.Error().Str("resultBehavior", fmt.Sprintf("%T", config.ResultBehavior.ResultBehavior)).Msg("unexpected resultBehavior")
-		return nil, customerrors.NewInternalError("unexpected resultBehavior")
-	}
-
-	sliceRequest := &v1alpha.SliceRequest{}
-	if config.Slice != nil && config.Slice.Slice != nil {
-		switch s := config.Slice.Slice.(type) {
-		case *v1alpha.SliceRequest_EntityKeys:
-			sliceRequest.Slice = &v1alpha.SliceRequest_EntityKeys{
-				EntityKeys: &v1alpha.SliceRequest_EntityKeysSlice{
-					EntityKeys: s.EntityKeys.EntityKeys,
-				},
-			}
-		case *v1alpha.SliceRequest_Percent:
-			sliceRequest.Slice = &v1alpha.SliceRequest_Percent{
-				Percent: &v1alpha.SliceRequest_PercentSlice{
-					Percent: s.Percent.Percent,
-				},
-			}
-		default:
-			subLogger.Error().Str("sliceRequest", fmt.Sprintf("%T", config.Slice.Slice)).Msg("unexpected sliceRequest")
-			return nil, customerrors.NewInternalError("unexpected sliceRequest")
-		}
-	}
-
-	incrementalQueryExperiment := false
-	for _, experimentalFeature := range config.ExperimentalFeatures {
-		switch {
-		case strings.EqualFold("incremental", experimentalFeature):
-			incrementalQueryExperiment = true
-		}
-	}
-
-	compileRequest := &v1alpha.CompileRequest{
-		Experimental: incrementalQueryExperiment,
-		FeatureSet: &v1alpha.FeatureSet{
-			Formulas: formulas,
-			Query:    expression,
-		},
-		PerEntityBehavior: perEntityBehavior,
-		SliceRequest:      sliceRequest,
-		Tables:            tables,
-	}
-
-	isFormula := false
-
-	if isFormula {
-		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_FORMULA
-	} else {
-		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE
-	}
-
-	queryClient := m.computeClients.ComputeServiceClient(ctx)
-	defer queryClient.Close()
-
-	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
-	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
-	defer compileTimeoutCancel()
-	compileResponse, err := queryClient.Compile(compileTimeoutCtx, compileRequest)
-	subLogger.Info().Err(err).
-		Interface("fenl_diagnostics", compileResponse.FenlDiagnostics).
-		Bool("incremental_enabled", compileResponse.IncrementalEnabled).
-		Strs("free_names", compileResponse.FreeNames).
-		Strs("missing_names", compileResponse.MissingNames).
-		Interface("plan_hash", compileResponse.PlanHash).
-		Interface("result_type", compileResponse.ResultType).
-		Interface("slices", compileResponse.TableSlices).Msg("received compile response")
-
-	return compileResponse, err
-}
-
-type QueryRequest struct {
-	Query          string
-	RequestViews   []*v1alpha.WithView
-	SliceRequest   *v1alpha.SliceRequest
-	ResultBehavior v1alpha.Query_ResultBehavior
-}
-type QueryOptions struct {
-	IsFormula      bool
-	IsExperimental bool
-}
-
-type CompileQueryResponse struct {
-	ComputeResponse *v1alpha.CompileResponse
-	Views           []*v1alpha.View
-}
-
-func (m *Manager) CreateCompileRequest(ctx context.Context, owner *ent.Owner, request *QueryRequest, options *QueryOptions) (*v1alpha.CompileRequest, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.CreateCompileRequest").Logger()
-	formulas, err := m.getFormulas(ctx, owner, request.RequestViews)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting formulas")
-		return nil, err
-	}
-
-	tables, err := m.getTablesForCompile(ctx, owner)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting tables for compile")
-		return nil, err
-	}
-
-	var perEntityBehavior v1alpha.PerEntityBehavior
-
-	switch request.ResultBehavior {
-	case v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_UNSPECIFIED
-	case v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_ALL
-	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL
-	case v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS_AT_TIME:
-		perEntityBehavior = v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL_AT_TIME
-	default:
-		subLogger.Error().Str("resultBehavior", request.ResultBehavior.String()).Msg("unexpected resultBehavior")
-		return nil, fmt.Errorf("unexpected resultBehavior: %s", request.ResultBehavior.String())
-	}
-
-	compileRequest := &v1alpha.CompileRequest{
-		Experimental: options.IsExperimental,
-		FeatureSet: &v1alpha.FeatureSet{
-			Formulas: formulas,
-			Query:    request.Query,
-		},
-		PerEntityBehavior: perEntityBehavior,
-		SliceRequest:      request.SliceRequest,
-		Tables:            tables,
-	}
-
-	if options.IsFormula {
-		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_FORMULA
-	} else {
-		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE
-	}
-
-	return compileRequest, nil
-}
-
-func (m *Manager) RunCompileRequest(ctx context.Context, owner *ent.Owner, compileRequest *v1alpha.CompileRequest) (*CompileQueryResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.RunCompileRequest").Logger()
-	computeClient := m.computeClients.ComputeServiceClient(ctx)
-	defer computeClient.Close()
-
-	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
-	compileTimeoutCtx, compileTimeoutCancel := context.WithTimeout(ctx, time.Second*compileTimeoutSeconds)
-	defer compileTimeoutCancel()
-
-	computeCompileResponse, err := computeClient.Compile(compileTimeoutCtx, compileRequest)
-	subLogger.Info().Err(err).
-		Interface("fenl_diagnostics", computeCompileResponse.FenlDiagnostics).
-		Bool("incremental_enabled", computeCompileResponse.IncrementalEnabled).
-		Strs("free_names", computeCompileResponse.FreeNames).
-		Strs("missing_names", computeCompileResponse.MissingNames).
-		Interface("plan_hash", computeCompileResponse.PlanHash).
-		Interface("result_type", computeCompileResponse.ResultType).
-		Interface("slices", computeCompileResponse.TableSlices).Msg("received compile response")
-	if err != nil {
-		return nil, err
-	}
-
-	compileResponse := CompileQueryResponse{
-		ComputeResponse: computeCompileResponse,
-		Views:           make([]*v1alpha.View, 0),
-	}
-
-	for _, formula := range compileRequest.FeatureSet.Formulas {
-		for _, freeName := range computeCompileResponse.FreeNames {
-			if freeName == formula.Name {
-				compileResponse.Views = append(compileResponse.Views, &v1alpha.View{
-					ViewName:   formula.Name,
-					Expression: formula.Formula,
-				})
-			}
-		}
-	}
-
-	return &compileResponse, err
+type QueryResult struct {
+	DataTokenId string
+	Paths       []string
 }
 
 func (m *Manager) GetOutputURI(owner *ent.Owner, planHash []byte) string {
@@ -515,6 +237,11 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 		return nil
 	}
 
+	prepareCacheBuster, err := m.getPrepareCacheBuster(ctx)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue getting current prepare cache buster")
+	}
+
 	materializations, err := m.materializationClient.GetMaterializationsBySourceType(ctx, owner, materialization.SourceTypeFiles)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("error listing materializations")
@@ -524,20 +251,14 @@ func (m *Manager) processMaterializations(requestCtx context.Context, owner *ent
 	for _, materialization := range materializations {
 		matLogger := subLogger.With().Str("materialization_name", materialization.Name).Logger()
 
-		prepareCacheBuster, err := m.getPrepareCacheBuster(ctx)
+		compileResp, _, err := m.CompileEntMaterialization(ctx, owner, materialization)
 		if err != nil {
-			matLogger.Error().Err(err).Msg("issue getting current prepare cache buster")
-		}
-
-		isExperimental := false
-		compileResp, err := m.CompileQuery(ctx, owner, materialization.Expression, materialization.WithViews.Views, false, isExperimental, materialization.SliceRequest, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
-		if err != nil {
-			matLogger.Error().Err(err).Msg("analyzing materialization")
+			matLogger.Error().Err(err).Msg("issue compiling materialization")
 			return nil
 		}
 
 		if compileResp.Plan == nil {
-			matLogger.Error().Interface("missing_names", compileResp.MissingNames).Interface("diagnostics", compileResp.FenlDiagnostics).Msg("analysis determined query is not executable. This is unexpected, as the materialization was previously able to compile.")
+			matLogger.Error().Interface("missing_names", compileResp.MissingNames).Interface("diagnostics", compileResp.FenlDiagnostics).Msg("analysis determined the materialization is not executable. This is unexpected, as it was previously able to compile.")
 			return nil
 		}
 
@@ -646,48 +367,6 @@ func (m *Manager) computeMaterialization(materialization *ent.Materialization, q
 	return nil
 }
 
-func reMapSparrowError(ctx context.Context, err error) error {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.reMapSparrowError").Logger()
-	inStatus, ok := status.FromError(err)
-	if !ok {
-		subLogger.Error().Msg("unexpected: compute error did not include error-status")
-		return err
-	}
-	outStatus := status.New(inStatus.Code(), inStatus.Message())
-
-	for _, detail := range inStatus.Details() {
-		switch t := detail.(type) {
-		case protoiface.MessageV1:
-			outStatus, err = outStatus.WithDetails(t)
-			if err != nil {
-				subLogger.Error().Err(err).Interface("detail", t).Msg("unable to add detail to re-mapped error details")
-			}
-		default:
-			subLogger.Error().Err(err).Interface("detail", t).Msg("unexpected: detail from compute doesn't implement the protoifam.MessageV1 interface")
-		}
-	}
-	return outStatus.Err()
-}
-
-func (m *Manager) getTablesForCompile(ctx context.Context, owner *ent.Owner) ([]*v1alpha.ComputeTable, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.getTablesForCompile").Logger()
-	computeTables := []*v1alpha.ComputeTable{}
-
-	kaskadaTables, err := m.kaskadaTableClient.GetAllKaskadaTables(ctx, owner)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("error getting all tables")
-		return nil, err
-	}
-
-	for _, kaskadaTable := range kaskadaTables {
-		// if merged schema not set, table still contains no data
-		if kaskadaTable.MergedSchema != nil {
-			computeTables = append(computeTables, convertKaskadaTableToComputeTable(kaskadaTable))
-		}
-	}
-	return computeTables, nil
-}
-
 func (m *Manager) getTablesForQuery(ctx context.Context, owner *ent.Owner, slicePlans []*v1alpha.SlicePlan) (map[string]*ent.KaskadaTable, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getTablesForQuery").Logger()
 
@@ -773,42 +452,6 @@ func (m *Manager) GetTablesForCompute(ctx context.Context, owner *ent.Owner, dat
 	return sliceTableMap, nil
 }
 
-// converts request views and persisted views to formulas.  if a request view has the same name as a persisted view
-// the request view is used.
-func (m *Manager) getFormulas(ctx context.Context, owner *ent.Owner, requestViews []*v1alpha.WithView) ([]*v1alpha.Formula, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.getFormulas").Logger()
-	persistedViews, err := m.kaskadaViewClient.GetAllKaskadaViews(ctx, owner)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting persisted views")
-		return nil, err
-	}
-
-	formulas := []*v1alpha.Formula{}
-
-	requestViewNames := make(map[string]struct{}, len(requestViews))
-	for _, requestView := range requestViews {
-		requestViewNames[requestView.Name] = struct{}{}
-
-		formulas = append(formulas, &v1alpha.Formula{
-			Name:           requestView.Name,
-			Formula:        requestView.Expression,
-			SourceLocation: fmt.Sprintf("View %s", requestView.Name),
-		})
-	}
-
-	for _, persistedView := range persistedViews {
-		if _, found := requestViewNames[persistedView.Name]; !found {
-			formulas = append(formulas, &v1alpha.Formula{
-				Name:           persistedView.Name,
-				Formula:        persistedView.Expression,
-				SourceLocation: fmt.Sprintf("View %s", persistedView.Name),
-			})
-		}
-	}
-
-	return formulas, nil
-}
-
 // gets the current snapshot cache buster
 func (m *Manager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getSnapshotCacheBuster").Logger()
@@ -865,15 +508,4 @@ func (m *Manager) GetFileSchema(ctx context.Context, fileInput internal.FileInpu
 	}
 
 	return metadataRes.SourceMetadata.Schema, nil
-}
-
-func ConvertURIForCompute(URI string) string {
-	return strings.TrimPrefix(URI, "file://")
-}
-
-func ConvertURIForManager(URI string) string {
-	if strings.HasPrefix(URI, "/") {
-		return fmt.Sprintf("file://%s", URI)
-	}
-	return URI
 }

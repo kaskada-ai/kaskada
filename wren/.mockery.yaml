@@ -17,3 +17,4 @@ packages:
       dir: "{{.InterfaceDir}}"
     interfaces:
       ComputeManager:
+      MaterializationManager:

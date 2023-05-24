@@ -67,58 +67,27 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		return wrapErrorWithStatus(err, subLogger)
 	}
 
-	if request.Query.ResultBehavior == v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED {
-		request.Query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
-	}
+	query := request.Query
+	queryOptions := request.QueryOptions
 
-	queryRequest := compute.QueryRequest{
-		Query:          request.Query.Expression,
-		RequestViews:   make([]*v1alpha.WithView, 0),
-		SliceRequest:   request.Query.Slice,
-		ResultBehavior: request.Query.ResultBehavior,
-	}
-
-	queryOptions := compute.QueryOptions{
-		IsFormula:      false,
-		IsExperimental: false,
-	}
-
-	if request.QueryOptions != nil && request.QueryOptions.ExperimentalFeatures {
-		queryOptions.IsExperimental = true
-	}
-
-	previousQueryId, err := uuid.Parse(request.Query.QueryId)
+	previousQueryId, err := uuid.Parse(query.QueryId)
 	if err == nil {
 		previousQuery, err := q.kaskadaQueryClient.GetKaskadaQuery(ctx, owner, previousQueryId, false)
 		if err != nil {
 			subLogger.Debug().Msg("returning from GetKaskadaQuery")
 			return wrapErrorWithStatus(err, subLogger)
 		}
-		queryRequest.Query = previousQuery.Expression
-		for _, view := range previousQuery.Query.Views {
-			queryRequest.RequestViews = append(queryRequest.RequestViews, &v1alpha.WithView{
-				Name:       view.ViewName,
-				Expression: view.Expression,
-			})
-		}
-		queryRequest.SliceRequest = previousQuery.Query.Slice
-		queryRequest.ResultBehavior = previousQuery.Query.ResultBehavior
+		query = previousQuery.Query
 	}
 
-	compileRequest, err := q.computeManager.CreateCompileRequest(ctx, owner, &queryRequest, &queryOptions)
-	if err != nil {
-		subLogger.Debug().Msg("returning from CreateCompileRequest")
-		return wrapErrorWithStatus(err, subLogger)
+	if query.ResultBehavior == v1alpha.Query_RESULT_BEHAVIOR_UNSPECIFIED {
+		query.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
 	}
 
-	compileResponse, err := q.computeManager.RunCompileRequest(ctx, owner, compileRequest)
-	if err != nil {
-		subLogger.Debug().Msg("returning from RunCompileRequest")
-		return wrapErrorWithStatus(err, subLogger)
-	}
+	compileResponse, views, err := q.computeManager.CompileV1Query(ctx, owner, query, queryOptions)
 
 	// Update the request views with only the views required for the query.
-	request.Query.Views = compileResponse.Views
+	request.Query.Views = views
 
 	analysisResponse := &v1alpha.CreateQueryResponse{
 		State: v1alpha.CreateQueryResponse_STATE_ANALYSIS,
@@ -126,10 +95,10 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 			SliceRequest: request.Query.Slice,
 		},
 		Analysis: &v1alpha.CreateQueryResponse_Analysis{
-			CanExecute: compileResponse.ComputeResponse.Plan != nil,
-			Schema:     compileResponse.ComputeResponse.ResultType.GetStruct(),
+			CanExecute: compileResponse.Plan != nil,
+			Schema:     compileResponse.ResultType.GetStruct(),
 		},
-		FenlDiagnostics: compileResponse.ComputeResponse.FenlDiagnostics,
+		FenlDiagnostics: compileResponse.FenlDiagnostics,
 	}
 
 	dataTokenId := ""
@@ -158,7 +127,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		responseStream.Send(q.addMetricsIfRequested(request, analysisResponse, metrics))
 	}
 
-	if compileResponse.ComputeResponse.Plan == nil {
+	if compileResponse.Plan == nil {
 		responseStream.Send(&v1alpha.CreateQueryResponse{
 			State:   v1alpha.CreateQueryResponse_STATE_FAILURE,
 			Metrics: metrics,
@@ -167,10 +136,10 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 		return nil
 	}
 
-	query, err := q.kaskadaQueryClient.CreateKaskadaQuery(ctx, owner, &ent.KaskadaQuery{
-		Expression:  request.Query.Expression,
+	kaskadaQuery, err := q.kaskadaQueryClient.CreateKaskadaQuery(ctx, owner, &ent.KaskadaQuery{
+		Expression:  query.Expression,
 		DataTokenID: dataToken.ID,
-		Query:       request.Query,
+		Query:       query,
 	}, false)
 
 	if err != nil {
@@ -179,7 +148,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}
 
 	queryIDResponse := &v1alpha.CreateQueryResponse{
-		QueryId: query.ID.String(),
+		QueryId: kaskadaQuery.ID.String(),
 	}
 	responseStream.Send(queryIDResponse)
 
@@ -215,7 +184,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}
 
 	// do prepare
-	tables, err := q.computeManager.GetTablesForCompute(ctx, owner, dataToken, compileResponse.ComputeResponse.TableSlices)
+	tables, err := q.computeManager.GetTablesForCompute(ctx, owner, dataToken, compileResponse.TableSlices)
 	if err != nil {
 		subLogger.Error().Err(err).Str("data_token", dataToken.ID.String()).Msg("issue getting tables for compute")
 		return wrapErrorWithStatus(err, subLogger)
@@ -235,7 +204,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 
 	destination := &v1alpha.Destination{}
 	if request.Query.Destination != nil {
-		outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
+		outputURI := q.computeManager.GetOutputURI(owner, compileResponse.PlanHash.Hash)
 		switch kind := request.Query.Destination.Destination.(type) {
 		case *v1alpha.Destination_ObjectStore:
 			destination.Destination = &v1alpha.Destination_ObjectStore{
@@ -255,7 +224,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	// * send progress messages every progressReportingSeconds interval
 	computeTimerContext, computeTimerContextCancel := context.WithCancel(ctx)
 	defer computeTimerContextCancel()
-	queryContext, queryContextCancel := compute.GetNewQueryContext(ctx, owner, request.Query.ChangedSinceTime, compileResponse.ComputeResponse, dataToken, request.Query.FinalResultTime, dataTokenId == "", limits, destination, request.Query.Slice, tables)
+	queryContext, queryContextCancel := compute.GetNewQueryContext(ctx, owner, request.Query.ChangedSinceTime, compileResponse, dataToken, request.Query.FinalResultTime, dataTokenId == "", limits, destination, request.Query.Slice, tables)
 	defer queryContextCancel()
 	go func(ctx context.Context) {
 		for {
@@ -341,7 +310,7 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 					}
 				}
 
-				outputURI := q.computeManager.GetOutputURI(owner, compileResponse.ComputeResponse.PlanHash.Hash)
+				outputURI := q.computeManager.GetOutputURI(owner, compileResponse.PlanHash.Hash)
 				queryResponse.Destination = &v1alpha.Destination{
 					Destination: &v1alpha.Destination_ObjectStore{
 						ObjectStore: &v1alpha.ObjectStoreDestination{

@@ -4,13 +4,51 @@ import (
 	"context"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/client"
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
 	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
+	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/rs/zerolog/log"
 )
 
-func (m *Manager) StartMaterialization(ctx context.Context, owner *ent.Owner, materializationID string, compileResp *v1alpha.CompileResponse, destination *v1alpha.Destination) error {
+type MaterializationManager interface {
+	CompileManager
+
+	// StartMaterialization starts a materialization on the compute backend
+	StartMaterialization(ctx context.Context, owner *ent.Owner, materializationID string, compileResp *v1alpha.CompileResponse, destination *v1alpha.Destination) error
+
+	// StopMaterialization stops a materialization on the compute backend
+	StopMaterialization(ctx context.Context, materializationID string) error
+
+	// GetMaterializationStatus gets the status of a materialization on the compute backend
+	GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.ProgressInformation, error)
+
+	// ReconcileMaterializations reconciles the materializations in the database with the materializations on the compute backend
+	ReconcileMaterializations(ctx context.Context) error
+}
+
+type materializationManager struct {
+	CompileManager
+
+	computeClients        client.ComputeClients
+	kaskadaTableClient    internal.KaskadaTableClient
+	materializationClient internal.MaterializationClient
+
+	runningMaterailizations map[string]struct{}
+}
+
+func NewMaterializationManager(compileManager *CompileManager, computeClients *client.ComputeClients, kaskadaTableClient *internal.KaskadaTableClient, materializationClient *internal.MaterializationClient) MaterializationManager {
+	return &materializationManager{
+		CompileManager:          *compileManager,
+		computeClients:          *computeClients,
+		kaskadaTableClient:      *kaskadaTableClient,
+		materializationClient:   *materializationClient,
+		runningMaterailizations: map[string]struct{}{},
+	}
+}
+
+func (m *materializationManager) StartMaterialization(ctx context.Context, owner *ent.Owner, materializationID string, compileResp *v1alpha.CompileResponse, destination *v1alpha.Destination) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.StartMaterialization").Str("materialization_id", materializationID).Logger()
 
 	tables, err := m.getMaterializationTables(ctx, owner, compileResp)
@@ -41,7 +79,7 @@ func (m *Manager) StartMaterialization(ctx context.Context, owner *ent.Owner, ma
 	return nil
 }
 
-func (m *Manager) StopMaterialization(ctx context.Context, materializationID string) error {
+func (m *materializationManager) StopMaterialization(ctx context.Context, materializationID string) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.StopMaterialization").Str("materialization_id", materializationID).Logger()
 
 	stopRequest := &v1alpha.StopMaterializationRequest{
@@ -60,7 +98,7 @@ func (m *Manager) StopMaterialization(ctx context.Context, materializationID str
 	return nil
 }
 
-func (m *Manager) GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.ProgressInformation, error) {
+func (m *materializationManager) GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.ProgressInformation, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetMaterializationStatus").Str("materialization_id", materializationID).Logger()
 
 	statusRequest := &v1alpha.GetMaterializationStatusRequest{
@@ -79,7 +117,7 @@ func (m *Manager) GetMaterializationStatus(ctx context.Context, materializationI
 	return statusResponse.Progress, nil
 }
 
-func (m *Manager) ReconcileMaterialzations(ctx context.Context) error {
+func (m *materializationManager) ReconcileMaterializations(ctx context.Context) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.ReconcileMaterialzations").Logger()
 
 	allStreamMaterializations, err := m.materializationClient.GetAllMaterializationsBySourceType(ctx, materialization.SourceTypeStreams)
@@ -110,8 +148,7 @@ func (m *Manager) ReconcileMaterialzations(ctx context.Context) error {
 		} else {
 			log.Debug().Str("id", materializationID).Msg("found materialization that is not running, attempting to start it")
 
-			isExperimental := false
-			compileResp, err := m.CompileQuery(ctx, owner, streamMaterialization.Expression, streamMaterialization.WithViews.Views, false, isExperimental, streamMaterialization.SliceRequest, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
+			compileResp, _, err := m.CompileEntMaterialization(ctx, owner, streamMaterialization)
 			if err != nil {
 				log.Error().Err(err).Str("id", materializationID).Msg("issue compiling materialization")
 			} else {
@@ -143,7 +180,10 @@ func (m *Manager) ReconcileMaterialzations(ctx context.Context) error {
 	return nil
 }
 
-func (m *Manager) getMaterializationTables(ctx context.Context, owner *ent.Owner, compileResp *v1alpha.CompileResponse) ([]*v1alpha.ComputeTable, error) {
+func (m *materializationManager) getMaterializationTables(ctx context.Context, owner *ent.Owner, compileResp *v1alpha.CompileResponse) ([]*v1alpha.ComputeTable, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationManager.getMaterializationTables").Logger()
+
+	// map of tableName to a list of slice plans
 	slicePlanMap := map[string][]*v1alpha.SlicePlan{}
 	for _, slicePlan := range compileResp.TableSlices {
 		if _, found := slicePlanMap[slicePlan.TableName]; !found {
@@ -152,21 +192,22 @@ func (m *Manager) getMaterializationTables(ctx context.Context, owner *ent.Owner
 		slicePlanMap[slicePlan.TableName] = append(slicePlanMap[slicePlan.TableName], slicePlan)
 	}
 
-	kaskadaTableMap, err := m.getTablesForQuery(ctx, owner, compileResp.TableSlices)
-	if err != nil {
-		return nil, err
-	}
-
-	computeTables := make([]*v1alpha.ComputeTable, len(kaskadaTableMap))
+	computeTables := make([]*v1alpha.ComputeTable, len(slicePlanMap))
 	i := 0
 
-	for _, kaskadaTable := range kaskadaTableMap {
+	for tableName, slicePlanList := range slicePlanMap {
+
+		kaskadaTable, err := m.kaskadaTableClient.GetKaskadaTableByName(ctx, owner, tableName)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting kaskada table")
+			return nil, err
+		}
 
 		computeTables[i] = convertKaskadaTableToComputeTable(kaskadaTable)
-		computeTables[i].FileSets = []*v1alpha.ComputeTable_FileSet{}
+		computeTables[i].FileSets = make([]*v1alpha.ComputeTable_FileSet, len(slicePlanList))
 
-		for _, slicePlan := range slicePlanMap[kaskadaTable.Name] {
-			computeTables[i].FileSets = append(computeTables[i].FileSets, &v1alpha.ComputeTable_FileSet{SlicePlan: slicePlan})
+		for j, slicePlan := range slicePlanList {
+			computeTables[i].FileSets[j] = &v1alpha.ComputeTable_FileSet{SlicePlan: slicePlan}
 		}
 		i++
 	}
