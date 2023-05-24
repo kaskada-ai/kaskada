@@ -25,6 +25,7 @@ import (
 type queryV2Service struct {
 	apiv2alpha.UnimplementedQueryServiceServer
 
+	compileManager     compute.CompileManager
 	computeManager     compute.ComputeManager
 	dataTokenClient    internal.DataTokenClient
 	kaskadaQueryClient internal.KaskadaQueryClient
@@ -33,7 +34,8 @@ type queryV2Service struct {
 // NewQueryV2Service creates a new query service
 func NewQueryV2Service(computeManager *compute.ComputeManager, dataTokenClient *internal.DataTokenClient, kaskadaQueryClient *internal.KaskadaQueryClient) apiv2alpha.QueryServiceServer {
 	return &queryV2Service{
-		computeManager:     *computeManager,
+		computeManager: *computeManager,
+
 		dataTokenClient:    *dataTokenClient,
 		kaskadaQueryClient: *kaskadaQueryClient,
 	}
@@ -87,15 +89,6 @@ func (q *queryV2Service) CreateQuery(ctx context.Context, request *apiv2alpha.Cr
 
 // createQuery creates a query for a user if it compiles and it isn't a dry-run
 func (q *queryV2Service) createQuery(ctx context.Context, owner *ent.Owner, request *apiv2alpha.CreateQueryRequest) (*apiv2alpha.CreateQueryResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "queryV2Service.createQuery").Logger()
-
-	queryViews := request.Views
-	if queryViews == nil {
-		queryViews = &apiv2alpha.QueryViews{
-			Views: []*apiv2alpha.QueryView{},
-		}
-	}
-
 	queryConfig := request.Config
 
 	if queryConfig == nil {
@@ -109,10 +102,10 @@ func (q *queryV2Service) createQuery(ctx context.Context, owner *ent.Owner, requ
 	}
 
 	if queryConfig.Destination == nil {
-		queryConfig.Destination = &v1alpha.Destination{
-			Destination: &v1alpha.Destination_ObjectStore{
-				ObjectStore: &v1alpha.ObjectStoreDestination{
-					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+		queryConfig.Destination = &apiv1alpha.Destination{
+			Destination: &apiv1alpha.Destination_ObjectStore{
+				ObjectStore: &apiv1alpha.ObjectStoreDestination{
+					FileType: apiv1alpha.FileType_FILE_TYPE_PARQUET,
 				},
 			},
 		}
@@ -124,26 +117,27 @@ func (q *queryV2Service) createQuery(ctx context.Context, owner *ent.Owner, requ
 		}
 	}
 
-	formulas, err := q.computeManager.GetFormulas(ctx, owner, queryViews)
+	compileResponse, views, err := q.compileManager.CompileV2Query(ctx, owner, request.Expression, request.Views.Views, request.Config)
 	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting formulas")
-	}
-
-	compileResp, err := q.computeManager.CompileQueryV2(ctx, owner, request.Expression, formulas, queryConfig)
-	if err != nil {
-		subLogger.Debug().Msg("returning from CompileQueryV2")
 		return nil, err
 	}
 
 	newKaskadaQuery := &ent.KaskadaQuery{
 		Config:          queryConfig,
-		CompileResponse: compileResp,
+		CompileResponse: compileResponse,
 		Expression:      request.Expression,
 		Metrics:         &apiv2alpha.QueryMetrics{},
-		Views:           q.computeManager.GetUsedViews(formulas, compileResp),
+		Views:           &apiv2alpha.QueryViews{Views: make([]*apiv2alpha.QueryView, len(views))},
 	}
 
-	if compileResp.FenlDiagnostics.NumErrors == 0 {
+	for i, view := range views {
+		newKaskadaQuery.Views.Views[i] = &apiv2alpha.QueryView{
+			ViewName:   view.ViewName,
+			Expression: view.Expression,
+		}
+	}
+
+	if compileResponse.FenlDiagnostics.NumErrors == 0 {
 		newKaskadaQuery.State = property.QueryStateCompiled
 	} else {
 		newKaskadaQuery.State = property.QueryStateFailure

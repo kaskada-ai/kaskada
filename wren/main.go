@@ -215,7 +215,9 @@ func main() {
 	// connect to stores
 	tableStore := store.NewTableStore(&objectStoreClient)
 
-	computeManager := compute.NewManager(g, computeClients, &dataTokenClient, &kaskadaTableClient, &kaskadaViewClient, &materializationClient, prepareJobClient, &objectStoreClient, *tableStore, *parallelizeConfig)
+	compileManager := compute.NewCompileManager(computeClients, &kaskadaTableClient, &kaskadaViewClient)
+	computeManager := compute.NewManager(g, &compileManager, computeClients, &dataTokenClient, &kaskadaTableClient, &materializationClient, prepareJobClient, &objectStoreClient, *tableStore, *parallelizeConfig)
+	materializationManager := compute.NewMaterializationManager(&compileManager, computeClients, &kaskadaTableClient, &materializationClient)
 
 	// gRPC Health Server
 	healthServer := health.NewServer()
@@ -289,7 +291,7 @@ func main() {
 		dependencyAnalyzerService := service.NewDependencyAnalyzer(&kaskadaViewClient, &materializationClient)
 		tableService := service.NewTableService(&computeManager, &kaskadaTableClient, &objectStoreClient, tableStore, &dependencyAnalyzerService)
 		viewService := service.NewViewService(&computeManager, &kaskadaTableClient, &kaskadaViewClient, &dependencyAnalyzerService)
-		materializationService := service.NewMaterializationService(&computeManager, &kaskadaTableClient, &kaskadaViewClient, &dataTokenClient, &materializationClient)
+		materializationService := service.NewMaterializationService(&computeManager, &materializationManager, &kaskadaTableClient, &kaskadaViewClient, &dataTokenClient, &materializationClient)
 		queryV1Service := service.NewQueryV1Service(&computeManager, &dataTokenClient, &kaskadaQueryClient, &objectStoreClient)
 
 		// Register the grpc services
@@ -352,7 +354,7 @@ func main() {
 		for {
 			time.Sleep(5 * time.Second)
 
-			err := computeManager.ReconcileMaterialzations(ctx)
+			err := materializationManager.ReconcileMaterializations(ctx)
 			if err != nil {
 				return err
 			}

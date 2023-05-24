@@ -28,21 +28,23 @@ type MaterializationService interface {
 
 type materializationService struct {
 	v1alpha.UnimplementedMaterializationServiceServer
-	kaskadaTableClient    internal.KaskadaTableClient
-	kaskadaViewClient     internal.KaskadaViewClient
-	dataTokenClient       internal.DataTokenClient
-	materializationClient internal.MaterializationClient
-	computeManager        compute.ComputeManager
+	kaskadaTableClient     internal.KaskadaTableClient
+	kaskadaViewClient      internal.KaskadaViewClient
+	dataTokenClient        internal.DataTokenClient
+	materializationClient  internal.MaterializationClient
+	computeManager         compute.ComputeManager
+	materializationManager compute.MaterializationManager
 }
 
 // NewMaterializationService creates a new materialization service
-func NewMaterializationService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
+func NewMaterializationService(computeManager *compute.ComputeManager, materializationManager *compute.MaterializationManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dataTokenClient *internal.DataTokenClient, materializationClient *internal.MaterializationClient) *materializationService {
 	return &materializationService{
-		kaskadaTableClient:    *kaskadaTableClient,
-		kaskadaViewClient:     *kaskadaViewClient,
-		dataTokenClient:       *dataTokenClient,
-		materializationClient: *materializationClient,
-		computeManager:        *computeManager,
+		kaskadaTableClient:     *kaskadaTableClient,
+		kaskadaViewClient:      *kaskadaViewClient,
+		dataTokenClient:        *dataTokenClient,
+		materializationClient:  *materializationClient,
+		computeManager:         *computeManager,
+		materializationManager: *materializationManager,
 	}
 }
 
@@ -166,9 +168,8 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization destination")
 	}
 
-	isExperimental := false
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
-	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.Materialization.Expression, request.Materialization.WithViews, false, isExperimental, request.Materialization.Slice, v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS)
+	compileResp, _, err := s.materializationManager.CompileV1Materialization(ctx, owner, request.Materialization)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling materialization")
 		return nil, err
@@ -270,7 +271,7 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 		s.computeManager.RunMaterializations(ctx, owner)
 	case materialization.SourceTypeStreams:
 		subLogger.Debug().Msg("adding materialization to compute")
-		err := s.computeManager.StartMaterialization(ctx, owner, createdMaterialization.ID.String(), compileResp, createdMaterialization.Destination)
+		err := s.materializationManager.StartMaterialization(ctx, owner, createdMaterialization.ID.String(), compileResp, createdMaterialization.Destination)
 		if err != nil {
 			return nil, err
 		}
@@ -313,7 +314,7 @@ func (s *materializationService) deleteMaterialization(ctx context.Context, owne
 	}
 
 	if foundMaterialization.SourceType == materialization.SourceTypeStreams {
-		err := s.computeManager.StopMaterialization(ctx, foundMaterialization.ID.String())
+		err := s.materializationManager.StopMaterialization(ctx, foundMaterialization.ID.String())
 		if err != nil {
 			subLogger := log.Ctx(ctx).With().Str("method", "materializationService.deleteMaterialization").Logger()
 			subLogger.Warn().Err(err).Str("materialization_id", foundMaterialization.ID.String()).Msg("unable to stop materialization on engine")

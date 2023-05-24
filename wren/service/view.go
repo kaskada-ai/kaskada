@@ -147,7 +147,7 @@ func (s *viewService) CreateView(ctx context.Context, request *pb.CreateViewRequ
 func (s *viewService) createView(ctx context.Context, owner *ent.Owner, request *pb.CreateViewRequest) (*pb.CreateViewResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "viewService.createView").Str("expression", request.View.Expression).Logger()
 
-	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.View.Expression, []*pb.WithView{}, true, false, nil, pb.Query_RESULT_BEHAVIOR_ALL_RESULTS)
+	compileResp, err := s.computeManager.CompileV1View(ctx, owner, request.View)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling view")
 		return nil, err
