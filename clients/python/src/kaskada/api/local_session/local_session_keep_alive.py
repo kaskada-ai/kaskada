@@ -67,7 +67,7 @@ class LocalSessionKeepAlive(threading.Thread):
             else:
                 unready_count += 1
                 logger.warn(
-                    f"Kaskada servies are not available (Attempt: #{unready_count})"
+                    f"Kaskada services are not available (Attempt: #{unready_count})"
                 )
 
             if unready_count >= self.maximum_unready_polls:
