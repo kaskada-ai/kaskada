@@ -155,3 +155,14 @@ def test_table_html_pulsar_table():
     )
     assert schema is None
     assert str(render) == str(expected)
+
+
+def test_update_diagnostic_with_link():
+    valid_error = (
+        "error[E0013]: Invalid output type = Output type must be a record, but was i64"
+    )
+    result = formatters.update_diagnostic_with_link(valid_error)
+    assert (
+        result
+        == 'error[<a href="https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#E0013" target="_blank">E0013</a>]: Invalid output type = Output type must be a record, but was i64'
+    )
