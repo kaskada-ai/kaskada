@@ -1,0 +1,5 @@
+{
+    "type": "AVRO",
+    "schema":"{\"type\":\"record\",\"name\":\"my_record\",\"fields\":[{\"name\":\"time\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"id\",\"type\":[\"null\",\"long\"],\"default\":null}, {\"name\":\"my_val\",\"type\":[\"null\",\"long\"],\"default\":null}]}",
+    "properties": {}
+}

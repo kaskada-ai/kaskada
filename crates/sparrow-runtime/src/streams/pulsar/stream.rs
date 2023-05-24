@@ -1,10 +1,12 @@
 use crate::prepare::Error;
+use arrow::datatypes::Schema;
 use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
 use error_stack::{IntoReport, ResultExt};
 use futures::Stream;
 use futures_lite::stream::StreamExt;
+use hashbrown::HashSet;
 use pulsar::consumer::InitialPosition;
 
 use pulsar::{
@@ -28,14 +30,14 @@ pub struct AvroWrapper {
 /// stream, batches them, and passes them to the runtime layer.
 ///
 /// Note that this stream does not do any filtering or ordering of events.
-#[allow(unused)]
-pub fn stream_for_execution(
-    schema: SchemaRef,
+pub fn execution_stream(
+    raw_schema: SchemaRef,
+    projected_schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema, consumer, last_publish_time, false);
+        let mut reader = PulsarReader::new(raw_schema, projected_schema, consumer, last_publish_time, false);
         loop {
             // Indefinitely reads messages from the stream
             if let Some(next) = reader.next_result_async().await? {
@@ -47,13 +49,17 @@ pub fn stream_for_execution(
     }
 }
 
-pub fn stream_for_prepare(
+/// Creates a pulsar stream to be used during preparation.
+///
+/// This stream reads messages until it times out, which (generally) indicates that
+/// no more messages exist on the stream at that point in time.
+pub fn preparation_stream(
     schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema, consumer, last_publish_time, true);
+        let mut reader = PulsarReader::new(schema.clone(), schema, consumer, last_publish_time, true );
         while let Some(next) = reader.next_result_async().await? {
             yield next
         }
@@ -61,7 +67,10 @@ pub fn stream_for_prepare(
 }
 
 struct PulsarReader {
-    schema: SchemaRef,
+    /// The raw schema; includes all columns in the stream.
+    raw_schema: SchemaRef,
+    /// The projected schema; includes only columns that are needed by the query.
+    projected_schema: SchemaRef,
     consumer: Consumer<AvroWrapper, TokioExecutor>,
     last_publish_time: i64,
     /// Whether the reader requires the stream to be ordered by _publish_time.
@@ -145,13 +154,15 @@ impl DeserializeMessage for AvroWrapper {
 
 impl PulsarReader {
     pub fn new(
-        schema: SchemaRef,
+        raw_schema: SchemaRef,
+        projected_schema: SchemaRef,
         consumer: Consumer<AvroWrapper, TokioExecutor>,
         last_publish_time: i64,
         require_ordered_publish_time: bool,
     ) -> Self {
         PulsarReader {
-            schema,
+            raw_schema,
+            projected_schema,
             consumer,
             last_publish_time,
             require_ordered_publish_time,
@@ -256,7 +267,17 @@ impl PulsarReader {
             _ => {
                 let arrow_data = sparrow_arrow::avro::avro_to_arrow(avro_values)
                     .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
-                RecordBatch::try_new(self.schema.clone(), arrow_data).map(Some)
+                let batch = RecordBatch::try_new(self.raw_schema.clone(), arrow_data)?;
+
+                // Note that the _last_publish_time is dropped here. This field is added for the purposes of
+                // prepare, where the `time` column is automatically set to the `_last_publish_time`.
+                let columns_to_read = get_columns_to_read(&self.raw_schema, &self.projected_schema);
+                let columns: Vec<_> = columns_to_read
+                    .iter()
+                    .map(|index| batch.column(*index).clone())
+                    .collect();
+
+                Ok(RecordBatch::try_new(self.projected_schema.clone(), columns).map(Some)?)
             }
         }
     }
@@ -273,18 +294,29 @@ pub async fn consumer(
         config.tenant, config.namespace, config.topic_name
     );
 
-    let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
-        .change_context(Error::CreatePulsarReader)?;
-    let auth = Authentication {
-        name: "token".to_string(),
-        data: auth_token.as_bytes().to_vec(),
+    // Auth is generally recommended, but some local builds may be run
+    // without auth for exploration/testing purposes.
+    let client = if !config.auth_params.is_empty() {
+        let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
+            .change_context(Error::CreatePulsarReader)?;
+        let auth = Authentication {
+            name: "token".to_string(),
+            data: auth_token.as_bytes().to_vec(),
+        };
+
+        Pulsar::builder(&config.broker_service_url, TokioExecutor)
+            .with_auth(auth)
+            .build()
+            .await
+            .into_report()
+            .change_context(Error::CreatePulsarReader)?
+    } else {
+        Pulsar::builder(&config.broker_service_url, TokioExecutor)
+            .build()
+            .await
+            .into_report()
+            .change_context(Error::CreatePulsarReader)?
     };
-    let client = Pulsar::builder(&config.broker_service_url, TokioExecutor)
-        .with_auth(auth)
-        .build()
-        .await
-        .into_report()
-        .change_context(Error::CreatePulsarReader)?;
 
     let formatted_schema =
         super::schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
@@ -314,4 +346,23 @@ pub async fn consumer(
         .change_context(Error::CreatePulsarReader)?;
 
     Ok(consumer)
+}
+
+/// Determine needed indices given a file schema and projected schema.
+fn get_columns_to_read(file_schema: &Schema, projected_schema: &Schema) -> Vec<usize> {
+    let needed_columns: HashSet<_> = projected_schema
+        .fields()
+        .iter()
+        .map(|field| field.name())
+        .collect();
+
+    let mut columns = Vec::with_capacity(3 + needed_columns.len());
+
+    for (index, column) in file_schema.fields().iter().enumerate() {
+        if needed_columns.contains(column.name()) {
+            columns.push(index)
+        }
+    }
+
+    columns
 }

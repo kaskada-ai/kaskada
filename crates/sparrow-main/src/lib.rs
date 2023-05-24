@@ -9,11 +9,14 @@
 )]
 
 pub(crate) mod batch;
+mod materialize;
 mod prepare;
+mod script;
 mod serve;
 pub mod tracing_setup;
 
 pub use batch::BatchCommand;
+pub use materialize::MaterializeCommand;
 pub use prepare::PrepareCommand;
 pub use serve::*;
 

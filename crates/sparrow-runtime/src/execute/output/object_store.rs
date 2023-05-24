@@ -122,6 +122,8 @@ pub(super) async fn write(
         }
 
         output_path.push(output_file_name(format)?);
+
+        tracing::info!("\nWriting to output file: {:?}", output_path);
         let output_file = File::create(output_path.clone())
             .into_report()
             .change_context(Error::LocalWriteFailure)

@@ -48,6 +48,13 @@ const DEFAULT_PULSAR_NAMESPACE: &str = "default";
 // In the java implementation, there exists a `batchingMaxBytes` configuration
 // that sends the batch when the size is reached. Ideally, we can clone that
 // implementation over to the rust-native implementation.
+//
+// Note that in the streaming world, we don't ever explicitly flush the batch
+// because we're continually receiving new batches. However, this means that
+// the producer won't send the batch for consumption until the `batch_size` is
+// reached. For local testing, this is extremely inconvenient, so recommend for
+// testing to set this to 1. The better solution would be to implement the
+// `batchingMaxPublishDelay` in the Rust client.
 const BATCH_SIZE: u32 = 1000;
 
 pub(super) async fn write(

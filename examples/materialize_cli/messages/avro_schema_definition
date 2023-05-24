@@ -1,0 +1,1 @@
+{"type": "record", "name": "MyRecord", "fields": [{"name": "time", "type":"long"}, {"name": "id", "type": "long"}, {"name": "my_val", "type": "long"}]}

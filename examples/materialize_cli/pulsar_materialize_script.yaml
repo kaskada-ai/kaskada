@@ -1,0 +1,20 @@
+output_to:
+  destination: !Pulsar
+    config: 
+      broker_service_url: "pulsar://127.0.0.1:6650"
+      admin_service_url: "http://127.0.0.1:8080"
+      auth_plugin: ""
+      auth_params: ""
+      tenant: "public"
+      namespace: "default"
+      topic_name: "output1"
+feature_set:
+  formulas:
+    - name: last_foo_id
+      formula: "Foo.id | last()"
+    - name: last_foo_time
+      formula: "Foo.time | last()"
+    - name: count_foo
+      formula: "Foo | count()"
+  query: "{ last_id: last_foo_id, last_time: last_foo_time, count_foo: count_foo }"
+

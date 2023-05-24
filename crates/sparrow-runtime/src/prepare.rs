@@ -21,7 +21,7 @@ use sparrow_api::kaskada::v1alpha::{
 
 mod column_behavior;
 mod error;
-mod execute_input_stream;
+pub(crate) mod execute_input_stream;
 mod prepare_input_stream;
 mod prepare_metadata;
 mod slice_preparer;
@@ -93,7 +93,7 @@ async fn reader_from_pulsar<'a>(
 
     let consumer =
         streams::pulsar::stream::consumer(pulsar_subscription, pm.user_schema.clone()).await?;
-    let stream = streams::pulsar::stream::stream_for_prepare(
+    let stream = streams::pulsar::stream::preparation_stream(
         pm.sparrow_metadata.raw_schema.clone(),
         consumer,
         pulsar_subscription.last_publish_time,

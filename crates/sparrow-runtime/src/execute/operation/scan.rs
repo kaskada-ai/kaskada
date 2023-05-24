@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::{operation_input_ref, operation_plan};
+use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
 use sparrow_core::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use sparrow_plan::TableId;
@@ -17,9 +17,11 @@ use super::BoxedOperation;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::{InputBatch, Operation, OperationContext};
 use crate::execute::progress_reporter::ProgressUpdate;
-use crate::execute::Error;
+use crate::execute::{error, Error};
 use crate::key_hash_index::KeyHashIndex;
-use crate::{table_reader, Batch};
+use crate::stream_reader::stream_reader;
+use crate::table_reader::table_reader;
+use crate::Batch;
 
 pub(super) struct ScanOperation {
     /// The schema of the scanned inputs.
@@ -171,37 +173,61 @@ impl ScanOperation {
                 .collect(),
         );
 
-        // Send initial progress information.
-        let total_num_rows = table_info
-            .prepared_files_for_slice(&requested_slice)
-            .into_report()
-            .change_context(crate::execute::error::invalid_operation!(
-                "scan operation references undefined slice {requested_slice:?} for table '{}'",
-                table_info.name()
-            ))?
-            .iter()
-            .map(|file| file.num_rows as usize)
-            .sum();
+        // Scans can read from tables (files) or streams.
+        let backing_source = match table_info.config().source.as_ref() {
+            Some(v1alpha::Source { source }) => source.as_ref().expect("source"),
+            _ => error_stack::bail!(Error::Internal("expected source")),
+        };
 
-        context
-            .progress_updates_tx
-            .try_send(ProgressUpdate::InputMetadata { total_num_rows })
-            .into_report()
-            .change_context(Error::internal())?;
+        let input_stream = match backing_source {
+            v1alpha::source::Source::Kaskada(_) => {
+                // Send initial progress information.
+                let total_num_rows = table_info
+                    .prepared_files_for_slice(&requested_slice)
+                    .into_report()
+                    .change_context(error::invalid_operation!("scan operation references undefined slice {requested_slice:?} for table '{}'", table_info.name()))?
+                    .iter()
+                    .map(|file| file.num_rows as usize)
+                    .sum();
 
-        let input_stream = table_reader(
-            &mut context.data_manager,
-            table_info,
-            &requested_slice,
-            projected_columns,
-            // TODO: Fix flight recorder
-            FlightRecorder::disabled(),
-            context.max_event_in_snapshot,
-            context.output_at_time,
-        )
-        .change_context(Error::internal_msg("failed to create table reader"))?
-        .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
-        .boxed();
+                context
+                    .progress_updates_tx
+                    .try_send(ProgressUpdate::InputMetadata { total_num_rows })
+                    .into_report()
+                    .change_context(Error::internal())?;
+
+                let input_stream = table_reader(
+                    &mut context.data_manager,
+                    table_info,
+                    &requested_slice,
+                    projected_columns,
+                    // TODO: Fix flight recorder
+                    FlightRecorder::disabled(),
+                    context.max_event_in_snapshot,
+                    context.output_at_time,
+                )
+                .change_context(Error::internal_msg("failed to create table reader"))?
+                .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+                .boxed();
+                input_stream
+            }
+            v1alpha::source::Source::Pulsar(p) => {
+                let input_stream = stream_reader(
+                    context,
+                    table_info,
+                    requested_slice.as_ref(),
+                    projected_columns,
+                    // TODO: Fix flight recorder
+                    FlightRecorder::disabled(),
+                    p,
+                )
+                .await
+                .change_context(Error::internal_msg("failed to create stream reader"))?
+                .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+                .boxed();
+                input_stream
+            }
+        };
 
         Ok(Box::new(Self {
             projected_schema,
@@ -408,6 +434,7 @@ mod tests {
             max_event_in_snapshot: None,
             progress_updates_tx,
             output_at_time: None,
+            bounded_lateness_ns: None,
         };
 
         executor

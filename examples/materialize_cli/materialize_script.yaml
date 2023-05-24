@@ -1,0 +1,15 @@
+output_to:
+  destination: !ObjectStore
+    file_type: 2
+    output_prefix_uri: "file:////Users/jordan.frazier/Documents/Datastax/kaskada/materialize_output"
+feature_set:
+  formulas:
+    - name: last_foo_id
+      formula: "Foo.id | last()"
+    - name: last_foo_time
+      formula: "Foo.time | last()"
+    - name: count_foo
+      formula: "Foo | count()"
+  query: "{ last_id: last_foo_id, last_time: last_foo_time, count_foo: count_foo }"
+bounded_lateness_ns: 3
+

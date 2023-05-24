@@ -97,6 +97,7 @@ func convertKaskadaTableToComputeTable(kaskadaTable *ent.KaskadaTable) *v1alpha.
 	if kaskadaTable == nil {
 		return nil
 	}
+
 	computeTable := &v1alpha.ComputeTable{
 		Config: &v1alpha.TableConfig{
 			Name:            kaskadaTable.Name,
@@ -104,6 +105,7 @@ func convertKaskadaTableToComputeTable(kaskadaTable *ent.KaskadaTable) *v1alpha.
 			TimeColumnName:  kaskadaTable.TimeColumnName,
 			GroupColumnName: kaskadaTable.EntityKeyColumnName,
 			Grouping:        kaskadaTable.GroupingID,
+			Source:          kaskadaTable.Source,
 		},
 		Metadata: &v1alpha.TableMetadata{
 			Schema: kaskadaTable.MergedSchema,

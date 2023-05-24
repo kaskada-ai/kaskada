@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::array::{ArrayRef, PrimitiveArray, TimestampNanosecondArray, UInt64Array};
 use arrow::compute::SortColumn;
-use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type};
+use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType, UInt64Type};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -16,20 +16,8 @@ use sparrow_core::{downcast_primitive_array, TableSchema};
 use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
-use crate::RawMetadata;
 
 use super::column_behavior::ColumnBehavior;
-
-/// The bounded lateness parameter, which configures the delay in watermark time.
-///
-/// In practical terms, this allows for items in the stream to be within 1 second
-/// compared to the max timestamp read.
-///
-/// This is hard-coded for now, but could easily be made configurable as a parameter
-/// to the table. This simple hueristic is a good start, but we can improve on this
-/// by statistically modeling event behavior and adapting the watermark accordingly.
-#[allow(unused)]
-const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
 
 /// Struct to store logic for handling late data with a watermark and
 /// bounded lateness.
@@ -59,16 +47,18 @@ impl InputBuffer {
 ///
 /// This stream reads unordered, unprepared batches from its `reader`, and
 /// is responsible for the following:
-/// 1. Inserting the time column, subsort column, and key hash from source to
+/// * Inserting the time column, subsort column, and key hash from source to
 ///    the batch
-/// 2. Casting required columns
-/// 3. Sorting the record batches by the time column, subsort column, and key hash
-/// 4. Handling late data
-#[allow(unused)]
+/// * Casting required columns
+/// * Dropping all but projected columns
+/// * Sorting the record batches by the time column, subsort column, and key hash
+/// * Handling late data
+#[allow(clippy::too_many_arguments)]
 pub async fn prepare_input<'a>(
     mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
-    config: &'a TableConfig,
-    raw_metadata: RawMetadata,
+    config: Arc<TableConfig>,
+    raw_schema: SchemaRef,
+    projected_schema: SchemaRef,
     prepare_hash: u64,
     slice: Option<&slice_plan::Slice>,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
@@ -76,20 +66,20 @@ pub async fn prepare_input<'a>(
 ) -> anyhow::Result<BoxStream<'a, error_stack::Result<Option<RecordBatch>, Error>>> {
     // This is a "hacky" way of adding the 3 key columns. We may just want
     // to manually do that (as part of deprecating `TableSchema`)?
-    let prepared_schema = TableSchema::try_from_data_schema(raw_metadata.table_schema.clone())?;
+    let prepared_schema = TableSchema::try_from_data_schema(projected_schema.clone())?;
     let prepared_schema = prepared_schema.schema_ref().clone();
 
     // Add column behaviors for each of the 3 key columns.
     let mut columns = Vec::with_capacity(prepared_schema.fields().len());
     columns.push(ColumnBehavior::try_new_cast(
-        &raw_metadata.raw_schema,
+        &raw_schema,
         &config.time_column_name,
         &TimestampNanosecondType::DATA_TYPE,
         false,
     )?);
     if let Some(subsort_column_name) = &config.subsort_column_name {
         columns.push(ColumnBehavior::try_new_subsort(
-            &raw_metadata.raw_schema,
+            &raw_schema,
             subsort_column_name,
         )?);
     } else {
@@ -97,7 +87,7 @@ pub async fn prepare_input<'a>(
     }
 
     columns.push(ColumnBehavior::try_new_entity_key(
-        &raw_metadata.raw_schema,
+        &raw_schema,
         &config.group_column_name,
         false,
     )?);
@@ -105,16 +95,15 @@ pub async fn prepare_input<'a>(
     // Add column behaviors for each column.  This means we include the key columns
     // redundantly, but cleaning that up is a big refactor.
     // See https://github.com/riptano/kaskada/issues/90
-    for field in raw_metadata.table_schema.fields() {
+    for field in projected_schema.fields() {
         columns.push(ColumnBehavior::try_cast_or_reference_or_null(
-            &raw_metadata.raw_schema,
+            &raw_schema,
             field,
         )?);
     }
 
     // we've already checked that the group column exists so we can just unwrap it here
-    let (entity_column_index, entity_key_column) = raw_metadata
-        .raw_schema
+    let (entity_column_index, entity_key_column) = raw_schema
         .column_with_name(&config.group_column_name)
         .with_context(|| "")?;
     let slice_preparer = SlicePreparer::try_new(
@@ -125,7 +114,10 @@ pub async fn prepare_input<'a>(
 
     Ok(async_stream::try_stream! {
         let mut input_buffer = InputBuffer::new();
-        while let Some(Ok(unfiltered_batch)) = reader.next().await {
+        while let Some(unfiltered_batch) = reader.next().await {
+            let unfiltered_batch = unfiltered_batch.into_report().change_context(Error::PreparingColumn)?;
+            let unfiltered_rows = unfiltered_batch.num_rows();
+
             // Keep a buffer of values with a bounded disorder window. This simple
             // hueristic allows for us to process unordered values directly from a stream, dropping
             // "late data" that is outside of the disorder window. The watermark is
@@ -152,13 +144,9 @@ pub async fn prepare_input<'a>(
                 .into_report()
                 .change_context(Error::PreparingColumn)?;
 
-            if input_buffer.watermark < 0 {
-                debug_assert!(
-                    time_column.value(0) - bounded_lateness > 0,
-                    "invalid time; below 0",
-                );
-                // If there's no watermark yet, initialize it to the first event time - the bounded lateness
-                input_buffer.watermark = time_column.value(0) - bounded_lateness
+            if input_buffer.watermark <= 0 {
+                // Initial watermark is the first event time - bounded lateness (or 0).
+                input_buffer.watermark = std::cmp::max(0, time_column.value(0) - bounded_lateness);
             };
 
             // Find which indices to take from the batch (the non-late data)
@@ -167,7 +155,7 @@ pub async fn prepare_input<'a>(
                 .enumerate()
                 .filter_map(|(index, time)| {
                     let time = time.expect("valid time");
-                    if time >= input_buffer.watermark {
+                    if time > input_buffer.watermark {
                         input_buffer.watermark = std::cmp::max(input_buffer.watermark, time - bounded_lateness);
                         Some(index as u64)
                     } else {
@@ -177,6 +165,8 @@ pub async fn prepare_input<'a>(
                 })
                 .collect::<Vec<u64>>();
             let take_indices: PrimitiveArray<UInt64Type> = PrimitiveArray::from_iter_values(take_indices);
+
+            tracing::debug!("Watermark: {:?}", input_buffer.watermark);
 
             // Drop all rows with late data from each column
             let filtered_columns = unfiltered_batch
@@ -189,6 +179,7 @@ pub async fn prepare_input<'a>(
             let record_batch = RecordBatch::try_new(unfiltered_batch.schema(), filtered_columns)
                 .into_report()
                 .change_context(Error::PreparingColumn)?;
+            tracing::debug!("Dropped {} late messages", unfiltered_rows - record_batch.num_rows());
 
             // 2. Slicing may reduce the number of entities to operate and sort on.
             let record_batch = slice_preparer.slice_batch(record_batch)?;
@@ -301,6 +292,8 @@ pub async fn prepare_input<'a>(
             };
             yield record_batch
         }
+
+        tracing::error!("unexpected - loop has exited");
     }
     .boxed())
 }
@@ -372,15 +365,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_sequence_of_batches_prepared() {
-        let config = TableConfig::new_with_table_source(
+        let config = Arc::new(TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
             Some("subsort"),
             "key",
             "",
-        );
-        let batch1 = make_time_batch(&[0, 3, 1, 10, 4, 7]);
+        ));
+        let batch1 = make_time_batch(&[3, 1, 10, 4, 7]);
         let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
         let batch3 = make_time_batch(&[20]);
         let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
@@ -391,8 +384,9 @@ mod tests {
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
-            &config,
-            raw_metadata,
+            config,
+            raw_metadata.raw_schema.clone(),
+            raw_metadata.table_schema.clone(),
             0,
             None,
             key_hash_inverse.clone(),
@@ -407,7 +401,7 @@ mod tests {
 
         let times1: &TimestampNanosecondArray =
             downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
-        assert_eq!(&[0, 1, 3], times1.values());
+        assert_eq!(&[1, 3], times1.values());
 
         let times2: &TimestampNanosecondArray =
             downcast_primitive_array(prepared2.column(0).as_ref()).unwrap();
@@ -415,20 +409,20 @@ mod tests {
 
         let times3: &TimestampNanosecondArray =
             downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
-        assert_eq!(&[12, 12], times3.values())
+        assert_eq!(&[12], times3.values())
     }
 
     #[tokio::test]
     async fn test_when_watermark_does_not_advance() {
-        let config = TableConfig::new_with_table_source(
+        let config = Arc::new(TableConfig::new_with_table_source(
             "Table1",
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             "time",
             Some("subsort"),
             "key",
             "",
-        );
-        let batch1 = make_time_batch(&[0, 1, 3, 10]);
+        ));
+        let batch1 = make_time_batch(&[1, 3, 10]);
         let batch2 = make_time_batch(&[6, 7, 8, 9, 10]);
         let batch3 = make_time_batch(&[20]);
 
@@ -440,8 +434,9 @@ mod tests {
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
             reader.boxed(),
-            &config,
-            raw_metadata,
+            config,
+            raw_metadata.raw_schema.clone(),
+            raw_metadata.table_schema.clone(),
             0,
             None,
             key_hash_inverse.clone(),
@@ -457,7 +452,7 @@ mod tests {
         // first batch
         let times1: &TimestampNanosecondArray =
             downcast_primitive_array(prepared1.column(0).as_ref()).unwrap();
-        assert_eq!(&[0, 1, 3], times1.values());
+        assert_eq!(&[1, 3], times1.values());
 
         // watermark did not advance, so cannot produce any
         assert!(prepared2.is_none());
@@ -466,5 +461,53 @@ mod tests {
         let times3: &TimestampNanosecondArray =
             downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
         assert_eq!(&[6, 7, 8, 9, 10, 10], times3.values())
+    }
+
+    #[tokio::test]
+    async fn test_when_first_batch_has_single_row() {
+        let config = Arc::new(TableConfig::new_with_table_source(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            Some("subsort"),
+            "key",
+            "",
+        ));
+        let batch1 = make_time_batch(&[10]);
+        let batch2 = make_time_batch(&[4]);
+        let batch3 = make_time_batch(&[7, 17]);
+
+        let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
+        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
+            KeyHashInverse::from_data_type(DataType::UInt64),
+        ));
+
+        let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
+        let mut stream = execute_input_stream::prepare_input(
+            reader.boxed(),
+            config,
+            raw_metadata.raw_schema.clone(),
+            raw_metadata.table_schema.clone(),
+            0,
+            None,
+            key_hash_inverse.clone(),
+            5,
+        )
+        .await
+        .unwrap();
+
+        let prepared1 = stream.next().await.unwrap().unwrap();
+        let prepared2 = stream.next().await.unwrap().unwrap();
+        let prepared3 = stream.next().await.unwrap().unwrap().unwrap();
+
+        // Can't produce row due to watermark not advancing past the row
+        assert!(prepared1.is_none());
+        // contained late data, so nothing to produce
+        assert!(prepared2.is_none());
+
+        // watermark advances, so produce the leftovers that are before the new watermark
+        let times3: &TimestampNanosecondArray =
+            downcast_primitive_array(prepared3.column(0).as_ref()).unwrap();
+        assert_eq!(&[7, 10], times3.values())
     }
 }

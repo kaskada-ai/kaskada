@@ -13,6 +13,8 @@ Commands:
           Run Sparrow in batch-mode on a specific script
   prepare
           Prepare a file for use as part of a table
+  materialize
+          Create a long-running process that materializes results to a destination
   license
           License report and notice
   help
