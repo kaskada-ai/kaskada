@@ -1,12 +1,12 @@
 # pylint: disable=no-member
 import operator
 import pprint
-from typing import Optional
+import re
 
-import pandas as pd
 from domonic.html import pre, table, td, th, tr
 from domonic.utils import Utils
 
+import kaskada.errors.error_codes as error_codes
 import kaskada.kaskada.v1alpha.pulsar_pb2 as pulsar_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
 import kaskada.kaskada.v1alpha.view_service_pb2 as view_pb
@@ -61,11 +61,24 @@ def get_analysis_and_diagnostics_tables(obj):
     return can_execute, has_errors, details, diagnostics
 
 
+def update_diagnostic_with_link(fenl_diag_msg: str) -> str:
+    re_search = re.search("error\[(,?.*)\]", fenl_diag_msg)
+    if re_search is not None:
+        error_code = re_search.groups()[0]
+        if error_code in error_codes.FENL_DIAGNOSTIC_ERRORS:
+            diagnostic_error = error_codes.FENL_DIAGNOSTIC_ERRORS[error_code]
+            fenl_diag_msg = fenl_diag_msg.replace(
+                error_code, diagnostic_error.render_error_code()
+            )
+    return fenl_diag_msg
+
+
 def get_fenl_diagnostics_html_and_has_errors(obj):
     diagnostics = table(_class="kda_table")
     for i in range(len(obj.fenl_diagnostics)):
         fenl_diag = obj.fenl_diagnostics[i]
-        diagnostics.appendChild(html_obj_table_row(i, fenl_diag.formatted))
+        rendered_diag = update_diagnostic_with_link(fenl_diag.formatted)
+        diagnostics.appendChild(html_obj_table_row(i, rendered_diag))
     return diagnostics, obj.num_errors > 0
 
 
