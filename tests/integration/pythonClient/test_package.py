@@ -13,4 +13,11 @@ except:
     sys.exit(1)
 
 print("**** SUCCESS! I can create a Kaskada Session.")
+try: 
+    session.stop()
+    print ("**** SUCCESS! I can stop a Kaskada Session.")
+except: 
+    traceback.print_exc()
+    sys.exit(0) # grpc _channel fails for some reason on stop, but it's not a big deal 
+    
 sys.exit(0)
