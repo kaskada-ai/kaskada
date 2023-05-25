@@ -12,8 +12,12 @@ import (
 )
 
 type FileManager interface {
-	// metadata related
+
+	// GetFileSchema returns the schema of the file at the given URI
 	GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error)
+
+	// GetPulsarSchema returns the schema of the pulsar topic
+	GetPulsarSchema(ctx context.Context, pulsarConfig *v1alpha.PulsarConfig) (*v1alpha.Schema, error)
 }
 
 type fileManager struct {
@@ -27,7 +31,7 @@ func NewFileManager(computeClients *client.ComputeClients) FileManager {
 }
 
 func (m *fileManager) GetFileSchema(ctx context.Context, fileInput internal.FileInput) (*v1alpha.Schema, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetFileSchema").Str("uri", fileInput.GetURI()).Str("type", fileInput.GetExtension()).Logger()
+	subLogger := log.Ctx(ctx).With().Str("method", "fileManager.GetFileSchema").Str("uri", fileInput.GetURI()).Str("type", fileInput.GetExtension()).Logger()
 	// Send the metadata request to the FileService
 
 	var sourceData *v1alpha.SourceData
@@ -41,6 +45,24 @@ func (m *fileManager) GetFileSchema(ctx context.Context, fileInput internal.File
 		subLogger.Warn().Msg("user didn't specifiy file type, defaulting to parquet for now, but will error in the future")
 		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: fileInput.GetURI()}}
 	}
+
+	return m.getSchema(ctx, sourceData)
+}
+
+func (m *fileManager) GetPulsarSchema(ctx context.Context, pulsarConfig *v1alpha.PulsarConfig) (*v1alpha.Schema, error) {
+	sourceData := &v1alpha.SourceData{
+		Source: &v1alpha.SourceData_PulsarSubscription{
+			PulsarSubscription: &v1alpha.PulsarSubscription{
+				Config: pulsarConfig,
+			},
+		},
+	}
+
+	return m.getSchema(ctx, sourceData)
+}
+
+func (m *fileManager) getSchema(ctx context.Context, sourceData *v1alpha.SourceData) (*v1alpha.Schema, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "fileManager.getSchema").Logger()
 
 	fileClient := m.computeClients.NewFileServiceClient(ctx)
 	defer fileClient.Close()

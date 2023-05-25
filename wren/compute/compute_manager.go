@@ -22,6 +22,7 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/client"
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/kaskada-ai/kaskada/wren/utils"
 )
@@ -39,7 +40,9 @@ type ComputeManager interface {
 	InitiateQuery(queryContext *QueryContext) (client.ComputeServiceClient, v1alpha.ComputeService_ExecuteClient, error)
 	SaveComputeSnapshots(queryContext *QueryContext, computeSnapshots []*v1alpha.ComputeSnapshot)
 
-	// materialization related
+	// Runs all existing file-based materializations for the given owner
+	// Note: this exists in the ComputeManager interface instead of the MaterializationManager interface because
+	// it runs materializations in a similar way to InitiateQuery
 	RunMaterializations(ctx context.Context, owner *ent.Owner)
 }
 
@@ -201,6 +204,8 @@ func (m *computeManager) SaveComputeSnapshots(queryContext *QueryContext, comput
 }
 
 // Runs all saved materializations on current data inside a go-routine that attempts to finish before shutdown
+// TODO: After sparrow supports long-running materializations from file-based sources 
+// remove all the code related to this method
 func (m *computeManager) RunMaterializations(requestCtx context.Context, owner *ent.Owner) {
 	m.errGroup.Go(func() error { return m.processMaterializations(requestCtx, owner) })
 }
@@ -229,7 +234,7 @@ func (m *computeManager) processMaterializations(requestCtx context.Context, own
 		subLogger.Error().Err(err).Msg("issue getting current prepare cache buster")
 	}
 
-	materializations, err := m.materializationClient.GetAllMaterializations(ctx, owner)
+	materializations, err := m.materializationClient.GetMaterializationsBySourceType(ctx, owner, materialization.SourceTypeFiles)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("error listing materializations")
 		return nil

@@ -14,6 +14,7 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/compute"
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/ent/schema"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 )
@@ -155,12 +156,19 @@ func (s *materializationService) CreateMaterialization(ctx context.Context, requ
 }
 
 func (s *materializationService) createMaterialization(ctx context.Context, owner *ent.Owner, request *v1alpha.CreateMaterializationRequest) (*v1alpha.CreateMaterializationResponse, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
+	if request.Materialization == nil {
+		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization definition")
+	}
+
+	if request.Materialization.Expression == "" {
+		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization expression")
+	}
 
 	if request.Materialization.Destination == nil {
 		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization destination")
 	}
 
+	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
 	compileResp, _, err := s.materializationManager.CompileV1Materialization(ctx, owner, request.Materialization)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling materialization")
@@ -181,6 +189,26 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	if err != nil {
 		return nil, err
 	}
+
+	sourceType := materialization.SourceTypeUnspecified
+	for _, table := range tableMap {
+		var newSourceType materialization.SourceType
+		switch table.Source.Source.(type) {
+		case *v1alpha.Source_Kaskada:
+			newSourceType = materialization.SourceTypeFiles
+		case *v1alpha.Source_Pulsar:
+			newSourceType = materialization.SourceTypeStreams
+		default:
+			log.Error().Msgf("unknown source type %T", table.Source.Source)
+			return nil, customerrors.NewInternalError("unknown table source type")
+		}
+		if sourceType == materialization.SourceTypeUnspecified {
+			sourceType = newSourceType
+		} else if sourceType != newSourceType {
+			return nil, customerrors.NewInvalidArgumentErrorWithCustomText("cannot materialize tables from different source types")
+		}
+	}
+
 	viewMap, err := s.kaskadaViewClient.GetKaskadaViewsFromNames(ctx, owner, compileResp.FreeNames)
 	if err != nil {
 		return nil, err
@@ -229,15 +257,28 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 		SliceRequest:  sliceRequest,
 		Analysis:      getAnalysisFromCompileResponse(compileResp),
 		DataVersionID: dataVersionID,
+		SourceType:    sourceType,
 	}
 
-	materialization, err := s.materializationClient.CreateMaterialization(ctx, owner, newMaterialization, dependencies)
+	createdMaterialization, err := s.materializationClient.CreateMaterialization(ctx, owner, newMaterialization, dependencies)
 	if err != nil {
 		return nil, err
 	}
 
-	subLogger.Debug().Msg("running materializations")
-	s.computeManager.RunMaterializations(ctx, owner)
+	switch sourceType {
+	case materialization.SourceTypeFiles:
+		subLogger.Debug().Msg("running materializations")
+		s.computeManager.RunMaterializations(ctx, owner)
+	case materialization.SourceTypeStreams:
+		subLogger.Debug().Msg("adding materialization to compute")
+		err := s.materializationManager.StartMaterialization(ctx, owner, createdMaterialization.ID.String(), compileResp, createdMaterialization.Destination)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		log.Error().Msgf("unknown source type %T", sourceType)
+		return nil, customerrors.NewInternalError("unknown table source type")
+	}
 
 	// Get the newly computed materialization and its associated data token.
 	//
@@ -246,7 +287,7 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	//
 	// We could also store the `data_token_id` (or DataToken itself) on the materialization,
 	// which would allow us to skip the secondary lookup of the token from version.
-	computedMaterialization, err := s.materializationClient.GetMaterialization(ctx, owner, materialization.ID)
+	computedMaterialization, err := s.materializationClient.GetMaterialization(ctx, owner, createdMaterialization.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +295,7 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	if err != nil {
 		return nil, err
 	}
-	return &v1alpha.CreateMaterializationResponse{Materialization: materializationProto, Analysis: materialization.Analysis}, nil
+	return &v1alpha.CreateMaterializationResponse{Materialization: materializationProto, Analysis: createdMaterialization.Analysis}, nil
 }
 
 func (s *materializationService) DeleteMaterialization(ctx context.Context, request *v1alpha.DeleteMaterializationRequest) (*v1alpha.DeleteMaterializationResponse, error) {
@@ -267,12 +308,20 @@ func (s *materializationService) DeleteMaterialization(ctx context.Context, requ
 }
 
 func (s *materializationService) deleteMaterialization(ctx context.Context, owner *ent.Owner, request *v1alpha.DeleteMaterializationRequest) (*v1alpha.DeleteMaterializationResponse, error) {
-	materialization, err := s.materializationClient.GetMaterializationByName(ctx, owner, request.MaterializationName)
+	foundMaterialization, err := s.materializationClient.GetMaterializationByName(ctx, owner, request.MaterializationName)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.materializationClient.DeleteMaterialization(ctx, owner, materialization)
+	if foundMaterialization.SourceType == materialization.SourceTypeStreams {
+		err := s.materializationManager.StopMaterialization(ctx, foundMaterialization.ID.String())
+		if err != nil {
+			subLogger := log.Ctx(ctx).With().Str("method", "materializationService.deleteMaterialization").Logger()
+			subLogger.Warn().Err(err).Str("materialization_id", foundMaterialization.ID.String()).Msg("unable to stop materialization on engine")
+		}
+	}
+
+	err = s.materializationClient.DeleteMaterialization(ctx, owner, foundMaterialization)
 	if err != nil {
 		return nil, err
 	}
