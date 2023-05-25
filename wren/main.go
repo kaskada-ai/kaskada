@@ -215,11 +215,11 @@ func main() {
 	// connect to stores
 	tableStore := store.NewTableStore(&objectStoreClient)
 
-	compileManager := compute.NewCompileManager(computeClients, &kaskadaTableClient, &kaskadaViewClient)
-	prepareManager := compute.NewPrepareManager(computeClients, &kaskadaTableClient, &prepareJobClient, parallelizeConfig, tableStore)
-	computeManager := compute.NewComputeManager(g, &compileManager, computeClients, &dataTokenClient, &kaskadaTableClient, &materializationClient, &objectStoreClient, &prepareManager)
-	fileManager := compute.NewFileManager(computeClients)
-	materializationManager := compute.NewMaterializationManager(&compileManager, computeClients, &kaskadaTableClient, &materializationClient)
+	compileManager := compute.NewCompileManager(&computeClients, &kaskadaTableClient, &kaskadaViewClient)
+	prepareManager := compute.NewPrepareManager(&computeClients, &kaskadaTableClient, &prepareJobClient, parallelizeConfig, tableStore)
+	computeManager := compute.NewComputeManager(g, &compileManager, &computeClients, &dataTokenClient, &kaskadaTableClient, &materializationClient, &objectStoreClient, &prepareManager)
+	fileManager := compute.NewFileManager(&computeClients)
+	materializationManager := compute.NewMaterializationManager(&compileManager, &computeClients, &kaskadaTableClient, &materializationClient)
 
 	// gRPC Health Server
 	healthServer := health.NewServer()

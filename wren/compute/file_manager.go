@@ -42,7 +42,7 @@ func (m *fileManager) GetFileSchema(ctx context.Context, fileInput internal.File
 		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: fileInput.GetURI()}}
 	}
 
-	fileClient := m.computeClients.FileServiceClient(ctx)
+	fileClient := m.computeClients.NewFileServiceClient(ctx)
 	defer fileClient.Close()
 
 	metadataReq := &v1alpha.GetMetadataRequest{

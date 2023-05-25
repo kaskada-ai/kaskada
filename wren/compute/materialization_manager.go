@@ -56,7 +56,7 @@ func (m *materializationManager) StartMaterialization(ctx context.Context, owner
 		Destination:       destination,
 	}
 
-	computeClient := m.computeClients.ComputeServiceClient(ctx)
+	computeClient := m.computeClients.NewComputeServiceClient(ctx)
 	defer computeClient.Close()
 
 	subLogger.Info().
@@ -79,7 +79,7 @@ func (m *materializationManager) StopMaterialization(ctx context.Context, materi
 		MaterializationId: materializationID,
 	}
 
-	computeClient := m.computeClients.ComputeServiceClient(ctx)
+	computeClient := m.computeClients.NewComputeServiceClient(ctx)
 	defer computeClient.Close()
 
 	_, err := computeClient.StopMaterialization(ctx, stopRequest)
@@ -98,7 +98,7 @@ func (m *materializationManager) GetMaterializationStatus(ctx context.Context, m
 		MaterializationId: materializationID,
 	}
 
-	computeClient := m.computeClients.ComputeServiceClient(ctx)
+	computeClient := m.computeClients.NewComputeServiceClient(ctx)
 	defer computeClient.Close()
 
 	statusResponse, err := computeClient.GetMaterializationStatus(ctx, statusRequest)

@@ -48,6 +48,7 @@ func NewCompileManager(computeClients *client.ComputeClients, kaskadaTableClient
 		kaskadaViewClient:  *kaskadaViewClient,
 	}
 }
+
 func (m *compileManager) CompileEntMaterialization(ctx context.Context, owner *ent.Owner, materialization *ent.Materialization) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
 	compileRequest := &compileRequest{
 		Expression:     materialization.Expression,
@@ -95,7 +96,7 @@ func (m *compileManager) CompileV1Query(ctx context.Context, owner *ent.Owner, q
 }
 
 func (m *compileManager) CompileV2Query(ctx context.Context, owner *ent.Owner, expression string, views []*v2alpha.QueryView, queryConfig *v2alpha.QueryConfig) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
-	
+
 	compileRequest := &compileRequest{
 		Expression:   expression,
 		Views:        make([]*v1alpha.WithView, len(views)),
@@ -208,7 +209,7 @@ func (m *compileManager) compile(ctx context.Context, owner *ent.Owner, request 
 		compileRequest.ExpressionKind = v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE
 	}
 
-	computeClient := m.computeClients.ComputeServiceClient(ctx)
+	computeClient := m.computeClients.NewComputeServiceClient(ctx)
 	defer computeClient.Close()
 
 	subLogger.Info().Interface("request", compileRequest).Msg("sending compile request")
@@ -265,7 +266,7 @@ func (m *compileManager) getFormulaMap(ctx context.Context, owner *ent.Owner, re
 		formulaMap[requestView.Name] = &v1alpha.Formula{
 			Name:           requestView.Name,
 			Formula:        requestView.Expression,
-			SourceLocation: fmt.Sprintf("Requested View %s", requestView.Name),
+			SourceLocation: fmt.Sprintf("Requested View: %s", requestView.Name),
 		}
 	}
 

@@ -47,7 +47,7 @@ type computeManager struct {
 	CompileManager
 
 	prepareManager        PrepareManager
-	computeClients        *client.ComputeClients
+	computeClients        client.ComputeClients
 	errGroup              *errgroup.Group
 	dataTokenClient       internal.DataTokenClient
 	kaskadaTableClient    internal.KaskadaTableClient
@@ -60,7 +60,7 @@ type computeManager struct {
 func NewComputeManager(errGroup *errgroup.Group, compileManager *CompileManager, computeClients *client.ComputeClients, dataTokenClient *internal.DataTokenClient, kaskadaTableClient *internal.KaskadaTableClient, materializationClient *internal.MaterializationClient, objectStoreClient *client.ObjectStoreClient, prepareManager *PrepareManager) ComputeManager {
 	return &computeManager{
 		CompileManager:        *compileManager,
-		computeClients:        computeClients,
+		computeClients:        *computeClients,
 		errGroup:              errGroup,
 		dataTokenClient:       *dataTokenClient,
 		kaskadaTableClient:    *kaskadaTableClient,
@@ -102,7 +102,7 @@ func (m *computeManager) InitiateQuery(queryContext *QueryContext) (client.Compu
 		return nil, nil, err
 	}
 
-	queryClient := m.computeClients.ComputeServiceClient(queryContext.ctx)
+	queryClient := m.computeClients.NewComputeServiceClient(queryContext.ctx)
 
 	subLogger.Info().Bool("incremental_enabled", queryContext.compileResp.IncrementalEnabled).Bool("is_current_data_token", queryContext.isCurrentDataToken).Msg("Populating snapshot config if needed")
 	if queryContext.compileResp.IncrementalEnabled && queryContext.isCurrentDataToken && queryContext.compileResp.PlanHash != nil {
@@ -346,7 +346,7 @@ func (m *computeManager) processMaterializations(requestCtx context.Context, own
 // gets the current snapshot cache buster
 func (m *computeManager) getSnapshotCacheBuster(ctx context.Context) (*int32, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getSnapshotCacheBuster").Logger()
-	queryClient := m.computeClients.ComputeServiceClient(ctx)
+	queryClient := m.computeClients.NewComputeServiceClient(ctx)
 	defer queryClient.Close()
 
 	res, err := queryClient.GetCurrentSnapshotVersion(ctx, &v1alpha.GetCurrentSnapshotVersionRequest{})
