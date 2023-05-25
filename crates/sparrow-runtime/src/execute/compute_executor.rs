@@ -54,6 +54,7 @@ impl ComputeExecutor {
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
         destination: v1alpha::Destination,
+        stop_signal_rx: tokio::sync::watch::Receiver<bool>,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
@@ -143,6 +144,7 @@ impl ComputeExecutor {
                         inputs,
                         max_event_time_tx.clone(),
                         late_bindings,
+                        stop_signal_rx.clone(),
                     )
                     .await?,
             );
