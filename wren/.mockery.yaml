@@ -12,3 +12,12 @@ packages:
       MaterializationClient:
       OwnerClient:
       PrepareJobClient:
+  github.com/kaskada-ai/kaskada/wren/compute:
+    config:
+      dir: "{{.InterfaceDir}}"
+    interfaces:
+      CompileManager:
+      ComputeManager:
+      FileManager:
+      MaterializationManager:
+      PrepareManager:

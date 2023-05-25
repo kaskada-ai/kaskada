@@ -38,6 +38,7 @@ type tableService struct {
 	v1alpha.UnimplementedTableServiceServer
 
 	computeManager     compute.ComputeManager
+	fileManager        compute.FileManager
 	kaskadaTableClient internal.KaskadaTableClient
 	objectStoreClient  client.ObjectStoreClient
 	tableStore         *store.TableStore
@@ -45,9 +46,10 @@ type tableService struct {
 }
 
 // NewTableService creates a new table service
-func NewTableService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, tableStore *store.TableStore, dependencyAnalyzer *Analyzer) *tableService {
+func NewTableService(computeManager *compute.ComputeManager, fileManager *compute.FileManager, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, tableStore *store.TableStore, dependencyAnalyzer *Analyzer) *tableService {
 	return &tableService{
 		computeManager:     *computeManager,
+		fileManager:        *fileManager,
 		kaskadaTableClient: *kaskadaTableClient,
 		objectStoreClient:  *objectStoreClient,
 		tableStore:         tableStore,
@@ -335,7 +337,7 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.KaskadaTable, fileInput internal.FileInput) (*v1alpha.Schema, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "table.validateFileSchema").Logger()
 
-	fileSchema, err := t.computeManager.GetFileSchema(ctx, fileInput)
+	fileSchema, err := t.fileManager.GetFileSchema(ctx, fileInput)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting schema for file")
 		return nil, reMapSparrowError(ctx, err)
