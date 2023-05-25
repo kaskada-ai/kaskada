@@ -180,8 +180,8 @@ func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, reques
 	}
 
 	switch s := table.Source.Source.(type) {
-	case *v1alpha.Source_Kaskada: // if the table soure is kaskada, do nothing
-	case *v1alpha.Source_Pulsar: // if the table soure is pulsar, validate the schema
+	case *v1alpha.Source_Kaskada: // if the table source is kaskada, do nothing
+	case *v1alpha.Source_Pulsar: // if the table source is pulsar, validate the schema
 		streamSchema, err := t.fileManager.GetPulsarSchema(ctx, s.Pulsar.Config)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting schema for file")

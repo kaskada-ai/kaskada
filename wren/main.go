@@ -354,7 +354,7 @@ func main() {
 	// peridocally reconcile materializations to ensure the ones that are supposed to be running are running
 	g.Go(func() error {
 		for {
-			time.Sleep(5 * time.Second)
+			time.Sleep(60 * time.Second)
 
 			err := materializationManager.ReconcileMaterializations(ctx)
 			if err != nil {
