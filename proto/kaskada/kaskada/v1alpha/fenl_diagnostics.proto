@@ -21,6 +21,9 @@ message FenlDiagnostic {
 
   // The full formatted diagnostic, suitable for display purposes.
   string formatted = 4;
+
+  // The web link associated with the code.
+  string web_link = 5;
 }
 
 enum Severity {
