@@ -9,6 +9,7 @@ import (
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	"github.com/kaskada-ai/kaskada/wren/ent"
 	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/ent/predicate"
 	"github.com/kaskada-ai/kaskada/wren/ent/schema"
 	"github.com/kaskada-ai/kaskada/wren/property"
@@ -80,10 +81,11 @@ type MaterializationClient interface {
 	CreateMaterialization(ctx context.Context, owner *ent.Owner, newMaterialization *ent.Materialization, dependencies []*ent.MaterializationDependency) (*ent.Materialization, error)
 	DeleteMaterialization(ctx context.Context, owner *ent.Owner, view *ent.Materialization) error
 	GetAllMaterializations(ctx context.Context, owner *ent.Owner) ([]*ent.Materialization, error)
+	GetAllMaterializationsBySourceType(ctx context.Context, sourceType materialization.SourceType) ([]*ent.Materialization, error)
 	GetMaterialization(ctx context.Context, owner *ent.Owner, id uuid.UUID) (*ent.Materialization, error)
 	GetMaterializationByName(ctx context.Context, owner *ent.Owner, name string) (*ent.Materialization, error)
-	GetMaterializationsFromNames(ctx context.Context, owner *ent.Owner, names []string) (map[string]*ent.Materialization, error)
 	GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error)
+	GetMaterializationsBySourceType(ctx context.Context, owner *ent.Owner, sourceType materialization.SourceType) ([]*ent.Materialization, error)
 	ListMaterializations(ctx context.Context, owner *ent.Owner, searchTerm string, pageSize int, offset int) ([]*ent.Materialization, error)
 	UpdateDataVersion(ctx context.Context, materialization *ent.Materialization, newDataVersion int64) (*ent.Materialization, error)
 	IncrementVersion(ctx context.Context, materialization *ent.Materialization) (*ent.Materialization, error)

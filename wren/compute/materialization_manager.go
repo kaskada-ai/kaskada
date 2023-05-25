@@ -7,6 +7,7 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/client"
 	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/rs/zerolog/log"
 )
@@ -22,6 +23,9 @@ type MaterializationManager interface {
 
 	// GetMaterializationStatus gets the status of a materialization on the compute backend
 	GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.ProgressInformation, error)
+
+	// ReconcileMaterializations reconciles the materializations in the database with the materializations on the compute backend
+	ReconcileMaterializations(ctx context.Context) error
 }
 
 type materializationManager struct {
@@ -30,14 +34,19 @@ type materializationManager struct {
 	computeClients        client.ComputeClients
 	kaskadaTableClient    internal.KaskadaTableClient
 	materializationClient internal.MaterializationClient
+
+	// this is used to keep track of which materializations are currently running on the compute backend
+	// so that if a materialization is deleted from the database, we can stop it the next time we reconcile
+	runningMaterializations map[string]interface{}
 }
 
 func NewMaterializationManager(compileManager *CompileManager, computeClients *client.ComputeClients, kaskadaTableClient *internal.KaskadaTableClient, materializationClient *internal.MaterializationClient) MaterializationManager {
 	return &materializationManager{
-		CompileManager:        *compileManager,
-		computeClients:        *computeClients,
-		kaskadaTableClient:    *kaskadaTableClient,
-		materializationClient: *materializationClient,
+		CompileManager:          *compileManager,
+		computeClients:          *computeClients,
+		kaskadaTableClient:      *kaskadaTableClient,
+		materializationClient:   *materializationClient,
+		runningMaterializations: map[string]interface{}{},
 	}
 }
 
@@ -108,6 +117,77 @@ func (m *materializationManager) GetMaterializationStatus(ctx context.Context, m
 	}
 
 	return statusResponse.Progress, nil
+}
+
+// ReconcileMaterializations reconciles the materializations in the database with the materializations on the compute backend
+// After running this function, all materializations in the database will be running on the compute backend
+// and all deleted materializations will be stopped
+func (m *materializationManager) ReconcileMaterializations(ctx context.Context) error {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.ReconcileMaterializations").Logger()
+
+	allStreamMaterializations, err := m.materializationClient.GetAllMaterializationsBySourceType(ctx, materialization.SourceTypeStreams)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("failed to get all stream materializations")
+		return err
+	}
+
+	// find all materializations in the database and start any that are not running
+	// we keep a map of materialization_name=>nil to keep track of which materializations are running
+	newRunningMaterializations := make(map[string]interface{})
+	for _, streamMaterialization := range allStreamMaterializations {
+		materializationID := streamMaterialization.ID.String()
+		owner := streamMaterialization.Edges.Owner
+
+		isRunning := false
+		// check to see if the materialization was running in the previous iteration
+		if _, found := m.runningMaterializations[materializationID]; found {
+			//verify that the materialization is still running
+			progressInfo, err := m.GetMaterializationStatus(ctx, materializationID)
+			if err != nil {
+				log.Error().Err(err).Str("id", materializationID).Msg("failed to get materialization status")
+			}
+			isRunning = progressInfo != nil
+		}
+
+		if isRunning {
+			newRunningMaterializations[materializationID] = nil
+		} else {
+			log.Debug().Str("id", materializationID).Msg("found materialization that is not running, attempting to start it")
+
+			compileResp, _, err := m.CompileEntMaterialization(ctx, owner, streamMaterialization)
+			if err != nil {
+				log.Error().Err(err).Str("id", materializationID).Msg("issue compiling materialization")
+			} else {
+				err = m.StartMaterialization(ctx, owner, materializationID, compileResp, streamMaterialization.Destination)
+				if err != nil {
+					log.Error().Err(err).Str("id", materializationID).Msg("failed to start materialization")
+				} else {
+					log.Debug().Str("id", materializationID).Msg("started materialization")
+					newRunningMaterializations[materializationID] = nil
+				}
+			}
+		}
+	}
+
+	// find all materializations that were running the previous time this method was called
+	// but no longer exist in the database. stop any that are found. this can happen due to a race
+	// condition where a materialization is deleted from the database after this method has started
+	// but before it has finished. this method is called periodically so it will eventually stop
+	// the materialization.
+	for materializationID := range m.runningMaterializations {
+		if _, found := newRunningMaterializations[materializationID]; !found {
+			log.Debug().Str("id", materializationID).Msg("found materialization that no longer exists, attempting to stop it")
+			err := m.StopMaterialization(ctx, materializationID)
+			if err != nil {
+				log.Error().Err(err).Str("id", materializationID).Msg("failed to stop materialization")
+				newRunningMaterializations[materializationID] = nil
+			} else {
+				log.Debug().Str("id", materializationID).Msg("stopped materialization")
+			}
+		}
+	}
+	m.runningMaterializations = newRunningMaterializations
+	return nil
 }
 
 func (m *materializationManager) getMaterializationTables(ctx context.Context, owner *ent.Owner, compileResp *v1alpha.CompileResponse) ([]*v1alpha.ComputeTable, error) {
