@@ -14,6 +14,10 @@ use smallvec::SmallVec;
 /// - `oss<operation_index>` for the shift subsort value.
 /// - `osrb<operation_index>` for the shift operation's pending or retained
 ///   batches.
+/// - `<materialization_id>_progress` for the progress of a materialization.
+/// - `<materialization_id>_status` for the status of a materialization.
+/// - `<materialization_id>_err` for errors (if any) for a materialization.
+/// - `<materialization_id>_state` for the state of a materialization.
 /// NOTE: No need to reallocate the keys each time, we can make them constants.
 pub struct StoreKey {
     /// The RocksDB key (or key prefix) to store values at.
@@ -116,6 +120,42 @@ impl StoreKey {
         let mut key = SmallVec::with_capacity(4);
         key.extend_from_slice(b"oss"); // 3
         key.push(operation_index); // 1
+        Self { key }
+    }
+
+    /// Creates a `StoreKey` for the state of a specific materialization.
+    pub fn new_materialization_state(id: &str) -> Self {
+        let progress = b"_state";
+        let mut key = SmallVec::with_capacity(id.len() + progress.len());
+        id.as_bytes().into_iter().for_each(|b| key.push(*b));
+        key.extend_from_slice(progress);
+        Self { key }
+    }
+
+    /// Creates a `StoreKey` for the error message of a specific materialization.
+    pub fn new_materialization_error(id: &str) -> Self {
+        let progress = b"_err";
+        let mut key = SmallVec::with_capacity(id.len() + progress.len());
+        id.as_bytes().into_iter().for_each(|b| key.push(*b));
+        key.extend_from_slice(progress);
+        Self { key }
+    }
+
+    /// Creates a `StoreKey` for the progress for a specific materialization.
+    pub fn new_materialization_progress(id: &str) -> Self {
+        let progress = b"_progress";
+        let mut key = SmallVec::with_capacity(id.len() + progress.len());
+        id.as_bytes().into_iter().for_each(|b| key.push(*b));
+        key.extend_from_slice(progress);
+        Self { key }
+    }
+
+    /// Creates a `StoreKey` for the status for a specific materialization.
+    pub fn new_materialization_status(id: &str) -> Self {
+        let progress = b"_status";
+        let mut key = SmallVec::with_capacity(id.len() + progress.len());
+        id.as_bytes().into_iter().for_each(|b| key.push(*b));
+        key.extend_from_slice(progress);
         Self { key }
     }
 }

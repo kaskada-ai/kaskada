@@ -2,12 +2,27 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Context;
+use error_stack::{IntoReportCompat, ResultExt};
 use prost_wkt_types::Timestamp;
 use rocksdb::DBPinnableSlice;
-use sparrow_api::kaskada::v1alpha::PlanHash;
+use sparrow_api::kaskada::v1alpha::{
+    get_materialization_status_response::{
+        self,
+        materialization_status::{self, State},
+        MaterializationStatus,
+    },
+    PlanHash, ProgressInformation,
+};
 use tracing::info;
 
 use crate::StoreKey;
+
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    Update(String),
+}
+
+impl error_stack::Context for Error {}
 
 /// Storage layer responsible for caching query metadata and results.
 ///
@@ -241,5 +256,57 @@ impl ComputeStore {
 
     pub fn put_max_event_time(&self, value: &Timestamp) -> anyhow::Result<()> {
         self.put_proto(&StoreKey::new_max_event_time(), value)
+    }
+
+    pub fn update_materialization_state(
+        &self,
+        id: &str,
+        state: materialization_status::State,
+    ) -> error_stack::Result<(), Error> {
+        let key = StoreKey::new_materialization_state(id);
+        self.put(&key, &(state as i32))
+            .into_report()
+            .change_context(Error::Update(format!("failed to update state for {id}")))?;
+        Ok(())
+    }
+
+    pub fn update_materialization_error(
+        &self,
+        id: &str,
+        error: &str,
+    ) -> error_stack::Result<(), Error> {
+        let key = StoreKey::new_materialization_error(id);
+        self.put(&key, &error)
+            .into_report()
+            .change_context(Error::Update(format!(
+                "failed to update error message for {id}"
+            )))?;
+        Ok(())
+    }
+
+    pub fn update_materialization_progress(
+        &self,
+        id: &str,
+        progress: ProgressInformation,
+    ) -> error_stack::Result<(), Error> {
+        let key = StoreKey::new_materialization_progress(id);
+        self.put_proto(&key, &progress)
+            .into_report()
+            .change_context(Error::Update(format!("failed to update progress for {id}")))?;
+        Ok(())
+    }
+
+    pub fn get_materialization_status(
+        &self,
+        id: &str,
+    ) -> error_stack::Result<Option<MaterializationStatus>, Error> {
+        let key = StoreKey::new_materialization_status(id);
+        let status = self
+            .get_proto(&key)
+            .into_report()
+            .change_context(Error::Update(format!(
+                "failed to get status for materialization {id}"
+            )))?;
+        Ok(status)
     }
 }

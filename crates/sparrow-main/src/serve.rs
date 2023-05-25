@@ -11,9 +11,11 @@ pub use error_status::*;
 use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeServiceServer;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileServiceServer;
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationServiceServer;
+use sparrow_instructions::ComputeStore;
 use sparrow_runtime::s3::{S3Helper, S3Object};
 use sparrow_runtime::stores::ObjectStoreRegistry;
 use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::Arc;
 use tonic::transport::Server;
 use tracing::{info, info_span};
@@ -48,9 +50,14 @@ pub enum Error {
     InvalidFlightRecordPath,
     #[display(fmt = "error running Tonic server")]
     ServerError,
+    #[display(fmt = "internal error")]
+    Internal,
 }
 
 impl error_stack::Context for Error {}
+
+/// The main compute store for sparrow, shared across requests.
+const COMPUTE_STORE_PATH: &str = "main_compute_store";
 
 impl ServeCommand {
     pub async fn execute(&self) -> error_stack::Result<(), Error> {
@@ -77,7 +84,15 @@ impl ServeCommand {
             None
         };
         let flight_record_path = Box::leak(Box::new(flight_record_path));
-        let compute_service = ComputeServiceImpl::new(flight_record_path, s3.clone());
+
+        // Sparrow's main compute store
+        let compute_store = ComputeStore::try_new_from_path(Path::new(COMPUTE_STORE_PATH))
+            .into_report()
+            .change_context(Error::Internal)
+            .attach_printable("failed to create compute store")?;
+
+        let compute_service =
+            ComputeServiceImpl::new(flight_record_path, s3.clone(), compute_store);
         let preparation_service = PreparationServiceImpl::new(object_store_registry.clone());
 
         let (mut health_reporter, health_service) = tonic_health::server::health_reporter();

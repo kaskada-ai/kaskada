@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
@@ -25,17 +27,22 @@ use uuid::Uuid;
 use crate::serve::error_status::IntoStatus;
 use crate::BuildInfo;
 
-#[derive(Debug)]
 pub(super) struct ComputeServiceImpl {
     flight_record_path: &'static Option<S3Object>,
     s3_helper: S3Helper,
+    compute_store: Arc<ComputeStore>,
 }
 
 impl ComputeServiceImpl {
-    pub(super) fn new(flight_record_path: &'static Option<S3Object>, s3_helper: S3Helper) -> Self {
+    pub(super) fn new(
+        flight_record_path: &'static Option<S3Object>,
+        s3_helper: S3Helper,
+        compute_store: ComputeStore,
+    ) -> Self {
         Self {
             flight_record_path,
             s3_helper,
+            compute_store: Arc::new(compute_store),
         }
     }
 }
@@ -101,10 +108,22 @@ impl ComputeService for ComputeServiceImpl {
 
     async fn start_materialization(
         &self,
-        _request: Request<StartMaterializationRequest>,
+        request: Request<StartMaterializationRequest>,
     ) -> Result<Response<StartMaterializationResponse>, Status> {
-        Err(tonic::Status::internal("unsupported"))
+        let span = tracing::info_span!("StartMaterialization");
+        let _enter = span.enter();
+        let compute_store = self.compute_store.clone();
+        let s3_helper = self.s3_helper.clone();
+
+        let _ = tokio::spawn({
+            // All errors and progress are internally stored, and can be queried
+            // for via the `get_materialization_status` endpoint.
+            materialize_impl(compute_store, s3_helper, request.into_inner()).in_current_span()
+        });
+
+        Ok(Response::new(StartMaterializationResponse {}))
     }
+
     async fn stop_materialization(
         &self,
         _request: Request<StopMaterializationRequest>,
@@ -219,6 +238,36 @@ async fn execute_impl(
             flight_record_tempfile,
         )))
         .map(|item| item.into_status()))
+}
+
+async fn materialize_impl(
+    compute_store: Arc<ComputeStore>,
+    s3_helper: S3Helper,
+    request: StartMaterializationRequest,
+) {
+    let id = request.materialization_id.clone();
+    let result = sparrow_runtime::execute::materialize(
+        request,
+        s3_helper.clone(),
+        None, // TODO: Accept configurable lateness
+        compute_store.clone(),
+    )
+    .await;
+
+    match result {
+        Ok(_) => {
+            tracing::error!("Materialization exited unexpectedly");
+        }
+        Err(e) => {
+            tracing::error!("Materialization failed: {:?}", e);
+            match compute_store.update_materialization_error(&id, &e.to_string()) {
+                Err(e) => {
+                    tracing::error!("Failed to update materialization error message: {:?}", e);
+                }
+                _ => (),
+            }
+        }
+    }
 }
 
 /// Sends the debug message after the end of the stream.

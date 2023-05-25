@@ -305,8 +305,7 @@ message ExecuteResponse {
 }
 
 message StartMaterializationRequest {
-  // The materailization id
-  // provided by the client to identify the materialization.
+  // The id provided by the client to identify the materialization.
   string materialization_id = 1;
 
   // The compiled compute plan.
@@ -326,17 +325,26 @@ message StartMaterializationRequest {
 message StartMaterializationResponse {}
 
 message GetMaterializationStatusRequest {
-  // The materailization id
   string materialization_id = 1;
 }
 
 message GetMaterializationStatusResponse {
-  // Progress information included in every message.
-  ProgressInformation progress = 1;
+  string materialization_id = 1;
+  MaterializationStatus status = 2;
+
+  message MaterializationStatus {
+    ProgressInformation progress = 1;
+    State state = 2;
+    string error = 3;
+
+    enum State {
+      RUNNING = 0;
+      FAILED = 1;
+    }
+  }
 }
 
 message StopMaterializationRequest {
-  // The materailization id
   string materialization_id = 1;
 }
 
