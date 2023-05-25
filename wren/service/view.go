@@ -29,16 +29,16 @@ type ViewService interface {
 
 type viewService struct {
 	pb.UnimplementedViewServiceServer
-	computeManager     compute.ComputeManager
+	compileManager     compute.CompileManager
 	kaskadaTableClient internal.KaskadaTableClient
 	kaskadaViewClient  internal.KaskadaViewClient
 	dependencyAnalyzer Analyzer
 }
 
 // NewViewService creates a new view service
-func NewViewService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dependencyAnalyzer *Analyzer) *viewService {
+func NewViewService(compileManager *compute.CompileManager, kaskadaTableClient *internal.KaskadaTableClient, kaskadaViewClient *internal.KaskadaViewClient, dependencyAnalyzer *Analyzer) *viewService {
 	return &viewService{
-		computeManager:     *computeManager,
+		compileManager:     *compileManager,
 		kaskadaTableClient: *kaskadaTableClient,
 		kaskadaViewClient:  *kaskadaViewClient,
 		dependencyAnalyzer: *dependencyAnalyzer,
@@ -147,7 +147,7 @@ func (s *viewService) CreateView(ctx context.Context, request *pb.CreateViewRequ
 func (s *viewService) createView(ctx context.Context, owner *ent.Owner, request *pb.CreateViewRequest) (*pb.CreateViewResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "viewService.createView").Str("expression", request.View.Expression).Logger()
 
-	compileResp, err := s.computeManager.CompileQuery(ctx, owner, request.View.Expression, []*pb.WithView{}, true, false, nil, pb.Query_RESULT_BEHAVIOR_ALL_RESULTS)
+	compileResp, err := s.compileManager.CompileV1View(ctx, owner, request.View)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling view")
 		return nil, err
