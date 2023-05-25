@@ -38,6 +38,7 @@ type tableService struct {
 	v1alpha.UnimplementedTableServiceServer
 
 	computeManager     compute.ComputeManager
+	fileManager        compute.FileManager
 	kaskadaTableClient internal.KaskadaTableClient
 	objectStoreClient  client.ObjectStoreClient
 	tableStore         *store.TableStore
@@ -45,9 +46,10 @@ type tableService struct {
 }
 
 // NewTableService creates a new table service
-func NewTableService(computeManager *compute.ComputeManager, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, tableStore *store.TableStore, dependencyAnalyzer *Analyzer) *tableService {
+func NewTableService(computeManager *compute.ComputeManager, fileManager *compute.FileManager, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, tableStore *store.TableStore, dependencyAnalyzer *Analyzer) *tableService {
 	return &tableService{
 		computeManager:     *computeManager,
+		fileManager:        *fileManager,
 		kaskadaTableClient: *kaskadaTableClient,
 		objectStoreClient:  *objectStoreClient,
 		tableStore:         tableStore,
@@ -155,6 +157,7 @@ func (t *tableService) CreateTable(ctx context.Context, request *v1alpha.CreateT
 }
 
 func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, request *v1alpha.CreateTableRequest) (*v1alpha.CreateTableResponse, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "tableService.createTable").Logger()
 	table := request.Table
 
 	// if no table source passed in request, set it to Kaskada source
@@ -174,6 +177,24 @@ func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, reques
 
 	if table.SubsortColumnName != nil {
 		newTable.SubsortColumnName = &request.Table.SubsortColumnName.Value
+	}
+
+	switch s := table.Source.Source.(type) {
+	case *v1alpha.Source_Kaskada: // if the table source is kaskada, do nothing
+	case *v1alpha.Source_Pulsar: // if the table source is pulsar, validate the schema
+		streamSchema, err := t.fileManager.GetPulsarSchema(ctx, s.Pulsar.Config)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting schema for file")
+			return nil, reMapSparrowError(ctx, err)
+		}
+
+		err = t.validateSchema(ctx, *newTable, streamSchema)
+		if err != nil {
+			return nil, err
+		}
+		newTable.MergedSchema = streamSchema
+	default:
+		return nil, customerrors.NewInvalidArgumentError("invalid source type")
 	}
 
 	kaskadaTable, err := t.kaskadaTableClient.CreateKaskadaTable(ctx, owner, newTable)
@@ -291,7 +312,13 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 		return nil, customerrors.NewNotFoundErrorWithCustomText(fmt.Sprintf("file: %s not found by the kaskada service", fileInput.GetURI()))
 	}
 
-	fileSchema, err := t.validateFileSchema(ctx, *kaskadaTable, fileInput)
+	fileSchema, err := t.fileManager.GetFileSchema(ctx, fileInput)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue getting schema for file")
+		return nil, reMapSparrowError(ctx, err)
+	}
+
+	err = t.validateSchema(ctx, *kaskadaTable, fileSchema)
 	if err != nil {
 		return nil, err
 	}
@@ -329,41 +356,35 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 	return newDataToken, nil
 }
 
-// validateFileSchema performs the validation of the a file vs the desired table
+// validateSchema performs the validation of the a file vs the desired table
 // assumes that the provided table and schema are up to date and valid
 // TODO: return all the return all the potential issues in a single response.  Similar to how the request validation works.
-func (t *tableService) validateFileSchema(ctx context.Context, kaskadaTable ent.KaskadaTable, fileInput internal.FileInput) (*v1alpha.Schema, error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "table.validateFileSchema").Logger()
+func (t *tableService) validateSchema(ctx context.Context, kaskadaTable ent.KaskadaTable, schema *v1alpha.Schema) error {
+	subLogger := log.Ctx(ctx).With().Str("method", "table.validateSchema").Logger()
 
-	fileSchema, err := t.computeManager.GetFileSchema(ctx, fileInput)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue getting schema for file")
-		return nil, reMapSparrowError(ctx, err)
-	}
-
-	if kaskadaTable.MergedSchema != nil && !proto.Equal(kaskadaTable.MergedSchema, fileSchema) {
-		subLogger.Warn().Interface("table_schema", kaskadaTable.MergedSchema).Interface("file_schema", fileSchema).Str("file_uri", fileInput.GetURI()).Msg("new file doesn't match schema of table")
-		return nil, customerrors.NewFailedPreconditionError("file schema does not match previous files")
+	if kaskadaTable.MergedSchema != nil && !proto.Equal(kaskadaTable.MergedSchema, schema) {
+		subLogger.Warn().Interface("table_schema", kaskadaTable.MergedSchema).Interface("schema", schema).Msg("new schema doesn't match schema of table")
+		return customerrors.NewFailedPreconditionError("schema does not match previous schema")
 	}
 
 	columnNames := map[string]interface{}{}
-	for _, field := range fileSchema.Fields {
+	for _, field := range schema.Fields {
 		columnNames[field.Name] = nil
 	}
 
 	if _, ok := columnNames[kaskadaTable.EntityKeyColumnName]; !ok {
-		return nil, customerrors.NewFailedPreconditionError(fmt.Sprintf("file does not contain entity key column: '%s'", kaskadaTable.EntityKeyColumnName))
+		return customerrors.NewFailedPreconditionError(fmt.Sprintf("schema does not contain entity key column: '%s'", kaskadaTable.EntityKeyColumnName))
 	}
 
 	if kaskadaTable.SubsortColumnName != nil {
 		if _, ok := columnNames[*kaskadaTable.SubsortColumnName]; !ok {
-			return nil, customerrors.NewFailedPreconditionError(fmt.Sprintf("file does not contain subsort column: '%s'", *kaskadaTable.SubsortColumnName))
+			return customerrors.NewFailedPreconditionError(fmt.Sprintf("schema does not contain subsort column: '%s'", *kaskadaTable.SubsortColumnName))
 		}
 	}
 	if _, ok := columnNames[kaskadaTable.TimeColumnName]; !ok {
-		return nil, customerrors.NewFailedPreconditionError(fmt.Sprintf("file does not contain time column: '%s'", kaskadaTable.TimeColumnName))
+		return customerrors.NewFailedPreconditionError(fmt.Sprintf("schema does not contain time column: '%s'", kaskadaTable.TimeColumnName))
 	}
-	return fileSchema, nil
+	return nil
 }
 
 func reMapSparrowError(ctx context.Context, err error) error {

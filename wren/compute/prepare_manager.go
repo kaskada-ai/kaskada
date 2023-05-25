@@ -7,13 +7,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"github.com/kaskada-ai/kaskada/wren/client"
 	"github.com/kaskada-ai/kaskada/wren/ent"
 	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/kaskada-ai/kaskada/wren/property"
+	"github.com/kaskada-ai/kaskada/wren/store"
+	"github.com/kaskada-ai/kaskada/wren/utils"
 )
 
 const (
@@ -21,8 +26,98 @@ const (
 	prepareTimeoutSeconds = 1800 //30 mins
 )
 
+type PrepareManager interface {
+	PrepareTablesForCompute(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken, slicePlans []*v1alpha.SlicePlan) (map[uuid.UUID]*internal.SliceTable, error)
+	GetPrepareCacheBuster(ctx context.Context) (*int32, error)
+}
+
+type prepareManager struct {
+	computeClients     client.ComputeClients
+	kaskadaTableClient internal.KaskadaTableClient
+	prepareJobClient   internal.PrepareJobClient
+	parallelizeConfig  utils.ParallelizeConfig
+	tableStore         store.TableStore
+	tr                 trace.Tracer
+}
+
+func NewPrepareManager(computeClients *client.ComputeClients, kaskadaTableClient *internal.KaskadaTableClient, prepareJobClient *internal.PrepareJobClient, parallelizeConfig *utils.ParallelizeConfig, tableStore *store.TableStore) PrepareManager {
+	return &prepareManager{
+		computeClients:     *computeClients,
+		kaskadaTableClient: *kaskadaTableClient,
+		prepareJobClient:   *prepareJobClient,
+		parallelizeConfig:  *parallelizeConfig,
+		tableStore:         *tableStore,
+		tr:                 otel.Tracer("prepareManager"),
+	}
+}
+
+// converts a dataToken into a map of of tableIDs to internal.SliceTable
+// prepares data as needed
+func (m *prepareManager) PrepareTablesForCompute(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken, slicePlans []*v1alpha.SlicePlan) (map[uuid.UUID]*internal.SliceTable, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetTablesForCompute").Logger()
+
+	kaskadaTableMap, err := m.getTablesForQuery(ctx, owner, slicePlans)
+	if err != nil {
+		return nil, err
+	}
+
+	sliceTableMap := make(map[uuid.UUID]*internal.SliceTable, len(kaskadaTableMap))
+	for _, kaskadaTable := range kaskadaTableMap {
+		sliceTableMap[kaskadaTable.ID] = internal.GetNewSliceTable(kaskadaTable)
+	}
+
+	for _, slicePlan := range slicePlans {
+		tableName := slicePlan.TableName
+		sliceLoggger := subLogger.With().Str("table_name", tableName).Interface("slice_plan", slicePlan.Slice).Logger()
+
+		kaskadaTable, found := kaskadaTableMap[slicePlan.TableName]
+		if !found {
+			sliceLoggger.Error().Msg("unexpected; missing kaskadaTable")
+			return nil, fmt.Errorf("unexpected; missing kaskadaTable")
+		}
+
+		sliceInfo, err := internal.GetNewSliceInfo(slicePlan, kaskadaTable)
+		if err != nil {
+			sliceLoggger.Error().Err(err).Msg("issue gettting slice info")
+		}
+
+		prepareJobs, err := m.getOrCreatePrepareJobs(ctx, owner, dataToken, sliceInfo)
+		if err != nil {
+			sliceLoggger.Error().Err(err).Msg("issue getting and/or creating prepare jobs")
+			return nil, err
+		}
+
+		sliceTableMap[kaskadaTable.ID].FileSetMap[&sliceInfo.PlanHash] = internal.GetNewFileSet(sliceInfo, prepareJobs)
+	}
+
+	err = m.parallelPrepare(ctx, owner, sliceTableMap)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue preparing tables")
+		return nil, err
+	}
+
+	//refresh prepareJobs after prepare complete
+	// for each job
+	for _, sliceTable := range sliceTableMap {
+		for _, fileSet := range sliceTable.FileSetMap {
+			refreshedPrepareJobs := make([]*ent.PrepareJob, len(fileSet.PrepareJobs))
+			for i, prepareJob := range fileSet.PrepareJobs {
+				refreshedPrepareJobs[i], err = m.prepareJobClient.GetPrepareJob(ctx, prepareJob.ID)
+				subLogger.Debug().Interface("prepare_job", refreshedPrepareJobs[i]).Msg("refreshed job")
+				if err != nil {
+					subLogger.Error().Err(err).Msg("issue refreshing prepare jobs")
+					return nil, fmt.Errorf("issue refreshing prepare jobs")
+				}
+			}
+			fileSet.PrepareJobs = refreshedPrepareJobs
+		}
+	}
+
+	return sliceTableMap, nil
+}
+
 // parallelly prepares files and downloads them after prepare.  starts downloading as soon as files are available.
-func (m *Manager) parallelPrepare(ctx context.Context, owner *ent.Owner, sliceTableMap map[uuid.UUID]*internal.SliceTable) error {
+func (m *prepareManager) parallelPrepare(ctx context.Context, owner *ent.Owner, sliceTableMap map[uuid.UUID]*internal.SliceTable) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "compute.parallelPrepare").Logger()
 	ctx, span := m.tr.Start(ctx, "compute.parallelPrepare")
 	defer span.End()
@@ -121,7 +216,7 @@ func (m *Manager) parallelPrepare(ctx context.Context, owner *ent.Owner, sliceTa
 
 // executePrepare will prepare files via the Compute Prepare API
 // when successful, updates the the `prepareJob`
-func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJob *ent.PrepareJob) error {
+func (m *prepareManager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJob *ent.PrepareJob) error {
 	if prepareJob == nil {
 		log.Ctx(ctx).Error().Msg("unexpected; got nil prepare_job")
 		return fmt.Errorf("unexpected; got nil prepare_job")
@@ -167,7 +262,7 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		}
 
 		// Send the preparation request to the prepare client
-		prepareClient := m.computeClients.PrepareServiceClient(ctx)
+		prepareClient := m.computeClients.NewPrepareServiceClient(ctx)
 		defer prepareClient.Close()
 		prepareReq := &v1alpha.PrepareDataRequest{
 			SourceData:       sourceData,
@@ -188,12 +283,6 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 		}
 		subLogger.Debug().Interface("response", prepareRes).Msg("received prepare response")
 
-		for _, preparedFile := range prepareRes.PreparedFiles {
-			preparedFile.MetadataPath = preparedFile.MetadataPath
-			preparedFile.Path = preparedFile.Path
-			subLogger.Debug().Interface("prepared_file", preparedFile).Msg("these paths should be URIs")
-		}
-
 		err = m.prepareJobClient.AddFilesToPrepareJob(ctx, prepareJob, prepareRes.PreparedFiles, kaskadaFile)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue adding prepared_files to prepare_job")
@@ -209,12 +298,12 @@ func (m *Manager) executePrepare(ctx context.Context, owner *ent.Owner, prepareJ
 	return nil
 }
 
-func (m *Manager) getOrCreatePrepareJobs(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken, sliceInfo *internal.SliceInfo) ([]*ent.PrepareJob, error) {
+func (m *prepareManager) getOrCreatePrepareJobs(ctx context.Context, owner *ent.Owner, dataToken *ent.DataToken, sliceInfo *internal.SliceInfo) ([]*ent.PrepareJob, error) {
 	kaskadaTable := sliceInfo.KaskadaTable
 	slicePlan := sliceInfo.Plan
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getOrCreatePrepareJobs").Str("table_name", kaskadaTable.Name).Interface("slice_plan", slicePlan.Slice).Logger()
 
-	prepareCacheBuster, err := m.getPrepareCacheBuster(ctx)
+	prepareCacheBuster, err := m.GetPrepareCacheBuster(ctx)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting current prepare cache buster")
 	}
@@ -265,9 +354,9 @@ func (m *Manager) getOrCreatePrepareJobs(ctx context.Context, owner *ent.Owner, 
 }
 
 // gets the current prepare cache buster
-func (m *Manager) getPrepareCacheBuster(ctx context.Context) (*int32, error) {
+func (m *prepareManager) GetPrepareCacheBuster(ctx context.Context) (*int32, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.getPrepareCacheBuster").Logger()
-	prepareClient := m.computeClients.PrepareServiceClient(ctx)
+	prepareClient := m.computeClients.NewPrepareServiceClient(ctx)
 	defer prepareClient.Close()
 	res, err := prepareClient.GetCurrentPrepID(ctx, &v1alpha.GetCurrentPrepIDRequest{})
 	if err != nil {
@@ -275,4 +364,24 @@ func (m *Manager) getPrepareCacheBuster(ctx context.Context) (*int32, error) {
 		return nil, err
 	}
 	return &res.PrepId, nil
+}
+
+func (m *prepareManager) getTablesForQuery(ctx context.Context, owner *ent.Owner, slicePlans []*v1alpha.SlicePlan) (map[string]*ent.KaskadaTable, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "manager.getTablesForQuery").Logger()
+
+	tableMap := map[string]*ent.KaskadaTable{}
+	for _, slicePlan := range slicePlans {
+		tableName := slicePlan.TableName
+		sliceLoggger := subLogger.With().Str("table_name", tableName).Interface("slice_plan", slicePlan.Slice).Logger()
+
+		if _, found := tableMap[tableName]; !found {
+			kaskadaTable, err := m.kaskadaTableClient.GetKaskadaTableByName(ctx, owner, tableName)
+			if err != nil {
+				sliceLoggger.Error().Err(err).Msg("issue getting kaskada table")
+				return nil, err
+			}
+			tableMap[tableName] = kaskadaTable
+		}
+	}
+	return tableMap, nil
 }
