@@ -6,16 +6,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type ComputeClients interface {
+	NewFileServiceClient(ctx context.Context) FileServiceClient
+	NewPrepareServiceClient(ctx context.Context) PrepareServiceClient
+	NewComputeServiceClient(ctx context.Context) ComputeServiceClient
+}
+
 // ComputeClients is the container to hold client for communicating with compute services
-type ComputeClients struct {
+type computeClients struct {
 	fileServiceConfig    *HostConfig
 	prepareServiceConfig *HostConfig
 	computeServiceConfig *HostConfig
 }
 
 // CreateComputeClients initializes the computeClients
-func CreateComputeClients(fileServiceConfig *HostConfig, prepareServiceConfig *HostConfig, computeServiceConfig *HostConfig) *ComputeClients {
-	return &ComputeClients{
+func CreateComputeClients(fileServiceConfig *HostConfig, prepareServiceConfig *HostConfig, computeServiceConfig *HostConfig) ComputeClients {
+	return &computeClients{
 		fileServiceConfig:    fileServiceConfig,
 		prepareServiceConfig: prepareServiceConfig,
 		computeServiceConfig: computeServiceConfig,
@@ -23,7 +29,7 @@ func CreateComputeClients(fileServiceConfig *HostConfig, prepareServiceConfig *H
 }
 
 // FileServiceClient creates a new FileServiceClient from the configuration and context
-func (c *ComputeClients) FileServiceClient(ctx context.Context) FileServiceClient {
+func (c *computeClients) NewFileServiceClient(ctx context.Context) FileServiceClient {
 	conn, err := connection(ctx, c.fileServiceConfig)
 	if err != nil {
 		log.Ctx(ctx).Fatal().Err(err).Interface("host_config", c.fileServiceConfig).Msg("unable to dial FileServiceClient")
@@ -35,7 +41,7 @@ func (c *ComputeClients) FileServiceClient(ctx context.Context) FileServiceClien
 }
 
 // PrepareServiceClient creates a new PrepareServiceClient from the configuration and context
-func (c *ComputeClients) PrepareServiceClient(ctx context.Context) PrepareServiceClient {
+func (c *computeClients) NewPrepareServiceClient(ctx context.Context) PrepareServiceClient {
 	conn, err := connection(ctx, c.prepareServiceConfig)
 	if err != nil {
 		log.Ctx(ctx).Fatal().Err(err).Interface("host_config", c.prepareServiceConfig).Msg("unable to dial PrepareServiceClient")
@@ -47,7 +53,7 @@ func (c *ComputeClients) PrepareServiceClient(ctx context.Context) PrepareServic
 }
 
 // ComputeServiceClient creates a new ComputeServiceClient from the configuration and context
-func (c *ComputeClients) ComputeServiceClient(ctx context.Context) ComputeServiceClient {
+func (c *computeClients) NewComputeServiceClient(ctx context.Context) ComputeServiceClient {
 	conn, err := connection(ctx, c.computeServiceConfig)
 	if err != nil {
 		log.Ctx(ctx).Fatal().Err(err).Interface("host_config", c.computeServiceConfig).Msg("unable to dial ComputeServiceClient")
