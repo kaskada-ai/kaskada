@@ -1,0 +1,43 @@
+= Remote Session (Python)
+
+The Kaskada Python Client and IPython magic extension Fenlmagic are configurable to connect to a local and remote session.
+The majority of the examples are focused on running Kaskada locally but the clients are configurable to communicate to a remote service.
+
+== Requirements
+* Kaskada Manager endpoint - An accessible endpoint from the current machine to the Kaskada Manager service. An endpoint consists of the hostname and the port of the service.
+* Secure connection (optional) - It is highly recommended that the connection be secured by TLS but connection between the service and client can be optionally insecure.
+
+== Setup
+
+[source,python]
+----
+# Kaskada Endpoint
+endpoint = "kaskada.io:50051"
+# Secure connection
+is_secure = True
+----
+
+[NOTE]
+====
+The above example uses an example endpoint and is not a valid remote session. The endpoint will need to be configured to be accessible by the current machine.
+====
+
+Configure the remote session using a RemoteBuilder. The remote session does not configure automated session recovery and health checks are disabled by default.
+After configuring the remote session, all existing functionality e.g. table CRUD and queries will operate like normal.
+
+[source,python]
+----
+from kaskada.api.remote_session import RemoteBuilder
+session = RemoteBuilder(endpoint, is_secure).build()
+----
+
+=== Use the remote session
+
+The remote session configures a local client to communicate with a remote service. All functionality between local and remote clients are the same.
+After configuring the remote session, simply run the same commands/Python code as expected.
+
+[source,python]
+----
+from kaskada import table
+table.list_tables()
+----
