@@ -62,6 +62,7 @@ impl From<CollectedDiagnostic> for FenlDiagnostic {
             code: diagnostic.code.code_str().to_owned(),
             message: diagnostic.code.message().to_owned(),
             formatted: diagnostic.formatted,
+            web_link: diagnostic.code.web_link().to_owned(),
         }
     }
 }
