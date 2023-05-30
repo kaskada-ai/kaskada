@@ -55,7 +55,9 @@ You can remove the block placed on the file when it was downloaded with the foll
 
 [source,bash]
 ----
-xattr -dr com.apple.quarantine <path to file>
+xattr -w com.apple.quarantine kaskada-cli
+xattr -w com.apple.quarantine kaskada-manager
+xattr -w com.apple.quarantine kaskada-engine
 ----
 ====
 
