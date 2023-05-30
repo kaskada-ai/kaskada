@@ -31,6 +31,13 @@ from kaskada.api.remote_session import RemoteBuilder
 session = RemoteBuilder(endpoint, is_secure).build()
 ----
 
+[NOTE]
+====
+Under the hood, the Python Client uses the https://pypi.org/project/certifi/[Certifi Pypi library] for validating the trustworthiness of SSL certificates while verifying the identity of TLS hosts.
+Certifi does not support any addition/removal or other modification of the CA trust store content. This project is intended to provide a reliable and highly portable root of trust to python deployments. Look to upstream projects for methods to use alternate trust.
+Please submit a https://github.com/kaskada-ai/kaskada/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=feat%3A+...[feature request] to prioritize the use of custom CA trust store content.
+====
+
 === Use the remote session
 
 The remote session configures a local client to communicate with a remote service. All functionality between local and remote clients are the same.
