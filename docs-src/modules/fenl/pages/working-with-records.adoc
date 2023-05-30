@@ -8,7 +8,7 @@ within the record.
 
 Records may be created using curly braces, such as
 `{name: "john", age: 32}`. The corresponding type would be described as
-`{name: string, age: 32}`. 
+`{name: string, age: number}`. 
 
 
 
