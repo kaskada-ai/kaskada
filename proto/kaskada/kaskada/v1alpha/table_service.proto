@@ -72,6 +72,9 @@ message Table {
 
   // The backing source for the table
   Source source = 12;
+
+  // The format of the time column.
+  TimestampFormat time_column_format = 13;
 }
 
 message ListTablesRequest {

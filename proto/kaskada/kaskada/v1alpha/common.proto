@@ -52,6 +52,29 @@ message FileResults {
   repeated string paths = 2;
 }
 
+enum TimestampPrecision {
+  // defaults to nanoseconds if unspecified
+  // note: this behavior may change in the future
+  TIMESTAMP_UNSPECIFIED = 0;
+  TIMESTAMP_SECONDS = 1;
+  TIMESTAMP_MILLISECONDS = 2;
+  TIMESTAMP_MICROSECONDS = 3;
+  TIMESTAMP_NANOSECONDS = 4;
+}
+
+message TimestampFormat {
+  oneof format {
+
+    // This format indicates the amount of time since the unix epoch.
+    // For example "TIMESTAMP_MILLISECONDS" indicates that values describe the number of milliseconds since the unix epoch.
+    TimestampPrecision unix_timestamp = 1;
+
+    // This format describes a string-formatted timestamp.
+    // For example, "%Y-%m-%d %H:%M:%S" would correspond to the timestamp string "2015-09-05 23:56:04"
+    string format_string = 2;
+  }
+}
+
 // General configuration for a table.
 message TableConfig {
   // The name of the table.
@@ -91,6 +114,9 @@ message TableConfig {
 
   // The backing source for the table
   Source source = 7;
+
+  // The format of the time column.
+  TimestampFormat time_column_format = 8;
 }
 
 message TableMetadata {
