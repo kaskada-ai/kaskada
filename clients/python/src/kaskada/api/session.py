@@ -51,8 +51,10 @@ class Session:
         global KASKADA_SESSION
         KASKADA_SESSION = None
 
-    def connect(self) -> kaskada.client.Client:
-        self.client = self.client_factory.get_client()
+    def connect(self, should_check_health: bool = True) -> kaskada.client.Client:
+        self.client = self.client_factory.get_client(
+            should_check_health=should_check_health
+        )
         assert self.client is not None
         kaskada.client.set_default_client(self.client)
         return self.client
@@ -313,11 +315,3 @@ class LocalBuilder(Builder):
         session.start()
         KASKADA_SESSION = session
         return session
-
-
-class RemoteBuilder(Builder):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def build(self):
-        return Session(self._endpoint, self._is_secure, client_id=self._client_id)

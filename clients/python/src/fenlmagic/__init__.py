@@ -180,10 +180,17 @@ class FenlMagics(Magics):
 
 def load_ipython_extension(ipython):
     if client.KASKADA_DEFAULT_CLIENT is None:
-        client_id = os.getenv("KASKADA_CLIENT_ID", None)
-        client.init(client_id=client_id)
+        logger.warn(
+            "No client was initialized. Initializing default client to connect to localhost:50051."
+        )
+        default_client = client.Client(
+            client_id=os.getenv("KASKADA_CLIENT_ID", None),
+            endpoint=client.KASKADA_DEFAULT_ENDPOINT,
+            is_secure=client.KASKADA_IS_SECURE,
+        )
+        client.set_default_client(default_client)
 
-    magics = FenlMagics(ipython, client.KASKADA_DEFAULT_CLIENT)
+    magics = FenlMagics(ipython, client.get_client())
     ipython.register_magics(magics)
 
 

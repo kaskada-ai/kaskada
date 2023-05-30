@@ -52,23 +52,25 @@ class ClientFactory:
             client_id (Optional[str]): A configurable client ID.
             endpoint (str, optional): The endpoint of the Manager service. Defaults to KASKADA_DEFAULT_ENDPOINT.
             is_secure (bool, optional): True to use TLS or False to use insecure connection. Defaults to True.
-            polling_interval_seconds (float, optional): The number of seconds to wait between readiness polls.. Defaults to 0.5.
+            polling_interval_seconds (float, optional): The number of seconds to wait between readiness polls. Defaults to 0.5.
         """
         self.client_id = client_id
         self.endpoint = endpoint
         self.is_secure = is_secure
         self.polling_interval_seconds = polling_interval_seconds
 
-    def get_client(self, should_connect: bool = True):
+    def get_client(self, should_connect: bool = True, should_check_health: bool = True):
         """Gets a client.
 
         Args:
             should_connect (bool, optional): True to connect. False to not connect. Defaults to True.
+            should_check_health (bool, optional): True to check health. False to not check. Defaults to True.
         """
         return Client(
             client_id=self.client_id,
             endpoint=self.endpoint,
             is_secure=self.is_secure,
+            should_check_health=should_check_health,
             polling_interval_seconds=self.polling_interval_seconds,
             should_connect=should_connect,
         )
@@ -84,8 +86,9 @@ class Client(object):
         client_id: Optional[str],
         endpoint: str,
         is_secure: bool,
-        polling_interval_seconds: float,
-        should_connect=True,
+        should_check_health: bool = True,
+        polling_interval_seconds: float = 1.0,
+        should_connect: bool = True,
     ):
         """Instantiates a Kaskada Client
 
@@ -93,12 +96,15 @@ class Client(object):
             client_id (Optional[str], optional): A configurable client ID.
             endpoint (str): The endpoint of the Manager service.
             is_secure (bool): True to use TLS or False to use insecure connection.
-            polling_interval_seconds (float): The number of seconds to wait between readiness polls.
+            should_check_health (bool, optional): True to check the health of the services. Defaults to True.
+            polling_interval_seconds (float, optional): The number of seconds to wait between readiness polls. Defaults to 1.0 seconds.
+            should_connect (bool, optional): True to connect automatically or False to not connect. Defaults to True.
         """
         self.client_id = client_id
         self.endpoint = endpoint
         self.is_secure = is_secure
         self.polling_interval_seconds = polling_interval_seconds
+        self.should_check_health = should_check_health
         if should_connect:
             self.connect()
 
@@ -109,34 +115,36 @@ class Client(object):
         Raises:
             ConnectionError: if unable to connect after MAX_HEALTH_CHECK_ATTEMPTS
         """
-        health_factory = HealthCheckClientFactory()
-        for i in range(0, MAX_HEALTH_CHECK_ATTEMPTS + 1):
-            if i == MAX_HEALTH_CHECK_ATTEMPTS:
-                raise ConnectionError(
-                    f"Unable to connect after {MAX_HEALTH_CHECK_ATTEMPTS} attempts"
-                )
-            manager_health = health_factory.get_client(
-                KASKADA_MANAGER_DEFAULT_HEALTH_CHECK_ENDPOINT, KASKADA_IS_SECURE
-            ).check()
-            engine_health = health_factory.get_client(
-                KASKADA_ENGINE_DEFAULT_HEALTH_CHECK_ENDPOINT, KASKADA_IS_SECURE
-            ).check()
-            if (
-                manager_health
-                == engine_health
-                == health_pb2.HealthCheckResponse.ServingStatus.SERVING
-            ):
-                logger.info("Successfully connected.")
-                break
-            time.sleep(self.polling_interval_seconds)
+        if self.should_check_health:
+            health_factory = HealthCheckClientFactory()
+            for i in range(0, MAX_HEALTH_CHECK_ATTEMPTS + 1):
+                if i == MAX_HEALTH_CHECK_ATTEMPTS:
+                    raise ConnectionError(
+                        f"Unable to connect after {MAX_HEALTH_CHECK_ATTEMPTS} attempts"
+                    )
+                manager_health = health_factory.get_client(
+                    KASKADA_MANAGER_DEFAULT_HEALTH_CHECK_ENDPOINT, KASKADA_IS_SECURE
+                ).check()
+                engine_health = health_factory.get_client(
+                    KASKADA_ENGINE_DEFAULT_HEALTH_CHECK_ENDPOINT, KASKADA_IS_SECURE
+                ).check()
+                if (
+                    manager_health
+                    == engine_health
+                    == health_pb2.HealthCheckResponse.ServingStatus.SERVING
+                ):
+                    logger.info("Successfully connected.")
+                    break
+                time.sleep(self.polling_interval_seconds)
 
-        self.health_servicer = HealthCheckServicer()
-        self.health_servicer.add_service(
-            "manager", KASKADA_MANAGER_DEFAULT_HEALTH_CHECK_ENDPOINT, False
-        )
-        self.health_servicer.add_service(
-            "engine", KASKADA_ENGINE_DEFAULT_HEALTH_CHECK_ENDPOINT, False
-        )
+            self.health_servicer = HealthCheckServicer()
+            self.health_servicer.add_service(
+                "manager", KASKADA_MANAGER_DEFAULT_HEALTH_CHECK_ENDPOINT, False
+            )
+            self.health_servicer.add_service(
+                "engine", KASKADA_ENGINE_DEFAULT_HEALTH_CHECK_ENDPOINT, False
+            )
+
         if self.is_secure:
             with open(certifi.where(), "rb") as f:
                 trusted_certs = f.read()
@@ -144,22 +152,25 @@ class Client(object):
             self.channel = grpc.secure_channel(self.endpoint, credentials)
         else:
             self.channel = grpc.insecure_channel(self.endpoint)
+
         self.table_stub = table_grpc.TableServiceStub(self.channel)
         self.view_stub = view_grpc.ViewServiceStub(self.channel)
         self.query_stub = query_grpc.QueryServiceStub(self.channel)
         self.materialization_stub = mat_grpc.MaterializationServiceStub(self.channel)
 
-        self.health_check_watcher = HealthCheckWatcher(self.health_servicer)
-        self.health_check_watcher.start()
+        if self.should_check_health:
+            self.health_check_watcher = HealthCheckWatcher(self.health_servicer)
+            self.health_check_watcher.start()
 
     def disconnect(self):
         """Stops the client."""
-        self.health_check_watcher.stop()
-        self.health_check_watcher.join()
+        if self.should_check_health and self.health_check_watcher is not None:
+            self.health_check_watcher.stop()
+            self.health_check_watcher.join()
         self.channel.close()
 
     def is_ready(self, always_check: bool = False) -> bool:
-        """Determines if the client is ready by querying the health servicer.
+        """Determines if the client is ready by querying the health servicer. If should_check_health is set to False, this method always returns True.
 
         Args:
             always_check (bool, optional): True to always fetch from the health servicer. False to use the latest cached value. Defaults to False.
@@ -167,6 +178,9 @@ class Client(object):
         Returns:
             bool: True if ready for traffic. False if not ready for traffic.
         """
+        if not self.should_check_health:
+            return True
+
         if self.health_check_watcher is None:
             return False
 
