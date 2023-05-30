@@ -26,6 +26,8 @@ permissions:
 env:
   IMAGE_ENGINE: ghcr.io/${{ github.repository }}/engine
   IMAGE_JUPYTER: ghcr.io/${{ github.repository }}/jupyter
+  DOCKERHUB_ENGINE: kaskadaio/engine
+  DOCKERHUB_JUPYTER: kaskadaio/jupyter
 
 name: Engine Release
 jobs:
@@ -272,6 +274,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to DockerHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          # registry: ghcr.io  defaulst is dockerhub (https://docs.docker.com/build/ci/github-actions/push-multi-registries/)
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and push Docker images for Engine
         uses: docker/build-push-action@v4
         with:
@@ -279,7 +288,7 @@ jobs:
           platforms: linux/amd64, linux/arm64
           file: Dockerfile.release
           push: true
-          tags: ${{ env.IMAGE_ENGINE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_ENGINE }}:latest
+          tags: ${{ env.IMAGE_ENGINE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_ENGINE }}:latest, ${{ env.DOCKERHUB_ENGINE }}:${{ needs.release_engine_draft.outputs.version }}, ${{ env.DOCKERHUB_ENGINE }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine 
             org.opencontainers.image.description=The kaskada engine
@@ -297,7 +306,7 @@ jobs:
           platforms: linux/amd64, linux/arm64
           file: Dockerfile.jupyter
           push: true
-          tags: ${{ env.IMAGE_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_JUPYTER }}:latest
+          tags: ${{ env.IMAGE_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_JUPYTER }}:latest, ${{ env.DOCKERHUB_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }},${{ env.DOCKERHUB_JUPYTER }}:latest
           labels: |
             org.opencontainers.image.title=kaskada engine with Jupyter
             org.opencontainers.image.description=The kaskada engine with pre-installed Jupyter notebook environment
