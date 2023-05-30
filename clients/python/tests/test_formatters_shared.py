@@ -2,6 +2,7 @@ from domonic.html import b, pre, table, td, th, tr
 
 import kaskada.formatters_helpers as formatters_helpers
 import kaskada.formatters_shared as formatters
+import kaskada.kaskada.v1alpha.fenl_diagnostics_pb2 as fenl_pb
 import kaskada.kaskada.v1alpha.pulsar_pb2 as pulsar_pb
 import kaskada.kaskada.v1alpha.sources_pb2 as sources_pb
 import kaskada.kaskada.v1alpha.table_service_pb2 as table_pb
@@ -158,11 +159,13 @@ def test_table_html_pulsar_table():
 
 
 def test_update_diagnostic_with_link():
-    valid_error = (
-        "error[E0013]: Invalid output type = Output type must be a record, but was i64"
+    valid_error = fenl_pb.FenlDiagnostic(
+        code="E0013",
+        formatted="error[E0013]: Invalid output type = Output type must be a record, but was i64",
+        web_link="https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#e0013",
     )
     result = formatters.update_diagnostic_with_link(valid_error)
     assert (
         result
-        == 'error[<a href="https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#E0013" target="_blank">E0013</a>]: Invalid output type = Output type must be a record, but was i64'
+        == 'error[<a href="https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#e0013" target="_blank">E0013</a>]: Invalid output type = Output type must be a record, but was i64'
     )
