@@ -147,7 +147,7 @@ jobs:
           name: Run S3 integration tests
           needs: [integration_skip, build_wren, build_sparrow]
           runs-on: ubuntu-latest
-          if: ${{ needs.integration_skip.outputs.should_skip != true || needs.build_wren.outputs.should_skip != true || needs.build_sparrow.outputs.should_skip != true }}
+          if: ${{ needs.integration_skip.outputs.should_skip != 'true' || needs.build_wren.outputs.should_skip != 'true' || needs.build_sparrow.outputs.should_skip != 'true' }}
           steps:
             - name: Checkout sources
               uses: actions/checkout@v3
