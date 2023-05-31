@@ -1026,13 +1026,14 @@ checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 
 [[package]]
 name = "bigdecimal"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aaf33151a6429fe9211d1b276eafdf70cdff28b071e76c0b0e1503221ea3744"
+checksum = "a6773ddc0eafc0e509fb60e48dff7f450f8e674a0686ae8605e8d9901bd5eefa"
 dependencies = [
  "num-bigint 0.4.3",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -1884,6 +1885,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071a31f4ee85403370b58aca746f01041ede6f0da2730960ad001edc2b71b394"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "enum-as-inner"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ffccbb6966c05b32ef8fbac435df276c4ae4d3dc55a8cd0eb9745e6c12f546a"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.13",
 ]
 
 [[package]]
@@ -4800,6 +4813,18 @@ dependencies = [
  "tracing-serde",
  "tracing-subscriber",
  "uuid 1.3.0",
+]
+
+[[package]]
+name = "sparrow-physical"
+version = "0.6.4"
+dependencies = [
+ "arrow-schema",
+ "bigdecimal",
+ "enum-as-inner",
+ "insta",
+ "serde",
+ "serde_yaml",
 ]
 
 [[package]]

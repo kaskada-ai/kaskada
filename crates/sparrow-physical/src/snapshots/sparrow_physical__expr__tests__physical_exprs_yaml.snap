@@ -1,0 +1,16 @@
+---
+source: crates/sparrow-physical/src/expr.rs
+expression: yaml
+---
+- kind: !column foo
+  children: []
+  result_type: Int32
+- kind: !column bar
+  children: []
+  result_type: Int32
+- kind: !call add
+  children:
+  - 0
+  - 1
+  result_type: Int32
+

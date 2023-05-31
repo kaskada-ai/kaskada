@@ -26,7 +26,7 @@ aws-config = "0.11.0"
 aws-sdk-s3 = "0.11.0"
 pulsar = { version = "5.1.0", default-features = false, features = ["async-std-runtime", "tokio-runtime", "lz4"] }
 aws-types = "0.11.0"
-bigdecimal = "0.3.0"
+bigdecimal = { vernsion ="0.3.1", features = ["serde"] }
 bincode = "1.3.3"
 bit-set = "0.5.3"
 bitvec = { version = "1.0.1", features = ["serde"] }
@@ -44,6 +44,7 @@ decorum = "0.3.1"
 derive_more = "0.99.17"
 edit-distance = "2.1.0"
 egg = "0.9.3"
+enum-as-inner = "0.6.0"
 enum-map = "2.5.0"
 erased-serde = "0.3.25"
 error-stack = { version = "0.3.1", features = ["anyhow", "spantrace"] }
