@@ -1,7 +1,7 @@
 use anyhow::Context;
 use arrow::datatypes::{DataType, TimeUnit};
 use itertools::Itertools;
-use sparrow_core::{
+use sparrow_arrow::scalar_value::{
     timeunit_from_suffix, timeunit_suffix, ScalarRecord, ScalarTimestamp, ScalarValue,
 };
 

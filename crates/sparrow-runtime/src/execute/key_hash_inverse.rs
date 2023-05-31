@@ -6,8 +6,8 @@ use arrow::datatypes::{DataType, UInt64Type};
 
 use hashbrown::HashMap;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_compiler::DataContext;
-use sparrow_core::downcast_primitive_array;
 use sparrow_instructions::{ComputeStore, StoreKey};
 use sparrow_plan::GroupId;
 use tempfile::NamedTempFile;

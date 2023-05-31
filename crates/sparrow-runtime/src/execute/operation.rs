@@ -47,8 +47,8 @@ use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_api::kaskada::v1alpha::{
     operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
 };
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::DataContext;
-use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use tokio::task::JoinHandle;
 use tracing::Instrument;

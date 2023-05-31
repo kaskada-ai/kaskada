@@ -38,6 +38,7 @@ serde_yaml.workspace = true
 sha2.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
+sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }

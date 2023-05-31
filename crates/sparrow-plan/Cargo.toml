@@ -18,7 +18,7 @@ hashbrown.workspace = true
 itertools.workspace = true
 parse-display.workspace = true
 sparrow-api = { path = "../sparrow-api" }
-sparrow-core = { path = "../sparrow-core" }
+sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true
 strum.workspace = true

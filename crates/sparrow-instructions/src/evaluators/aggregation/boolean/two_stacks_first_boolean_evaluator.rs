@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use arrow::array::{ArrayRef, BooleanArray, UInt32Array};
 use arrow::datatypes::Int64Type;
 use itertools::izip;
-use sparrow_core::downcast_boolean_array;
+use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_kernels::BitBufferIterator;
 use sparrow_plan::ValueRef;
 

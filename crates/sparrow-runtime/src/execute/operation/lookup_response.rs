@@ -7,7 +7,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_core::{downcast_list_array, downcast_primitive_array};
+use sparrow_arrow::downcast::{downcast_list_array, downcast_primitive_array};
 use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
 

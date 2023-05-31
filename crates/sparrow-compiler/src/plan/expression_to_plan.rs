@@ -1,7 +1,7 @@
 use anyhow::Context;
 use sparrow_api::kaskada::v1alpha::DataType;
 use sparrow_api::kaskada::v1alpha::{expression_plan, ExpressionPlan};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::{InstKind, Mode};
 use sparrow_syntax::{ArgVec, FenlType};
 

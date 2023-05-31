@@ -9,19 +9,14 @@
 )]
 use std::pin::Pin;
 
-mod arrow_downcast;
 mod context_code;
 mod key_triple;
-mod scalar_value;
 mod table_schema;
-pub mod utils;
 
 use arrow::record_batch::RecordBatch;
-pub use arrow_downcast::*;
 pub use context_code::*;
 use futures::Stream;
 pub use key_triple::{KeyTriple, KeyTriples};
-pub use scalar_value::*;
 pub use table_schema::TableSchema;
 
 // A stream of record batches (wrapped in anyhow::Result, boxed and pinned).

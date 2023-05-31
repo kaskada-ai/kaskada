@@ -3,7 +3,8 @@ use arrow::array::{ArrayRef, TimestampNanosecondArray};
 use arrow::datatypes::{Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use chrono::NaiveDateTime;
-use sparrow_core::{downcast_primitive_array, KeyTriple, KeyTriples};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::{KeyTriple, KeyTriples};
 
 /// Represents a batch to be processed.
 ///
