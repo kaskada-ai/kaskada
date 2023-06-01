@@ -1,4 +1,4 @@
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 
 /// Identifies a value to reference.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

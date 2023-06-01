@@ -1,6 +1,7 @@
 use arrow::array::{ArrayRef, TimestampNanosecondArray, UInt64Array};
 use itertools::Itertools;
-use sparrow_core::{downcast_primitive_array, KeyTriple};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::KeyTriple;
 use sparrow_instructions::ComputeStore;
 
 use crate::execute::operation::expression_executor::InputColumn;

@@ -1,6 +1,6 @@
 use anyhow::Context;
 use itertools::Itertools;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{
     ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo, StaticArg, StaticInfo,
 };
@@ -204,7 +204,7 @@ impl RuntimeInfo for ConstEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use sparrow_core::ScalarValue;
+    use sparrow_arrow::scalar_value::ScalarValue;
     use sparrow_plan::{InstKind, InstOp};
     use strum::IntoEnumIterator;
 

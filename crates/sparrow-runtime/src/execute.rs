@@ -7,8 +7,8 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::{
     ExecuteRequest, ExecuteResponse, LateBoundValue, PerEntityBehavior,
 };
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
-use sparrow_core::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 

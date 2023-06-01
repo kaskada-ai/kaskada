@@ -13,3 +13,7 @@ pub mod attachments;
 pub mod avro;
 
 pub mod serde;
+
+pub mod downcast;
+pub mod scalar_value;
+pub mod utils;

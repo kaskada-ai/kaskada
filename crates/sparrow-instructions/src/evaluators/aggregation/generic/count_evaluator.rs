@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arrow::array::{ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::UInt32Type;
 use itertools::izip;
-use sparrow_core::downcast_boolean_array;
+use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_kernels::BitBufferIterator;
 use sparrow_plan::ValueRef;
 
@@ -315,7 +315,7 @@ impl CountIfEvaluator {
 mod tests {
     use arrow::array::UInt32Array;
     use arrow::datatypes::UInt32Type;
-    use sparrow_core::downcast_primitive_array;
+    use sparrow_arrow::downcast::downcast_primitive_array;
 
     use super::*;
 

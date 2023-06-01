@@ -28,7 +28,7 @@ serde.workspace = true
 serde_json.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
-sparrow-core = { path = "../sparrow-core" }
+sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-kernels = { path = "../sparrow-kernels" }
 sparrow-plan = { path = "../sparrow-plan" }
 sparrow-syntax = { path = "../sparrow-syntax" }

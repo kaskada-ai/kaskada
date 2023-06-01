@@ -8,7 +8,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use sparrow_plan::TableId;
 use sparrow_qfr::FlightRecorder;
@@ -295,8 +295,8 @@ mod tests {
         Literal, OperationInputRef, OperationPlan, PlanHash, PreparedFile, SlicePlan, TableConfig,
         TableMetadata,
     };
+    use sparrow_arrow::downcast::downcast_primitive_array;
     use sparrow_compiler::DataContext;
-    use sparrow_core::downcast_primitive_array;
     use uuid::Uuid;
 
     use crate::data_manager::DataManager;

@@ -15,7 +15,7 @@ use egg::Id;
 use itertools::{izip, Itertools};
 use record_ops_to_dfg::*;
 use smallvec::{smallvec, SmallVec};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
 use sparrow_plan::{GroupId, InstKind, InstOp};
 use sparrow_syntax::{

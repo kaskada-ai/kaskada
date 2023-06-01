@@ -9,7 +9,7 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
 use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::io::writer::FlightRecordWriter;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;

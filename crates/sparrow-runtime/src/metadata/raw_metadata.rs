@@ -410,7 +410,7 @@ mod tests {
             false,
         )]));
 
-        let metadata = RawMetadata::from_raw_schema(raw_schema.clone());
+        let metadata = RawMetadata::from_raw_schema(raw_schema);
         match metadata {
             Ok(_) => panic!("should not have succeeded"),
             Err(e) => {
