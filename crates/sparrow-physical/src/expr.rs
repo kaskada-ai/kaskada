@@ -2,6 +2,18 @@ use std::borrow::Cow;
 
 use arrow_schema::DataType;
 
+/// The identifier (index) of an expression.
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct ExprId(usize);
+
+impl From<usize> for ExprId {
+    fn from(value: usize) -> Self {
+        ExprId(value)
+    }
+}
+
 /// A physical expression which describes how a value should be computed.
 ///
 /// Generally, each expression computes a column of values from zero or more
@@ -14,7 +26,7 @@ pub struct Expr {
     /// Arguments to the expression.
     ///
     /// These are indices referencing earlier expressions.
-    pub children: Vec<usize>,
+    pub args: Vec<ExprId>,
     /// The type produced by the expression.
     pub result_type: DataType,
 }
@@ -44,7 +56,7 @@ pub enum ExprKind {
     /// A numeric literal.
     ///
     /// Other primitive literals (such as date times) may be expressed
-    /// using numeric literlas with an appropriate datatype.
+    /// using numeric literals with an appropriate datatype.
     NumericLiteral(bigdecimal::BigDecimal),
 }
 
@@ -57,17 +69,17 @@ mod tests {
         let exprs = vec![
             Expr {
                 kind: ExprKind::Column("foo".to_owned()),
-                children: vec![],
+                args: vec![],
                 result_type: DataType::Int32,
             },
             Expr {
                 kind: ExprKind::Column("bar".to_owned()),
-                children: vec![],
+                args: vec![],
                 result_type: DataType::Int32,
             },
             Expr {
                 kind: ExprKind::Call("add".into()),
-                children: vec![0, 1],
+                args: vec![0.into(), 1.into()],
                 result_type: DataType::Int32,
             },
         ];

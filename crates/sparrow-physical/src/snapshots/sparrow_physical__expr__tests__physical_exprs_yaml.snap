@@ -3,13 +3,13 @@ source: crates/sparrow-physical/src/expr.rs
 expression: yaml
 ---
 - kind: !column foo
-  children: []
+  args: []
   result_type: Int32
 - kind: !column bar
-  children: []
+  args: []
   result_type: Int32
 - kind: !call add
-  children:
+  args:
   - 0
   - 1
   result_type: Int32

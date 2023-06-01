@@ -1,9 +1,17 @@
 use arrow_schema::SchemaRef;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+/// The identifier (index) of a step.
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct StepId(usize);
+
+impl From<usize> for StepId {
+    fn from(value: usize) -> Self {
+        StepId(value)
+    }
+}
 
 /// A single step in the physical plan.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -11,8 +19,8 @@ pub struct Step {
     pub id: StepId,
     /// The kind of step being performed.
     pub kind: StepKind,
-    /// Steps which act as input (children) of this step.
-    pub children: Vec<StepId>,
+    /// Inputs to this step.
+    pub inputs: Vec<StepId>,
     /// The schema for this step.
     pub schema: SchemaRef,
 }
