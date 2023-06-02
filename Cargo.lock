@@ -4599,6 +4599,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-backend"
+version = "0.7.0"
+dependencies = [
+ "arrow-schema",
+ "sparrow-core",
+ "sparrow-physical",
+]
+
+[[package]]
 name = "sparrow-catalog"
 version = "0.7.0"
 dependencies = [

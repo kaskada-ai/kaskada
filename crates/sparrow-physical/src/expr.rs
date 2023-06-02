@@ -12,6 +12,13 @@ pub struct Exprs {
 }
 
 impl Exprs {
+    pub fn empty() -> Self {
+        Self {
+            exprs: vec![],
+            outputs: vec![],
+        }
+    }
+
     /// Create expressions computing the value of the last expression.
     pub fn singleton(exprs: Vec<Expr>) -> Self {
         let output = exprs.len() - 1;
@@ -19,6 +26,10 @@ impl Exprs {
             exprs,
             outputs: vec![output.into()],
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.outputs.is_empty()
     }
 
     pub fn is_singleton(&self) -> bool {

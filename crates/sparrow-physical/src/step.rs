@@ -7,7 +7,7 @@ use crate::Exprs;
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct StepId(usize);
+pub struct StepId(pub usize);
 
 impl From<usize> for StepId {
     fn from(value: usize) -> Self {
@@ -18,7 +18,6 @@ impl From<usize> for StepId {
 /// A single step in the physical plan.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Step {
-    pub id: StepId,
     /// The kind of step being performed.
     pub kind: StepKind,
     /// Inputs to this step.
