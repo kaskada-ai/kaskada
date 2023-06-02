@@ -18,11 +18,11 @@ index_vec::define_index_type! {
 /// Conceptually, steps describe how batches are produced while
 /// expressions describe columns inside a batch.
 ///
-/// During execution, each step receives an partitioned stream
+/// During execution, each step receives a partitioned stream
 /// of ordered batches and produces a partitioned stream of
 /// ordered batches. Steps never operate between partitions --
 /// instead, operations like `with_key` for a given partition
-/// produce output to destined for multiple partitions based
+/// produce output destined for multiple partitions based
 /// on the newly computed keys.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Step {
