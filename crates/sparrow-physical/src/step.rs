@@ -2,17 +2,11 @@ use arrow_schema::SchemaRef;
 
 use crate::Exprs;
 
-/// The identifier (index) of a step.
+index_vec::define_index_type! {
+    /// The identifier (index) of a step.
+    pub struct StepId = u32;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct StepId(pub usize);
-
-impl From<usize> for StepId {
-    fn from(value: usize) -> Self {
-        StepId(value)
-    }
+    DISPLAY_FORMAT = "{}";
 }
 
 /// A single step in the physical plan.

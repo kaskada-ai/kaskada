@@ -1,5 +1,6 @@
+use index_vec::{IndexSlice, IndexVec};
 use sparrow_core::debug_println;
-use sparrow_physical::{Pipeline, Step, StepKind};
+use sparrow_physical::{Pipeline, Step, StepId, StepKind};
 
 const DEBUG_SCHEDULING: bool = false;
 
@@ -13,47 +14,23 @@ const DEBUG_SCHEDULING: bool = false;
 /// 3. Any other operation with a single input is part of the
 ///    the same pipeline as the input.
 /// 4. Any other operation is a separate pipeline.
-pub fn pipeline_schedule(steps: &[Step]) -> Vec<Pipeline> {
+pub fn pipeline_schedule(steps: &IndexSlice<StepId, [Step]>) -> Vec<Pipeline> {
     // Compute how many times each step is referenced.
     // Any step referenced multiple times must end a pipeline.
-    let mut references = vec![0; steps.len()];
+    let mut references = index_vec::index_vec![0; steps.len()];
     for step in steps {
         for input in &step.inputs {
-            references[input.0] += 1;
+            references[*input] += 1;
         }
     }
 
     // Then compute the assignments for each step.
-    let mut assignments = Vec::with_capacity(steps.len());
+    let mut assignments = IndexVec::with_capacity(steps.len());
 
     let mut pipelines = Vec::new();
-    for (index, step) in steps.iter().enumerate() {
-        let break_pipeline = if step.inputs.len() != 1 {
-            debug_println!(
-                DEBUG_SCHEDULING,
-                "Step {index} is new pipeline since it has multiple inputs"
-            );
-            true
-        } else if references[step.inputs[0].0] > 1 {
-            debug_println!(
-                DEBUG_SCHEDULING,
-                "Step {index} is new pipeline since it's only input ({}) is referenced {} times",
-                step.inputs[0].0,
-                references[step.inputs[0].0]
-            );
-            true
-        } else if is_pipeline_breaker(&step.kind) {
-            debug_println!(
-                DEBUG_SCHEDULING,
-                "Step {index} is new pipeline based on kind {:?}",
-                step.kind
-            );
-            true
-        } else {
-            false
-        };
-
-        let assignment = if break_pipeline {
+    for (index, step) in steps.iter_enumerated() {
+        let index: StepId = index.into();
+        let assignment = if is_pipeline_breaker(index, &step, &references) {
             // A step with no input (such as a scan) starts a new pipeline.
             // A step with multiple inputs (such as a merge) is a separate pipeline.
             let index = pipelines.len();
@@ -61,11 +38,11 @@ pub fn pipeline_schedule(steps: &[Step]) -> Vec<Pipeline> {
             index
         } else {
             // The step has exactly 1 input and is not a pipeline breaker.
-            assignments[step.inputs[0].0]
+            assignments[step.inputs[0]]
         };
 
         // Add this step to the assigned pipeline and record the assignment.
-        pipelines[assignment].steps.push(index.into());
+        pipelines[assignment].steps.push(index);
         assignments.push(assignment);
     }
 
@@ -73,11 +50,34 @@ pub fn pipeline_schedule(steps: &[Step]) -> Vec<Pipeline> {
 }
 
 /// Return true if the step is "pipeline breaking".
-fn is_pipeline_breaker(kind: &StepKind) -> bool {
-    matches!(
-        kind,
-        StepKind::Scan { .. } | StepKind::Merge | StepKind::Repartition { .. }
-    )
+fn is_pipeline_breaker(index: StepId, step: &Step, references: &IndexVec<StepId, usize>) -> bool {
+    match &step.kind {
+        _ if step.inputs.len() != 1 => {
+            debug_println!(
+                DEBUG_SCHEDULING,
+                "Step {index} is new pipeline since it has multiple inputs"
+            );
+            true
+        }
+        _ if references[step.inputs[0]] > 1 => {
+            debug_println!(
+                DEBUG_SCHEDULING,
+                "Step {index} is new pipeline since it's only input ({}) is referenced {} times",
+                step.inputs[0],
+                references[step.inputs[0]]
+            );
+            true
+        }
+        StepKind::Scan { .. } | StepKind::Merge | StepKind::Repartition { .. } => {
+            debug_println!(
+                DEBUG_SCHEDULING,
+                "Step {index} is new pipeline based on kind {:?}",
+                step.kind
+            );
+            true
+        }
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -92,7 +92,7 @@ mod tests {
     #[test]
     fn test_schedule_pipeline() {
         let schema = Arc::new(Schema::empty());
-        let steps = vec![
+        let steps = index_vec::index_vec![
             // 0: scan table1
             Step {
                 kind: StepKind::Scan {

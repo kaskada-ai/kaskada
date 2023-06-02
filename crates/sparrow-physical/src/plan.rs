@@ -1,3 +1,5 @@
+use index_vec::IndexVec;
+
 use crate::{Step, StepId};
 
 /// A plan is a directed, acyclic graph of steps.
@@ -8,7 +10,7 @@ use crate::{Step, StepId};
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Plan {
     /// The steps in the plan.
-    pub steps: Vec<Step>,
+    pub steps: IndexVec<StepId, Step>,
     /// The pipelines within the plan.
     pub pipelines: Vec<Pipeline>,
 }

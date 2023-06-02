@@ -13,6 +13,7 @@ Physical execution plans for Kaskada queries.
 arrow-schema.workspace = true
 bigdecimal.workspace = true
 enum-as-inner.workspace = true
+index_vec.workspace = true
 serde.workspace = true
 
 [dev-dependencies]

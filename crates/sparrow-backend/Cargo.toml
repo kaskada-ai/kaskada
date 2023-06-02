@@ -11,6 +11,7 @@ Compilation backend for Kaskada queries.
 
 [dependencies]
 arrow-schema.workspace = true
+index_vec.workspace = true
 sparrow-core = { path = "../sparrow-core" }
 sparrow-physical = { path = "../sparrow-physical" }
 
