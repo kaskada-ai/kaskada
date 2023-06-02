@@ -3,6 +3,9 @@ use std::borrow::Cow;
 use arrow_schema::DataType;
 
 /// Represents 1 or more values computed by expressions.
+///
+/// Expressions are evaluated by producing a sequence of columns
+/// and then selecting specific columns from those computed.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Exprs {
     /// The expressions computing the intermediate values.
