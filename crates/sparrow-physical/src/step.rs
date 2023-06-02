@@ -1,5 +1,7 @@
 use arrow_schema::SchemaRef;
 
+use crate::Exprs;
+
 /// The identifier (index) of a step.
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -41,27 +43,25 @@ pub enum StepKind {
     /// The output includes the same rows as the input, but with columns
     /// projected as configured.
     Project {
-        /// Expressions to apply to compute additional input columns.
-        exprs: Vec<crate::Expr>,
-        /// Indices of expressions to use for the output.
+        /// Expressions to compute the projection.
         ///
-        /// The length should be the same as the number of fields in the schema.
-        outputs: Vec<usize>,
+        /// The length of the outputs should be the same as the fields in the schema.
+        exprs: Exprs,
     },
     /// Filter the results based on a boolean predicate.
     Filter {
         /// Expressions to apply to compute the predicate.
         ///
-        /// The last expression should be the boolean predicate.
-        exprs: Vec<crate::Expr>,
+        /// There should be a single output producing a boolean value.
+        exprs: Exprs,
     },
     /// A step that repartitions the output.
     Repartition {
         num_partitions: usize,
-        /// Expressions to apply to compute columns which may be referenced by `keys`.
-        exprs: Vec<crate::Expr>,
-        /// Indices of expression columns representing the keys.
-        keys: Vec<usize>,
+        /// Expressions to compute the keys.
+        ///
+        /// Each output corresponds to a part of the key.
+        keys: Exprs,
     },
     Error,
 }

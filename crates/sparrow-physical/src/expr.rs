@@ -2,6 +2,35 @@ use std::borrow::Cow;
 
 use arrow_schema::DataType;
 
+/// Represents 1 or more values computed by expressions.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Exprs {
+    /// The expressions computing the intermediate values.
+    pub exprs: Vec<Expr>,
+    /// The indices of columns to output.
+    pub outputs: Vec<ExprId>,
+}
+
+impl Exprs {
+    /// Create expressions computing the value of the last expression.
+    pub fn singleton(exprs: Vec<Expr>) -> Self {
+        let output = exprs.len() - 1;
+        Self {
+            exprs,
+            outputs: vec![output.into()],
+        }
+    }
+
+    pub fn is_singleton(&self) -> bool {
+        self.outputs.len() == 1
+    }
+
+    /// Return the number of outputs produced by these expressions.
+    pub fn output_len(&self) -> usize {
+        self.outputs.len()
+    }
+}
+
 /// The identifier (index) of an expression.
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
