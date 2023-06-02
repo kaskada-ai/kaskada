@@ -10,11 +10,11 @@ use arrow::array::{
 use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Field};
 use bitvec::vec::BitVec;
 use itertools::{izip, Itertools};
-use sparrow_core::utils::make_null_array;
-use sparrow_core::{
+use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_list_array, downcast_primitive_array, downcast_string_array,
     downcast_struct_array,
 };
+use sparrow_arrow::utils::make_null_array;
 use sparrow_instructions::GroupingIndices;
 use sparrow_kernels::BitBufferIterator;
 
@@ -1709,8 +1709,10 @@ mod tests {
         StructArray, UInt32Array,
     };
     use arrow::datatypes::{DataType, Field, UInt64Type};
-    use sparrow_core::utils::make_struct_array_null;
-    use sparrow_core::{downcast_primitive_array, downcast_string_array, downcast_struct_array};
+    use sparrow_arrow::downcast::{
+        downcast_primitive_array, downcast_string_array, downcast_struct_array,
+    };
+    use sparrow_arrow::utils::make_struct_array_null;
     use sparrow_instructions::GroupingIndices;
 
     use crate::execute::operation::spread::Spread;

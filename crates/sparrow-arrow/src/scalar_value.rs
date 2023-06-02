@@ -8,10 +8,10 @@ use decorum::Total;
 use itertools::izip;
 use num::{One, Signed, Zero};
 
-use crate::utils::make_struct_array;
-use crate::{
+use crate::downcast::{
     downcast_boolean_array, downcast_primitive_array, downcast_string_array, downcast_struct_array,
 };
+use crate::utils::make_struct_array;
 
 /// Represents a single value of a given data type.
 ///

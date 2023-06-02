@@ -6,7 +6,7 @@ use arrow::datatypes::Int64Type;
 use itertools::izip;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_kernels::BitBufferIterator;
 use sparrow_plan::ValueRef;
 

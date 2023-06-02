@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use arrow::array::{ArrayRef, Float32Array, Float64Array};
 use arrow::compute::kernels::arity::unary;
 use arrow::datatypes::DataType;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};

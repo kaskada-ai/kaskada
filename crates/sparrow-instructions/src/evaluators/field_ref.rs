@@ -4,7 +4,7 @@
 use anyhow::{anyhow, Context};
 use arrow::array::ArrayRef;
 use arrow::datatypes::DataType;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};

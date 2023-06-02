@@ -6,7 +6,7 @@ use std::str::FromStr;
 use anyhow::Context;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_api::kaskada::v1alpha::{slice_plan, LateBoundValue};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::{InstKind, InstOp, TableId};
 use sparrow_syntax::WindowBehavior;
 use uuid::Uuid;

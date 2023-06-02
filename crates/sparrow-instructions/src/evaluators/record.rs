@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use arrow::array::ArrayRef;
 use arrow::datatypes::{DataType, Field};
 use itertools::Itertools;
-use sparrow_core::utils::make_struct_array;
+use sparrow_arrow::utils::make_struct_array;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};

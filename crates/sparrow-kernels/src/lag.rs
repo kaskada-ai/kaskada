@@ -45,7 +45,7 @@ use std::sync::Arc;
 use arrow::array::{ArrayRef, PrimitiveArray, UInt32Array};
 use arrow::datatypes::ArrowPrimitiveType;
 use itertools::izip;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 
 use crate::utils::BitBufferIterator;
 

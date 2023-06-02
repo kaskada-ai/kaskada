@@ -36,7 +36,7 @@ use egg::{AstSize, Extractor, Id, Language};
 use hashbrown::HashMap;
 use itertools::{izip, Itertools};
 pub(crate) use language::ChildrenVec;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::{InstKind, InstOp};
 use sparrow_syntax::{FenlType, Location};
 pub(crate) use step_kind::*;

@@ -15,7 +15,8 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::StreamExt;
 use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
-use sparrow_core::{downcast_primitive_array, KeyTriple};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::KeyTriple;
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
 use static_init::dynamic;
 

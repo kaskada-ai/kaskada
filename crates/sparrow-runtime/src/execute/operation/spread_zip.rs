@@ -7,7 +7,7 @@ use arrow::array::{
 };
 use arrow::datatypes::*;
 use itertools::Itertools;
-use sparrow_core::{
+use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_primitive_array, downcast_string_array, downcast_struct_array,
 };
 use sparrow_kernels::BitBufferIterator;

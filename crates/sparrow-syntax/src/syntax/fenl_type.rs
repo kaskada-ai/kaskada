@@ -4,7 +4,7 @@ use std::str::FromStr;
 use arrow::datatypes::{DataType, Field, IntervalUnit, TimeUnit};
 use itertools::Itertools;
 use serde::Serialize;
-use sparrow_core::timeunit_suffix;
+use sparrow_arrow::scalar_value::timeunit_suffix;
 
 /// A wrapper around an Arrow `DataType`.
 ///

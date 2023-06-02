@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context};
 use arrow::datatypes::*;
 use serde::Serialize;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 
 /// Identifies a literal value. For general value manipulation we should prefer
 /// to operate on Arrow value arrays.

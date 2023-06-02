@@ -19,7 +19,7 @@ chronoutil.workspace = true
 itertools.workspace = true
 num.workspace = true
 smallvec.workspace = true
-sparrow-core = { path = "../sparrow-core" }
+sparrow-arrow = { path = "../sparrow-arrow" }
 static_init.workspace = true
 substring.workspace = true
 

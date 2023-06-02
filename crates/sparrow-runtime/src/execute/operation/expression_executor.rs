@@ -9,7 +9,7 @@ use enum_map::EnumMap;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::expression_plan::Operator;
 use sparrow_api::kaskada::v1alpha::{ExpressionPlan, LateBoundValue, OperationInputRef};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{
     create_evaluator, ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo,
     StaticArg, StaticInfo, StoreKey,

@@ -5,7 +5,7 @@ use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::compute::math_op;
 use arrow::datatypes::{ArrowFloatNumericType, ArrowNativeTypeOp};
 use num::traits::Pow;
-use sparrow_core::NativeFromScalar;
+use sparrow_arrow::scalar_value::NativeFromScalar;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};

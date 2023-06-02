@@ -10,7 +10,8 @@ use futures::StreamExt;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_core::{downcast_boolean_array, downcast_primitive_array, KeyTriples};
+use sparrow_arrow::downcast::{downcast_boolean_array, downcast_primitive_array};
+use sparrow_core::KeyTriples;
 use sparrow_instructions::{ComputeStore, StoreKey};
 use tokio_stream::wrappers::ReceiverStream;
 

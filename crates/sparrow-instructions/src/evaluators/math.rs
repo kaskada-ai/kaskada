@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow::array::ArrayRef;
 use arrow::datatypes::{ArrowNativeTypeOp, ArrowNumericType};
-use sparrow_core::NativeFromScalar;
+use sparrow_arrow::scalar_value::NativeFromScalar;
 use sparrow_plan::ValueRef;
 
 mod clamp;

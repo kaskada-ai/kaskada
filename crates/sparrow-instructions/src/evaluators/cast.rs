@@ -12,7 +12,8 @@ use arrow::datatypes::{
     ArrowPrimitiveType, DataType, DurationMicrosecondType, DurationMillisecondType,
     DurationNanosecondType, DurationSecondType,
 };
-use sparrow_core::{downcast_primitive_array, ScalarValue};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_kernels::time::i64_to_two_i32;
 use sparrow_plan::ValueRef;
 use sparrow_syntax::FenlType;
