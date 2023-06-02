@@ -4,7 +4,7 @@ use crate::Step;
 ///
 /// The plan is represented as an array of steps, with each step referencing
 /// it's children (inputs) by index. The array is topologically sorted so that
-/// all children have indices less than the step that references them.
+/// every step appears after the inputs to that step.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Plan {
     /// The steps in the plan.

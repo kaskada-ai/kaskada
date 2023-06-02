@@ -22,6 +22,9 @@ impl From<usize> for ExprId {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 
 pub struct Expr {
+    /// The kind of expression being applied.
+    ///
+    /// Similar to an opcode or function.
     pub kind: ExprKind,
     /// Arguments to the expression.
     ///
