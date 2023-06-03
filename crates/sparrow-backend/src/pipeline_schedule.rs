@@ -29,8 +29,7 @@ pub fn pipeline_schedule(steps: &IndexSlice<StepId, [Step]>) -> Vec<Pipeline> {
 
     let mut pipelines = Vec::new();
     for (index, step) in steps.iter_enumerated() {
-        let index: StepId = index.into();
-        let assignment = if is_pipeline_breaker(index, &step, &references) {
+        let assignment = if is_pipeline_breaker(index, step, &references) {
             // A step with no input (such as a scan) starts a new pipeline.
             // A step with multiple inputs (such as a merge) is a separate pipeline.
             let index = pipelines.len();
