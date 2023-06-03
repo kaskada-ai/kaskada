@@ -1,24 +1,21 @@
 [package]
-name = "sparrow-physical"
+name = "sparrow-backend"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 description = """
-Physical execution plans for Kaskada queries.
+Compilation backend for Kaskada queries.
 """
 
 [dependencies]
 arrow-schema.workspace = true
-bigdecimal.workspace = true
-enum-as-inner.workspace = true
 index_vec.workspace = true
-serde.workspace = true
+sparrow-core = { path = "../sparrow-core" }
+sparrow-physical = { path = "../sparrow-physical" }
 
 [dev-dependencies]
-serde_yaml.workspace = true
-insta.workspace = true
 
 [lib]
 doctest = false

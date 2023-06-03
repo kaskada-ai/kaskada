@@ -2565,6 +2565,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "index_vec"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74086667896a940438f2118212f313abba4aff3831fef6f4b17d02add5c8bb60"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4599,6 +4608,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-backend"
+version = "0.7.0"
+dependencies = [
+ "arrow-schema",
+ "index_vec",
+ "sparrow-core",
+ "sparrow-physical",
+]
+
+[[package]]
 name = "sparrow-catalog"
 version = "0.7.0"
 dependencies = [
@@ -4827,6 +4846,7 @@ dependencies = [
  "arrow-schema",
  "bigdecimal",
  "enum-as-inner",
+ "index_vec",
  "insta",
  "serde",
  "serde_yaml",

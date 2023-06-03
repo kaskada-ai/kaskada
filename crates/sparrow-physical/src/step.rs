@@ -2,23 +2,30 @@ use arrow_schema::SchemaRef;
 
 use crate::Exprs;
 
-/// The identifier (index) of a step.
+index_vec::define_index_type! {
+    /// The identifier (index) of a step.
+    pub struct StepId = u32;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct StepId(usize);
-
-impl From<usize> for StepId {
-    fn from(value: usize) -> Self {
-        StepId(value)
-    }
+    DISPLAY_FORMAT = "{}";
 }
 
 /// A single step in the physical plan.
+///
+/// Each step corresponds to a specific relational operator.
+/// Many [kinds of steps](StepKind) include [expressions](Exprs)
+/// to specify columns -- for instance the columns to compute in
+/// a projection or the condition to use for a selection.
+/// Conceptually, steps describe how batches are produced while
+/// expressions describe columns inside a batch.
+///
+/// During execution, each step receives a partitioned stream
+/// of ordered batches and produces a partitioned stream of
+/// ordered batches. Steps never operate between partitions --
+/// instead, operations like `with_key` for a given partition
+/// produce output destined for multiple partitions based
+/// on the newly computed keys.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Step {
-    pub id: StepId,
     /// The kind of step being performed.
     pub kind: StepKind,
     /// Inputs to this step.

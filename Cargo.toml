@@ -54,6 +54,7 @@ futures-lite = "1.12.0"
 half = { version = "2.2.1", features = ["serde"] }
 hashbrown = { version = "0.13.2", features = ["serde"] }
 hex = "0.4.3"
+index_vec = { version = "0.1.3", features = ["serde"] }
 indoc = "1.0.9"
 insta = { version = "1.29.0", features = ["ron", "yaml", "json"] }
 inventory = "0.3.5"
