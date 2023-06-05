@@ -383,7 +383,7 @@ impl<'a> std::fmt::Display for AsJson<'a> {
         let mut json_string = Vec::new();
         let mut writer = arrow::json::LineDelimitedWriter::new(&mut json_string);
 
-        writer.write_batches(&[self.0.data.clone()]).map_err(|e| {
+        writer.write_batches(&[&self.0.data]).map_err(|e| {
             tracing::error!("Error formatting batch: {}", e);
             std::fmt::Error
         })?;

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use arrow::array::ArrayRef;
-use arrow::datatypes::{DataType, Field};
+use arrow::datatypes::{DataType, FieldRef, Fields};
 use itertools::Itertools;
 use sparrow_arrow::utils::make_struct_array;
 use sparrow_plan::ValueRef;
@@ -16,12 +16,12 @@ use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 #[derive(Debug)]
 pub struct RecordEvaluator {
     args: Vec<ValueRef>,
-    fields: Vec<Field>,
+    fields: Fields,
 }
 
 impl Evaluator for RecordEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let fields: Vec<(Field, ArrayRef)> = self
+        let fields: Vec<(FieldRef, ArrayRef)> = self
             .fields
             .iter()
             .zip(self.args.iter())

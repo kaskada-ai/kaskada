@@ -1,4 +1,4 @@
-use arrow::datatypes::{DataType, Field, IntervalUnit, TimeUnit};
+use arrow::datatypes::{DataType, FieldRef, IntervalUnit, TimeUnit};
 use hashbrown::HashSet;
 use itertools::izip;
 use static_init::dynamic;
@@ -29,7 +29,7 @@ static UNENCODABLE_TYPES: HashSet<DataType> = {
 /// Emits diagnostics for unencodable fields.
 pub(crate) fn emit_diagnostic_for_unencodable_fields(
     query: &AstDfgRef,
-    fields: &[Field],
+    fields: &[FieldRef],
     diagnostics: &mut DiagnosticCollector<'_>,
 ) -> anyhow::Result<()> {
     if let Some(fields_ast) = query.fields() {

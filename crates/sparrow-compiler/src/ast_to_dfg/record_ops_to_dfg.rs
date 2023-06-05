@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use anyhow::Context;
-use arrow::datatypes::{DataType, Field};
+use arrow::datatypes::{DataType, Field, FieldRef};
 use hashbrown::HashSet;
 use itertools::{izip, Itertools};
 use smallvec::{smallvec, SmallVec};
@@ -132,7 +132,7 @@ pub(super) fn record_to_dfg(
     }
     instruction_args.shrink_to_fit();
 
-    let value_type = DataType::Struct(struct_fields).into();
+    let value_type = DataType::Struct(struct_fields.into()).into();
 
     // Create the value after the fields since this takes ownership of the names.
     let value = dfg.add_expression(Expression::Inst(InstKind::Record), instruction_args)?;
@@ -242,7 +242,7 @@ pub(super) fn extend_record_to_dfg(
     // Build a record construction expression from the RHS & LHS fields.
     let is_new = is_any_new(dfg, arguments.values())?;
     let value = dfg.add_expression(Expression::Inst(InstKind::Record), record_args)?;
-    let value_type = DataType::Struct(combined_fields).into();
+    let value_type = DataType::Struct(combined_fields.into()).into();
 
     let time_domain = combine_time_domains(location, arguments.values(), data_context)?
         .unwrap_or_else(|diagnostic| {
@@ -375,7 +375,7 @@ pub(super) fn select_remove_fields(
 
     // 4. Return the record instruction.
     let value = dfg.add_expression(Expression::Inst(InstKind::Record), record_args)?;
-    let value_type = FenlType::Concrete(DataType::Struct(result_fields));
+    let value_type = FenlType::Concrete(DataType::Struct(result_fields.into()));
 
     Ok(Rc::new(AstDfg::new(
         value,
@@ -391,7 +391,7 @@ pub(super) fn select_remove_fields(
 fn extract_field_name_arguments<'a>(
     dfg: &Dfg,
     select: SelectOrRemove,
-    input_fields: &[Field],
+    input_fields: &[FieldRef],
     arguments: impl Iterator<Item = (&'a Located<AstDfgRef>, &'a Located<FenlType>)>,
 ) -> Result<HashSet<String>, Vec<DiagnosticBuilder>> {
     let mut errors = Vec::new();

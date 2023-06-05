@@ -5,12 +5,12 @@ use arrow::array::{
     Array, ArrayRef, BooleanArray, BooleanBufferBuilder, NullArray, PrimitiveArray,
     PrimitiveBuilder, StringArray, StringBuilder, StructArray,
 };
+use arrow::buffer::NullBuffer;
 use arrow::datatypes::*;
-use itertools::Itertools;
+use itertools::{izip, Itertools};
 use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_primitive_array, downcast_string_array, downcast_struct_array,
 };
-use sparrow_kernels::BitBufferIterator;
 
 /// Spread and zip two arrays by some boolean mask.
 ///
@@ -253,7 +253,7 @@ fn string_spread_zip(
 }
 
 fn struct_spread_zip(
-    fields: &[Field],
+    fields: &Fields,
     mask: &BooleanArray,
     truthy: &dyn Array,
     falsy: &dyn Array,
@@ -261,14 +261,11 @@ fn struct_spread_zip(
     let truthy = downcast_struct_array(truthy)?;
     let falsy = downcast_struct_array(falsy)?;
 
-    let spread_fields: Vec<_> = fields
-        .iter()
-        .enumerate()
-        .map(|(index, field)| -> anyhow::Result<_> {
-            let truthy_field = truthy.column(index);
-            let falsy_field = falsy.column(index);
+    debug_assert_eq!(truthy.num_columns(), falsy.num_columns());
+    let spread_arrays: Vec<_> = izip!(truthy.columns().iter(), falsy.columns().iter())
+        .map(|(truthy_field, falsy_field)| -> anyhow::Result<_> {
             let spread = spread_zip(mask, truthy_field.as_ref(), falsy_field.as_ref())?;
-            Ok((field.clone(), spread))
+            Ok(spread)
         })
         .try_collect()?;
 
@@ -283,8 +280,8 @@ fn struct_spread_zip(
     // TODO: There are likely ways to do this in chunks using bit-wise logical
     // operations. That would likely be more efficient.
     let mut null_buffer = BooleanBufferBuilder::new(mask.len());
-    let mut truthy_null = BitBufferIterator::array_valid_bits(truthy);
-    let mut falsy_null = BitBufferIterator::array_valid_bits(falsy);
+    let mut truthy_null = truthy.nulls().map(|nulls| nulls.iter());
+    let mut falsy_null = falsy.nulls().map(|nulls| nulls.iter());
     for mask in mask.iter() {
         let is_valid = match mask {
             None => false,
@@ -306,6 +303,11 @@ fn struct_spread_zip(
         null_buffer.append(is_valid);
     }
     let null_buffer = null_buffer.finish();
+    let null_buffer = NullBuffer::new(null_buffer);
 
-    Ok(Arc::new(StructArray::from((spread_fields, null_buffer))))
+    Ok(Arc::new(StructArray::new(
+        fields.clone(),
+        spread_arrays,
+        Some(null_buffer),
+    )))
 }

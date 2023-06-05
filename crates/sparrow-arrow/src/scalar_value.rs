@@ -64,13 +64,13 @@ impl From<bool> for ScalarValue {
 pub struct ScalarTimestamp {
     value: Option<i64>,
     unit: TimeUnit,
-    tz: Option<String>,
+    tz: Option<Arc<str>>,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct ScalarRecord {
     value: Option<Vec<ScalarValue>>,
-    fields: Vec<Field>,
+    fields: Fields,
 }
 
 // Return a suffix for the given time unit.
@@ -190,7 +190,7 @@ where
 }
 
 impl ScalarTimestamp {
-    pub fn new(value: Option<i64>, unit: TimeUnit, tz: Option<String>) -> ScalarTimestamp {
+    pub fn new(value: Option<i64>, unit: TimeUnit, tz: Option<Arc<str>>) -> ScalarTimestamp {
         ScalarTimestamp { value, unit, tz }
     }
     pub fn time_nanos(&self) -> Option<i64> {
@@ -207,27 +207,27 @@ impl ScalarTimestamp {
     pub fn unit(&self) -> TimeUnit {
         self.unit.clone()
     }
-    pub fn tz(&self) -> Option<String> {
+    pub fn tz(&self) -> Option<Arc<str>> {
         self.tz.clone()
     }
 }
 
 impl ScalarRecord {
-    pub fn new(value: Option<Vec<ScalarValue>>, fields: Vec<Field>) -> ScalarRecord {
+    pub fn new(value: Option<Vec<ScalarValue>>, fields: Fields) -> ScalarRecord {
         ScalarRecord { value, fields }
     }
 
     pub fn values(&self) -> &Option<Vec<ScalarValue>> {
         &self.value
     }
-    pub fn fields(&self) -> &Vec<Field> {
+    pub fn fields(&self) -> &Fields {
         &self.fields
     }
 }
 
 impl ScalarValue {
     /// Create a scalar value for timestamp nanoseconds in the given timezone.
-    pub fn timestamp_ns(n: i64, tz: Option<String>) -> Self {
+    pub fn timestamp_ns(n: i64, tz: Option<Arc<str>>) -> Self {
         Self::Timestamp(Box::new(ScalarTimestamp {
             value: Some(n),
             unit: TimeUnit::Nanosecond,
@@ -236,7 +236,7 @@ impl ScalarValue {
     }
 
     /// Create a scalar value for timestamp nanoseconds in the given timezone.
-    pub fn timestamp(seconds: i64, nanos: i32, tz: Option<String>) -> Self {
+    pub fn timestamp(seconds: i64, nanos: i32, tz: Option<Arc<str>>) -> Self {
         let nanos = chrono::NaiveDateTime::from_timestamp_opt(seconds, nanos as u32)
             .expect("timestamp overflow")
             .timestamp_nanos();
@@ -384,7 +384,7 @@ impl ScalarValue {
                 Arc::new(iter.cloned().collect::<StringArray>())
             }
             ScalarValue::Record(record) => {
-                let fields: Vec<(Field, ArrayRef)> = if let Some(values) = &record.value {
+                let fields: Vec<(FieldRef, ArrayRef)> = if let Some(values) = &record.value {
                     izip!(&record.fields, values)
                         .map(|(field, value)| (field.clone(), value.to_array(len)))
                         .collect()

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use arrow::datatypes::{DataType, Field, IntervalUnit, TimeUnit};
+use arrow_schema::{DataType, Field, FieldRef, Fields, IntervalUnit, TimeUnit};
 use itertools::Itertools;
 use serde::Serialize;
 use sparrow_arrow::scalar_value::timeunit_suffix;
@@ -64,7 +64,7 @@ impl<'a> std::fmt::Display for FormatDataType<'a> {
 
 // Creates a struct that can be given a reference to set of fields
 /// A wrapper for formatting structs.
-pub struct FormatStruct<'a>(pub &'a [Field]);
+pub struct FormatStruct<'a>(pub &'a [FieldRef]);
 impl<'a> std::fmt::Display for FormatStruct<'a> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -225,7 +225,7 @@ impl FenlType {
         }
     }
 
-    pub fn record_fields(&self) -> Option<&Vec<Field>> {
+    pub fn record_fields(&self) -> Option<&Fields> {
         self.arrow_type().and_then(|data_type| match data_type {
             DataType::Struct(fields) => Some(fields),
             _ => None,

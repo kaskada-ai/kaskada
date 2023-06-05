@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
+use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
+use arrow::datatypes::ArrowNativeType;
 use itertools::izip;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sparrow_arrow::downcast::downcast_primitive_array;
-use sparrow_kernels::BitBufferIterator;
 use sparrow_plan::ValueRef;
 
 use super::two_stacks_arrow_agg_evaluator::TwoStacksArrowAggEvaluator;
@@ -33,6 +33,7 @@ where
 impl<AggF> Evaluator for ArrowAggEvaluator<AggF>
 where
     AggF: ArrowAggFn,
+    AggF::InT: arrow::datatypes::ArrowNativeType,
     AggF::AccT: Serialize + DeserializeOwned + Sync,
 {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
@@ -93,6 +94,7 @@ where
 impl<AggF> EvaluatorFactory for ArrowAggEvaluator<AggF>
 where
     AggF: ArrowAggFn + Send + 'static,
+    AggF::InT: ArrowNativeType,
     AggF::AccT: Serialize + DeserializeOwned + Sync,
 {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
@@ -113,6 +115,7 @@ where
 impl<AggF> ArrowAggEvaluator<AggF>
 where
     AggF: ArrowAggFn,
+    AggF::InT: ArrowNativeType,
     AggF::AccT: Serialize + DeserializeOwned,
 {
     fn ensure_entity_capacity(accum: &mut Vec<Option<AggF::AccT>>, entity_id_len: usize) {
@@ -192,38 +195,11 @@ where
 
         // TODO: Handle the case where the input is empty (null_count == len) and we
         // don't need to compute anything.
-        let result: PrimitiveArray<AggF::OutArrowT> =
-            if let Some(is_valid) = BitBufferIterator::array_valid_bits(input) {
-                let iter = izip!(is_valid, entity_indices.values(), input.values()).map(
-                    |(is_valid, entity_index, input)| {
-                        let entity_accum = &mut accum[*entity_index as usize];
-                        if is_valid {
-                            if let Some(entity_accum) = entity_accum {
-                                AggF::add_one(entity_accum, input);
-                                AggF::extract(entity_accum)
-                            } else {
-                                let one = AggF::one(input);
-                                let result = AggF::extract(&one);
-                                *entity_accum = Some(one);
-                                result
-                            }
-                        } else {
-                            match entity_accum.as_ref() {
-                                Some(accum) => AggF::extract(accum),
-                                None => None,
-                            }
-                        }
-                    },
-                );
-
-                // SAFETY: `izip!` and `map` are trusted length iterators.
-                unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
-            } else {
-                // Handle the case where input contains no nulls. This allows us to
-                // use `prim_input.values()` instead of `prim_input.iter()`.
-                let iter =
-                    izip!(entity_indices.values(), input.values()).map(|(entity_index, input)| {
-                        let entity_accum = &mut accum[*entity_index as usize];
+        let result: PrimitiveArray<AggF::OutArrowT> = if let Some(is_valid) = input.nulls() {
+            let iter = izip!(is_valid, entity_indices.values(), input.values()).map(
+                |(is_valid, entity_index, input)| {
+                    let entity_accum = &mut accum[*entity_index as usize];
+                    if is_valid {
                         if let Some(entity_accum) = entity_accum {
                             AggF::add_one(entity_accum, input);
                             AggF::extract(entity_accum)
@@ -233,11 +209,37 @@ where
                             *entity_accum = Some(one);
                             result
                         }
-                    });
+                    } else {
+                        match entity_accum.as_ref() {
+                            Some(accum) => AggF::extract(accum),
+                            None => None,
+                        }
+                    }
+                },
+            );
 
-                // SAFETY: `izip!` and `map` are trusted length iterators.
-                unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
-            };
+            // SAFETY: `izip!` and `map` are trusted length iterators.
+            unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
+        } else {
+            // Handle the case where input contains no nulls. This allows us to
+            // use `prim_input.values()` instead of `prim_input.iter()`.
+            let iter =
+                izip!(entity_indices.values(), input.values()).map(|(entity_index, input)| {
+                    let entity_accum = &mut accum[*entity_index as usize];
+                    if let Some(entity_accum) = entity_accum {
+                        AggF::add_one(entity_accum, input);
+                        AggF::extract(entity_accum)
+                    } else {
+                        let one = AggF::one(input);
+                        let result = AggF::extract(&one);
+                        *entity_accum = Some(one);
+                        result
+                    }
+                });
+
+            // SAFETY: `izip!` and `map` are trusted length iterators.
+            unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
+        };
         Ok(Arc::new(result))
     }
 
@@ -279,15 +281,12 @@ where
         // TODO: Handle the case where the input is empty (null_count == len) and we
         // don't need to compute anything.
 
-        let result: PrimitiveArray<AggF::OutArrowT> = match (
-            BitBufferIterator::array_valid_bits(input),
-            BitBufferIterator::array_valid_bits(ticks),
-        ) {
+        let result: PrimitiveArray<AggF::OutArrowT> = match (input.nulls(), ticks.nulls()) {
             (None, None) => {
                 let iter = izip!(
                     entity_indices.values(),
                     input.values(),
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(|(entity_index, input, tick)| {
                     Self::update_accum(accum, *entity_index, true, true, input, tick)
@@ -301,7 +300,7 @@ where
                     entity_indices.values(),
                     input_valid_bits,
                     input.values(),
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(|(entity_index, input_is_valid, input, since_bool)| {
                     Self::update_accum(
@@ -321,7 +320,7 @@ where
                     entity_indices.values(),
                     window_valid_bits,
                     input.values(),
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(|(entity_index, since_is_valid, input, since_bool)| {
                     Self::update_accum(
@@ -343,7 +342,7 @@ where
                     input_valid_bits,
                     window_valid_bits,
                     input.values(),
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(
                     |(entity_index, input_is_valid, since_is_valid, input, since_bool)| {

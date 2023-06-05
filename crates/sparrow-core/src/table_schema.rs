@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use arrow::datatypes::{
-    ArrowPrimitiveType, DataType, Field, Schema, SchemaRef, TimestampNanosecondType,
+    ArrowPrimitiveType, DataType, Field, FieldRef, Schema, SchemaRef, TimestampNanosecondType,
 };
 use static_init::dynamic;
 
@@ -73,16 +73,22 @@ impl TableSchema {
     /// Create a `TableSchema` containing the given *data* fields.
     ///
     /// Returns an error if the data fields already contain the "key fields".
-    pub fn from_data_fields(data_fields: impl IntoIterator<Item = Field>) -> anyhow::Result<Self> {
+    pub fn from_data_fields(
+        data_fields: impl IntoIterator<Item = FieldRef>,
+    ) -> anyhow::Result<Self> {
         let iter = data_fields.into_iter();
         let mut result_fields = Vec::with_capacity(3 + iter.size_hint().0);
-        result_fields.push(Field::new(
+        result_fields.push(Arc::new(Field::new(
             Self::TIME,
             TimestampNanosecondType::DATA_TYPE,
             false,
-        ));
-        result_fields.push(Field::new(Self::SUBSORT, DataType::UInt64, false));
-        result_fields.push(Field::new(Self::KEY_HASH, DataType::UInt64, false));
+        )));
+        result_fields.push(Arc::new(Field::new(Self::SUBSORT, DataType::UInt64, false)));
+        result_fields.push(Arc::new(Field::new(
+            Self::KEY_HASH,
+            DataType::UInt64,
+            false,
+        )));
 
         for field in iter {
             anyhow::ensure!(
@@ -128,12 +134,12 @@ impl TableSchema {
     }
 
     /// Return the data fields.
-    pub fn data_fields(&self) -> &[Field] {
+    pub fn data_fields(&self) -> &[FieldRef] {
         &self.0.fields()[3..]
     }
 
     /// Returns the data columns of the current table schema as a struct.
     pub fn as_struct_type(&self) -> DataType {
-        DataType::Struct(self.data_fields().to_vec())
+        DataType::Struct(self.data_fields().into())
     }
 }

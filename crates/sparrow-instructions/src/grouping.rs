@@ -62,8 +62,7 @@ impl GroupingIndices {
         // use lifetimes... but this was minimally invasive at the time.
         let group_indices: UInt32Array = self
             .group_indices
-            .data_ref()
-            .clone()
+            .to_data()
             .into_builder()
             .offset(self.group_indices.offset() + offset)
             .len(length)

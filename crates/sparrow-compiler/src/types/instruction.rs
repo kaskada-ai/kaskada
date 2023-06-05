@@ -134,7 +134,7 @@ pub(crate) fn typecheck_inst(
                 fields.push(Field::new(field_name, field_type.clone(), true))
             }
 
-            let result_type = DataType::Struct(fields);
+            let result_type = DataType::Struct(fields.into());
             Ok(FenlType::Concrete(result_type))
         }
     }

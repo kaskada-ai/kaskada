@@ -4,6 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::{fmt, path};
 
 use arrow::record_batch::RecordBatch;
@@ -463,15 +464,31 @@ const BATCH_SIZE: usize = 1_000_000;
 
 async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
     config: &'a TableConfig,
-    reader: R,
+    mut reader: R,
     prepare_hash: u64,
     slice: &'a Option<slice_plan::Slice>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     use arrow::csv::ReaderBuilder;
 
+    let position = reader
+        .stream_position()
+        .into_report()
+        .change_context(Error::Internal)?;
+    let (raw_schema, _) = arrow::csv::reader::Format::default()
+        .with_header(true)
+        .infer_schema(&mut reader, None)
+        .into_report()
+        .change_context(Error::ReadSchema)?;
+    let raw_schema = Arc::new(raw_schema);
+
     // Create the CSV reader.
-    let csv_reader = ReaderBuilder::new()
+    reader
+        .seek(std::io::SeekFrom::Start(position))
+        .into_report()
+        .change_context(Error::Internal)?;
+
+    let csv_reader = ReaderBuilder::new(raw_schema.clone())
         .has_header(true)
         .with_batch_size(BATCH_SIZE);
     let reader = csv_reader
@@ -479,7 +496,7 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
         .into_report()
         .change_context(Error::CreateCsvReader)?;
     let raw_metadata =
-        RawMetadata::from_raw_schema(reader.schema()).change_context_lazy(|| Error::ReadSchema)?;
+        RawMetadata::from_raw_schema(raw_schema.clone()).change_context(Error::ReadSchema)?;
     let stream_reader = futures::stream::iter(reader);
 
     prepare_input_stream::prepare_input(

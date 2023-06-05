@@ -9,7 +9,7 @@ mod tests;
 use std::rc::Rc;
 
 use anyhow::{anyhow, Context};
-use arrow::datatypes::{DataType, Field};
+use arrow::datatypes::{DataType, FieldRef};
 pub use ast_dfg::*;
 use egg::Id;
 use itertools::{izip, Itertools};
@@ -721,7 +721,7 @@ fn add_literal(
 }
 
 fn missing_field_diagnostic(
-    fields: &[Field],
+    fields: &[FieldRef],
     field_name: &str,
     location: &Location,
 ) -> DiagnosticBuilder {

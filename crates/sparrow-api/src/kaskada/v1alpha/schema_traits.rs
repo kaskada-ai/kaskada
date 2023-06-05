@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow::datatypes::ArrowPrimitiveType;
 use itertools::Itertools;
 use sparrow_syntax::FenlType;
@@ -265,13 +267,13 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                 }
             }
             Some(data_type::Kind::Struct(schema)) => Ok(arrow::datatypes::DataType::Struct(
-                fields_to_arrow(&schema.fields)?,
+                fields_to_arrow(&schema.fields)?.into(),
             )),
             Some(data_type::Kind::List(item_type)) => {
                 let item_type = arrow::datatypes::DataType::try_from(item_type.as_ref())
                     .map_err(|e| e.with_prepend_field("list item".to_owned()))?;
                 let item_type = arrow::datatypes::Field::new("item", item_type, true);
-                Ok(arrow::datatypes::DataType::List(Box::new(item_type)))
+                Ok(arrow::datatypes::DataType::List(Arc::new(item_type)))
             }
             None | Some(data_type::Kind::Window(_)) => {
                 Err(ConversionError::new_unsupported(value.clone()))
@@ -362,17 +364,23 @@ mod tests {
 
     #[test]
     fn test_struct_round_trip() {
-        let inner_struct_type = arrow::datatypes::DataType::Struct(vec![
-            arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-            arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
-        ]);
+        let inner_struct_type = arrow::datatypes::DataType::Struct(
+            vec![
+                arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
+                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
+            ]
+            .into(),
+        );
 
         assert_data_type_round_trip(&inner_struct_type);
 
-        let outer_struct_type = arrow::datatypes::DataType::Struct(vec![
-            arrow::datatypes::Field::new("a", inner_struct_type, true),
-            arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
-        ]);
+        let outer_struct_type = arrow::datatypes::DataType::Struct(
+            vec![
+                arrow::datatypes::Field::new("a", inner_struct_type, true),
+                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
+            ]
+            .into(),
+        );
 
         assert_data_type_round_trip(&outer_struct_type);
     }
@@ -387,10 +395,13 @@ mod tests {
         assert_schema_round_trip(&arrow_schema);
 
         // Schema with struct field.
-        let inner_struct_type = arrow::datatypes::DataType::Struct(vec![
-            arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-            arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
-        ]);
+        let inner_struct_type = arrow::datatypes::DataType::Struct(
+            vec![
+                arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
+                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
+            ]
+            .into(),
+        );
         let arrow_schema = arrow::datatypes::Schema::new(vec![
             arrow::datatypes::Field::new("a", inner_struct_type, true),
             arrow::datatypes::Field::new("b", arrow::datatypes::DataType::Utf8, true),
@@ -413,14 +424,20 @@ mod tests {
 
     #[test]
     fn test_unsupported_nested_struct() {
-        let inner_struct_type = arrow::datatypes::DataType::Struct(vec![
-            arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-            arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
-        ]);
-        let outer_struct_type = arrow::datatypes::DataType::Struct(vec![
-            arrow::datatypes::Field::new("x", inner_struct_type, true),
-            arrow::datatypes::Field::new("y", arrow::datatypes::DataType::Utf8, true),
-        ]);
+        let inner_struct_type = arrow::datatypes::DataType::Struct(
+            vec![
+                arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
+                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
+            ]
+            .into(),
+        );
+        let outer_struct_type = arrow::datatypes::DataType::Struct(
+            vec![
+                arrow::datatypes::Field::new("x", inner_struct_type, true),
+                arrow::datatypes::Field::new("y", arrow::datatypes::DataType::Utf8, true),
+            ]
+            .into(),
+        );
         let err = DataType::try_from(&outer_struct_type).unwrap_err();
         assert_eq!(
             err,
@@ -437,10 +454,13 @@ mod tests {
 
     #[test]
     fn test_unsupported_nested_schema() {
-        let inner_struct_type = arrow::datatypes::DataType::Struct(vec![
-            arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-            arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
-        ]);
+        let inner_struct_type = arrow::datatypes::DataType::Struct(
+            vec![
+                arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
+                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
+            ]
+            .into(),
+        );
         let outer_schema = arrow::datatypes::Schema::new(vec![
             arrow::datatypes::Field::new("x", inner_struct_type, true),
             arrow::datatypes::Field::new("y", arrow::datatypes::DataType::Utf8, true),

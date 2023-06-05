@@ -173,7 +173,7 @@ fn record_to_type(
         .iter()
         .map(|field| avro_to_arrow(field, names))
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(DataType::Struct(fields))
+    Ok(DataType::Struct(fields.into()))
 }
 
 #[cfg(test)]
@@ -211,10 +211,13 @@ mod tests {
             Field::new("c", DataType::Utf8, true),
             Field::new(
                 "d",
-                DataType::Struct(vec![
-                    Field::new("a", DataType::Int64, true),
-                    Field::new("b", DataType::Float64, false),
-                ]),
+                DataType::Struct(
+                    vec![
+                        Field::new("a", DataType::Int64, true),
+                        Field::new("b", DataType::Float64, false),
+                    ]
+                    .into(),
+                ),
                 false,
             ),
         ])
@@ -232,10 +235,13 @@ mod tests {
             Field::new("a", DataType::Int64, true),
             Field::new(
                 "b",
-                DataType::Struct(vec![
-                    Field::new("c", DataType::Utf8, false),
-                    Field::new("d", DataType::Int32, true),
-                ]),
+                DataType::Struct(
+                    vec![
+                        Field::new("c", DataType::Utf8, false),
+                        Field::new("d", DataType::Int32, true),
+                    ]
+                    .into(),
+                ),
                 true,
             ),
         ])

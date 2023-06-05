@@ -8,7 +8,7 @@ use arrow::datatypes::ArrowPrimitiveType;
 /// for this trait to be used directly at compile time to get required to
 /// perform all basic aggregation operations.
 pub trait AggFn {
-    type InT;
+    type InT: Send + Sync;
     type AccT: Send + Clone + Debug;
     type OutT;
 

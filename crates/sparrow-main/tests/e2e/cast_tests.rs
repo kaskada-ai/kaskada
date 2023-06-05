@@ -16,7 +16,7 @@ async fn cast_data_fixture() -> DataFixture {
         0,0,1997-12-19T16:39:58-08:00,2,25,0.0,food,2001-12-19T16:39:57-08:00,73
         0,0,1997-12-19T16:39:59-08:00,2,35,0.0,food,2001-12-19T16:39:57-08:00,73
         0,1,1998-12-19T16:39:57-08:00,3,25,2.2,gas,2003-12-19T16:39:57-08:00,82
-        0,1,1999-12-19T16:39:58-08:00,4,12,,MOVIe,2004-12-1,18
+        0,1,1999-12-19T16:39:58-08:00,4,12,,MOVIe,2004-12-01,18
         0,1,1999-12-19T16:39:58-08:00,5,,,null_amount,not a timestamp,
     "};
     DataFixture::new()
@@ -37,7 +37,7 @@ async fn cast_data_fixture() -> DataFixture {
 
 #[tokio::test]
 async fn test_implicit_cast_i64_to_f64_add() {
-    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, f64_field: Input.f64, add: Input.i64 + Input.f64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ add: Input.i64 + Input.f64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64_field,f64_field,add
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,21.4,71.4
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,1.22,

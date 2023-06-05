@@ -75,7 +75,7 @@ fn bench_merge(batch_a: &RecordBatch, batch_b: &RecordBatch) {
 pub fn merge_benchmarks(c: &mut Criterion) {
     let mut group = c.benchmark_group("binary_merge");
 
-    let schema = TableSchema::try_from_data_schema(&Schema::new(vec![])).unwrap();
+    let schema = TableSchema::try_from_data_schema(&Schema::empty()).unwrap();
     let dense_a = rand_dense(&schema, 2000000);
     let dense_b = rand_dense(&schema, 2000000);
     let sparse_a = rand_sparse(&schema, 1000000);
