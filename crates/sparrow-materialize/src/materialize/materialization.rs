@@ -32,7 +32,7 @@ impl Materialization {
         destination: Destination,
     ) -> Self {
         Self {
-            id: id.clone(),
+            id,
             plan,
             tables,
             destination,
