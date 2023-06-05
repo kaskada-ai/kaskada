@@ -19,6 +19,7 @@ aws-sdk-s3.workspace = true
 aws-types.workspace = true
 chrono.workspace = true
 clap.workspace = true
+dashmap.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 fallible-iterator.workspace = true
@@ -39,6 +40,7 @@ sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }
+sparrow-materialize = { path = "../sparrow-materialize" }
 sparrow-plan = { path = "../sparrow-plan" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-runtime = { path = "../sparrow-runtime" }
