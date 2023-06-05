@@ -1,0 +1,12 @@
+= Fenl Diagnostic Error Codes
+
+[caption="Diagnostic Pages for Fenl Error Codes"]
+[cols="1,6"]
+|=== 
+| Error Code | Description
+
+| xref:diagnostic-pages/e0013.adoc[E0013]
+|`error[E0013]: Invalid output type = Output type must be a record, but was X`
+
+
+|===

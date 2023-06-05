@@ -162,10 +162,10 @@ def test_update_diagnostic_with_link():
     valid_error = fenl_pb.FenlDiagnostic(
         code="E0013",
         formatted="error[E0013]: Invalid output type = Output type must be a record, but was i64",
-        web_link="https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#e0013",
+        web_link="https://kaskada.io/docs-site/kaskada/main/troubleshooting/diagnostic-pages/e0013.html",
     )
     result = formatters.update_diagnostic_with_link(valid_error)
     assert (
         result
-        == 'error[<a href="https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#e0013" target="_blank">E0013</a>]: Invalid output type = Output type must be a record, but was i64'
+        == 'error[<a href="https://kaskada.io/docs-site/kaskada/main/troubleshooting/diagnostic-pages/e0013.html" target="_blank">E0013</a>]: Invalid output type = Output type must be a record, but was i64'
     )

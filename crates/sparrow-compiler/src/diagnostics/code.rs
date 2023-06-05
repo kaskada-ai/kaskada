@@ -58,7 +58,7 @@ DuplicateFieldNames(E0009, Error, "Duplicate field names in record expression", 
 InvalidArgumentType(E0010, Error, "Invalid argument type(s)", ""),
 SyntaxError(E0011, Error, "Invalid syntax", ""),
 CyclicReference(E0012, Error, "Circular dependency", ""),
-InvalidOutputType(E0013, Error, "Invalid output type", "https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#e0013"),
+InvalidOutputType(E0013, Error, "Invalid output type", "https://kaskada.io/docs-site/kaskada/main/troubleshooting/diagnostic-pages/e0013.html"),
 InvalidNonConstArgument(E0014, Error, "Invalid non-constant argument", ""),
 
 // Bugs: 1000 - 1999

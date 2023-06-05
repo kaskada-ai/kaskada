@@ -9,4 +9,4 @@
 ** xref:catalog.adoc[] 
 ** xref:fenl-faq.adoc[]
 ** xref:working-with-records.adoc[]
-** xref:fenl-diagnostic-codes.adoc[]
+

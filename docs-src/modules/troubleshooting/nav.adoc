@@ -1,5 +1,6 @@
 * Troubleshooting
 ** xref:logs.adoc[]
+** xref:fenl-diagnostic-codes.adoc[]
 
 
 

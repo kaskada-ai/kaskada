@@ -1,0 +1,8 @@
+= Invalid output type -- output type must be a record
+
+`error[E0013]: Invalid output type = Output type must be a record, but was X`
+
+The values produced by all Fenl expressions must be a https://docs.kaskada.com/docs/data-model#records[record]. 
+A record is a representation of multiple data types into a single value.
+This error indicates that the offending query produces a non-record type.
+To fix this, update the query to return a record type. For more information, see https://docs.kaskada.com/docs/data-model#records[Records].
