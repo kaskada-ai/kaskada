@@ -114,6 +114,7 @@ impl ComputeService for ComputeServiceImpl {
         let _enter = span.enter();
         let s3_helper = self.s3_helper.clone();
         let id = request.get_ref().materialization_id.clone();
+        tracing::info!("id: {}", id);
 
         match start_materialization_impl(s3_helper, request.into_inner()) {
             Ok(handle) => {
@@ -134,6 +135,7 @@ impl ComputeService for ComputeServiceImpl {
         let span = tracing::info_span!("StopMaterialization");
         let _enter = span.enter();
         let id = request.into_inner().materialization_id;
+        tracing::info!("id: {}", id);
 
         if let Some(mut materialization) = self.materializations.get_mut(&id) {
             match materialization.stop().await {
@@ -146,7 +148,7 @@ impl ComputeService for ComputeServiceImpl {
                 }
             }
         } else {
-            Err(tonic::Status::internal(format!(
+            Err(tonic::Status::not_found(format!(
                 "materialization {id} does not exist"
             )))
         }
@@ -159,6 +161,7 @@ impl ComputeService for ComputeServiceImpl {
         let span = tracing::info_span!("GetMaterializationStatus");
         let _enter = span.enter();
         let id = request.into_inner().materialization_id;
+        tracing::info!("id: {}", id);
 
         if let Some(materialization) = self.materializations.get(&id) {
             let status = materialization.get_status();

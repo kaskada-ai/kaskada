@@ -13,10 +13,6 @@ use crate::{Error, Materialization};
 /// This handles communication with the materialization process,
 /// allowing a user to manipulate the process via the service layer.
 pub struct MaterializationControl {
-    /// Unique identifier of the materialization
-    ///
-    /// TODO: Can remove this id, and keep it as part of the service layer logic.
-    pub id: String,
     /// Channel for sending the stop signal
     stop_signal_sender: tokio::sync::watch::Sender<bool>,
     /// Channel for receiving progress information
@@ -37,7 +33,6 @@ impl MaterializationControl {
         s3_helper: S3Helper,
         bounded_lateness_ns: Option<i64>,
     ) -> Self {
-        let id = materialization.id.clone();
         let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
         let (progress_tx, progress_rx) = tokio::sync::watch::channel(MaterializationStatus {
             state: State::Uninitialized,
@@ -98,7 +93,6 @@ impl MaterializationControl {
             error: None,
         };
         Self {
-            id,
             stop_signal_sender: stop_tx,
             progress_receiver: progress_rx,
             handle: Some(handle),
@@ -178,14 +172,14 @@ impl MaterializationControl {
                 ..
             } => {
                 // Note: Could return an "AlreadyStopped" status code
-                tracing::info!("cannot stop; materialization {} already stopped", self.id)
+                tracing::info!("cannot stop; materialization already stopped")
             }
             MaterializationStatus {
                 state: State::Failed,
                 ..
             } => {
                 // Note: Could return an "AlreadyFailed" status code
-                tracing::info!("cannot stop; materialization {} already failed", self.id)
+                tracing::info!("cannot stop; materialization already failed")
             }
         };
 
