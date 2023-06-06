@@ -47,7 +47,7 @@ See the [docs](https://kaskada.io/docs-site/) to get started in a [Jupyter Noteb
 
 ## Join Us!
 We're building an active, inclusive community of users and contributors. 
-Come get to know us on [Slack](https://join.slack.com/t/kaskada-hq/shared_invite/zt-1t1lms085-bqs2jtGO2TYr9kuuam~c9w) - we'd love to meed you!
+Come get to know us on [Slack](https://join.slack.com/t/kaskada-hq/shared_invite/zt-1t1lms085-bqs2jtGO2TYr9kuuam~c9w) - we'd love to meet you!
 
 For specific problems, file an [issue](https://github.com/kaskada-ai/kaskada/issues).
 
