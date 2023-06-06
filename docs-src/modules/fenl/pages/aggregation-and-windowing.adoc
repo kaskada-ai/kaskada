@@ -20,7 +20,7 @@ Purchase.amount | sum()
 
 [cols=",,",options="header",]
 |===
-|Time |Purchase.amount |... | sum()
+|Time |Purchase.amount |... \| sum()
 |2012-02-23 |5 |5
 |2012-05-10 |2 |7
 |2018-11-03 |13 |20
