@@ -63,6 +63,12 @@ impl CastEvaluator {
 
     fn execute(input: &ArrayRef, to: &DataType) -> anyhow::Result<ArrayRef> {
         match (input.data_type(), to) {
+            (DataType::Null, _) => {
+                // TODO: https://github.com/apache/arrow-rs/issues/684 is fixed,
+                // use existing arrow cast kernels.
+                Ok(sparrow_arrow::scalar_value::ScalarValue::try_new_null(to)?
+                    .to_array(input.len()))
+            }
             (DataType::Interval(interval_unit), to_type) => match interval_unit {
                 arrow::datatypes::IntervalUnit::DayTime => {
                     let input: &IntervalDayTimeArray = downcast_primitive_array(input.as_ref())?;

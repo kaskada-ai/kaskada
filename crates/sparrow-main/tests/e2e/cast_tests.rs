@@ -37,7 +37,7 @@ async fn cast_data_fixture() -> DataFixture {
 
 #[tokio::test]
 async fn test_implicit_cast_i64_to_f64_add() {
-    insta::assert_snapshot!(QueryFixture::new("{ add: Input.i64 + Input.f64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ i64_field: Input.i64, f64_field: Input.f64, add: Input.i64 + Input.f64 }").run_to_csv(&cast_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,i64_field,f64_field,add
     1996-12-20T00:39:57.000000000,9223372036854775808,14253486467890685049,0,50,21.4,71.4
     1997-12-20T00:39:57.000000000,9223372036854775809,14253486467890685049,0,,1.22,
