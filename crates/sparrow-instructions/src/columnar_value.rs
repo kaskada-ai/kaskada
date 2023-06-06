@@ -4,10 +4,10 @@ use arrow::array::{
 };
 use arrow::datatypes::*;
 use owning_ref::ArcRef;
-use sparrow_core::{
+use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_primitive_array, downcast_string_array, downcast_struct_array,
-    NativeFromScalar, ScalarValue,
 };
+use sparrow_arrow::scalar_value::{NativeFromScalar, ScalarValue};
 
 /// The input to an instruction.
 #[derive(Debug, Clone)]

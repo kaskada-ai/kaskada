@@ -14,7 +14,7 @@ use arrow::temporal_conversions::timestamp_ns_to_datetime;
 use chrono::Datelike;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_kernels::lag::LagPrimitive;
 use sparrow_plan::ValueRef;
 

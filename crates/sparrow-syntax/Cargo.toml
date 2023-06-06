@@ -23,7 +23,7 @@ lalrpop-util.workspace = true
 logos.workspace = true
 serde.workspace = true
 smallvec.workspace = true
-sparrow-core = { path = "../sparrow-core" }
+sparrow-arrow = { path = "../sparrow-arrow" }
 static_init.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

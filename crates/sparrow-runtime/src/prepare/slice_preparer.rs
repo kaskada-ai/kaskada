@@ -7,7 +7,8 @@ use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use hashbrown::HashSet;
 use sparrow_api::kaskada::v1alpha::slice_plan;
-use sparrow_core::{context_code, downcast_primitive_array};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::context_code;
 use sparrow_kernels::hash::hash;
 
 use crate::prepare::Error;

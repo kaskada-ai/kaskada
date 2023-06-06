@@ -8,7 +8,7 @@ You can use the notebook in Docker by running the following command in this dire
 
 
 ```sh
-docker run --rm -p 8888:8888 -v "$PWD:/home/jovyan/example" ghcr.io/kaskada-ai/jupyter
+docker run --rm -p 8888:8888 -v "$PWD:/home/jovyan/example" kaskadaio/jupyter
 ````
 
 At the end of the log output you should see a URL like `http://127.0.0.1:8888/lab?token=d7f0cab9929e1b499b66fd3308357ed62dbb524db1ffe394`:

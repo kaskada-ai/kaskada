@@ -8,7 +8,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use sparrow_plan::TableId;
 use sparrow_qfr::FlightRecorder;
@@ -30,6 +30,7 @@ pub(super) struct ScanOperation {
     input_stream: Pin<Box<dyn Stream<Item = error_stack::Result<Batch, Error>> + Send>>,
     key_hash_index: KeyHashIndex,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
+    stop_signal_rx: tokio::sync::watch::Receiver<bool>,
 }
 
 impl std::fmt::Debug for ScanOperation {
@@ -90,6 +91,12 @@ impl Operation for ScanOperation {
                 .await
                 .into_report()
                 .change_context(Error::internal_msg("send next output"))?;
+
+            // Stops the operation if the signal is received.
+            if *self.stop_signal_rx.borrow() {
+                tracing::info!("Stop signal received. Ending scan");
+                break;
+            }
         }
 
         Ok(())
@@ -103,6 +110,7 @@ impl ScanOperation {
         scan_operation: operation_plan::ScanOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
+        stop_signal_rx: tokio::sync::watch::Receiver<bool>,
     ) -> error_stack::Result<BoxedOperation, Error> {
         error_stack::ensure!(
             input_channels.is_empty(),
@@ -234,6 +242,7 @@ impl ScanOperation {
             input_stream,
             key_hash_index: KeyHashIndex::default(),
             progress_updates_tx: context.progress_updates_tx.clone(),
+            stop_signal_rx,
         }))
     }
 
@@ -295,8 +304,8 @@ mod tests {
         Literal, OperationInputRef, OperationPlan, PlanHash, PreparedFile, SlicePlan, TableConfig,
         TableMetadata,
     };
+    use sparrow_arrow::downcast::downcast_primitive_array;
     use sparrow_compiler::DataContext;
-    use sparrow_core::downcast_primitive_array;
     use uuid::Uuid;
 
     use crate::data_manager::DataManager;
@@ -414,6 +423,7 @@ mod tests {
         let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
 
         let (max_event_tx, mut max_event_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (_, stop_signal_rx) = tokio::sync::watch::channel(false);
         let (sender, receiver) = tokio::sync::mpsc::channel(10);
         let mut executor = OperationExecutor::new(plan.clone());
         executor.add_consumer(sender);
@@ -438,7 +448,14 @@ mod tests {
         };
 
         executor
-            .execute(0, &mut context, vec![], max_event_tx, &Default::default())
+            .execute(
+                0,
+                &mut context,
+                vec![],
+                max_event_tx,
+                &Default::default(),
+                stop_signal_rx,
+            )
             .await
             .unwrap()
             .await

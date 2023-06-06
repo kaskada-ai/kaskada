@@ -20,6 +20,7 @@ num.workspace = true
 owning_ref.workspace = true
 parquet.workspace = true
 serde.workspace = true
+sparrow-arrow = { path = "../sparrow-arrow" }
 static_init.workspace = true
 tonic.workspace = true
 tracing.workspace = true

@@ -10,7 +10,8 @@ use futures::FutureExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_input_ref::Interpolation;
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_core::{downcast_primitive_array, KeyTriple, KeyTriples};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::{KeyTriple, KeyTriples};
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -623,7 +624,8 @@ mod tests {
         expression_plan, operation_input_ref, operation_plan, ExpressionPlan, OperationInputRef,
         OperationPlan,
     };
-    use sparrow_core::{downcast_primitive_array, KeyTriple};
+    use sparrow_arrow::downcast::downcast_primitive_array;
+    use sparrow_core::KeyTriple;
 
     use super::KeyedBatch;
     use crate::execute::operation::testing::{batch_from_csv, run_operation};

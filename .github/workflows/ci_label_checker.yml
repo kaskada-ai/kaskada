@@ -1,0 +1,22 @@
+name: Label Checker
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+  merge_group:
+    types: [checks_requested]
+
+jobs:
+  check_labels:
+    if: github.event_name == 'pull_request'
+    name: Check CLA signed labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker://agilepathway/pull-request-label-checker:latest
+        with:
+          any_of: cla-signed
+          repo_token: ${{ secrets.GITHUB_TOKEN }}

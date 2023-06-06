@@ -95,26 +95,26 @@ test/int/run-api-s3:
 ## CI related targets
 ####
 ci/integration/tests/docker-compose-up:
-	export DOCKER_BUILDKIT=1 
+	export DOCKER_BUILDKIT=1
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build --detach
 
-ci/integration/tests/docker-compose-logs: 
+ci/integration/tests/docker-compose-logs:
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml logs -t
 
 ci/integration/tests/docker-compose-logs-kaskada-only:
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml logs -t kaskada
 
 ci/integration/tests/docker-compose-down:
-	export DOCKER_BUILDKIT=1 
+	export DOCKER_BUILDKIT=1
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
 
 ci/integration/tests/run/api: test/int/run-api-docker
 
 
 ####
-## S3 CI Integration Tests 
+## S3 CI Integration Tests
 ####
-ci/integration/tests/docker-compose-up-s3: 
+ci/integration/tests/docker-compose-up-s3:
 	export DOCKER_BUILDKIT=1
 	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml up --build --detach
 
@@ -127,7 +127,7 @@ ci/integration/tests/docker-compose-s3-logs-kaskada-only:
 	 docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t kaskada
 
 ci/integration/tests/docker-compose-s3-logs:
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t 
+	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t
 
 ci/integration/tests/run/api-s3: test/int/run-api-s3-docker
 
@@ -159,7 +159,7 @@ ci/integration/tests/run/api-postgres-s3: test/int/run-api-postgres-s3
 
 wren/build:
 	cp NOTICE wren/
-	cd wren && go build main.go
+	cd wren && go build -o wren main.go
 
 wren/generate-mocks:
 	docker run -v $(shell pwd)/wren:/src/wren -v$(shell pwd)/gen:/src/gen -w /src/wren vektra/mockery
@@ -176,7 +176,7 @@ wren/run:
 	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \
 	go run main.go
 
-wren/run-s3: 
+wren/run-s3:
 	cp NOTICE wren/
 	cd wren && \
 	AWS_ACCESS_KEY_ID=kaskada \
@@ -238,4 +238,3 @@ python/build:
 
 python/install: python/build
 	pip install clients/python/dist/*.whl;
-	

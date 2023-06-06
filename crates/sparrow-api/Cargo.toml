@@ -25,7 +25,7 @@ prost-wkt.workspace = true
 prost-wkt-types.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
-sparrow-core = { path = "../sparrow-core" }
+sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 tempfile.workspace = true
 thiserror.workspace = true

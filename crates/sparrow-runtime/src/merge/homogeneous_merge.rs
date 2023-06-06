@@ -5,7 +5,7 @@ use arrow::array::ArrayRef;
 use arrow::datatypes::SchemaRef;
 use arrow::record_batch::RecordBatch;
 use itertools::izip;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 
 use crate::merge::binary_merge::BinaryMergeResult;
 use crate::merge::{binary_merge, BinaryMergeInput};

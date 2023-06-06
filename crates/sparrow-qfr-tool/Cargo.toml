@@ -30,7 +30,6 @@ tracing.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
-sparrow-core = { path = "../sparrow-core" }
 tempfile.workspace = true
 
 [[bin]]

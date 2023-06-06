@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, Field};
 use itertools::{izip, Itertools};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
 use sparrow_plan::{InstKind, Mode};
 use sparrow_syntax::{ArgVec, FenlType, Resolved};

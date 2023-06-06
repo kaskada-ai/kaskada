@@ -41,26 +41,49 @@ jobs:
 
 
   run_antora_build:
-    name: Run Build Workflow at kaskada-ai/docs-site
+    name: Run Antora build and upload artifacts
     needs: [docs_skip]
     runs-on: ubuntu-latest
     if: needs.docs_skip.outputs.should_skip != 'true' && github.event_name == 'pull_request'
     steps: 
-      - name: Call PR workflow in kaskada-ai/docs-site
-        uses: convictional/trigger-workflow-and-wait@v1.6.5
-        with:
-          owner: kaskada-ai
-          repo: docs-site
-          github_token: ${{ secrets.DOCS_TOKEN }}
-          workflow_file_name: pull_request.yml
-          ref: main
-          client_payload: '{"branch": "${{ github.head_ref }}"}'
-          wait_interval: 10
-          propagate_failure: true
-          trigger_workflow: true
-          wait_workflow: true
+        - name: Checkout code 
+          uses: actions/checkout@v3
+        
+        - name: Checkout docs-site code 
+          uses: actions/checkout@v3
+          with:
+            repository: kaskada-ai/docs-site
+            path: docs-site
 
+        - name: Update paths in antora-playbook.yml
+          uses: mikefarah/yq@master
+          with:
+            cmd: yq -i 'with(.content.sources[]; .url = "../" | del(.branches))' 'docs-site/antora-playbook.yml'
+        
+        - name: Install Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: "16"
 
+        - name: Install Antora
+          run: npm i antora
+          working-directory: docs-site
+
+        - name: Install npm dependencies
+          run: npm i
+          working-directory: docs-site
+
+        - name: Generate Site
+          run: npx antora --log-failure-level=warn antora-playbook.yml --stacktrace
+          working-directory: docs-site
+  
+        - name: Upload artifacts
+          uses: actions/upload-artifact@v3
+          with:
+            name: docs-site
+            path: |
+              docs-site/build/site
+  
   run_antora_publish:
     name: Run Publish Workflow at kaskada-ai/docs-site
     needs: [docs_skip]

@@ -9,7 +9,7 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
 use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::io::writer::FlightRecordWriter;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
@@ -54,6 +54,7 @@ impl ComputeExecutor {
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
         destination: v1alpha::Destination,
+        stop_signal_rx: tokio::sync::watch::Receiver<bool>,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
@@ -143,6 +144,7 @@ impl ComputeExecutor {
                         inputs,
                         max_event_time_tx.clone(),
                         late_bindings,
+                        stop_signal_rx.clone(),
                     )
                     .await?,
             );

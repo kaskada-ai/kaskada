@@ -8,7 +8,9 @@ use arrow::datatypes::{
     ArrowPrimitiveType, DataType, Int16Type, Int32Type, Int64Type, Int8Type, UInt16Type,
     UInt32Type, UInt64Type,
 };
-use sparrow_core::{downcast_boolean_array, downcast_primitive_array, downcast_string_array};
+use sparrow_arrow::downcast::{
+    downcast_boolean_array, downcast_primitive_array, downcast_string_array,
+};
 
 pub fn can_hash(data_type: &DataType) -> bool {
     matches!(

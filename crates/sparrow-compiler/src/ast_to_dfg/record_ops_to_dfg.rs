@@ -5,7 +5,7 @@ use arrow::datatypes::{DataType, Field};
 use hashbrown::HashSet;
 use itertools::{izip, Itertools};
 use smallvec::{smallvec, SmallVec};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::InstKind;
 use sparrow_syntax::{ArgVec, FenlType, Located, Location, Resolved};
 

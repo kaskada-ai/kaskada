@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use arrow::array::{ArrayRef, Int16Array, Int32Array, Int64Array, Int8Array, UInt64Array};
 use arrow::datatypes::DataType;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 
 pub fn order_preserving_cast_to_u64(array: &ArrayRef) -> anyhow::Result<ArrayRef> {
     match array.data_type() {

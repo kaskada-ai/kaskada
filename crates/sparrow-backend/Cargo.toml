@@ -1,0 +1,21 @@
+[package]
+name = "sparrow-backend"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Compilation backend for Kaskada queries.
+"""
+
+[dependencies]
+arrow-schema.workspace = true
+index_vec.workspace = true
+sparrow-core = { path = "../sparrow-core" }
+sparrow-physical = { path = "../sparrow-physical" }
+
+[dev-dependencies]
+
+[lib]
+doctest = false

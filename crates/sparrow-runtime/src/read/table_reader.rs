@@ -460,8 +460,8 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{
         compute_table, ComputeTable, PreparedFile, TableConfig, TableMetadata,
     };
+    use sparrow_arrow::downcast::downcast_primitive_array;
     use sparrow_compiler::DataContext;
-    use sparrow_core::downcast_primitive_array;
     use sparrow_qfr::FlightRecorder;
     use static_init::dynamic;
     use uuid::Uuid;

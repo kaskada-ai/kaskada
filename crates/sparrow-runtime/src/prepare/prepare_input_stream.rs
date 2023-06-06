@@ -11,7 +11,8 @@ use futures::stream::BoxStream;
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{slice_plan, TableConfig};
-use sparrow_core::{downcast_primitive_array, TableSchema};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::TableSchema;
 
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;

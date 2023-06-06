@@ -46,7 +46,7 @@ impl<'a> BinaryMergeInput<'a> {
         subsort: &'a ArrayRef,
         key_hash: &'a ArrayRef,
     ) -> anyhow::Result<Self> {
-        use sparrow_core::downcast_primitive_array;
+        use sparrow_arrow::downcast::downcast_primitive_array;
 
         let time = downcast_primitive_array(time.as_ref())?;
         let subsort = downcast_primitive_array(subsort.as_ref())?;

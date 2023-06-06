@@ -145,7 +145,7 @@ fn null_to_true(boolean: &BooleanArray) -> anyhow::Result<BooleanArray> {
 
 #[cfg(test)]
 mod tests {
-    use sparrow_core::downcast_boolean_array;
+    use sparrow_arrow::downcast::downcast_boolean_array;
 
     use super::*;
 
