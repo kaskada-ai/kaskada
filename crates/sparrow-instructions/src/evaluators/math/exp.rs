@@ -4,14 +4,14 @@ use std::sync::Arc;
 
 use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::compute::kernels::arity::unary;
-use arrow::datatypes::ArrowFloatNumericType;
+use arrow::datatypes::ArrowNumericType;
 use num::traits::Float;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
 /// Evaluator for Exp.
-pub(in crate::evaluators) struct ExpEvaluator<T: ArrowFloatNumericType>
+pub(in crate::evaluators) struct ExpEvaluator<T: ArrowNumericType>
 where
     T::Native: num::Float,
 {
@@ -20,7 +20,7 @@ where
     _phantom: PhantomData<fn(T) -> T>,
 }
 
-impl<T: ArrowFloatNumericType> Evaluator for ExpEvaluator<T>
+impl<T: ArrowNumericType> Evaluator for ExpEvaluator<T>
 where
     T::Native: num::Float,
 {
@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<T: ArrowFloatNumericType> EvaluatorFactory for ExpEvaluator<T>
+impl<T: ArrowNumericType> EvaluatorFactory for ExpEvaluator<T>
 where
     T::Native: num::Float,
 {
@@ -50,7 +50,7 @@ where
 /// When passed a non-numeric array type.
 fn exp<T>(array: &PrimitiveArray<T>) -> Result<PrimitiveArray<T>, Infallible>
 where
-    T: ArrowFloatNumericType,
+    T: ArrowNumericType,
     T::Native: Float,
 {
     Ok(unary(array, |b| b.exp()))

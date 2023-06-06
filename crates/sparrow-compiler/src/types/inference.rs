@@ -513,7 +513,7 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
                 // At least one of the fields didn't line up.
                 None
             } else {
-                Some(DataType::Struct(result_fields))
+                Some(DataType::Struct(result_fields.into()))
             }
         }
 

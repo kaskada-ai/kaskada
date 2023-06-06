@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arrow::array::{ArrayData, ArrayRef, StructArray};
 use arrow::buffer::Buffer;
-use arrow::datatypes::{DataType, Field};
+use arrow::datatypes::{DataType, FieldRef, Fields};
 
 /// Create a StructArray with the given length and fields.
 ///
@@ -13,7 +13,7 @@ use arrow::datatypes::{DataType, Field};
 /// actually need any of the fields after projection pushdown.
 ///
 /// https://github.com/apache/arrow-rs/issues/1657
-pub fn make_struct_array(length: usize, fields: Vec<(Field, ArrayRef)>) -> StructArray {
+pub fn make_struct_array(length: usize, fields: Vec<(FieldRef, ArrayRef)>) -> StructArray {
     // Check the fields have the expected length.
     #[cfg(debug_assertions)]
     {
@@ -30,7 +30,7 @@ pub fn make_struct_array(length: usize, fields: Vec<(Field, ArrayRef)>) -> Struc
     if fields.is_empty() {
         // Arrow can't create a struct array with no fields -- it wouldn't know the
         // length. So we create the ArrayData directly.
-        let array_data = ArrayData::builder(DataType::Struct(vec![])).len(length);
+        let array_data = ArrayData::builder(DataType::Struct(Fields::empty())).len(length);
         // SAFETY: Array Data constructed correctly.
         let array_data = unsafe { array_data.build_unchecked() };
         StructArray::from(array_data)
@@ -43,13 +43,13 @@ pub fn make_struct_array(length: usize, fields: Vec<(Field, ArrayRef)>) -> Struc
 ///
 /// https://github.com/apache/arrow-rs/issues/1657
 pub fn make_null_array(data_type: &DataType, length: usize) -> ArrayRef {
-    if data_type == &DataType::Struct(vec![]) {
+    if data_type == &DataType::Struct(Fields::empty()) {
         // Work around the fact that `new_null_array` panics for empty structs.
         // rewrite as `length.div_ceil(8)` once stablized.
         let num_bytes = arrow::util::bit_util::ceil(length, 8);
         let null_buffer = Buffer::from(vec![0x00; num_bytes]);
 
-        let array_data = ArrayData::builder(DataType::Struct(vec![]))
+        let array_data = ArrayData::builder(DataType::Struct(Fields::empty()))
             .null_bit_buffer(Some(null_buffer))
             .len(length);
         // SAFETY: Array Data constructed correctly.
@@ -71,7 +71,7 @@ pub fn make_null_array(data_type: &DataType, length: usize) -> ArrayRef {
 /// https://github.com/apache/arrow-rs/issues/1657
 pub fn make_struct_array_null(
     length: usize,
-    fields: Vec<(Field, ArrayRef)>,
+    fields: Vec<(FieldRef, ArrayRef)>,
     null_buffer: Buffer,
 ) -> StructArray {
     // Check the fields have the expected length.
@@ -86,11 +86,10 @@ pub fn make_struct_array_null(
             );
         }
     }
-
     if fields.is_empty() {
         // Arrow can't create a struct array with no fields -- it wouldn't know the
         // length. So we create the ArrayData directly.
-        let array_data = ArrayData::builder(DataType::Struct(vec![]))
+        let array_data = ArrayData::builder(DataType::Struct(Fields::empty()))
             .null_bit_buffer(Some(null_buffer))
             .len(length);
         // SAFETY: Array data constructed correctly.

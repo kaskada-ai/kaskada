@@ -371,7 +371,7 @@ fn output_schema(expressions: &[ExpressionPlan]) -> anyhow::Result<SchemaRef> {
             Ok(Field::new(format!("e{index}"), data_type, true))
         });
 
-    let fields = KEY_FIELDS
+    let fields: Vec<_> = KEY_FIELDS
         .iter()
         .map(|field| Ok(field.clone()))
         .chain(exported_fields)

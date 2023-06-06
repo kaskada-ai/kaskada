@@ -134,7 +134,7 @@ mod tests {
             Step {
                 kind: StepKind::Merge,
                 inputs: vec![3.into(), 4.into()],
-                schema: schema.clone(),
+                schema,
             },
         ];
 

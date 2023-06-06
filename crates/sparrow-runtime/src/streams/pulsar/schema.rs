@@ -21,7 +21,12 @@ pub fn get_output_schema(schema: SchemaRef) -> Result<SchemaRef, Error> {
     // For the `_time` (timestamp_ns) column, we cast to timestamp_us, sacrificing nano precision.
     // (Optionally, we could provide a separate column composed of the nanos as a separate i64).
     // The `_subsort` and `_key_hash` columns are dropped.
-    let time_us = arrow::datatypes::Field::new("_time", TimestampMicrosecondType::DATA_TYPE, false);
+    let time_us = Arc::new(arrow::datatypes::Field::new(
+        "_time",
+        TimestampMicrosecondType::DATA_TYPE,
+        false,
+    ));
+
     let mut new_fields = vec![time_us];
     fields
         .iter()

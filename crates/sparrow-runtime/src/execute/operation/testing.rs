@@ -31,7 +31,7 @@ pub(super) async fn batches_to_json(
     let mut json_string = Vec::new();
     let mut writer = arrow::json::LineDelimitedWriter::new(&mut json_string);
     while let Some(batch) = receiver.recv().await {
-        writer.write(batch.data).context("write batch")?;
+        writer.write(&batch.data).context("write batch")?;
     }
     writer.finish()?;
     String::from_utf8(json_string).context("writing batches")
@@ -56,61 +56,47 @@ pub(super) fn batch_from_csv(
     // Trim trailing/leading whitespace on each line.
     let csv = csv.lines().map(|line| line.trim()).join("\n");
 
-    let reader = std::io::Cursor::new(csv.as_bytes());
-    let reader = arrow::csv::ReaderBuilder::new()
-        .has_header(true)
-        .build(reader)?;
-    let batches: Vec<_> = reader.try_collect()?;
-    let read_schema = batches.get(0).context("no batches read")?.schema();
-    let batch = arrow::compute::concat_batches(&read_schema, &batches)
-        .context("concatenate read batches")?;
+    let cursor = std::io::Cursor::new(csv.as_bytes());
+
+    let (read_schema, _) = arrow::csv::reader::Format::default()
+        .with_header(true)
+        .infer_schema(cursor.clone(), None)
+        .context("no schema")?;
 
     // Convert the key columns.
     let mut fields = vec![
-        Field::new(
+        Arc::new(Field::new(
             "_time",
             DataType::Timestamp(TimeUnit::Nanosecond, None),
             false,
-        ),
-        Field::new("_subsort", DataType::UInt64, false),
-        Field::new("_key_hash", DataType::UInt64, false),
+        )),
+        Arc::new(Field::new("_subsort", DataType::UInt64, false)),
+        Arc::new(Field::new("_key_hash", DataType::UInt64, false)),
     ];
 
     if let Some(column_types) = column_types {
         anyhow::ensure!(read_schema.fields()[3..].len() == column_types.len());
-        fields.extend(
-            read_schema.fields()[3..]
-                .iter()
-                .zip(column_types)
-                .map(|(field, data_type)| Field::new(field.name(), data_type, true)),
-        )
+        fields.extend(read_schema.fields()[3..].iter().zip(column_types).map(
+            |(field, data_type)| {
+                if field.data_type() == &data_type && field.is_nullable() {
+                    field.clone()
+                } else {
+                    Arc::new(Field::new(field.name(), data_type, true))
+                }
+            },
+        ));
     } else {
         fields.extend_from_slice(&read_schema.fields()[3..]);
-    }
-
+    };
     let schema = Arc::new(Schema::new(fields));
 
-    let columns = batch
-        .columns()
-        .iter()
-        .zip(schema.fields().iter())
-        .map(|(column, field)| {
-            if column.data_type() == field.data_type() {
-                Ok(column.clone())
-            } else {
-                arrow::compute::cast(column, field.data_type()).with_context(|| {
-                    format!(
-                        "unable to cast input column '{}' from {:?} to {:?}",
-                        field.name(),
-                        column.data_type(),
-                        field.data_type()
-                    )
-                })
-            }
-        })
-        .try_collect()?;
-
-    RecordBatch::try_new(schema, columns).context("create input batch")
+    let reader = arrow::csv::ReaderBuilder::new(schema.clone())
+        .has_header(true)
+        .build(cursor)?;
+    let batches: Vec<_> = reader.try_collect()?;
+    let batch =
+        arrow::compute::concat_batches(&schema, &batches).context("concatenate read batches")?;
+    Ok(batch)
 }
 
 /// Parse a `RecordBatch` from the given CSV string.
@@ -156,9 +142,7 @@ pub(super) fn batch_from_json(
 
     // Create the reader
     let reader = std::io::Cursor::new(json.as_bytes());
-    let reader = arrow::json::ReaderBuilder::new()
-        .with_schema(schema)
-        .build(reader)?;
+    let reader = arrow::json::ReaderBuilder::new(schema).build(reader)?;
 
     // Read all the batches and concatenate them.
     let batches: Vec<_> = reader.try_collect()?;

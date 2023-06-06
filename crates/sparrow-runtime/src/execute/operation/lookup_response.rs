@@ -184,6 +184,8 @@ impl LookupResponseOperation {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use arrow::datatypes::{DataType, Field};
     use sparrow_api::kaskada::v1alpha::operation_plan::LookupResponseOperation;
     use sparrow_api::kaskada::v1alpha::{self, data_type};
@@ -301,7 +303,7 @@ mod tests {
         let input = batch_from_json(
             input_json,
             vec![
-                DataType::List(Box::new(Field::new("item", DataType::UInt64, true))),
+                DataType::List(Arc::new(Field::new("item", DataType::UInt64, true))),
                 DataType::Int64,
                 DataType::Float64,
             ],

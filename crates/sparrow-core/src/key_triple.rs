@@ -448,7 +448,7 @@ where
     T: ops::Deref,
     T::Target: Array,
 {
-    std::ptr::eq(lhs.data_ref(), rhs.data_ref())
+    arrow::array::ArrayData::ptr_eq(&lhs.to_data(), &rhs.to_data())
 }
 
 impl KeyTriple {

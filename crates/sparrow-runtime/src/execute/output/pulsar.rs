@@ -130,7 +130,7 @@ pub(super) async fn write(
 
     while let Some(batch) = batches.next().await {
         let batch = get_output_batch(output_schema.clone(), batch)?;
-        let json_rows = arrow::json::writer::record_batches_to_json_rows(&[batch])
+        let json_rows = arrow::json::writer::record_batches_to_json_rows(&[&batch])
             .into_report()
             .change_context(Error::LocalWrite)?;
         let num_rows = json_rows.len();

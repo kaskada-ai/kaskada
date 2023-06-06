@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow::array::ArrowPrimitiveType;
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimestampMillisecondType};
+use arrow::datatypes::{DataType, Field, FieldRef, Schema, SchemaRef, TimestampMillisecondType};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use tempfile::NamedTempFile;
@@ -185,9 +185,17 @@ impl RawMetadata {
 
         // inject _publish_time field so that we have a consistent column to sort on
         // (this will always be our time_column in Pulsar sources)
-        let publish_time = Field::new("_publish_time", TimestampMillisecondType::DATA_TYPE, false);
-        let mut new_fields = pulsar_schema.fields.clone();
-        new_fields.push(publish_time);
+        let publish_time = Arc::new(Field::new(
+            "_publish_time",
+            TimestampMillisecondType::DATA_TYPE,
+            false,
+        ));
+        let new_fields: Vec<_> = pulsar_schema
+            .fields
+            .iter()
+            .cloned()
+            .chain(std::iter::once(publish_time))
+            .collect();
         tracing::debug!("pulsar schema fields: {:?}", new_fields);
 
         Ok(PulsarMetadata {
@@ -213,24 +221,13 @@ impl RawMetadata {
     where
         R: std::io::Read + std::io::Seek,
     {
-        use arrow::csv::ReaderBuilder;
-
-        let raw_reader = ReaderBuilder::new()
-            .has_header(true)
-            // We only need the first row to find the minimum timestamp.
-            .with_batch_size(1)
-            // Use up to 1000 records to infer schemas.
-            //
-            // CSV is mostly used for small tests, so we expect to get enough
-            // information about a given CSV file pretty quick. If this doesn't,
-            // we can increase, or allow the user to specify the schema.
-            .infer_schema(Some(1000))
-            .build(reader)
+        let (raw_schema, _) = arrow::csv::reader::Format::default()
+            .with_header(true)
+            .infer_schema(reader, None)
             .into_report()
-            .change_context_lazy(|| Error::ReadSchema)?;
+            .change_context(Error::ReadSchema)?;
 
-        let raw_schema = raw_reader.schema();
-        Self::from_raw_schema(raw_schema)
+        Self::from_raw_schema(Arc::new(raw_schema))
     }
 }
 
@@ -255,7 +252,7 @@ fn convert_schema(schema: &Schema) -> error_stack::Result<SchemaRef, Error> {
 /// Arrow also does not support Decimal types. As of now, we are currently
 /// dropping the columns that are Decimal types since we do not support at query
 /// time either.
-fn convert_field(field: &Field) -> error_stack::Result<Field, Error> {
+fn convert_field(field: &FieldRef) -> error_stack::Result<FieldRef, Error> {
     match field.data_type() {
         DataType::Timestamp(time_unit, Some(tz)) => {
             // TODO: We discard this because the conversion from an Arrow
@@ -265,11 +262,11 @@ fn convert_field(field: &Field) -> error_stack::Result<Field, Error> {
                 tz,
                 field.name()
             );
-            Ok(Field::new(
+            Ok(Arc::new(Field::new(
                 field.name(),
                 DataType::Timestamp(time_unit.clone(), None),
                 field.is_nullable(),
-            ))
+            )))
         }
         DataType::Decimal128(_, _) | DataType::Decimal256(_, _) => {
             tracing::warn!("Decimal columns are unsupported: '{}'", field.name());
@@ -317,7 +314,7 @@ mod tests {
             // Time zone should be removed.
             Field::new(
                 "time_zone",
-                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".to_owned())),
+                DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC"))),
                 false,
             ),
             Field::new("subsort", DataType::UInt64, false),
@@ -353,22 +350,22 @@ mod tests {
             // Time zone should be removed.
             Field::new(
                 "time_zone_micro",
-                DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".to_owned())),
+                DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC"))),
                 false,
             ),
             Field::new(
                 "time_zone_nano",
-                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".to_owned())),
+                DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC"))),
                 false,
             ),
             Field::new(
                 "time_zone_second",
-                DataType::Timestamp(TimeUnit::Second, Some("UTC".to_owned())),
+                DataType::Timestamp(TimeUnit::Second, Some(Arc::from("UTC"))),
                 false,
             ),
             Field::new(
                 "time_zone_milli",
-                DataType::Timestamp(TimeUnit::Millisecond, Some("UTC".to_owned())),
+                DataType::Timestamp(TimeUnit::Millisecond, Some(Arc::from("UTC"))),
                 false,
             ),
         ]));

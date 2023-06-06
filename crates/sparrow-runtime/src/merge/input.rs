@@ -297,9 +297,12 @@ mod tests {
         (1..max_len)
             .prop_flat_map(|len| (arb_key_triples(len), arb_i64_array(len)))
             .prop_map(|((time, subsort, key_hash), values)| {
-                let schema =
-                    TableSchema::from_data_fields([Field::new("data", DataType::Int64, true)])
-                        .unwrap();
+                let schema = TableSchema::from_data_fields([Arc::new(Field::new(
+                    "data",
+                    DataType::Int64,
+                    true,
+                ))])
+                .unwrap();
                 let schema = schema.schema_ref();
                 RecordBatch::try_new(
                     schema.clone(),
