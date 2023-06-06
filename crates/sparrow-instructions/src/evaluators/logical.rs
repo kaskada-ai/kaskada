@@ -105,16 +105,16 @@ impl Evaluator for NullIfEvaluator {
         // `null` to `true` instead of `null` to `false`.
         let value = info.value(&self.value)?.array_ref()?;
         let condition = info.value(&self.condition)?.boolean_array()?;
-        let result = if let Some(condition_null) = condition.data_ref().null_buffer() {
+        let result = if let Some(condition_null) = condition.nulls() {
             // If there are nulls, then we need to create an argument for `nullif`
             // that corresponds to `condition | condition_null`. This is equivalent
             // to `condition | !condition_valid`.
             let offset = condition.offset();
             let len = condition.len();
             let buffer = bitwise_bin_op_helper(
-                &condition.data_ref().buffers()[0],
+                condition.values().inner(),
                 offset,
-                condition_null,
+                condition_null.buffer(),
                 offset,
                 len,
                 |condition, condition_valid| condition | !condition_valid,
@@ -156,7 +156,7 @@ impl Evaluator for IfEvaluator {
         // 2. Teaching the optimizer to prefer `null_if` in cases where the `not` node
         //    is already in the DFG.
         let condition = info.value(&self.condition)?.boolean_array()?;
-        let condition = if let Some(condition_null) = condition.data_ref().null_buffer() {
+        let condition = if let Some(condition_null) = condition.nulls() {
             // The result of `if` is null, if
             // 1. The `condition` is null.
             // 2. The `condition` is false.
@@ -169,9 +169,9 @@ impl Evaluator for IfEvaluator {
             let offset = condition.offset();
             let len = condition.len();
             let buffer = bitwise_bin_op_helper(
-                &condition.data_ref().buffers()[0],
+                condition.values().inner(),
                 offset,
-                condition_null,
+                condition_null.buffer(),
                 offset,
                 len,
                 |condition, condition_valid| !(condition & condition_valid),

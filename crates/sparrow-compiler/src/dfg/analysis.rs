@@ -8,7 +8,7 @@ use egg::{Analysis, Id, Language};
 use hashbrown::HashMap;
 use itertools::Itertools;
 use smallvec::smallvec;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::{InstKind, InstOp};
 
 use super::{DfgGraph, DfgLang, StepKind};

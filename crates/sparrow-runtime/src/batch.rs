@@ -3,7 +3,8 @@ use arrow::array::{ArrayRef, TimestampNanosecondArray};
 use arrow::datatypes::{Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use chrono::NaiveDateTime;
-use sparrow_core::{downcast_primitive_array, KeyTriple, KeyTriples};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::{KeyTriple, KeyTriples};
 
 /// Represents a batch to be processed.
 ///
@@ -382,7 +383,7 @@ impl<'a> std::fmt::Display for AsJson<'a> {
         let mut json_string = Vec::new();
         let mut writer = arrow::json::LineDelimitedWriter::new(&mut json_string);
 
-        writer.write_batches(&[self.0.data.clone()]).map_err(|e| {
+        writer.write_batches(&[&self.0.data]).map_err(|e| {
             tracing::error!("Error formatting batch: {}", e);
             std::fmt::Error
         })?;

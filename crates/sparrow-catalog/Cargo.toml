@@ -26,7 +26,6 @@ similar.workspace = true
 static_init.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-core = { path = "../sparrow-core" }
 sparrow-main = { path = "../sparrow-main" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 sparrow-qfr = { path = "../sparrow-qfr" }

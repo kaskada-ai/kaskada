@@ -139,7 +139,7 @@ impl FrontendOutput {
                 FenlType::Concrete(DataType::Struct(fields)) => {
                     output_types::emit_diagnostic_for_unencodable_fields(
                         &query,
-                        fields,
+                        fields.as_ref(),
                         &mut diagnostics,
                     )?;
                     true

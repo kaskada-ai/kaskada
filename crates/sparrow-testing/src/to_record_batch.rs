@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, ResultExt};
@@ -28,17 +30,22 @@ impl<'a> ToRecordBatch for JsonString<'a> {
 
         // Create the reader
         let reader = std::io::Cursor::new(json.as_bytes());
-        let mut reader_builder = arrow_json::ReaderBuilder::new();
-        if let Some(schema) = schema {
-            reader_builder = reader_builder.with_schema(schema);
-        }
-        let reader = reader_builder
+        let schema = if let Some(schema) = schema {
+            schema
+        } else {
+            Arc::new(
+                arrow_json::reader::infer_json_schema(reader.clone(), None)
+                    .into_report()
+                    .change_context(crate::Error)?,
+            )
+        };
+
+        let reader = arrow_json::ReaderBuilder::new(schema.clone())
             .build(reader)
             .into_report()
             .change_context(crate::Error)?;
 
         // Read all the batches and concatenate them.
-        let schema = reader.schema();
         let batches: Vec<_> = reader
             .try_collect()
             .into_report()
@@ -71,24 +78,22 @@ impl<'a, T: serde::Serialize + std::fmt::Debug + 'a> ToRecordBatch for JsonValue
 
 impl<'a> ToRecordBatch for CsvString<'a> {
     fn to_record_batch(&self, schema: Option<SchemaRef>) -> crate::Result<RecordBatch> {
+        let reader = std::io::Cursor::new(self.0.as_bytes());
+
         // Determine the schema (if not provided).
         let schema = if let Some(schema) = schema {
             schema
         } else {
-            let reader = std::io::Cursor::new(self.0.as_bytes());
-            let reader = arrow_csv::ReaderBuilder::new()
-                .has_header(true)
-                .build(reader)
+            let (schema, _) = arrow_csv::reader::Format::default()
+                .infer_schema(reader.clone(), None)
                 .into_report()
                 .change_context(crate::Error)?;
-            reader.schema()
+            Arc::new(schema)
         };
 
         // Create the reader.
-        let reader = std::io::Cursor::new(self.0.as_bytes());
-        let reader = arrow_csv::ReaderBuilder::new()
+        let reader = arrow_csv::ReaderBuilder::new(schema.clone())
             .has_header(true)
-            .with_schema(schema.clone())
             .build(reader)
             .into_report()
             .change_context(crate::Error)?;

@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, Field};
 use itertools::{izip, Itertools};
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
 use sparrow_plan::{InstKind, Mode};
 use sparrow_syntax::{ArgVec, FenlType, Resolved};
@@ -134,7 +134,7 @@ pub(crate) fn typecheck_inst(
                 fields.push(Field::new(field_name, field_type.clone(), true))
             }
 
-            let result_type = DataType::Struct(fields);
+            let result_type = DataType::Struct(fields.into());
             Ok(FenlType::Concrete(result_type))
         }
     }

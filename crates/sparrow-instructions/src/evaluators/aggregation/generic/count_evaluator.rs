@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
+use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::UInt32Type;
 use itertools::izip;
-use sparrow_core::downcast_boolean_array;
-use sparrow_kernels::BitBufferIterator;
+use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_plan::ValueRef;
 
 use super::two_stacks_count_evaluator::TwoStacksCountIfEvaluator;
@@ -150,34 +149,33 @@ impl CountIfEvaluator {
         Self::ensure_entity_capacity(token, key_capacity);
 
         let input = downcast_boolean_array(input)?;
-        let result: UInt32Array =
-            if let Some(input_valid_bits) = BitBufferIterator::array_valid_bits(input) {
-                let iter = izip!(key_indices.values(), input_valid_bits, 0..).map(
-                    |(key_index, input_is_valid, input_index)| {
-                        Some(Self::update_accum(
-                            token,
-                            *key_index,
-                            input_is_valid,
-                            input.value(input_index),
-                        ))
-                    },
-                );
-
-                // SAFETY: The iterator produced by `izip` has trusted length.
-                unsafe { PrimitiveArray::<UInt32Type>::from_trusted_len_iter(iter) }
-            } else {
-                let iter = izip!(key_indices.values(), 0..).map(|(entity_index, input_index)| {
+        let result: UInt32Array = if let Some(input_valid_bits) = input.nulls() {
+            let iter = izip!(key_indices.values(), input_valid_bits, 0..).map(
+                |(key_index, input_is_valid, input_index)| {
                     Some(Self::update_accum(
                         token,
-                        *entity_index,
-                        true,
+                        *key_index,
+                        input_is_valid,
                         input.value(input_index),
                     ))
-                });
+                },
+            );
 
-                // SAFETY: The iterator produced by `izip` has trusted length.
-                unsafe { PrimitiveArray::<UInt32Type>::from_trusted_len_iter(iter) }
-            };
+            // SAFETY: The iterator produced by `izip` has trusted length.
+            unsafe { PrimitiveArray::<UInt32Type>::from_trusted_len_iter(iter) }
+        } else {
+            let iter = izip!(key_indices.values(), 0..).map(|(entity_index, input_index)| {
+                Some(Self::update_accum(
+                    token,
+                    *entity_index,
+                    true,
+                    input.value(input_index),
+                ))
+            });
+
+            // SAFETY: The iterator produced by `izip` has trusted length.
+            unsafe { PrimitiveArray::<UInt32Type>::from_trusted_len_iter(iter) }
+        };
 
         Ok(Arc::new(result))
     }
@@ -215,26 +213,20 @@ impl CountIfEvaluator {
 
         let input = downcast_boolean_array(input.as_ref())?;
 
-        let result: PrimitiveArray<UInt32Type> = match (
-            BitBufferIterator::array_valid_bits(input),
-            BitBufferIterator::array_valid_bits(ticks),
-        ) {
+        let result: PrimitiveArray<UInt32Type> = match (input.nulls(), ticks.nulls()) {
             (None, None) => {
-                let iter = izip!(
-                    entity_indices.values(),
-                    0..,
-                    BitBufferIterator::boolean_array(ticks)
-                )
-                .map(|(entity_index, input_index, tick)| {
-                    Some(Self::update_since_accum(
-                        token,
-                        *entity_index,
-                        true,
-                        input.value(input_index),
-                        true,
-                        tick,
-                    ))
-                });
+                let iter = izip!(entity_indices.values(), 0.., ticks.values().iter()).map(
+                    |(entity_index, input_index, tick)| {
+                        Some(Self::update_since_accum(
+                            token,
+                            *entity_index,
+                            true,
+                            input.value(input_index),
+                            true,
+                            tick,
+                        ))
+                    },
+                );
 
                 // SAFETY: `izip!` and `map` are trusted length iterators.
                 unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
@@ -245,7 +237,7 @@ impl CountIfEvaluator {
                     entity_indices.values(),
                     input_valid_bits,
                     0..,
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(|(entity_index, input_valid, input_index, since_bool)| {
                     Some(Self::update_since_accum(
@@ -266,7 +258,7 @@ impl CountIfEvaluator {
                     entity_indices.values(),
                     window_valid_bits,
                     0..,
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(|(entity_index, window_valid, input_index, since_bool)| {
                     Some(Self::update_since_accum(
@@ -288,7 +280,7 @@ impl CountIfEvaluator {
                     input_valid_bits,
                     window_valid_bits,
                     0..,
-                    BitBufferIterator::boolean_array(ticks)
+                    ticks.values().iter()
                 )
                 .map(
                     |(entity_index, input_valid, window_valid, input_index, since_bool)| {
@@ -315,7 +307,7 @@ impl CountIfEvaluator {
 mod tests {
     use arrow::array::UInt32Array;
     use arrow::datatypes::UInt32Type;
-    use sparrow_core::downcast_primitive_array;
+    use sparrow_arrow::downcast::downcast_primitive_array;
 
     use super::*;
 

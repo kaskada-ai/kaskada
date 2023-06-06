@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, BooleanArray, UInt32Array};
+use arrow::array::{Array, ArrayRef, BooleanArray, UInt32Array};
 use itertools::izip;
-use sparrow_core::downcast_boolean_array;
-use sparrow_kernels::BitBufferIterator;
+use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_plan::ValueRef;
 
 use super::two_stacks_last_boolean_evaluator::TwoStacksLastBooleanEvaluator;
@@ -161,25 +160,24 @@ impl LastBooleanEvaluator {
         // want to store.
         Self::ensure_entity_capacity(token, key_capacity);
 
-        let result: BooleanArray =
-            if let Some(input_valid_bits) = BitBufferIterator::array_valid_bits(input) {
-                izip!(key_indices.values(), input_valid_bits, 0..)
-                    .map(|(entity_index, input_is_valid, input_index)| {
-                        Self::update_accum(
-                            token,
-                            *entity_index,
-                            input_is_valid,
-                            input.value(input_index),
-                        )
-                    })
-                    .collect::<anyhow::Result<BooleanArray>>()?
-            } else {
-                izip!(key_indices.values(), 0..)
-                    .map(|(entity_index, input_index)| {
-                        Self::update_accum(token, *entity_index, true, input.value(input_index))
-                    })
-                    .collect::<anyhow::Result<BooleanArray>>()?
-            };
+        let result: BooleanArray = if let Some(input_valid_bits) = input.nulls() {
+            izip!(key_indices.values(), input_valid_bits, 0..)
+                .map(|(entity_index, input_is_valid, input_index)| {
+                    Self::update_accum(
+                        token,
+                        *entity_index,
+                        input_is_valid,
+                        input.value(input_index),
+                    )
+                })
+                .collect::<anyhow::Result<BooleanArray>>()?
+        } else {
+            izip!(key_indices.values(), 0..)
+                .map(|(entity_index, input_index)| {
+                    Self::update_accum(token, *entity_index, true, input.value(input_index))
+                })
+                .collect::<anyhow::Result<BooleanArray>>()?
+        };
 
         Ok(Arc::new(result))
     }
@@ -217,32 +215,25 @@ impl LastBooleanEvaluator {
         // want to store.
         Self::ensure_entity_capacity(token, key_capacity);
 
-        let result: BooleanArray = match (
-            BitBufferIterator::array_valid_bits(input),
-            BitBufferIterator::array_valid_bits(window_since),
-        ) {
-            (None, None) => izip!(
-                key_indices.values(),
-                0..,
-                BitBufferIterator::boolean_array(window_since)
-            )
-            .map(|(entity_index, input_index, since_bool)| {
-                Self::update_since_accum(
-                    token,
-                    *entity_index,
-                    true,
-                    true,
-                    input.value(input_index),
-                    since_bool,
-                )
-            })
-            .collect::<anyhow::Result<BooleanArray>>()?,
+        let result: BooleanArray = match (input.nulls(), window_since.nulls()) {
+            (None, None) => izip!(key_indices.values(), 0.., window_since.values().iter())
+                .map(|(entity_index, input_index, since_bool)| {
+                    Self::update_since_accum(
+                        token,
+                        *entity_index,
+                        true,
+                        true,
+                        input.value(input_index),
+                        since_bool,
+                    )
+                })
+                .collect::<anyhow::Result<BooleanArray>>()?,
 
             (Some(input_valid_bits), None) => izip!(
                 key_indices.values(),
                 input_valid_bits,
                 0..,
-                BitBufferIterator::boolean_array(window_since)
+                window_since.values().iter()
             )
             .map(|(entity_index, input_is_valid, input_index, since_bool)| {
                 Self::update_since_accum(
@@ -260,7 +251,7 @@ impl LastBooleanEvaluator {
                 key_indices.values(),
                 window_valid_bits,
                 0..,
-                BitBufferIterator::boolean_array(window_since)
+                window_since.values().iter()
             )
             .map(|(entity_index, since_is_valid, input_index, since_bool)| {
                 Self::update_since_accum(
@@ -279,7 +270,7 @@ impl LastBooleanEvaluator {
                 input_valid_bits,
                 window_valid_bits,
                 0..,
-                BitBufferIterator::boolean_array(window_since)
+                window_since.values().iter()
             )
             .map(
                 |(entity_index, input_is_valid, since_is_valid, input_index, since_bool)| {

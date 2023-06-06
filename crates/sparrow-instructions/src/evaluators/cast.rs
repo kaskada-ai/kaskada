@@ -5,14 +5,9 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use arrow::array::{
-    ArrayRef, Int32Array, Int64Array, IntervalDayTimeArray, IntervalYearMonthArray, PrimitiveArray,
-};
-use arrow::datatypes::{
-    ArrowPrimitiveType, DataType, DurationMicrosecondType, DurationMillisecondType,
-    DurationNanosecondType, DurationSecondType,
-};
-use sparrow_core::{downcast_primitive_array, ScalarValue};
+use arrow::array::{ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray};
+use arrow::datatypes::DataType;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_kernels::time::i64_to_two_i32;
 use sparrow_plan::ValueRef;
 use sparrow_syntax::FenlType;
@@ -43,9 +38,7 @@ impl CastEvaluator {
 
     pub fn is_supported(from: &DataType, to: &DataType) -> bool {
         match (from, to) {
-            (DataType::Null, _) => true,
             _ if arrow::compute::can_cast_types(from, to) => true,
-            (DataType::Duration(_), DataType::Int64) => true,
             (
                 DataType::Interval(
                     arrow::datatypes::IntervalUnit::DayTime
@@ -73,25 +66,8 @@ impl CastEvaluator {
             (DataType::Null, _) => {
                 // TODO: https://github.com/apache/arrow-rs/issues/684 is fixed,
                 // use existing arrow cast kernels.
-                Ok(ScalarValue::try_new_null(to)?.to_array(input.len()))
-            }
-            (DataType::Duration(time_unit), DataType::Int64) => {
-                // TODO: https://github.com/apache/arrow-rs/issues/685 is fixed,
-                // user existing arrow cast kernels.
-                match time_unit {
-                    arrow::datatypes::TimeUnit::Second => {
-                        cast_duration::<DurationSecondType>(input)
-                    }
-                    arrow::datatypes::TimeUnit::Millisecond => {
-                        cast_duration::<DurationMillisecondType>(input)
-                    }
-                    arrow::datatypes::TimeUnit::Microsecond => {
-                        cast_duration::<DurationMicrosecondType>(input)
-                    }
-                    arrow::datatypes::TimeUnit::Nanosecond => {
-                        cast_duration::<DurationNanosecondType>(input)
-                    }
-                }
+                Ok(sparrow_arrow::scalar_value::ScalarValue::try_new_null(to)?
+                    .to_array(input.len()))
             }
             (DataType::Interval(interval_unit), to_type) => match interval_unit {
                 arrow::datatypes::IntervalUnit::DayTime => {
@@ -133,14 +109,4 @@ impl EvaluatorFactory for CastEvaluator {
 
         Ok(Box::new(CastEvaluator { input, data_type }))
     }
-}
-
-fn cast_duration<T>(input: &ArrayRef) -> anyhow::Result<ArrayRef>
-where
-    T: ArrowPrimitiveType<Native = i64>,
-{
-    let input: &PrimitiveArray<T> = downcast_primitive_array(input.as_ref())?;
-    let result: Int64Array = arrow::compute::kernels::arity::unary(input, |v| v);
-    let result = Arc::new(result);
-    Ok(result)
 }

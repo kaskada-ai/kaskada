@@ -46,7 +46,7 @@ impl<'a> BinaryMergeInput<'a> {
         subsort: &'a ArrayRef,
         key_hash: &'a ArrayRef,
     ) -> anyhow::Result<Self> {
-        use sparrow_core::downcast_primitive_array;
+        use sparrow_arrow::downcast::downcast_primitive_array;
 
         let time = downcast_primitive_array(time.as_ref())?;
         let subsort = downcast_primitive_array(subsort.as_ref())?;
@@ -609,8 +609,7 @@ mod tests {
 
     fn arb_non_empty_merge_result(max_len: usize) -> impl Strategy<Value = BinaryMergeResult> {
         arb_merge_result(max_len).prop_filter("inputs must be non-empty", |r| {
-            r.take_a.data().null_count() < r.take_a.len()
-                && r.take_b.data().null_count() < r.take_b.len()
+            r.take_a.null_count() < r.take_a.len() && r.take_b.null_count() < r.take_b.len()
         })
     }
 

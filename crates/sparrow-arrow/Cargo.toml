@@ -15,12 +15,16 @@ avro = ["avro-schema"]
 
 # This crate should not depend on any other Sparrow crates.
 [dependencies]
+anyhow.workspace = true
 arrow.workspace = true
 avro-schema = { workspace = true, optional = true }
 avro-rs = { workspace = true }
+chrono.workspace = true
+decorum.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 itertools.workspace = true
+num.workspace = true
 serde.workspace = true
 tracing.workspace = true
 

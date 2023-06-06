@@ -9,14 +9,10 @@
     clippy::print_stderr,
     clippy::undocumented_unsafe_blocks
 )]
-
-pub mod filter;
 pub mod hash;
 pub mod lag;
 mod ordered_cast;
 pub mod string;
 pub mod time;
-mod utils;
 
 pub use ordered_cast::*;
-pub use utils::*;

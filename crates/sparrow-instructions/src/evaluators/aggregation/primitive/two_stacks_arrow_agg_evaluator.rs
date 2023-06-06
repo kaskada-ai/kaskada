@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use arrow::array::{ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
-use arrow::datatypes::Int64Type;
+use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
+use arrow::datatypes::{ArrowNativeType, Int64Type};
 use itertools::izip;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use sparrow_core::downcast_primitive_array;
-use sparrow_kernels::BitBufferIterator;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
@@ -24,6 +23,7 @@ use crate::{
 pub(crate) struct TwoStacksArrowAggEvaluator<AggF>
 where
     AggF: ArrowAggFn,
+    AggF::InT: ArrowNativeType,
     AggF::AccT: Serialize + DeserializeOwned,
 {
     pub(crate) args: AggregationArgs<ValueRef>,
@@ -33,6 +33,7 @@ where
 impl<AggF> Evaluator for TwoStacksArrowAggEvaluator<AggF>
 where
     AggF: ArrowAggFn + Send,
+    AggF::InT: ArrowNativeType,
     AggF::AccT: Serialize + DeserializeOwned + Sync,
 {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
@@ -95,6 +96,7 @@ where
 impl<AggF> TwoStacksArrowAggEvaluator<AggF>
 where
     AggF: ArrowAggFn + Send,
+    AggF::InT: ArrowNativeType,
     AggF::AccT: Serialize + DeserializeOwned,
 {
     fn ensure_entity_capacity(
@@ -165,15 +167,13 @@ where
         // TODO: Handle the case where the input is empty (null_count == len) and we
         // don't need to compute anything.
 
-        let result: PrimitiveArray<AggF::OutArrowT> = match (
-            BitBufferIterator::array_valid_bits(input),
-            BitBufferIterator::array_valid_bits(sliding_window),
-        ) {
+        let result: PrimitiveArray<AggF::OutArrowT> = match (input.nulls(), sliding_window.nulls())
+        {
             (None, None) => {
                 let iter = izip!(
                     entity_indices.values(),
                     input.values(),
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(|(entity_index, input, sliding)| {
                     Self::update_two_stacks_accum(accum, *entity_index, true, true, input, sliding)
@@ -187,7 +187,7 @@ where
                     entity_indices.values(),
                     input_valid_bits,
                     input.values(),
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(|(entity_index, input_is_valid, input, sliding)| {
                     Self::update_two_stacks_accum(
@@ -208,7 +208,7 @@ where
                     entity_indices.values(),
                     window_valid_bits,
                     input.values(),
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(|(entity_index, since_is_valid, input, since_bool)| {
                     Self::update_two_stacks_accum(
@@ -230,7 +230,7 @@ where
                     input_valid_bits,
                     window_valid_bits,
                     input.values(),
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(
                     |(entity_index, input_is_valid, since_is_valid, input, since_bool)| {

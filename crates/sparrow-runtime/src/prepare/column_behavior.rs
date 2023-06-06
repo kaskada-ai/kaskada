@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use arrow::array::{Array, UInt64Array};
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_core::utils::make_null_array;
+use sparrow_arrow::utils::make_null_array;
 use sparrow_kernels::order_preserving_cast_to_u64;
 
 use crate::prepare::Error;

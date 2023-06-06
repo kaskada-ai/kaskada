@@ -3,22 +3,22 @@ use std::sync::Arc;
 
 use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::compute::math_op;
-use arrow::datatypes::{ArrowFloatNumericType, ArrowNativeTypeOp};
+use arrow::datatypes::{ArrowNativeTypeOp, ArrowNumericType};
 use num::traits::Pow;
-use sparrow_core::NativeFromScalar;
+use sparrow_arrow::scalar_value::NativeFromScalar;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
 /// Evaluator for Powf.
-pub(in crate::evaluators) struct PowfEvaluator<T: ArrowFloatNumericType> {
+pub(in crate::evaluators) struct PowfEvaluator<T: ArrowNumericType> {
     base: ValueRef,
     exp: ValueRef,
     // Use the type parameter and indicate it is invariant.
     _phantom: PhantomData<fn(T) -> T>,
 }
 
-impl<T: ArrowFloatNumericType> Evaluator for PowfEvaluator<T>
+impl<T: ArrowNumericType> Evaluator for PowfEvaluator<T>
 where
     T: NativeFromScalar,
     T::Native: ArrowNativeTypeOp + num::pow::Pow<T::Native, Output = T::Native>,
@@ -27,10 +27,7 @@ where
         let base = info.value(&self.base)?.primitive_array::<T>()?;
         let exp = info.value(&self.exp)?;
         let result = match exp.try_primitive_literal::<T>() {
-            Ok(Some(exp_literal)) => Arc::new(arrow::compute::kernels::arithmetic::powf_scalar(
-                base.as_ref(),
-                exp_literal,
-            )?),
+            Ok(Some(exp_literal)) => Arc::new(powf_scalar(base.as_ref(), exp_literal)?),
             Ok(None) => {
                 // Raised to the null power is always null
                 arrow::array::new_null_array(&T::DATA_TYPE, base.len())
@@ -44,7 +41,17 @@ where
     }
 }
 
-impl<T: ArrowFloatNumericType> EvaluatorFactory for PowfEvaluator<T>
+/// Raise array with floating point values to the power of a scalar.
+fn powf_scalar<T>(array: &PrimitiveArray<T>, raise: T::Native) -> anyhow::Result<PrimitiveArray<T>>
+where
+    T: ArrowNumericType,
+    T::Native: Pow<T::Native, Output = T::Native>,
+{
+    // TODO: Update this to use `unary_opt` and `null` on overflow.
+    Ok(array.unary(|x| x.pow(raise)))
+}
+
+impl<T: ArrowNumericType> EvaluatorFactory for PowfEvaluator<T>
 where
     T: NativeFromScalar,
     T::Native: ArrowNativeTypeOp + num::pow::Pow<T::Native, Output = T::Native>,
@@ -69,7 +76,7 @@ where
 /// When passed base or exponent arrays containing non-float types.
 fn powf<T>(base: &PrimitiveArray<T>, exp: &PrimitiveArray<T>) -> anyhow::Result<PrimitiveArray<T>>
 where
-    T: ArrowFloatNumericType,
+    T: ArrowNumericType,
     T::Native: ArrowNativeTypeOp + Pow<T::Native, Output = T::Native>,
 {
     let result = math_op(base, exp, |b, e| b.pow(e))?;

@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use arrow::datatypes::{DataType, TimeUnit};
 use itertools::Itertools;
-use sparrow_core::{
+use sparrow_arrow::scalar_value::{
     timeunit_from_suffix, timeunit_suffix, ScalarRecord, ScalarTimestamp, ScalarValue,
 };
 
@@ -47,7 +49,8 @@ impl Literal {
             Some(literal::Literal::Float64(v)) => ScalarValue::Float64(Some((*v).into())),
             Some(literal::Literal::Timestamp(v)) => {
                 let tu = timeunit_from_suffix(&v.unit)?;
-                ScalarValue::Timestamp(Box::new(ScalarTimestamp::new(v.value, tu, v.tz.clone())))
+                let tz = v.tz.as_ref().map(|tz| Arc::from(tz.clone()));
+                ScalarValue::Timestamp(Box::new(ScalarTimestamp::new(v.value, tu, tz)))
             }
             Some(literal::Literal::Date32(v)) => ScalarValue::Date32(Some(*v)),
             Some(literal::Literal::Date64(v)) => ScalarValue::Date64(Some(*v)),
@@ -105,10 +108,11 @@ impl From<&ScalarValue> for Literal {
             ScalarValue::Float32(Some(v)) => Some(literal::Literal::Float32(v.into_inner())),
             ScalarValue::Float64(Some(v)) => Some(literal::Literal::Float64(v.into_inner())),
             ScalarValue::Timestamp(v) => {
+                let tz = v.tz().map(|tz| tz.as_ref().to_owned());
                 Some(literal::Literal::Timestamp(literal::TimestampValue {
                     value: v.value(),
                     unit: timeunit_suffix(&v.unit()).to_string(),
-                    tz: v.tz(),
+                    tz,
                 }))
             }
             ScalarValue::Time64(Some(v), u) => {

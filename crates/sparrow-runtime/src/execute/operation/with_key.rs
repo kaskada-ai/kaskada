@@ -13,7 +13,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -225,10 +225,10 @@ mod tests {
         let input = batch_from_csv(
             "
         _time,_subsort,_key_hash,e0,e3,e4
-        2000,0,1,1,joe,0.2
-        3000,0,1,2,ally,2.0
-        4000,0,2,3,joe,3.2
-        5000,0,5,4,joe,2.1",
+        1970-01-01T00:00:00.000002000,0,1,1,joe,0.2
+        1970-01-01T00:00:00.000003000,0,1,2,ally,2.0
+        1970-01-01T00:00:00.000004000,0,2,3,joe,3.2
+        1970-01-01T00:00:00.000005000,0,5,4,joe,2.1",
             None,
         )
         .unwrap();

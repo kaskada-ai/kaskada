@@ -1,3 +1,4 @@
+use dashmap::DashMap;
 use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
@@ -14,10 +15,12 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_instructions::ComputeStore;
+use sparrow_materialize::{Materialization, MaterializationControl};
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
 use sparrow_runtime::execute::Error;
 use sparrow_runtime::s3::{S3Helper, S3Object};
 use tempfile::NamedTempFile;
+
 use tonic::{Request, Response, Status};
 use tracing::{error, info, Instrument};
 use uuid::Uuid;
@@ -25,17 +28,21 @@ use uuid::Uuid;
 use crate::serve::error_status::IntoStatus;
 use crate::BuildInfo;
 
-#[derive(Debug)]
 pub(super) struct ComputeServiceImpl {
     flight_record_path: &'static Option<S3Object>,
     s3_helper: S3Helper,
+    /// Thread-safe map containing the materialization id to control handles.
+    materializations: DashMap<String, MaterializationControl>,
 }
 
 impl ComputeServiceImpl {
     pub(super) fn new(flight_record_path: &'static Option<S3Object>, s3_helper: S3Helper) -> Self {
+        let materializations = DashMap::new();
+
         Self {
             flight_record_path,
             s3_helper,
+            materializations,
         }
     }
 }
@@ -101,21 +108,82 @@ impl ComputeService for ComputeServiceImpl {
 
     async fn start_materialization(
         &self,
-        _request: Request<StartMaterializationRequest>,
+        request: Request<StartMaterializationRequest>,
     ) -> Result<Response<StartMaterializationResponse>, Status> {
-        Err(tonic::Status::internal("unsupported"))
+        let span = tracing::info_span!("StartMaterialization");
+        let _enter = span.enter();
+        let s3_helper = self.s3_helper.clone();
+        let id = request.get_ref().materialization_id.clone();
+        tracing::info!("id: {}", id);
+
+        match start_materialization_impl(s3_helper, request.into_inner()) {
+            Ok(handle) => {
+                self.materializations.insert(id, handle);
+                Ok(Response::new(StartMaterializationResponse {}))
+            }
+            Err(e) => {
+                tracing::error!("failed to create materialization: {e}");
+                Err(tonic::Status::internal("failed to create materialization"))
+            }
+        }
     }
+
     async fn stop_materialization(
         &self,
-        _request: Request<StopMaterializationRequest>,
+        request: Request<StopMaterializationRequest>,
     ) -> Result<Response<StopMaterializationResponse>, Status> {
-        Err(tonic::Status::internal("unsupported"))
+        let span = tracing::info_span!("StopMaterialization");
+        let _enter = span.enter();
+        let id = request.into_inner().materialization_id;
+        tracing::info!("id: {}", id);
+
+        if let Some(mut materialization) = self.materializations.get_mut(&id) {
+            match materialization.stop().await {
+                Ok(_) => Ok(Response::new(StopMaterializationResponse {})),
+                Err(e) => {
+                    tracing::error!("stop materialization error: {e}");
+                    Err(tonic::Status::internal(format!(
+                        "stop materialization error: {e}"
+                    )))
+                }
+            }
+        } else {
+            Err(tonic::Status::not_found(format!(
+                "materialization {id} does not exist"
+            )))
+        }
     }
+
     async fn get_materialization_status(
         &self,
-        _request: Request<GetMaterializationStatusRequest>,
+        request: Request<GetMaterializationStatusRequest>,
     ) -> Result<Response<GetMaterializationStatusResponse>, Status> {
-        Err(tonic::Status::internal("unsupported"))
+        let span = tracing::info_span!("GetMaterializationStatus");
+        let _enter = span.enter();
+        let id = request.into_inner().materialization_id;
+        tracing::info!("id: {}", id);
+
+        if let Some(materialization) = self.materializations.get(&id) {
+            let status = materialization.get_status();
+            let error = match status.error {
+                Some(e) => {
+                    tracing::error!("get materialization status error: {e}");
+                    e.to_string()
+                }
+                None => "".to_string(),
+            };
+
+            Ok(Response::new(GetMaterializationStatusResponse {
+                materialization_id: id,
+                state: status.state as i32,
+                progress: Some(status.progress),
+                error,
+            }))
+        } else {
+            Err(tonic::Status::not_found(format!(
+                "materialization {id} does not exist"
+            )))
+        }
     }
 }
 
@@ -219,6 +287,27 @@ async fn execute_impl(
             flight_record_tempfile,
         )))
         .map(|item| item.into_status()))
+}
+
+fn start_materialization_impl(
+    s3_helper: S3Helper,
+    request: StartMaterializationRequest,
+) -> error_stack::Result<MaterializationControl, Error> {
+    let id = request.materialization_id.clone();
+    let plan = request.plan.ok_or(Error::MissingField("compute plan"))?;
+    let tables = request.tables.clone();
+    let destination = request
+        .destination
+        .ok_or(Error::MissingField("destination"))?;
+
+    let materialization = Materialization::new(id, plan, tables, destination);
+    // TODO: Support lateness
+    // Spawns the materialization thread and begin exeution
+    Ok(MaterializationControl::start(
+        materialization,
+        s3_helper,
+        None,
+    ))
 }
 
 /// Sends the debug message after the end of the stream.

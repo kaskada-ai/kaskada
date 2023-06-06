@@ -42,12 +42,10 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, PrimitiveArray, UInt32Array};
+use arrow::array::{Array, ArrayRef, PrimitiveArray, UInt32Array};
 use arrow::datatypes::ArrowPrimitiveType;
 use itertools::izip;
-use sparrow_core::downcast_primitive_array;
-
-use crate::utils::BitBufferIterator;
+use sparrow_arrow::downcast::downcast_primitive_array;
 
 pub struct LagPrimitive<T: ArrowPrimitiveType> {
     pub state: Vec<VecDeque<T::Native>>,
@@ -138,10 +136,8 @@ where
         // TODO: Handle the case where the input is empty (null_count == len) and we
         // don't need to compute anything.
 
-        let result: PrimitiveArray<T> = if let Some(is_valid) =
-            BitBufferIterator::array_valid_bits(input)
-        {
-            let iter = izip!(is_valid, entity_indices.values(), input.values()).map(
+        let result: PrimitiveArray<T> = if let Some(is_valid) = input.nulls() {
+            let iter = izip!(is_valid.iter(), entity_indices.values(), input.values()).map(
                 |(is_valid, entity_index, input)| {
                     self.execute_one(*entity_index, is_valid, *input, lag)
                 },

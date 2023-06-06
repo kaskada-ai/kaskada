@@ -40,7 +40,7 @@ fn batch_to_json(batch: RecordBatch) -> Result<String, std::fmt::Error> {
     let mut json_string = Vec::new();
     let mut writer = arrow::json::LineDelimitedWriter::new(&mut json_string);
 
-    writer.write_batches(&[batch]).map_err(|e| {
+    writer.write_batches(&[&batch]).map_err(|e| {
         tracing::error!("Error formatting batch: {}", e);
         std::fmt::Error
     })?;

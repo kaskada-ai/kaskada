@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, StringArray};
 use owning_ref::ArcRef;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
@@ -107,7 +107,7 @@ mod tests {
     use arrow::array::{GenericStringArray, StringArray};
     use arrow::datatypes::DataType;
     use owning_ref::OwningRef;
-    use sparrow_core::downcast_string_array;
+    use sparrow_arrow::downcast::downcast_string_array;
     use sparrow_plan::{InstKind, InstOp};
 
     use super::*;

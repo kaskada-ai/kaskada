@@ -7,16 +7,15 @@ use arrow::array::{
     Int32BufferBuilder, ListArray, PrimitiveArray, PrimitiveBuilder, StringArray, StringBuilder,
     StructArray,
 };
-use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Field};
+use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
 use itertools::{izip, Itertools};
-use sparrow_core::utils::make_null_array;
-use sparrow_core::{
+use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_list_array, downcast_primitive_array, downcast_string_array,
     downcast_struct_array,
 };
+use sparrow_arrow::utils::make_null_array;
 use sparrow_instructions::GroupingIndices;
-use sparrow_kernels::BitBufferIterator;
 
 use crate::execute::operation;
 
@@ -842,18 +841,20 @@ where
 /// cannot be reconstructed from the individual operations.
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct StructSpread<T: StructSpreadState> {
+    fields: Fields,
     spreads: Vec<Spread>,
     state: T,
 }
 
 impl StructSpread<UnlatchedStructSpreadState> {
-    fn try_new_unlatched(fields: &[Field]) -> anyhow::Result<Self> {
+    fn try_new_unlatched(fields: &Fields) -> anyhow::Result<Self> {
         let spreads = fields
             .iter()
             .map(|field| Spread::try_new(false, field.data_type()))
             .try_collect()?;
 
         Ok(Self {
+            fields: fields.clone(),
             spreads,
             state: UnlatchedStructSpreadState,
         })
@@ -861,13 +862,14 @@ impl StructSpread<UnlatchedStructSpreadState> {
 }
 
 impl StructSpread<LatchedStructSpreadState> {
-    fn try_new_latched(fields: &[Field]) -> anyhow::Result<Self> {
+    fn try_new_latched(fields: &Fields) -> anyhow::Result<Self> {
         let spreads = fields
             .iter()
             .map(|field| Spread::try_new(true, field.data_type()))
             .try_collect()?;
 
         Ok(Self {
+            fields: fields.clone(),
             spreads,
             state: LatchedStructSpreadState::default(),
         })
@@ -1035,33 +1037,33 @@ impl StructSpreadState for UnlatchedStructSpreadState {
             "Output array should be created with no null values (eg., by StructArray::from)"
         );
 
-        let null_buffer =
-            if let Some(mut null_bits) = BitBufferIterator::array_valid_bits(input_array) {
-                // We need to create a new null buffer which "spreads" the
-                // null values of `null_buffer` out based on the `signal`.
-                // Specifically, if `signal` is true, we take the next null
-                // bit from `null_buffer`. If `signal` is false, we take
-                // produce a `null` (false) bit.
-                let mut builder = BooleanBufferBuilder::new(grouping.len());
+        let null_buffer = if let Some(null_bits) = input_array.nulls() {
+            let mut null_bits = null_bits.iter();
+            // We need to create a new null buffer which "spreads" the
+            // null values of `null_buffer` out based on the `signal`.
+            // Specifically, if `signal` is true, we take the next null
+            // bit from `null_buffer`. If `signal` is false, we take
+            // produce a `null` (false) bit.
+            let mut builder = BooleanBufferBuilder::new(grouping.len());
 
-                // TODO: We could iterate over the `signals` in "runs" of contiguous
-                // bits. For a sequence of `N false` values, we append `N null` (false)
-                // values to the builder. For a sequence of `N true` values, we append
-                // a slice of the next `N` bits from the `null_buffer`. This would require
-                // more machinery than we currently have, but would allow this to use
-                // much faster operations.
-                for signal in BitBufferIterator::boolean_array(signal) {
-                    if signal {
-                        builder.append(null_bits.next().expect("not enough bits"));
-                    } else {
-                        builder.append(false);
-                    }
+            // TODO: We could iterate over the `signals` in "runs" of contiguous
+            // bits. For a sequence of `N false` values, we append `N null` (false)
+            // values to the builder. For a sequence of `N true` values, we append
+            // a slice of the next `N` bits from the `null_buffer`. This would require
+            // more machinery than we currently have, but would allow this to use
+            // much faster operations.
+            for signal in signal.values().iter() {
+                if signal {
+                    builder.append(null_bits.next().expect("not enough bits"));
+                } else {
+                    builder.append(false);
                 }
-                builder.finish()
-            } else {
-                debug_assert_eq!(signal.null_count(), 0);
-                signal.data().buffers()[0].clone()
-            };
+            }
+            builder.finish().into_inner()
+        } else {
+            debug_assert_eq!(signal.null_count(), 0);
+            signal.values().inner().clone()
+        };
 
         // Create a new struct array (with the same data) but updating the null buffer.
         let data = output_array
@@ -1082,7 +1084,7 @@ impl StructSpreadState for UnlatchedStructSpreadState {
         // just need to change the null bits to indicate nothing is valid.
         let mut builder = BooleanBufferBuilder::new(grouping.len());
         builder.append_n(grouping.len(), false);
-        let null_buffer = builder.finish();
+        let null_buffer = builder.finish().into_inner();
 
         let data = output_array
             .into_data()
@@ -1101,6 +1103,7 @@ impl StructSpreadState for UnlatchedStructSpreadState {
 ///   b) The `signal` is `false` and the "remembered" row is `null`.
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 struct LatchedStructSpreadState {
+    fields: Fields,
     /// For each grouping index, remembers if the most-recently latched
     /// value was null.
     struct_valid: BitVec,
@@ -1132,50 +1135,51 @@ impl StructSpreadState for LatchedStructSpreadState {
         debug_assert_eq!(grouping.len(), output_array.len());
         debug_assert_eq!(signal.len(), output_array.len());
 
-        let null_buffer =
-            if let Some(mut valid_bits) = BitBufferIterator::array_valid_bits(input_array) {
-                // We need to create a new null buffer which "spreads" the
-                // null values of `null_buffer` out based on the `signal`.
-                // Specifically, if `signal` is true, we take the next null
-                // bit from `null_buffer`. If `signal` is false, we return
-                // the captured null bit.
-                let mut builder = BooleanBufferBuilder::new(grouping.len());
+        let null_buffer = if let Some(valid_bits) = input_array.nulls() {
+            let mut valid_bits = valid_bits.iter();
 
-                let signal = BitBufferIterator::boolean_array(signal);
-                for (signal, group) in signal.zip(grouping.group_iter()) {
-                    let is_valid = if signal {
-                        let is_valid = valid_bits.next().expect("not enough bits");
-                        self.struct_valid.set(group, is_valid);
-                        is_valid
-                    } else {
-                        self.struct_valid[group]
-                    };
+            // We need to create a new null buffer which "spreads" the
+            // null values of `null_buffer` out based on the `signal`.
+            // Specifically, if `signal` is true, we take the next null
+            // bit from `null_buffer`. If `signal` is false, we return
+            // the captured null bit.
+            let mut builder = BooleanBufferBuilder::new(grouping.len());
 
-                    builder.append(is_valid);
-                }
-                builder.finish()
-            } else {
-                debug_assert_eq!(signal.null_count(), 0);
+            let signal = signal.values().iter();
+            for (signal, group) in signal.zip(grouping.group_iter()) {
+                let is_valid = if signal {
+                    let is_valid = valid_bits.next().expect("not enough bits");
+                    self.struct_valid.set(group, is_valid);
+                    is_valid
+                } else {
+                    self.struct_valid[group]
+                };
 
-                let mut builder = BooleanBufferBuilder::new(grouping.len());
+                builder.append(is_valid);
+            }
+            builder.finish()
+        } else {
+            debug_assert_eq!(signal.null_count(), 0);
 
-                let signal = BitBufferIterator::boolean_array(signal);
-                for (signal, group) in signal.zip(grouping.group_iter()) {
-                    let is_valid = if signal {
-                        self.struct_valid.set(group, true);
-                        true
-                    } else {
-                        self.struct_valid[group]
-                    };
-                    builder.append(is_valid);
-                }
-                builder.finish()
-            };
+            let mut builder = BooleanBufferBuilder::new(grouping.len());
+
+            let signal = signal.values().iter();
+            for (signal, group) in signal.zip(grouping.group_iter()) {
+                let is_valid = if signal {
+                    self.struct_valid.set(group, true);
+                    true
+                } else {
+                    self.struct_valid[group]
+                };
+                builder.append(is_valid);
+            }
+            builder.finish()
+        };
         // Create a new struct array (with the same data) but updating the null buffer.
         let data = output_array
             .into_data()
             .into_builder()
-            .null_bit_buffer(Some(null_buffer))
+            .null_bit_buffer(Some(null_buffer.into_inner()))
             .build()?;
         Ok(arrow::array::make_array(data))
     }
@@ -1198,7 +1202,7 @@ impl StructSpreadState for LatchedStructSpreadState {
         for group in grouping.group_iter() {
             builder.append(self.struct_valid[group]);
         }
-        let null_buffer = builder.finish();
+        let null_buffer = builder.finish().into_inner();
 
         // Create a new struct array (with the same data) but updating the null buffer.
         let data = output_array
@@ -1621,7 +1625,11 @@ pub(super) fn bit_run_iterator(
     array: &BooleanArray,
 ) -> arrow::util::bit_iterator::BitSliceIterator<'_> {
     debug_assert_eq!(array.null_count(), 0);
-    arrow::util::bit_iterator::BitSliceIterator::new(array.values(), array.offset(), array.len())
+    arrow::util::bit_iterator::BitSliceIterator::new(
+        array.values().inner(),
+        array.offset(),
+        array.len(),
+    )
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -1670,11 +1678,11 @@ impl SpreadImpl for UnlatchedUInt64ListSpread {
             offset_builder.append(offset);
         }
 
-        let data_builder = values.data().clone().into_builder();
+        let data_builder = values.to_data().into_builder();
         let offset = offset_builder.finish();
         let array_data = data_builder
             .len(grouping.len())
-            .null_bit_buffer(Some(null_builder.finish()))
+            .null_bit_buffer(Some(null_builder.finish().into_inner()))
             .buffers(vec![offset])
             .build()?;
         let result = ListArray::from(array_data);
@@ -1709,8 +1717,10 @@ mod tests {
         StructArray, UInt32Array,
     };
     use arrow::datatypes::{DataType, Field, UInt64Type};
-    use sparrow_core::utils::make_struct_array_null;
-    use sparrow_core::{downcast_primitive_array, downcast_string_array, downcast_struct_array};
+    use sparrow_arrow::downcast::{
+        downcast_primitive_array, downcast_string_array, downcast_struct_array,
+    };
+    use sparrow_arrow::utils::make_struct_array_null;
     use sparrow_instructions::GroupingIndices;
 
     use crate::execute::operation::spread::Spread;
@@ -2091,6 +2101,7 @@ mod tests {
         ];
         let list_array = ListArray::from_iter_primitive::<UInt64Type, _, _>(data);
         let list_array = list_array.slice(1, 4);
+        let list_array = Arc::new(list_array);
 
         let result = run_spread(
             list_array,
@@ -2153,8 +2164,16 @@ mod tests {
         make_struct_array_null(
             values.len(),
             vec![
-                (Field::new("a", DataType::Int64, true), Arc::new(a)),
-                (Field::new("b", DataType::Float64, true), Arc::new(b)),
+                (
+                    // TODO(https://github.com/kaskada-ai/kaskada/issues/417): Avoid copying.
+                    Arc::new(Field::new("a", DataType::Int64, true)),
+                    Arc::new(a),
+                ),
+                (
+                    // TODO(https://github.com/kaskada-ai/kaskada/issues/417): Avoid copying.
+                    Arc::new(Field::new("b", DataType::Float64, true)),
+                    Arc::new(b),
+                ),
             ],
             null_buffer,
         )
@@ -2169,7 +2188,7 @@ mod tests {
             .zip(b.iter())
             .enumerate()
             .map(|(index, (a, b))| {
-                if struct_array.data().is_null(index) {
+                if struct_array.is_null(index) {
                     None
                 } else {
                     Some(TestStruct { a, b })

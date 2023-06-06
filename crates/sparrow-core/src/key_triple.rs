@@ -8,8 +8,8 @@ use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type};
 use arrow::record_batch::RecordBatch;
 use owning_ref::ArcRef;
 
-use crate::arrow_downcast::downcast_primitive_array;
 use crate::TableSchema;
+use sparrow_arrow::downcast::downcast_primitive_array;
 
 /// The key columns for a given batch.
 ///
@@ -448,7 +448,7 @@ where
     T: ops::Deref,
     T::Target: Array,
 {
-    std::ptr::eq(lhs.data_ref(), rhs.data_ref())
+    arrow::array::ArrayData::ptr_eq(&lhs.to_data(), &rhs.to_data())
 }
 
 impl KeyTriple {

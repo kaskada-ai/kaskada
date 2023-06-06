@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
-use arrow::datatypes::{DataType, Field};
+use arrow::datatypes::{DataType, FieldRef};
 use egg::{Id, Subst, Var};
 use smallvec::smallvec;
 use sparrow_plan::InstKind;
@@ -119,7 +119,7 @@ impl Pushdown {
             }
             DataType::Struct(fields) => {
                 let fields = fields.clone();
-                self.pushdown_struct(dfg, subst, value, &fields)
+                self.pushdown_struct(dfg, subst, value, fields.as_ref())
             }
             unsupported => Err(anyhow!("Pushdown operation on type {:?}", unsupported)),
         }
@@ -130,7 +130,7 @@ impl Pushdown {
         dfg: &mut Dfg,
         subst: &Subst,
         record: Id,
-        fields: &[Field],
+        fields: &[FieldRef],
     ) -> anyhow::Result<Id> {
         let mut args = ChildrenVec::with_capacity(fields.len() * 2);
 

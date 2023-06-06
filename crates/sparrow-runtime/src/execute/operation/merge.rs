@@ -10,7 +10,8 @@ use futures::FutureExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_input_ref::Interpolation;
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_core::{downcast_primitive_array, KeyTriple, KeyTriples};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::{KeyTriple, KeyTriples};
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -623,7 +624,8 @@ mod tests {
         expression_plan, operation_input_ref, operation_plan, ExpressionPlan, OperationInputRef,
         OperationPlan,
     };
-    use sparrow_core::{downcast_primitive_array, KeyTriple};
+    use sparrow_arrow::downcast::downcast_primitive_array;
+    use sparrow_core::KeyTriple;
 
     use super::KeyedBatch;
     use crate::execute::operation::testing::{batch_from_csv, run_operation};
@@ -688,19 +690,19 @@ mod tests {
         let operation_0 = batch_from_csv(
             "
         _time,_subsort,_key_hash,e0
-        2000,0,1,1
-        3000,1,1,2
-        4000,0,2,3",
+        1970-01-01T00:00:00.000002000,0,1,1
+        1970-01-01T00:00:00.000003000,1,1,2
+        1970-01-01T00:00:00.000004000,0,2,3",
             None,
         )
         .unwrap();
         let operation_1 = batch_from_csv(
             "
         _time,_subsort,_key_hash,e0,e2
-        2500,0,2,1,3
-        3000,0,1,2,2
-        3000,1,1,4,4
-        4000,0,2,3,2",
+        1970-01-01T00:00:00.000002500,0,2,1,3
+        1970-01-01T00:00:00.000003000,0,1,2,2
+        1970-01-01T00:00:00.000003000,1,1,4,4
+        1970-01-01T00:00:00.000004000,0,2,3,2",
             None,
         )
         .unwrap();

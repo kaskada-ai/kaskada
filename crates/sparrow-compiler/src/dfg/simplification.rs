@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use egg::{rewrite, Applier, Id, Rewrite, Runner, Subst};
 use smallvec::smallvec;
-use sparrow_core::ScalarValue;
+use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_syntax::LiteralValue;
 use static_init::dynamic;
 use tracing::{info, info_span, warn};

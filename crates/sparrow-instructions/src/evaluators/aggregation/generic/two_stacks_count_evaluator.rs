@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use arrow::array::{ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
+use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::{Int64Type, UInt32Type};
 use itertools::izip;
-use sparrow_core::downcast_boolean_array;
-use sparrow_kernels::BitBufferIterator;
+use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_plan::ValueRef;
 
 use crate::{AggregationArgs, Count, Evaluator, RuntimeInfo, StateToken, TwoStacksCountAccumToken};
@@ -134,26 +133,20 @@ impl TwoStacksCountIfEvaluator {
 
         let input = downcast_boolean_array(input)?;
 
-        let result: PrimitiveArray<UInt32Type> = match (
-            BitBufferIterator::array_valid_bits(input),
-            BitBufferIterator::array_valid_bits(sliding_window),
-        ) {
+        let result: PrimitiveArray<UInt32Type> = match (input.nulls(), sliding_window.nulls()) {
             (None, None) => {
-                let iter = izip!(
-                    key_indices.values(),
-                    0..,
-                    BitBufferIterator::boolean_array(sliding_window)
-                )
-                .map(|(entity_index, input_index, since_bool)| {
-                    Some(Self::update_two_stacks_accum(
-                        token,
-                        *entity_index,
-                        true,
-                        input.value(input_index),
-                        true,
-                        since_bool,
-                    ))
-                });
+                let iter = izip!(key_indices.values(), 0.., sliding_window.values().iter()).map(
+                    |(entity_index, input_index, since_bool)| {
+                        Some(Self::update_two_stacks_accum(
+                            token,
+                            *entity_index,
+                            true,
+                            input.value(input_index),
+                            true,
+                            since_bool,
+                        ))
+                    },
+                );
 
                 // SAFETY: `izip!` and `map` are trusted length iterators.
                 unsafe { PrimitiveArray::from_trusted_len_iter(iter) }
@@ -164,7 +157,7 @@ impl TwoStacksCountIfEvaluator {
                     key_indices.values(),
                     input_valid_bits,
                     0..,
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(|(entity_index, input_is_valid, input_index, since_bool)| {
                     Some(Self::update_two_stacks_accum(
@@ -186,7 +179,7 @@ impl TwoStacksCountIfEvaluator {
                     key_indices.values(),
                     0..,
                     window_valid_bits,
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(|(entity_index, input_index, since_is_valid, since_bool)| {
                     Some(Self::update_two_stacks_accum(
@@ -209,7 +202,7 @@ impl TwoStacksCountIfEvaluator {
                     input_valid_bits,
                     0..,
                     window_valid_bits,
-                    BitBufferIterator::boolean_array(sliding_window)
+                    sliding_window.values().iter()
                 )
                 .map(
                     |(entity_index, input_is_valid, input_index, since_is_valid, since_bool)| {
@@ -234,7 +227,7 @@ impl TwoStacksCountIfEvaluator {
 }
 #[cfg(test)]
 mod tests {
-    use sparrow_core::downcast_primitive_array;
+    use sparrow_arrow::downcast::downcast_primitive_array;
 
     use super::*;
 

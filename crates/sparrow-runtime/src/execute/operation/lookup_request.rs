@@ -11,7 +11,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_core::downcast_primitive_array;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::{ComputeStore, GroupingIndices};
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -243,9 +243,9 @@ fn make_request_list(
     values: &ArrayRef,
 ) -> anyhow::Result<ArrayRef> {
     let values = arrow::compute::take(values.as_ref(), value_indices, None)?;
-    let values_data = values.data();
+    let values_data = values.into_data();
 
-    let field = Box::new(Field::new(
+    let field = Arc::new(Field::new(
         "item",
         values_data.data_type().clone(),
         true, // TODO: find a consistent way of getting this
@@ -254,7 +254,7 @@ fn make_request_list(
     let array_data = ArrayData::builder(data_type)
         .len(len)
         .add_buffer(offset_buffer.clone())
-        .add_child_data(values_data.clone())
+        .add_child_data(values_data)
         .build()?;
 
     let result = Arc::new(ListArray::from(array_data));
@@ -262,7 +262,7 @@ fn make_request_list(
 }
 
 fn make_empty_request_list(col: &ArrayRef) -> anyhow::Result<ArrayRef> {
-    let field = Box::new(Field::new("item", col.data_type().clone(), true));
+    let field = Arc::new(Field::new("item", col.data_type().clone(), true));
     let data_type = ListArray::DATA_TYPE_CONSTRUCTOR(field);
     Ok(Arc::new(ListArray::from(ArrayData::new_empty(&data_type))))
 }

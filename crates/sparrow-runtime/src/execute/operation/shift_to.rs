@@ -13,7 +13,8 @@ use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_api::kaskada::v1alpha::operation_plan::shift_to_operation::Time;
-use sparrow_core::{downcast_boolean_array, downcast_primitive_array, KeyTriples};
+use sparrow_arrow::downcast::{downcast_boolean_array, downcast_primitive_array};
+use sparrow_core::KeyTriples;
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::info;
@@ -332,9 +333,7 @@ impl ShiftToColumnOperation {
             shifted_times_primitive,
         )?;
 
-        let num_filtered = is_forward_shift.len()
-            - is_forward_shift.data().buffers()[0]
-                .count_set_bits_offset(is_forward_shift.offset(), is_forward_shift.len());
+        let num_filtered = is_forward_shift.len() - is_forward_shift.values().count_set_bits();
         if num_filtered != 0 {
             let num_null = shifted_times.null_count();
             let num_backward = num_filtered - num_null;
@@ -450,8 +449,8 @@ impl ShiftToColumnOperation {
             let group_indices: &UInt32Array = downcast_primitive_array(group_indices.as_ref())?;
             // TODO: We shouldn't need to clone the array. Instead, we should be able
             // to pass an owned reference to the grouping indices. But... the clone
-            // shouldn't be too expensive, and that would require API hanges.
-            let group_indices: UInt32Array = UInt32Array::from(group_indices.data().clone());
+            // shouldn't be too expensive, and that would require API changes.
+            let group_indices: UInt32Array = UInt32Array::from(group_indices.to_data());
             let num_groups = left.grouping.num_groups().max(right.grouping.num_groups());
             let grouping = GroupingIndices::new(num_groups, group_indices);
 

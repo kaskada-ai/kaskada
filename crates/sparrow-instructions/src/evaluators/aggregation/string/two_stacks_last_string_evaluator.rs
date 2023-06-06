@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use arrow::array::{ArrayRef, BooleanArray, StringArray, UInt32Array};
+use arrow::array::{Array, ArrayRef, BooleanArray, StringArray, UInt32Array};
 use arrow::datatypes::Int64Type;
 use itertools::izip;
-use sparrow_core::downcast_string_array;
-use sparrow_kernels::BitBufferIterator;
+use sparrow_arrow::downcast::downcast_string_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
@@ -143,33 +142,26 @@ impl TwoStacksLastStringEvaluator {
 
         Self::ensure_entity_capacity(token, key_capacity, sliding_duration);
 
-        let result: StringArray = match (
-            BitBufferIterator::array_valid_bits(input),
-            BitBufferIterator::array_valid_bits(sliding_window),
-        ) {
-            (None, None) => izip!(
-                key_indices.values(),
-                0..,
-                BitBufferIterator::boolean_array(sliding_window)
-            )
-            .map(|(entity_index, input_index, since_bool)| {
-                Self::update_two_stacks_accum(
-                    token,
-                    *entity_index,
-                    true,
-                    true,
-                    input.value(input_index),
-                    since_bool,
-                    sliding_duration,
-                )
-            })
-            .collect::<anyhow::Result<StringArray>>()?,
+        let result: StringArray = match (input.nulls(), sliding_window.nulls()) {
+            (None, None) => izip!(key_indices.values(), 0.., sliding_window.values().iter())
+                .map(|(entity_index, input_index, since_bool)| {
+                    Self::update_two_stacks_accum(
+                        token,
+                        *entity_index,
+                        true,
+                        true,
+                        input.value(input_index),
+                        since_bool,
+                        sliding_duration,
+                    )
+                })
+                .collect::<anyhow::Result<StringArray>>()?,
 
             (Some(input_valid_bits), None) => izip!(
                 key_indices.values(),
                 input_valid_bits,
                 0..,
-                BitBufferIterator::boolean_array(sliding_window)
+                sliding_window.values().iter()
             )
             .map(|(entity_index, input_is_valid, input_index, since_bool)| {
                 Self::update_two_stacks_accum(
@@ -188,7 +180,7 @@ impl TwoStacksLastStringEvaluator {
                 key_indices.values(),
                 window_valid_bits,
                 0..,
-                BitBufferIterator::boolean_array(sliding_window)
+                sliding_window.values().iter()
             )
             .map(|(entity_index, since_is_valid, input_index, since_bool)| {
                 Self::update_two_stacks_accum(
@@ -208,7 +200,7 @@ impl TwoStacksLastStringEvaluator {
                 input_valid_bits,
                 window_valid_bits,
                 0..,
-                BitBufferIterator::boolean_array(sliding_window)
+                sliding_window.values().iter()
             )
             .map(
                 |(entity_index, input_is_valid, since_is_valid, input_index, since_bool)| {

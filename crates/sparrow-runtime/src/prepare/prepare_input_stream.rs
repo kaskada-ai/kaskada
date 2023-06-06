@@ -11,7 +11,8 @@ use futures::stream::BoxStream;
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{slice_plan, TableConfig};
-use sparrow_core::{downcast_primitive_array, TableSchema};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::TableSchema;
 
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
@@ -233,7 +234,7 @@ mod tests {
         let time: &TimestampNanosecondArray =
             downcast_primitive_array(batch.column(0).as_ref()).unwrap();
 
-        assert_eq!(vec![1, 3, 3, 5, 6, 7, 7], time.values());
+        assert_eq!(vec![1, 3, 3, 5, 6, 7, 7], time.values().to_vec());
         assert_eq!(metadata.num_rows(), 3);
     }
 
@@ -270,7 +271,7 @@ mod tests {
         let time: &TimestampNanosecondArray =
             downcast_primitive_array(batch.column(0).as_ref()).unwrap();
 
-        assert_eq!(vec![1, 3, 3, 5, 6, 7, 7], time.values());
+        assert_eq!(vec![1, 3, 3, 5, 6, 7, 7], time.values().to_vec());
         assert_eq!(metadata.num_rows(), 4);
     }
 }

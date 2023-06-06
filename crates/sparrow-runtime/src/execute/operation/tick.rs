@@ -18,7 +18,8 @@ use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use sparrow_core::{downcast_primitive_array, KeyTriple};
+use sparrow_arrow::downcast::downcast_primitive_array;
+use sparrow_core::KeyTriple;
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
 use static_init::dynamic;
 
@@ -553,10 +554,10 @@ mod tests {
         let input = batch_from_csv(
             "
         _time,_subsort,_key_hash,n
-        2000000000,0,1,10
-        3000000000,0,1,2
-        10700000000000,0,2,
-        10900000000000,0,1,4",
+        1970-01-01T00:00:02.000000000,0,1,10
+        1970-01-01T00:00:03.000000000,0,1,2
+        1970-01-01T02:58:20.000000000,0,2,
+        1970-01-01T03:01:40.000000000,0,1,4",
             None,
         )
         .unwrap();
