@@ -196,13 +196,13 @@ impl PulsarReader {
 
             match msg {
                 Some(msg) => {
-                    // Note: Intentionally not acking here. 
-                    // In the materialization case, we should be using subscriptions to start from 
-                    // a specific offset. We do not want to ack messages in case we need to re-read 
-                    // messages from a time in the past to handle late data or backfills. 
+                    // Note: Intentionally not acking here.
+                    // In the materialization case, we should be using subscriptions to start from
+                    // a specific offset. We do not want to ack messages in case we need to re-read
+                    // messages from a time in the past to handle late data or backfills.
                     //
-                    // TODO: It's possible this breaks the specialized prepare demo - 
-                    // `prepare` may duplicate input data into the same spot. 
+                    // TODO: It's possible this breaks the specialized prepare demo -
+                    // `prepare` may duplicate input data into the same spot.
 
                     let result: error_stack::Result<AvroWrapper, DeserializeError> =
                         msg.deserialize();
