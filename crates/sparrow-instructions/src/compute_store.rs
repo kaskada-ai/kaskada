@@ -9,6 +9,13 @@ use tracing::info;
 
 use crate::StoreKey;
 
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    Update(String),
+}
+
+impl error_stack::Context for Error {}
+
 /// Storage layer responsible for caching query metadata and results.
 ///
 /// Enables resumeable queries. Currently implemented with RocksDb.

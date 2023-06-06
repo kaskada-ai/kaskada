@@ -1,0 +1,25 @@
+[package]
+name = "sparrow-materialize"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Materialization-specific code for Sparrow.
+"""
+
+[dependencies]
+dashmap.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
+futures.workspace = true
+sparrow-api = { path = "../sparrow-api" }
+sparrow-runtime= { path = "../sparrow-runtime" }
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+
+[lib]
+doctest = false

@@ -174,6 +174,7 @@ pub(super) async fn run_operation(
     let s3_helper = S3Helper::new().await;
     // Channel for the output stats.
     let (progress_updates_tx, _) = tokio::sync::mpsc::channel(29);
+    let (_, stop_signal_rx) = tokio::sync::watch::channel(false);
 
     let key_hash_inverse = KeyHashInverse::from_data_type(DataType::Utf8);
     let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
@@ -194,7 +195,14 @@ pub(super) async fn run_operation(
         bounded_lateness_ns: None,
     };
     executor
-        .execute(0, &mut context, inputs, max_event_tx, &Default::default())
+        .execute(
+            0,
+            &mut context,
+            inputs,
+            max_event_tx,
+            &Default::default(),
+            stop_signal_rx,
+        )
         .await
         .unwrap()
         .await
@@ -231,6 +239,7 @@ pub(super) async fn run_operation_json(
 
     // Channel for the output stats.
     let (progress_updates_tx, _) = tokio::sync::mpsc::channel(29);
+    let (_, stop_signal_rx) = tokio::sync::watch::channel(false);
     let mut context = OperationContext {
         plan: ComputePlan {
             operations: vec![plan],
@@ -247,7 +256,14 @@ pub(super) async fn run_operation_json(
         bounded_lateness_ns: None,
     };
     executor
-        .execute(0, &mut context, inputs, max_event_tx, &Default::default())
+        .execute(
+            0,
+            &mut context,
+            inputs,
+            max_event_tx,
+            &Default::default(),
+            stop_signal_rx,
+        )
         .await
         .unwrap()
         .await

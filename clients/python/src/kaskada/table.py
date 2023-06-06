@@ -25,6 +25,7 @@ class PulsarTableSource(TableSource):
     def __init__(
         self,
         broker_service_url: str,
+        admin_service_url: str,
         auth_plugin: str,
         auth_params: str,
         tenant: str,
@@ -33,6 +34,7 @@ class PulsarTableSource(TableSource):
     ):
         self._broker_service_url = broker_service_url
         self._auth_plugin = auth_plugin
+        self._admin_service_url = admin_service_url
         self._auth_params = auth_params
         self._tenant = tenant
         self._namespace = namespace
@@ -177,6 +179,7 @@ def create_table(
                     "pulsar": {
                         "config": {
                             "broker_service_url": source._broker_service_url,
+                            "admin_service_url": source._admin_service_url,
                             "auth_plugin": source._auth_plugin,
                             "auth_params": source._auth_params,
                             "tenant": source._tenant,

@@ -22,7 +22,7 @@ type MaterializationManager interface {
 	StopMaterialization(ctx context.Context, materializationID string) error
 
 	// GetMaterializationStatus gets the status of a materialization on the compute backend
-	GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.ProgressInformation, error)
+	GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.GetMaterializationStatusResponse, error)
 
 	// ReconcileMaterializations reconciles the materializations in the database with the materializations on the compute backend
 	ReconcileMaterializations(ctx context.Context) error
@@ -100,7 +100,7 @@ func (m *materializationManager) StopMaterialization(ctx context.Context, materi
 	return nil
 }
 
-func (m *materializationManager) GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.ProgressInformation, error) {
+func (m *materializationManager) GetMaterializationStatus(ctx context.Context, materializationID string) (*v1alpha.GetMaterializationStatusResponse, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.GetMaterializationStatus").Str("materialization_id", materializationID).Logger()
 
 	statusRequest := &v1alpha.GetMaterializationStatusRequest{
@@ -116,7 +116,7 @@ func (m *materializationManager) GetMaterializationStatus(ctx context.Context, m
 		return nil, customerrors.NewComputeError(reMapSparrowError(ctx, err))
 	}
 
-	return statusResponse.Progress, nil
+	return statusResponse, nil
 }
 
 // ReconcileMaterializations reconciles the materializations in the database with the materializations on the compute backend
@@ -142,11 +142,12 @@ func (m *materializationManager) ReconcileMaterializations(ctx context.Context) 
 		// check to see if the materialization was running in the previous iteration
 		if _, found := m.runningMaterializations[materializationID]; found {
 			//verify that the materialization is still running
-			progressInfo, err := m.GetMaterializationStatus(ctx, materializationID)
+			status, err := m.GetMaterializationStatus(ctx, materializationID)
 			if err != nil {
 				log.Error().Err(err).Str("id", materializationID).Msg("failed to get materialization status")
 			}
-			isRunning = progressInfo != nil
+			isRunning = status.State == v1alpha.GetMaterializationStatusResponse_STATE_RUNNING
+
 		}
 
 		if isRunning {

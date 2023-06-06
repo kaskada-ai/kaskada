@@ -88,12 +88,19 @@ def test_table_create_table_subsort_column_id(mockClient):
 
 def test_pulsar_table_source():
     broker_service_url = "pulsar://localhost:6650"
+    admin_service_url = "https://some-service-url"
     auth_plugin = "auth-plugin"
     tenant = "test-tenant"
     namespace = "test-namespace"
     topic_name = "my-topic"
     test_source = kaskada.table.PulsarTableSource(
-        broker_service_url, auth_plugin, "", tenant, namespace, topic_name
+        broker_service_url,
+        admin_service_url,
+        auth_plugin,
+        "",
+        tenant,
+        namespace,
+        topic_name,
     )
     assert test_source._broker_service_url == broker_service_url
     assert test_source._auth_plugin == auth_plugin
@@ -105,12 +112,19 @@ def test_table_create_table_with_pulsar_table_source(mockClient):
     time_column_name = "time"
     entity_key_column_name = "entity"
     broker_service_url = "pulsar://localhost:6650"
+    admin_service_url = "https://some-service-url"
     auth_plugin = "auth-plugin"
     tenant = "test-tenant"
     namespace = "test-namespace"
     topic_name = "my-topic"
     test_source = kaskada.table.PulsarTableSource(
-        broker_service_url, auth_plugin, "", tenant, namespace, topic_name
+        broker_service_url,
+        admin_service_url,
+        auth_plugin,
+        "",
+        tenant,
+        namespace,
+        topic_name,
     )
     expected_request = table_pb.CreateTableRequest(
         table=table_pb.Table(
@@ -122,6 +136,7 @@ def test_table_create_table_with_pulsar_table_source(mockClient):
                     config=pulsar_pb.PulsarConfig(
                         **{
                             "broker_service_url": broker_service_url,
+                            "admin_service_url": admin_service_url,
                             "auth_plugin": auth_plugin,
                             "tenant": tenant,
                             "namespace": namespace,
