@@ -22,6 +22,7 @@ import (
 	vfs_utils "github.com/c2fo/vfs/utils"
 	"github.com/c2fo/vfs/v6/backend/azure"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/linkedin/goavro/v2"
 
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 	. "github.com/onsi/ginkgo/v2"
@@ -69,7 +70,11 @@ func DownloadCSV(url string) [][]string {
 	localPath, cleanup := downloadFile(url)
 	defer cleanup()
 
-	file, err := os.Open(localPath)
+	return GetCSV(localPath)
+}
+
+func GetCSV(filePath string) [][]string {
+	file, err := os.Open(filePath)
 	Expect(err).ShouldNot(HaveOccurred(), "can't open file")
 
 	r := csv.NewReader(file)
@@ -133,6 +138,14 @@ func GetFileURI(fileName string) string {
 		return fmt.Sprintf("file://%s/../../../testdata/%s", workDir, fileName)
 	}
 	return fmt.Sprintf("file:///testdata/%s", fileName)
+}
+
+// Reads a file from the testdata path
+func ReadFile(fileName string) []byte {
+	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	fileData, err := ioutil.ReadFile(filePath)
+	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue finding testdata file: %s", fileName))
+	return fileData
 }
 
 // loads files from testdata/ into a table.
@@ -353,4 +366,23 @@ func GetMergedCreateQueryResponse(stream v1alpha.QueryService_CreateQueryClient)
 		mergedResponse.State = queryResponse.State
 	}
 	return mergedResponse, nil
+}
+
+// EncodeAvroToBytes convert interface{} datum to bytes
+func EncodeAvroToBytes(schema string, datum interface{}) ([]byte, error) {
+	codec, err := goavro.NewCodec(schema)
+	if err != nil {
+		return nil, err
+	}
+	return codec.BinaryFromNative(nil, datum)
+}
+
+// DecodeAvroFromBytes convert bytes to interface{} datum
+func DecodeAvroFromBytes(schema string, payload []byte) (interface{}, error) {
+	codec, err := goavro.NewCodec(schema)
+	if err != nil {
+		return nil, err
+	}
+	datum, _, err := codec.NativeFromBinary(payload)
+	return datum, err
 }

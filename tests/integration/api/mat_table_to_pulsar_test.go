@@ -19,17 +19,12 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-type testSchema struct {
-	Key       string `json:"key"`
-	MaxAmount int    `json:"max_amount"`
-	MinAmount int    `json:"min_amount"`
-}
-
 var _ = PDescribe("Materialization with Pulsar upload", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
 		conn                  *grpc.ClientConn
+		err                   error
 		pulsarClient          pulsar.Client
 		table                 *v1alpha.Table
 		tableClient           v1alpha.TableServiceClient
@@ -48,11 +43,11 @@ var _ = PDescribe("Materialization with Pulsar upload", Ordered, Label("pulsar")
 		materializationClient = v1alpha.NewMaterializationServiceClient(conn)
 
 		// create a pulsar client
-		pulsarClient, _ = pulsar.NewClient(pulsar.ClientOptions{
+		pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{
 			URL:               "pulsar://localhost:6650",
 			ConnectionTimeout: 5 * time.Second,
 		})
-		defer pulsarClient.Close()
+		Expect(err).ShouldNot(HaveOccurred())
 
 		// create a table
 		tableName = "PulsarTable"
@@ -123,7 +118,7 @@ min_amount: PulsarTable.amount | min(),
 			defer consumer.Close()
 
 			// Verify the first message
-			var data testSchema
+			var data pulsarTestSchema
 			msg, err := consumer.Receive(context.Background())
 			Expect(err).Should(BeNil())
 
@@ -168,7 +163,7 @@ min_amount: PulsarTable.amount | min(),
 			defer consumer.Close()
 
 			// Verify the first message
-			var data testSchema
+			var data pulsarTestSchema
 			msg, err := consumer.Receive(context.Background())
 			Expect(err).Should(BeNil())
 			fmt.Printf("\nMessage: %s\n", msg.Payload())

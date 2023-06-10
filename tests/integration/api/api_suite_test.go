@@ -15,6 +15,7 @@ import (
 	"github.com/RedisAI/redisai-go/redisai"
 	"github.com/gomodule/redigo/redis"
 	_ "github.com/lib/pq"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/namsral/flag"
 	. "github.com/onsi/ginkgo/v2"
@@ -199,3 +200,4 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 		},
 	}
 }
+

@@ -13,7 +13,7 @@ services:
   #  - "6379:6379"
   
   pulsar:
-    image: apachepulsar/pulsar:2.11.0
+    image: apachepulsar/pulsar:3.0.0
     container_name: pulsar
     environment:
       PULSAR_LOG_LEVEL: "warn"
@@ -31,6 +31,9 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+    volumes: 
+      - pulsardata:/pulsar/data
+      - pulsarconf:/pulsar/conf
 
   kaskada:
     build:
@@ -64,4 +67,6 @@ services:
     restart: unless-stopped
 
 volumes: 
-  shared:
+  pulsardata:
+  pulsarconf:
+
