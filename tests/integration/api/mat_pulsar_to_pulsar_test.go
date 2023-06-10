@@ -2,11 +2,12 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	pulsaradmin "github.com/streamnative/pulsar-admin-go"
@@ -19,29 +20,28 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-type pulsarTestSchema struct {
-	Key       string `json:"key"`
-	MaxAmount int    `json:"max_amount"`
-	MinAmount int    `json:"min_amount"`
+type pulsarToPulsarTestSchema struct {
+	LastId   int `json:"last_id"`
+	LastTime int `json:"last_time"`
+	Count    int `json:"count"`
 }
 
-var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("pulsar"), func() {
+var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
 		conn                  *grpc.ClientConn
 		err                   error
-		firstFileName         string
 		materializationClient v1alpha.MaterializationServiceClient
 		materializationName   string
-		outputPath            string
-		outputURI             string
 		pulsarClient          pulsar.Client
+		pulsarConsumer        pulsar.Consumer
 		pulsarProducer        pulsar.Producer
 		table                 *v1alpha.Table
 		tableClient           v1alpha.TableServiceClient
 		tableName             string
-		topicName             string
+		topicNameIn           string
+		topicNameOut          string
 	)
 
 	pulsarAvroSchema := `
@@ -84,19 +84,7 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		// get a grpc client for the table & materialization services
 		tableClient = v1alpha.NewTableServiceClient(conn)
 		materializationClient = v1alpha.NewMaterializationServiceClient(conn)
-		materializationName = "mat_pulsarToObjStore"
-
-		// define the output path and make sure it is empty
-		outputPath = fmt.Sprintf("../data/output/%s/", materializationName)
-		os.RemoveAll(outputPath)
-
-		if os.Getenv("ENV") == "local-local" {
-			workDir, err := os.Getwd()
-			Expect(err).ShouldNot(HaveOccurred())
-			outputURI = fmt.Sprintf("file://%s/../data/output/%s", workDir, materializationName)
-		} else {
-			outputURI = fmt.Sprintf("file:///data/output/%s", materializationName)
-		}
+		materializationName = "mat_pulsarToPulsar"
 
 		// create a pulsar client
 		pulsarClient, err = pulsar.NewClient(pulsar.ClientOptions{
@@ -106,9 +94,10 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		Expect(err).ShouldNot(HaveOccurred())
 
 		// create a pulsar producer and push initial data to pulsar
-		topicName = "topic_pulsarToObjStore"
+		topicNameIn = "topic_pulsarToPulsar_In"
+		topicNameOut = "topic_pulsarToPulsar_Out"
 		pulsarProducer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{
-			Topic:  topicName,
+			Topic:  topicNameIn,
 			Schema: pulsar.NewAvroSchema(pulsarAvroSchema, map[string]string{}),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
@@ -126,8 +115,16 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 
+		// create a pulsar consumer
+		pulsarConsumer, err = pulsarClient.Subscribe(pulsar.ConsumerOptions{
+			Topic:            topicNameOut,
+			SubscriptionName: uuid.New().String(),
+			Type:             pulsar.Shared,
+		})
+		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar consumer")
+
 		// create a table backed by pulsar
-		tableName = "table_pulsarToObjStore"
+		tableName = "table_pulsarToPulsar"
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 
 		table = &v1alpha.Table{
@@ -144,7 +141,7 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 							AuthParams:       "",
 							Tenant:           "public",
 							Namespace:        "default",
-							TopicName:        topicName,
+							TopicName:        topicNameIn,
 						},
 					},
 				},
@@ -163,18 +160,22 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 
 		cancel()
 		conn.Close()
+		pulsarConsumer.Close()
 		pulsarProducer.Close()
 		pulsarClient.Close()
 
-		// attempt to delete pulsar topic used in test
+		// attempt to delete pulsar topics used in test
 		cfg := &pulsaradmin.Config{}
 		cfg.WebServiceURL = "http://localhost:8080"
 		admin, err := pulsaradmin.NewClient(cfg)
 		Expect(err).ShouldNot(HaveOccurred(), "issue getting puslar admin client")
 		Expect(err).ShouldNot(HaveOccurred())
-		topic, _ := utils.GetTopicName(fmt.Sprintf("public/default/%s", topicName))
+		topic, _ := utils.GetTopicName(fmt.Sprintf("public/default/%s", topicNameIn))
 		err = admin.Topics().Delete(*topic, true, true)
-		Expect(err).ShouldNot(HaveOccurred(), "issue deleting pulsar topic")
+		Expect(err).ShouldNot(HaveOccurred(), "issue deleting pulsar in topic")
+		topic, _ = utils.GetTopicName(fmt.Sprintf("public/default/%s", topicNameOut))
+		err = admin.Topics().Delete(*topic, true, true)
+		Expect(err).ShouldNot(HaveOccurred(), "issue deleting pulsar out topic")
 	})
 
 	Describe("Create a materialization", func() {
@@ -184,16 +185,20 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 					MaterializationName: materializationName,
 					Expression: `
 					{
-						last_id: table_pulsarToObjStore.id | last(),
-						last_time: table_pulsarToObjStore.time | last(),
-						count: table_pulsarToObjStore | count(),
+						last_id: table_pulsarToPulsar.id | last(),
+						last_time: table_pulsarToPulsar.time | last(),
+						count: table_pulsarToPulsar | count(),
 					}
 					`,
 					Destination: &v1alpha.Destination{
-						Destination: &v1alpha.Destination_ObjectStore{
-							ObjectStore: &v1alpha.ObjectStoreDestination{
-								FileType:        v1alpha.FileType_FILE_TYPE_CSV,
-								OutputPrefixUri: outputURI,
+						Destination: &v1alpha.Destination_Pulsar{
+							Pulsar: &v1alpha.PulsarDestination{
+								Config: &v1alpha.PulsarConfig{
+									BrokerServiceUrl: "pulsar://pulsar:6650",
+									Tenant:           "public",
+									Namespace:        "default",
+									TopicName:        topicNameOut,
+								},
 							},
 						},
 					},
@@ -208,17 +213,21 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 			Expect(res.Materialization.MaterializationId).ShouldNot(BeEmpty())
 		})
 
-		It("Should output initial results to csv", func() {
+		It("Should output initial results to pulsar", func() {
 			Eventually(func(g Gomega) {
-				dirs, err := os.ReadDir(outputPath)
-				g.Expect(err).ShouldNot(HaveOccurred(), "cannot list output_path files")
-				g.Expect(dirs).Should(HaveLen(1))
-				firstFileName = dirs[0].Name()
+				timeout, timeoutCancel := context.WithTimeout(ctx, time.Second)
+				defer timeoutCancel()
+				msg, err := pulsarConsumer.Receive(timeout)
+				g.Expect(err).ShouldNot(HaveOccurred())
 
-				results := helpers.GetCSV(outputPath + firstFileName)
-				g.Expect(results).Should(HaveLen(2)) //header row + 1 data row
-				g.Expect(results[0]).Should(ContainElements("_time", "last_id", "last_time", "count"))
-				g.Expect(results[1]).Should(ContainElements("???", "1", "10", "1"))
+				var data pulsarToPulsarTestSchema
+				err = json.Unmarshal(msg.Payload(), &data)
+				g.Expect(err).ShouldNot(HaveOccurred())
+				g.Expect(data.LastId).Should(Equal(1))
+				g.Expect(data.LastTime).Should(Equal(10))
+				g.Expect(data.Count).Should(Equal(1))
+
+				pulsarConsumer.Ack(msg)
 			}, "5s", "1s").Should(Succeed())
 		})
 	})
@@ -233,21 +242,21 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		})
 
-		It("Should output additional results to csv", func() {
+		It("Should output additional results to pulsar", func() {
 			Eventually(func(g Gomega) {
-				dirs, err := os.ReadDir(outputPath)
-				g.Expect(err).ShouldNot(HaveOccurred(), "cannot list output_path files")
-				g.Expect(dirs).Should(HaveLen(2))
+				timeout, timeoutCancel := context.WithTimeout(ctx, time.Second)
+				defer timeoutCancel()
+				msg, err := pulsarConsumer.Receive(timeout)
+				g.Expect(err).ShouldNot(HaveOccurred())
 
-				for _, dir := range dirs {
-					if dir.Name() == firstFileName {
-						continue
-					}
-					results := helpers.GetCSV(outputPath + dir.Name())
-					g.Expect(results).Should(HaveLen(2)) //header row + 1 data row
-					g.Expect(results[0]).Should(ContainElements("_time", "last_id", "last_time", "count"))
-					g.Expect(results[1]).Should(ContainElements("???", "1", "20", "2"))
-				}
+				var data pulsarToPulsarTestSchema
+				err = json.Unmarshal(msg.Payload(), &data)
+				g.Expect(err).ShouldNot(HaveOccurred())
+				g.Expect(data.LastId).Should(Equal(1))
+				g.Expect(data.LastTime).Should(Equal(20))
+				g.Expect(data.Count).Should(Equal(2))
+
+				pulsarConsumer.Ack(msg)
 			}, "5s", "1s").Should(Succeed())
 		})
 	})

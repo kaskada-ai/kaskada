@@ -114,16 +114,16 @@ min_amount: PulsarTable.amount | min(),
 				SubscriptionName: uuid.New().String(),
 				Type:             pulsar.Shared,
 			})
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			defer consumer.Close()
 
 			// Verify the first message
 			var data pulsarTestSchema
 			msg, err := consumer.Receive(context.Background())
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 
 			err = json.Unmarshal(msg.Payload(), &data)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(data.Key).Should(Equal("karen"))
 			Expect(data.MaxAmount).Should(Equal(9))
 			Expect(data.MinAmount).Should(Equal(2))
