@@ -1,0 +1,5 @@
+[source,fenl]
+----
+%%fenl
+include::example$purchase.fenl[]
+----

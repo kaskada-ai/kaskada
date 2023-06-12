@@ -1,0 +1,5 @@
+[source,Fenl]
+----
+%%fenl --preview-rows 10
+Purchase | when(Purchase.customer_id == "patrick")
+----

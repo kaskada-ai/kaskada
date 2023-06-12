@@ -200,11 +200,9 @@ Data loaded into Kaskada is accessed by performing Fenl Queries.
 Let's start by looking at the Purchase table without any filters.
 Begin by creating a text file with the following query:
 
-[source,Fenl]
 .query.fenl
-----
-Purchase
-----
+include::partial$cli-purchase.adoc[]
+ 
 
 This query will return all of the columns and rows contained in a table.
 Run it by sending the query to `kaskada-cli query run`:
@@ -243,11 +241,8 @@ _time,_subsort,_key_hash,_key,id,purchase_time,customer_id,vendor_id,amount,subs
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
-[source,Fenl]
 .query.fenl
-----
-Purchase | when(Purchase.customer_id == "patrick")
-----
+include::partial$cli-filter-patrick.adoc[]
 
 [source,bash]
 ----
@@ -282,34 +277,8 @@ We begin with the timeline produced by the table `Purchase`, then filter it to t
 Kaskada's query language provides a rich set of xref:fenl:catalog.adoc[operations] for reasoning about time.
 Here's a more sophisticated example that touches on many of the unique features of Kaskada queries:
 
-[source,Fenl]
 .query.fenl
-----
-# How many big purchases happen each hour and where?
-let cadence = hourly()
-
-# Anything can be named and re-used
-let hourly_big_purchases = Purchase
-| when(Purchase.amount > 10)
-
-# Filter anywhere
-| count(window=since(cadence))
-
-# Aggregate anything
-| when(cadence)
-
-# Shift timelines relative to each other
-let purchases_now = count(Purchase)
-let purchases_yesterday =
-   purchases_now | shift_by(days(1))
-
-# Records are just another type
-in { hourly_big_purchases, purchases_in_last_day: purchases_now - purchases_yesterday }
-| extend({
-  # …modify them sequentially
-  last_visit_region: last(Pageview.region)
-})
-----
+include::partial$cli-unique.adoc[]
 
 ****
 ⭢  Read more about writing queries in xref:developing:queries.adoc[]

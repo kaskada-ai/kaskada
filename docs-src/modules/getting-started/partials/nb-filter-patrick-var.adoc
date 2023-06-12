@@ -1,0 +1,5 @@
+[source,Fenl]
+----
+%%fenl --var query_result
+Purchase | when(Purchase.customer_id == "patrick")
+----
