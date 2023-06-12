@@ -1,0 +1,18 @@
+# How many big purchases happen each hour and where?
+# Anything can be named and re-used
+let hourly_big_purchases = Purchase
+| when(Purchase.amount > 10)
+
+# Filter anywhere
+| count(window=since(hourly()))
+
+# Aggregate anything
+| when(hourly())
+
+# Shift timelines relative to each other
+let purchases_now = count(Purchase)
+let purchases_yesterday =
+   purchases_now | shift_by(days(1))
+
+# Records are just another type
+in { hourly_big_purchases, purchases_in_last_day: purchases_now - purchases_yesterday }

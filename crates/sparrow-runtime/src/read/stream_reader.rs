@@ -65,13 +65,13 @@ pub(crate) async fn stream_reader(
         subscription_id: pulsar_subscription,
         last_publish_time: 0,
     };
-    let raw_metadata = RawMetadata::try_from_pulsar(pulsar_config)
+    let pulsar_metadata = RawMetadata::try_from_pulsar(pulsar_config, false)
         .await
         .change_context(Error::CreateStream)?;
 
     // Verify the provided table schema matches the topic schema
     verify_schema_match(
-        raw_metadata.user_schema.clone(),
+        pulsar_metadata.user_schema.clone(),
         table_info.schema().clone(),
     )?;
 
@@ -79,18 +79,20 @@ pub(crate) async fn stream_reader(
     // timestamp column, dropped decimal columns, etc.
     // i.e. any changes we make to the raw schema to be able to process rows.
     let projected_schema = if let Some(columns) = &projected_columns {
-        projected_schema(raw_metadata.sparrow_metadata.table_schema, columns)
+        projected_schema(pulsar_metadata.sparrow_metadata.table_schema, columns)
             .change_context(Error::CreateStream)?
     } else {
-        raw_metadata.sparrow_metadata.table_schema
+        pulsar_metadata.sparrow_metadata.table_schema
     };
 
-    let consumer =
-        streams::pulsar::stream::consumer(&pulsar_subscription, raw_metadata.user_schema.clone())
-            .await
-            .change_context(Error::CreateStream)?;
+    let consumer = streams::pulsar::stream::consumer(
+        &pulsar_subscription,
+        pulsar_metadata.user_schema.clone(),
+    )
+    .await
+    .change_context(Error::CreateStream)?;
     let stream = streams::pulsar::stream::execution_stream(
-        raw_metadata.sparrow_metadata.raw_schema.clone(),
+        pulsar_metadata.sparrow_metadata.raw_schema.clone(),
         projected_schema.clone(),
         consumer,
         pulsar_subscription.last_publish_time,
@@ -106,7 +108,7 @@ pub(crate) async fn stream_reader(
     let mut input_stream = prepare::execute_input_stream::prepare_input(
         stream.boxed(),
         table_config,
-        raw_metadata.user_schema.clone(),
+        pulsar_metadata.user_schema.clone(),
         projected_schema,
         0,
         requested_slice,

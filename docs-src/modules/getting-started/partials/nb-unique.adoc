@@ -1,0 +1,6 @@
+
+[source,Fenl]
+----
+%%fenl
+include::example$unique-code.fenl[]
+----

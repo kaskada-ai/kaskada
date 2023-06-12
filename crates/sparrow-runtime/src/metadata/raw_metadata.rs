@@ -80,7 +80,17 @@ impl RawMetadata {
             }
             source_data::Source::PulsarSubscription(ps) => {
                 let config = ps.config.as_ref().ok_or(Error::PulsarSubscription)?;
-                Ok(Self::try_from_pulsar(config).await?.sparrow_metadata)
+                // The `_publish_time` is metadata on the pulsar message, and required
+                // by the `prepare` step. However, that is not part of the user's schema.
+                // The prepare path calls `try_from_pulsar` directly, so for all other cases
+                // we explicitly set the schema to not include the `_publish_time` column.
+                //
+                // The "prepare from pulsar" step is an experimental feature, and will
+                // likely change in the future, so we're okay with this hack for now.
+                let should_include_publish_time = false;
+                Ok(Self::try_from_pulsar(config, should_include_publish_time)
+                    .await?
+                    .sparrow_metadata)
             }
         }
     }
@@ -171,6 +181,7 @@ impl RawMetadata {
     /// Create a `RawMetadata` from a Pulsar topic.
     pub(crate) async fn try_from_pulsar(
         config: &PulsarConfig,
+        should_include_publish_time: bool,
     ) -> error_stack::Result<PulsarMetadata, Error> {
         // the user-defined schema in the topic
         let pulsar_schema = streams::pulsar::schema::get_pulsar_schema(
@@ -183,21 +194,25 @@ impl RawMetadata {
         .await
         .change_context_lazy(|| Error::PulsarSchema("unable to get schema".to_owned()))?;
 
-        // inject _publish_time field so that we have a consistent column to sort on
-        // (this will always be our time_column in Pulsar sources)
-        let publish_time = Arc::new(Field::new(
-            "_publish_time",
-            TimestampMillisecondType::DATA_TYPE,
-            false,
-        ));
-        let new_fields: Vec<_> = pulsar_schema
-            .fields
-            .iter()
-            .cloned()
-            .chain(std::iter::once(publish_time))
-            .collect();
-        tracing::debug!("pulsar schema fields: {:?}", new_fields);
+        let new_fields = if should_include_publish_time {
+            // inject _publish_time field so that we have a consistent column to sort on
+            // (this will always be our time_column in Pulsar sources)
+            let publish_time = Arc::new(Field::new(
+                "_publish_time",
+                TimestampMillisecondType::DATA_TYPE,
+                false,
+            ));
+            pulsar_schema
+                .fields
+                .iter()
+                .cloned()
+                .chain(std::iter::once(publish_time))
+                .collect()
+        } else {
+            pulsar_schema.fields.clone()
+        };
 
+        tracing::debug!("pulsar schema fields: {:?}", new_fields);
         Ok(PulsarMetadata {
             user_schema: Arc::new(pulsar_schema),
             sparrow_metadata: Self::from_raw_schema(Arc::new(Schema::new(new_fields)))?,

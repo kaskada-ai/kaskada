@@ -269,8 +269,8 @@ impl PulsarReader {
                     .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
                 let batch = RecordBatch::try_new(self.raw_schema.clone(), arrow_data)?;
 
-                // Note that the _last_publish_time is dropped here. This field is added for the purposes of
-                // prepare, where the `time` column is automatically set to the `_last_publish_time`.
+                // Note that the _publish_time is dropped here. This field is added for the purposes of
+                // prepare, where the `time` column is automatically set to the `_publish_time`.
                 let columns_to_read = get_columns_to_read(&self.raw_schema, &self.projected_schema);
                 let columns: Vec<_> = columns_to_read
                     .iter()

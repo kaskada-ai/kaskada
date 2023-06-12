@@ -300,20 +300,14 @@ Let's start by looking at the `Purchase` table without any filters, this
 query will return all of the columns and rows contained in a table:
 
 [source,Fenl]
-----
-%%fenl
-Purchase
-----
+include::partial$nb-purchase.adoc[]
 
 This query will return all of the columns and rows contained in a table.
 It can be helpful to limit your results to a single entity.
 This makes it easier to see how a single entity changes over time.
 
 [source,Fenl]
-----
-%%fenl
-Purchase | when(Purchase.customer_id == "patrick")
-----
+include::partial$nb-filter-patrick.adoc[]
 
 In this example, we build a pipeline of functions using the `|` character.
 We begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"` using the `xref:fenl:catalog.adoc#when[when()]` function.
@@ -321,34 +315,7 @@ We begin with the timeline produced by the table `Purchase`, then filter it to t
 Kaskada's query language provides a rich set of operations for reasoning about time.
 Here's a more sophisticated example that touches on many of the unique features of Kaskada queries:
 
-[source,Fenl]
-----
-%%fenl
-# How many big purchases happen each hour and where?
-let cadence = hourly()
-
-# Anything can be named and re-used
-let hourly_big_purchases = Purchase
-| when(Purchase.amount > 10)
-
-# Filter anywhere
-| count(window=since(cadence))
-
-# Aggregate anything
-| when(cadence)
-
-# Shift timelines relative to each other
-let purchases_now = count(Purchase)
-let purchases_yesterday =
-   purchases_now | shift_by(days(1))
-
-# Records are just another type
-in { hourly_big_purchases, purchases_in_last_day: purchases_now - purchases_yesterday }
-| extend({
-  # …modify them sequentially
-  last_visit_region: last(Pageview.region)
-})
-----
+include::partial$nb-unique.adoc[]
 
 ****
 ⭢  Read more about writing queries in xref:developing:queries.adoc[]
@@ -369,22 +336,13 @@ When you make a query, the resulting timeline is interpreted in one of two ways:
 By default, timelines are output as histories.
 You can output a timeline as a snapshot by setting the `--result-behavior` fenlmagic argument to `final-results`.
 
-[source,Fenl]
-----
-%%fenl --result-behavior final-results
-Purchase | when(Purchase.customer_id == "patrick")
-----
+include::partial$nb-filter-patrick-final.adoc[]
 
 ==== Limiting how many rows are returned
 
 You can limit the number of rows returned from a query:
 
-[source,Fenl]
-----
-%%fenl --preview-rows 10
-Purchase | when(Purchase.customer_id == "patrick")
-----
-
+include::partial$nb-filter-patrick-preview-rows.adoc[]
 [TIP]
 ====
 This may return more rows that you asked for.
@@ -396,11 +354,7 @@ When you configure `--preview-rows` Kaskada stops processing at the end of a bat
 
 To capture the result of a query and assign it to the variable `query_result`:
 
-[source,Fenl]
-----
-%%fenl --var query_result
-Purchase | when(Purchase.customer_id == "patrick")
-----
+include::partial$nb-filter-patrick-var.adoc[]
 
 You can now inspect the resulting dataframe, or the original query string:
 
