@@ -88,7 +88,7 @@ async fn reader_from_pulsar<'a>(
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
-    let pm = RawMetadata::try_from_pulsar(pulsar_config, true)
+    let pm = RawMetadata::try_from_pulsar(pulsar_config)
         .await
         .change_context(Error::CreatePulsarReader)?;
 
