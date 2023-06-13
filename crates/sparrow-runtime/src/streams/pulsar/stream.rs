@@ -289,6 +289,7 @@ impl PulsarReader {
                     .iter()
                     .map(|index| batch.column(*index).clone())
                     .collect();
+                tracing::debug!("columns: {}", columns.len());
 
                 Ok(RecordBatch::try_new(self.projected_schema.clone(), columns).map(Some)?)
             }

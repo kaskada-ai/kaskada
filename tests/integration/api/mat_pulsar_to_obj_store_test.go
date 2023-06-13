@@ -25,7 +25,7 @@ type pulsarTestSchema struct {
 	MinAmount int    `json:"min_amount"`
 }
 
-var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("pulsar"), func() {
+var _ = FDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc

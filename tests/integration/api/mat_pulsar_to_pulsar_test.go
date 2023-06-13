@@ -27,7 +27,7 @@ type pulsarToPulsarTestSchema struct {
 	Count    int `json:"count"`
 }
 
-var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
+var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -38,6 +38,7 @@ var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		pulsarClient          pulsar.Client
 		pulsarConsumer        pulsar.Consumer
 		pulsarProducer        pulsar.Producer
+		pulsarRemoteHostname  string
 		table                 *v1alpha.Table
 		tableClient           v1alpha.TableServiceClient
 		tableName             string
@@ -128,7 +129,6 @@ var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		tableName = "table_pulsarToPulsar"
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 
-		var pulsarRemoteHostname string
 		if os.Getenv("ENV") == "local-local" {
 			pulsarRemoteHostname = "localhost"
 		} else {
@@ -202,7 +202,9 @@ var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 						Destination: &v1alpha.Destination_Pulsar{
 							Pulsar: &v1alpha.PulsarDestination{
 								Config: &v1alpha.PulsarConfig{
-									BrokerServiceUrl: "pulsar://pulsar:6650",
+									BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", pulsarRemoteHostname),
+									AuthPlugin:       "",
+									AuthParams:       "",
 									Tenant:           "public",
 									Namespace:        "default",
 									TopicName:        topicNameOut,
