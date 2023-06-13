@@ -130,6 +130,13 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		tableName = "table_pulsarToObjStore"
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 
+		var pulsarRemoteHostname string
+		if os.Getenv("ENV") == "local-local" {
+			pulsarRemoteHostname = "localhost"
+		} else {
+			pulsarRemoteHostname = "pulsar"
+		}
+
 		table = &v1alpha.Table{
 			TableName:           tableName,
 			TimeColumnName:      "time",
@@ -138,8 +145,8 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 				Source: &v1alpha.Source_Pulsar{
 					Pulsar: &v1alpha.PulsarSource{
 						Config: &v1alpha.PulsarConfig{
-							BrokerServiceUrl: "pulsar://pulsar:6650",
-							AdminServiceUrl:  "http://pulsar:8080",
+							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", pulsarRemoteHostname),
+							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", pulsarRemoteHostname),
 							AuthPlugin:       "",
 							AuthParams:       "",
 							Tenant:           "public",

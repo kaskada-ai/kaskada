@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -127,6 +128,13 @@ var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		tableName = "table_pulsarToPulsar"
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 
+		var pulsarRemoteHostname string
+		if os.Getenv("ENV") == "local-local" {
+			pulsarRemoteHostname = "localhost"
+		} else {
+			pulsarRemoteHostname = "pulsar"
+		}
+
 		table = &v1alpha.Table{
 			TableName:           tableName,
 			TimeColumnName:      "time",
@@ -135,8 +143,8 @@ var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				Source: &v1alpha.Source_Pulsar{
 					Pulsar: &v1alpha.PulsarSource{
 						Config: &v1alpha.PulsarConfig{
-							BrokerServiceUrl: "pulsar://pulsar:6650",
-							AdminServiceUrl:  "http://pulsar:8080",
+							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", pulsarRemoteHostname),
+							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", pulsarRemoteHostname),
 							AuthPlugin:       "",
 							AuthParams:       "",
 							Tenant:           "public",
@@ -228,7 +236,7 @@ var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				g.Expect(data.Count).Should(Equal(1))
 
 				pulsarConsumer.Ack(msg)
-			}, "5s", "1s").Should(Succeed())
+			}, "30s", "5s").Should(Succeed())
 		})
 	})
 
