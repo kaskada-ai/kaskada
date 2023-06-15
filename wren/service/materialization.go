@@ -169,7 +169,7 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 	}
 
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
-	compileResp, _, err := s.materializationManager.CompileV1Materialization(ctx, owner, request.Materialization)
+	compileResp, _, err := s.materializationManager.CompileV1Materialization(ctx, owner, request.Materialization, false)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue compiling materialization")
 		return nil, err
@@ -206,6 +206,15 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 			sourceType = newSourceType
 		} else if sourceType != newSourceType {
 			return nil, customerrors.NewInvalidArgumentErrorWithCustomText("cannot materialize tables from different source types")
+		}
+	}
+
+	// if materialization source is streams, then re-compile using all-results result-behavior
+	if sourceType == materialization.SourceTypeStreams {
+		compileResp, _, err = s.materializationManager.CompileV1Materialization(ctx, owner, request.Materialization, true)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue compiling materialization")
+			return nil, err
 		}
 	}
 
