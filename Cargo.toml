@@ -1,5 +1,6 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "fenl-fiddle/src-tauri"]
+
 
 [workspace.package]
 authors = ["Kaskada Developers"]
