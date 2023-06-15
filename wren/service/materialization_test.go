@@ -104,7 +104,7 @@ var _ = Describe("MaterializationService", func() {
 					Plan:            &v1alpha.ComputePlan{},
 					FreeNames:       freeNames,
 				}
-				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization).Return(expectedCompileResponse, nil, nil)
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization, false).Return(expectedCompileResponse, nil, nil)
 
 				mockKaskadaTableClient := internal.NewMockKaskadaTableClient(GinkgoT())
 				tablesResponse := map[string]*ent.KaskadaTable{
@@ -155,7 +155,7 @@ var _ = Describe("MaterializationService", func() {
 					Plan:            &v1alpha.ComputePlan{},
 					FreeNames:       freeNames,
 				}
-				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization).Return(expectedCompileResponse, nil, nil)
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization, false).Return(expectedCompileResponse, nil, nil)
 
 				mockComputeManager := compute.NewMockComputeManager(GinkgoT())
 				mockComputeManager.EXPECT().RunMaterializations(mock.Anything, owner)
@@ -238,7 +238,7 @@ var _ = Describe("MaterializationService", func() {
 					Plan:            &v1alpha.ComputePlan{},
 					FreeNames:       freeNames,
 				}
-				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization).Return(expectedCompileResponse, nil, nil)
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization, false).Return(expectedCompileResponse, nil, nil)
 
 				mockKaskadaTableClient := internal.NewMockKaskadaTableClient(GinkgoT())
 				tablesResponse := map[string]*ent.KaskadaTable{
@@ -253,6 +253,8 @@ var _ = Describe("MaterializationService", func() {
 				}
 
 				mockKaskadaTableClient.EXPECT().GetKaskadaTablesFromNames(mock.Anything, owner, freeNames).Return(tablesResponse, nil)
+
+				mockMaterializationManager.EXPECT().CompileV1Materialization(mock.Anything, owner, newMaterialization, true).Return(expectedCompileResponse, nil, nil)
 
 				mockKaskadaViewClient := internal.NewMockKaskadaViewClient(GinkgoT())
 				mockKaskadaViewClient.EXPECT().GetKaskadaViewsFromNames(mock.Anything, owner, freeNames).Return(map[string]*ent.KaskadaView{}, nil)

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	ent_materialization "github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/stretchr/testify/mock"
 
@@ -104,6 +105,7 @@ var _ = Describe("CompileManager", func() {
 						},
 					},
 				},
+				SourceType: ent_materialization.SourceTypeFiles,
 			}
 
 			computeTables := []*v1alpha.ComputeTable{
