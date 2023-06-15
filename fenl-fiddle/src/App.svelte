@@ -1,4 +1,5 @@
 <script lang="ts">
+    import DataDrop from './lib/DataDrop.svelte';
   import Greet from './lib/Greet.svelte'
 </script>
 
@@ -24,7 +25,9 @@
   <div class="row">
     <Greet />
   </div>
-
+  <div class="row">
+    <DataDrop />
+  </div>
 
 </main>
 
