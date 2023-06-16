@@ -184,7 +184,7 @@ impl OperationExecutor {
         // but depending on the snapshot time, it may need to skip files. Ideally,
         // there's a more intuitive pattern to creating an operation and restoring
         // from a snapshot, but for now we just manually pass in the max event time.
-        let key_hash_inverse = context.key_hash_inverse.clone();
+        let _key_hash_inverse = context.key_hash_inverse.clone();
         let max_event_in_snapshot: Option<NaiveDateTime> = None;
         context.max_event_in_snapshot = max_event_in_snapshot;
 
@@ -286,7 +286,7 @@ impl OperationExecutor {
             };
 
             // Join with the operation
-            let operation = match operation_handle.await {
+            let _operation = match operation_handle.await {
                 Err(join_error) if join_error.is_cancelled() => {
                     tracing::warn!("Execution cancelled. Not saving state");
                     return Ok(());

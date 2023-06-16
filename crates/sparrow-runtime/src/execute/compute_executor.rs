@@ -5,7 +5,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::{FuturesUnordered, PollNext};
 use futures::{FutureExt, Stream, TryFutureExt};
 use prost_wkt_types::Timestamp;
-use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
+
 use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
 use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_arrow::scalar_value::ScalarValue;
@@ -173,9 +173,9 @@ impl ComputeExecutor {
     /// created, but before progress information stops being streamed.
     pub fn execute_with_progress(
         self,
-        s3_helper: S3Helper,
-        storage_dir: Option<TempDir>,
-        compute_snapshot_config: Option<ComputeSnapshotConfig>,
+        _s3_helper: S3Helper,
+        _storage_dir: Option<TempDir>,
+        _compute_snapshot_config: Option<ComputeSnapshotConfig>,
     ) -> impl Stream<Item = error_stack::Result<ExecuteResponse, Error>> {
         let Self {
             plan_hash,
@@ -234,15 +234,6 @@ fn select_biased<T: 'static>(
     }
 
     futures::stream::select_with_strategy(preferred, other, prio_left).boxed()
-}
-
-async fn upload_compute_snapshots(
-    s3_helper: S3Helper,
-    storage_dir: Option<TempDir>,
-    compute_snapshot_config: Option<ComputeSnapshotConfig>,
-    compute_result: ComputeResult,
-) -> error_stack::Result<Vec<ComputeSnapshot>, Error> {
-    Ok(Vec::new())
 }
 
 async fn join(

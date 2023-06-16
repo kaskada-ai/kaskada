@@ -21,11 +21,6 @@ struct SerializableBooleanAccum {
 }
 
 impl SerializableBooleanAccum {
-    fn clear(&mut self) {
-        self.accum.clear();
-        self.is_valid.clear();
-    }
-
     fn resize(&mut self, len: usize) {
         self.accum.resize(len, false);
         self.is_valid.resize(len, false);

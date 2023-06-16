@@ -30,9 +30,6 @@ mod spawner;
 pub use compute_executor::*;
 pub use error::*;
 
-// The path prefix to the local compute store db.
-const STORE_PATH_PREFIX: &str = "compute_snapshot_";
-
 /// The main method for executing a Fenl query.
 ///
 /// The `request` proto contains the execution plan as well as

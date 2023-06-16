@@ -195,17 +195,6 @@ impl ExpressionExecutor {
         })
     }
 
-    pub fn restore(
-        &mut self,
-        operation_index: u8,
-    ) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    pub fn store(&self, operation_index: u8) -> anyhow::Result<()> {
-        Ok(())
-    }
-
     pub fn input_columns(&self) -> &[InputColumn] {
         &self.input_columns
     }
