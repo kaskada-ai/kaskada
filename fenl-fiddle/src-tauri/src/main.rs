@@ -1,7 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use tauri::State;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::Schema;
@@ -12,9 +13,20 @@ use sparrow_runtime::RawMetadata;
 
 use sparrow_runtime::stores::ObjectStoreRegistry;
 
+use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
+use sparrow_api::kaskada::v1alpha::{
+    CompileRequest, CompileResponse, ComputeTable, FeatureSet, FenlDiagnostics,
+    PerEntityBehavior, TableConfig, TableMetadata, 
+};
+use sparrow_compiler::InternalCompileOptions;
+use uuid::Uuid;
+
+#[derive(Default)]
+struct TableSchema(Mutex<Option<Schema>>);
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command(async)]
-async fn get_schema(csv: String) -> Option<Schema> {
+async fn get_schema(csv: String, table_schema: State<'_, TableSchema>) -> Result<Schema, String> {
     let object_store_registry = Arc::new(ObjectStoreRegistry::new());
 
     let source_data = SourceData {
@@ -23,16 +35,19 @@ async fn get_schema(csv: String) -> Option<Schema> {
     let result = get_source_metadata(&object_store_registry, &source_data)
             .await
             .unwrap();
-    Some(result)
+    *table_schema.0.lock().unwrap() = Some(result.clone());
+    Ok(result)
 }
 
-
-fn main() {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_schema])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+#[tauri::command(async)]
+async fn compile(expression: String, table_schema: State<'_, TableSchema>) -> Result<CompileResponse, String> {
+    let schema = table_schema.0.lock().unwrap().clone();
+    let result = compile_expression(expression, schema)
+        .await
+        .unwrap();
+    Ok(result)
 }
+
 
 #[derive(derive_more::Display, Debug)]
 enum Error {
@@ -40,6 +55,14 @@ enum Error {
     SourcePath,
     #[display(fmt = "schema error: '{_0}'")]
     Schema(String),
+    #[display(fmt = "failed to prepare input")]
+    PrepareInput,
+    #[display(fmt = "failed to compile query")]
+    CompileQuery,
+    #[display(fmt = "failed to compile query:\n{_0}")]
+    QueryErrors(FenlDiagnostics),
+    #[display(fmt = "failed to execute query")]
+    ExecuteQuery,
 }
 impl error_stack::Context for Error {}
 
@@ -68,4 +91,50 @@ async fn get_source_metadata(
             metadata.table_schema, source
         )))?;
     Ok(schema)
+}
+
+async fn compile_expression(
+    expression: String,
+    table_schema: Option<Schema>,
+) -> error_stack::Result<CompileResponse, Error> {
+    let table1 = ComputeTable {
+        config: Some(TableConfig::new_with_table_source(
+            "Table1",
+            &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+            "time",
+            Some("subsort"),
+            "entity",
+            "grouping",
+        )),
+        file_sets: vec![],
+        metadata: Some(TableMetadata {
+            schema: table_schema,
+            file_count: 0,
+        }),
+    };
+
+    let result = sparrow_compiler::compile_proto(
+        CompileRequest {
+            tables: vec![table1],
+            feature_set: Some(FeatureSet {
+                formulas: vec![],
+                query: expression,
+            }),
+            slice_request: None,
+            expression_kind: ExpressionKind::Complete as i32,
+            experimental: false,
+            per_entity_behavior: PerEntityBehavior::All as i32,
+        },
+        InternalCompileOptions::default(),
+    ).await
+    .change_context(Error::CompileQuery)?;
+    Ok(result)
+}
+
+fn main() {
+    tauri::Builder::default()
+        .manage(TableSchema(Default::default()))
+        .invoke_handler(tauri::generate_handler![get_schema, compile])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
