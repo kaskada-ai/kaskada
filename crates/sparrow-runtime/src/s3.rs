@@ -10,12 +10,6 @@ use tokio_util::io::StreamReader;
 use tonic::transport::Uri;
 use tracing::info;
 
-mod download_snapshot;
-mod upload_snapshot;
-
-pub(crate) use download_snapshot::*;
-pub(crate) use upload_snapshot::*;
-
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct S3Object {
     pub bucket: String,

@@ -19,7 +19,7 @@ use sparrow_kernels::lag::LagPrimitive;
 use sparrow_plan::ValueRef;
 
 use crate::evaluators::{Evaluator, RuntimeInfo};
-use crate::{EvaluatorFactory, StateToken, StaticInfo};
+use crate::{EvaluatorFactory, StaticInfo};
 
 /// Evaluator for the `TimeOf` instruction.
 pub(super) struct TimeOfEvaluator {}
@@ -421,14 +421,6 @@ where
             &info.value(&self.input)?.array_ref()?,
             self.lag,
         )
-    }
-
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.state)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.state)
     }
 }
 

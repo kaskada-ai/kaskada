@@ -1,8 +1,6 @@
 use bitvec::prelude::BitVec;
 use serde::{Deserialize, Serialize};
 
-use crate::{ComputeStore, StateToken, StoreKey};
-
 /// Token used for boolean accumulators.
 ///
 /// Boolean accumulators are stored in two `BitVecs`, one validity bit
@@ -53,22 +51,6 @@ impl SerializableBooleanAccum {
         } else {
             Ok(None)
         }
-    }
-}
-
-impl StateToken for BooleanAccumToken {
-    fn restore(&mut self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        if let Some(accum) = store.get(key)? {
-            self.accum = accum;
-        } else {
-            self.accum.clear();
-        }
-
-        Ok(())
-    }
-
-    fn store(&self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.put(key, &self.accum)
     }
 }
 

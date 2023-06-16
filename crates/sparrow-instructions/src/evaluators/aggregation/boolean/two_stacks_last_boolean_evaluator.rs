@@ -8,7 +8,7 @@ use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
-    AggregationArgs, Evaluator, LastBoolean, RuntimeInfo, StateToken, TwoStacks,
+    AggregationArgs, Evaluator, LastBoolean, RuntimeInfo, TwoStacks,
     TwoStacksBooleanAccumToken,
 };
 
@@ -63,13 +63,6 @@ impl Evaluator for TwoStacksLastBooleanEvaluator {
         }
     }
 
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
-    }
 }
 
 impl TwoStacksLastBooleanEvaluator {

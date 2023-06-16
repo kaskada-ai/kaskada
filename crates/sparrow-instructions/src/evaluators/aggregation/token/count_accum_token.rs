@@ -1,5 +1,3 @@
-use crate::{ComputeStore, StateToken, StoreKey};
-
 /// Token used for the count accumulator.
 ///
 /// Values are stored as `[pass_id, instruction_id] -> Vec<u32>`.
@@ -7,16 +5,6 @@ use crate::{ComputeStore, StateToken, StoreKey};
 pub struct CountAccumToken {
     /// Stores the state for in-memory usage.
     accum: Vec<u32>,
-}
-
-impl StateToken for CountAccumToken {
-    fn restore(&mut self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.get_to_vec(key, &mut self.accum)
-    }
-
-    fn store(&self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.put(key, &self.accum)
-    }
 }
 
 impl CountAccumToken {

@@ -2,7 +2,6 @@
 
 mod boolean_accum_token;
 mod count_accum_token;
-pub mod lag_token;
 mod primitive_accum_token;
 mod string_accum_token;
 mod two_stacks_boolean_accum_token;

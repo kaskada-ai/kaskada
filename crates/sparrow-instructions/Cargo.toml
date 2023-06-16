@@ -25,7 +25,6 @@ num.workspace = true
 owning_ref.workspace = true
 prost.workspace = true
 prost-wkt-types.workspace = true
-rocksdb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smallvec.workspace = true

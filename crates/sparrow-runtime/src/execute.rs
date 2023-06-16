@@ -7,11 +7,9 @@ use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
     ComputePlan, ComputeTable, Destination, ExecuteRequest, ExecuteResponse, LateBoundValue,
-    PerEntityBehavior,
 };
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
-use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 
 use crate::data_manager::DataManager;
@@ -88,74 +86,9 @@ pub async fn execute(
         .into_report()
         .change_context(Error::internal_msg("create data context"))?;
 
-    // If the snapshot config exists, sparrow should attempt to resume from state,
-    // and store new state. Create a new storage path for the local store to
-    // exist.
-    let storage_dir = if let Some(config) = &request.compute_snapshot_config {
-        let dir = tempfile::Builder::new()
-            .prefix(&STORE_PATH_PREFIX)
-            .tempdir()
-            .into_report()
-            .change_context(Error::internal_msg("create snapshot dir"))?;
-
-        // If a `resume_from` path is specified, download the existing state from s3.
-        if config.resume_from.is_some() {
-            crate::s3::download_snapshot(&s3_helper, dir.path(), config)
-                .await
-                .into_report()
-                .change_context(Error::internal_msg("download snapshot"))?;
-        };
-
-        Some(dir)
-    } else {
-        None
-    };
+    let storage_dir = None;
 
     let plan_hash = hash_compute_plan_proto(&plan);
-
-    let compute_store = if let Some(dir) = &storage_dir {
-        let max_allowed_max_event_time = match plan.per_entity_behavior() {
-            PerEntityBehavior::Unspecified => {
-                error_stack::bail!(Error::UnspecifiedPerEntityBehavior)
-            }
-            PerEntityBehavior::All => {
-                // For all results, we need a snapshot with a maximum event time
-                // no larger than the changed_since time, since we need to replay
-                // (and recompute the results for) all events after the changed
-                // since time.
-                changed_since_time.clone()
-            }
-            PerEntityBehavior::Final => {
-                // This is a bit confusing. Right now, the manager is responsible for
-                // choosing a valid snapshot to resume from. Thus, the work of choosing
-                // a valid snapshot with regard to any new input data is already done.
-                // However, the engine does a sanity check here to ensure the snapshot's
-                // max event time is before the allowed max event time the engine supports,
-                // dependent on the entity behavior of the query.
-                //
-                // For FinalResults, the snapshot can have a max event time of "any time",
-                // so we set this to Timestamp::MAX. This is because we just need to be able
-                // to produce results once after all new events have been processed, and
-                // we can already assume a valid snapshot is chosen and the correct input
-                // files are being processed.
-                Timestamp {
-                    seconds: i64::MAX,
-                    nanos: i32::MAX,
-                }
-            }
-            PerEntityBehavior::FinalAtTime => {
-                output_at_time.as_ref().expect("final at time").clone()
-            }
-        };
-
-        Some(
-            ComputeStore::try_new(dir.path(), &max_allowed_max_event_time, &plan_hash)
-                .into_report()
-                .change_context(Error::internal_msg("loading compute store"))?,
-        )
-    } else {
-        None
-    };
 
     let primary_grouping_key_type = plan
         .primary_grouping_key_type
@@ -167,11 +100,6 @@ pub async fn execute(
             .change_context(Error::internal_msg("decode primary_grouping_key_type"))?;
     let mut key_hash_inverse = KeyHashInverse::from_data_type(primary_grouping_key_type.clone());
 
-    if let Some(compute_store) = compute_store.to_owned() {
-        if let Ok(restored) = KeyHashInverse::restore_from(&compute_store) {
-            key_hash_inverse = restored
-        }
-    }
     let primary_group_id = data_context
         .get_or_create_group_id(&plan.primary_grouping, &primary_grouping_key_type)
         .into_report()
@@ -205,7 +133,6 @@ pub async fn execute(
         plan_hash,
         data_manager: DataManager::new(s3_helper.clone()),
         data_context,
-        compute_store,
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
@@ -283,7 +210,6 @@ pub async fn materialize(
 
     // TODO: Resuming from state is unimplemented
     let storage_dir = None;
-    let snapshot_compute_store = None;
 
     let plan_hash = hash_compute_plan_proto(&plan);
 
@@ -321,7 +247,6 @@ pub async fn materialize(
         plan_hash,
         data_manager: DataManager::new(s3_helper.clone()),
         data_context,
-        compute_store: snapshot_compute_store,
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,

@@ -2,7 +2,6 @@ use arrow::array::{ArrayRef, TimestampNanosecondArray, UInt64Array};
 use itertools::Itertools;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::KeyTriple;
-use sparrow_instructions::ComputeStore;
 
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::InputBatch;
@@ -32,24 +31,6 @@ impl SingleConsumerHelper {
             incoming_columns: input_columns,
             key_index_state: KeyHashIndex::default(),
         })
-    }
-
-    pub(super) fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.key_index_state
-            .restore_from(operation_index, compute_store)
-    }
-
-    pub(super) fn store_to(
-        &self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.key_index_state
-            .store_to(operation_index, compute_store)
     }
 
     /// Create an input batch by applying some transform to every needed column.

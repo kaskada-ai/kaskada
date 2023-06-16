@@ -49,7 +49,6 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::DataContext;
-use sparrow_instructions::ComputeStore;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 
@@ -83,7 +82,6 @@ pub(crate) struct OperationContext {
     pub plan_hash: PlanHash,
     pub data_manager: DataManager,
     pub data_context: DataContext,
-    pub compute_store: Option<Arc<ComputeStore>>,
     /// The key hash inverse to produce the output results, if one exists.
     pub key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     /// The max input event time in the restored snapshot, if one exists.
@@ -113,14 +111,6 @@ impl OperationContext {
 /// This also allows operations to store internal state.
 #[async_trait]
 trait Operation: Send + Debug {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()>;
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()>;
-
     /// Run the operation to completion, returning an error if it occurs.
     ///
     /// Batches of input to operate on should be sent to `send`.
@@ -194,18 +184,8 @@ impl OperationExecutor {
         // but depending on the snapshot time, it may need to skip files. Ideally,
         // there's a more intuitive pattern to creating an operation and restoring
         // from a snapshot, but for now we just manually pass in the max event time.
-        let compute_store = context.compute_store.clone();
         let key_hash_inverse = context.key_hash_inverse.clone();
-        let max_event_in_snapshot: Option<NaiveDateTime> =
-            if let Some(compute_store) = &compute_store {
-                compute_store
-                    .get_max_event_time()
-                    .into_report()
-                    .change_context(Error::internal_msg("missing max_event_time"))?
-                    .and_then(|ts| NaiveDateTime::from_timestamp_opt(ts.seconds, ts.nanos as u32))
-            } else {
-                None
-            };
+        let max_event_in_snapshot: Option<NaiveDateTime> = None;
         context.max_event_in_snapshot = max_event_in_snapshot;
 
         let mut operation = create_operation(
@@ -224,20 +204,6 @@ impl OperationExecutor {
         let operation_index = operation_index as u8;
 
         Ok(async move {
-            if let Some(store) = &compute_store {
-                let _span = tracing::debug_span!("Restoring state").entered();
-                expression_executor
-                    .restore(operation_index, store.as_ref())
-                    .into_report()
-                    .change_context(Error::internal())?;
-                operation
-                    .restore_from(operation_index, store.as_ref())
-                    .into_report()
-                    .change_context(Error::internal())?;
-            } else {
-                tracing::debug!("No state to restore");
-            }
-
             let operation_handle: JoinHandle<error_stack::Result<_, Error>> = tokio::spawn(
                 async move {
                     tracing::debug!("Full operation is {:?}", operation);
@@ -333,36 +299,6 @@ impl OperationExecutor {
                 Ok(operation_result) => operation_result.change_context(Error::internal())?,
             };
 
-            if let Some(store) = &compute_store {
-                let _span = tracing::debug_span!("Saving state").entered();
-                expression_executor
-                    .store(operation_index, store.as_ref())
-                    .into_report()
-                    .change_context(Error::internal())?;
-                operation
-                    .store_to(operation_index, store.as_ref())
-                    .into_report()
-                    .change_context(Error::internal())?;
-            } else {
-                tracing::debug!("No state store; nothing to save");
-            }
-
-            let key_hash_handle: JoinHandle<anyhow::Result<_>> = tokio::spawn(
-                async move {
-                    if let Some(store) = &compute_store {
-                        key_hash_inverse.clone().store_to(store).await?;
-                    }
-                    Ok(())
-                }
-                .in_current_span(),
-            );
-
-            key_hash_handle
-                .await
-                .into_report()
-                .change_context(Error::internal())?
-                .into_report()
-                .change_context(Error::internal())?;
             Ok(())
         })
     }

@@ -7,7 +7,7 @@ use itertools::izip;
 use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_plan::ValueRef;
 
-use crate::{AggregationArgs, Count, Evaluator, RuntimeInfo, StateToken, TwoStacksCountAccumToken};
+use crate::{AggregationArgs, Count, Evaluator, RuntimeInfo, TwoStacksCountAccumToken};
 
 /// Evaluator for the `count` instruction.
 pub(crate) struct TwoStacksCountIfEvaluator {
@@ -55,13 +55,6 @@ impl Evaluator for TwoStacksCountIfEvaluator {
         }
     }
 
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
-    }
 }
 
 impl TwoStacksCountIfEvaluator {

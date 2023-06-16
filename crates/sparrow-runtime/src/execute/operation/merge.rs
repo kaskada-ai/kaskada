@@ -12,7 +12,7 @@ use sparrow_api::kaskada::v1alpha::operation_input_ref::Interpolation;
 use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::{KeyTriple, KeyTriples};
-use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_instructions::GroupingIndices;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::BoxedOperation;
@@ -47,36 +47,6 @@ pub(super) struct MergeOperation {
 
 #[async_trait]
 impl Operation for MergeOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        // TODO: Restore the spread buffer state.
-
-        self.key_hash_index
-            .restore_from(operation_index, compute_store)?;
-
-        if let Some(input_columns) =
-            compute_store.get(&StoreKey::new_merge_state(operation_index))?
-        {
-            self.input_columns = input_columns;
-        } else {
-            // TODO: Clear the state.
-        }
-        Ok(())
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.key_hash_index
-            .store_to(operation_index, compute_store)?;
-        compute_store.put(
-            &StoreKey::new_merge_state(operation_index),
-            &self.input_columns,
-        )?;
-        Ok(())
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,

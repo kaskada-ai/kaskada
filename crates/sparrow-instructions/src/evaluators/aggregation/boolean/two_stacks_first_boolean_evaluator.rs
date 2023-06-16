@@ -8,7 +8,7 @@ use sparrow_arrow::downcast::downcast_boolean_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
-    AggregationArgs, Evaluator, FirstBoolean, RuntimeInfo, StateToken, TwoStacks,
+    AggregationArgs, Evaluator, FirstBoolean, RuntimeInfo, TwoStacks,
     TwoStacksBooleanAccumToken,
 };
 
@@ -64,13 +64,6 @@ impl Evaluator for TwoStacksFirstBooleanEvaluator {
         }
     }
 
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
-    }
 }
 
 impl TwoStacksFirstBooleanEvaluator {

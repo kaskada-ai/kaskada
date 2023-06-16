@@ -8,7 +8,7 @@ use sparrow_plan::ValueRef;
 
 use super::two_stacks_count_evaluator::TwoStacksCountIfEvaluator;
 use crate::{
-    AggregationArgs, CountAccumToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken,
+    AggregationArgs, CountAccumToken, Evaluator, EvaluatorFactory, RuntimeInfo, 
     StaticInfo, TwoStacksCountAccumToken,
 };
 
@@ -49,14 +49,6 @@ impl Evaluator for CountIfEvaluator {
                 unreachable!("Expected Non-windowed or Since windowed aggregation, saw Sliding.")
             }
         }
-    }
-
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
     }
 }
 

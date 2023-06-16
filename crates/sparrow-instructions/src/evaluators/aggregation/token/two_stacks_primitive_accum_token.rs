@@ -1,4 +1,4 @@
-use crate::{AggFn, ComputeStore, StateToken, StoreKey, TwoStacks};
+use crate::{AggFn, TwoStacks};
 
 /// Key used for windowed primitive accumulators using two-stacks
 /// implementation.
@@ -16,20 +16,6 @@ where
 {
     /// Stores the state for in-memory usage.
     accum: Vec<TwoStacks<AggF>>,
-}
-
-impl<AggF> StateToken for TwoStacksPrimitiveAccumToken<AggF>
-where
-    AggF: AggFn,
-    Vec<TwoStacks<AggF>>: serde::ser::Serialize + serde::de::DeserializeOwned,
-{
-    fn restore(&mut self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.get_to_vec(key, &mut self.accum)
-    }
-
-    fn store(&self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.put(key, &self.accum)
-    }
 }
 
 impl<AggF> TwoStacksPrimitiveAccumToken<AggF>

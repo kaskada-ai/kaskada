@@ -15,7 +15,7 @@ use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_api::kaskada::v1alpha::operation_plan::shift_to_operation::Time;
 use sparrow_arrow::downcast::{downcast_boolean_array, downcast_primitive_array};
 use sparrow_core::KeyTriples;
-use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_instructions::GroupingIndices;
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::info;
 
@@ -238,27 +238,6 @@ impl ShiftToLiteralOperation {
 
 #[async_trait]
 impl Operation for ShiftToLiteralOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.helper.restore_from(operation_index, compute_store)?;
-        let subsort: Option<u64> =
-            compute_store.get(&StoreKey::new_shift_to_subsort(operation_index))?;
-        self.next_subsort = if let Some(s) = subsort { s } else { 0 };
-        Ok(())
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.helper.store_to(operation_index, compute_store)?;
-        compute_store.put_proto(
-            &StoreKey::new_shift_to_subsort(operation_index),
-            &self.next_subsort,
-        )?;
-        Ok(())
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,
@@ -606,20 +585,6 @@ impl ShiftToColumnOperation {
 
 #[async_trait]
 impl Operation for ShiftToColumnOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.helper.restore_from(operation_index, compute_store)?;
-        Ok(())
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.helper.store_to(operation_index, compute_store)?;
-        Ok(())
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,

@@ -7,7 +7,7 @@ use sparrow_plan::ValueRef;
 
 use super::two_stacks_last_string_evaluator::TwoStacksLastStringEvaluator;
 use crate::{
-    AggregationArgs, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo,
+    AggregationArgs, Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo,
     StringAccumToken, TwoStacksStringAccumToken,
 };
 
@@ -52,13 +52,6 @@ impl Evaluator for LastStringEvaluator {
         }
     }
 
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
-    }
 }
 
 impl EvaluatorFactory for LastStringEvaluator {

@@ -17,7 +17,7 @@ use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::KeyTriple;
-use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_instructions::GroupingIndices;
 use static_init::dynamic;
 
 use super::expression_executor::InputColumn;
@@ -155,34 +155,6 @@ impl FinalTickOperation {
 
 #[async_trait]
 impl Operation for FinalTickOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.key_hashes
-            .restore_from(operation_index, compute_store)?;
-        let state = compute_store
-            .get(&StoreKey::new_tick_state(operation_index))?
-            .unwrap_or(FinalTickOperationState {
-                current_time: 0,
-                tick_at: self.tick_at,
-            });
-        self.current_time = state.current_time;
-
-        Ok(())
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.key_hashes.store_to(operation_index, compute_store)?;
-        let state = FinalTickOperationState {
-            current_time: self.current_time,
-            tick_at: self.tick_at,
-        };
-        compute_store.put(&StoreKey::new_tick_state(operation_index), &state)?;
-        Ok(())
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,
@@ -436,45 +408,5 @@ mod tests {
 
         let ticks = true_column(num_rows);
         assert_eq!(tick_batch.input_columns[0].as_ref(), &ticks)
-    }
-
-    mod incremental {
-        use super::*;
-
-        fn compute_store() -> ComputeStore {
-            let tempdir = tempfile::Builder::new().tempdir().unwrap();
-            ComputeStore::try_new_from_path(tempdir.path()).unwrap()
-        }
-
-        #[test]
-        fn test_basic_store_restore() {
-            let store = compute_store();
-            let current1 = 3700;
-            let keys1 = SortedKeyHashMap::new();
-            let original_operation = FinalTickOperation {
-                input_stream: Box::pin(futures::stream::iter(vec![])),
-                current_time: current1,
-                key_hashes: keys1.clone(),
-                tick_at: None,
-            };
-            original_operation.store_to(0, &store).unwrap();
-
-            let mut restored_operation = FinalTickOperation {
-                input_stream: Box::pin(futures::stream::iter(vec![])),
-                current_time: 0,
-                key_hashes: SortedKeyHashMap::new(),
-                tick_at: None,
-            };
-            restored_operation.restore_from(0, &store).unwrap();
-
-            let FinalTickOperation {
-                current_time,
-                key_hashes,
-                ..
-            } = restored_operation;
-
-            assert_eq!(current_time, current1);
-            assert_eq!(key_hashes, keys1);
-        }
     }
 }

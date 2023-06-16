@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_arrow::downcast::{downcast_boolean_array, downcast_primitive_array};
 use sparrow_core::KeyTriples;
-use sparrow_instructions::{ComputeStore, StoreKey};
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::BoxedOperation;
@@ -250,46 +249,6 @@ impl ShiftUntilOperation {
 
 #[async_trait]
 impl Operation for ShiftUntilOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.helper.restore_from(operation_index, compute_store)?;
-        let subsort_key = StoreKey::new_shift_to_subsort(operation_index);
-        let subsort = compute_store.get(&subsort_key)?;
-        if let Some(s) = subsort {
-            self.subsort_start = s;
-        } else {
-            self.subsort_start = 0;
-        }
-
-        let pending_key = StoreKey::new_shift_until_retained_batches(operation_index);
-        let pending: Option<Vec<RetainedBatch>> = compute_store.get(&pending_key)?;
-        if let Some(p) = pending {
-            self.pending = p;
-        } else {
-            self.pending = vec![];
-        }
-
-        Ok(())
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.helper.store_to(operation_index, compute_store)?;
-        compute_store.put(
-            &StoreKey::new_shift_to_subsort(operation_index),
-            &self.subsort_start,
-        )?;
-
-        compute_store.put(
-            &StoreKey::new_shift_until_retained_batches(operation_index),
-            &self.pending,
-        )?;
-
-        Ok(())
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,

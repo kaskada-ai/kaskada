@@ -7,7 +7,6 @@ use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_arrow::downcast::downcast_boolean_array;
-use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::BoxedOperation;
@@ -26,18 +25,6 @@ pub(super) struct SelectOperation {
 
 #[async_trait]
 impl Operation for SelectOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.helper.restore_from(operation_index, compute_store)
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.helper.store_to(operation_index, compute_store)
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,

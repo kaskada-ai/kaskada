@@ -8,7 +8,7 @@ use crate::evaluators::macros::{
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
     create_typed_evaluator,
 };
-use crate::{ColumnarValue, ComputeStore, GroupingIndices};
+use crate::{ColumnarValue, GroupingIndices};
 
 pub mod aggregation;
 mod cast;
@@ -116,7 +116,6 @@ pub trait RuntimeInfo {
     fn value(&self, arg: &ValueRef) -> anyhow::Result<ColumnarValue>;
     fn grouping(&self) -> &GroupingIndices;
     fn time_column(&self) -> ColumnarValue;
-    fn storage(&self) -> Option<&ComputeStore>;
     fn num_rows(&self) -> usize;
 }
 
@@ -128,16 +127,6 @@ pub trait Evaluator: Send + Sync {
     /// compatible with the use of this as `Box<dyn Evaluator>`. So, we allow
     /// dynamic dispatch to any `RuntimeInfo` reference.
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef>;
-
-    /// Return the state token managing the evaluator state, if any.
-    fn state_token(&self) -> Option<&dyn crate::StateToken> {
-        None
-    }
-
-    /// Return the state token managing the evaluator state, if any.
-    fn state_token_mut(&mut self) -> Option<&mut dyn crate::StateToken> {
-        None
-    }
 }
 
 /// Trait for creating evaluators.

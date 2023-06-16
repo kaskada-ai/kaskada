@@ -9,7 +9,6 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
 use sparrow_arrow::downcast::downcast_primitive_array;
-use sparrow_instructions::ComputeStore;
 use sparrow_plan::TableId;
 use sparrow_qfr::FlightRecorder;
 
@@ -44,19 +43,6 @@ impl std::fmt::Debug for ScanOperation {
 
 #[async_trait]
 impl Operation for ScanOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.key_hash_index
-            .restore_from(operation_index, compute_store)
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.key_hash_index.store_to(operation_index, compute_store)
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,
@@ -439,7 +425,6 @@ mod tests {
             plan_hash: PlanHash::default(),
             data_manager: DataManager::new(s3_helper),
             data_context,
-            compute_store: None,
             key_hash_inverse,
             max_event_in_snapshot: None,
             progress_updates_tx,

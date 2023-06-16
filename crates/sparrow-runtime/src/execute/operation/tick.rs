@@ -20,7 +20,7 @@ use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::KeyTriple;
-use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_instructions::GroupingIndices;
 use static_init::dynamic;
 
 use super::expression_executor::InputColumn;
@@ -86,65 +86,6 @@ struct TickOperationState {
 
 #[async_trait]
 impl Operation for TickOperation {
-    fn restore_from(
-        &mut self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        self.key_hashes
-            .restore_from(operation_index, compute_store)?;
-
-        let state = compute_store
-            .get(&StoreKey::new_tick_state(operation_index))?
-            .unwrap_or({
-                TickOperationState {
-                    next_tick: NaiveDateTime::from_timestamp_opt(0, 0)
-                        .expect("zero should be valid"),
-                    current_time: 0,
-                }
-            });
-        self.current_time = state.current_time;
-        self.next_tick = state.next_tick;
-
-        let producer: Box<dyn TickProducer> = match self.behavior {
-            TickBehavior::Minutely => Box::new(MinutelyTickProducer),
-            TickBehavior::Hourly => Box::new(HourlyTickProducer),
-            TickBehavior::Daily => Box::new(DailyTickProducer),
-            TickBehavior::Monthly => Box::new(MonthlyTickProducer),
-            TickBehavior::Yearly => Box::new(YearlyTickProducer),
-            TickBehavior::Finished => anyhow::bail!("Final ticks should use separate operation"),
-            unknown => anyhow::bail!("Unknown tick behavior {:?}", unknown),
-        };
-
-        // If `next_tick` is 0, we can assume that it has not been initialized yet.
-        if self.next_tick.timestamp_nanos() == 0 {
-            self.tick_iter = None
-        } else {
-            self.tick_iter = Some(TickIter::try_new(
-                vec![producer],
-                self.next_tick,
-                chrono::NaiveDateTime::MAX,
-            )?);
-            // Advance the tick iter past the current `next_tick` value.
-            let cur_tick = self.next_tick;
-            self.advance_tick()?;
-            anyhow::ensure!(self.next_tick == cur_tick, "Advanced tick iter too far");
-        };
-        Ok(())
-    }
-
-    fn store_to(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        self.key_hashes.store_to(operation_index, compute_store)?;
-
-        let state = TickOperationState {
-            next_tick: self.next_tick,
-            current_time: self.current_time,
-        };
-        compute_store.put(&StoreKey::new_tick_state(operation_index), &state)?;
-
-        Ok(())
-    }
-
     async fn execute(
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,
@@ -963,62 +904,11 @@ mod tests {
         let ticks = true_column(num_rows);
         assert_eq!(tick_batch.input_columns[0].as_ref(), &ticks)
     }
-
-    mod incremental {
         use super::*;
 
-        fn compute_store() -> ComputeStore {
-            let tempdir = tempfile::Builder::new().tempdir().unwrap();
-            ComputeStore::try_new_from_path(tempdir.path()).unwrap()
-        }
-
-        fn tick_iter(lower_bound: NaiveDateTime) -> TickIter {
-            let producer = Box::new(HourlyTickProducer);
-            TickIter::try_new(vec![producer], lower_bound, chrono::NaiveDateTime::MAX).unwrap()
-        }
-
-        #[test]
-        fn test_basic_store_restore() {
-            let store = compute_store();
-            let tick1 = NaiveDateTime::from_timestamp_opt(3600, 0).unwrap();
-            let current1 = 3700;
-            let keys1 = SortedKeyHashMap::new();
-            let tick_iter = tick_iter(tick1);
-            let original_operation = TickOperation {
-                input_stream: Box::pin(futures::stream::iter(vec![])),
-                tick_iter: Some(tick_iter),
-                next_tick: tick1,
-                current_time: current1,
-                key_hashes: keys1.clone(),
-                behavior: TickBehavior::Hourly,
-            };
-            original_operation.store_to(0, &store).unwrap();
-
-            let mut restored_operation = TickOperation {
-                input_stream: Box::pin(futures::stream::iter(vec![])),
-                tick_iter: None,
-                next_tick: NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
-                current_time: 0,
-                key_hashes: SortedKeyHashMap::new(),
-                behavior: TickBehavior::Hourly,
-            };
-            restored_operation.restore_from(0, &store).unwrap();
-
-            let TickOperation {
-                next_tick,
-                current_time: current_upper_bound,
-                key_hashes,
-                tick_iter,
-                ..
-            } = restored_operation;
-
-            assert_eq!(next_tick, tick1);
-            assert_eq!(current_upper_bound, current1);
-            assert_eq!(key_hashes, keys1);
-            assert_eq!(
-                tick_iter.unwrap().next().unwrap(),
-                NaiveDateTime::from_timestamp_opt(7200, 0).unwrap()
-            )
-        }
+    fn tick_iter(lower_bound: NaiveDateTime) -> TickIter {
+        let producer = Box::new(HourlyTickProducer);
+        TickIter::try_new(vec![producer], lower_bound, chrono::NaiveDateTime::MAX).unwrap()
     }
+
 }

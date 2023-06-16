@@ -11,8 +11,8 @@ use sparrow_api::kaskada::v1alpha::expression_plan::Operator;
 use sparrow_api::kaskada::v1alpha::{ExpressionPlan, LateBoundValue, OperationInputRef};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{
-    create_evaluator, ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo,
-    StaticArg, StaticInfo, StoreKey,
+    create_evaluator, ColumnarValue, Evaluator, GroupingIndices, RuntimeInfo,
+    StaticArg, StaticInfo,
 };
 use sparrow_plan::ValueRef;
 
@@ -198,24 +198,11 @@ impl ExpressionExecutor {
     pub fn restore(
         &mut self,
         operation_index: u8,
-        compute_store: &ComputeStore,
     ) -> anyhow::Result<()> {
-        for (inst_index, evaluator) in self.expression_evaluators.iter_mut().enumerate() {
-            if let Some(state) = evaluator.state_token_mut() {
-                let key = StoreKey::new_accumulator(operation_index, inst_index as u32);
-                state.restore(&key, compute_store)?;
-            }
-        }
         Ok(())
     }
 
-    pub fn store(&self, operation_index: u8, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        for (inst_index, evaluator) in self.expression_evaluators.iter().enumerate() {
-            if let Some(state) = evaluator.state_token() {
-                let key = StoreKey::new_accumulator(operation_index, inst_index as u32);
-                state.store(&key, compute_store)?;
-            }
-        }
+    pub fn store(&self, operation_index: u8) -> anyhow::Result<()> {
         Ok(())
     }
 
@@ -334,10 +321,6 @@ impl RuntimeInfo for WorkArea {
 
     fn time_column(&self) -> sparrow_instructions::ColumnarValue {
         ColumnarValue::Array(self.time.clone())
-    }
-
-    fn storage(&self) -> Option<&sparrow_instructions::ComputeStore> {
-        todo!()
     }
 
     fn num_rows(&self) -> usize {

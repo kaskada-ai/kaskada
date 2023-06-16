@@ -8,7 +8,7 @@ use sparrow_arrow::downcast::downcast_string_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
-    AggregationArgs, Evaluator, LastString, RuntimeInfo, StateToken, TwoStacks,
+    AggregationArgs, Evaluator, LastString, RuntimeInfo, TwoStacks,
     TwoStacksStringAccumToken,
 };
 
@@ -58,13 +58,6 @@ impl Evaluator for TwoStacksLastStringEvaluator {
         }
     }
 
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
-    }
 }
 
 impl TwoStacksLastStringEvaluator {

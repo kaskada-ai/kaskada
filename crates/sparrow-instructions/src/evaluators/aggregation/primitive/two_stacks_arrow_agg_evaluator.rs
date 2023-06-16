@@ -10,7 +10,7 @@ use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
-    AggregationArgs, ArrowAggFn, Evaluator, RuntimeInfo, StateToken, TwoStacks,
+    AggregationArgs, ArrowAggFn, Evaluator, RuntimeInfo, TwoStacks,
     TwoStacksPrimitiveAccumToken,
 };
 
@@ -82,14 +82,6 @@ where
                 )
             }
         }
-    }
-
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
     }
 }
 

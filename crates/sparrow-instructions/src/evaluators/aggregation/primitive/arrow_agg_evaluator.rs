@@ -11,7 +11,7 @@ use sparrow_plan::ValueRef;
 use super::two_stacks_arrow_agg_evaluator::TwoStacksArrowAggEvaluator;
 use crate::evaluators::aggregation::function::agg_fn::ArrowAggFn;
 use crate::{
-    AggregationArgs, Evaluator, EvaluatorFactory, PrimitiveAccumToken, RuntimeInfo, StateToken,
+    AggregationArgs, Evaluator, EvaluatorFactory, PrimitiveAccumToken, RuntimeInfo, 
     StaticInfo, TwoStacksPrimitiveAccumToken,
 };
 
@@ -82,13 +82,6 @@ where
         }
     }
 
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
-    }
 }
 
 impl<AggF> EvaluatorFactory for ArrowAggEvaluator<AggF>

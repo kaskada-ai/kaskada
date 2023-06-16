@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use arrow::array::{UInt32Array, UInt64Array};
-use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_instructions::GroupingIndices;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SortedKeyHashMap(BTreeMap<u64, u32>);
@@ -69,28 +69,5 @@ impl SortedKeyHashMap {
             self.len(),
             entity_indices_array.finish(),
         ))
-    }
-
-    pub fn restore_from(
-        &mut self,
-        operation_index: u8,
-        store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        if let Some(key_hash_to_index) = store.get(&StoreKey::new_key_hash_set(operation_index))? {
-            self.0 = key_hash_to_index
-        } else {
-            self.0.clear()
-        }
-
-        Ok(())
-    }
-
-    pub fn store_to(
-        &self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        compute_store.put(&StoreKey::new_key_hash_set(operation_index), &self.0)?;
-        Ok(())
     }
 }

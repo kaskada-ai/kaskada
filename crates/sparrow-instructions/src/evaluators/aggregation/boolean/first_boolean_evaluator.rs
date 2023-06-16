@@ -7,7 +7,7 @@ use sparrow_plan::ValueRef;
 
 use super::two_stacks_first_boolean_evaluator::TwoStacksFirstBooleanEvaluator;
 use crate::{
-    AggregationArgs, BooleanAccumToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken,
+    AggregationArgs, BooleanAccumToken, Evaluator, EvaluatorFactory, RuntimeInfo,
     StaticInfo, TwoStacksBooleanAccumToken,
 };
 
@@ -48,14 +48,6 @@ impl Evaluator for FirstBooleanEvaluator {
                 unreachable!("Expected Non-windowed or Since windowed aggregation, saw Sliding.")
             }
         }
-    }
-
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.token)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.token)
     }
 }
 

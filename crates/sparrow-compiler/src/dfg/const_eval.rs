@@ -2,7 +2,7 @@ use anyhow::Context;
 use itertools::Itertools;
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{
-    ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo, StaticArg, StaticInfo,
+    ColumnarValue, Evaluator, GroupingIndices, RuntimeInfo, StaticArg, StaticInfo,
 };
 use sparrow_plan::{InstKind, InstOp, ValueRef};
 
@@ -191,10 +191,6 @@ impl RuntimeInfo for ConstEvaluator {
 
     fn time_column(&self) -> ColumnarValue {
         panic!("Accessing time column during constant evaluation")
-    }
-
-    fn storage(&self) -> Option<&ComputeStore> {
-        panic!("Accessing storage during constant evaluation")
     }
 
     fn num_rows(&self) -> usize {

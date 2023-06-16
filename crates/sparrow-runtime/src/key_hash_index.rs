@@ -1,6 +1,6 @@
 use arrow::array::{UInt32Array, UInt64Array};
 use hashbrown::HashMap;
-use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_instructions::GroupingIndices;
 
 /// Stores an index mapping key hashes to an index.
 ///
@@ -43,34 +43,6 @@ impl std::fmt::Debug for KeyHashIndex {
 }
 
 impl KeyHashIndex {
-    pub fn restore_from(
-        &mut self,
-        operation_index: u8,
-        store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        if let Some(key_hash_to_index) =
-            store.get(&StoreKey::new_key_hash_to_index(operation_index))?
-        {
-            self.key_hash_to_index = key_hash_to_index
-        } else {
-            self.key_hash_to_index.clear()
-        }
-
-        Ok(())
-    }
-
-    pub fn store_to(
-        &self,
-        operation_index: u8,
-        compute_store: &ComputeStore,
-    ) -> anyhow::Result<()> {
-        compute_store.put(
-            &StoreKey::new_key_hash_to_index(operation_index),
-            &self.key_hash_to_index,
-        )?;
-        Ok(())
-    }
-
     pub fn len(&self) -> usize {
         self.key_hash_to_index.len()
     }

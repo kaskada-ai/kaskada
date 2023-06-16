@@ -8,7 +8,6 @@ use hashbrown::HashMap;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_compiler::DataContext;
-use sparrow_instructions::{ComputeStore, StoreKey};
 use sparrow_plan::GroupId;
 use tempfile::NamedTempFile;
 
@@ -37,19 +36,6 @@ impl std::fmt::Debug for KeyHashInverse {
 }
 
 impl KeyHashInverse {
-    /// Restores the KeyHashInverse from the compute store.
-    pub fn restore_from(store: &ComputeStore) -> anyhow::Result<Self> {
-        store
-            .get(&StoreKey::new_key_hash_inverse())?
-            .with_context(|| "unable to get key hash inverses from store")
-    }
-
-    /// Stores the KeyHashInverse to the compute store.
-    pub fn store_to(&self, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        compute_store.put(&StoreKey::new_key_hash_inverse(), &self)?;
-        Ok(())
-    }
-
     pub fn key_type(&self) -> &DataType {
         self.key.data_type()
     }
@@ -231,14 +217,6 @@ impl ThreadSafeKeyHashInverse {
             Ok(())
         }
     }
-
-    /// Stores the KeyHashInverse to the compute store.
-    ///
-    /// This method is thread-safe and acquires the read-lock.
-    pub async fn store_to(&self, compute_store: &ComputeStore) -> anyhow::Result<()> {
-        let read = self.key_map.read().await;
-        read.store_to(compute_store)
-    }
 }
 
 /// Return the file at a given path.
@@ -252,7 +230,6 @@ mod tests {
 
     use arrow::array::{Int32Array, StringArray, UInt64Array};
     use arrow::datatypes::DataType;
-    use sparrow_instructions::ComputeStore;
 
     use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 
@@ -349,53 +326,11 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_inverse_store_to_restore_from_compute_store() {
-        // Create a compute store from a temp directory
-        let compute_store = compute_store();
-        // Create a key hash inverse and populate it with some data
-        let key_hash = test_key_hash_inverse().await;
-        // Save the key hash inverse to the store
-        key_hash.store_to(&compute_store).unwrap();
-        // Restore the key hash inverse from the store
-        let key_hash = KeyHashInverse::restore_from(&compute_store).unwrap();
-        // Verify the previous results are accessible/valid.
-        let test_hashes = UInt64Array::from_iter_values([1, 2, 1]);
-        let result = key_hash.inverse(&test_hashes).unwrap();
-        assert_eq!(
-            result.as_ref(),
-            &StringArray::from(vec!["awkward", "tacos", "awkward"])
-        );
-    }
-
-    #[tokio::test]
-    async fn test_inverse_restore_from_adds_data() {
-        let compute_store = compute_store();
-        let key_hash = test_key_hash_inverse().await;
-        key_hash.store_to(&compute_store).unwrap();
-
-        let mut key_hash = KeyHashInverse::restore_from(&compute_store).unwrap();
-        let keys = Arc::new(StringArray::from(vec!["party", "pizza"]));
-        let key_hashes = UInt64Array::from(vec![3, 4]);
-        key_hash.add(keys, &key_hashes).unwrap();
-        let test_hashes = UInt64Array::from_iter_values([1, 2, 3, 4]);
-        let result = key_hash.inverse(&test_hashes).unwrap();
-        assert_eq!(
-            result.as_ref(),
-            &StringArray::from(vec!["awkward", "tacos", "party", "pizza"])
-        );
-    }
-
     async fn test_key_hash_inverse() -> KeyHashInverse {
         let keys = Arc::new(StringArray::from(vec!["awkward", "tacos"]));
         let key_hashes = UInt64Array::from(vec![1, 2]);
         let mut key_hash = KeyHashInverse::from_data_type(DataType::Utf8);
         key_hash.add(keys, &key_hashes).unwrap();
         key_hash
-    }
-
-    fn compute_store() -> ComputeStore {
-        let tempdir = tempfile::Builder::new().tempdir().unwrap();
-        ComputeStore::try_new_from_path(tempdir.path()).unwrap()
     }
 }

@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use crate::{ComputeStore, StateToken, StoreKey};
-
 /// Token used for primitive accumulators.
 ///
 /// Primitive accumulators are stored as `[passId, instId] -> vec<T>`
@@ -18,19 +16,6 @@ pub struct PrimitiveAccumToken<T> {
     accum: Vec<T>,
 
     _phantom: PhantomData<fn(T) -> T>,
-}
-
-impl<T> StateToken for PrimitiveAccumToken<T>
-where
-    Vec<T>: serde::ser::Serialize + serde::de::DeserializeOwned + std::fmt::Debug,
-{
-    fn restore(&mut self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.get_to_vec(key, &mut self.accum)
-    }
-
-    fn store(&self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.put(key, &self.accum)
-    }
 }
 
 impl<T> PrimitiveAccumToken<T> {

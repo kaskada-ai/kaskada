@@ -14,7 +14,6 @@ use sparrow_api::kaskada::v1alpha::{
     GetCurrentSnapshotVersionRequest, GetCurrentSnapshotVersionResponse, LongQueryState,
 };
 use sparrow_compiler::InternalCompileOptions;
-use sparrow_instructions::ComputeStore;
 use sparrow_materialize::{Materialization, MaterializationControl};
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
 use sparrow_runtime::execute::Error;
@@ -50,15 +49,6 @@ impl ComputeServiceImpl {
 #[tonic::async_trait]
 impl ComputeService for ComputeServiceImpl {
     type ExecuteStream = BoxStream<'static, Result<ExecuteResponse, tonic::Status>>;
-
-    async fn get_current_snapshot_version(
-        &self,
-        _request: Request<GetCurrentSnapshotVersionRequest>,
-    ) -> Result<Response<GetCurrentSnapshotVersionResponse>, Status> {
-        Ok(Response::new(GetCurrentSnapshotVersionResponse {
-            snapshot_version: ComputeStore::current_version(),
-        }))
-    }
 
     async fn compile(
         &self,

@@ -3,7 +3,6 @@ use std::time::Duration;
 use futures::Stream;
 use sparrow_api::kaskada::v1alpha::destination;
 use sparrow_api::kaskada::v1alpha::object_store_destination::ResultPaths;
-use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::Destination;
 use sparrow_api::kaskada::v1alpha::ObjectStoreDestination;
 use sparrow_api::kaskada::v1alpha::ProgressInformation;
@@ -56,7 +55,6 @@ pub(crate) enum ProgressUpdate {
     /// For now, contains the compute snapshots, as we only snapshot
     /// once on completion of a query.
     ExecutionComplete {
-        compute_snapshots: Vec<ComputeSnapshot>,
     },
     /// Message sent to indicate the execution failed.
     /// Contains details of failure.
@@ -211,7 +209,7 @@ pub(super) fn progress_stream(
                 progress_update = progress_updates_rx.next() => {
                     if let Some(update) = progress_update {
                         match update {
-                            ProgressUpdate::ExecutionComplete { compute_snapshots } => {
+                            ProgressUpdate::ExecutionComplete { } => {
                                 // Loop to ensure all progress updates are received before completion
                                 loop {
                                     tokio::select! {
@@ -247,7 +245,7 @@ pub(super) fn progress_stream(
                                     progress: Some(tracker.progress),
                                     flight_record_path: None,
                                     plan_yaml_path: None,
-                                    compute_snapshots,
+                                    compute_snapshots: Vec::new(),
                                     destination: Some(output),
                                 });
                                 yield final_result;

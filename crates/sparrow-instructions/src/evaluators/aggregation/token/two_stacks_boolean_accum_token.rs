@@ -1,5 +1,5 @@
 use crate::aggregation::two_stacks::TwoStacks;
-use crate::{AggFn, ComputeStore, StateToken, StoreKey};
+use crate::AggFn;
 
 /// Key used for windowed boolean accumulators using two-stacks
 /// implementation.
@@ -13,19 +13,6 @@ where
     accum: Vec<TwoStacks<AggF>>,
 }
 
-impl<AggF> StateToken for TwoStacksBooleanAccumToken<AggF>
-where
-    AggF: AggFn,
-    Vec<TwoStacks<AggF>>: serde::ser::Serialize + serde::de::DeserializeOwned,
-{
-    fn restore(&mut self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.get_to_vec(key, &mut self.accum)
-    }
-
-    fn store(&self, key: &StoreKey, store: &ComputeStore) -> anyhow::Result<()> {
-        store.put(key, &self.accum)
-    }
-}
 
 impl<AggF> TwoStacksBooleanAccumToken<AggF>
 where
