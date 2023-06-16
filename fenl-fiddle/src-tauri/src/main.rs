@@ -5,9 +5,7 @@ use std::sync::Arc;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::Schema;
-use sparrow_api::kaskada::v1alpha::{
-    SourceData, SourceMetadata,
-};
+use sparrow_api::kaskada::v1alpha::SourceData;
 use sparrow_api::kaskada::v1alpha::source_data::Source::CsvData;
 
 use sparrow_runtime::RawMetadata;
@@ -21,7 +19,7 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command(async)]
-async fn get_schema(csv: String) -> String {
+async fn get_schema(csv: String) -> Option<Schema> {
     let object_store_registry = Arc::new(ObjectStoreRegistry::new());
 
     let source_data = SourceData {
@@ -30,7 +28,7 @@ async fn get_schema(csv: String) -> String {
     let result = get_source_metadata(&object_store_registry, &source_data)
             .await
             .unwrap();
-    format!("{:?}", result)
+    Some(result)
 }
 
 
@@ -40,6 +38,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![get_schema])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    
 }
 
 #[derive(derive_more::Display, Debug)]
@@ -54,7 +54,7 @@ impl error_stack::Context for Error {}
 async fn get_source_metadata(
     object_store_registry: &ObjectStoreRegistry,
     source: &SourceData,
-) -> error_stack::Result<SourceMetadata, Error> {
+) -> error_stack::Result<Schema, Error> {
     let source = source.source.as_ref().ok_or(Error::SourcePath)?;
     let metadata = RawMetadata::try_from(source, object_store_registry)
         .await
@@ -75,7 +75,5 @@ async fn get_source_metadata(
             "Unable to encode schema {:?} for source file {:?}",
             metadata.table_schema, source
         )))?;
-    Ok(SourceMetadata {
-        schema: Some(schema),
-    })
+    Ok(schema)
 }
