@@ -13,11 +13,6 @@ use sparrow_runtime::RawMetadata;
 use sparrow_runtime::stores::ObjectStoreRegistry;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[tauri::command(async)]
 async fn get_schema(csv: String) -> Option<Schema> {
     let object_store_registry = Arc::new(ObjectStoreRegistry::new());
@@ -34,12 +29,9 @@ async fn get_schema(csv: String) -> Option<Schema> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
         .invoke_handler(tauri::generate_handler![get_schema])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-
-    
 }
 
 #[derive(derive_more::Display, Debug)]
