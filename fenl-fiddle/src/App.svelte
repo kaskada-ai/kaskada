@@ -1,12 +1,8 @@
 <script lang="ts">
   import Compute from './lib/Compute.svelte';
-  import DataDrop from './lib/DataDrop.svelte';
 </script>
 
 <main class="container">
-  <div class="row">
-    <DataDrop />
-  </div>
   <div class="row">
     <Compute />
   </div>

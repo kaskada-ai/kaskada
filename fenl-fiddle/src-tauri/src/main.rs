@@ -40,9 +40,15 @@ async fn get_schema(csv: String, table_schema: State<'_, TableSchema>) -> Result
 }
 
 #[tauri::command(async)]
-async fn compile(expression: String, table_schema: State<'_, TableSchema>) -> Result<CompileResponse, String> {
+async fn compile(
+    expression: String, 
+    table_name: String,
+    entity_column_name: String,
+    time_column_name: String,
+    table_schema: State<'_, TableSchema>,
+) -> Result<CompileResponse, String> {
     let schema = table_schema.0.lock().unwrap().clone();
-    let result = compile_expression(expression, schema)
+    let result = compile_expression(expression, table_name, entity_column_name, time_column_name, schema)
         .await
         .unwrap();
     Ok(result)
@@ -95,16 +101,19 @@ async fn get_source_metadata(
 
 async fn compile_expression(
     expression: String,
+    table_name: String,
+    entity_column_name: String,
+    time_column_name: String,
     table_schema: Option<Schema>,
 ) -> error_stack::Result<CompileResponse, Error> {
     let table1 = ComputeTable {
         config: Some(TableConfig::new_with_table_source(
-            "Table1",
+            &table_name,
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
-            "time",
-            Some("subsort"),
-            "entity",
-            "grouping",
+            &time_column_name,
+            None,
+            &entity_column_name,
+            &table_name,
         )),
         file_sets: vec![],
         metadata: Some(TableMetadata {
