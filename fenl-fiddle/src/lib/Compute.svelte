@@ -10,9 +10,12 @@
   let entityColumnName: string;
   let csv: string;
 
-  let schema = {
-    fields: [],
-  };
+  let schema: {
+    fields: {
+      name: string;
+      data_type: { kind: { Primitive: number } };
+    }[];
+  } = { fields: [] };
 
   let diagnostics: string[] = [];
 
@@ -73,27 +76,22 @@
   }
 </script>
 
-<div class="row">
-  <DataDrop bind:tableName bind:timeColumnName bind:entityColumnName bind:csv />
-</div>
-<div>
-  <form class="row" on:submit|preventDefault={compute}>
-    <textarea
-      on:keyup={compile}
-      on:change={compile}
-      id="data-input"
-      placeholder="fenl..."
-      bind:value={expression}
-      cols="80"
-      rows="10"
-    />
-    <button type="submit">Compute</button>
-    <Terminal lines={diagnostics} />
-  </form>
-  <p>
-    <SchemaViewer {schema} />
-  </p>
-  <section>
-    {computeResult}
-  </section>
-</div>
+<DataDrop bind:tableName bind:timeColumnName bind:entityColumnName bind:csv />
+
+<form on:submit|preventDefault={compute}>
+  <textarea
+    on:keyup={compile}
+    on:change={compile}
+    id="data-input"
+    placeholder="fenl..."
+    bind:value={expression}
+    cols="80"
+    rows="10"
+  />
+  <button type="submit">Compute</button>
+  <Terminal lines={diagnostics} />
+</form>
+<SchemaViewer schemaFields={schema.fields} caption="Query Schema" />
+<section>
+  {computeResult}
+</section>

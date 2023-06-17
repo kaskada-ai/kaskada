@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/tauri";
   import SchemaViewer from "./SchemaViewer.svelte";
+  import { Textarea, Label, Button, Input, Select } from "flowbite-svelte";
 
   export let csv = `id,purchase_time,customer_id,vendor_id,amount,subsort_id
 cb_001,2020-01-01T00:00:00.000000000+00:00,karen,chum_bucket,9,0
@@ -15,13 +16,17 @@ cb_006,2020-01-05T00:00:00.000000000+00:00,karen,chum_bucket,5,8
 kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
 `;
 
-  let schema = {
-    fields: [],
-  };
+  let schema: {
+    fields: {
+      name: string;
+      data_type: { kind: { Primitive: number } };
+    }[];
+  } = { fields: [] };
+
   export let tableName = "purchases";
   export let timeColumnName = "";
   export let entityColumnName = "";
-  let columnNames = [];
+  let columnNames: { value: string; name: string }[] = [];
 
   async function get_schema() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -32,7 +37,7 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
       entityColumnName = "";
       timeColumnName = "";
       for (let element of schema.fields) {
-        columnNames.push(element.name);
+        columnNames.push({ value: element.name, name: element.name });
         if (
           entityColumnName == "" &&
           element.name.toLowerCase().includes("id")
@@ -50,51 +55,51 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
   }
 </script>
 
-<div>
-  <form class="row" on:submit|preventDefault={get_schema}>
-    <textarea
+<form on:submit|preventDefault={get_schema}>
+  <Label
+    >CSV Data:
+    <Textarea
       id="data-input"
+      rows="10"
+      class="mt-2"
       placeholder="Copy and Paste CSV..."
       bind:value={csv}
-      cols="80"
-      rows="10"
     />
-    <button type="submit">Load Data</button>
-  </form>
+  </Label>
 
-  <form>
-    <p>
-      <label>
-        Table Name:
-        <input name="table-name" type="text" bind:value={tableName} />
-      </label>
-    </p>
-    <p>
-      <label>
-        Entity Column Name:
-        <select name="entity-column-name" bind:value={entityColumnName}>
-          {#each columnNames as columnName}
-            <option value={columnName}>
-              {columnName}
-            </option>
-          {/each}
-        </select>
-      </label>
-    </p>
-    <p>
-      <label>
-        Time Column Name:
-        <select name="time-column-name" bind:value={timeColumnName}>
-          {#each columnNames as columnName}
-            <option value={columnName}>
-              {columnName}
-            </option>
-          {/each}
-        </select>
-      </label>
-    </p>
-  </form>
-  <p>
-    <SchemaViewer {schema} />
-  </p>
-</div>
+  <Button type="submit">Load Data</Button>
+</form>
+
+<form>
+  <div class="grid gap-6 mb-6 md:grid-cols-3">
+    <div>
+      <Label>
+        Table name:
+        <Input
+          type="text"
+          class="mt-2"
+          name="table-name"
+          required
+          bind:value={tableName}
+        />
+      </Label>
+    </div>
+    <div>
+      <Label>
+        Entity column name:
+        <Select
+          class="mt-2"
+          items={columnNames}
+          bind:value={entityColumnName}
+        />
+      </Label>
+    </div>
+    <div>
+      <Label>
+        Time column name:
+        <Select class="mt-2" items={columnNames} bind:value={timeColumnName} />
+      </Label>
+    </div>
+  </div>
+</form>
+<SchemaViewer schemaFields={schema.fields} caption={"Data Schema"} />

@@ -1,7 +1,19 @@
 <script lang="ts">
-  export let schema = {
-    fields: [],
-  };
+  import {
+    Table,
+    TableBody,
+    TableBodyCell,
+    TableBodyRow,
+    TableHead,
+    TableHeadCell,
+  } from "flowbite-svelte";
+
+  export let schemaFields: {
+    name: string;
+    data_type: { kind: { Primitive: number } };
+  }[] = [];
+  export let caption: string = "Schema";
+  export let description: string = "";
 
   const decodeType = function (field: {
     name: string;
@@ -68,26 +80,27 @@
   };
 </script>
 
-<section>
-  <table>
-    <tr>
-      <td>Field</td>
-      <td>Type</td>
-    </tr>
-    {#each schema.fields as field}
-      <tr>
-        <td>{field.name}</td>
-        <td>{decodeType(field)}</td>
-      </tr>
+<Table>
+  <caption
+    class="p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800"
+  >
+    {caption}
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      {description}
+    </p>
+  </caption>
+  <TableHead>
+    <TableHeadCell>Index</TableHeadCell>
+    <TableHeadCell>Field Name</TableHeadCell>
+    <TableHeadCell>Data Type</TableHeadCell>
+  </TableHead>
+  <TableBody tableBodyClass="divide-y">
+    {#each schemaFields as field, index}
+      <TableBodyRow>
+        <TableBodyCell>{index}</TableBodyCell>
+        <TableBodyCell>{field.name}</TableBodyCell>
+        <TableBodyCell>{decodeType(field)}</TableBodyCell>
+      </TableBodyRow>
     {/each}
-  </table>
-</section>
-
-<style>
-  table,
-  td {
-    border: 1px solid;
-    border-color: aliceblue;
-    border-collapse: collapse;
-  }
-</style>
+  </TableBody>
+</Table>
