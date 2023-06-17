@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    Label,
     Table,
     TableBody,
     TableBodyCell,
@@ -12,8 +13,6 @@
     name: string;
     data_type: { kind: { Primitive: number } };
   }[] = [];
-  export let caption: string = "Schema";
-  export let description: string = "";
 
   const decodeType = function (field: {
     name: string;
@@ -80,27 +79,22 @@
   };
 </script>
 
-<Table>
-  <caption
-    class="p-5 text-lg font-semibold text-left text-gray-900 bg-white dark:text-white dark:bg-gray-800"
-  >
-    {caption}
-    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-      {description}
-    </p>
-  </caption>
-  <TableHead>
-    <TableHeadCell>Index</TableHeadCell>
-    <TableHeadCell>Field Name</TableHeadCell>
-    <TableHeadCell>Data Type</TableHeadCell>
-  </TableHead>
-  <TableBody tableBodyClass="divide-y">
-    {#each schemaFields as field, index}
-      <TableBodyRow>
-        <TableBodyCell>{index}</TableBodyCell>
-        <TableBodyCell>{field.name}</TableBodyCell>
-        <TableBodyCell>{decodeType(field)}</TableBodyCell>
-      </TableBodyRow>
-    {/each}
-  </TableBody>
-</Table>
+<Label>
+  Schema:
+  <Table class="mt-2">
+    <TableHead>
+      <TableHeadCell>Index</TableHeadCell>
+      <TableHeadCell>Field Name</TableHeadCell>
+      <TableHeadCell>Data Type</TableHeadCell>
+    </TableHead>
+    <TableBody tableBodyClass="divide-y">
+      {#each schemaFields as field, index}
+        <TableBodyRow>
+          <TableBodyCell>{index}</TableBodyCell>
+          <TableBodyCell>{field.name}</TableBodyCell>
+          <TableBodyCell>{decodeType(field)}</TableBodyCell>
+        </TableBodyRow>
+      {/each}
+    </TableBody>
+  </Table>
+</Label>

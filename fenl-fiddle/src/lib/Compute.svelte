@@ -3,9 +3,10 @@
   import DataDrop from "./DataDrop.svelte";
   import SchemaViewer from "./SchemaViewer.svelte";
   import Terminal from "./Terminal.svelte";
+  import { Textarea, Label, Button } from "flowbite-svelte";
 
   let expression = "";
-  let tableName: string;
+  let sourceName: string;
   let timeColumnName: string;
   let entityColumnName: string;
   let csv: string;
@@ -21,10 +22,12 @@
 
   let computeResult = "";
 
+  let computable = false;
+
   async function compute() {
     computeResult = await invoke("compute", {
       csv,
-      tableName,
+      sourceName,
       entityColumnName,
       timeColumnName,
     });
@@ -49,10 +52,12 @@
       };
     } = await invoke("compile", {
       expression,
-      tableName,
+      sourceName,
       entityColumnName,
       timeColumnName,
     });
+
+    computable = false;
 
     diagnostics = [];
     if ("fenl_diagnostics" in compileResult) {
@@ -70,28 +75,42 @@
       ) {
         if ("Struct" in compileResult.result_type.kind) {
           schema = compileResult.result_type.kind.Struct;
+          computable = true;
         }
       }
     }
   }
 </script>
 
-<DataDrop bind:tableName bind:timeColumnName bind:entityColumnName bind:csv />
+<DataDrop bind:sourceName bind:timeColumnName bind:entityColumnName bind:csv />
 
-<form on:submit|preventDefault={compute}>
-  <textarea
-    on:keyup={compile}
-    on:change={compile}
-    id="data-input"
-    placeholder="fenl..."
-    bind:value={expression}
-    cols="80"
-    rows="10"
-  />
-  <button type="submit">Compute</button>
-  <Terminal lines={diagnostics} />
-</form>
-<SchemaViewer schemaFields={schema.fields} caption="Query Schema" />
-<section>
+<div class="flex flex-row gap-2">
+  <div class="basis-5/12">
+    <form on:submit|preventDefault={compute}>
+      <Label
+        >Query:
+        <Textarea
+          on:keyup={compile}
+          on:change={compile}
+          id="data-input"
+          rows="10"
+          class="mt-2"
+          placeholder="fenl..."
+          bind:value={expression}
+          spellcheck="false"
+        />
+      </Label>
+      <Button type="submit" disabled={!computable}>Compute</Button>
+    </form>
+  </div>
+  <div class="basis-4/12">
+    <Terminal lines={diagnostics} />
+  </div>
+  <div class="basis-3/12">
+    <SchemaViewer schemaFields={schema.fields} />
+  </div>
+</div>
+
+<section class="text-gray-800 dark:text-gray-200">
   {computeResult}
 </section>

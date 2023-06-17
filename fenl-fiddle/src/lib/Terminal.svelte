@@ -1,40 +1,41 @@
 <script lang="ts">
+	import { Label } from "flowbite-svelte";
 	export let lines: string[];
 </script>
 
-<section class="terminal">
-	{#each lines as line}
-		<p class="output">
-			{#each line.split("\n") as outputLine, index}
-				{#if index == 0}
-					<span class="prompt">&gt;</span>
-				{/if}
+<Label
+	>Debug:
+	<div class="terminal mt-2 bg-gray-300 dark:bg-gray-900">
+		{#each lines as line}
+			<p class="output text-gray-800 dark:text-gray-200">
+				{#each line.split("\n") as outputLine, index}
+					{#if index == 0}
+						<span class="prompt text-green-500 dark:text-green-400"
+							>&gt;</span
+						>
+					{/if}
 
-				{@html outputLine.replaceAll(" ", "&nbsp;")}<br />
-			{/each}
-		</p>
-	{/each}
-</section>
+					{@html outputLine.replaceAll(" ", "&nbsp;")}<br />
+				{/each}
+			</p>
+		{/each}
+	</div>
+</Label>
 
 <style>
 	.terminal {
 		position: relative;
 		font-family: monospace;
 		font-size: 0.7rem;
-		background: #333;
 		padding: 0.7rem 1rem;
-		margin: 5rem;
 		border-radius: 0.5rem;
-		color: #b8b8b8;
-		height: 10rem;
-		width: 50em;
+		height: 14rem;
 		overflow: auto;
 		text-align: left;
 		line-height: normal;
 	}
 
 	.prompt {
-		color: #27c93f;
 		font-weight: bold;
 	}
 

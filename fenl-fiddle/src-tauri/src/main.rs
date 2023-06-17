@@ -55,7 +55,7 @@ async fn get_schema(csv: String, table_schema: State<'_, TableSchema>) -> Result
 #[tauri::command(async)]
 async fn compile(
     expression: String,
-    table_name: String,
+    source_name: String,
     entity_column_name: String,
     time_column_name: String,
     table_schema: State<'_, TableSchema>,
@@ -64,7 +64,7 @@ async fn compile(
     let schema = table_schema.0.lock().unwrap().clone();
     let result = compile_expression(
         expression,
-        table_name,
+        source_name,
         entity_column_name,
         time_column_name,
         schema,
@@ -78,7 +78,7 @@ async fn compile(
 #[tauri::command(async)]
 async fn compute(
     csv: String,
-    table_name: String,
+    source_name: String,
     entity_column_name: String,
     time_column_name: String,
     compile_result: State<'_, CompileResult>,
@@ -93,7 +93,7 @@ async fn compute(
 
     let result = compute_expression(
         Some(csv),
-        table_name,
+        source_name,
         entity_column_name,
         time_column_name,
         plan,
@@ -149,19 +149,19 @@ async fn get_source_metadata(
 
 async fn compile_expression(
     expression: String,
-    table_name: String,
+    source_name: String,
     entity_column_name: String,
     time_column_name: String,
     table_schema: Option<Schema>,
 ) -> error_stack::Result<CompileResponse, Error> {
     let table1 = ComputeTable {
         config: Some(TableConfig::new_with_table_source(
-            &table_name,
+            &source_name,
             &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
             &time_column_name,
             None,
             &entity_column_name,
-            &table_name,
+            &source_name,
         )),
         file_sets: vec![],
         metadata: Some(TableMetadata {
@@ -191,7 +191,7 @@ async fn compile_expression(
 
 async fn compute_expression(
     csv: Option<String>,
-    table_name: String,
+    source_name: String,
     entity_column_name: String,
     time_column_name: String,
     compute_plan: Option<ComputePlan>,
@@ -203,7 +203,7 @@ async fn compute_expression(
     let tables = preparer
         .prepare_inputs(
             &csv,
-            table_name,
+            source_name,
             entity_column_name,
             time_column_name,
             vec![],
@@ -308,7 +308,7 @@ impl ExampleInputPreparer {
     async fn prepare_inputs(
         &mut self,
         input_csv: &Option<String>,
-        table_name: String,
+        source_name: String,
         entity_column_name: String,
         time_column_name: String,
         tables: Vec<ExampleTable>,
@@ -318,12 +318,12 @@ impl ExampleInputPreparer {
             prepared_tables.push(
                 self.prepare_input(
                     TableConfig::new_with_table_source(
-                        &table_name,
+                        &source_name,
                         &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
                         &time_column_name,
                         None,
                         &entity_column_name,
-                        &table_name,
+                        &source_name,
                     ),
                     input_csv,
                 )
