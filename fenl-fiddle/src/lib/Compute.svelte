@@ -8,6 +8,7 @@
   let tableName: string;
   let timeColumnName: string;
   let entityColumnName: string;
+  let csv: string;
 
   let schema = {
     fields: [],
@@ -15,7 +16,16 @@
 
   let diagnostics: string[] = [];
 
-  async function compute() {}
+  let computeResult = "";
+
+  async function compute() {
+    computeResult = await invoke("compute", {
+      csv,
+      tableName,
+      entityColumnName,
+      timeColumnName,
+    });
+  }
 
   async function compile() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -40,7 +50,6 @@
       entityColumnName,
       timeColumnName,
     });
-    console.log(compileResult);
 
     diagnostics = [];
     if ("fenl_diagnostics" in compileResult) {
@@ -65,7 +74,7 @@
 </script>
 
 <div class="row">
-  <DataDrop bind:tableName bind:timeColumnName bind:entityColumnName />
+  <DataDrop bind:tableName bind:timeColumnName bind:entityColumnName bind:csv />
 </div>
 <div>
   <form class="row" on:submit|preventDefault={compute}>
@@ -84,4 +93,7 @@
   <p>
     <SchemaViewer {schema} />
   </p>
+  <section>
+    {computeResult}
+  </section>
 </div>

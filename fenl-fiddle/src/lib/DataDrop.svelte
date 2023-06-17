@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/tauri"
-  import SchemaViewer from './SchemaViewer.svelte';
+  import { invoke } from "@tauri-apps/api/tauri";
+  import SchemaViewer from "./SchemaViewer.svelte";
 
-  let csv = `id,purchase_time,customer_id,vendor_id,amount,subsort_id
+  export let csv = `id,purchase_time,customer_id,vendor_id,amount,subsort_id
 cb_001,2020-01-01T00:00:00.000000000+00:00,karen,chum_bucket,9,0
 kk_001,2020-01-01T00:00:00.000000000+00:00,patrick,krusty_krab,3,1
 cb_002,2020-01-02T00:00:00.000000000+00:00,karen,chum_bucket,2,2
@@ -16,27 +16,33 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
 `;
 
   let schema = {
-      fields: []
-    };
+    fields: [],
+  };
   export let tableName = "purchases";
   export let timeColumnName = "";
   export let entityColumnName = "";
   let columnNames = [];
 
-  async function get_schema(){
+  async function get_schema() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    schema = await invoke("get_schema", { csv })
+    schema = await invoke("get_schema", { csv });
 
-    if ('fields' in schema) {
+    if ("fields" in schema) {
       columnNames = [];
       entityColumnName = "";
       timeColumnName = "";
       for (let element of schema.fields) {
-        columnNames.push(element.name)
-        if (entityColumnName == "" && element.name.toLowerCase().includes("id")) {
+        columnNames.push(element.name);
+        if (
+          entityColumnName == "" &&
+          element.name.toLowerCase().includes("id")
+        ) {
           entityColumnName = element.name;
         }
-        if (timeColumnName == "" && element.name.toLowerCase().includes("time")) {
+        if (
+          timeColumnName == "" &&
+          element.name.toLowerCase().includes("time")
+        ) {
           timeColumnName = element.name;
         }
       }
@@ -46,7 +52,13 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
 
 <div>
   <form class="row" on:submit|preventDefault={get_schema}>
-    <textarea id="data-input" placeholder="Copy and Paste CSV..." bind:value={csv} cols="80" rows="10" />
+    <textarea
+      id="data-input"
+      placeholder="Copy and Paste CSV..."
+      bind:value={csv}
+      cols="80"
+      rows="10"
+    />
     <button type="submit">Load Data</button>
   </form>
 
@@ -54,7 +66,7 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
     <p>
       <label>
         Table Name:
-        <input name="table-name" type="text" bind:value={tableName}/>
+        <input name="table-name" type="text" bind:value={tableName} />
       </label>
     </p>
     <p>
@@ -62,9 +74,9 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
         Entity Column Name:
         <select name="entity-column-name" bind:value={entityColumnName}>
           {#each columnNames as columnName}
-          <option value={columnName}>
-            {columnName}
-          </option>
+            <option value={columnName}>
+              {columnName}
+            </option>
           {/each}
         </select>
       </label>
@@ -74,16 +86,15 @@ kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9,9
         Time Column Name:
         <select name="time-column-name" bind:value={timeColumnName}>
           {#each columnNames as columnName}
-          <option value={columnName}>
-            {columnName}
-          </option>
+            <option value={columnName}>
+              {columnName}
+            </option>
           {/each}
         </select>
       </label>
     </p>
-  </form> 
+  </form>
   <p>
-    <SchemaViewer schema={schema} />
+    <SchemaViewer {schema} />
   </p>
 </div>
-

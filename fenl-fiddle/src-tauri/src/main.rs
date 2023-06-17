@@ -5,33 +5,37 @@ use std::fs::File;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-use error_stack::{IntoReport, ResultExt, IntoReportCompat};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
+use sparrow_api::kaskada::v1alpha::destination;
+use sparrow_api::kaskada::v1alpha::source_data;
+use sparrow_api::kaskada::v1alpha::source_data::Source::CsvData;
+use sparrow_api::kaskada::v1alpha::Destination;
 use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::SourceData;
-use sparrow_api::kaskada::v1alpha::source_data;
-use sparrow_api::kaskada::v1alpha::destination;
-use sparrow_api::kaskada::v1alpha::Destination;
-use sparrow_api::kaskada::v1alpha::source_data::Source::CsvData;
-use sparrow_runtime::RawMetadata;
+use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::PreparedMetadata;
-use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
+use sparrow_runtime::RawMetadata;
 
 use sparrow_runtime::stores::ObjectStoreRegistry;
 
+use serde::{Deserialize, Serialize};
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::{
-    compute_table, CompileRequest, CompileResponse, ComputeTable, FeatureSet, FenlDiagnostics,
-    FileType, PerEntityBehavior, TableConfig, TableMetadata, ExecuteRequest, ObjectStoreDestination, ComputePlan
+    compute_table, CompileRequest, CompileResponse, ComputePlan, ComputeTable, ExecuteRequest,
+    FeatureSet, FenlDiagnostics, FileType, ObjectStoreDestination, PerEntityBehavior, TableConfig,
+    TableMetadata,
 };
 use sparrow_compiler::InternalCompileOptions;
 use tempfile::NamedTempFile;
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
 
 #[derive(Default)]
 struct TableSchema(Mutex<Option<Schema>>);
+
+#[derive(Default)]
+struct CompileResult(Mutex<Option<CompileResponse>>);
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command(async)]
@@ -39,30 +43,65 @@ async fn get_schema(csv: String, table_schema: State<'_, TableSchema>) -> Result
     let object_store_registry = Arc::new(ObjectStoreRegistry::new());
 
     let source_data = SourceData {
-        source: Some(CsvData(csv.clone()))
+        source: Some(CsvData(csv.clone())),
     };
     let result = get_source_metadata(&object_store_registry, &source_data)
-            .await
-            .unwrap();
+        .await
+        .unwrap();
     *table_schema.0.lock().unwrap() = Some(result.clone());
     Ok(result)
 }
 
 #[tauri::command(async)]
 async fn compile(
-    expression: String, 
+    expression: String,
     table_name: String,
     entity_column_name: String,
     time_column_name: String,
     table_schema: State<'_, TableSchema>,
+    compile_result: State<'_, CompileResult>,
 ) -> Result<CompileResponse, String> {
     let schema = table_schema.0.lock().unwrap().clone();
-    let result = compile_expression(expression, table_name, entity_column_name, time_column_name, schema)
-        .await
-        .unwrap();
+    let result = compile_expression(
+        expression,
+        table_name,
+        entity_column_name,
+        time_column_name,
+        schema,
+    )
+    .await
+    .unwrap();
+    *compile_result.0.lock().unwrap() = Some(result.clone());
     Ok(result)
 }
 
+#[tauri::command(async)]
+async fn compute(
+    csv: String,
+    table_name: String,
+    entity_column_name: String,
+    time_column_name: String,
+    compile_result: State<'_, CompileResult>,
+) -> Result<String, String> {
+    let compile_response = compile_result.0.lock().unwrap().clone();
+
+    let plan;
+    match compile_response {
+        Some(response) => plan = response.plan,
+        None => return Err(Error::CompileQuery.to_string()),
+    }
+
+    let result = compute_expression(
+        Some(csv),
+        table_name,
+        entity_column_name,
+        time_column_name,
+        plan,
+    )
+    .await
+    .unwrap();
+    Ok(result)
+}
 
 #[derive(derive_more::Display, Debug)]
 enum Error {
@@ -144,27 +183,31 @@ async fn compile_expression(
             per_entity_behavior: PerEntityBehavior::All as i32,
         },
         InternalCompileOptions::default(),
-    ).await
+    )
+    .await
     .change_context(Error::CompileQuery)?;
     Ok(result)
 }
 
-
 async fn compute_expression(
     csv: Option<String>,
-    expression: String,
     table_name: String,
     entity_column_name: String,
     time_column_name: String,
-    table_schema: Option<Schema>,
-    computePlan: Option<ComputePlan>,
+    compute_plan: Option<ComputePlan>,
 ) -> error_stack::Result<String, Error> {
     let s3_helper = S3Helper::new().await;
 
     // 1. Prepare the file
     let mut preparer = ExampleInputPreparer::new();
     let tables = preparer
-        .prepare_inputs(&csv, vec![])
+        .prepare_inputs(
+            &csv,
+            table_name,
+            entity_column_name,
+            time_column_name,
+            vec![],
+        )
         .await?;
 
     let tempdir = tempfile::Builder::new()
@@ -183,7 +226,7 @@ async fn compute_expression(
 
     let stream = sparrow_runtime::execute::execute(
         ExecuteRequest {
-            plan: computePlan,
+            plan: compute_plan,
             tables,
             destination: Some(output_to),
             limits: None,
@@ -243,7 +286,8 @@ async fn compute_expression(
 fn main() {
     tauri::Builder::default()
         .manage(TableSchema(Default::default()))
-        .invoke_handler(tauri::generate_handler![get_schema, compile])
+        .manage(CompileResult(Default::default()))
+        .invoke_handler(tauri::generate_handler![get_schema, compile, compute])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -264,6 +308,9 @@ impl ExampleInputPreparer {
     async fn prepare_inputs(
         &mut self,
         input_csv: &Option<String>,
+        table_name: String,
+        entity_column_name: String,
+        time_column_name: String,
         tables: Vec<ExampleTable>,
     ) -> error_stack::Result<Vec<ComputeTable>, Error> {
         let mut prepared_tables = Vec::with_capacity(tables.len() + 1);
@@ -271,12 +318,12 @@ impl ExampleInputPreparer {
             prepared_tables.push(
                 self.prepare_input(
                     TableConfig::new_with_table_source(
-                        "Input",
-                        &Uuid::new_v4(),
-                        "time",
+                        &table_name,
+                        &Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap(),
+                        &time_column_name,
                         None,
-                        "key",
-                        "grouping",
+                        &entity_column_name,
+                        &table_name,
                     ),
                     input_csv,
                 )
