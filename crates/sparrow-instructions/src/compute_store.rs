@@ -102,10 +102,10 @@ impl ComputeStore {
             // want to make this an option and configure it to see which is
             // best in-situ.
             //
-            options.set_use_direct_io_for_flush_and_compaction(true);
-            options.set_use_direct_reads(true);
-            // options.set_allow_mmap_reads(true);
-            // options.set_allow_mmap_writes(true);
+            // options.set_use_direct_io_for_flush_and_compaction(true);
+            // options.set_use_direct_reads(true);
+            options.set_allow_mmap_reads(true);
+            options.set_allow_mmap_writes(true);
 
             let mut write_options = rocksdb::WriteOptions::default();
             write_options.set_sync(false);
