@@ -38,8 +38,8 @@
         "fullscreen": false,
         "resizable": true,
         "title": "fenl-fiddle",
-        "width": 800,
-        "height": 600
+        "width": 1400,
+        "height": 1200
       }
     ]
   }
