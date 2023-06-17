@@ -1,0 +1,5 @@
+[source,Fenl]
+----
+%%fenl --result-behavior final-results
+Purchase | when(Purchase.customer_id == "patrick")
+----

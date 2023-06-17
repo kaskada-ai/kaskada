@@ -1,0 +1,5 @@
+[source,Fenl]
+----
+%%fenl
+include::example$filter-patrick.fenl[]
+----

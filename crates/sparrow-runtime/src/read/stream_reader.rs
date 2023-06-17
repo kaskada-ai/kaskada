@@ -68,7 +68,6 @@ pub(crate) async fn stream_reader(
     let pulsar_metadata = RawMetadata::try_from_pulsar(pulsar_config, false)
         .await
         .change_context(Error::CreateStream)?;
-
     // Verify the provided table schema matches the topic schema
     verify_schema_match(
         pulsar_metadata.user_schema.clone(),

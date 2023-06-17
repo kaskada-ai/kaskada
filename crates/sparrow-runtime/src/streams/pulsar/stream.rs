@@ -21,7 +21,8 @@ use std::time::Duration;
 use tokio::time::timeout;
 
 pub struct AvroWrapper {
-    value: Value,
+    user_record: Value,
+    projected_record: Value,
 }
 
 /// Creates a pulsar stream to be used during execution in a long-lived process.
@@ -37,7 +38,7 @@ pub fn execution_stream(
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(raw_schema, projected_schema, consumer, last_publish_time, false);
+        let mut reader = PulsarReader::new(raw_schema, projected_schema, consumer, last_publish_time, false, false);
         loop {
             // Indefinitely reads messages from the stream
             if let Some(next) = reader.next_result_async().await? {
@@ -59,7 +60,7 @@ pub fn preparation_stream(
     last_publish_time: i64,
 ) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
     async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema.clone(), schema, consumer, last_publish_time, true );
+        let mut reader = PulsarReader::new(schema.clone(), schema, consumer, last_publish_time, true , true);
         while let Some(next) = reader.next_result_async().await? {
             yield next
         }
@@ -79,6 +80,7 @@ struct PulsarReader {
     /// when publishing a message at the client. There is a chance that the broker
     /// reorders messages internally.
     require_ordered_publish_time: bool,
+    should_include_publish_time: bool,
 }
 
 #[derive(Debug)]
@@ -136,18 +138,20 @@ impl DeserializeMessage for AvroWrapper {
             })
             .into_report()
             .change_context(DeserializeError::Avro)?;
-        let mut fields = match value {
+        let user_fields = match value {
             Value::Record(record) => record,
             _ => error_stack::bail!(DeserializeError::UnsupportedType),
         };
+        let mut projected_fields = user_fields.clone();
         // the Payload data only contains the fields for the user-defined (raw) schema,
         // so we inject the publish time from the metadata
-        fields.push((
+        projected_fields.push((
             "_publish_time".to_string(),
             Value::TimestampMillis(payload.metadata.publish_time as i64),
         ));
         Ok(AvroWrapper {
-            value: Value::Record(fields),
+            user_record: Value::Record(user_fields),
+            projected_record: Value::Record(projected_fields),
         })
     }
 }
@@ -159,6 +163,7 @@ impl PulsarReader {
         consumer: Consumer<AvroWrapper, TokioExecutor>,
         last_publish_time: i64,
         require_ordered_publish_time: bool,
+        should_include_publish_time: bool,
     ) -> Self {
         PulsarReader {
             raw_schema,
@@ -166,6 +171,7 @@ impl PulsarReader {
             consumer,
             last_publish_time,
             require_ordered_publish_time,
+            should_include_publish_time,
         }
     }
 
@@ -210,7 +216,13 @@ impl PulsarReader {
                             return Err(ArrowError::from_external_error(Box::new(wrapped_error)));
                         }
                     };
-                    match aw.value {
+                    let aw_records = if self.should_include_publish_time {
+                        aw.projected_record
+                    } else {
+                        aw.user_record
+                    };
+
+                    match aw_records {
                         Value::Record(fields) => {
                             avro_values.push(fields);
                         }
@@ -218,7 +230,7 @@ impl PulsarReader {
                             let e = error_stack::report!(DeserializeError::UnsupportedType)
                                 .attach_printable(format!(
                                     "expected a record but got {:?}",
-                                    aw.value
+                                    aw_records
                                 ));
                             return Err(ArrowError::from_external_error(Box::new(
                                 DeserializeErrorWrapper::from(e),
@@ -260,13 +272,14 @@ impl PulsarReader {
                 }
             }
         }
-
         tracing::debug!("read {} messages", avro_values.len());
         match avro_values.len() {
             0 => Ok(None),
             _ => {
-                let arrow_data = sparrow_arrow::avro::avro_to_arrow(avro_values)
-                    .map_err(|e| ArrowError::from_external_error(Box::new(e)))?;
+                let arrow_data = sparrow_arrow::avro::avro_to_arrow(avro_values).map_err(|e| {
+                    tracing::error!("avro_to_arrow error: {}", e);
+                    ArrowError::from_external_error(Box::new(e))
+                })?;
                 let batch = RecordBatch::try_new(self.raw_schema.clone(), arrow_data)?;
 
                 // Note that the _publish_time is dropped here. This field is added for the purposes of

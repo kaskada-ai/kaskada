@@ -181,7 +181,7 @@ impl RawMetadata {
     /// Create a `RawMetadata` from a Pulsar topic.
     pub(crate) async fn try_from_pulsar(
         config: &PulsarConfig,
-        should_include_publish_time: bool,
+        include_publish_time: bool,
     ) -> error_stack::Result<PulsarMetadata, Error> {
         // the user-defined schema in the topic
         let pulsar_schema = streams::pulsar::schema::get_pulsar_schema(
@@ -194,7 +194,7 @@ impl RawMetadata {
         .await
         .change_context_lazy(|| Error::PulsarSchema("unable to get schema".to_owned()))?;
 
-        let new_fields = if should_include_publish_time {
+        let new_fields = if include_publish_time {
             // inject _publish_time field so that we have a consistent column to sort on
             // (this will always be our time_column in Pulsar sources)
             let publish_time = Arc::new(Field::new(

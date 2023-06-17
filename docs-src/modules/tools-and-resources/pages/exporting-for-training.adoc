@@ -118,7 +118,7 @@ Begin by limiting the examples to the training time range.
 
 [source,Fenl]
 ----
-%%fenl
+%%fenl --var training
 
 Examples 
   | when(time_of($input) > ("2020-01-01T00:00:00Z" as timestamp_ns))
@@ -130,7 +130,7 @@ validation dataset.
 
 [source,Fenl]
 ----
-%%fenl --var training
+%%fenl --var validation
 
 Examples 
   | when(time_of($input) > ("2020-02-03T00:00:00Z" as timestamp_ns))

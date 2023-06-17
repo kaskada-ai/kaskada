@@ -353,12 +353,24 @@ func main() {
 
 	// peridocally reconcile materializations to ensure the ones that are supposed to be running are running
 	g.Go(func() error {
+		count := 0
 		for {
-			time.Sleep(60 * time.Second)
+			time.Sleep(time.Second)
 
-			err := materializationManager.ReconcileMaterializations(ctx)
-			if err != nil {
-				return err
+			select {
+			case <-interrupt:
+				return nil
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
+			count++
+			if count == 60 {
+				count = 0
+				if err := materializationManager.ReconcileMaterializations(ctx); err != nil {
+					return err
+				}
 			}
 		}
 	})

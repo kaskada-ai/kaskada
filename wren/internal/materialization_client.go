@@ -155,7 +155,6 @@ func (c *materializationClient) GetMaterializationByName(ctx context.Context, ow
 	return materialization, nil
 }
 
-
 func (c *materializationClient) GetMaterializationsWithDependency(ctx context.Context, owner *ent.Owner, name string, dependencyType schema.DependencyType) ([]*ent.Materialization, error) {
 	subLogger := log.Ctx(ctx).With().
 		Str("method", "materializationClient.GetMaterializationsWithDependency").
@@ -201,7 +200,7 @@ func (c *materializationClient) GetAllMaterializationsBySourceType(ctx context.C
 		Str("source_type", string(sourceType)).
 		Logger()
 
-	materializations, err := c.entClient.Materialization.Query().Where(materialization.SourceTypeEQ(sourceType)).All(ctx)
+	materializations, err := c.entClient.Materialization.Query().Where(materialization.SourceTypeEQ(sourceType)).WithOwner().All(ctx)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue listing materializations")
 		return nil, err

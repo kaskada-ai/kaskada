@@ -10,6 +10,7 @@ import (
 	v2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
 	"github.com/kaskada-ai/kaskada/wren/client"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	ent_materialization "github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/maps"
@@ -29,7 +30,7 @@ type compileOptions struct {
 
 type CompileManager interface {
 	CompileEntMaterialization(ctx context.Context, owner *ent.Owner, materialization *ent.Materialization) (*v1alpha.CompileResponse, []*v1alpha.View, error)
-	CompileV1Materialization(ctx context.Context, owner *ent.Owner, materialization *v1alpha.Materialization) (*v1alpha.CompileResponse, []*v1alpha.View, error)
+	CompileV1Materialization(ctx context.Context, owner *ent.Owner, materialization *v1alpha.Materialization, isStreamBased bool) (*v1alpha.CompileResponse, []*v1alpha.View, error)
 	CompileV1Query(ctx context.Context, owner *ent.Owner, query *v1alpha.Query, queryOptions *v1alpha.QueryOptions) (*v1alpha.CompileResponse, []*v1alpha.View, error)
 	CompileV2Query(ctx context.Context, owner *ent.Owner, expression string, views []*v2alpha.QueryView, queryConfig *v2alpha.QueryConfig) (*v1alpha.CompileResponse, []*v1alpha.View, error)
 	CompileV1View(ctx context.Context, owner *ent.Owner, view *v1alpha.View) (*v1alpha.CompileResponse, error)
@@ -51,10 +52,15 @@ func NewCompileManager(computeClients *client.ComputeClients, kaskadaTableClient
 
 func (m *compileManager) CompileEntMaterialization(ctx context.Context, owner *ent.Owner, materialization *ent.Materialization) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
 	compileRequest := &compileRequest{
-		Expression:     materialization.Expression,
-		Views:          materialization.WithViews.Views,
-		SliceRequest:   materialization.SliceRequest,
-		ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS,
+		Expression:   materialization.Expression,
+		Views:        materialization.WithViews.Views,
+		SliceRequest: materialization.SliceRequest,
+	}
+
+	if materialization.SourceType == ent_materialization.SourceTypeStreams {
+		compileRequest.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
+	} else {
+		compileRequest.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS
 	}
 
 	compileOptions := &compileOptions{
@@ -64,12 +70,17 @@ func (m *compileManager) CompileEntMaterialization(ctx context.Context, owner *e
 	return m.compile(ctx, owner, compileRequest, compileOptions)
 }
 
-func (m *compileManager) CompileV1Materialization(ctx context.Context, owner *ent.Owner, materialization *v1alpha.Materialization) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
+func (m *compileManager) CompileV1Materialization(ctx context.Context, owner *ent.Owner, materialization *v1alpha.Materialization, isStreamBased bool) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
 	compileRequest := &compileRequest{
 		Expression:     materialization.Expression,
 		Views:          materialization.WithViews,
 		SliceRequest:   materialization.Slice,
-		ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS,
+	}
+
+	if isStreamBased {
+		compileRequest.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS
+	} else {
+		compileRequest.ResultBehavior = v1alpha.Query_RESULT_BEHAVIOR_FINAL_RESULTS
 	}
 
 	compileOptions := &compileOptions{
@@ -96,7 +107,6 @@ func (m *compileManager) CompileV1Query(ctx context.Context, owner *ent.Owner, q
 }
 
 func (m *compileManager) CompileV2Query(ctx context.Context, owner *ent.Owner, expression string, views []*v2alpha.QueryView, queryConfig *v2alpha.QueryConfig) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
-
 	compileRequest := &compileRequest{
 		Expression:   expression,
 		Views:        make([]*v1alpha.WithView, len(views)),
