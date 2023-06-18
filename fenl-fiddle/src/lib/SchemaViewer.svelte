@@ -81,20 +81,30 @@
 
 <Label>
   Schema:
-  <Table class="mt-2">
-    <TableHead>
-      <TableHeadCell>Index</TableHeadCell>
-      <TableHeadCell>Field Name</TableHeadCell>
-      <TableHeadCell>Data Type</TableHeadCell>
-    </TableHead>
-    <TableBody tableBodyClass="divide-y">
-      {#each schemaFields as field, index}
-        <TableBodyRow>
-          <TableBodyCell>{index}</TableBodyCell>
-          <TableBodyCell>{field.name}</TableBodyCell>
-          <TableBodyCell>{decodeType(field)}</TableBodyCell>
-        </TableBodyRow>
-      {/each}
-    </TableBody>
-  </Table>
+  <div class="overscroll-none overflow-auto h-60">
+    <Table class="mt-2">
+      <TableHead
+        class="text-xs uppercase text-gray-700 dark:text-gray-400 bg-gray-50 dark:bg-gray-700"
+      >
+        <TableHeadCell>Index</TableHeadCell>
+        <TableHeadCell>Field Name</TableHeadCell>
+        <TableHeadCell>Data Type</TableHeadCell>
+      </TableHead>
+      <TableBody tableBodyClass="divide-y">
+        {#each schemaFields as field, index}
+          <TableBodyRow>
+            <TableBodyCell class="px-4 py-1 whitespace-nowrap font-medium"
+              >{index}</TableBodyCell
+            >
+            <TableBodyCell class="px-4 py-1 whitespace-nowrap font-medium"
+              >{field.name}</TableBodyCell
+            >
+            <TableBodyCell class="px-4 py-1 whitespace-nowrap font-medium"
+              >{decodeType(field)}</TableBodyCell
+            >
+          </TableBodyRow>
+        {/each}
+      </TableBody>
+    </Table>
+  </div>
 </Label>
