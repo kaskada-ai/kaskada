@@ -4,6 +4,7 @@
   import SchemaViewer from "./SchemaViewer.svelte";
   import Terminal from "./Terminal.svelte";
   import { Textarea, Label, Button } from "flowbite-svelte";
+  import CsvViewer from "./CsvViewer.svelte";
 
   let expression = "";
   let sourceName: string;
@@ -111,6 +112,4 @@
   </div>
 </div>
 
-<section class="text-gray-800 dark:text-gray-200">
-  {computeResult}
-</section>
+<CsvViewer csvData={computeResult} title={"Results:"} />
