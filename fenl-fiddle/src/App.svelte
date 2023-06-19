@@ -1,11 +1,16 @@
 <script lang="ts">
   import Compute from "./lib/Compute.svelte";
-  import { DarkMode } from "flowbite-svelte";
+  import SideBar from "./lib/SideBar.svelte";
 </script>
 
-<DarkMode initialTheme="dark" />
-
-<Compute />
+<div class="flex flex-row gap-2 pr-4">
+  <div class="flex-none w-60">
+    <SideBar />
+  </div>
+  <div class="grow">
+    <Compute />
+  </div>
+</div>
 
 <style>
 </style>

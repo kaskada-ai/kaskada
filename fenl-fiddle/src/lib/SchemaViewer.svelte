@@ -86,9 +86,9 @@
       <TableHead
         class="text-xs uppercase text-gray-700 dark:text-gray-400 bg-gray-50 dark:bg-gray-700"
       >
-        <TableHeadCell>Index</TableHeadCell>
-        <TableHeadCell>Field Name</TableHeadCell>
-        <TableHeadCell>Data Type</TableHeadCell>
+        <TableHeadCell class="rounded-tl-lg">Index</TableHeadCell>
+        <TableHeadCell>Field</TableHeadCell>
+        <TableHeadCell class="rounded-tr-lg">Type</TableHeadCell>
       </TableHead>
       <TableBody tableBodyClass="divide-y">
         {#each schemaFields as field, index}

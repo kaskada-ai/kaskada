@@ -3,7 +3,7 @@
   import DataDrop from "./DataDrop.svelte";
   import SchemaViewer from "./SchemaViewer.svelte";
   import Terminal from "./Terminal.svelte";
-  import { Textarea, Label, Button } from "flowbite-svelte";
+  import { Textarea, Label, Tabs, TabItem } from "flowbite-svelte";
   import CsvViewer from "./CsvViewer.svelte";
 
   let expression = "";
@@ -26,12 +26,14 @@
   let computable = false;
 
   async function compute() {
-    computeResult = await invoke("compute", {
-      csv,
-      sourceName,
-      entityColumnName,
-      timeColumnName,
-    });
+    if (computable) {
+      computeResult = await invoke("compute", {
+        csv,
+        sourceName,
+        entityColumnName,
+        timeColumnName,
+      });
+    }
   }
 
   async function compile() {
@@ -83,16 +85,22 @@
   }
 </script>
 
-<DataDrop bind:sourceName bind:timeColumnName bind:entityColumnName bind:csv />
-
-<div class="flex flex-row gap-2">
-  <div class="basis-5/12">
-    <form on:submit|preventDefault={compute}>
+<div class="rounded-lg p-2 bg-gray-200 dark:bg-gray-800 m-2">
+  <DataDrop
+    bind:sourceName
+    bind:timeColumnName
+    bind:entityColumnName
+    bind:csv
+  />
+</div>
+<div class="rounded-lg p-2 bg-gray-200 dark:bg-gray-800 m-2">
+  <div class="flex flex-row gap-2">
+    <div class="basis-5/12">
       <Label
         >Query:
         <Textarea
-          on:keyup={compile}
-          on:change={compile}
+          on:input={compile}
+          on:blur={compute}
           id="data-input"
           rows="10"
           class="mt-2"
@@ -101,15 +109,32 @@
           spellcheck="false"
         />
       </Label>
-      <Button type="submit" disabled={!computable}>Compute</Button>
-    </form>
+    </div>
+    <div class="basis-4/12">
+      <Terminal lines={diagnostics} />
+    </div>
+    <div class="basis-3/12">
+      <SchemaViewer schemaFields={schema.fields} />
+    </div>
   </div>
-  <div class="basis-4/12">
-    <Terminal lines={diagnostics} />
-  </div>
-  <div class="basis-3/12">
-    <SchemaViewer schemaFields={schema.fields} />
-  </div>
-</div>
 
-<CsvViewer csvData={computeResult} title={"Results:"} />
+  <Tabs
+    contentClass="p-1 bg-gray-50 rounded-lg dark:bg-gray-800"
+    activeClasses="px-4 py-2 text-gray-900 border-b-2 border-gray-600 dark:text-gray-100 dark:border-gray-400"
+    inactiveClasses="px-4 py-2 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 text-gray-500 dark:text-gray-400"
+  >
+    <TabItem title="Results:" disabled />
+    <TabItem title="Raw" open>
+      <Textarea
+        id="data-input"
+        value={computeResult}
+        class="overscroll-none overflow-auto h-48"
+      />
+    </TabItem>
+    <TabItem title="Table">
+      <div class="overscroll-none overflow-auto h-48">
+        <CsvViewer csvData={computeResult} />
+      </div>
+    </TabItem>
+  </Tabs>
+</div>
