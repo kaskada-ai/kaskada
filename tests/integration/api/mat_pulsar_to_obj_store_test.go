@@ -114,15 +114,11 @@ var _ = FDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
 
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg1.avro"),
-			// time	id	my_val
-			// 10	1	5
+			Payload: helpers.ReadFile("avro/msg_0.avro"),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg2.avro"),
-			// time	id	my_val
-			// 20	1	3
+			Payload: helpers.ReadFile("avro/msg_1.avro"),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 
@@ -230,12 +226,13 @@ var _ = FDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		})
 	})
 
-	Describe("Load the second file into the table", func() {
+	Describe("Load the more data into the table", func() {
 		It("Should work without error", func() {
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg3.avro"),
-				// time	id	my_val
-				// 30	1	15
+				Payload: helpers.ReadFile("avro/msg_2.avro"),
+			})
+			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
+				Payload: helpers.ReadFile("avro/msg_3.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		})

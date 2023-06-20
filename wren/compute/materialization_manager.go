@@ -145,9 +145,9 @@ func (m *materializationManager) ReconcileMaterializations(ctx context.Context) 
 			status, err := m.GetMaterializationStatus(ctx, materializationID)
 			if err != nil {
 				log.Error().Err(err).Str("id", materializationID).Msg("failed to get materialization status")
+			} else {
+				isRunning = status.State == v1alpha.GetMaterializationStatusResponse_STATE_RUNNING
 			}
-			isRunning = status.State == v1alpha.GetMaterializationStatusResponse_STATE_RUNNING
-
 		}
 
 		if isRunning {
