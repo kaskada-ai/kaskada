@@ -6,17 +6,17 @@
   import CsvViewer from "./CsvViewer.svelte";
   import { onMount } from "svelte";
 
-  export let csv = `id,purchase_time,customer_id,vendor_id,amount
-cb_001,2020-01-01T00:00:00.000000000+00:00,karen,chum_bucket,9
-kk_001,2020-01-01T00:00:00.000000000+00:00,patrick,krusty_krab,3
-cb_002,2020-01-02T00:00:00.000000000+00:00,karen,chum_bucket,2
-kk_002,2020-01-02T00:00:00.000000000+00:00,patrick,krusty_krab,5
-cb_003,2020-01-03T00:00:00.000000000+00:00,karen,chum_bucket,4
-kk_003,2020-01-03T00:00:00.000000000+00:00,patrick,krusty_krab,12
-cb_004,2020-01-04T00:00:00.000000000+00:00,patrick,chum_bucket,5000
-cb_005,2020-01-04T00:00:00.000000000+00:00,karen,chum_bucket,3
-cb_006,2020-01-05T00:00:00.000000000+00:00,karen,chum_bucket,5
-kk_004,2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9
+  export let csv = `purchase_time,customer_id,vendor_id,amount
+2020-01-01T00:00:00.000000000+00:00,karen,chum_bucket,9
+2020-01-01T00:00:00.000000000+00:00,patrick,krusty_krab,3
+2020-01-02T00:00:00.000000000+00:00,karen,chum_bucket,2
+2020-01-02T00:00:00.000000000+00:00,patrick,krusty_krab,5
+2020-01-03T00:00:00.000000000+00:00,karen,chum_bucket,4
+2020-01-03T00:00:00.000000000+00:00,patrick,krusty_krab,12
+2020-01-04T00:00:00.000000000+00:00,patrick,chum_bucket,50
+2020-01-04T00:00:00.000000000+00:00,karen,krusty_krab,3
+2020-01-05T00:00:00.000000000+00:00,karen,chum_bucket,5
+2020-01-05T00:00:00.000000000+00:00,patrick,krusty_krab,9
 `;
 
   let schema: {
