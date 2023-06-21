@@ -2,13 +2,18 @@
 source: crates/sparrow-physical/src/expr.rs
 expression: yaml
 ---
-- kind: !column foo
+- name: column
+  literal_args:
+  - !Utf8 foo
   args: []
   result_type: Int32
-- kind: !column bar
+- name: column
+  literal_args:
+  - !Utf8 bar
   args: []
   result_type: Int32
-- kind: !call add
+- name: add
+  literal_args: []
   args:
   - 0
   - 1

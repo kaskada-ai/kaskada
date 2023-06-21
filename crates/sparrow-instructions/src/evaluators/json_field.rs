@@ -21,7 +21,6 @@ pub(super) struct JsonFieldEvaluator {
 
 impl Evaluator for JsonFieldEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        tracing::info!("Evaluating json");
         let strings: ArcRef<dyn Array, StringArray> =
             info.value(&self.json_string)?.string_array()?;
 

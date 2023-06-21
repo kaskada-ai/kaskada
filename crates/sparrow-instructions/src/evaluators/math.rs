@@ -23,7 +23,7 @@ pub(super) use round::*;
 use crate::evaluators::{Evaluator, RuntimeInfo};
 use crate::{EvaluatorFactory, StaticInfo};
 
-/// Evalutaor for unary negation.
+/// Evaluator for unary negation.
 pub(super) struct NegEvaluator<T: ArrowNumericType>
 where
     T::Native: std::ops::Neg<Output = T::Native>,

@@ -4687,6 +4687,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-expressions"
+version = "0.8.3"
+dependencies = [
+ "approx 0.5.1",
+ "arrow-arith",
+ "arrow-array",
+ "arrow-buffer",
+ "arrow-cast",
+ "arrow-data",
+ "arrow-ord",
+ "arrow-schema",
+ "arrow-select",
+ "arrow-string",
+ "derive_more",
+ "error-stack",
+ "hashbrown 0.13.2",
+ "index_vec",
+ "inventory",
+ "itertools",
+ "num",
+ "serde_json",
+ "sparrow-arrow",
+ "sparrow-physical",
+ "static_init",
+ "substring",
+]
+
+[[package]]
 name = "sparrow-instructions"
 version = "0.8.3"
 dependencies = [
@@ -4830,6 +4858,7 @@ dependencies = [
  "insta",
  "serde",
  "serde_yaml",
+ "sparrow-arrow",
 ]
 
 [[package]]
