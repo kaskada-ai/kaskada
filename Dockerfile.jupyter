@@ -8,7 +8,7 @@ USER root
 RUN apt update && apt install jq -y
 
 # Install libssl1.1 from bullseye
-RUN BULLSEYE_VERSION=$(wget -qO- 'https://qa.debian.org/madison.php?package=openssl&table=debian&a=&c=&s=bullseye-security&text=on#' | jq -Rn 'input | split(" | ")[1]') && \
+RUN BULLSEYE_VERSION=$(wget -qO- 'https://qa.debian.org/madison.php?package=openssl&table=debian&a=&c=&s=bullseye-security&text=on#' | jq -Rnr 'input | split(" | ")[1]') && \
     wget -q "http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_${BULLSEYE_VERSION}_${TARGETARCH}.deb" -O /tmp/libssl1.1.deb && \
     dpkg -i /tmp/libssl1.1.deb && \
     rm /tmp/libssl1.1.deb
