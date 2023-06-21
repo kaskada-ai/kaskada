@@ -72,9 +72,9 @@ func (m *compileManager) CompileEntMaterialization(ctx context.Context, owner *e
 
 func (m *compileManager) CompileV1Materialization(ctx context.Context, owner *ent.Owner, materialization *v1alpha.Materialization, isStreamBased bool) (*v1alpha.CompileResponse, []*v1alpha.View, error) {
 	compileRequest := &compileRequest{
-		Expression:     materialization.Expression,
-		Views:          materialization.WithViews,
-		SliceRequest:   materialization.Slice,
+		Expression:   materialization.Expression,
+		Views:        materialization.WithViews,
+		SliceRequest: materialization.Slice,
 	}
 
 	if isStreamBased {

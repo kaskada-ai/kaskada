@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -38,7 +37,6 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		pulsarClient          pulsar.Client
 		pulsarConsumer        pulsar.Consumer
 		pulsarProducer        pulsar.Producer
-		pulsarRemoteHostname  string
 		table                 *v1alpha.Table
 		tableClient           v1alpha.TableServiceClient
 		tableName             string
@@ -125,12 +123,6 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		tableName = "table_pulsarToPulsar"
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 
-		if os.Getenv("ENV") == "local-local" {
-			pulsarRemoteHostname = "localhost"
-		} else {
-			pulsarRemoteHostname = "pulsar"
-		}
-
 		table = &v1alpha.Table{
 			TableName:           tableName,
 			TimeColumnName:      "time",
@@ -139,8 +131,8 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				Source: &v1alpha.Source_Pulsar{
 					Pulsar: &v1alpha.PulsarSource{
 						Config: &v1alpha.PulsarConfig{
-							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", pulsarRemoteHostname),
-							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", pulsarRemoteHostname),
+							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
+							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", getRemotePulsarHostname()),
 							AuthPlugin:       "",
 							AuthParams:       "",
 							Tenant:           "public",
@@ -198,7 +190,7 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 						Destination: &v1alpha.Destination_Pulsar{
 							Pulsar: &v1alpha.PulsarDestination{
 								Config: &v1alpha.PulsarConfig{
-									BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", pulsarRemoteHostname),
+									BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
 									AuthPlugin:       "",
 									AuthParams:       "",
 									Tenant:           "public",

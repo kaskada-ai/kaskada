@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -201,3 +202,10 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 	}
 }
 
+func getRemotePulsarHostname() string {
+	if os.Getenv("ENV") == "local-local" {
+		return "localhost"
+	} else {
+		return "pulsar"
+	}
+}

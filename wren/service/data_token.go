@@ -56,7 +56,7 @@ func (d *dataTokenService) getDataToken(ctx context.Context, req *pb.GetDataToke
 		}
 		dataToken, err = d.client.GetDataToken(ctx, owner, id)
 	}
-	if err != nil { 
+	if err != nil {
 		//could be NotFoundError or other error, already logged in GetDataToken
 		return nil, err
 	}

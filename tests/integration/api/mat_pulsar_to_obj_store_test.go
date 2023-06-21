@@ -25,7 +25,7 @@ type pulsarTestSchema struct {
 	MinAmount int    `json:"min_amount"`
 }
 
-var _ = FDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("pulsar"), func() {
+var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -126,13 +126,6 @@ var _ = FDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		tableName = "table_pulsarToObjStore"
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 
-		var pulsarRemoteHostname string
-		if os.Getenv("ENV") == "local-local" {
-			pulsarRemoteHostname = "localhost"
-		} else {
-			pulsarRemoteHostname = "pulsar"
-		}
-
 		table = &v1alpha.Table{
 			TableName:           tableName,
 			TimeColumnName:      "time",
@@ -141,8 +134,8 @@ var _ = FDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 				Source: &v1alpha.Source_Pulsar{
 					Pulsar: &v1alpha.PulsarSource{
 						Config: &v1alpha.PulsarConfig{
-							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", pulsarRemoteHostname),
-							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", pulsarRemoteHostname),
+							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
+							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", getRemotePulsarHostname()),
 							AuthPlugin:       "",
 							AuthParams:       "",
 							Tenant:           "public",
