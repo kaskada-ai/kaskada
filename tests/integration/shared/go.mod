@@ -95,6 +95,7 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/kaskada-ai/kaskada/gen/proto/go v0.0.0-00010101000000-000000000000
 	github.com/kaskada-ai/kaskada/wren v0.0.0-00010101000000-000000000000
+	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/minio/madmin-go v1.7.5
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/xitongsys/parquet-go-source v0.0.0-20221025031416-9877e685ef65

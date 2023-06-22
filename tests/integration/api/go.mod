@@ -66,7 +66,7 @@ require (
 	github.com/kaskada-ai/kaskada/wren v0.0.0-00010101000000-000000000000 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
-	github.com/linkedin/goavro/v2 v2.9.8 // indirect
+	github.com/linkedin/goavro/v2 v2.12.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20220913051719-115f729f3c8c // indirect
 	github.com/mattn/go-ieproxy v0.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
@@ -128,6 +128,7 @@ require (
 	github.com/namsral/flag v1.7.4-pre
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/streamnative/pulsar-admin-go v0.1.0
 	github.com/xitongsys/parquet-go v1.6.2 // indirect
 	github.com/xitongsys/parquet-go-source v0.0.0-20221025031416-9877e685ef65 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect

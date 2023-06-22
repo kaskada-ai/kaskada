@@ -7,14 +7,17 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/RedisAI/redisai-go/redisai"
+	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/gomodule/redigo/redis"
 	_ "github.com/lib/pq"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/namsral/flag"
 	. "github.com/onsi/ginkgo/v2"
@@ -197,5 +200,38 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 				Primitive: primitiveType,
 			},
 		},
+	}
+}
+
+func getRemotePulsarHostname() string {
+	if os.Getenv("ENV") == "local-local" {
+		return "localhost"
+	} else {
+		return "pulsar"
+	}
+}
+
+func getPulsarConfig(topicName string) *v1alpha.PulsarConfig {
+	return &v1alpha.PulsarConfig{
+		BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
+		AdminServiceUrl:  fmt.Sprintf("http://%s:8080", getRemotePulsarHostname()),
+		AuthPlugin:       "",
+		AuthParams:       "",
+		Tenant:           "public",
+		Namespace:        "default",
+		TopicName:        topicName,
+	}
+}
+
+func receivePulsarMessageWithTimeout(pulsarConsumer pulsar.Consumer, ctx context.Context) pulsar.Message {
+	timeout, timeoutCancel := context.WithTimeout(ctx, 100 * time.Millisecond)
+	defer timeoutCancel()
+	msg, err := pulsarConsumer.Receive(timeout)
+	if err != nil {
+		helpers.LogLn("timed out waiting for puslar message")
+		return nil
+	} else {
+		helpers.LogLn("recieved pulsar response: %v", msg)
+		return msg
 	}
 }

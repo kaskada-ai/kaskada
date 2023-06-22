@@ -294,7 +294,7 @@ func main() {
 		tableService := service.NewTableService(&computeManager, &fileManager, &kaskadaTableClient, &objectStoreClient, tableStore, &dependencyAnalyzerService)
 		viewService := service.NewViewService(&compileManager, &kaskadaTableClient, &kaskadaViewClient, &dependencyAnalyzerService)
 		materializationService := service.NewMaterializationService(&computeManager, &materializationManager, &kaskadaTableClient, &kaskadaViewClient, &dataTokenClient, &materializationClient)
-		queryV1Service := service.NewQueryV1Service(&computeManager, &dataTokenClient, &kaskadaQueryClient, &objectStoreClient, &prepareManager)
+		queryV1Service := service.NewQueryV1Service(&computeManager, &dataTokenClient, &kaskadaQueryClient, &kaskadaTableClient, &objectStoreClient, &prepareManager)
 
 		// Register the grpc services
 		v1alpha.RegisterDataTokenServiceServer(grpcServer, service.NewDataTokenService(&dataTokenClient))

@@ -160,8 +160,7 @@ func Test_queryV1Service_listQueries(t *testing.T) {
 	listQueries = append(listQueries, sampleKaskadaQuery)
 
 	mockKaskadaQueryClient := internal.NewMockKaskadaQueryClient(t)
-	mockKaskadaQueryClient.EXPECT().ListKaskadaQueries(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*ent.KaskadaQuery{{Query:sampleKaskadaQuery}}, nil)
-
+	mockKaskadaQueryClient.EXPECT().ListKaskadaQueries(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*ent.KaskadaQuery{{Query: sampleKaskadaQuery}}, nil)
 
 	tests := []struct {
 		name    string

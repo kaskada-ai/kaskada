@@ -39,16 +39,18 @@ type queryV1Service struct {
 	computeManager     compute.ComputeManager
 	dataTokenClient    internal.DataTokenClient
 	kaskadaQueryClient internal.KaskadaQueryClient
+	kaskadaTableClient internal.KaskadaTableClient
 	objectStoreClient  client.ObjectStoreClient
 	prepareManager     compute.PrepareManager
 }
 
 // NewQueryV1Service creates a new query service
-func NewQueryV1Service(computeManager *compute.ComputeManager, dataTokenClient *internal.DataTokenClient, kaskadaQueryClient *internal.KaskadaQueryClient, objectStoreClient *client.ObjectStoreClient, prepareManager *compute.PrepareManager) v1alpha.QueryServiceServer {
+func NewQueryV1Service(computeManager *compute.ComputeManager, dataTokenClient *internal.DataTokenClient, kaskadaQueryClient *internal.KaskadaQueryClient, kaskadaTableClient *internal.KaskadaTableClient, objectStoreClient *client.ObjectStoreClient, prepareManager *compute.PrepareManager) v1alpha.QueryServiceServer {
 	return &queryV1Service{
 		computeManager:     *computeManager,
 		dataTokenClient:    *dataTokenClient,
 		kaskadaQueryClient: *kaskadaQueryClient,
+		kaskadaTableClient: *kaskadaTableClient,
 		objectStoreClient:  *objectStoreClient,
 		prepareManager:     *prepareManager,
 	}
@@ -87,6 +89,26 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	}
 
 	compileResponse, views, err := q.computeManager.CompileV1Query(ctx, owner, query, queryOptions)
+	if err != nil {
+		return wrapErrorWithStatus(err, subLogger)
+	}
+
+	tableMap, err := q.kaskadaTableClient.GetKaskadaTablesFromNames(ctx, owner, compileResponse.FreeNames)
+	if err != nil {
+		return wrapErrorWithStatus(err, subLogger)
+	}
+
+	for _, table := range tableMap {
+		switch table.Source.Source.(type) {
+		case *v1alpha.Source_Kaskada:
+		case *v1alpha.Source_Pulsar:
+			err := customerrors.NewInvalidArgumentErrorWithCustomText("query is currently not supported on tables backed by streams")
+			return wrapErrorWithStatus(err, subLogger)
+		default:
+			log.Error().Msgf("unknown source type %T", table.Source.Source)
+			return wrapErrorWithStatus(customerrors.NewInternalError("unknown table source type"), subLogger)
+		}
+	}
 
 	// Update the request views with only the views required for the query.
 	request.Query.Views = views

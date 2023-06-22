@@ -10,6 +10,8 @@ import (
 	"github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type MaterializationManager interface {
@@ -93,6 +95,10 @@ func (m *materializationManager) StopMaterialization(ctx context.Context, materi
 
 	_, err := computeClient.StopMaterialization(ctx, stopRequest)
 	if err != nil {
+		if errStatus, ok := status.FromError(err); ok && errStatus.Code() == codes.NotFound {
+			log.Debug().Msg("materialization no longer exists on compute")
+			return nil
+		} 
 		subLogger.Error().Err(err).Msg("issue stopping materialization")
 		return customerrors.NewComputeError(reMapSparrowError(ctx, err))
 	}
@@ -145,9 +151,9 @@ func (m *materializationManager) ReconcileMaterializations(ctx context.Context) 
 			status, err := m.GetMaterializationStatus(ctx, materializationID)
 			if err != nil {
 				log.Error().Err(err).Str("id", materializationID).Msg("failed to get materialization status")
+			} else {
+				isRunning = status.State == v1alpha.GetMaterializationStatusResponse_STATE_RUNNING
 			}
-			isRunning = status.State == v1alpha.GetMaterializationStatusResponse_STATE_RUNNING
-
 		}
 
 		if isRunning {
