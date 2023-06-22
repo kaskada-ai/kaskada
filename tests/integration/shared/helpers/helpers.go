@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -22,6 +21,7 @@ import (
 	vfs_utils "github.com/c2fo/vfs/utils"
 	"github.com/c2fo/vfs/v6/backend/azure"
 	"github.com/kaskada-ai/kaskada/wren/ent"
+	"github.com/linkedin/goavro/v2"
 
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 	. "github.com/onsi/ginkgo/v2"
@@ -30,6 +30,7 @@ import (
 	"github.com/xitongsys/parquet-go/reader"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
@@ -43,7 +44,7 @@ type HostConfig struct {
 
 func (c HostConfig) GetGrpcConnection(ctx context.Context) *grpc.ClientConn {
 	// default to disabling TLS for running in k8s
-	tlsOpt := grpc.WithInsecure()
+	tlsOpt := grpc.WithTransportCredentials(insecure.NewCredentials())
 
 	// Override with TLS (usually for running locally against k8s)
 	if c.UseTLS {
@@ -69,7 +70,11 @@ func DownloadCSV(url string) [][]string {
 	localPath, cleanup := downloadFile(url)
 	defer cleanup()
 
-	file, err := os.Open(localPath)
+	return GetCSV(localPath)
+}
+
+func GetCSV(filePath string) [][]string {
+	file, err := os.Open(filePath)
 	Expect(err).ShouldNot(HaveOccurred(), "can't open file")
 
 	r := csv.NewReader(file)
@@ -133,6 +138,14 @@ func GetFileURI(fileName string) string {
 		return fmt.Sprintf("file://%s/../../../testdata/%s", workDir, fileName)
 	}
 	return fmt.Sprintf("file:///testdata/%s", fileName)
+}
+
+// Reads a file from the testdata path
+func ReadFile(fileName string) []byte {
+	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	fileData, err := os.ReadFile(filePath)
+	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue finding testdata file: %s", fileName))
+	return fileData
 }
 
 // loads files from testdata/ into a table.
@@ -252,7 +265,7 @@ func DeleteAllExistingObjects(objectStoreType string, objectStoreBucket string, 
 	Expect(err).ShouldNot(HaveOccurred(), "unable to initialize object store")
 	if objectStoreType == Object_store_type_local {
 		LogLn(fmt.Sprintf("removing everything at: %s", dataLocation.Path()))
-		files, err := ioutil.ReadDir(dataLocation.Path())
+		files, err := os.ReadDir(dataLocation.Path())
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, file := range files {
 			switch file.Name() {
@@ -279,8 +292,8 @@ func DeleteAllExistingObjects(objectStoreType string, objectStoreBucket string, 
 }
 
 // helper to log to test output
-func LogLn(line string) {
-	fmt.Fprintln(GinkgoWriter, line)
+func LogLn(format string, args ...any) {
+	fmt.Fprintln(GinkgoWriter, fmt.Sprintf(format, args...))
 }
 
 func GetCreateQueryResponses(stream v1alpha.QueryService_CreateQueryClient) ([]*v1alpha.CreateQueryResponse, error) {
@@ -353,4 +366,23 @@ func GetMergedCreateQueryResponse(stream v1alpha.QueryService_CreateQueryClient)
 		mergedResponse.State = queryResponse.State
 	}
 	return mergedResponse, nil
+}
+
+// EncodeAvroToBytes convert interface{} datum to bytes
+func EncodeAvroToBytes(schema string, datum interface{}) ([]byte, error) {
+	codec, err := goavro.NewCodec(schema)
+	if err != nil {
+		return nil, err
+	}
+	return codec.BinaryFromNative(nil, datum)
+}
+
+// DecodeAvroFromBytes convert bytes to interface{} datum
+func DecodeAvroFromBytes(schema string, payload []byte) (interface{}, error) {
+	codec, err := goavro.NewCodec(schema)
+	if err != nil {
+		return nil, err
+	}
+	datum, _, err := codec.NativeFromBinary(payload)
+	return datum, err
 }

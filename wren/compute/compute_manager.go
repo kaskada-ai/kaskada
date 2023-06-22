@@ -204,7 +204,7 @@ func (m *computeManager) SaveComputeSnapshots(queryContext *QueryContext, comput
 }
 
 // Runs all saved materializations on current data inside a go-routine that attempts to finish before shutdown
-// TODO: After sparrow supports long-running materializations from file-based sources 
+// TODO: After sparrow supports long-running materializations from file-based sources
 // remove all the code related to this method
 func (m *computeManager) RunMaterializations(requestCtx context.Context, owner *ent.Owner) {
 	m.errGroup.Go(func() error { return m.processMaterializations(requestCtx, owner) })
