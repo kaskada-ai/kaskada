@@ -26,7 +26,7 @@ type pulsarToPulsarTestSchema struct {
 	Count    int `json:"count"`
 }
 
-var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
+var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -77,6 +77,13 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
 			Payload: helpers.ReadFile("avro/msg_1.avro"),
 		})
+		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
+			Payload: helpers.ReadFile("avro/msg_2.avro"),
+		})
+		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
+		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
+			Payload: helpers.ReadFile("avro/msg_3.avro"),
+		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 
 		// create a pulsar consumer
@@ -98,15 +105,7 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 			Source: &v1alpha.Source{
 				Source: &v1alpha.Source_Pulsar{
 					Pulsar: &v1alpha.PulsarSource{
-						Config: &v1alpha.PulsarConfig{
-							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
-							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", getRemotePulsarHostname()),
-							AuthPlugin:       "",
-							AuthParams:       "",
-							Tenant:           "public",
-							Namespace:        "default",
-							TopicName:        topicNameIn,
-						},
+						Config: getPulsarConfig(topicNameIn),
 					},
 				},
 			},
@@ -157,14 +156,7 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 					Destination: &v1alpha.Destination{
 						Destination: &v1alpha.Destination_Pulsar{
 							Pulsar: &v1alpha.PulsarDestination{
-								Config: &v1alpha.PulsarConfig{
-									BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
-									AuthPlugin:       "",
-									AuthParams:       "",
-									Tenant:           "public",
-									Namespace:        "default",
-									TopicName:        topicNameOut,
-								},
+								Config: getPulsarConfig(topicNameOut),
 							},
 						},
 					},
@@ -181,9 +173,11 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 
 		It("Should output initial results to pulsar", func() {
 			Eventually(func(g Gomega) {
-				timeout, timeoutCancel := context.WithTimeout(ctx, time.Second)
+				timeout, timeoutCancel := context.WithTimeout(ctx, 100 * time.Millisecond)
 				defer timeoutCancel()
 				msg, err := pulsarConsumer.Receive(timeout)
+
+				helpers.LogLn("recieved: %v, err: %v", msg, err)
 				g.Expect(err).ShouldNot(HaveOccurred())
 
 				var data pulsarToPulsarTestSchema
@@ -194,25 +188,25 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				g.Expect(data.Count).Should(Equal(1))
 
 				pulsarConsumer.Ack(msg)
-			}, "30s", "5s").Should(Succeed())
+			}, "5s", "1s").Should(Succeed())
 		})
 	})
 
 	Describe("Load the more data into the table", func() {
 		It("Should work without error", func() {
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg_2.avro"),
+				Payload: helpers.ReadFile("avro/msg_4.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg_3.avro"),
+				Payload: helpers.ReadFile("avro/msg_5.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		})
 
 		It("Should output additional results to pulsar", func() {
 			Eventually(func(g Gomega) {
-				timeout, timeoutCancel := context.WithTimeout(ctx, time.Second)
+				timeout, timeoutCancel := context.WithTimeout(ctx,  100 * time.Millisecond)
 				defer timeoutCancel()
 				msg, err := pulsarConsumer.Receive(timeout)
 				g.Expect(err).ShouldNot(HaveOccurred())

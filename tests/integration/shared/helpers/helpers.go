@@ -292,8 +292,8 @@ func DeleteAllExistingObjects(objectStoreType string, objectStoreBucket string, 
 }
 
 // helper to log to test output
-func LogLn(line string) {
-	fmt.Fprintln(GinkgoWriter, line)
+func LogLn(format string, args ...any) {
+	fmt.Fprintln(GinkgoWriter, fmt.Sprintf(format, args...))
 }
 
 func GetCreateQueryResponses(stream v1alpha.QueryService_CreateQueryClient) ([]*v1alpha.CreateQueryResponse, error) {

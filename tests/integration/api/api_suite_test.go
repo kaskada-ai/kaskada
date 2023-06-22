@@ -209,3 +209,15 @@ func getRemotePulsarHostname() string {
 		return "pulsar"
 	}
 }
+
+func getPulsarConfig(topicName string) *v1alpha.PulsarConfig {
+	return &v1alpha.PulsarConfig{
+		BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
+		AdminServiceUrl:  fmt.Sprintf("http://%s:8080", getRemotePulsarHostname()),
+		AuthPlugin:       "",
+		AuthParams:       "",
+		Tenant:           "public",
+		Namespace:        "default",
+		TopicName:        topicName,
+	}
+}

@@ -102,15 +102,7 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 			Source: &v1alpha.Source{
 				Source: &v1alpha.Source_Pulsar{
 					Pulsar: &v1alpha.PulsarSource{
-						Config: &v1alpha.PulsarConfig{
-							BrokerServiceUrl: fmt.Sprintf("pulsar://%s:6650", getRemotePulsarHostname()),
-							AdminServiceUrl:  fmt.Sprintf("http://%s:8080", getRemotePulsarHostname()),
-							AuthPlugin:       "",
-							AuthParams:       "",
-							Tenant:           "public",
-							Namespace:        "default",
-							TopicName:        topicName,
-						},
+						Config: getPulsarConfig(topicName),
 					},
 				},
 			},
