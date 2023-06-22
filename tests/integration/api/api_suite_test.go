@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/RedisAI/redisai-go/redisai"
+	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/gomodule/redigo/redis"
 	_ "github.com/lib/pq"
 
@@ -219,5 +220,18 @@ func getPulsarConfig(topicName string) *v1alpha.PulsarConfig {
 		Tenant:           "public",
 		Namespace:        "default",
 		TopicName:        topicName,
+	}
+}
+
+func receivePulsarMessageWithTimeout(pulsarConsumer pulsar.Consumer, ctx context.Context) pulsar.Message {
+	timeout, timeoutCancel := context.WithTimeout(ctx, 100 * time.Millisecond)
+	defer timeoutCancel()
+	msg, err := pulsarConsumer.Receive(timeout)
+	if err != nil {
+		helpers.LogLn("timed out waiting for puslar message")
+		return nil
+	} else {
+		helpers.LogLn("recieved pulsar response: %v", msg)
+		return msg
 	}
 }

@@ -77,14 +77,6 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
 			Payload: helpers.ReadFile("avro/msg_1.avro"),
 		})
-		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg_2.avro"),
-		})
-		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
-		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg_3.avro"),
-		})
-		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 
 		// create a pulsar consumer
 		pulsarConsumer, err = pulsarClient.Subscribe(pulsar.ConsumerOptions{
@@ -173,12 +165,8 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 
 		It("Should output initial results to pulsar", func() {
 			Eventually(func(g Gomega) {
-				timeout, timeoutCancel := context.WithTimeout(ctx, 100 * time.Millisecond)
-				defer timeoutCancel()
-				msg, err := pulsarConsumer.Receive(timeout)
-
-				helpers.LogLn("recieved: %v, err: %v", msg, err)
-				g.Expect(err).ShouldNot(HaveOccurred())
+				msg := receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
+				g.Expect(msg).ShouldNot(BeNil())
 
 				var data pulsarToPulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
@@ -187,29 +175,27 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				g.Expect(data.LastTime).Should(Equal(10))
 				g.Expect(data.Count).Should(Equal(1))
 
-				pulsarConsumer.Ack(msg)
+				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
 			}, "5s", "1s").Should(Succeed())
 		})
 	})
 
-	Describe("Load the more data into the table", func() {
+	Describe("Load more data into the table", func() {
 		It("Should work without error", func() {
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg_4.avro"),
+				Payload: helpers.ReadFile("avro/msg_2.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg_5.avro"),
+				Payload: helpers.ReadFile("avro/msg_3.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		})
 
 		It("Should output additional results to pulsar", func() {
 			Eventually(func(g Gomega) {
-				timeout, timeoutCancel := context.WithTimeout(ctx,  100 * time.Millisecond)
-				defer timeoutCancel()
-				msg, err := pulsarConsumer.Receive(timeout)
-				g.Expect(err).ShouldNot(HaveOccurred())
+				msg := receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
+				g.Expect(msg).ShouldNot(BeNil())
 
 				var data pulsarToPulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
@@ -218,7 +204,7 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				g.Expect(data.LastTime).Should(Equal(20))
 				g.Expect(data.Count).Should(Equal(2))
 
-				pulsarConsumer.Ack(msg)
+				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
 			}, "5s", "1s").Should(Succeed())
 		})
 	})
