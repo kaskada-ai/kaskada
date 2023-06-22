@@ -154,7 +154,8 @@ pub(super) async fn write(
         // sends the current batch to avoid waiting indefinitely until BATCH_SIZE is achieved.
         //
         // This is not optimal and may raise performance concerns to send small batches.
-        producer.send_batch()
+        producer
+            .send_batch()
             .await
             .into_report()
             .change_context(Error::SendingMessage)?;
