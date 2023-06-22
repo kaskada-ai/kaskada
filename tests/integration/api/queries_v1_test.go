@@ -40,37 +40,6 @@ var _ = Describe("Queries V1", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		pulsarAvroSchema := `
-		{
-			"name": "MyRecord",
-			"type": "record",
-			"fields": [
-			   {
-				  "name": "time",
-				  "type": [
-					 "null",
-					 "long"
-				  ],
-				  "default": null
-			   },
-			   {
-				  "name": "id",
-				  "type": [
-					 "null",
-					 "long"
-				  ],
-				  "default": null
-			   },
-			   {
-				  "name": "my_val",
-				  "type": [
-					 "null",
-					 "long"
-				  ],
-				  "default": null
-			   }
-			]
-		 }	`
 
 		//get connection to wren
 		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
@@ -110,7 +79,7 @@ var _ = Describe("Queries V1", Ordered, func() {
 		// create a pulsar producer and push initial data to pulsar
 		pulsarProducer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{
 			Topic:  pulsarTopicName,
-			Schema: pulsar.NewAvroSchema(pulsarAvroSchema, map[string]string{}),
+			Schema: pulsar.NewAvroSchema(string(helpers.ReadFile("avro/schema.json")), map[string]string{}),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
 

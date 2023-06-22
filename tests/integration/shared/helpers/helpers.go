@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -31,6 +30,7 @@ import (
 	"github.com/xitongsys/parquet-go/reader"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
@@ -44,7 +44,7 @@ type HostConfig struct {
 
 func (c HostConfig) GetGrpcConnection(ctx context.Context) *grpc.ClientConn {
 	// default to disabling TLS for running in k8s
-	tlsOpt := grpc.WithInsecure()
+	tlsOpt := grpc.WithTransportCredentials(insecure.NewCredentials())
 
 	// Override with TLS (usually for running locally against k8s)
 	if c.UseTLS {
@@ -143,7 +143,7 @@ func GetFileURI(fileName string) string {
 // Reads a file from the testdata path
 func ReadFile(fileName string) []byte {
 	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
-	fileData, err := ioutil.ReadFile(filePath)
+	fileData, err := os.ReadFile(filePath)
 	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue finding testdata file: %s", fileName))
 	return fileData
 }
@@ -265,7 +265,7 @@ func DeleteAllExistingObjects(objectStoreType string, objectStoreBucket string, 
 	Expect(err).ShouldNot(HaveOccurred(), "unable to initialize object store")
 	if objectStoreType == Object_store_type_local {
 		LogLn(fmt.Sprintf("removing everything at: %s", dataLocation.Path()))
-		files, err := ioutil.ReadDir(dataLocation.Path())
+		files, err := os.ReadDir(dataLocation.Path())
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, file := range files {
 			switch file.Name() {

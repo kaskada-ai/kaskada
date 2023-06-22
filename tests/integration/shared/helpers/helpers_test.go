@@ -62,8 +62,8 @@ var _ = Describe("DecodeAvroFromBytes", func() {
 			"my_val": int64(5),
 		}
 
-		data := DecodeAvroFromBytes(schema, fileData)
-
+		data, err := DecodeAvroFromBytes(schema, fileData)
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(data).Should(BeEquivalentTo(expected))
 	})
 

@@ -44,37 +44,6 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		topicName             string
 	)
 
-	pulsarAvroSchema := `
-	{
-		"name": "MyRecord",
-		"type": "record",
-		"fields": [
-		   {
-			  "name": "time",
-			  "type": [
-				 "null",
-				 "long"
-			  ],
-			  "default": null
-		   },
-		   {
-			  "name": "id",
-			  "type": [
-				 "null",
-				 "long"
-			  ],
-			  "default": null
-		   },
-		   {
-			  "name": "my_val",
-			  "type": [
-				 "null",
-				 "long"
-			  ],
-			  "default": null
-		   }
-		]
-	 }	`
 
 	BeforeAll(func() {
 		//get connection to wren
@@ -109,7 +78,7 @@ var _ = PDescribe("Materialization from Pulsar to ObjectStore", Ordered, Label("
 		topicName = "topic_pulsarToObjStore"
 		pulsarProducer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{
 			Topic:  topicName,
-			Schema: pulsar.NewAvroSchema(pulsarAvroSchema, map[string]string{}),
+			Schema: pulsar.NewAvroSchema(string(helpers.ReadFile("avro/schema.json")), map[string]string{}),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
 

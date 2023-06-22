@@ -44,38 +44,6 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		topicNameOut          string
 	)
 
-	pulsarAvroSchema := `
-	{
-		"name": "MyRecord",
-		"type": "record",
-		"fields": [
-		   {
-			  "name": "time",
-			  "type": [
-				 "null",
-				 "long"
-			  ],
-			  "default": null
-		   },
-		   {
-			  "name": "id",
-			  "type": [
-				 "null",
-				 "long"
-			  ],
-			  "default": null
-		   },
-		   {
-			  "name": "my_val",
-			  "type": [
-				 "null",
-				 "long"
-			  ],
-			  "default": null
-		   }
-		]
-	 }	`
-
 	BeforeAll(func() {
 		//get connection to wren
 		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
@@ -98,7 +66,7 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 		topicNameOut = "topic_pulsarToPulsar_Out"
 		pulsarProducer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{
 			Topic:  topicNameIn,
-			Schema: pulsar.NewAvroSchema(pulsarAvroSchema, map[string]string{}),
+			Schema: pulsar.NewAvroSchema(string(helpers.ReadFile("avro/schema.json")), map[string]string{}),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
 
