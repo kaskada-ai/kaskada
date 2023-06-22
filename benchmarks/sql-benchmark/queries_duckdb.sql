@@ -1,28 +1,29 @@
+PRAGMA enable_profiling;
+
+-- Create (L2.87s)
 CREATE TABLE Purchases AS SELECT * FROM read_parquet('purchases.parquet');
 CREATE TABLE Reviews AS SELECT * FROM read_parquet('reviews.parquet');
 CREATE TABLE PageViews AS SELECT * FROM read_parquet('page_views.parquet');
 
-PRAGMA enable_profiling;
-
 -- Aggregation / History (0.151s)
-SELECT
+COPY (SELECT
   user,
   time,
   SUM(amount) OVER (
     PARTITION BY user
     ORDER BY time
   )
-FROM Purchases;
+FROM Purchases) TO 'agg_history_duckdb.parquet';
 
 -- Aggregation / Snapshot (0.0114s)
-SELECT
+COPY (SELECT
   user,
   SUM(amount)
 FROM Purchases
-GROUP BY user;
+GROUP BY user) TO 'agg_snapshot_duckdb.parquet';
 
 -- Time-Windowed Aggregation / History (0.178s)
-SELECT
+COPY (SELECT
   user,
   time,
   sum(amount) OVER (
@@ -32,18 +33,18 @@ SELECT
     ORDER BY time
   )
 FROM Purchases
-ORDER BY time;
+ORDER BY time) TO 'windowed_history_duckdb.parquet';
 
 -- Time-Windowed Aggregation / Snapshot (0.0219s)
-SELECT
+COPY (SELECT
   user,
   sum(amount)
 FROM Purchases
 WHERE time_bucket(INTERVAL '1 month', time) >= time_bucket(INTERVAL '1 month', DATE '2022-05-03')
-GROUP BY user;
+GROUP BY user) TO 'windowed_snapshot_duckdb.parquet';
 
 -- Data-Defined Windowed Aggregation / History (2.92s)
-WITH activity AS (
+COPY (WITH activity AS (
   (SELECT user, time, 1 as is_page_view FROM PageViews)
   UNION
   (SELECT user, time, 0 as is_page_view FROM Purchases)
@@ -64,10 +65,10 @@ SELECT user, time,
   AVG(views) OVER (PARTITION BY user ORDER BY time)
     as avg_views_since_purchase
 FROM page_views_since_purchase
-ORDER BY time;
+ORDER BY time) TO 'data_defined_history_duckdb.parquet';
 
 -- Temporal Join / Snapshot [Spline] (0.208s)
-WITH review_avg AS (
+COPY (WITH review_avg AS (
   SELECT item, time,
     AVG(rating) OVER (PARTITION BY item ORDER BY time) as avg_score
   FROM Reviews
@@ -92,14 +93,14 @@ LEFT JOIN spline
   ON Purchases.time = spline.time AND Purchases.item = spline.item
 LEFT JOIN review_avg
   ON spline.last_r_time = review_avg.time
- AND Purchases.item = review_avg.item;
+ AND Purchases.item = review_avg.item) TO 'temporal_join_spline_snapshot_duckdb.parquet';
 
 -- Temporal Join / Snapshot [ASOF Join] (0.125s)
-WITH review_avg AS (
+COPY (WITH review_avg AS (
   SELECT item, time,
     AVG(rating) OVER (PARTITION BY item ORDER BY time) as avg_score
   FROM Reviews
 )
 SELECT p.user, p.time, r.avg_score
 FROM review_avg r ASOF RIGHT JOIN Purchases p
-ON p.item = r.item AND r.time >= p.time;
+ON p.item = r.item AND r.time >= p.time) TO 'temporal_join_asof_snapshot_duckdb.parquet';
