@@ -26,7 +26,7 @@ type pulsarToPulsarTestSchema struct {
 	Count    int `json:"count"`
 }
 
-var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
+var _ = FDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -142,7 +142,7 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 					{
 						last_id: table_pulsarToPulsar.id | last(),
 						last_time: table_pulsarToPulsar.time | last(),
-						count: table_pulsarToPulsar | count(),
+						count: table_pulsarToPulsar | count() as i32,
 					}
 					`,
 					Destination: &v1alpha.Destination{
@@ -171,8 +171,8 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				var data pulsarToPulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
-				g.Expect(data.LastId).Should(Equal(1))
-				g.Expect(data.LastTime).Should(Equal(10))
+				g.Expect(data.LastId).Should(Equal(9))
+				g.Expect(data.LastTime).Should(Equal(1687303801000000000))
 				g.Expect(data.Count).Should(Equal(1))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
@@ -200,11 +200,21 @@ var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsa
 				var data pulsarToPulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
-				g.Expect(data.LastId).Should(Equal(1))
-				g.Expect(data.LastTime).Should(Equal(20))
-				g.Expect(data.Count).Should(Equal(2))
-
+				g.Expect(data.LastId).Should(Equal(2))
+				g.Expect(data.LastTime).Should(Equal(1687303803000000000))
+				g.Expect(data.Count).Should(Equal(1))
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
+
+				msg2 := receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
+				g.Expect(msg2).ShouldNot(BeNil())
+
+				var data2 pulsarToPulsarTestSchema
+				err = json.Unmarshal(msg2.Payload(), &data2)
+				g.Expect(err).ShouldNot(HaveOccurred())
+				g.Expect(data2.LastId).Should(Equal(4))
+				g.Expect(data2.LastTime).Should(Equal(1687303805000000000))
+				g.Expect(data2.Count).Should(Equal(1))
+
 			}, "5s", "1s").Should(Succeed())
 		})
 	})
