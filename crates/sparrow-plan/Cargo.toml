@@ -12,7 +12,6 @@ Execution plans for Sparrow.
 [dependencies]
 anyhow.workspace = true
 arrow.workspace = true
-bigdecimal.workspace = true
 enum-map.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true

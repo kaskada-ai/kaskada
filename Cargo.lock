@@ -4540,6 +4540,9 @@ version = "0.8.3"
 dependencies = [
  "anyhow",
  "arrow",
+ "arrow-array",
+ "arrow-schema",
+ "arrow-select",
  "avro-rs",
  "avro-schema",
  "chrono",
@@ -4549,7 +4552,9 @@ dependencies = [
  "insta",
  "itertools",
  "num",
+ "proptest",
  "serde",
+ "static_init",
  "tracing",
 ]
 
@@ -4824,7 +4829,6 @@ version = "0.8.3"
 dependencies = [
  "anyhow",
  "arrow",
- "bigdecimal",
  "enum-map",
  "hashbrown 0.13.2",
  "itertools",
