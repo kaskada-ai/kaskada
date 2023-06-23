@@ -161,6 +161,11 @@ pub(super) async fn write(
             .change_context(Error::SendingMessage)?;
 
         tracing::debug!("Success. Buffered {num_rows} messages to pulsar");
+        producer
+            .send_batch()
+            .await
+            .into_report()
+            .change_context(Error::SendingMessage)?;
 
         progress_updates_tx
             .send(ProgressUpdate::Output { num_rows })

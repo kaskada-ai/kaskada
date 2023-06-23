@@ -27,10 +27,11 @@ pub(super) struct ScanOperation {
     /// The schema of the scanned inputs.
     projected_schema: SchemaRef,
     /// The input stream of batches.
+    ///
+    /// Takes until the stop signal is received
     input_stream: Pin<Box<dyn Stream<Item = error_stack::Result<Batch, Error>> + Send>>,
     key_hash_index: KeyHashIndex,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
-    stop_signal_rx: tokio::sync::watch::Receiver<bool>,
 }
 
 impl std::fmt::Debug for ScanOperation {
@@ -61,14 +62,9 @@ impl Operation for ScanOperation {
         &mut self,
         sender: tokio::sync::mpsc::Sender<InputBatch>,
     ) -> error_stack::Result<(), Error> {
-        while let Some(incoming) = self
-            .input_stream
-            .try_next()
-            .await
-            .change_context(Error::GetNextInput)?
-        {
+        while let Some(batch) = self.input_stream.next().await {
             let input = self
-                .create_input(incoming)
+                .create_input(batch?)
                 .into_report()
                 .change_context(Error::PreprocessNextInput)?;
 
@@ -85,18 +81,11 @@ impl Operation for ScanOperation {
                 break;
             };
 
-            // Send batch.
             sender
                 .send(input)
                 .await
                 .into_report()
                 .change_context(Error::internal_msg("send next output"))?;
-
-            // Stops the operation if the signal is received.
-            if *self.stop_signal_rx.borrow() {
-                tracing::info!("Stop signal received. Ending scan");
-                break;
-            }
         }
 
         Ok(())
@@ -110,7 +99,7 @@ impl ScanOperation {
         scan_operation: operation_plan::ScanOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-        stop_signal_rx: tokio::sync::watch::Receiver<bool>,
+        mut stop_signal_rx: tokio::sync::watch::Receiver<bool>,
     ) -> error_stack::Result<BoxedOperation, Error> {
         error_stack::ensure!(
             input_channels.is_empty(),
@@ -233,16 +222,31 @@ impl ScanOperation {
                 .change_context(Error::internal_msg("failed to create stream reader"))?
                 .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
                 .boxed();
+
                 input_stream
             }
         };
+
+        // Streams until the stop signal has been received
+        let input_stream = input_stream
+            .take_until(async move {
+                while !*stop_signal_rx.borrow() {
+                    match stop_signal_rx.changed().await {
+                        Ok(_) => (),
+                        Err(e) => {
+                            tracing::error!("Stop signal receiver dropped: {e}");
+                            break;
+                        }
+                    }
+                }
+            })
+            .boxed();
 
         Ok(Box::new(Self {
             projected_schema,
             input_stream,
             key_hash_index: KeyHashIndex::default(),
             progress_updates_tx: context.progress_updates_tx.clone(),
-            stop_signal_rx,
         }))
     }
 
