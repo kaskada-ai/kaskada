@@ -147,6 +147,19 @@ pub(super) async fn write(
                 .into_report()
                 .change_context(Error::SendingMessage)?;
         }
+        // Send the buffer in the producer, if one exists.
+        //
+        // After every batch, the size of the batch may be less than the configured BATCH_SIZE.
+        // The current Pulsar client will wait until the batch reaches the BATCH_SIZE, this explicitly
+        // sends the current batch to avoid waiting indefinitely until BATCH_SIZE is achieved.
+        //
+        // This is not optimal and may raise performance concerns to send small batches.
+        producer
+            .send_batch()
+            .await
+            .into_report()
+            .change_context(Error::SendingMessage)?;
+
         tracing::debug!("Success. Buffered {num_rows} messages to pulsar");
 
         progress_updates_tx
@@ -155,17 +168,6 @@ pub(super) async fn write(
             .into_report()
             .change_context(Error::ProgressUpdate)?;
     }
-
-    // Send the buffer in the producer, if one exists.
-    //
-    // Ideally, this is done automatically by the producer, but in the absense
-    // of a `maxPublishDelay` or similar clean-up process that flushes batches,
-    // we need to explicitly send the final batch.
-    producer
-        .send_batch()
-        .await
-        .into_report()
-        .change_context(Error::SendingMessage)?;
 
     Ok(())
 }
