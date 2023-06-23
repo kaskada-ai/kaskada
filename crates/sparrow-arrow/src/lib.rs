@@ -16,7 +16,7 @@ mod row_time;
 pub mod scalar_value;
 pub mod serde;
 #[cfg(any(test, feature = "testing"))]
-mod testing;
+pub mod testing;
 pub mod utils;
 
 pub use batch::*;

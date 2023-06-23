@@ -337,8 +337,8 @@ impl Batch {
     }
 
     /// Creates a batch with the given times and key hashes.
-    #[cfg(test)]
-    pub(crate) fn minimal_from(
+    #[cfg(any(test, feature = "testing"))]
+    pub fn minimal_from(
         time: impl Into<TimestampNanosecondArray>,
         key_hash: impl Into<arrow_array::UInt64Array>,
         up_to_time: i64,
@@ -487,7 +487,7 @@ pub fn take_record_batch(
     RecordBatch::try_new(batch.schema(), columns).into_report()
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 #[static_init::dynamic]
 static MINIMAL_SCHEMA: arrow_schema::SchemaRef = {
     use std::sync::Arc;
