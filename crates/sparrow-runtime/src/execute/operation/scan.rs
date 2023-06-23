@@ -28,7 +28,7 @@ pub(super) struct ScanOperation {
     projected_schema: SchemaRef,
     /// The input stream of batches.
     ///
-    /// Takes until the stop signal is received
+    /// Takes until the stop signal is received or the stream is empty.
     input_stream: Pin<Box<dyn Stream<Item = error_stack::Result<Batch, Error>> + Send>>,
     key_hash_index: KeyHashIndex,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
