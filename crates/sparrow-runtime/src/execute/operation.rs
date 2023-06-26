@@ -170,7 +170,7 @@ impl OperationExecutor {
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         max_event_time_tx: tokio::sync::mpsc::UnboundedSender<Timestamp>,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
-        stop_signal_rx: tokio::sync::watch::Receiver<bool>,
+        stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
     ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
         let Self {
             operation,
@@ -383,7 +383,7 @@ async fn create_operation(
     operator: operation_plan::Operator,
     incoming_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
     input_columns: &[InputColumn],
-    stop_signal_rx: tokio::sync::watch::Receiver<bool>,
+    stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
 ) -> Result<BoxedOperation, Error> {
     match operator {
         operation_plan::Operator::Scan(scan_operation) => {

@@ -99,7 +99,7 @@ impl ScanOperation {
         scan_operation: operation_plan::ScanOperation,
         input_channels: Vec<tokio::sync::mpsc::Receiver<Batch>>,
         input_columns: &[InputColumn],
-        mut stop_signal_rx: tokio::sync::watch::Receiver<bool>,
+        stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
     ) -> error_stack::Result<BoxedOperation, Error> {
         error_stack::ensure!(
             input_channels.is_empty(),
@@ -228,19 +228,26 @@ impl ScanOperation {
         };
 
         // Streams until the stop signal has been received
-        let input_stream = input_stream
-            .take_until(async move {
-                while !*stop_signal_rx.borrow() {
-                    match stop_signal_rx.changed().await {
-                        Ok(_) => (),
-                        Err(e) => {
-                            tracing::error!("Stop signal receiver dropped: {e}");
-                            break;
+        let input_stream = if let Some(mut stop_signal_rx) = stop_signal_rx {
+            input_stream
+                .take_until(async move {
+                    while !*stop_signal_rx.borrow() {
+                        match stop_signal_rx.changed().await {
+                            Ok(_) => (),
+                            Err(e) => {
+                                tracing::error!(
+                                    "stop signal receiver dropped unexpectedly: {:?}",
+                                    e
+                                );
+                                break;
+                            }
                         }
                     }
-                }
-            })
-            .boxed();
+                })
+                .boxed()
+        } else {
+            input_stream.boxed()
+        };
 
         Ok(Box::new(Self {
             projected_schema,
@@ -427,7 +434,6 @@ mod tests {
         let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
 
         let (max_event_tx, mut max_event_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (_, stop_signal_rx) = tokio::sync::watch::channel(false);
         let (sender, receiver) = tokio::sync::mpsc::channel(10);
         let mut executor = OperationExecutor::new(plan.clone());
         executor.add_consumer(sender);
@@ -458,7 +464,7 @@ mod tests {
                 vec![],
                 max_event_tx,
                 &Default::default(),
-                stop_signal_rx,
+                None,
             )
             .await
             .unwrap()
