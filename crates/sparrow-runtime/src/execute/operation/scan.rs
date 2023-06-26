@@ -227,7 +227,9 @@ impl ScanOperation {
             }
         };
 
-        // Streams until the stop signal has been received
+        // Currently configures the stream for the following cases:
+        // 1) Streams until the stop signal is received or source is done producing (currently only used for materializations)
+        // 2) Streams until the source is done producing
         let input_stream = if let Some(mut stop_signal_rx) = stop_signal_rx {
             input_stream
                 .take_until(async move {
