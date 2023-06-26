@@ -12,11 +12,15 @@ General purpose functions and structs for working with Arrow.
 [features]
 default = ["avro"]
 avro = ["avro-schema"]
+testing = ["proptest"]
 
 # This crate should not depend on any other Sparrow crates.
 [dependencies]
 anyhow.workspace = true
 arrow.workspace = true
+arrow-array.workspace = true
+arrow-schema.workspace = true
+arrow-select.workspace = true
 avro-schema = { workspace = true, optional = true }
 avro-rs = { workspace = true }
 chrono.workspace = true
@@ -25,11 +29,14 @@ derive_more.workspace = true
 error-stack.workspace = true
 itertools.workspace = true
 num.workspace = true
+proptest = { workspace = true, optional = true }
 serde.workspace = true
+static_init.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+proptest.workspace = true
 
 [lib]
 doctest = false

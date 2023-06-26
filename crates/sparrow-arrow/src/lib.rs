@@ -8,12 +8,16 @@
     clippy::undocumented_unsafe_blocks
 )]
 pub mod attachments;
-
 #[cfg(feature = "avro")]
 pub mod avro;
-
-pub mod serde;
-
+mod batch;
 pub mod downcast;
+mod row_time;
 pub mod scalar_value;
+pub mod serde;
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
 pub mod utils;
+
+pub use batch::*;
+pub use row_time::*;
