@@ -154,13 +154,12 @@ pub(super) async fn write(
         // sends the current batch to avoid waiting indefinitely until BATCH_SIZE is achieved.
         //
         // This is not optimal and may raise performance concerns to send small batches.
+        tracing::debug!("Success. Buffered {num_rows} messages to pulsar");
         producer
             .send_batch()
             .await
             .into_report()
             .change_context(Error::SendingMessage)?;
-
-        tracing::debug!("Success. Buffered {num_rows} messages to pulsar");
 
         progress_updates_tx
             .send(ProgressUpdate::Output { num_rows })

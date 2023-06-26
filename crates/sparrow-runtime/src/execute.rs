@@ -222,16 +222,13 @@ pub async fn execute(
         flight_record_path: None,
     };
 
-    // Note: This placeholder is used to support the [StopMaterialization] API, but can be easily used to
-    // support stopping a query in general.
-    let (_, stop_signal_rx) = tokio::sync::watch::channel(false);
     let compute_executor = ComputeExecutor::try_spawn(
         context,
         &late_bindings,
         &runtime_options,
         progress_updates_rx,
         destination,
-        stop_signal_rx,
+        None,
     )
     .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
@@ -344,7 +341,7 @@ pub async fn materialize(
         &runtime_options,
         progress_updates_rx,
         destination,
-        stop_signal_rx,
+        Some(stop_signal_rx),
     )
     .await
     .change_context(Error::internal_msg("spawn compute executor"))?;

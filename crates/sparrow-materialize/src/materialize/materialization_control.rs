@@ -61,7 +61,7 @@ impl MaterializationControl {
                     }) {
                         Ok(_) => {}
                         Err(e) => {
-                            tracing::error!("failed to send progress to materialization: {}, stopping with error: {}", id.clone(), e);
+                            tracing::error!("failed to send progress for materialization: {}, stopping with error: {}", id.clone(), e);
                             break;
                         }
                     };
@@ -73,8 +73,12 @@ impl MaterializationControl {
                 progress: last_progress,
                 error: None,
             }) {
-                Ok(_) => {}
+                Ok(_) => {
+                    tracing::debug!("set materialization (id: {}) status to stopped", id.clone())
+                }
                 Err(e) => {
+                    // At this point, the query should be stopped (or stopping), but
+                    // we've failed to update the status.
                     tracing::error!(
                         "failed to set progress to stopped for materialization: {} with error: {}",
                         id.clone(),
@@ -83,7 +87,7 @@ impl MaterializationControl {
                 }
             }
 
-            tracing::error!("materialization {} exited unexpectedly", id);
+            tracing::info!("materialization (id: {}) is exiting", id);
             Ok(())
         });
 
