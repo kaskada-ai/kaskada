@@ -26,7 +26,7 @@ type pulsarToPulsarTestSchema struct {
 	Count    int `json:"count"`
 }
 
-var _ = PDescribe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
+var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc

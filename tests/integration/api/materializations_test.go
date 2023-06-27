@@ -50,11 +50,10 @@ min_amount: purchases_mat_test.amount | min(),
 }`
 
 		destination = &v1alpha.Destination{
-			Destination: &v1alpha.Destination_Redis{
-				Redis: &v1alpha.RedisDestination{
-					HostName:       "redis",
-					Port:           6379,
-					DatabaseNumber: 2,
+			Destination: &v1alpha.Destination_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType:        v1alpha.FileType_FILE_TYPE_CSV,
+					OutputPrefixUri: "file:///data/output/",
 				},
 			},
 		}
