@@ -107,6 +107,8 @@ pub enum TypeConstraint {
     TimeDelta,
     /// Any ordered type. This includes numbers and timestamps.
     Ordered,
+    /// A collection type. This includes maps and lists.
+    Collection,
 }
 
 impl Display for TypeConstraint {
@@ -119,6 +121,7 @@ impl Display for TypeConstraint {
             TypeConstraint::Float => fmt.write_str("float"),
             TypeConstraint::TimeDelta => fmt.write_str("timedelta"),
             TypeConstraint::Ordered => fmt.write_str("ordered"),
+            TypeConstraint::Collection => fmt.write_str("collection"),
         }
     }
 }
@@ -187,6 +190,7 @@ impl FromStr for FenlType {
             "duration_ns" => Ok(DataType::Duration(TimeUnit::Nanosecond).into()),
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
+            "collection" => Ok(TypeConstraint::Collection.into()),
             _ => Err(FenlType::Error),
         }
     }

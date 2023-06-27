@@ -68,6 +68,7 @@ pub async fn prepare_input<'a>(
     // redundantly, but cleaning that up is a big refactor.
     // See https://github.com/riptano/kaskada/issues/90
     for field in raw_metadata.table_schema.fields() {
+        println!("FRAZ - Field: {:?}", field);
         columns.push(ColumnBehavior::try_cast_or_reference_or_null(
             &raw_metadata.raw_schema,
             field,

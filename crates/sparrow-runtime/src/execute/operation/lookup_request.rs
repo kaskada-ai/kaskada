@@ -374,7 +374,7 @@ mod tests {
 
         let input = batch_from_json(input_json, vec![DataType::UInt64]).unwrap();
 
-        // The output (e0) should be the list of originall requesting keys.
+        // The output (e0) should be the list of original requesting keys.
         // The key_hash should be the hash of e0 from the input.
         run_operation_json(vec![input], plan).await.unwrap()
     }

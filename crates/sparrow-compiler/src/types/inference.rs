@@ -536,6 +536,11 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeConstraint) -> Option<F
         // Window behaviors don't fit anything else and nothing else matches window behavior.
         (_, FenlType::Window) => None,
 
+// TODO: FRAZ 
+        (TypeConstraint::Collection, FenlType::Concrete(DataType::Map(_, _))) => Some(concrete),
+        (TypeConstraint::Collection, _) => None,
+
+        // TODO: FRAZ - maps..lists?
         // Any concrete type satisfies `any`.
         (TypeConstraint::Any, _) => Some(concrete),
 

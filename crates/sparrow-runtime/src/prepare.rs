@@ -434,11 +434,13 @@ async fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static
     let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(reader)
         .into_report()
         .change_context(Error::CreateParquetReader)?;
+    println!("FRAZ - parquet reader built");
     let num_rows = parquet_reader.metadata().file_metadata().num_rows();
     let num_files = get_num_files(file_size);
     let batch_size = get_batch_size(num_rows, num_files);
     let parquet_reader = parquet_reader.with_batch_size(batch_size);
 
+    println!("FRAZ - metadta: {}", parquet_reader.schema());
     let raw_metadata = RawMetadata::from_raw_schema(parquet_reader.schema().clone())
         .change_context_lazy(|| Error::ReadSchema)?;
     let reader = parquet_reader
@@ -448,6 +450,7 @@ async fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static
     // create a Stream from reader
     let stream_reader = futures::stream::iter(reader);
 
+    println!("FRAZ - preparing input now");
     prepare_input_stream::prepare_input(
         stream_reader.boxed(),
         config,

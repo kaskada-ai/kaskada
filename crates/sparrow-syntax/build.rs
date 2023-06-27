@@ -5,6 +5,7 @@ fn main() {
         // something changes.
         .emit_rerun_directives(true)
         .use_cargo_dir_conventions()
+        .enable_generic_types()
         .process()
         .unwrap();
 }

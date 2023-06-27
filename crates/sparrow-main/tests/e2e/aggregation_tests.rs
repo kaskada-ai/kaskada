@@ -14,6 +14,7 @@ async fn test_sum_i64_final() {
     insta::assert_snapshot!(QueryFixture::new("{ sum_field: sum(Numbers.m) }").with_final_results().run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum_field
     1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,34
+    1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,34
     1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,24
     "###);
 }
