@@ -779,7 +779,7 @@ async fn test_invalid_output_type() {
         message: Invalid output type
         formatted:
           - "error[E0013]: Invalid output type"
-          - " = Output type must be a record, but was string"
+          - " = Output type must be a record, but was timestamp_s"
           - ""
           - ""
     "###);
