@@ -238,10 +238,30 @@ Param: (Located<&'input str>, bool, Located<FenlType>, Option<Located<ExprRef>>,
     (name, is_const.is_some(), fenl_type, default.map(|(_, e)| e), is_vararg.is_some()),
 }
 
+TypeParams: Vec<TypeParameter> = {
+  "<" <params:Comma<TypeParameter>> ">" => params.to_vec()
+}
+
+pub(crate) TypeParameter: TypeParameter = {
+  <name:ident> ":" <l:@L> <constraint:Located<Constraint>> <r:@R> =>
+    TypeParameter::new(name.to_owned(), vec![constraint.inner().clone()])
+}
+
 pub(crate) Signature: Signature = {
-  <name:ident> "(" <l:@L> <parameters:Params> <r:@R> ")" "->" <result:Type> =>?
-    Signature::try_new(name.to_owned(), parameters, result).map_err(|e|
+  <name:ident> <type_params:TypeParams?> "(" <l:@L> <parameters:Params> <r:@R> ")" "->" <result:Type> =>?
+    Signature::try_new(name.to_owned(), parameters, type_params.unwrap_or_default(), result).map_err(|e|
       ParseError::User{ error: (l, e.to_string(), r) })
+}
+
+Constraint: TypeConstraint = {
+  <l:@L> <name:ident> <r:@R> => TypeConstraint::from_str(name).unwrap_or_else(|e| {
+    errors.push(ParseError::User{ error: (l, format!("Invalid Type Constraint '{}'", name), r)});
+    e
+  }),
+  ! => {
+    errors.push(<>.error);
+    TypeConstraint::Error
+  }
 }
 
 Type: FenlType = {

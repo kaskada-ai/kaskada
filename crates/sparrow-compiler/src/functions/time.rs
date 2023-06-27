@@ -5,11 +5,11 @@ use crate::functions::{Implementation, Registry};
 
 pub(super) fn register(registry: &mut Registry) {
     registry
-        .register("time_of(input: any) -> timestamp_ns")
+        .register("time_of<T: any>(input: T) -> timestamp_ns")
         .with_implementation(Implementation::Instruction(InstOp::TimeOf));
 
     registry
-        .register("when(condition: bool, value: any) -> any")
+        .register("when<T: any>(condition: bool, value: T) -> T")
         .with_implementation(Implementation::new_pattern(
             "(transform (transform ?value_value (merge_join ?condition_op ?value_op)) (select \
              (transform ?condition_value (merge_join ?condition_op ?value_op))))",
@@ -42,7 +42,7 @@ pub(super) fn register(registry: &mut Registry) {
         ));
 
     registry
-        .register("shift_to(time: timestamp_ns, value: any) -> any")
+        .register("shift_to<T: any>(time: timestamp_ns, value: T) -> T")
         .with_implementation(Implementation::new_pattern(
             "(transform ?value_value (shift_to ?time_value))",
         ))
@@ -53,7 +53,7 @@ pub(super) fn register(registry: &mut Registry) {
 
     // Shift by is a macro expansion of shift to, hence it shared the same time domain check
     registry
-        .register("shift_by(delta: timedelta, value: any) -> any")
+        .register("shift_by<T: any, D: timedelta>(delta: D, value: T) -> T")
         .with_implementation(Implementation::new_fenl_rewrite(
             "shift_to(add_time(delta, time_of(value)), value)",
         ))
@@ -103,11 +103,11 @@ pub(super) fn register(registry: &mut Registry) {
         .with_implementation(Implementation::Instruction(InstOp::Seconds));
 
     registry
-        .register("add_time(delta: timedelta, time: timestamp_ns) -> timestamp_ns")
+        .register("add_time<D: timedelta>(delta: D, time: timestamp_ns) -> timestamp_ns")
         .with_implementation(Implementation::Instruction(InstOp::AddTime));
 
     registry
-        .register("shift_until(predicate: bool, value: any) -> any")
+        .register("shift_until<T: any>(predicate: bool, value: T) -> T")
         .with_implementation(Implementation::new_pattern(
             "(transform (transform ?value_value (merge_join ?value_op ?predicate_op)) \
              (shift_until (transform ?predicate_value (merge_join ?value_op ?predicate_op))))",
@@ -132,6 +132,6 @@ pub(super) fn register(registry: &mut Registry) {
 
     // Note: Lag is specifically *not* an aggregation function.
     registry
-        .register("lag(const n: i64, input: ordered) -> ordered")
+        .register("lag<O: ordered>(const n: i64, input: O) -> O")
         .with_implementation(Implementation::Instruction(InstOp::Lag));
 }

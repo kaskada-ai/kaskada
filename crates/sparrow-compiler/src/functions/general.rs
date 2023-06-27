@@ -4,15 +4,15 @@ use crate::functions::{Implementation, Registry};
 
 pub(super) fn register(registry: &mut Registry) {
     registry
-        .register("is_valid(input: any) -> bool")
+        .register("is_valid<T: any>(input: T) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::IsValid));
 
     registry
-        .register("hash(input: key) -> u64")
+        .register("hash<K: key>(input: K) -> u64")
         .with_implementation(Implementation::Instruction(InstOp::Hash));
 
     registry
-        .register("with_key(key: key, value: any, const grouping: string = null) -> any")
+        .register("with_key<K: key, T: any>(key: K, value: T, const grouping: string = null) -> T")
         .with_implementation(Implementation::new_pattern({
             const MERGED_OP: &str = "(merge_join ?key_op ?value_op)";
             const MERGED_KEY: &str = const_format::formatcp!("(transform ?key_value {MERGED_OP})");
@@ -31,7 +31,7 @@ pub(super) fn register(registry: &mut Registry) {
         ));
 
     registry
-        .register("lookup(key: key, value: any) -> any")
+        .register("lookup<K: key, T: any>(key: K, value: T) -> T")
         .with_implementation(Implementation::new_pattern({
             // The operation of the lookup request depends on the key value.
             //
@@ -87,6 +87,6 @@ pub(super) fn register(registry: &mut Registry) {
         }));
 
     registry
-        .register("coalesce(values+: any) -> any")
+        .register("coalesce<T: any>(values+: T) -> T")
         .with_implementation(Implementation::Instruction(InstOp::Coalesce));
 }
