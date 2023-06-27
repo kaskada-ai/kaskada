@@ -7,10 +7,10 @@ use arrow_array::cast::{
 };
 use arrow_array::types::{ArrowDictionaryKeyType, Decimal128Type, Decimal256Type};
 use arrow_array::{
-    downcast_dictionary_array, downcast_primitive_array, Array, ArrayAccessor, DictionaryArray,
-    FixedSizeBinaryArray,
+    downcast_dictionary_array, downcast_primitive_array, Array, ArrayAccessor, BooleanArray,
+    DictionaryArray, FixedSizeBinaryArray,
 };
-use arrow_buffer::{i256, ArrowNativeType};
+use arrow_buffer::{i256, ArrowNativeType, NullBuffer};
 use arrow_schema::DataType;
 
 pub struct Hasher {
@@ -56,7 +56,13 @@ impl Hasher {
 
         self.hash_buffer.clear();
         self.hash_buffer.resize(num_rows, 0);
-        create_hashes(arrays, &self.random_state, &mut self.hash_buffer, false)?;
+        create_hashes(
+            arrays,
+            &self.random_state,
+            &mut self.hash_buffer,
+            None,
+            false,
+        )?;
 
         Ok(&self.hash_buffer)
     }
@@ -72,37 +78,44 @@ fn create_hashes(
     arrays: &[impl std::borrow::Borrow<dyn Array>],
     random_state: &RandomState,
     hashes_buffer: &mut Vec<u64>,
+    mask: Option<&NullBuffer>,
     mut multi_col: bool,
 ) -> error_stack::Result<(), Error> {
     for col in arrays {
         let array = col.borrow();
         downcast_primitive_array! {
-            array => hash_array(array, random_state, hashes_buffer, multi_col),
+            array => hash_array(array, random_state, hashes_buffer, mask, multi_col),
             DataType::Null => hash_null(random_state, hashes_buffer, multi_col),
-            DataType::Boolean => hash_array(as_boolean_array(array), random_state, hashes_buffer, multi_col),
-            DataType::Utf8 => hash_array(as_string_array(array), random_state, hashes_buffer, multi_col),
-            DataType::LargeUtf8 => hash_array(as_largestring_array(array), random_state, hashes_buffer, multi_col),
-            DataType::Binary => hash_array(as_generic_binary_array::<i32>(array), random_state, hashes_buffer, multi_col),
-            DataType::LargeBinary => hash_array(as_generic_binary_array::<i64>(array), random_state, hashes_buffer, multi_col),
+            DataType::Boolean => hash_array(as_boolean_array(array), random_state, hashes_buffer, mask, multi_col),
+            DataType::Utf8 => hash_array(as_string_array(array), random_state, hashes_buffer, mask, multi_col),
+            DataType::LargeUtf8 => hash_array(as_largestring_array(array), random_state, hashes_buffer, mask, multi_col),
+            DataType::Binary => hash_array(as_generic_binary_array::<i32>(array), random_state, hashes_buffer, mask, multi_col),
+            DataType::LargeBinary => hash_array(as_generic_binary_array::<i64>(array), random_state, hashes_buffer, mask, multi_col),
             DataType::FixedSizeBinary(_) => {
                 let array: &FixedSizeBinaryArray = array.as_any().downcast_ref().unwrap();
-                hash_array(array, random_state, hashes_buffer, multi_col)
+                hash_array(array, random_state, hashes_buffer, mask, multi_col)
             }
             DataType::Decimal128(_, _) => {
                 let array = as_primitive_array::<Decimal128Type>(array);
-                hash_array(array, random_state, hashes_buffer, multi_col)
+                hash_array(array, random_state, hashes_buffer, mask, multi_col)
             }
             DataType::Decimal256(_, _) => {
                 let array = as_primitive_array::<Decimal256Type>(array);
-                hash_array(array, random_state, hashes_buffer, multi_col)
+                hash_array(array, random_state, hashes_buffer, mask, multi_col)
             }
             DataType::Dictionary(_, _) => downcast_dictionary_array! {
-                array => hash_dictionary(array, random_state, hashes_buffer, multi_col)?,
+                array => hash_dictionary(array, random_state, hashes_buffer, mask, multi_col)?,
                 _ => unreachable!()
             }
             DataType::Struct(_) => {
                 let array = as_struct_array(array);
-                create_hashes(array.columns(), random_state, hashes_buffer, multi_col)?;
+                if let Some(nulls) = array.nulls() {
+                    let nulls = BooleanArray::new(nulls.inner().clone(), None);
+                    hash_array(&nulls, random_state, hashes_buffer, mask, multi_col);
+                }
+
+                let mask = NullBuffer::union(mask, array.nulls());
+                create_hashes(array.columns(), random_state, hashes_buffer, mask.as_ref(), true)?;
             }
             unsupported => {
                 // This is internal because we should have caught this before.
@@ -168,31 +181,67 @@ macro_rules! hash_float_value {
 }
 hash_float_value!((half::f16, u16), (f32, u32), (f64, u64));
 
-fn hash_array<T>(array: T, random_state: &RandomState, hashes_buffer: &mut [u64], multi_col: bool)
-where
+fn hash_array<T>(
+    array: T,
+    random_state: &RandomState,
+    hashes_buffer: &mut [u64],
+    mask: Option<&NullBuffer>,
+    multi_col: bool,
+) where
     T: ArrayAccessor,
     T::Item: HashValue,
 {
-    if array.null_count() == 0 {
-        if multi_col {
+    match (array.null_count(), mask, multi_col) {
+        (0, None, true) => {
             for (i, hash) in hashes_buffer.iter_mut().enumerate() {
                 *hash = combine_hashes(array.value(i).hash_one(random_state), *hash);
             }
-        } else {
+        }
+        (0, Some(mask), true) => {
+            for (i, hash) in hashes_buffer.iter_mut().enumerate() {
+                if mask.is_valid(i) {
+                    *hash = combine_hashes(array.value(i).hash_one(random_state), *hash);
+                }
+            }
+        }
+        (0, None, false) => {
             for (i, hash) in hashes_buffer.iter_mut().enumerate() {
                 *hash = array.value(i).hash_one(random_state);
             }
         }
-    } else if multi_col {
-        for (i, hash) in hashes_buffer.iter_mut().enumerate() {
-            if !array.is_null(i) {
-                *hash = combine_hashes(array.value(i).hash_one(random_state), *hash);
+        (0, Some(mask), false) => {
+            for (i, hash) in hashes_buffer.iter_mut().enumerate() {
+                if mask.is_valid(i) {
+                    *hash = array.value(i).hash_one(random_state);
+                }
             }
         }
-    } else {
-        for (i, hash) in hashes_buffer.iter_mut().enumerate() {
-            if !array.is_null(i) {
-                *hash = array.value(i).hash_one(random_state);
+        (_, None, true) => {
+            for (i, hash) in hashes_buffer.iter_mut().enumerate() {
+                if array.is_valid(i) {
+                    *hash = combine_hashes(array.value(i).hash_one(random_state), *hash);
+                }
+            }
+        }
+        (_, Some(mask), true) => {
+            for (i, hash) in hashes_buffer.iter_mut().enumerate() {
+                if array.is_valid(i) && mask.is_valid(i) {
+                    *hash = combine_hashes(array.value(i).hash_one(random_state), *hash);
+                }
+            }
+        }
+        (_, None, false) => {
+            for (i, hash) in hashes_buffer.iter_mut().enumerate() {
+                if array.is_valid(i) {
+                    *hash = array.value(i).hash_one(random_state);
+                }
+            }
+        }
+        (_, Some(mask), false) => {
+            for (i, hash) in hashes_buffer.iter_mut().enumerate() {
+                if array.is_valid(i) && mask.is_valid(i) {
+                    *hash = array.value(i).hash_one(random_state);
+                }
             }
         }
     }
@@ -203,6 +252,7 @@ fn hash_dictionary<K: ArrowDictionaryKeyType>(
     array: &DictionaryArray<K>,
     random_state: &RandomState,
     hashes_buffer: &mut [u64],
+    mask: Option<&NullBuffer>,
     multi_col: bool,
 ) -> error_stack::Result<(), Error> {
     // Hash each dictionary value once, and then use that computed
@@ -210,20 +260,49 @@ fn hash_dictionary<K: ArrowDictionaryKeyType>(
     // redundant hashing for large dictionary elements (e.g. strings)
     let values = array.values().clone();
     let mut dict_hashes = vec![0; values.len()];
-    create_hashes(&[values], random_state, &mut dict_hashes, false)?;
+    create_hashes(&[values], random_state, &mut dict_hashes, None, false)?;
 
     // combine hash for each index in values
-    if multi_col {
-        for (hash, key) in hashes_buffer.iter_mut().zip(array.keys().iter()) {
-            if let Some(key) = key {
-                *hash = combine_hashes(dict_hashes[key.as_usize()], *hash)
-            } // no update for Null, consistent with other hashes
+    match (mask, multi_col) {
+        (None, true) => {
+            for (hash, key) in hashes_buffer.iter_mut().zip(array.keys().iter()) {
+                if let Some(key) = key {
+                    *hash = combine_hashes(dict_hashes[key.as_usize()], *hash)
+                } // no update for Null, consistent with other hashes
+            }
         }
-    } else {
-        for (hash, key) in hashes_buffer.iter_mut().zip(array.keys().iter()) {
-            if let Some(key) = key {
-                *hash = dict_hashes[key.as_usize()]
-            } // no update for Null, consistent with other hashes
+        (Some(mask), true) => {
+            for (i, (hash, key)) in hashes_buffer
+                .iter_mut()
+                .zip(array.keys().iter())
+                .enumerate()
+            {
+                if mask.is_valid(i) {
+                    if let Some(key) = key {
+                        *hash = combine_hashes(dict_hashes[key.as_usize()], *hash)
+                    }
+                } // no update for Null, consistent with other hashes
+            }
+        }
+        (None, false) => {
+            for (hash, key) in hashes_buffer.iter_mut().zip(array.keys().iter()) {
+                if let Some(key) = key {
+                    *hash = dict_hashes[key.as_usize()]
+                } // no update for Null, consistent with other hashes
+            }
+        }
+        (Some(mask), false) => {
+            for (i, (hash, key)) in hashes_buffer
+                .iter_mut()
+                .zip(array.keys().iter())
+                .enumerate()
+            {
+                if mask.is_valid(i) {
+                    if let Some(key) = key {
+                        *hash = dict_hashes[key.as_usize()]
+                    }
+                } // no update for Null, consistent with other hashes
+            }
         }
     }
     Ok(())
@@ -235,6 +314,7 @@ mod tests {
 
     use arrow::array::{StringArray, UInt64Array};
     use arrow_array::StructArray;
+    use arrow_buffer::NullBuffer;
     use arrow_schema::{Field, Fields};
 
     use super::*;
@@ -318,5 +398,30 @@ mod tests {
         assert_ne!(hashes[2], hashes[4]);
         assert_ne!(hashes[3], hashes[4]);
         assert_ne!(hashes[4], hashes[5]);
+    }
+
+    #[test]
+    fn test_hash_struct_nulls() {
+        let mut hasher = Hasher::default();
+        let n_array = UInt64Array::from(vec![Some(5), None, Some(8)]);
+        let s_array = StringArray::from(vec![Some("hello"), None, Some("world")]);
+        let array = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            Some(NullBuffer::from(vec![false, true, false])),
+        );
+        let array: &dyn Array = &array;
+
+        let hashes = hasher.hash_array(array).unwrap();
+        // 0: null = ("hello", 5)
+        // 1: (null, null)
+        // 2: null = ("world", 8)
+
+        assert_ne!(hashes[0], hashes[1]);
+        assert_eq!(hashes[0], hashes[2]);
+        assert_ne!(hashes[1], hashes[2]);
     }
 }
