@@ -4545,9 +4545,11 @@ dependencies = [
 name = "sparrow-arrow"
 version = "0.8.3"
 dependencies = [
+ "ahash 0.8.3",
  "anyhow",
  "arrow",
  "arrow-array",
+ "arrow-buffer",
  "arrow-schema",
  "arrow-select",
  "avro-rs",
@@ -4556,6 +4558,7 @@ dependencies = [
  "decorum",
  "derive_more",
  "error-stack",
+ "half 2.2.1",
  "insta",
  "itertools",
  "num",
@@ -4725,7 +4728,6 @@ dependencies = [
 name = "sparrow-kernels"
 version = "0.8.3"
 dependencies = [
- "ahash 0.8.3",
  "anyhow",
  "arrow",
  "bitvec",

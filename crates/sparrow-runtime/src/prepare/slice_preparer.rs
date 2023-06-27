@@ -9,7 +9,6 @@ use hashbrown::HashSet;
 use sparrow_api::kaskada::v1alpha::slice_plan;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::context_code;
-use sparrow_kernels::hash::hash;
 
 use crate::prepare::Error;
 
@@ -48,7 +47,7 @@ impl SlicePreparer {
                         entity_keys.null_count()
                     )
                 );
-                let entity_key_hashes = hash(&entity_keys)?;
+                let entity_key_hashes = sparrow_arrow::hash::hash(&entity_keys)?;
                 let entity_key_hashes: &UInt64Array = downcast_primitive_array(&entity_key_hashes)?;
                 let desired_keys: HashSet<u64> =
                     entity_key_hashes.values().iter().copied().collect();
@@ -126,7 +125,7 @@ impl SlicePreparer {
         record_batch: &RecordBatch,
     ) -> error_stack::Result<UInt64Array, Error> {
         let entity_column = record_batch.column(self.entity_column_index);
-        hash(entity_column)
+        sparrow_arrow::hash::hash(entity_column)
             .into_report()
             .change_context(Error::SlicingBatch)
     }

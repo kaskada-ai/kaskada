@@ -590,7 +590,7 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeConstraint) -> Option<F
 
         // Keys include anything we can currently hash.
         (TypeConstraint::Key, FenlType::Concrete(actual_type)) => {
-            if sparrow_kernels::hash::can_hash(actual_type) {
+            if sparrow_arrow::hash::can_hash(actual_type) {
                 Some(concrete)
             } else {
                 None
