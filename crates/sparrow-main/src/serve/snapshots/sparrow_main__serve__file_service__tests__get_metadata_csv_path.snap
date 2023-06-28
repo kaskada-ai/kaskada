@@ -24,15 +24,15 @@ source_metadata:
       - name: timestamp
         data_type:
           kind:
-            Primitive: 14
+            Primitive: 23
       - name: sentAt
         data_type:
           kind:
-            Primitive: 14
+            Primitive: 23
       - name: receivedAt
         data_type:
           kind:
-            Primitive: 14
+            Primitive: 23
       - name: channel
         data_type:
           kind:

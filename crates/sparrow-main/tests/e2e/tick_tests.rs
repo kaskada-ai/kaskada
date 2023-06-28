@@ -557,8 +557,8 @@ async fn test_tick_when_finished() {
     // "finished", but we expect to get the most recent (new) value.
     insta::assert_snapshot!(QueryFixture::new("{ time: Numbers.time, sum: sum(Numbers.m) } | last() | when(finished())").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,time,sum
-    1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,1996-12-19T16:40:02-08:00,34
-    1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,1996-12-19T16:39:58-08:00,24
+    1996-12-20T00:40:02.000000001,18446744073709551615,3650215962958587783,A,1996-12-20T00:40:02.000000000,34
+    1996-12-20T00:40:02.000000001,18446744073709551615,11753611437813598533,B,1996-12-20T00:39:58.000000000,24
     "###);
 }
 
