@@ -3,62 +3,62 @@ package kaskada.kaskada.v1alpha;
 
 // The configurations required to define a kafka consumer
 message KafkaConfig {
-    // The list of kafka hosts e.g. localhost:9092
-    repeated string hosts = 1;
+  // The list of kafka hosts e.g. localhost:9092
+  repeated string hosts = 1;
 
-    // The name of the topic to consume
-    string topic = 2;
-    
-    // The list of partitions (optional)
-    // If no list is provided, all partitions will be read from.
-    repeated int32 partitions = 3;
+  // The name of the topic to consume
+  string topic = 2;
 
-    // The security configuration to use when connecting (optional)
-    SecurityConfig security_config = 4;
+  // The list of partitions (optional)
+  // If no list is provided, all partitions will be read from.
+  repeated int32 partitions = 3;
 
-    // TODO: Additional security config constraints
-    message SecurityConfig {
-        // Should perform hostname validation. Defaults to true.
-        bool hostname_validation = 1;
-    }
+  // The security configuration to use when connecting (optional)
+  SecurityConfig security_config = 4;
 
-    // The connection configuration 
-    // TODO: Define these defaults and document them here.
-    message ConnectionConfig {
-        // The maximum amount of time to wait for a message in millis. 
-        int32 fetch_max_wait_time = 1;
-        // The minimum amount of bytes for a message.
-        int32 min_message_size = 2;
-        // The maximum amount of bytes per partition. 
-        int32 max_bytes_per_partition = 3;
-        // Use CRC validation
-        bool crc_validation = 4;
-        // Connection idle timeout in millis.
-        int32 connection_idle_timeout = 5;
-        // The client ID to be sent along with every request.
-        string client_id = 6;
-    }
+  // TODO: Additional security config constraints
+  message SecurityConfig {
+    // Should perform hostname validation. Defaults to true.
+    bool hostname_validation = 1;
+  }
+
+  // The connection configuration
+  // TODO: Define these defaults and document them here.
+  message ConnectionConfig {
+    // The maximum amount of time to wait for a message in millis.
+    int32 fetch_max_wait_time = 1;
+    // The minimum amount of bytes for a message.
+    int32 min_message_size = 2;
+    // The maximum amount of bytes per partition.
+    int32 max_bytes_per_partition = 3;
+    // Use CRC validation
+    bool crc_validation = 4;
+    // Connection idle timeout in millis.
+    int32 connection_idle_timeout = 5;
+    // The client ID to be sent along with every request.
+    string client_id = 6;
+  }
 }
 
 // Configuration for a single source of data from a Kafka topic.
 message KafkaSubscription {
-    // The Kafka config
-    KafkaConfig config = 1;
+  // The Kafka config
+  KafkaConfig config = 1;
 
-    // The group on whose behalf to maintain consumed message offsets.
-    string group = 2;
+  // The group on whose behalf to maintain consumed message offsets.
+  string group = 2;
 
-    // The specific offset to use. Defaults to LATEST.
-    FetchOffset offset = 3;
+  // The specific offset to use. Defaults to LATEST.
+  FetchOffset offset = 3;
 
-    // The offset to use when consuming
-    enum FetchOffset {
-        FETCH_OFFSET_UNSPECIFIED = 0;
-        // Receive the earliest available offset.
-        FETCH_OFFSET_EARLIEST = 1;
-        // Receive the latest offset.
-        FETCH_OFFSET_LATEST = 2;
-        // All messages before a certain time unix timestamp in millis.
-        FETCH_OFFSET_BEFORE_OFFSET = 3;
-    } 
+  // The offset to use when consuming
+  enum FetchOffset {
+    FETCH_OFFSET_UNSPECIFIED = 0;
+    // Receive the earliest available offset.
+    FETCH_OFFSET_EARLIEST = 1;
+    // Receive the latest offset.
+    FETCH_OFFSET_LATEST = 2;
+    // All messages before a certain time unix timestamp in millis.
+    FETCH_OFFSET_BEFORE_OFFSET = 3;
+  }
 }

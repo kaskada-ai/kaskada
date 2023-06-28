@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package kaskada.kaskada.v1alpha;
 
-import "kaskada/kaskada/v1alpha/pulsar.proto";
 import "kaskada/kaskada/v1alpha/kafka.proto";
+import "kaskada/kaskada/v1alpha/pulsar.proto";
 
 message Source {
   oneof source {
