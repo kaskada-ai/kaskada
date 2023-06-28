@@ -74,6 +74,7 @@ pub async fn prepared_batches<'a>(
             source_data::Source::PulsarSubscription(ps) => {
                 reader_from_pulsar(config, ps, prepare_hash, slice).await?
             }
+            source_data::Source::KafkaSubscription(_) => todo!(),
         },
     };
 
@@ -133,6 +134,7 @@ impl<'a> fmt::Display for SourceDataWrapper<'a> {
                     config.broker_service_url
                 )
             }
+            Some(source_data::Source::KafkaSubscription(_)) => todo!(),
             None => write!(f, "empty source (should never happen)"),
         }
     }
@@ -399,6 +401,7 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
             let hash = hasher.finalize();
             data_encoding::HEXUPPER.encode(&hash)
         }
+        source_data::Source::KafkaSubscription(_) => todo!(),
     };
     Ok(get_u64_hash(&hex_encoding))
 }

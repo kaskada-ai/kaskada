@@ -178,6 +178,7 @@ pub async fn convert_to_local_sourcedata(
                 }
                 source_data::Source::CsvData(data) => source_data::Source::CsvData(data.to_owned()),
                 source_data::Source::PulsarSubscription(_) => source.clone(),
+                source_data::Source::KafkaSubscription(_) => todo!(),
             };
             Ok(SourceData {
                 source: Some(local_path),

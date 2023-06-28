@@ -92,6 +92,7 @@ impl RawMetadata {
                     .await?
                     .sparrow_metadata)
             }
+            source_data::Source::KafkaSubscription(_) => todo!(),
         }
     }
 

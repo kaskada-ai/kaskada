@@ -4,6 +4,7 @@ package kaskada.kaskada.v1alpha;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "kaskada/kaskada/v1alpha/fenl_diagnostics.proto";
+import "kaskada/kaskada/v1alpha/kafka.proto";
 import "kaskada/kaskada/v1alpha/pulsar.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
 import "kaskada/kaskada/v1alpha/sources.proto";
@@ -24,6 +25,8 @@ message SourceData {
     string csv_data = 3;
 
     PulsarSubscription pulsar_subscription = 4;
+
+    KafkaSubscription kafka_subscription = 5;
   }
 }
 
