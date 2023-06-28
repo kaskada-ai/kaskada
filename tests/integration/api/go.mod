@@ -63,6 +63,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/jt-nti/gproto v0.0.0-20210304092907-23e645af1351 // indirect
 	github.com/kaskada-ai/kaskada/wren v0.0.0-00010101000000-000000000000 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect

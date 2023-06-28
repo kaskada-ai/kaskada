@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/jt-nti/gproto"
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
@@ -131,10 +132,10 @@ min_amount: query_v1_panic.amount | min(),
 		Expect(res.GetDestination().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
 
 		Expect(res.Analysis.Schema).Should(ContainElements(
-			primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND),
-			primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-			primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-			primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
+			gproto.Equal(primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND)),
+			gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+			gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+			gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 		))
 
 		resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
