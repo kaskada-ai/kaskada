@@ -16,13 +16,15 @@ message KafkaConfig {
   // The security configuration to use when connecting (optional)
   SecurityConfig security_config = 4;
 
+  // The connection configuration
+  ConnectionConfig connection_config = 5;
+
   // TODO: Additional security config constraints
   message SecurityConfig {
     // Should perform hostname validation. Defaults to true.
     bool hostname_validation = 1;
   }
 
-  // The connection configuration
   // TODO: Define these defaults and document them here.
   message ConnectionConfig {
     // The maximum amount of time to wait for a message in millis.
@@ -47,18 +49,4 @@ message KafkaSubscription {
 
   // The group on whose behalf to maintain consumed message offsets.
   string group = 2;
-
-  // The specific offset to use. Defaults to LATEST.
-  FetchOffset offset = 3;
-
-  // The offset to use when consuming
-  enum FetchOffset {
-    FETCH_OFFSET_UNSPECIFIED = 0;
-    // Receive the earliest available offset.
-    FETCH_OFFSET_EARLIEST = 1;
-    // Receive the latest offset.
-    FETCH_OFFSET_LATEST = 2;
-    // All messages before a certain time unix timestamp in millis.
-    FETCH_OFFSET_BEFORE_OFFSET = 3;
-  }
 }
