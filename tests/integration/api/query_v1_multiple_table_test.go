@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/jt-nti/gproto"
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
@@ -77,7 +78,7 @@ var _ = Describe("Query V1 gRPC with multiple tables", Ordered, func() {
 			Expression: `
 # 1. Data Cleaning
 
-let meaningful_txns = Transaction 
+let meaningful_txns = Transaction
 | when(Transaction.price > 100)
 | when(time_of(Transaction.transaction_time) > ("2000-01-01T00:00:00Z" as timestamp_ns))
 
@@ -134,10 +135,10 @@ member_name : membership.name
 				Expect(firstResponse.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
 
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
-					primitiveSchemaField("price", v1alpha.DataType_PRIMITIVE_TYPE_F64),
-					primitiveSchemaField("quantity", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-					primitiveSchemaField("membership_date", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("member_name", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
+					gproto.Equal(primitiveSchemaField("price", v1alpha.DataType_PRIMITIVE_TYPE_F64)),
+					gproto.Equal(primitiveSchemaField("quantity", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+					gproto.Equal(primitiveSchemaField("membership_date", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+					gproto.Equal(primitiveSchemaField("member_name", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
 				))
 			})
 		})
@@ -161,10 +162,10 @@ member_name : membership.name
 				Expect(firstResponse.State).Should(Equal(v1alpha.CreateQueryResponse_STATE_ANALYSIS))
 				VerifyRequestDetails(firstResponse.RequestDetails)
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
-					primitiveSchemaField("price", v1alpha.DataType_PRIMITIVE_TYPE_F64),
-					primitiveSchemaField("quantity", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-					primitiveSchemaField("membership_date", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("member_name", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
+					gproto.Equal(primitiveSchemaField("price", v1alpha.DataType_PRIMITIVE_TYPE_F64)),
+					gproto.Equal(primitiveSchemaField("quantity", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+					gproto.Equal(primitiveSchemaField("membership_date", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+					gproto.Equal(primitiveSchemaField("member_name", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
 				))
 
 				_, err = uuid.Parse(secondResponse.QueryId)

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/jt-nti/gproto"
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
@@ -116,10 +117,10 @@ min_amount: query_v1_test.amount | min(),
 				Expect(firstResponse.Config.DataTokenId).ShouldNot(BeEmpty())
 				Expect(firstResponse.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
-					primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND),
-					primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-					primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
+					gproto.Equal(primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND)),
+					gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+					gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+					gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 				))
 			})
 		})
@@ -144,10 +145,10 @@ min_amount: query_v1_test.amount | min(),
 				VerifyRequestDetails(firstResponse.RequestDetails)
 				Expect(firstResponse.Config.DataTokenId).Should(Equal(firstDataTokenId))
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
-					primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND),
-					primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-					primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
+					gproto.Equal(primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND)),
+					gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+					gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+					gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 				))
 				_, err = uuid.Parse(secondResponse.QueryId)
 				Expect(err).Should(BeNil())
