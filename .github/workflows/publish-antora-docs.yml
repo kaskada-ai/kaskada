@@ -29,7 +29,7 @@ jobs:
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+      run_id: ${{ fromJSON(steps.skip_check.outputs.skipped_by).id }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
@@ -45,11 +45,11 @@ jobs:
     needs: [docs_skip]
     runs-on: ubuntu-latest
     if: needs.docs_skip.outputs.should_skip != 'true' && github.event_name == 'pull_request'
-    steps: 
-        - name: Checkout code 
+    steps:
+        - name: Checkout code
           uses: actions/checkout@v3
-        
-        - name: Checkout docs-site code 
+
+        - name: Checkout docs-site code
           uses: actions/checkout@v3
           with:
             repository: kaskada-ai/docs-site
@@ -59,7 +59,7 @@ jobs:
           uses: mikefarah/yq@master
           with:
             cmd: yq -i 'with(.content.sources[]; .url = "../" | del(.branches))' 'docs-site/antora-playbook.yml'
-        
+
         - name: Install Node.js
           uses: actions/setup-node@v3
           with:
@@ -76,20 +76,20 @@ jobs:
         - name: Generate Site
           run: npx antora --log-failure-level=warn antora-playbook.yml --stacktrace
           working-directory: docs-site
-  
+
         - name: Upload artifacts
           uses: actions/upload-artifact@v3
           with:
             name: docs-site
             path: |
               docs-site/build/site
-  
+
   run_antora_publish:
     name: Run Publish Workflow at kaskada-ai/docs-site
     needs: [docs_skip]
     runs-on: ubuntu-latest
     if: needs.docs_skip.outputs.should_skip != 'true' && github.ref == 'refs/heads/main'
-    steps: 
+    steps:
         - name: Call PR workflow in kaskada-ai/docs-site
           uses: convictional/trigger-workflow-and-wait@v1.6.5
           with:

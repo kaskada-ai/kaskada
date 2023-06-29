@@ -36,7 +36,7 @@ jobs:
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+      run_id: ${{ fromJSON(steps.skip_check.outputs.skipped_by).id }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
@@ -54,7 +54,7 @@ jobs:
     name: Build sparrow (rust)
     uses: ./.github/workflows/reusable_ci_rust.yml
 
-  run_integration_tests: 
+  run_integration_tests:
     name: Run integration tests
     needs: [integration_skip, build_wren, build_sparrow]
     runs-on: ubuntu-latest
@@ -101,10 +101,10 @@ jobs:
       - name: Copy NOTICE
         run: cp NOTICE ./wren/
 
-      - name: Create data dir with correct permissions 
+      - name: Create data dir with correct permissions
         run: |
           mkdir -p tests/integration/data/tmp
-          chmod -R a+rw tests/integration/ 
+          chmod -R a+rw tests/integration/
           echo "::group::Data Dir"
           ls -laR tests/integration/data
           echo "::endgroup::"
@@ -112,22 +112,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Docker compose up for integration tests 
+      - name: Docker compose up for integration tests
         run: make ci/integration/tests/docker-compose-up
-          
+
       - name: Check docker containers healthcheck
         run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 10; done'
 
-      - name: Show kaskada container logs 
+      - name: Show kaskada container logs
         run: make ci/integration/tests/docker-compose-logs-kaskada-only
 
       # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
-      # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
-      # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
-      # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.  
+      # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is
+      # set to the user and group *of the user on GitHub runner* and make it -rw- for all.
+      # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.
       - name: Run integration tests
         id: integration-tests
-        run: | 
+        run: |
           echo "::group::Data Dir"
           sudo chown -R $USER:$(id -g -n $USER) tests/integration/data
           chmod -R a+rw tests/integration/
@@ -137,13 +137,13 @@ jobs:
           make ci/integration/tests/run/api
 
       - name: Show all container logs in case of failure
-        if: failure() && steps.integration-tests.outcome != 'success' 
+        if: failure() && steps.integration-tests.outcome != 'success'
         run: make  ci/integration/tests/docker-compose-logs
 
-      - name: Docker compose down for integration tests 
+      - name: Docker compose down for integration tests
         run: make ci/integration/tests/docker-compose-down
 
-  run_integration_tests_s3: 
+  run_integration_tests_s3:
           name: Run S3 integration tests
           needs: [integration_skip, build_wren, build_sparrow]
           runs-on: ubuntu-latest
@@ -151,19 +151,19 @@ jobs:
           steps:
             - name: Checkout sources
               uses: actions/checkout@v3
-      
+
             - name: Get wren binary
               uses: actions/download-artifact@v3
               with:
                 name: manager-binary
                 path: release/linux/amd64/
-      
+
             - name: Get Sparrow binary
               uses: actions/download-artifact@v3
               with:
                 name: engine-debug
                 path: release/linux/amd64/
-      
+
             - name: Install Buf
               uses: bufbuild/buf-setup-action@v1.12.0
               with:
@@ -171,66 +171,66 @@ jobs:
                 buf_user: ${{ secrets.BUF_USER }}
                 buf_api_token: ${{ secrets.BUF_API_TOKEN }}
                 github_token: ${{ secrets.GITHUB_TOKEN }}
-      
+
             - name: Generate Protos
               run: buf generate
               working-directory: proto
-      
+
             - name: Install GoLang
               uses: actions/setup-go@v3
               with:
                 go-version: "1.19"
                 cache: true
                 cache-dependency-path: wren/go.sum
-      
+
             - name: Generate ent
               run: go generate ./ent
               working-directory: wren
-      
+
             - name: Copy NOTICE
               run: cp NOTICE ./wren/
-      
-            - name: Create data dir with correct permissions 
+
+            - name: Create data dir with correct permissions
               run: |
                 mkdir -p tests/integration/data/tmp
-                chmod -R a+rw tests/integration/ 
+                chmod -R a+rw tests/integration/
                 echo "::group::Data Dir"
                 ls -laR tests/integration/data
                 echo "::endgroup::"
-      
+
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v2
-      
-            - name: Docker compose up for integration tests 
+
+            - name: Docker compose up for integration tests
               run: make ci/integration/tests/docker-compose-up-s3
-            
+
             - name: Check docker containers (pulsar) healthcheck
               run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for pulsar container to be healthy..."; sleep 10; done'
 
             - name: Check docker containers (minio) healthcheck
               run: timeout 240s sh -c 'until docker ps | grep minio | grep -q healthy; do echo "Waiting for minio container to be healthy..."; sleep 10; done'
 
-            - name: Show kaskada container logs 
+            - name: Show kaskada container logs
               run: make ci/integration/tests/docker-compose-s3-logs-kaskada-only
 
             # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
-            # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is 
-            # set to the user and group *of the user on GitHub runner* and make it -rw- for all. 
-            # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.  
+            # Before we run any tests we make sure that all files under tests/integration/data (mapepd to /data in the container) is
+            # set to the user and group *of the user on GitHub runner* and make it -rw- for all.
+            # A better fix would probably be to match the user and group of the container's user and group to the of the user and group on the GitHub runner.
             - name: Run S3 integration tests
               id: s3-integration-tests
-              run: | 
+              run: |
                 echo "::group::Data Dir"
                 sudo chown -R $USER:$(id -g -n $USER) tests/integration/data
                 chmod -R a+rw tests/integration/
                 ls -laR tests/integration/data
                 echo "::endgroup::"
-      
+
                 make ci/integration/tests/run/api-s3
 
             - name: Show all container logs in case of failure
-              if: failure() && steps.s3-integration-tests.outcome != 'success' 
+              if: failure() && steps.s3-integration-tests.outcome != 'success'
               run: make  ci/integration/tests/docker-compose-s3-logs
 
-            - name: Docker compose down for integration tests 
+            - name: Docker compose down for integration tests
               run: make ci/integration/tests/docker-compose-down-postgres-s3

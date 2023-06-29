@@ -26,7 +26,7 @@ jobs:
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+      run_id: ${{ fromJSON(steps.skip_check.outputs.skipped_by).id }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
@@ -61,7 +61,7 @@ jobs:
           # Python gRPC code is generated in src/kaskada/kaskada
           path: clients/python/src/kaskada/kaskada
 
-  # if: statement is on each *step* instead of the whole job due to 
+  # if: statement is on each *step* instead of the whole job due to
   # https://github.com/actions/runner/issues/952
   # and https://github.com/orgs/community/discussions/9141
   python_client_build:
@@ -70,7 +70,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.8", "3.9"]
     needs: [python_client_skip, python_protos]
-    
+
     runs-on: ${{ matrix.os }}
     defaults:
       run:
