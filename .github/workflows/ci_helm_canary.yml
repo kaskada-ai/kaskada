@@ -26,7 +26,7 @@ jobs:
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+      run_id: ${{ fromJSON(steps.skip_check.outputs.skipped_by).id }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
@@ -61,6 +61,6 @@ jobs:
 
       - name: Install Helm-UnitTest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest --version 0.3.0
-      
+
       - name: Test Canary Chart
         run: helm unittest kaskada-canary
