@@ -1,15 +1,10 @@
 //! Provides a kernel for hashing an arbitrary Arrow array to a UInt64Array.
-
-use std::hash::{BuildHasher, Hash, Hasher};
-
+use crate::downcast::{downcast_boolean_array, downcast_primitive_array, downcast_string_array};
 use anyhow::anyhow;
 use arrow::array::{Array, OffsetSizeTrait, UInt64Array};
 use arrow::datatypes::{
     ArrowPrimitiveType, DataType, Int16Type, Int32Type, Int64Type, Int8Type, UInt16Type,
     UInt32Type, UInt64Type,
-};
-use sparrow_arrow::downcast::{
-    downcast_boolean_array, downcast_primitive_array, downcast_string_array,
 };
 
 pub fn can_hash(data_type: &DataType) -> bool {
@@ -51,8 +46,8 @@ pub fn hash(array: &dyn Array) -> anyhow::Result<UInt64Array> {
     }
 }
 
-fn fixed_seed_hasher() -> ahash::AHasher {
-    ahash::random_state::RandomState::with_seeds(1234, 5678, 9012, 3456).build_hasher()
+fn fixed_seed_hasher() -> ahash::random_state::RandomState {
+    ahash::random_state::RandomState::with_seeds(1234, 5678, 9012, 3456)
 }
 
 fn hash_string<T>(array: &dyn Array) -> anyhow::Result<UInt64Array>
@@ -64,9 +59,7 @@ where
     let mut builder = UInt64Array::builder(array.len());
 
     for string in string_array {
-        let mut hasher = fixed_seed_hasher();
-        string.hash(&mut hasher);
-        builder.append_value(hasher.finish());
+        builder.append_value(fixed_seed_hasher().hash_one(string));
     }
 
     Ok(builder.finish())
@@ -82,9 +75,7 @@ where
     let mut builder = UInt64Array::builder(array.len());
 
     for primitive in primitive_array {
-        let mut hasher = fixed_seed_hasher();
-        primitive.hash(&mut hasher);
-        builder.append_value(hasher.finish());
+        builder.append_value(fixed_seed_hasher().hash_one(primitive));
     }
 
     Ok(builder.finish())
@@ -96,9 +87,7 @@ fn hash_boolean(array: &dyn Array) -> anyhow::Result<UInt64Array> {
     let mut builder = UInt64Array::builder(array.len());
 
     for boolean in boolean_array {
-        let mut hasher = fixed_seed_hasher();
-        boolean.hash(&mut hasher);
-        builder.append_value(hasher.finish());
+        builder.append_value(fixed_seed_hasher().hash_one(boolean));
     }
 
     Ok(builder.finish())

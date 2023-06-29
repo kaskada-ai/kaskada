@@ -282,7 +282,7 @@ impl ColumnBehavior {
                     }
                 );
 
-                let entity_column = sparrow_kernels::hash::hash(column)
+                let entity_column = sparrow_arrow::hash::hash(column)
                     .into_report()
                     .change_context(Error::PreparingColumn)?;
 

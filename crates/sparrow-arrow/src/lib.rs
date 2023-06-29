@@ -12,6 +12,8 @@ pub mod attachments;
 pub mod avro;
 mod batch;
 pub mod downcast;
+pub mod hash;
+pub mod hasher;
 mod row_time;
 pub mod scalar_value;
 pub mod serde;
