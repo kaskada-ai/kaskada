@@ -142,6 +142,10 @@ pub(super) fn create_evaluators(
     input_schema: &Schema,
     exprs: &[Expr],
 ) -> error_stack::Result<Vec<Box<dyn Evaluator>>, Error> {
+    // Static information (index in expressions, type, etc.) for each expression in `exprs`.
+    // This is used to locate the information about arguments to the remaining expressions.
+    //
+    // It is only needed while instantiating the evaluators.
     let mut expressions = IndexVec::with_capacity(exprs.len());
     let mut evaluators = Vec::with_capacity(exprs.len());
     for (index, expr) in exprs.iter().enumerate() {

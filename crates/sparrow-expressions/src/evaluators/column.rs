@@ -9,7 +9,7 @@ inventory::submit!(crate::evaluators::EvaluatorFactory {
     create: &create
 });
 
-/// Evaluator for addition.
+/// Evaluator for column reference (`.c`)..
 struct ColumnEvaluator {
     column: usize,
 }

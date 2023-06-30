@@ -8,7 +8,7 @@ use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
-/// Evaluator for Round.
+/// Evaluator for the `clamp` instruction.
 pub(in crate::evaluators) struct ClampEvaluator<T: ArrowNumericType> {
     input: ValueRef,
     min: ValueRef,

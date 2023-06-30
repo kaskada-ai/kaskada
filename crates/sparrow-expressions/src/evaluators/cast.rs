@@ -19,7 +19,7 @@ inventory::submit!(EvaluatorFactory {
     create: &create,
 });
 
-/// Evaluator for unary negation.
+/// Evaluator for the `cast` instructino.
 struct CastEvaluator {
     input: ArrayRefValue,
     to: DataType,

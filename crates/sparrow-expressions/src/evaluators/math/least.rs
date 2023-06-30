@@ -14,7 +14,7 @@ inventory::submit!(crate::evaluators::EvaluatorFactory {
     create: &crate::evaluators::macros::create_primitive_evaluator!(0, create, number)
 });
 
-/// Evaluator for unary negation.
+/// Evaluator for the `least` (min) instruction.
 struct LeastEvaluator<T: ArrowNumericType> {
     lhs: PrimitiveValue<T>,
     rhs: PrimitiveValue<T>,
