@@ -12,7 +12,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	apiv1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
-	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	apiv2alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v2alpha"
 	"github.com/kaskada-ai/kaskada/wren/auth"
 	"github.com/kaskada-ai/kaskada/wren/compute"
@@ -317,7 +316,7 @@ func (q *queryV2Service) getProtoFromDB(ctx context.Context, query *ent.KaskadaQ
 	}
 
 	switch kind := query.Config.Destination.Destination.(type) {
-	case *v1alpha.Destination_ObjectStore:
+	case *apiv1alpha.Destination_ObjectStore:
 		responseQuery.Results.Output.FileResults = &apiv1alpha.FileResults{
 			FileType: kind.ObjectStore.FileType,
 			Paths:    []string{},

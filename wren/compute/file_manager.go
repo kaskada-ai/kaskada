@@ -46,30 +46,31 @@ func (m *fileManager) GetFileSchema(ctx context.Context, fileInput internal.File
 		sourceData = &v1alpha.SourceData{Source: &v1alpha.SourceData_ParquetPath{ParquetPath: fileInput.GetURI()}}
 	}
 
-	return m.getSchema(ctx, sourceData)
+	metadataReq := &v1alpha.GetMetadataRequest{
+		Source: &v1alpha.GetMetadataRequest_SourceData{
+			SourceData: sourceData,
+		},
+	}
+	return m.getSchema(ctx, metadataReq)
 }
 
 func (m *fileManager) GetPulsarSchema(ctx context.Context, pulsarConfig *v1alpha.PulsarConfig) (*v1alpha.Schema, error) {
-	sourceData := &v1alpha.SourceData{
-		Source: &v1alpha.SourceData_PulsarSubscription{
+	metadataReq := &v1alpha.GetMetadataRequest{
+		Source: &v1alpha.GetMetadataRequest_PulsarSubscription{
 			PulsarSubscription: &v1alpha.PulsarSubscription{
 				Config: pulsarConfig,
 			},
 		},
 	}
 
-	return m.getSchema(ctx, sourceData)
+	return m.getSchema(ctx, metadataReq)
 }
 
-func (m *fileManager) getSchema(ctx context.Context, sourceData *v1alpha.SourceData) (*v1alpha.Schema, error) {
+func (m *fileManager) getSchema(ctx context.Context, metadataReq *v1alpha.GetMetadataRequest) (*v1alpha.Schema, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "fileManager.getSchema").Logger()
 
 	fileClient := m.computeClients.NewFileServiceClient(ctx)
 	defer fileClient.Close()
-
-	metadataReq := &v1alpha.GetMetadataRequest{
-		SourceData: sourceData,
-	}
 
 	subLogger.Debug().Interface("request", metadataReq).Msg("sending get_metadata request to file service")
 	metadataRes, err := fileClient.GetMetadata(ctx, metadataReq)
