@@ -23,10 +23,6 @@ message SourceData {
     // This is analogous to a [`data:`
     // URI](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs).
     string csv_data = 3;
-
-    PulsarSubscription pulsar_subscription = 4;
-
-    KafkaSubscription kafka_subscription = 5;
   }
 }
 

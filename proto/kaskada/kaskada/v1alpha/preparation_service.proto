@@ -2,10 +2,16 @@ syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/kafka.proto";
+import "kaskada/kaskada/v1alpha/pulsar.proto";
 
 message PrepareDataRequest {
   // The source of information for the prepare data
-  SourceData source_data = 1;
+  oneof source {
+    SourceData source_data = 1;
+    PulsarSubscription pulsar_subscription = 6;
+    KafkaSubscription kafka_subscription = 7;
+  }
 
   // General configuration of the table
   TableConfig config = 2;
