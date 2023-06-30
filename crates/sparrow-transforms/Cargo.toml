@@ -1,0 +1,28 @@
+[package]
+name = "sparrow-transforms"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Implementation of transforms and pipeline for executing them.
+"""
+
+[dependencies]
+arrow-array.workspace = true
+arrow-schema.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
+itertools.workspace = true
+parking_lot.workspace = true
+sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-physical = { path = "../sparrow-physical" }
+sparrow-scheduler = { path = "../sparrow-scheduler" }
+tracing.workspace = true
+
+[dev-dependencies]
+
+[lib]
+doctest = false

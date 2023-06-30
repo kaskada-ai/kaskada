@@ -1,0 +1,22 @@
+[package]
+name = "sparrow-execution"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Implementations of the pipelines to be executed.
+"""
+
+[dependencies]
+derive_more.workspace = true
+error-stack.workspace = true
+sparrow-physical = { path = "../sparrow-physical" }
+sparrow-transforms = { path = "../sparrow-transforms" }
+sparrow-scheduler = { path = "../sparrow-scheduler" }
+
+[dev-dependencies]
+
+[lib]
+doctest = false

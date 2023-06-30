@@ -430,7 +430,7 @@ version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf46fee83e5ccffc220104713af3292ff9bc7c64c7de289f66dae8e38d826833"
 dependencies = [
- "concurrent-queue",
+ "concurrent-queue 2.2.0",
  "event-listener",
  "futures-core",
 ]
@@ -443,7 +443,7 @@ checksum = "6fa3dc5f2a8564f07759c008b9109dc0d39de92a88d5588b8a5036d286383afb"
 dependencies = [
  "async-lock",
  "async-task",
- "concurrent-queue",
+ "concurrent-queue 2.2.0",
  "fastrand",
  "futures-lite",
  "slab",
@@ -473,7 +473,7 @@ dependencies = [
  "async-lock",
  "autocfg",
  "cfg-if",
- "concurrent-queue",
+ "concurrent-queue 2.2.0",
  "futures-lite",
  "log",
  "parking",
@@ -1235,6 +1235,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cache-padded"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "981520c98f422fcc584dc1a95c334e6953900b9106bc47a9839b81790009eb21"
+
+[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1442,6 +1448,15 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "concurrent-queue"
+version = "1.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af4780a44ab5696ea9e28294517f1fffb421a83a25af521333c838635509db9c"
+dependencies = [
+ "cache-padded",
+]
+
+[[package]]
+name = "concurrent-queue"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62ec6771ecfa0762d24683ee5a32ad78487a3d3afdc0fb8cae19d2c5deb50b7c"
@@ -1524,6 +1539,17 @@ name = "core-foundation-sys"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
+
+[[package]]
+name = "core_affinity"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4436406e93f52cce33bfba4be067a9f7229da44a634c385e4b22cdfaca5f84cc"
+dependencies = [
+ "libc",
+ "num_cpus",
+ "winapi",
+]
 
 [[package]]
 name = "cpu-time"
@@ -2149,6 +2175,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
+]
+
+[[package]]
+name = "generator"
+version = "0.6.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "061d3be1afec479d56fa3bd182bf966c7999ec175fcfdb87ac14d417241366c6"
+dependencies = [
+ "cc",
+ "libc",
+ "log",
+ "rustversion",
+ "winapi",
+]
+
+[[package]]
+name = "generator"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cc16584ff22b460a382b7feec54b23d2908d858152e5739a120b949293bd74e"
+dependencies = [
+ "cc",
+ "libc",
+ "log",
+ "rustversion",
+ "windows",
 ]
 
 [[package]]
@@ -2909,6 +2961,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "loom"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27a6650b2f722ae8c0e2ebc46d07f80c9923464fc206d962332f1eff83143530"
+dependencies = [
+ "cfg-if",
+ "generator 0.6.25",
+ "scoped-tls",
+]
+
+[[package]]
+name = "loom"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27537a24ea22f4818f17260442099a6ed6e21c445ece117aa1873688c399cb79"
+dependencies = [
+ "cfg-if",
+ "generator 0.7.5",
+ "scoped-tls",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lz4"
 version = "1.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3638,7 +3714,7 @@ dependencies = [
  "autocfg",
  "bitflags",
  "cfg-if",
- "concurrent-queue",
+ "concurrent-queue 2.2.0",
  "libc",
  "log",
  "pin-project-lite",
@@ -4281,6 +4357,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "scoped-tls"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
+
+[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4710,6 +4792,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-execution"
+version = "0.8.3"
+dependencies = [
+ "derive_more",
+ "error-stack",
+ "sparrow-physical",
+ "sparrow-scheduler",
+ "sparrow-transforms",
+]
+
+[[package]]
 name = "sparrow-expressions"
 version = "0.8.3"
 dependencies = [
@@ -5031,6 +5124,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-scheduler"
+version = "0.8.3"
+dependencies = [
+ "core_affinity",
+ "derive_more",
+ "error-stack",
+ "index_vec",
+ "itertools",
+ "loom 0.6.0",
+ "serde",
+ "sparrow-arrow",
+ "tracing",
+ "work-queue",
+]
+
+[[package]]
 name = "sparrow-syntax"
 version = "0.8.3"
 dependencies = [
@@ -5075,6 +5184,23 @@ dependencies = [
  "tempfile",
  "tracing-error",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "sparrow-transforms"
+version = "0.8.3"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "itertools",
+ "parking_lot 0.12.1",
+ "sparrow-arrow",
+ "sparrow-expressions",
+ "sparrow-physical",
+ "sparrow-scheduler",
+ "tracing",
 ]
 
 [[package]]
@@ -6416,6 +6542,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "work-queue"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f54d15a54f5becdd82ef1f74f6e0951332d6b311369feb7b3cd45396fe6eb219"
+dependencies = [
+ "concurrent-queue 1.2.4",
+ "loom 0.4.1",
 ]
 
 [[package]]

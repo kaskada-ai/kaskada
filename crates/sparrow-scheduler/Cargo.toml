@@ -1,0 +1,29 @@
+[package]
+name = "sparrow-scheduler"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Scheduler for managing local, multi-threaded execution.
+"""
+
+[dependencies]
+core_affinity.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
+index_vec.workspace = true
+itertools.workspace = true
+serde.workspace = true
+sparrow-arrow = { path = "../sparrow-arrow" }
+tracing.workspace = true
+work-queue = "0.1.3"
+
+[dev-dependencies]
+
+[target.'cfg(loom)'.dependencies]
+loom = "0.6.0"
+
+[lib]
+doctest = false
