@@ -48,21 +48,21 @@ pub enum Mode {
 )]
 #[display(style = "snake_case")]
 pub enum InstOp {
-    #[strum(props(signature = "add(a: number, b: number) -> number"))]
+    #[strum(props(signature = "add<N: number>(a: N, b: N) -> N"))]
     Add,
-    #[strum(props(signature = "add_time(delta: timedelta, time: timestamp_ns) -> timestamp_ns"))]
-    AddTime,
-    #[strum(props(signature = "ceil(n: number) -> number"))]
-    Ceil,
     #[strum(props(
-        signature = "clamp(value: number, min: number = null, max: number = null) -> number"
+        signature = "add_time<D: timedelta>(delta: D, time: timestamp_ns) -> timestamp_ns"
     ))]
+    AddTime,
+    #[strum(props(signature = "ceil<N: number>(n: N) -> N"))]
+    Ceil,
+    #[strum(props(signature = "clamp<N: number>(value: N, min: N = null, max: N = null) -> N"))]
     Clamp,
-    #[strum(props(signature = "coalesce(values+: any) -> any"))]
+    #[strum(props(signature = "coalesce<T: any>(values+: T) -> T"))]
     Coalesce,
     #[strum(props(
-        dfg_signature = "count_if(input: any, window: window = null) -> u32",
-        plan_signature = "count_if(input: any, ticks: bool = null, slide_duration: i64 = null) -> \
+        dfg_signature = "count_if<T: any>(input: T, window: window = null) -> u32",
+        plan_signature = "count_if<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> \
                           u32"
     ))]
     CountIf,
@@ -80,28 +80,28 @@ pub enum InstOp {
         signature = "days_between(t1: timestamp_ns, t2: timestamp_ns) -> interval_days"
     ))]
     DaysBetween,
-    #[strum(props(signature = "div(a: number, b: number) -> number"))]
+    #[strum(props(signature = "div<N: number>(a: N, b: N) -> N"))]
     Div,
-    #[strum(props(signature = "eq(a: any, b: any) -> bool"))]
+    #[strum(props(signature = "eq<T: any>(a: T, b: T) -> bool"))]
     Eq,
     #[strum(props(signature = "exp(power: f64) -> f64"))]
     Exp,
     #[strum(props(
-        dfg_signature = "first(input: any, window: window = null) -> any",
-        plan_signature = "first(input: any, ticks: bool = null, slide_duration: i64 = null) -> any"
+        dfg_signature = "first<T: any>(input: T, window: window = null) -> T",
+        plan_signature = "first<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
     ))]
     First,
-    #[strum(props(signature = "floor(n: number) -> number"))]
+    #[strum(props(signature = "floor<N: number>(n: N) -> N"))]
     Floor,
-    #[strum(props(signature = "gt(a: ordered, b: ordered) -> bool"))]
+    #[strum(props(signature = "gt<O: ordered>(a: O, b: O) -> bool"))]
     Gt,
-    #[strum(props(signature = "gte(a: ordered, b: ordered) -> bool"))]
+    #[strum(props(signature = "gte<O: ordered>(a: O, b: O) -> bool"))]
     Gte,
-    #[strum(props(signature = "hash(input: any) -> u64"))]
+    #[strum(props(signature = "hash<T: any>(input: T) -> u64"))]
     Hash,
-    #[strum(props(signature = "if(condition: bool, value: any) -> any"))]
+    #[strum(props(signature = "if<T: any>(condition: bool, value: T) -> T"))]
     If,
-    #[strum(props(signature = "is_valid(input: any) -> bool"))]
+    #[strum(props(signature = "is_valid<T: any>(input: T) -> bool"))]
     IsValid,
     // HACK: This instruction does not show up in the plan/does not have an evaluator.
     // It is converted to `JsonField` during simplification.
@@ -109,11 +109,11 @@ pub enum InstOp {
     Json,
     #[strum(props(signature = "json_field(s: string, field: string) -> string"))]
     JsonField,
-    #[strum(props(signature = "lag(n: i64, input: ordered) -> ordered"))]
+    #[strum(props(signature = "lag<O: ordered>(n: i64, input: O) -> O"))]
     Lag,
     #[strum(props(
-        dfg_signature = "last(input: any, window: window = null) -> any",
-        plan_signature = "last(input: any, ticks: bool = null, slide_duration: i64 = null) -> any"
+        dfg_signature = "last<T: any>(input: T, window: window = null) -> T",
+        plan_signature = "last<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
     ))]
     Last,
     #[strum(props(signature = "len(s: string) -> i32"))]
@@ -124,26 +124,24 @@ pub enum InstOp {
     LogicalOr,
     #[strum(props(signature = "lower(s: string) -> string"))]
     Lower,
-    #[strum(props(signature = "lt(a: ordered, b: ordered) -> bool"))]
+    #[strum(props(signature = "lt<O: ordered>(a: O, b: O) -> bool"))]
     Lt,
-    #[strum(props(signature = "lte(a: ordered, b: ordered) -> bool"))]
+    #[strum(props(signature = "lte<O: ordered>(a: O, b: O) -> bool"))]
     Lte,
     #[strum(props(
-        dfg_signature = "max(input: ordered, window: window = null) -> ordered",
-        plan_signature = "max(input: ordered, ticks: bool = null, slide_duration: i64 = null) -> \
-                          ordered"
+        dfg_signature = "max<O: ordered>(input: O, window: window = null) -> O",
+        plan_signature = "max<O: ordered>(input: O, ticks: bool = null, slide_duration: i64 = null) -> O"
     ))]
     Max,
     #[strum(props(
-        dfg_signature = "mean(input: number, window: window = null) -> f64",
-        plan_signature = "mean(input: number, ticks: bool = null, slide_duration: i64 = null) -> \
+        dfg_signature = "mean<N: number>(input: N, window: window = null) -> f64",
+        plan_signature = "mean<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) -> \
                           f64"
     ))]
     Mean,
     #[strum(props(
-        dfg_signature = "min(input: ordered, window: window = null) -> ordered",
-        plan_signature = "min(input: ordered, ticks: bool = null, slide_duration: i64 = null) -> \
-                          ordered"
+        dfg_signature = "min<O: ordered>(input: O, window: window = null) -> O",
+        plan_signature = "min<O: ordered>(input: O, ticks: bool = null, slide_duration: i64 = null) -> O"
     ))]
     Min,
     #[strum(props(signature = "month_of_year(time: timestamp_ns) -> u32"))]
@@ -156,19 +154,19 @@ pub enum InstOp {
         signature = "months_between(t1: timestamp_ns, t2: timestamp_ns) -> interval_months"
     ))]
     MonthsBetween,
-    #[strum(props(signature = "mul(a: number, b: number) -> number"))]
+    #[strum(props(signature = "mul<N: number>(a: N, b: N) -> N"))]
     Mul,
-    #[strum(props(signature = "neg(n: signed) -> signed"))]
+    #[strum(props(signature = "neg<S: signed>(n: S) -> S"))]
     Neg,
-    #[strum(props(signature = "neq(a: any, b: any) -> bool"))]
+    #[strum(props(signature = "neq<T: any>(a: T, b: T) -> bool"))]
     Neq,
     #[strum(props(signature = "not(input: bool) -> bool"))]
     Not,
-    #[strum(props(signature = "null_if(condition: bool, value: any) -> any"))]
+    #[strum(props(signature = "null_if<T: any>(condition: bool, value: T) -> T"))]
     NullIf,
     #[strum(props(signature = "powf(base: f64, power: f64) -> f64"))]
     Powf,
-    #[strum(props(signature = "round(n: number) -> number"))]
+    #[strum(props(signature = "round<N: number>(n: N) -> N"))]
     Round,
     #[strum(props(signature = "seconds(seconds: i64) -> duration_s"))]
     Seconds,
@@ -176,33 +174,33 @@ pub enum InstOp {
         signature = "seconds_between(t1: timestamp_ns, t2: timestamp_ns) -> duration_s"
     ))]
     SecondsBetween,
-    #[strum(props(signature = "sub(a: number, b: number) -> number"))]
+    #[strum(props(signature = "sub<N: number>(a: N, b: N) -> N"))]
     Sub,
     #[strum(props(
         signature = "substring(s: string, start: i64 = null, end: i64 = null) -> string"
     ))]
     Substring,
     #[strum(props(
-        dfg_signature = "sum(input: number, window: window = null) -> number",
-        plan_signature = "sum(input: number, ticks: bool = null, slide_duration: i64 = null) -> \
-                          number"
+        dfg_signature = "sum<N: number>(input: N, window: window = null) -> N",
+        plan_signature = "sum<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) -> \
+                          N"
     ))]
     Sum,
-    #[strum(props(signature = "time_of(input: any) -> timestamp_ns"))]
+    #[strum(props(signature = "time_of<T: any>(input: T) -> timestamp_ns"))]
     TimeOf,
     #[strum(props(signature = "upper(s: string) -> string"))]
     Upper,
     #[strum(props(
-        dfg_signature = "variance(input: number, window: window = null) -> f64",
-        plan_signature = "variance(input: number, ticks: bool = null, slide_duration: i64 = null) \
+        dfg_signature = "variance<N: number>(input: N, window: window = null) -> f64",
+        plan_signature = "variance<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) \
                           -> f64"
     ))]
     Variance,
     #[strum(props(signature = "year(time: timestamp_ns) -> i32"))]
     Year,
-    #[strum(props(signature = "zip_max(a: ordered, b: ordered) -> ordered"))]
+    #[strum(props(signature = "zip_max<O: ordered>(a: O, b: O) -> O"))]
     ZipMax,
-    #[strum(props(signature = "zip_min(a: ordered, b: ordered) -> ordered"))]
+    #[strum(props(signature = "zip_min<O: ordered>(a: O, b: O) -> O"))]
     ZipMin,
 }
 

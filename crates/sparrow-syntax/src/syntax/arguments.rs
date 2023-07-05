@@ -666,13 +666,12 @@ mod tests {
         .map(|resolved| resolved.into_iter().map(|expr| expr.into_inner()).collect())
     }
 
-    const POW_SIGNATURE: &str = "pow(power:number, base:number) -> number";
-    const CLAMP_SIGNATURE: &str =
-        "clamp(value: number, min:number=null, max:number=null) -> number";
-    const LOG_SIGNATURE: &str = "log(power:f64, base:f64 = e) -> f64";
+    const POW_SIGNATURE: &str = "pow<N: number>(power: N, base: N) -> N";
+    const CLAMP_SIGNATURE: &str = "clamp<N: number>(value: N, min: N = null, max: N = null) -> N";
+    const LOG_SIGNATURE: &str = "log(power: f64, base: f64 = e) -> f64";
     const SUBSTRING_SIGNATURE: &str =
-        "substring(str: string, start: i32=null, end:i32=null) -> string";
-    const COALESCE_SIGNATURE: &str = "coalesce(values+: any) -> any";
+        "substring(str: string, start: i32 = null, end: i32 = null) -> string";
+    const COALESCE_SIGNATURE: &str = "coalesce<T: any>(values+: T) -> T";
 
     #[test]
     fn resolve_pow_positional_explicit_input() {
@@ -957,9 +956,9 @@ mod tests {
             op: Literal(Located(
               value: Null,
               location: Location(
-                part: Internal("clamp(value: number, min:number=null, max:number=null) -> number"),
-                start: 49,
-                end: 53,
+                part: Internal("clamp<N: number>(value: N, min: N = null, max: N = null) -> N"),
+                start: 51,
+                end: 55,
               ),
             )),
             args: Arguments([]),
@@ -988,9 +987,9 @@ mod tests {
             op: Literal(Located(
               value: Null,
               location: Location(
-                part: Internal("clamp(value: number, min:number=null, max:number=null) -> number"),
-                start: 32,
-                end: 36,
+                part: Internal("clamp<N: number>(value: N, min: N = null, max: N = null) -> N"),
+                start: 36,
+                end: 40,
               ),
             )),
             args: Arguments([]),
@@ -1041,9 +1040,9 @@ mod tests {
             op: Literal(Located(
               value: Null,
               location: Location(
-                part: Internal("clamp(value: number, min:number=null, max:number=null) -> number"),
-                start: 49,
-                end: 53,
+                part: Internal("clamp<N: number>(value: N, min: N = null, max: N = null) -> N"),
+                start: 51,
+                end: 55,
               ),
             )),
             args: Arguments([]),
@@ -1072,9 +1071,9 @@ mod tests {
             op: Literal(Located(
               value: Null,
               location: Location(
-                part: Internal("clamp(value: number, min:number=null, max:number=null) -> number"),
-                start: 32,
-                end: 36,
+                part: Internal("clamp<N: number>(value: N, min: N = null, max: N = null) -> N"),
+                start: 36,
+                end: 40,
               ),
             )),
             args: Arguments([]),
@@ -1145,9 +1144,9 @@ mod tests {
             op: Reference(Located(
               value: "e",
               location: Location(
-                part: Internal("log(power:f64, base:f64 = e) -> f64"),
-                start: 26,
-                end: 27,
+                part: Internal("log(power: f64, base: f64 = e) -> f64"),
+                start: 28,
+                end: 29,
               ),
             )),
             args: Arguments([]),
@@ -1176,9 +1175,9 @@ mod tests {
             op: Reference(Located(
               value: "e",
               location: Location(
-                part: Internal("log(power:f64, base:f64 = e) -> f64"),
-                start: 26,
-                end: 27,
+                part: Internal("log(power: f64, base: f64 = e) -> f64"),
+                start: 28,
+                end: 29,
               ),
             )),
             args: Arguments([]),
@@ -1207,9 +1206,9 @@ mod tests {
             op: Reference(Located(
               value: "e",
               location: Location(
-                part: Internal("log(power:f64, base:f64 = e) -> f64"),
-                start: 26,
-                end: 27,
+                part: Internal("log(power: f64, base: f64 = e) -> f64"),
+                start: 28,
+                end: 29,
               ),
             )),
             args: Arguments([]),
@@ -1238,9 +1237,9 @@ mod tests {
             op: Reference(Located(
               value: "e",
               location: Location(
-                part: Internal("log(power:f64, base:f64 = e) -> f64"),
-                start: 26,
-                end: 27,
+                part: Internal("log(power: f64, base: f64 = e) -> f64"),
+                start: 28,
+                end: 29,
               ),
             )),
             args: Arguments([]),
@@ -1380,9 +1379,9 @@ mod tests {
             op: Literal(Located(
               value: Null,
               location: Location(
-                part: Internal("substring(str: string, start: i32=null, end:i32=null) -> string"),
-                start: 48,
-                end: 52,
+                part: Internal("substring(str: string, start: i32 = null, end: i32 = null) -> string"),
+                start: 53,
+                end: 57,
               ),
             )),
             args: Arguments([]),
@@ -1411,9 +1410,9 @@ mod tests {
             op: Literal(Located(
               value: Null,
               location: Location(
-                part: Internal("substring(str: string, start: i32=null, end:i32=null) -> string"),
-                start: 34,
-                end: 38,
+                part: Internal("substring(str: string, start: i32 = null, end: i32 = null) -> string"),
+                start: 36,
+                end: 40,
               ),
             )),
             args: Arguments([]),
@@ -1541,7 +1540,7 @@ mod tests {
     fn should_report_positional_after_keyword() {
         // fun(a = zero, 5)
         insta::assert_ron_snapshot!(
-          test_resolve_exprs("fun(a: number, b: string) -> string", "a = zero, 5"), @r###"
+          test_resolve_exprs("fun<N: number>(a: N, b: string) -> string", "a = zero, 5"), @r###"
         Err(PositionalAfterKeyword(
           keyword: Location(
             part: Internal("a = zero, 5"),
@@ -1561,7 +1560,7 @@ mod tests {
     fn should_report_invalid_named_argument() {
         // fun(c = zero, 5)
         insta::assert_ron_snapshot!(
-          test_resolve_exprs("fun(a: number, b: string) -> string", "c = zero, b = 5"), @r###"
+          test_resolve_exprs("fun<N: number>(a: N, b: string) -> string", "c = zero, b = 5"), @r###"
         Err(InvalidKeywordArgument(
           keyword: Located(
             value: "c",
@@ -1579,7 +1578,7 @@ mod tests {
     fn should_report_too_many_arguments() {
         // fun(1, 2, 3)
         insta::assert_ron_snapshot!(
-          test_resolve_exprs("fun(a: number, b: string) -> number", "1, 2, 3"), @r###"
+          test_resolve_exprs("fun<N: number>(a: N, b: string) -> N", "1, 2, 3"), @r###"
         Err(TooManyArguments(
           expected: 2,
           actual: 3,
@@ -1596,7 +1595,7 @@ mod tests {
     fn should_report_too_many_missing_arguments() {
         // fun(1)
         insta::assert_ron_snapshot!(
-          test_resolve_exprs("fun(a: number, b: string, c: number) -> number", "1"), @r###"
+          test_resolve_exprs("fun<N: number>(a: N, b: string, c: N) -> N", "1"), @r###"
         Err(NotEnoughArguments(
           expected: 3,
           actual: 1,
@@ -1608,7 +1607,7 @@ mod tests {
     fn should_report_duplicate_keyword_arguments() {
         // fun(a = 1, a = 3)
         insta::assert_ron_snapshot!(
-          test_resolve_exprs("fun(a: number, b: string) -> string", "a = 1, a = 3"), @r###"
+          test_resolve_exprs("fun<N: number>(a: N, b: string) -> string", "a = 1, a = 3"), @r###"
         Err(InvalidKeywordArgument(
           keyword: Located(
             value: "a",
@@ -1626,7 +1625,7 @@ mod tests {
     fn should_report_duplicate_keyword_positional_arguments() {
         // fun(1, a = 2)
         insta::assert_ron_snapshot!(
-          test_resolve_exprs("fun(a: number, b: string) -> string", "1, a = 2"), @r###"
+          test_resolve_exprs("fun<N: number>(a: N, b: string) -> string", "1, a = 2"), @r###"
         Err(DuplicateKeywordAndPositional(
           keyword: Location(
             part: Internal("1, a = 2"),

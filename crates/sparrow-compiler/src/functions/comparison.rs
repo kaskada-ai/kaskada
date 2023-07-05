@@ -4,26 +4,26 @@ use crate::functions::{Implementation, Registry};
 
 pub(super) fn register(registry: &mut Registry) {
     registry
-        .register("eq(a: any, b: any) -> bool")
+        .register("eq<T: any>(a: T, b: T) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::Eq));
 
     registry
-        .register("neq(a: any, b: any) -> bool")
+        .register("neq<T: any>(a: T, b: T) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::Neq));
 
     registry
-        .register("lt(a: ordered, b: ordered) -> bool")
+        .register("lt<O: ordered>(a: O, b: O) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::Lt));
 
     registry
-        .register("gt(a: ordered, b: ordered) -> bool")
+        .register("gt<O: ordered>(a: O, b: O) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::Gt));
 
     registry
-        .register("lte(a: ordered, b: ordered) -> bool")
+        .register("lte<O: ordered>(a: O, b: O) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::Lte));
 
     registry
-        .register("gte(a: ordered, b: ordered) -> bool")
+        .register("gte<O: ordered>(a: O, b: O) -> bool")
         .with_implementation(Implementation::Instruction(InstOp::Gte));
 }

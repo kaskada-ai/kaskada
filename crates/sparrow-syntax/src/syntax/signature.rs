@@ -1,7 +1,45 @@
 use itertools::Itertools;
 
 use crate::parser::try_parse_signature;
-use crate::{ExprRef, FeatureSetPart, FenlType, Located, Parameters, ParseErrors};
+use crate::{ExprRef, FeatureSetPart, FenlType, Located, Parameters, ParseErrors, TypeConstraint};
+
+/// Type variable defined by a signature
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(serde::Serialize))]
+pub struct TypeVariable(pub String);
+
+impl std::fmt::Display for TypeVariable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Contains the type variable and the constraints for
+/// that variable.
+///
+/// e.g. N(type variable): Eq(constraint) + Hash(constraint)
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(serde::Serialize))]
+pub struct TypeParameter {
+    pub name: TypeVariable,
+    pub constraints: Vec<TypeConstraint>,
+}
+
+impl std::fmt::Display for TypeParameter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Note: this excludes the type constraints
+        write!(f, "{}", self.name.0)
+    }
+}
+
+impl TypeParameter {
+    pub fn new(name: String, constraints: Vec<TypeConstraint>) -> Self {
+        Self {
+            name: TypeVariable(name),
+            constraints,
+        }
+    }
+}
 
 /// The signature of an operator or function.
 #[derive(Debug, PartialEq, Eq)]
@@ -15,6 +53,8 @@ pub struct Signature {
     name: String,
     /// The parameters to the function.
     pub(super) parameters: Parameters<ExprRef>,
+    /// The type parameters associated with this signature.
+    pub type_parameters: Vec<TypeParameter>,
     /// The result of the function.
     result: FenlType,
 }
@@ -23,6 +63,7 @@ impl Signature {
     pub(crate) fn try_new(
         name: String,
         parameters: Parameters<ExprRef>,
+        type_parameters: Vec<TypeParameter>,
         result: FenlType,
     ) -> anyhow::Result<Self> {
         if matches!(result, FenlType::Generic(_)) {
@@ -39,9 +80,50 @@ impl Signature {
             )
         }
 
+        // check that no duplicates exist in the type_parameters
+        let duplicates: Vec<_> = type_parameters
+            .iter()
+            .map(|p| &p.name.0)
+            .duplicates()
+            .collect();
+        if !duplicates.is_empty() {
+            anyhow::bail!(
+                "Duplicate type parameters: {} in signature for '{name}'",
+                duplicates
+                    .iter()
+                    .format_with(",", |elt, f| f(&format_args!("'{elt}'")))
+            );
+        };
+
+        // check that all type variables referenced in parameters are defined
+        for t in parameters.types() {
+            if let FenlType::Generic(type_variable) = t.inner() {
+                if !type_parameters.iter().any(|tp| &tp.name == type_variable) {
+                    anyhow::bail!(
+                        "Type variable '{:?}' is not defined in the type parameters for signature \
+                         '{}'",
+                        type_variable,
+                        name
+                    )
+                }
+            }
+        }
+
+        // check result type variable is defined
+        if let FenlType::Generic(result_variable) = &result {
+            if !type_parameters.iter().any(|p| &p.name == result_variable) {
+                anyhow::bail!(
+                    "Type variable '{:?}' is not defined in the type parameters for signature '{}'",
+                    result_variable,
+                    name
+                )
+            }
+        }
+
         Ok(Self {
             name,
             parameters,
+            type_parameters,
             result,
         })
     }
@@ -86,7 +168,6 @@ impl Signature {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
 
@@ -101,6 +182,86 @@ mod tests {
                     .format_with(", ", |elt, f| f(&format_args!("{elt:?}")))
             )
         })
+    }
+
+    #[test]
+    fn test_type_params() {
+        insta::assert_ron_snapshot!(
+            test_parse_signature("test<N: number, O: ordered>(input: N, input2: O) -> O"),
+            @r###"
+        Ok(Signature(
+          name: "test",
+          parameters: Parameters(
+            names: [
+              Located(
+                value: "input",
+                location: Location(
+                  part: Internal("test<N: number, O: ordered>(input: N, input2: O) -> O"),
+                  start: 28,
+                  end: 33,
+                ),
+              ),
+              Located(
+                value: "input2",
+                location: Location(
+                  part: Internal("test<N: number, O: ordered>(input: N, input2: O) -> O"),
+                  start: 38,
+                  end: 44,
+                ),
+              ),
+            ],
+            constants: BitSeq(
+              order: "bitvec::order::Lsb0",
+              head: BitIdx(
+                width: 64,
+                index: 0,
+              ),
+              bits: 2,
+              data: [
+                0,
+              ],
+            ),
+            types: [
+              Located(
+                value: Generic(TypeVariable("N")),
+                location: Location(
+                  part: Internal("test<N: number, O: ordered>(input: N, input2: O) -> O"),
+                  start: 35,
+                  end: 36,
+                ),
+              ),
+              Located(
+                value: Generic(TypeVariable("O")),
+                location: Location(
+                  part: Internal("test<N: number, O: ordered>(input: N, input2: O) -> O"),
+                  start: 46,
+                  end: 47,
+                ),
+              ),
+            ],
+            defaults: [
+              None,
+              None,
+            ],
+            has_vararg: false,
+          ),
+          type_parameters: [
+            TypeParameter(
+              name: TypeVariable("N"),
+              constraints: [
+                Number,
+              ],
+            ),
+            TypeParameter(
+              name: TypeVariable("O"),
+              constraints: [
+                Ordered,
+              ],
+            ),
+          ],
+          result: Generic(TypeVariable("O")),
+        ))
+        "###);
     }
 
     #[test]
@@ -147,6 +308,7 @@ mod tests {
             ],
             has_vararg: false,
           ),
+          type_parameters: [],
           result: Concrete(Boolean),
         ))
         "###);
@@ -156,7 +318,7 @@ mod tests {
     fn test_parse_binary() {
         insta::assert_ron_snapshot!(
             test_parse_signature(
-                "add(lhs: number, rhs: number) -> number"
+                "add<N: number>(lhs: N, rhs: N) -> N"
             ),
             @r###"
         Ok(Signature(
@@ -166,17 +328,17 @@ mod tests {
               Located(
                 value: "lhs",
                 location: Location(
-                  part: Internal("add(lhs: number, rhs: number) -> number"),
-                  start: 4,
-                  end: 7,
+                  part: Internal("add<N: number>(lhs: N, rhs: N) -> N"),
+                  start: 15,
+                  end: 18,
                 ),
               ),
               Located(
                 value: "rhs",
                 location: Location(
-                  part: Internal("add(lhs: number, rhs: number) -> number"),
-                  start: 17,
-                  end: 20,
+                  part: Internal("add<N: number>(lhs: N, rhs: N) -> N"),
+                  start: 23,
+                  end: 26,
                 ),
               ),
             ],
@@ -193,19 +355,19 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(Number),
+                value: Generic(TypeVariable("N")),
                 location: Location(
-                  part: Internal("add(lhs: number, rhs: number) -> number"),
-                  start: 9,
-                  end: 15,
+                  part: Internal("add<N: number>(lhs: N, rhs: N) -> N"),
+                  start: 20,
+                  end: 21,
                 ),
               ),
               Located(
-                value: Generic(Number),
+                value: Generic(TypeVariable("N")),
                 location: Location(
-                  part: Internal("add(lhs: number, rhs: number) -> number"),
-                  start: 22,
-                  end: 28,
+                  part: Internal("add<N: number>(lhs: N, rhs: N) -> N"),
+                  start: 28,
+                  end: 29,
                 ),
               ),
             ],
@@ -215,7 +377,15 @@ mod tests {
             ],
             has_vararg: false,
           ),
-          result: Generic(Number),
+          type_parameters: [
+            TypeParameter(
+              name: TypeVariable("N"),
+              constraints: [
+                Number,
+              ],
+            ),
+          ],
+          result: Generic(TypeVariable("N")),
         ))
         "###);
     }
@@ -224,7 +394,7 @@ mod tests {
     fn test_parse_signature_with_const() {
         insta::assert_ron_snapshot!(
             test_parse_signature(
-                "lag(e: ordered, const n: i64) -> ordered"
+                "lag<O: ordered>(e: O, const n: i64) -> O"
             ),
             @r###"
         Ok(Signature(
@@ -234,17 +404,17 @@ mod tests {
               Located(
                 value: "e",
                 location: Location(
-                  part: Internal("lag(e: ordered, const n: i64) -> ordered"),
-                  start: 4,
-                  end: 5,
+                  part: Internal("lag<O: ordered>(e: O, const n: i64) -> O"),
+                  start: 16,
+                  end: 17,
                 ),
               ),
               Located(
                 value: "n",
                 location: Location(
-                  part: Internal("lag(e: ordered, const n: i64) -> ordered"),
-                  start: 22,
-                  end: 23,
+                  part: Internal("lag<O: ordered>(e: O, const n: i64) -> O"),
+                  start: 28,
+                  end: 29,
                 ),
               ),
             ],
@@ -261,19 +431,19 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(Ordered),
+                value: Generic(TypeVariable("O")),
                 location: Location(
-                  part: Internal("lag(e: ordered, const n: i64) -> ordered"),
-                  start: 7,
-                  end: 14,
+                  part: Internal("lag<O: ordered>(e: O, const n: i64) -> O"),
+                  start: 19,
+                  end: 20,
                 ),
               ),
               Located(
                 value: Concrete(Int64),
                 location: Location(
-                  part: Internal("lag(e: ordered, const n: i64) -> ordered"),
-                  start: 25,
-                  end: 28,
+                  part: Internal("lag<O: ordered>(e: O, const n: i64) -> O"),
+                  start: 31,
+                  end: 34,
                 ),
               ),
             ],
@@ -283,7 +453,15 @@ mod tests {
             ],
             has_vararg: false,
           ),
-          result: Generic(Ordered),
+          type_parameters: [
+            TypeParameter(
+              name: TypeVariable("O"),
+              constraints: [
+                Ordered,
+              ],
+            ),
+          ],
+          result: Generic(TypeVariable("O")),
         ))
         "###);
     }
@@ -291,7 +469,7 @@ mod tests {
     #[test]
     fn test_parse_signature_with_vararg() {
         insta::assert_ron_snapshot!(
-            test_parse_signature("coalesce(values+: any) -> any"),
+            test_parse_signature("coalesce<T: any>(values+: T) -> T"),
             @r###"
         Ok(Signature(
           name: "coalesce",
@@ -300,9 +478,9 @@ mod tests {
               Located(
                 value: "values",
                 location: Location(
-                  part: Internal("coalesce(values+: any) -> any"),
-                  start: 9,
-                  end: 15,
+                  part: Internal("coalesce<T: any>(values+: T) -> T"),
+                  start: 17,
+                  end: 23,
                 ),
               ),
             ],
@@ -319,11 +497,11 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(Any),
+                value: Generic(TypeVariable("T")),
                 location: Location(
-                  part: Internal("coalesce(values+: any) -> any"),
-                  start: 18,
-                  end: 21,
+                  part: Internal("coalesce<T: any>(values+: T) -> T"),
+                  start: 26,
+                  end: 27,
                 ),
               ),
             ],
@@ -332,7 +510,15 @@ mod tests {
             ],
             has_vararg: true,
           ),
-          result: Generic(Any),
+          type_parameters: [
+            TypeParameter(
+              name: TypeVariable("T"),
+              constraints: [
+                Any,
+              ],
+            ),
+          ],
+          result: Generic(TypeVariable("T")),
         ))
         "###);
     }
