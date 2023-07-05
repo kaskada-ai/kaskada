@@ -16,9 +16,11 @@ testing = ["proptest"]
 
 # This crate should not depend on any other Sparrow crates.
 [dependencies]
+ahash.workspace = true
 anyhow.workspace = true
 arrow.workspace = true
 arrow-array.workspace = true
+arrow-buffer.workspace = true
 arrow-schema.workspace = true
 arrow-select.workspace = true
 avro-schema = { workspace = true, optional = true }
@@ -27,6 +29,7 @@ chrono.workspace = true
 decorum.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
+half.workspace = true
 itertools.workspace = true
 num.workspace = true
 proptest = { workspace = true, optional = true }

@@ -1,6 +1,6 @@
 on:
   workflow_call:
-    outputs: 
+    outputs:
       should_skip:
         description: "True if this workflow inferred that changes do not need to be build, false otherwise"
         value: ${{ jobs.rust_skip.outputs.should_skip }}
@@ -31,7 +31,7 @@ jobs:
     # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      run_id: ${{ steps.skip_check.outputs.skipped_by.id }}
+      run_id: ${{ fromJSON(steps.skip_check.outputs.skipped_by).id }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
@@ -43,7 +43,7 @@ jobs:
 
   rust_check:
     name: Rust Checks
-    runs-on: 
+    runs-on:
       group: linux-rust-builds
     needs: [rust_skip]
     steps:

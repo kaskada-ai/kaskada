@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -67,13 +66,11 @@ func NewEntConfig(dbDialect string, dbName *string, dbHost *string, inMemory *bo
 		log.Fatal().Msg("Flag: `db-dialect` must be set to either `postgres` or `sqlite`.")
 	}
 
-	if dbPath != nil && strings.HasPrefix(*dbPath, "~/") {
-		usr, err := user.Current()
+	if dbPath != nil {
+		path, err := filepath.Abs(*dbPath)
 		if err != nil {
-			log.Fatal().Msgf("unable to get local user account: %v", err)
+			log.Fatal().Msgf("invalid database path provided: %v", err)
 		}
-		dir := usr.HomeDir
-		path := filepath.Join(dir, (*dbPath)[2:])
 		err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 		if err != nil {
 			log.Fatal().Msgf("unable to create directories to path: %v", err)

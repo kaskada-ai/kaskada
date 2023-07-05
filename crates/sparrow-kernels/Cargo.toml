@@ -11,7 +11,6 @@ Computation kernels defined over Arrow arrays.
 
 [dependencies]
 anyhow.workspace = true
-ahash.workspace = true
 arrow.workspace = true
 bitvec.workspace = true
 chrono.workspace = true

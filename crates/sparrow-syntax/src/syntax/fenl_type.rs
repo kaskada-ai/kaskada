@@ -6,6 +6,8 @@ use itertools::Itertools;
 use serde::Serialize;
 use sparrow_arrow::scalar_value::timeunit_suffix;
 
+use crate::TypeVariable;
+
 /// A wrapper around an Arrow `DataType`.
 ///
 /// Adapts / extends the underlying Arrow type with additional Fenl-specific
@@ -16,8 +18,8 @@ pub enum FenlType {
     // TODO: Rename concrete?
     /// A specific Arrow DataType.
     Concrete(DataType),
-    /// A generic type with the given type constraint.
-    Generic(TypeConstraint),
+    /// A generic type with the given type variable.
+    Generic(TypeVariable),
     /// A type for describing a windowing behavior.
     Window,
     /// A type for describing a string that will be interpreted
@@ -90,7 +92,7 @@ impl<'a> std::fmt::Display for FormatStruct<'a> {
 /// an instantiation of the signature. This leads to a relatively simple
 /// instantiation strategy, where a least upper bound of the types of the
 /// actual arguments is chosen for constrained type.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(PartialOrd, Ord, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 #[repr(u8)]
 pub enum TypeConstraint {
     /// Any type.
@@ -101,12 +103,17 @@ pub enum TypeConstraint {
     Number,
     /// Any signed numeric type.
     Signed,
-    /// Any floating point numeric ytpe.
+    /// Any floating point numeric type.
     Float,
     /// Any time delta.
     TimeDelta,
     /// Any ordered type. This includes numbers and timestamps.
     Ordered,
+    /// Error variant.
+    ///
+    /// This indicates the error has already been reported, so no more error
+    /// reports are needed.
+    Error,
 }
 
 impl Display for TypeConstraint {
@@ -119,6 +126,24 @@ impl Display for TypeConstraint {
             TypeConstraint::Float => fmt.write_str("float"),
             TypeConstraint::TimeDelta => fmt.write_str("timedelta"),
             TypeConstraint::Ordered => fmt.write_str("ordered"),
+            TypeConstraint::Error => fmt.write_str("error"),
+        }
+    }
+}
+
+impl FromStr for TypeConstraint {
+    type Err = TypeConstraint;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "number" => Ok(TypeConstraint::Number),
+            "key" => Ok(TypeConstraint::Key),
+            "any" => Ok(TypeConstraint::Any),
+            "signed" => Ok(TypeConstraint::Signed),
+            "float" => Ok(TypeConstraint::Float),
+            "timedelta" => Ok(TypeConstraint::TimeDelta),
+            "ordered" => Ok(TypeConstraint::Ordered),
+            _ => Err(TypeConstraint::Error),
         }
     }
 }
@@ -145,7 +170,7 @@ impl Display for FenlType {
         match self {
             FenlType::Json => write!(fmt, "json"),
             FenlType::Window => write!(fmt, "window"),
-            FenlType::Generic(constraint) => write!(fmt, "{constraint}"),
+            FenlType::Generic(type_param) => write!(fmt, "{type_param}"),
             FenlType::Concrete(data_type) => write!(fmt, "{}", FormatDataType(data_type)),
             FenlType::Error => write!(fmt, "error"),
         }
@@ -157,13 +182,6 @@ impl FromStr for FenlType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "number" => Ok(TypeConstraint::Number.into()),
-            "key" => Ok(TypeConstraint::Key.into()),
-            "any" => Ok(TypeConstraint::Any.into()),
-            "signed" => Ok(TypeConstraint::Signed.into()),
-            "float" => Ok(TypeConstraint::Float.into()),
-            "timedelta" => Ok(TypeConstraint::TimeDelta.into()),
-            "ordered" => Ok(TypeConstraint::Ordered.into()),
             "bool" => Ok(DataType::Boolean.into()),
             "i8" => Ok(DataType::Int8.into()),
             "i32" => Ok(DataType::Int32.into()),
@@ -187,7 +205,8 @@ impl FromStr for FenlType {
             "duration_ns" => Ok(DataType::Duration(TimeUnit::Nanosecond).into()),
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
-            _ => Err(FenlType::Error),
+            // catch-all assumes the type is a type variable, which will be validated in the signature creation
+            name => Ok(FenlType::Generic(TypeVariable(name.to_owned()))),
         }
     }
 }
@@ -195,12 +214,6 @@ impl FromStr for FenlType {
 impl From<DataType> for FenlType {
     fn from(data_type: DataType) -> Self {
         Self::Concrete(data_type)
-    }
-}
-
-impl From<TypeConstraint> for FenlType {
-    fn from(constraint: TypeConstraint) -> Self {
-        Self::Generic(constraint)
     }
 }
 

@@ -61,7 +61,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 
 That's it! Thank you for your contribution!
 
-## <a name="development"</a> Development
+## <a name="development"></a> Development
 
 ### Setup Environment
 #### Mac OS

@@ -62,7 +62,7 @@ async fn test_last_timestamp_ns_changed_since_finished() {
     let changed_since = NaiveDateTime::new(date_for_test(1995, 1, 1), time_for_test(0, 0, 0));
     insta::assert_snapshot!(QueryFixture::new("{ key: Times.key, last: last(Times.n), last_time: last(Times.time) }").with_changed_since(changed_since).with_final_results().run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,last,last_time
-    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,B,23,2004-12-05T16:44:57-08:00
+    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,B,23,2004-12-06T00:44:57.000000000
     "###);
 }
 
@@ -133,7 +133,7 @@ async fn test_last_timestamp_ns_changed_since_final_expect_filtered_results() {
         .with_changed_since(changed_since)
         .with_final_results().run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,time,last
-    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,B,2004-12-05T16:44:57-08:00,23
+    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,B,2004-12-06T00:44:57.000000000,23
     "###);
 }
 
@@ -145,7 +145,7 @@ async fn test_last_timestamp_ns_changed_since_expect_filtered_results() {
     insta::assert_snapshot!(QueryFixture::new(FILTERED_RESULTS)
         .with_changed_since(changed_since).run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,time,last
-    2004-12-06T00:44:57.000000000,9223372036854775808,11753611437813598533,B,B,2004-12-05T16:44:57-08:00,23
+    2004-12-06T00:44:57.000000000,9223372036854775808,11753611437813598533,B,B,2004-12-06T00:44:57.000000000,23
     "###);
 }
 
@@ -158,7 +158,7 @@ async fn test_last_timestamp_ns_final_expect_filtered_results() {
     insta::assert_snapshot!(QueryFixture::new(FILTERED_RESULTS)
         .with_final_results().run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,time,last
-    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,B,2004-12-05T16:44:57-08:00,23
+    2004-12-06T00:44:57.000000001,18446744073709551615,11753611437813598533,B,B,2004-12-06T00:44:57.000000000,23
     "###);
 }
 
@@ -168,11 +168,11 @@ async fn test_last_timestamp_filtered_results() {
 
     insta::assert_snapshot!(QueryFixture::new(FILTERED_RESULTS).run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,key,time,last
-    1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,B,1995-10-19T16:40:57-08:00,4
-    1996-08-20T00:41:57.000000000,9223372036854775808,11753611437813598533,B,B,1996-08-19T16:41:57-08:00,5
-    1997-12-12T00:42:57.000000000,9223372036854775808,11753611437813598533,B,B,1997-12-11T16:42:57-08:00,5
-    1998-12-13T00:43:57.000000000,9223372036854775808,11753611437813598533,B,B,1998-12-12T16:43:57-08:00,8
-    2004-12-06T00:44:57.000000000,9223372036854775808,11753611437813598533,B,B,2004-12-05T16:44:57-08:00,23
+    1995-10-20T00:40:57.000000000,9223372036854775808,11753611437813598533,B,B,1995-10-20T00:40:57.000000000,4
+    1996-08-20T00:41:57.000000000,9223372036854775808,11753611437813598533,B,B,1996-08-20T00:41:57.000000000,5
+    1997-12-12T00:42:57.000000000,9223372036854775808,11753611437813598533,B,B,1997-12-12T00:42:57.000000000,5
+    1998-12-13T00:43:57.000000000,9223372036854775808,11753611437813598533,B,B,1998-12-13T00:43:57.000000000,8
+    2004-12-06T00:44:57.000000000,9223372036854775808,11753611437813598533,B,B,2004-12-06T00:44:57.000000000,23
     "###);
 }
 

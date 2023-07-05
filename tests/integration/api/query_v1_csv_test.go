@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/jt-nti/gproto"
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
@@ -115,11 +116,12 @@ min_amount: query_v1_test_csv.amount | min(),
 				VerifyRequestDetails(firstResponse.RequestDetails)
 				Expect(firstResponse.Config.DataTokenId).ShouldNot(BeEmpty())
 				Expect(firstResponse.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).Should(BeNil())
+
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
-					primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-					primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
+					gproto.Equal(primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND)),
+					gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+					gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+					gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 				))
 			})
 		})
@@ -144,10 +146,10 @@ min_amount: query_v1_test_csv.amount | min(),
 				VerifyRequestDetails(firstResponse.RequestDetails)
 				Expect(firstResponse.Config.DataTokenId).Should(Equal(firstDataTokenId))
 				Expect(firstResponse.Analysis.Schema.GetFields()).Should(ContainElements(
-					primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING),
-					primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
-					primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64),
+					gproto.Equal(primitiveSchemaField("time", v1alpha.DataType_PRIMITIVE_TYPE_TIMESTAMP_NANOSECOND)),
+					gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
+					gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
+					gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 				))
 				_, err = uuid.Parse(secondResponse.QueryId)
 				Expect(err).Should(BeNil())
@@ -176,7 +178,7 @@ min_amount: query_v1_test_csv.amount | min(),
 				firstResults = helpers.DownloadCSV(resultUrls[0])
 
 				Expect(firstResults).Should(HaveLen(11)) //header row + 10 data rows
-				Expect(firstResults[10]).Should(ContainElements("2020-01-05T00:00:00.000000000+00:00", "patrick", "5000", "3"))
+				Expect(firstResults[10]).Should(ContainElements("2020-01-05T00:00:00.000000000", "patrick", "5000", "3"))
 			})
 		})
 
@@ -236,8 +238,8 @@ min_amount: query_v1_test_csv.amount | min(),
 				secondResults = helpers.DownloadCSV(resultUrls[0])
 
 				Expect(secondResults).Should(HaveLen(16)) // header row + 15 rows
-				Expect(secondResults[10]).Should(ContainElements("2020-01-05T00:00:00.000000000+00:00", "patrick", "5000", "3"))
-				Expect(secondResults[14]).Should(ContainElements("2020-01-08T00:00:00.000000000+00:00", "karen", "9", "2"))
+				Expect(secondResults[10]).Should(ContainElements("2020-01-05T00:00:00.000000000", "patrick", "5000", "3"))
+				Expect(secondResults[14]).Should(ContainElements("2020-01-08T00:00:00.000000000", "karen", "9", "2"))
 			})
 		})
 
@@ -378,9 +380,9 @@ min_amount: query_v1_test_csv.amount | min(),
 				Expect(len(resultUrls)).Should(Equal(1))
 				results := helpers.DownloadCSV(resultUrls[0])
 				Expect(results).Should(HaveLen(4)) // header row + 3 rows
-				Expect(results[1]).Should(ContainElements("2020-01-08T00:00:00.000000000+00:00", "karen", "9", "2"))
-				Expect(results[2]).Should(ContainElements("2020-01-07T00:00:00.000000000+00:00", "spongebob", "34", "7"))
-				Expect(results[3]).Should(ContainElements("2020-01-08T00:00:00.000000000+00:00", "patrick", "5000", "2"))
+				Expect(results[1]).Should(ContainElements("2020-01-08T00:00:00.000000000", "karen", "9", "2"))
+				Expect(results[2]).Should(ContainElements("2020-01-07T00:00:00.000000000", "spongebob", "34", "7"))
+				Expect(results[3]).Should(ContainElements("2020-01-08T00:00:00.000000000", "patrick", "5000", "2"))
 			})
 		})
 	})
