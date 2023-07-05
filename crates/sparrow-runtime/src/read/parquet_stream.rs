@@ -1,20 +1,22 @@
+use std::str::FromStr;
+
 use arrow::datatypes::Schema;
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use hashbrown::HashSet;
-use parquet::arrow::{ParquetRecordBatchStreamBuilder, ProjectionMask};
 use sparrow_arrow::attachments::{RecordBatchAttachment, SchemaAttachment};
 use sparrow_core::{KeyTriple, TableSchema};
 
-use crate::data_manager::DataHandle;
+use crate::read::parquet_file::ParquetFile;
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use crate::{validate_batch_schema, Batch};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
-    #[display(fmt = "failed to resolve data handle to path(s)")]
-    ResolveDataHandle,
+    #[display(fmt = "failed to parse object URL")]
+    ParseObjectUrl,
     #[display(fmt = "failed to open parquet file")]
     OpenParquetFile,
     #[display(fmt = "failed to determine columns to read")]
@@ -33,35 +35,23 @@ pub enum Error {
 impl error_stack::Context for Error {}
 
 pub(super) async fn new_parquet_stream(
-    data_handle: &DataHandle,
+    object_stores: &ObjectStoreRegistry,
+    object_path: &str,
     projected_schema: &TableSchema,
 ) -> error_stack::Result<BoxStream<'static, error_stack::Result<Batch, Error>>, Error> {
-    let path = data_handle
-        .get_path()
+    let object_path =
+        ObjectStoreUrl::from_str(object_path).change_context(Error::ParseObjectUrl)?;
+    let parquet_file = ParquetFile::try_new(object_stores, object_path)
         .await
-        .into_report()
-        .change_context(Error::ResolveDataHandle)?;
-
-    let file = tokio::fs::File::open(path)
-        .await
-        .into_report()
-        .change_context(Error::OpenParquetFile)?;
-    let builder = ParquetRecordBatchStreamBuilder::new(file)
-        .await
-        .into_report()
         .change_context(Error::OpenParquetFile)?;
 
-    let file_schema = builder.schema();
-    let reader_columns = get_columns_to_read(file_schema.as_ref(), projected_schema)
+    let reader_columns = get_columns_to_read(parquet_file.schema.as_ref(), projected_schema)
         .into_report()
         .change_context(Error::DetermineColumns)?;
 
-    let mask = ProjectionMask::leaves(builder.parquet_schema(), reader_columns);
-    let projected_reader = builder
-        .with_batch_size(BATCH_SIZE)
-        .with_projection(mask)
-        .build()
-        .into_report()
+    let stream = parquet_file
+        .read_stream(Some(reader_columns))
+        .await
         .change_context(Error::OpenParquetFile)?;
 
     let projected_schema = projected_schema.schema_ref().clone();
@@ -71,23 +61,19 @@ pub(super) async fn new_parquet_stream(
         subsort: 0,
         key_hash: 0,
     };
-    let stream = projected_reader.map(move |item| {
-        let raw_batch = item.into_report().change_context(Error::ReadingBatch)?;
+    let stream = stream.map(move |item| {
+        let raw_batch = item.change_context(Error::ReadingBatch)?;
 
-        // Recreate the RecordBatch, if needed, to adjust nullability of columns.
+        // Recreate the RecordBatch, to adjust nullability of columns.
         // The schemas should be identical / compatible, but may have different
         // nullability.
-        let batch = if raw_batch.schema() == projected_schema {
-            raw_batch
-        } else {
-            RecordBatch::try_new(projected_schema.clone(), raw_batch.columns().to_vec())
-                .into_report()
-                .change_context(Error::ReadingBatch)
-                .attach_printable_lazy(|| RecordBatchAttachment::new("raw_batch", &raw_batch))
-                .attach_printable_lazy(|| {
-                    SchemaAttachment::new("projected_schema", &projected_schema)
-                })?
-        };
+        let batch = RecordBatch::try_new(projected_schema.clone(), raw_batch.columns().to_vec())
+            .into_report()
+            .change_context(Error::ReadingBatch)
+            .attach_printable_lazy(|| RecordBatchAttachment::new("raw_batch", &raw_batch))
+            .attach_printable_lazy(|| {
+                SchemaAttachment::new("projected_schema", &projected_schema)
+            })?;
 
         let batch = Batch::try_new_from_batch(batch)
             .into_report()
@@ -135,23 +121,18 @@ fn get_columns_to_read(
     Ok(columns)
 }
 
-const BATCH_SIZE: usize = 100_000;
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use arrow::array::{Int64Array, StringArray, TimestampNanosecondArray, UInt64Array};
+    use arrow::array::{Int64Array, TimestampNanosecondArray, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
     use futures::TryStreamExt;
-    use sparrow_api::kaskada::v1alpha::PreparedFile;
     use static_init::dynamic;
 
     use super::*;
-    use crate::data_manager::DataHandle;
     use crate::read::testing::write_parquet_file;
-    use crate::s3::S3Helper;
 
     #[tokio::test]
     async fn test_parquet_file_source() {
@@ -159,31 +140,18 @@ mod tests {
 
         // Create a Parquet file
         let file = write_parquet_file(&COMPLETE_BATCH, None);
-        let metadata = write_parquet_file(&METADATA_BATCH, None);
 
-        let prepared_file = PreparedFile {
-            num_rows: 3,
-            path: file.to_string_lossy().into_owned(),
-            min_event_time: Some(prost_wkt_types::Timestamp {
-                seconds: 0,
-                nanos: 5,
-            }),
-            max_event_time: Some(prost_wkt_types::Timestamp {
-                seconds: 0,
-                nanos: 15,
-            }),
-            metadata_path: metadata.to_string_lossy().into_owned(),
-        };
-        let data_handle = DataHandle::try_new(S3Helper::new().await, &prepared_file).unwrap();
+        let path = format!("file://{}", file.display());
 
         // Test reading the file
-        check_complete(&data_handle, &COMPLETE_BATCH).await;
-        check_projected(&data_handle, &PROJECTED_BATCH).await;
+        check_complete(&path, &COMPLETE_BATCH).await;
+        check_projected(&path, &PROJECTED_BATCH).await;
     }
 
-    async fn check_complete(data_handle: &DataHandle, expected: &RecordBatch) {
+    async fn check_complete(object_path: &str, expected: &RecordBatch) {
+        let object_stores = ObjectStoreRegistry::default();
         let table_schema = TableSchema::from_sparrow_schema(expected.schema()).unwrap();
-        let mut reader = new_parquet_stream(data_handle, &table_schema)
+        let mut reader = new_parquet_stream(&object_stores, object_path, &table_schema)
             .await
             .unwrap();
 
@@ -191,9 +159,10 @@ mod tests {
         assert!(reader.try_next().await.unwrap().is_none());
     }
 
-    async fn check_projected(data_handle: &DataHandle, expected: &RecordBatch) {
+    async fn check_projected(object_path: &str, expected: &RecordBatch) {
+        let object_stores = ObjectStoreRegistry::default();
         let table_schema = TableSchema::from_sparrow_schema(expected.schema()).unwrap();
-        let mut reader = new_parquet_stream(data_handle, &table_schema)
+        let mut reader = new_parquet_stream(&object_stores, object_path, &table_schema)
             .await
             .unwrap();
 
@@ -233,14 +202,6 @@ mod tests {
     };
 
     #[dynamic]
-    static METADATA_SCHEMA: SchemaRef = {
-        Arc::new(Schema::new(vec![
-            Field::new("_key_hash", DataType::UInt64, false),
-            Field::new("_entity_key", DataType::Utf8, false),
-        ]))
-    };
-
-    #[dynamic]
     static COMPLETE_BATCH: RecordBatch = {
         let time = TimestampNanosecondArray::from(vec![5, 10, 15]);
         let subsort = UInt64Array::from(vec![0, 0, 1]);
@@ -259,17 +220,6 @@ mod tests {
                 Arc::new(b),
                 Arc::new(c),
             ],
-        )
-        .unwrap()
-    };
-
-    #[dynamic]
-    static METADATA_BATCH: RecordBatch = {
-        let key_hash = UInt64Array::from(vec![0, 1]);
-        let entity_keys = StringArray::from(vec!["0", "1"]);
-        RecordBatch::try_new(
-            METADATA_SCHEMA.clone(),
-            vec![Arc::new(key_hash), Arc::new(entity_keys)],
         )
         .unwrap()
     };

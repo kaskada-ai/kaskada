@@ -7,10 +7,9 @@ use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan, PlanHash};
 use sparrow_compiler::DataContext;
 
-use crate::data_manager::DataManager;
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::{OperationContext, OperationExecutor};
-use crate::s3::S3Helper;
+use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
 
 pub(super) async fn batches_to_csv(
@@ -171,7 +170,6 @@ pub(super) async fn run_operation(
     let mut executor = OperationExecutor::new(plan.clone());
     executor.add_consumer(sender);
 
-    let s3_helper = S3Helper::new().await;
     // Channel for the output stats.
     let (progress_updates_tx, _) = tokio::sync::mpsc::channel(29);
 
@@ -184,7 +182,7 @@ pub(super) async fn run_operation(
             ..ComputePlan::default()
         },
         plan_hash: PlanHash::default(),
-        data_manager: DataManager::new(s3_helper),
+        object_stores: ObjectStoreRegistry::default(),
         data_context: DataContext::default(),
         compute_store: None,
         key_hash_inverse,
@@ -234,8 +232,6 @@ pub(super) async fn run_operation_json(
     let mut executor = OperationExecutor::new(plan.clone());
     executor.add_consumer(sender);
 
-    let s3_helper = S3Helper::new().await;
-
     // Channel for the output stats.
     let (progress_updates_tx, _) = tokio::sync::mpsc::channel(29);
     let mut context = OperationContext {
@@ -244,7 +240,7 @@ pub(super) async fn run_operation_json(
             ..ComputePlan::default()
         },
         plan_hash: PlanHash::default(),
-        data_manager: DataManager::new(s3_helper),
+        object_stores: ObjectStoreRegistry::default(),
         data_context: DataContext::default(),
         compute_store: None,
         key_hash_inverse,
