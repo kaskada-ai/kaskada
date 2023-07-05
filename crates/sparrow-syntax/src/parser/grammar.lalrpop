@@ -253,14 +253,14 @@ pub(crate) Signature: Signature = {
       ParseError::User{ error: (l, e.to_string(), r) })
 }
 
-Constraint: TypeConstraint = {
-  <l:@L> <name:ident> <r:@R> => TypeConstraint::from_str(name).unwrap_or_else(|e| {
+Constraint: TypeClass = {
+  <l:@L> <name:ident> <r:@R> => TypeClass::from_str(name).unwrap_or_else(|e| {
     errors.push(ParseError::User{ error: (l, format!("Invalid Type Constraint '{}'", name), r)});
     e
   }),
   ! => {
     errors.push(<>.error);
-    TypeConstraint::Error
+    TypeClass::Error
   }
 }
 

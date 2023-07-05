@@ -6,7 +6,7 @@ use arrow::datatypes::{DataType, Field, TimeUnit};
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use itertools::{izip, Itertools};
-use sparrow_syntax::{FenlType, Located, Resolved, Signature, TypeConstraint, TypeVariable};
+use sparrow_syntax::{FenlType, Located, Resolved, Signature, TypeClass, TypeVariable};
 
 use crate::{DiagnosticBuilder, DiagnosticCode};
 
@@ -68,7 +68,7 @@ pub(crate) fn instantiate(
         izip!(arguments.iter(), &parameter_types).enumerate()
     {
         match (parameter_type.inner(), argument_type.inner()) {
-            (FenlType::Generic(type_var), _) => {
+            (FenlType::TypeRef(type_var), _) => {
                 types_for_variable
                     .entry(type_var.clone())
                     .or_default()
@@ -185,7 +185,7 @@ pub fn validate_instantiation(
             continue;
         }
         match parameter_type.inner() {
-            FenlType::Generic(type_var) => {
+            FenlType::TypeRef(type_var) => {
                 match types_for_variable.entry(type_var.clone()) {
                     Entry::Occupied(occupied) => {
                         // When validating, we assume that all uses of a constraint are
@@ -247,7 +247,7 @@ pub fn validate_instantiation(
 /// type.
 fn solve_constraint(
     call: &Located<String>,
-    constraint: &TypeConstraint,
+    constraint: &TypeClass,
     types: &[&Located<FenlType>],
 ) -> Result<FenlType, DiagnosticBuilder> {
     debug_assert!(!types.is_empty());
@@ -304,7 +304,7 @@ fn solve_constraint(
 /// solutions.
 fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, FenlType>) -> FenlType {
     match fenl_type {
-        FenlType::Generic(type_var) => solutions
+        FenlType::TypeRef(type_var) => solutions
             .get(type_var)
             .cloned()
             .unwrap_or(FenlType::Concrete(DataType::Null)),
@@ -543,7 +543,7 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
 /// If the `concrete` type already satisfies this constraint, it is
 /// returned. If the `concrete` may be promoted to satisfy this
 /// constraint, it is. Otherwise, `None` is returned.
-fn promote_concrete(concrete: FenlType, constraint: &TypeConstraint) -> Option<FenlType> {
+fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlType> {
     use DataType::*;
     match (constraint, &concrete) {
         // Any type may be null.
@@ -553,59 +553,59 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeConstraint) -> Option<F
         (_, FenlType::Window) => None,
 
         // Any concrete type satisfies `any`.
-        (TypeConstraint::Any, _) => Some(concrete),
+        (TypeClass::Any, _) => Some(concrete),
 
         // Json types should not promote into other constraints.
         (_, FenlType::Json) => None,
 
         // All numeric types satisfy `number`.
         (
-            TypeConstraint::Number,
+            TypeClass::Number,
             FenlType::Concrete(
                 Int8 | Int16 | Int32 | Int64 | UInt8 | UInt16 | UInt32 | UInt64 | Float16 | Float32
                 | Float64,
             ),
         ) => Some(concrete),
-        (TypeConstraint::Number, FenlType::Concrete(_)) => None,
+        (TypeClass::Number, FenlType::Concrete(_)) => None,
 
         // UInt needs to be widened to wider Int or Float64 to be `signed`
-        (TypeConstraint::Signed, FenlType::Concrete(Int8 | Int16 | Int32 | Int64)) => {
+        (TypeClass::Signed, FenlType::Concrete(Int8 | Int16 | Int32 | Int64)) => {
             Some(concrete)
         }
-        (TypeConstraint::Signed, FenlType::Concrete(UInt8)) => Some(FenlType::Concrete(Int16)),
-        (TypeConstraint::Signed, FenlType::Concrete(UInt16)) => Some(FenlType::Concrete(Int32)),
-        (TypeConstraint::Signed, FenlType::Concrete(UInt32)) => Some(FenlType::Concrete(Int64)),
-        (TypeConstraint::Signed, FenlType::Concrete(UInt64)) => Some(FenlType::Concrete(Float64)),
-        (TypeConstraint::Signed, FenlType::Concrete(Float16 | Float32 | Float64)) => Some(concrete),
-        (TypeConstraint::Signed, FenlType::Concrete(_)) => None,
+        (TypeClass::Signed, FenlType::Concrete(UInt8)) => Some(FenlType::Concrete(Int16)),
+        (TypeClass::Signed, FenlType::Concrete(UInt16)) => Some(FenlType::Concrete(Int32)),
+        (TypeClass::Signed, FenlType::Concrete(UInt32)) => Some(FenlType::Concrete(Int64)),
+        (TypeClass::Signed, FenlType::Concrete(UInt64)) => Some(FenlType::Concrete(Float64)),
+        (TypeClass::Signed, FenlType::Concrete(Float16 | Float32 | Float64)) => Some(concrete),
+        (TypeClass::Signed, FenlType::Concrete(_)) => None,
 
         // Int and UInt needs to be widened to Float64 to be `float`
         (
-            TypeConstraint::Float,
+            TypeClass::Float,
             FenlType::Concrete(Int8 | Int16 | Int32 | Int64 | UInt8 | UInt16 | UInt32 | UInt64),
         ) => Some(FenlType::Concrete(Float64)),
-        (TypeConstraint::Float, FenlType::Concrete(Float16 | Float32 | Float64)) => Some(concrete),
-        (TypeConstraint::Float, FenlType::Concrete(_)) => None,
+        (TypeClass::Float, FenlType::Concrete(Float16 | Float32 | Float64)) => Some(concrete),
+        (TypeClass::Float, FenlType::Concrete(_)) => None,
 
         // Duration and Interval types are time deltas.
-        (TypeConstraint::TimeDelta, FenlType::Concrete(Duration(_) | Interval(_))) => {
+        (TypeClass::TimeDelta, FenlType::Concrete(Duration(_) | Interval(_))) => {
             Some(concrete)
         }
-        (TypeConstraint::TimeDelta, FenlType::Concrete(_)) => None,
+        (TypeClass::TimeDelta, FenlType::Concrete(_)) => None,
 
         // Ordered types include all numbered types and timestamps.
         (
-            TypeConstraint::Ordered,
+            TypeClass::Ordered,
             FenlType::Concrete(
                 Int8 | Int16 | Int32 | Int64 | UInt8 | UInt16 | UInt32 | UInt64 | Float16 | Float32
                 | Float64,
             ),
         ) => Some(concrete),
-        (TypeConstraint::Ordered, FenlType::Concrete(Timestamp(_, _))) => Some(concrete),
-        (TypeConstraint::Ordered, _) => None,
+        (TypeClass::Ordered, FenlType::Concrete(Timestamp(_, _))) => Some(concrete),
+        (TypeClass::Ordered, _) => None,
 
         // Keys include anything we can currently hash.
-        (TypeConstraint::Key, FenlType::Concrete(actual_type)) => {
+        (TypeClass::Key, FenlType::Concrete(actual_type)) => {
             if sparrow_arrow::hash::can_hash(actual_type) {
                 Some(concrete)
             } else {
@@ -614,10 +614,10 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeConstraint) -> Option<F
         }
 
         // errors propagate.
-        (TypeConstraint::Error, _) => Some(FenlType::Error),
+        (TypeClass::Error, _) => Some(FenlType::Error),
 
         // Generics can never be concrete.
-        (_, FenlType::Generic(_)) => None,
+        (_, FenlType::TypeRef(_)) => None,
 
         // Errors propagate. This ensures we don't report an additional error.
         (_, FenlType::Error) => Some(FenlType::Error),

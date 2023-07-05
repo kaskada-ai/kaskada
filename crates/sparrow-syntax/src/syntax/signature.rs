@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::parser::try_parse_signature;
-use crate::{ExprRef, FeatureSetPart, FenlType, Located, Parameters, ParseErrors, TypeConstraint};
+use crate::{ExprRef, FeatureSetPart, FenlType, Located, Parameters, ParseErrors, TypeClass};
 
 /// Type variable defined by a signature
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -22,7 +22,7 @@ impl std::fmt::Display for TypeVariable {
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct TypeParameter {
     pub name: TypeVariable,
-    pub constraints: Vec<TypeConstraint>,
+    pub constraints: Vec<TypeClass>,
 }
 
 impl std::fmt::Display for TypeParameter {
@@ -33,7 +33,7 @@ impl std::fmt::Display for TypeParameter {
 }
 
 impl TypeParameter {
-    pub fn new(name: String, constraints: Vec<TypeConstraint>) -> Self {
+    pub fn new(name: String, constraints: Vec<TypeClass>) -> Self {
         Self {
             name: TypeVariable(name),
             constraints,
@@ -66,7 +66,7 @@ impl Signature {
         type_parameters: Vec<TypeParameter>,
         result: FenlType,
     ) -> anyhow::Result<Self> {
-        if matches!(result, FenlType::Generic(_)) {
+        if matches!(result, FenlType::TypeRef(_)) {
             anyhow::ensure!(
                 parameters
                     .types()
@@ -97,7 +97,7 @@ impl Signature {
 
         // check that all type variables referenced in parameters are defined
         for t in parameters.types() {
-            if let FenlType::Generic(type_variable) = t.inner() {
+            if let FenlType::TypeRef(type_variable) = t.inner() {
                 if !type_parameters.iter().any(|tp| &tp.name == type_variable) {
                     anyhow::bail!(
                         "Type variable '{:?}' is not defined in the type parameters for signature \
@@ -110,7 +110,7 @@ impl Signature {
         }
 
         // check result type variable is defined
-        if let FenlType::Generic(result_variable) = &result {
+        if let FenlType::TypeRef(result_variable) = &result {
             if !type_parameters.iter().any(|p| &p.name == result_variable) {
                 anyhow::bail!(
                     "Type variable '{:?}' is not defined in the type parameters for signature '{}'",

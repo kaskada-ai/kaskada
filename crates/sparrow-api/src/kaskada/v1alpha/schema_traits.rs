@@ -188,7 +188,7 @@ impl TryFrom<&FenlType> for DataType {
                         e.map_data_type(FenlType::Concrete)
                     })
             }
-            FenlType::Generic(_) => Err(ConversionError::new_unsupported(value.clone())),
+            FenlType::TypeRef(_) => Err(ConversionError::new_unsupported(value.clone())),
             FenlType::Window => Ok(Self {
                 kind: Some(data_type::Kind::Window(())),
             }),

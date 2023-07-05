@@ -19,7 +19,7 @@ pub enum FenlType {
     /// A specific Arrow DataType.
     Concrete(DataType),
     /// A generic type with the given type variable.
-    Generic(TypeVariable),
+    TypeRef(TypeVariable),
     /// A type for describing a windowing behavior.
     Window,
     /// A type for describing a string that will be interpreted
@@ -94,7 +94,7 @@ impl<'a> std::fmt::Display for FormatStruct<'a> {
 /// actual arguments is chosen for constrained type.
 #[derive(PartialOrd, Ord, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 #[repr(u8)]
-pub enum TypeConstraint {
+pub enum TypeClass {
     /// Any type.
     Any,
     /// Any type that is a valid key.
@@ -116,34 +116,34 @@ pub enum TypeConstraint {
     Error,
 }
 
-impl Display for TypeConstraint {
+impl Display for TypeClass {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TypeConstraint::Number => fmt.write_str("number"),
-            TypeConstraint::Key => fmt.write_str("key"),
-            TypeConstraint::Any => fmt.write_str("any"),
-            TypeConstraint::Signed => fmt.write_str("signed"),
-            TypeConstraint::Float => fmt.write_str("float"),
-            TypeConstraint::TimeDelta => fmt.write_str("timedelta"),
-            TypeConstraint::Ordered => fmt.write_str("ordered"),
-            TypeConstraint::Error => fmt.write_str("error"),
+            TypeClass::Number => fmt.write_str("number"),
+            TypeClass::Key => fmt.write_str("key"),
+            TypeClass::Any => fmt.write_str("any"),
+            TypeClass::Signed => fmt.write_str("signed"),
+            TypeClass::Float => fmt.write_str("float"),
+            TypeClass::TimeDelta => fmt.write_str("timedelta"),
+            TypeClass::Ordered => fmt.write_str("ordered"),
+            TypeClass::Error => fmt.write_str("error"),
         }
     }
 }
 
-impl FromStr for TypeConstraint {
-    type Err = TypeConstraint;
+impl FromStr for TypeClass {
+    type Err = TypeClass;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "number" => Ok(TypeConstraint::Number),
-            "key" => Ok(TypeConstraint::Key),
-            "any" => Ok(TypeConstraint::Any),
-            "signed" => Ok(TypeConstraint::Signed),
-            "float" => Ok(TypeConstraint::Float),
-            "timedelta" => Ok(TypeConstraint::TimeDelta),
-            "ordered" => Ok(TypeConstraint::Ordered),
-            _ => Err(TypeConstraint::Error),
+            "number" => Ok(TypeClass::Number),
+            "key" => Ok(TypeClass::Key),
+            "any" => Ok(TypeClass::Any),
+            "signed" => Ok(TypeClass::Signed),
+            "float" => Ok(TypeClass::Float),
+            "timedelta" => Ok(TypeClass::TimeDelta),
+            "ordered" => Ok(TypeClass::Ordered),
+            _ => Err(TypeClass::Error),
         }
     }
 }
@@ -170,7 +170,7 @@ impl Display for FenlType {
         match self {
             FenlType::Json => write!(fmt, "json"),
             FenlType::Window => write!(fmt, "window"),
-            FenlType::Generic(type_param) => write!(fmt, "{type_param}"),
+            FenlType::TypeRef(type_param) => write!(fmt, "{type_param}"),
             FenlType::Concrete(data_type) => write!(fmt, "{}", FormatDataType(data_type)),
             FenlType::Error => write!(fmt, "error"),
         }
@@ -206,7 +206,7 @@ impl FromStr for FenlType {
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
             // catch-all assumes the type is a type variable, which will be validated in the signature creation
-            name => Ok(FenlType::Generic(TypeVariable(name.to_owned()))),
+            name => Ok(FenlType::TypeRef(TypeVariable(name.to_owned()))),
         }
     }
 }
@@ -230,7 +230,7 @@ impl FenlType {
 
     pub fn arrow_type(&self) -> Option<&DataType> {
         match self {
-            FenlType::Generic(_) => None,
+            FenlType::TypeRef(_) => None,
             FenlType::Concrete(t) => Some(t),
             FenlType::Window => None,
             FenlType::Json => None,
@@ -247,7 +247,7 @@ impl FenlType {
 
     pub fn take_arrow_type(self) -> Option<DataType> {
         match self {
-            FenlType::Generic(_) => None,
+            FenlType::TypeRef(_) => None,
             FenlType::Concrete(t) => Some(t),
             FenlType::Window => None,
             FenlType::Json => None,
