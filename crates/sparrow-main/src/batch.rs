@@ -7,7 +7,6 @@ use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{CompileRequest, ExecuteRequest, FenlDiagnostics};
 use sparrow_compiler::CompilerOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
-use sparrow_runtime::s3::S3Helper;
 use tracing::{info, info_span};
 
 use crate::script::{Schema, Script, ScriptPath};
@@ -112,8 +111,6 @@ impl BatchCommand {
         };
 
         if !self.compile_only {
-            let s3_helper = S3Helper::new().await;
-
             if !self.output_dir.exists() {
                 tokio::fs::create_dir_all(&self.output_dir)
                     .await
@@ -133,7 +130,6 @@ impl BatchCommand {
                     changed_since: None,
                     final_result_time: None,
                 },
-                s3_helper,
                 None,
                 self.flight_record_path,
                 FlightRecordHeader::default(),

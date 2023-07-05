@@ -13,7 +13,6 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
-use sparrow_runtime::s3::S3Helper;
 use sparrow_runtime::PreparedMetadata;
 use tempfile::NamedTempFile;
 use uuid::Uuid;
@@ -45,7 +44,6 @@ impl error_stack::Context for Error {}
 /// Execute the example and return the result as a CSV string.
 pub(super) async fn execute_example(
     example: &FunctionExample,
-    s3_helper: S3Helper,
 ) -> error_stack::Result<String, Error> {
     // 1. Prepare the file
     let mut preparer = ExampleInputPreparer::new();
@@ -106,7 +104,6 @@ pub(super) async fn execute_example(
             changed_since: None,
             final_result_time: None,
         },
-        s3_helper,
         None,
         None,
         FlightRecordHeader::default(),

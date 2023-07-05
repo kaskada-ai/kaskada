@@ -88,7 +88,7 @@ func getComputePreparedFiles(prepareJobs []*ent.PrepareJob) []*v1alpha.PreparedF
 				MaxEventTime: timestamppb.New(time.Unix(0, preparedFile.MaxEventTime)),
 				MinEventTime: timestamppb.New(time.Unix(0, preparedFile.MinEventTime)),
 				NumRows:      preparedFile.RowCount,
-				MetadataPath: ConvertURIForCompute(metadataPath),
+				MetadataPath: metadataPath,
 			})
 		}
 	}

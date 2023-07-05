@@ -96,7 +96,7 @@ impl PreparedMetadata {
             .unwrap_or(i64::MIN);
 
         let path = format!("file://{}", parquet_path.display());
-        let metadata_path = format!("{}", metadata_parquet_path.display());
+        let metadata_path = format!("file://{}", metadata_parquet_path.display());
         Self::try_from_prepared_schema(
             path,
             prepared_schema.clone(),
