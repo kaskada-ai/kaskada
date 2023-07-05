@@ -7,11 +7,7 @@ import "kaskada/kaskada/v1alpha/pulsar.proto";
 
 message PrepareDataRequest {
   // The source of information for the prepare data
-  oneof source {
-    SourceData source_data = 1;
-    PulsarSubscription pulsar_subscription = 6;
-    KafkaSubscription kafka_subscription = 7;
-  }
+  SourceData source_data = 1;
 
   // General configuration of the table
   TableConfig config = 2;

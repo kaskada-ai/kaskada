@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use error_stack::{IntoReport, ResultExt};
 use sparrow_api::kaskada::v1alpha::file_service_server::FileService;
+use sparrow_api::kaskada::v1alpha::Schema;
 use sparrow_api::kaskada::v1alpha::{
-    GetMetadataRequest, GetMetadataResponse, MergeMetadataRequest, MergeMetadataResponse,
-    SourceData, SourceMetadata,
+    GetMetadataRequest, GetMetadataResponse, KafkaConfig, MergeMetadataRequest,
+    MergeMetadataResponse, PulsarConfig, SourceData, SourceMetadata,
 };
-use sparrow_api::kaskada::v1alpha::{KafkaSubscription, PulsarSubscription, Schema};
 
 use sparrow_runtime::RawMetadata;
 
@@ -68,16 +68,16 @@ async fn get_metadata(
                 .await
                 .or_else(|e| anyhow::bail!("failed getting source metadata: {}", e))
         }
-        sparrow_api::kaskada::v1alpha::get_metadata_request::Source::PulsarSubscription(
-            pulsar_data,
-        ) => get_pulsar_metadata(&pulsar_data)
+        sparrow_api::kaskada::v1alpha::get_metadata_request::Source::PulsarConfig(
+            pulsar_config,
+        ) => get_pulsar_metadata(&pulsar_config)
             .await
             .or_else(|e| anyhow::bail!("failed getting source metadata: {}", e)),
-        sparrow_api::kaskada::v1alpha::get_metadata_request::Source::KafkaSubscription(
-            kakfa_data,
-        ) => get_kafka_metadata(&kakfa_data)
-            .await
-            .or_else(|e| anyhow::bail!("failed getting source metadata: {}", e)),
+        sparrow_api::kaskada::v1alpha::get_metadata_request::Source::KafkaConfig(kafka_config) => {
+            get_kafka_metadata(&kafka_config)
+                .await
+                .or_else(|e| anyhow::bail!("failed getting source metadata: {}", e))
+        }
     }?;
 
     Ok(Response::new(GetMetadataResponse {
@@ -110,27 +110,27 @@ pub(crate) async fn get_source_metadata(
 }
 
 pub(crate) async fn get_pulsar_metadata(
-    ps: &PulsarSubscription,
+    pc: &PulsarConfig,
 ) -> error_stack::Result<SourceMetadata, Error> {
-    let metadata = RawMetadata::try_from_pulsar_subscription(ps)
+    let metadata = RawMetadata::try_from_pulsar_subscription(pc)
         .await
-        .attach_printable_lazy(|| format!("Pulsar Source: {:?}", ps))
+        .attach_printable_lazy(|| format!("Pulsar Source: {:?}", pc))
         .change_context(Error::Schema(format!(
             "unable to read schema from: {:?}",
-            ps
+            pc
         )))?;
     get_schema_from_metadata(metadata)
 }
 
 pub(crate) async fn get_kafka_metadata(
-    ks: &KafkaSubscription,
+    kc: &KafkaConfig,
 ) -> error_stack::Result<SourceMetadata, Error> {
-    let metadata = RawMetadata::try_from_kafka_subscription(ks)
+    let metadata = RawMetadata::try_from_kafka_subscription(kc)
         .await
-        .attach_printable_lazy(|| format!("Kafka Source: {:?}", ks))
+        .attach_printable_lazy(|| format!("Kafka Source: {:?}", kc))
         .change_context(Error::Schema(format!(
             "unable to read schema from: {:?}",
-            ks
+            kc
         )))?;
     get_schema_from_metadata(metadata)
 }

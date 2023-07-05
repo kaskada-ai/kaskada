@@ -146,26 +146,6 @@ async fn reader_from_pulsar<'a>(
     .change_context(Error::CreatePulsarReader)
 }
 
-pub async fn prepare_pulsar(
-    object_store_registry: &ObjectStoreRegistry,
-    pulsar_subscription: &PulsarSubscription,
-    output_path_prefix: &str,
-    output_file_prefix: &str,
-    table_config: &TableConfig,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let prepare_stream =
-        prepared_from_pulsar_batches(pulsar_subscription, table_config, slice).await?;
-    let result = prepare_source_stream(
-        object_store_registry,
-        prepare_stream,
-        output_path_prefix,
-        output_file_prefix,
-    )
-    .await?;
-    Ok(result)
-}
-
 pub async fn prepare_file(
     object_store_registry: &ObjectStoreRegistry,
     source_data: &SourceData,
@@ -175,26 +155,6 @@ pub async fn prepare_file(
     slice: &Option<slice_plan::Slice>,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
     let prepare_stream = prepared_batches(source_data, table_config, slice).await?;
-    let result = prepare_source_stream(
-        object_store_registry,
-        prepare_stream,
-        output_path_prefix,
-        output_file_prefix,
-    )
-    .await?;
-    Ok(result)
-}
-
-pub async fn prepare_kafka(
-    object_store_registry: &ObjectStoreRegistry,
-    kafka_subscription: &KafkaSubscription,
-    output_path_prefix: &str,
-    output_file_prefix: &str,
-    table_config: &TableConfig,
-    slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let prepare_stream =
-        prepared_from_kafka_batches(kafka_subscription, table_config, slice).await?;
     let result = prepare_source_stream(
         object_store_registry,
         prepare_stream,

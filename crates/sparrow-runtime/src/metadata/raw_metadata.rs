@@ -10,7 +10,7 @@ use tempfile::NamedTempFile;
 
 use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
 
-use sparrow_api::kaskada::v1alpha::{KafkaSubscription, PulsarConfig, PulsarSubscription};
+use sparrow_api::kaskada::v1alpha::{KafkaConfig, PulsarConfig};
 
 use crate::metadata::file_from_path;
 use crate::stores::object_store_url::ObjectStoreKey;
@@ -29,8 +29,6 @@ pub enum Error {
     Download,
     #[display(fmt = "reading schema error")]
     ReadSchema,
-    #[display(fmt = "pulsar subscription error")]
-    PulsarSubscription,
     #[display(fmt = "failed to get pulsar schema: {_0}")]
     PulsarSchema(String),
     #[display(fmt = "unsupport column detected: '{_0}")]
@@ -82,9 +80,8 @@ impl RawMetadata {
     }
 
     pub async fn try_from_pulsar_subscription(
-        ps: &PulsarSubscription,
+        ps: &PulsarConfig,
     ) -> error_stack::Result<Self, Error> {
-        let config = ps.config.as_ref().ok_or(Error::PulsarSubscription)?;
         // The `_publish_time` is metadata on the pulsar message, and required
         // by the `prepare` step. However, that is not part of the user's schema.
         // The prepare path calls `try_from_pulsar` directly, so for all other cases
@@ -93,14 +90,12 @@ impl RawMetadata {
         // The "prepare from pulsar" step is an experimental feature, and will
         // likely change in the future, so we're okay with this hack for now.
         let should_include_publish_time = false;
-        Ok(Self::try_from_pulsar(config, should_include_publish_time)
+        Ok(Self::try_from_pulsar(ps, should_include_publish_time)
             .await?
             .sparrow_metadata)
     }
 
-    pub async fn try_from_kafka_subscription(
-        _: &KafkaSubscription,
-    ) -> error_stack::Result<Self, Error> {
+    pub async fn try_from_kafka_subscription(_: &KafkaConfig) -> error_stack::Result<Self, Error> {
         todo!()
     }
 

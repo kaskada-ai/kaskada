@@ -9,7 +9,7 @@ use sparrow_api::kaskada::v1alpha::{
     source_data, GetCurrentPrepIdRequest, GetCurrentPrepIdResponse, PrepareDataRequest,
     PrepareDataResponse, SourceData,
 };
-use sparrow_runtime::prepare::{prepare_file, prepare_kafka, prepare_pulsar, Error};
+use sparrow_runtime::prepare::{prepare_file, Error};
 
 use sparrow_runtime::stores::object_store_url::ObjectStoreKey;
 use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
@@ -89,55 +89,25 @@ pub async fn prepare_data(
     let temp_file = NamedTempFile::new()
         .into_report()
         .change_context(Error::Internal)?;
-    let source = prepare_request
-        .source
+    let source_data = prepare_request
+        .source_data
         .ok_or(Error::MissingField("source"))?;
 
-    let (_prepared_metadata, prepared_files) = match source {
-        sparrow_api::kaskada::v1alpha::prepare_data_request::Source::SourceData(source_data) => {
-            let source_data = convert_to_local_sourcedata(
-                object_store_registry.clone(),
-                &source_data,
-                temp_file.path(),
-            )
-            .await?;
-            prepare_file(
-                &object_store_registry,
-                &source_data,
-                &prepare_request.output_path_prefix,
-                &prepare_request.file_prefix,
-                &table_config,
-                &slice_plan.slice,
-            )
-            .await?
-        }
-        sparrow_api::kaskada::v1alpha::prepare_data_request::Source::PulsarSubscription(
-            pulsar_sub,
-        ) => {
-            prepare_pulsar(
-                &object_store_registry,
-                &pulsar_sub,
-                &prepare_request.output_path_prefix,
-                &prepare_request.file_prefix,
-                &table_config,
-                &slice_plan.slice,
-            )
-            .await?
-        }
-        sparrow_api::kaskada::v1alpha::prepare_data_request::Source::KafkaSubscription(
-            kafka_sub,
-        ) => {
-            prepare_kafka(
-                &object_store_registry,
-                &kafka_sub,
-                &prepare_request.output_path_prefix,
-                &prepare_request.file_prefix,
-                &table_config,
-                &slice_plan.slice,
-            )
-            .await?
-        }
-    };
+    let source_data = convert_to_local_sourcedata(
+        object_store_registry.clone(),
+        &source_data,
+        temp_file.path(),
+    )
+    .await?;
+    let (_prepared_metadata, prepared_files) = prepare_file(
+        &object_store_registry,
+        &source_data,
+        &prepare_request.output_path_prefix,
+        &prepare_request.file_prefix,
+        &table_config,
+        &slice_plan.slice,
+    )
+    .await?;
 
     Ok(Response::new(PrepareDataResponse {
         prep_id: CURRENT_PREP_ID,

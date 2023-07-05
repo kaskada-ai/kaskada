@@ -14,8 +14,8 @@ message SourceMetadata {
 message GetMetadataRequest {
   oneof source {
     SourceData source_data = 1;
-    PulsarSubscription pulsar_subscription = 2;
-    KafkaSubscription kafka_subscription = 3;
+    PulsarConfig pulsar_config = 2;
+    KafkaConfig kafka_config = 3;
   }
 }
 
