@@ -569,9 +569,7 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlTy
         (TypeClass::Number, FenlType::Concrete(_)) => None,
 
         // UInt needs to be widened to wider Int or Float64 to be `signed`
-        (TypeClass::Signed, FenlType::Concrete(Int8 | Int16 | Int32 | Int64)) => {
-            Some(concrete)
-        }
+        (TypeClass::Signed, FenlType::Concrete(Int8 | Int16 | Int32 | Int64)) => Some(concrete),
         (TypeClass::Signed, FenlType::Concrete(UInt8)) => Some(FenlType::Concrete(Int16)),
         (TypeClass::Signed, FenlType::Concrete(UInt16)) => Some(FenlType::Concrete(Int32)),
         (TypeClass::Signed, FenlType::Concrete(UInt32)) => Some(FenlType::Concrete(Int64)),
@@ -588,9 +586,7 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlTy
         (TypeClass::Float, FenlType::Concrete(_)) => None,
 
         // Duration and Interval types are time deltas.
-        (TypeClass::TimeDelta, FenlType::Concrete(Duration(_) | Interval(_))) => {
-            Some(concrete)
-        }
+        (TypeClass::TimeDelta, FenlType::Concrete(Duration(_) | Interval(_))) => Some(concrete),
         (TypeClass::TimeDelta, FenlType::Concrete(_)) => None,
 
         // Ordered types include all numbered types and timestamps.
