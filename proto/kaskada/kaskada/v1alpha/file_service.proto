@@ -2,9 +2,9 @@ syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
 import "kaskada/kaskada/v1alpha/common.proto";
-import "kaskada/kaskada/v1alpha/schema.proto";
 import "kaskada/kaskada/v1alpha/kafka.proto";
 import "kaskada/kaskada/v1alpha/pulsar.proto";
+import "kaskada/kaskada/v1alpha/schema.proto";
 
 message SourceMetadata {
   // The schema of the source.

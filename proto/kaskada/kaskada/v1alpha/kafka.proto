@@ -8,7 +8,7 @@ message KafkaConfig {
 
   // The name of the topic to consume
   string topic = 2;
-  
+
   oneof schema {
     // Avro schema as a string
     string avro_schema = 100;
