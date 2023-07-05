@@ -1,11 +1,14 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use arrow::array::TimestampNanosecondArray;
 use arrow::datatypes::{Schema, SchemaRef};
+use arrow::record_batch::RecordBatch;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::file::metadata::ParquetMetaData;
 use parquet::file::statistics::ValueStatistics;
 use sparrow_api::kaskada::v1alpha::PreparedFile;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::TableSchema;
 
 use crate::metadata::file_from_path;
@@ -67,6 +70,39 @@ fn get_time_statistics(
 }
 
 impl PreparedMetadata {
+    pub fn try_from_data(
+        data_path: String,
+        data: &RecordBatch,
+        metadata_path: String,
+    ) -> anyhow::Result<Self> {
+        let prepared_schema = data.schema();
+
+        anyhow::ensure!(
+            prepared_schema.field(0).name() == "_time",
+            "First column of prepared files must be '_time'"
+        );
+
+        // Compute the time statistics directly from the data.
+        //
+        // TODO: We could instead just get this from the parquet metadata.
+        let time = data.column(0);
+        let time: &TimestampNanosecondArray = downcast_primitive_array(time.as_ref())?;
+
+        let num_rows = data.num_rows() as i64;
+        anyhow::ensure!(num_rows > 0, "Data should be non-empty");
+        let min_time = *time.values().iter().min().expect("non-empty");
+        let max_time = *time.values().iter().max().expect("non-empty");
+
+        Self::try_from_prepared_schema(
+            data_path,
+            prepared_schema,
+            min_time,
+            max_time,
+            num_rows,
+            metadata_path,
+        )
+    }
+
     /// Create a `PreparedMetadata` from the path to a parquet file.
     pub fn try_from_local_parquet_path(
         parquet_path: &Path,
