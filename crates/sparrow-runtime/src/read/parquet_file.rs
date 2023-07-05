@@ -36,6 +36,8 @@ pub enum Error {
     ReadingParquetFile,
 }
 
+const BATCH_SIZE_ROWS: usize = 100_000;
+
 impl error_stack::Context for Error {}
 
 impl ParquetFile {
@@ -86,7 +88,7 @@ impl ParquetFile {
             .change_context(Error::ReadingParquetFile)
             .attach_printable_lazy(|| path.clone())?;
 
-        batch_stream = batch_stream.with_batch_size(100_000);
+        batch_stream = batch_stream.with_batch_size(BATCH_SIZE_ROWS);
         if let Some(projection) = projection {
             let mask = ProjectionMask::leaves(metadata.file_metadata().schema_descr(), projection);
             batch_stream = batch_stream.with_projection(mask);
