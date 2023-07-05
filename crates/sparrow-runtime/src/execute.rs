@@ -14,15 +14,14 @@ use sparrow_compiler::{hash_compute_plan_proto, DataContext};
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 
-use crate::data_manager::DataManager;
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
+use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
 
 mod compute_executor;
 mod error;
-mod input_prefetch;
 pub(crate) mod key_hash_inverse;
 pub(crate) mod operation;
 pub mod output;
@@ -203,7 +202,7 @@ pub async fn execute(
     let context = OperationContext {
         plan,
         plan_hash,
-        data_manager: DataManager::new(s3_helper.clone()),
+        object_stores: ObjectStoreRegistry::default(),
         data_context,
         compute_store,
         key_hash_inverse,
@@ -316,7 +315,7 @@ pub async fn materialize(
     let context = OperationContext {
         plan,
         plan_hash,
-        data_manager: DataManager::new(s3_helper.clone()),
+        object_stores: ObjectStoreRegistry::default(),
         data_context,
         compute_store: snapshot_compute_store,
         key_hash_inverse,

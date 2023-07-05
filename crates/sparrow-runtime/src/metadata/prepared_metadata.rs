@@ -95,8 +95,8 @@ impl PreparedMetadata {
             // Empty files contain no stats. We default to assuming the min time.
             .unwrap_or(i64::MIN);
 
-        let path = parquet_path.to_string_lossy().into_owned();
-        let metadata_path = metadata_parquet_path.to_string_lossy().into_owned();
+        let path = format!("file://{}", parquet_path.display());
+        let metadata_path = format!("{}", metadata_parquet_path.display());
         Self::try_from_prepared_schema(
             path,
             prepared_schema.clone(),
