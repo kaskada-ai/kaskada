@@ -89,8 +89,8 @@ type ObjectStoreClient interface {
 	// Note the signing step will be skipped when the object-store-type is `local`
 	GetPresignedDownloadURL(ctx context.Context, URI string) (string, error)
 
-	// gets an MD5 hash or equivalent identifier for an object in our store
-	GetObjectIdentifier(ctx context.Context, object Object) (string, error)
+	// gets an MD5 hash or equivalent identifier for fileURI
+	GetObjectIdentifier(ctx context.Context, fileURI string) (string, error)
 
 	// returns the absolute URI of a path inside our object store
 	GetDataPathURI(path string) string

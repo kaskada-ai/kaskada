@@ -291,14 +291,14 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 	}
 }
 
-// gets an MD5 hash or equivalent identifier for an object in our store
-func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, object Object) (identifier string, err error) {
-	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetObjectIdentifier").Str("path", object.path).Logger()
+// gets an MD5 hash or equivalent identifier for an object
+func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI string) (identifier string, err error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetObjectIdentifier").Str("file_uri", fileURI).Logger()
 
 	var file vfs.File
-	file, err = c.dataLocation.NewFile(object.path)
+	file, err = newFile(fileURI)
 	if err != nil {
-		subLogger.Error().Err(err).Msg("issue accessing path")
+		subLogger.Error().Err(err).Msg("issue accessing file_uri")
 		return
 	}
 	defer file.Close()

@@ -357,7 +357,7 @@ var _ = Describe("Tables", Ordered, func() {
 		})
 	})
 
-	Describe("Add the file to the second table", func() {
+	Describe("Add a file to the second table, without copying it to the kaskada filesystem", func() {
 		It("should work without issue", func() {
 			time.Sleep(time.Millisecond * 2) //so table create & update times are different
 
@@ -369,6 +369,9 @@ var _ = Describe("Tables", Ordered, func() {
 						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
+				CopyToFilesystem: &wrapperspb.BoolValue{
+					Value: false,
+				},
 			})
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(res).ShouldNot(BeNil())
@@ -376,6 +379,31 @@ var _ = Describe("Tables", Ordered, func() {
 			Expect(res.DataTokenId).ShouldNot(Equal(dataToken1))
 			Expect(res.DataTokenId).ShouldNot(Equal(dataTokenDelete))
 			dataToken2 = res.DataTokenId
+		})
+	})
+
+	Describe("Add a file to the second table again", func() {
+		It("Should error with a friendly message", func() {
+			res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
+				TableName: table2.TableName,
+				SourceData: &v1alpha.LoadDataRequest_FileInput{
+					FileInput: &v1alpha.FileInput{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+						Uri:      helpers.GetFileURI(fileName),
+					},
+				},
+				CopyToFilesystem: &wrapperspb.BoolValue{
+					Value: false,
+				},
+			})
+			Expect(err).Should(HaveOccurredGrpc())
+			Expect(res).Should(BeNil())
+
+			//inspect error response
+			errStatus, ok := status.FromError(err)
+			Expect(ok).Should(BeTrue())
+			Expect(errStatus.Code()).Should(Equal(codes.AlreadyExists))
+			Expect(errStatus.Message()).Should(ContainSubstring("file already exists in table"))
 		})
 	})
 

@@ -186,9 +186,23 @@ min_amount: query_v1_test.amount | min(),
 			})
 		})
 
-		Describe("Load the second file into the table", func() {
+		Describe("Load the second file into the table, without copying the file to the kaskada filesystem", func() {
 			It("Should work without error and return a dataToken", func() {
-				res := helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part2.parquet")
+				res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
+					TableName: table.TableName,
+					SourceData: &v1alpha.LoadDataRequest_FileInput{
+						FileInput: &v1alpha.FileInput{
+							FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+							Uri:      helpers.GetFileURI("purchases/purchases_part2.parquet"),
+						},
+					},
+					CopyToFilesystem: &wrapperspb.BoolValue{
+						Value: false,
+					},
+				})
+				Expect(err).ShouldNot(HaveOccurredGrpc())
+				Expect(res).ShouldNot(BeNil())
+
 				Expect(res.DataTokenId).ShouldNot(BeEmpty())
 				secondDataTokenId = res.DataTokenId
 				Expect(secondDataTokenId).ShouldNot(Equal(firstDataTokenId))
