@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_api::kaskada::v1alpha::{source_data, PrepareDataRequest, PulsarConfig, SlicePlan};
+use sparrow_api::kaskada::v1alpha::prepare_data_request::Source;
+use sparrow_api::kaskada::v1alpha::{PrepareDataRequest, PulsarConfig, SlicePlan};
 use sparrow_api::kaskada::v1alpha::{PulsarSubscription, SourceData};
 
 use sparrow_runtime::stores::ObjectStoreRegistry;
@@ -175,15 +176,11 @@ impl PrepareCommand {
             };
             tracing::debug!("Pulsar config is {:?}", redact_auth_field(&pulsar_config));
 
-            SourceData {
-                source: Some(source_data::Source::PulsarSubscription(
-                    PulsarSubscription {
-                        config: Some(pulsar_config),
-                        subscription_id: pulsar_subscription,
-                        last_publish_time: 0,
-                    },
-                )),
-            }
+            Source::PulsarSubscription(PulsarSubscription {
+                config: Some(pulsar_config),
+                subscription_id: pulsar_subscription,
+                last_publish_time: 0,
+            })
         } else {
             let input = self
                 .input
@@ -195,9 +192,9 @@ impl PrepareCommand {
             let file_path = SourceData::try_from_local(input.as_path())
                 .into_report()
                 .change_context(Error::UnrecognizedInputFormat)?;
-            SourceData {
+            Source::SourceData(SourceData {
                 source: Some(file_path),
-            }
+            })
         };
 
         if table.file_sets.is_empty() {
@@ -214,7 +211,7 @@ impl PrepareCommand {
         };
 
         let pdr = PrepareDataRequest {
-            source_data: Some(source_data),
+            source: Some(source_data),
             config: Some(config),
             output_path_prefix: self.output_path.to_string_lossy().to_string(),
             file_prefix: file_prefix.to_string(),

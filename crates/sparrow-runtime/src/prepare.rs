@@ -2,10 +2,10 @@ use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
+use std::path;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::{fmt, path};
 
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -17,7 +17,8 @@ use parquet::arrow::ArrowWriter;
 use serde_yaml;
 use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{
-    slice_plan, source_data, PreparedFile, PulsarSubscription, SourceData, TableConfig,
+    slice_plan, source_data, KafkaSubscription, PreparedFile, PulsarSubscription, SourceData,
+    TableConfig,
 };
 
 mod column_behavior;
@@ -71,14 +72,47 @@ pub async fn prepared_batches<'a>(
                 let reader = BufReader::new(content);
                 reader_from_csv(config, reader, prepare_hash, slice).await?
             }
-            source_data::Source::PulsarSubscription(ps) => {
-                reader_from_pulsar(config, ps, prepare_hash, slice).await?
-            }
-            source_data::Source::KafkaSubscription(_) => todo!(),
         },
     };
 
     Ok(prepare_iter)
+}
+
+/// Prepares batches from the Pulsar Subscription
+///
+/// Returns a fallible iterator over pairs containing the data and metadata
+/// batches.
+pub async fn prepared_from_pulsar_batches<'a>(
+    ps: &PulsarSubscription,
+    config: &'a TableConfig,
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
+    let prepare_hash = get_pulsar_prepare_hash(ps)?;
+    Ok(reader_from_pulsar(config, ps, prepare_hash, slice).await?)
+}
+
+/// Prepares batches from the Kafka Subscription
+///
+/// Not Implemented
+pub async fn prepared_from_kafka_batches<'a>(
+    ks: &KafkaSubscription,
+    config: &'a TableConfig,
+    slice: &'a Option<slice_plan::Slice>,
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
+    let kafka_hash = get_kafka_prepare_hash(ks)?;
+    Ok(reader_from_kafka(config, ks, kafka_hash, slice).await?)
+}
+
+async fn reader_from_kafka<'a>(
+    _config: &'a TableConfig,
+    _kafka_subscription: &KafkaSubscription,
+    _prepare_hash: u64,
+    _slice: &'a Option<Slice>,
+) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
+{
+    todo!()
 }
 
 async fn reader_from_pulsar<'a>(
@@ -112,35 +146,26 @@ async fn reader_from_pulsar<'a>(
     .change_context(Error::CreatePulsarReader)
 }
 
-// this is to avoid putting pulsar auth info in the logs
-pub struct SourceDataWrapper<'a>(&'a SourceData);
-
-impl<'a> fmt::Display for SourceDataWrapper<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0.source.as_ref() {
-            Some(source_data::Source::ParquetPath(path)) => write!(f, "{}", path),
-            Some(source_data::Source::CsvPath(path)) => write!(f, "{}", path),
-            Some(source_data::Source::CsvData(_)) => write!(f, "csv data"),
-            Some(source_data::Source::PulsarSubscription(ps)) => {
-                let config = ps.config.as_ref().unwrap();
-                write!(
-                    f,
-                    "pulsar subscription {} to {} @ {}",
-                    ps.subscription_id,
-                    match crate::execute::output::pulsar::format_topic_url(config) {
-                        Ok(url) => url,
-                        Err(_) => "invalid pulsar url".to_string(),
-                    },
-                    config.broker_service_url
-                )
-            }
-            Some(source_data::Source::KafkaSubscription(_)) => todo!(),
-            None => write!(f, "empty source (should never happen)"),
-        }
-    }
+pub async fn prepare_pulsar(
+    object_store_registry: &ObjectStoreRegistry,
+    pulsar_subscription: &PulsarSubscription,
+    output_path_prefix: &str,
+    output_file_prefix: &str,
+    table_config: &TableConfig,
+    slice: &Option<slice_plan::Slice>,
+) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
+    let prepare_stream =
+        prepared_from_pulsar_batches(pulsar_subscription, table_config, slice).await?;
+    let result = prepare_source_stream(
+        object_store_registry,
+        prepare_stream,
+        output_path_prefix,
+        output_file_prefix,
+    )
+    .await?;
+    Ok(result)
 }
 
-/// Prepare the given file and return the list of prepared files.
 pub async fn prepare_file(
     object_store_registry: &ObjectStoreRegistry,
     source_data: &SourceData,
@@ -148,6 +173,44 @@ pub async fn prepare_file(
     output_file_prefix: &str,
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
+) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
+    let prepare_stream = prepared_batches(source_data, table_config, slice).await?;
+    let result = prepare_source_stream(
+        object_store_registry,
+        prepare_stream,
+        output_path_prefix,
+        output_file_prefix,
+    )
+    .await?;
+    Ok(result)
+}
+
+pub async fn prepare_kafka(
+    object_store_registry: &ObjectStoreRegistry,
+    kafka_subscription: &KafkaSubscription,
+    output_path_prefix: &str,
+    output_file_prefix: &str,
+    table_config: &TableConfig,
+    slice: &Option<slice_plan::Slice>,
+) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
+    let prepare_stream =
+        prepared_from_kafka_batches(kafka_subscription, table_config, slice).await?;
+    let result = prepare_source_stream(
+        object_store_registry,
+        prepare_stream,
+        output_path_prefix,
+        output_file_prefix,
+    )
+    .await?;
+    Ok(result)
+}
+
+/// Prepare the given file and return the list of prepared files.
+async fn prepare_source_stream<'a>(
+    object_store_registry: &ObjectStoreRegistry,
+    prepare_stream: BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>,
+    output_path_prefix: &str,
+    output_file_prefix: &str,
 ) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
     let output_url = ObjectStoreUrl::from_str(output_path_prefix)
         .change_context_lazy(|| Error::InvalidUrl(output_path_prefix.to_owned()))?;
@@ -175,9 +238,7 @@ pub async fn prepare_file(
         _ => path::Path::new(temp_dir),
     };
 
-    let prepare_stream = prepared_batches(source_data, table_config, slice).await?;
     let batch_count = std::sync::atomic::AtomicUsize::new(0);
-
     let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
         // Defines the local path to the result file
         let local_result_path =
@@ -387,23 +448,27 @@ fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error>
 
             data_encoding::HEXUPPER.encode(&hash)
         }
-        source_data::Source::PulsarSubscription(ps) => {
-            let mut hasher = sha2::Sha224::new();
-            let config = ps.config.as_ref().ok_or(Error::Internal)?;
-            hasher.update(&config.broker_service_url);
-            hasher.update(&config.tenant);
-            hasher.update(&config.namespace);
-            hasher.update(&config.topic_name);
-            hasher.update(&ps.subscription_id);
-            let mut bytes = [0u8; 8];
-            bytes.copy_from_slice(&ps.last_publish_time.to_be_bytes());
-            hasher.update(bytes);
-            let hash = hasher.finalize();
-            data_encoding::HEXUPPER.encode(&hash)
-        }
-        source_data::Source::KafkaSubscription(_) => todo!(),
     };
     Ok(get_u64_hash(&hex_encoding))
+}
+
+fn get_pulsar_prepare_hash(ps: &PulsarSubscription) -> error_stack::Result<u64, Error> {
+    let mut hasher = sha2::Sha224::new();
+    let config = ps.config.as_ref().ok_or(Error::Internal)?;
+    hasher.update(&config.broker_service_url);
+    hasher.update(&config.tenant);
+    hasher.update(&config.namespace);
+    hasher.update(&config.topic_name);
+    hasher.update(&ps.subscription_id);
+    let mut bytes = [0u8; 8];
+    bytes.copy_from_slice(&ps.last_publish_time.to_be_bytes());
+    hasher.update(bytes);
+    let hash = hasher.finalize();
+    Ok(get_u64_hash(&data_encoding::HEXUPPER.encode(&hash)))
+}
+
+fn get_kafka_prepare_hash(_ks: &KafkaSubscription) -> error_stack::Result<u64, Error> {
+    todo!()
 }
 
 fn get_u64_hash(str: &str) -> u64 {
