@@ -47,6 +47,7 @@ pub(super) async fn write(
     let start = Instant::now();
     let format = object_store.file_type();
     let output_prefix = object_store.output_prefix_uri;
+
     if is_s3_path(&output_prefix) {
         // TODO: This is currently a hacky way of uploading the file to S3. We first
         // write to a local temp file and then we upload. Ideally, we would support

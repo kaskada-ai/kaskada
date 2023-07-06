@@ -23,7 +23,6 @@
 )]
 
 mod batch;
-mod data_manager;
 pub mod execute;
 mod key_hash_index;
 pub mod merge;

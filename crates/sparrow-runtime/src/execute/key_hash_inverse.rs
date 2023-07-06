@@ -1,18 +1,19 @@
-use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, PrimitiveArray, UInt64Array};
 use arrow::datatypes::{DataType, UInt64Type};
 
+use error_stack::{IntoReportCompat, ResultExt};
+use futures::TryStreamExt;
 use hashbrown::HashMap;
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_compiler::DataContext;
 use sparrow_instructions::{ComputeStore, StoreKey};
 use sparrow_plan::GroupId;
-use tempfile::NamedTempFile;
 
-use crate::s3::{self, S3Helper, S3Object};
+use crate::read::ParquetFile;
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 
 /// Stores the mapping from key hash u64 to the position in the keys array.
 ///
@@ -35,6 +36,18 @@ impl std::fmt::Debug for KeyHashInverse {
             .finish_non_exhaustive()
     }
 }
+
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    #[display(fmt = "invalid metadata url '{_0}'")]
+    InvalidMetadataUrl(String),
+    #[display(fmt = "failed to open metadata")]
+    OpeningMetadata,
+    #[display(fmt = "failed to read metadata")]
+    ReadingMetadata,
+}
+
+impl error_stack::Context for Error {}
 
 impl KeyHashInverse {
     /// Restores the KeyHashInverse from the compute store.
@@ -68,32 +81,37 @@ impl KeyHashInverse {
         &mut self,
         data_context: &DataContext,
         primary_grouping: GroupId,
-        s3: S3Helper,
-    ) -> anyhow::Result<()> {
+        registry: &ObjectStoreRegistry,
+    ) -> error_stack::Result<(), Error> {
         let metadata_files = data_context
             .tables_for_grouping(primary_grouping)
             .flat_map(|table| table.metadata_for_files());
 
+        let mut streams = Vec::new();
         for file in metadata_files {
-            let file = if s3::is_s3_path(&file) {
-                let s3_object = S3Object::try_from_uri(&file)?;
-                let downloaded_file = NamedTempFile::new()?;
-                let download_file_path = downloaded_file.into_temp_path();
-                s3.download_s3(s3_object, &download_file_path).await?;
-                file_from_path(&download_file_path)?
-            } else {
-                file_from_path(&PathBuf::from(file))?
-            };
+            let url =
+                ObjectStoreUrl::from_str(&file).change_context(Error::InvalidMetadataUrl(file))?;
+            let file = ParquetFile::try_new(registry, url)
+                .await
+                .change_context(Error::OpeningMetadata)?;
+            let stream = file
+                .read_stream(None)
+                .await
+                .change_context(Error::OpeningMetadata)?;
+            streams.push(stream);
+        }
 
-            let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?;
-            let parquet_reader = parquet_reader.build()?;
-            for batch in parquet_reader {
-                let batch = batch?;
-                let hash_col = batch.column(0);
-                let hash_col: &UInt64Array = downcast_primitive_array(hash_col.as_ref())?;
-                let entity_key_col = batch.column(1);
-                self.add(entity_key_col.to_owned(), hash_col)?;
-            }
+        let mut stream = futures::stream::select_all(streams)
+            .map_err(|e| e.change_context(Error::ReadingMetadata));
+        while let Some(batch) = stream.try_next().await? {
+            let hash_col = batch.column(0);
+            let hash_col: &UInt64Array = downcast_primitive_array(hash_col.as_ref())
+                .into_report()
+                .change_context(Error::ReadingMetadata)?;
+            let entity_key_col = batch.column(1);
+            self.add(entity_key_col.to_owned(), hash_col)
+                .into_report()
+                .change_context(Error::ReadingMetadata)?;
         }
 
         Ok(())
@@ -239,11 +257,6 @@ impl ThreadSafeKeyHashInverse {
         let read = self.key_map.read().await;
         read.store_to(compute_store)
     }
-}
-
-/// Return the file at a given path.
-fn file_from_path(path: &std::path::Path) -> anyhow::Result<std::fs::File> {
-    std::fs::File::open(path).with_context(|| format!("unable to open {path:?}"))
 }
 
 #[cfg(test)]

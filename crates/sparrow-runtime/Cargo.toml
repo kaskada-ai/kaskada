@@ -26,6 +26,7 @@ aws-sdk-s3.workspace = true
 aws-types.workspace = true
 bit-set.workspace = true
 bitvec.workspace = true
+bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
 data-encoding.workspace = true

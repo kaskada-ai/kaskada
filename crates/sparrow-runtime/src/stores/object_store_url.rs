@@ -92,6 +92,8 @@ impl ObjectStoreUrl {
             }
         }
     }
+
+    /// Download the given object to the given local file path.
     pub async fn download(
         &self,
         object_store_registry: &ObjectStoreRegistry,
@@ -118,12 +120,19 @@ impl ObjectStoreUrl {
     }
 }
 
+#[derive(derive_more::Display, Debug)]
+#[display(fmt = "failed to parse URL '{_0}'")]
+pub struct ParseError(String);
+
+impl error_stack::Context for ParseError {}
+
 impl FromStr for ObjectStoreUrl {
-    type Err = error_stack::Report<<Url as FromStr>::Err>;
+    type Err = error_stack::Report<ParseError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Url::from_str(s)
             .into_report()
+            .change_context(ParseError(s.to_owned()))
             .map(|it| ObjectStoreUrl { url: it })
     }
 }

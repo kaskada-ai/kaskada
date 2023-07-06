@@ -1,9 +1,5 @@
-use std::sync::Arc;
-
 use arrow::datatypes::SchemaRef;
 use chrono::NaiveDateTime;
-
-use crate::data_manager::DataHandle;
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -32,13 +28,11 @@ pub enum Error {
     },
     #[display(fmt = "failed to select necessary prepared files")]
     SelectPreparedFiles,
-    #[display(fmt = "failed to queue download of necessary prepared files")]
-    QueueFileDownloads,
     #[display(
-        fmt = "unexpected file '{file:?}' in table '{table_name}' with data partially before the snapshot time {snapshot_time:?}"
+        fmt = "unexpected file '{file}' in table '{table_name}' with data partially before the snapshot time {snapshot_time:?}"
     )]
     PartialOverlap {
-        file: Arc<DataHandle>,
+        file: String,
         table_name: String,
         snapshot_time: Option<NaiveDateTime>,
     },
