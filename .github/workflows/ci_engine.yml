@@ -118,7 +118,7 @@ jobs:
       - name: Check docker containers healthcheck
         run: timeout 240s sh -c 'until docker ps | grep pulsar | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 10; done'
 
-      - name: Show kaskada container logs
+      - name: Show kaskada container logs (before tests)
         run: make ci/integration/tests/docker-compose-logs-kaskada-only
 
       # Workaround: The db file `kaskada.db` gets generated from within the kaskada container and is owned by the container's `root`
@@ -136,9 +136,9 @@ jobs:
 
           make ci/integration/tests/run/api
 
-      - name: Show all container logs in case of failure
+      - name: Show kaskada container logs in case of failure
         if: failure() && steps.integration-tests.outcome != 'success'
-        run: make  ci/integration/tests/docker-compose-logs
+        run: make  ci/integration/tests/docker-compose-logs-kaskada-only
 
       - name: Docker compose down for integration tests
         run: make ci/integration/tests/docker-compose-down
