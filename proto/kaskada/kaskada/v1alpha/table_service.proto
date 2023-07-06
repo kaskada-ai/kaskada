@@ -158,12 +158,18 @@ message LoadDataRequest {
     FileInput file_input = 2;
   }
 
-  // If `true` or unset, the file is copied to Kaskada's filesystem
-  // so that Kaskada can compute on the data even if the original file
-  // gets deleted.
-  //
+
   // If set `false`, Kaskada reads the file in-place during compute.
-  google.protobuf.BoolValue copy_to_filesystem = 3;
+  // 
+  // Note: Kaskada assumes that a file added in this way is immutable
+  // and Kaskada may cache data from the file based on this assumption.
+  // If this is an issue for your use case, set `copy_to_filesystem`
+  // to `true`.
+  //
+  // If set `true`, the file is copied to Kaskada's filesystem
+  // so that Kaskada can compute on the data even if the original file
+  // is updated, removed, or no longer accesible.
+  bool copy_to_filesystem = 3;
 }
 
 message LoadDataResponse {

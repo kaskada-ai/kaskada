@@ -275,9 +275,7 @@ func (t *tableService) loadData(ctx context.Context, owner *ent.Owner, request *
 	switch r := request.SourceData.(type) {
 	case *v1alpha.LoadDataRequest_FileInput:
 		fileInput := internal.FileInputFromV1Alpha(r.FileInput)
-		// true if unset, otherwise passed value
-		copyToFilesystem := request.CopyToFilesystem == nil || request.CopyToFilesystem.Value
-		newDataToken, err = t.loadFileIntoTable(ctx, owner, fileInput, kaskadaTable, copyToFilesystem)
+		newDataToken, err = t.loadFileIntoTable(ctx, owner, fileInput, kaskadaTable, request.CopyToFilesystem)
 		if err != nil {
 			return nil, err
 		}

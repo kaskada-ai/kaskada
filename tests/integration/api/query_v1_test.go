@@ -196,9 +196,7 @@ min_amount: query_v1_test.amount | min(),
 							Uri:      helpers.GetFileURI("purchases/purchases_part2.parquet"),
 						},
 					},
-					CopyToFilesystem: &wrapperspb.BoolValue{
-						Value: false,
-					},
+					CopyToFilesystem: false,
 				})
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(res).ShouldNot(BeNil())
