@@ -186,7 +186,7 @@ min_amount: query_v1_test.amount | min(),
 			})
 		})
 
-		Describe("Load the second file into the table, without copying the file to the kaskada filesystem", func() {
+		Describe("Load the second file into the table, copying the file to the kaskada filesystem", func() {
 			It("Should work without error and return a dataToken", func() {
 				res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
 					TableName: table.TableName,
@@ -196,7 +196,7 @@ min_amount: query_v1_test.amount | min(),
 							Uri:      helpers.GetFileURI("purchases/purchases_part2.parquet"),
 						},
 					},
-					CopyToFilesystem: false,
+					CopyToFilesystem: true,
 				})
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(res).ShouldNot(BeNil())

@@ -307,8 +307,8 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 	}
 	defer file.Close()
 
-	switch fs.Name() {
-	case "os":
+	switch fs.Scheme() {
+	case "file":
 		h := md5.New()
 		if _, err = io.Copy(h, file); err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
@@ -349,8 +349,8 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 		identifier := string(attrs.MD5)
 		return &identifier, nil
 	default:
-		subLogger.Error().Str("type", fs.Name()).Msg("getting an object identifier is unimplemented for this object-store-type")
-		return nil, fmt.Errorf("getting an object identifier is unimplemented for object-store-type: %s", fs.Name())
+		subLogger.Error().Str("type", fs.Scheme()).Msg("getting an object identifier is unimplemented for this object-store-type")
+		return nil, fmt.Errorf("getting an object identifier is unimplemented for object-store-type: %s", fs.Scheme())
 	}
 }
 

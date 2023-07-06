@@ -357,7 +357,7 @@ var _ = Describe("Tables", Ordered, func() {
 		})
 	})
 
-	Describe("Add a file to the second table, without copying it to the kaskada filesystem", func() {
+	Describe("Add a file to the second table, copying it to the kaskada filesystem", func() {
 		It("should work without issue", func() {
 			time.Sleep(time.Millisecond * 2) //so table create & update times are different
 
@@ -369,7 +369,7 @@ var _ = Describe("Tables", Ordered, func() {
 						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
-				CopyToFilesystem: false,
+				CopyToFilesystem: true,
 			})
 			Expect(err).ShouldNot(HaveOccurredGrpc())
 			Expect(res).ShouldNot(BeNil())
@@ -380,7 +380,7 @@ var _ = Describe("Tables", Ordered, func() {
 		})
 	})
 
-	Describe("Add a file to the second table again, without copying it to the kaskada filesystem", func() {
+	Describe("Add a file to the second table again, copying it to the kaskada filesystem", func() {
 		It("Should error with a friendly message", func() {
 			res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
 				TableName: table2.TableName,
@@ -390,7 +390,7 @@ var _ = Describe("Tables", Ordered, func() {
 						Uri:      helpers.GetFileURI(fileName),
 					},
 				},
-				CopyToFilesystem: false,
+				CopyToFilesystem: true,
 			})
 			Expect(err).Should(HaveOccurredGrpc())
 			Expect(res).Should(BeNil())
