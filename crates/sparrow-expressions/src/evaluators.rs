@@ -167,7 +167,9 @@ pub(super) fn create_evaluators(
     Ok(evaluators)
 }
 
-#[static_init::dynamic]
+// This needs to be marked lazy so it is run after the evaluators
+// are submitted to the inventory.
+#[static_init::dynamic(lazy)]
 static EVALUATORS: HashMap<&'static str, &'static EvaluatorFactoryFn> = {
     let result: HashMap<_, _> = inventory::iter::<EvaluatorFactory>()
         .map(|e| (e.name, e.create))
