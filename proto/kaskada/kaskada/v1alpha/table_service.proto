@@ -158,9 +158,8 @@ message LoadDataRequest {
     FileInput file_input = 2;
   }
 
-
   // If set `false`, Kaskada reads the file in-place during compute.
-  // 
+  //
   // Note: Kaskada assumes that a file added in this way is immutable
   // and Kaskada may cache data from the file based on this assumption.
   // If this is an issue for your use case, set `copy_to_filesystem`
