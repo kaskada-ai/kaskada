@@ -90,8 +90,9 @@ impl PreparedMetadata {
 
         let num_rows = data.num_rows() as i64;
         anyhow::ensure!(num_rows > 0, "Data should be non-empty");
-        let min_time = *time.values().iter().min().expect("non-empty");
-        let max_time = *time.values().iter().max().expect("non-empty");
+        // Time column is sorted (since the file is already prepared).
+        let min_time = *time.values().iter().next().expect("non-empty");
+        let max_time = *time.values().iter().last().expect("non-empty");
 
         Self::try_from_prepared_schema(
             data_path,
