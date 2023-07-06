@@ -173,6 +173,7 @@ wren/run:
 	cd wren && \
 	DB_IN_MEMORY=false \
 	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	DEBUG=true \
 	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \
 	go run main.go
 
@@ -184,6 +185,7 @@ wren/run-s3:
 	AWS_REGION=us-west-2 \
 	DB_IN_MEMORY=false \
 	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	DEBUG=true \
 	OBJECT_STORE_TYPE=s3 \
 	OBJECT_STORE_BUCKET=integration \
 	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \

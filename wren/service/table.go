@@ -353,7 +353,7 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 	newFiles := []internal.AddFileProps{}
 	newFiles = append(newFiles, internal.AddFileProps{
 		URI:        newFileURI,
-		Identifier: fileIdentifier,
+		Identifier: *fileIdentifier,
 		Schema:     fileSchema,
 		FileType:   fileInput.GetType(),
 	})

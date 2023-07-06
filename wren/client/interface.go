@@ -90,7 +90,7 @@ type ObjectStoreClient interface {
 	GetPresignedDownloadURL(ctx context.Context, URI string) (string, error)
 
 	// gets an MD5 hash or equivalent identifier for fileURI
-	GetObjectIdentifier(ctx context.Context, fileURI string) (string, error)
+	GetObjectIdentifier(ctx context.Context, fileURI string) (*string, error)
 
 	// returns the absolute URI of a path inside our object store
 	GetDataPathURI(path string) string

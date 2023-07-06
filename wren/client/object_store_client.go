@@ -292,48 +292,50 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 }
 
 // gets an MD5 hash or equivalent identifier for an object
-func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI string) (identifier string, err error) {
+func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI string) (*string, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetObjectIdentifier").Str("file_uri", fileURI).Logger()
 
-	var file vfs.File
-	file, err = newFile(fileURI)
+	fs, host, path, err := parseSupportedURI(fileURI)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("unable to create vfs.File for file_uri")
+		return nil, err
+	}
+	file, err := fs.NewFile(host, path)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue accessing file_uri")
-		return
+		return nil, err
 	}
 	defer file.Close()
 
-	switch c.objectStoreType {
-	case object_store_type_local:
+	switch fs.Name() {
+	case "os":
 		h := md5.New()
 		if _, err = io.Copy(h, file); err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
-			return
+			return nil, err
 		}
-		identifier = fmt.Sprintf("%x", h.Sum(nil))
-		return
+		identifier := fmt.Sprintf("%x", h.Sum(nil))
+		return &identifier, nil
 
-	case object_store_type_s3:
+	case "s3":
 		headObjectInput := &aws_s3.HeadObjectInput{
 			Bucket: aws.String(file.Location().Volume()),
 			Key:    aws.String(file.Path()),
 		}
 
-		var result *aws_s3.HeadObjectOutput
-		result, err = c.awsS3.HeadObjectWithContext(ctx, headObjectInput)
+		result, err := c.awsS3.HeadObjectWithContext(ctx, headObjectInput)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
-			return
+			return nil, err
 		}
-		identifier = utils.TrimQuotes(*result.ETag)
-		return
-	case object_store_type_gcs:
+		identifier := utils.TrimQuotes(*result.ETag)
+		return &identifier, nil
+	case "gs":
 		// Set up a GCS client
-		var gscClient *storage.Client
-		gscClient, err = storage.NewClient(ctx)
+		gscClient, err := storage.NewClient(ctx)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue creating GCS client")
-			return
+			return nil, err
 		}
 		defer gscClient.Close()
 
@@ -342,14 +344,13 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 		attrs, err = gscClient.Bucket(file.Location().Volume()).Object(file.Path()).Attrs(ctx)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
-			return
+			return nil, err
 		}
-		identifier = string(attrs.MD5)
-		return
+		identifier := string(attrs.MD5)
+		return &identifier, nil
 	default:
-		subLogger.Error().Str("type", c.objectStoreType).Msg("getting an object identifier is unimplemented for this object-store-type")
-		err = fmt.Errorf("getting an object identifier is unimplemented for object-store-type: %s", c.objectStoreType)
-		return
+		subLogger.Error().Str("type", fs.Name()).Msg("getting an object identifier is unimplemented for this object-store-type")
+		return nil, fmt.Errorf("getting an object identifier is unimplemented for object-store-type: %s", fs.Name())
 	}
 }
 
@@ -428,7 +429,6 @@ func parseURI(uri string) (scheme, authority, path string, err error) {
 }
 
 // parseSupportedURI checks if URI matches any backend name as prefix, capturing the longest(most specific) match found.
-// See doc.go Registered Backend Resoltion seciton for examples.
 func parseSupportedURI(uri string) (vfs.FileSystem, string, string, error) {
 	_, authority, path, err := parseURI(uri)
 	if err != nil {
