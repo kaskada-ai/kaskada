@@ -127,9 +127,10 @@ impl LocalTestTable {
                 output.write(&metadata).unwrap();
                 output.close().unwrap();
 
-                let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
-                    prepared_file.path(),
-                    metadata_output_file.path(),
+                let prepared_metadata = PreparedMetadata::try_from_data(
+                    format!("file://{}", prepared_file.path().display()),
+                    &prepared_batch,
+                    format!("{}", metadata_output_file.path().display()),
                 )?;
 
                 prepared_batches_and_metadata.push((
