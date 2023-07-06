@@ -16,10 +16,34 @@ pub struct ObjectStoreUrl {
 }
 
 impl ObjectStoreUrl {
+    /// Return the [object_store::path::Path] corresponding to this URL.
     pub fn path(&self) -> error_stack::Result<object_store::path::Path, Error> {
         object_store::path::Path::parse(self.url.path())
             .into_report()
             .change_context_lazy(|| Error::UrlInvalidPath(self.url.clone()))
+    }
+
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    /// Parse a string as an URL, with this URL as the base URL.
+    ///
+    /// Note: a trailing slash is significant.
+    /// Without it, the last path component is considered to be a “file” name
+    /// to be removed to get at the “directory” that is used as the base:
+    ///
+    /// # Errors
+    ///
+    /// If the function can not parse an URL from the given string
+    /// with this URL as the base URL, an [Error] variant will be returned.
+    pub fn join(&self, input: &str) -> error_stack::Result<Self, Error> {
+        let url = self
+            .url
+            .join(input)
+            .into_report()
+            .change_context(Error::InvalidUrl(input.to_owned()))?;
+        Ok(Self { url })
     }
 
     pub fn key(&self) -> error_stack::Result<ObjectStoreKey, Error> {
@@ -92,6 +116,8 @@ impl ObjectStoreUrl {
             }
         }
     }
+
+    /// Download the given object to the given local file path.
     pub async fn download(
         &self,
         object_store_registry: &ObjectStoreRegistry,
@@ -118,12 +144,19 @@ impl ObjectStoreUrl {
     }
 }
 
+#[derive(derive_more::Display, Debug)]
+#[display(fmt = "failed to parse URL '{_0}'")]
+pub struct ParseError(String);
+
+impl error_stack::Context for ParseError {}
+
 impl FromStr for ObjectStoreUrl {
-    type Err = error_stack::Report<<Url as FromStr>::Err>;
+    type Err = error_stack::Report<ParseError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Url::from_str(s)
             .into_report()
+            .change_context(ParseError(s.to_owned()))
             .map(|it| ObjectStoreUrl { url: it })
     }
 }

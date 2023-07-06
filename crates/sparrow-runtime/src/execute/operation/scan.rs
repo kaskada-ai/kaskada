@@ -194,7 +194,7 @@ impl ScanOperation {
                     .change_context(Error::internal())?;
 
                 let input_stream = table_reader(
-                    &mut context.data_manager,
+                    &context.object_stores,
                     table_info,
                     &requested_slice,
                     projected_columns,
@@ -203,6 +203,7 @@ impl ScanOperation {
                     context.max_event_in_snapshot,
                     context.output_at_time,
                 )
+                .await
                 .change_context(Error::internal_msg("failed to create table reader"))?
                 .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
                 .boxed();
@@ -321,12 +322,11 @@ mod tests {
     use sparrow_compiler::DataContext;
     use uuid::Uuid;
 
-    use crate::data_manager::DataManager;
     use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
     use crate::execute::operation::testing::batches_to_csv;
     use crate::execute::operation::{OperationContext, OperationExecutor};
     use crate::read::testing::write_parquet_file;
-    use crate::s3::S3Helper;
+    use crate::stores::ObjectStoreRegistry;
 
     #[tokio::test]
     async fn test_scan_execution() {
@@ -442,14 +442,13 @@ mod tests {
 
         // Channel for the output stats.
         let (progress_updates_tx, mut progress_updates_rx) = tokio::sync::mpsc::channel(29);
-        let s3_helper = S3Helper::new().await;
         let mut context = OperationContext {
             plan: ComputePlan {
                 operations: vec![plan],
                 ..ComputePlan::default()
             },
             plan_hash: PlanHash::default(),
-            data_manager: DataManager::new(s3_helper),
+            object_stores: ObjectStoreRegistry::default(),
             data_context,
             compute_store: None,
             key_hash_inverse,
@@ -523,11 +522,11 @@ mod tests {
         let metadata_parquet_file = write_parquet_file(&metadata, None);
 
         let prepared = PreparedFile {
-            path: parquet_file.to_string_lossy().to_string(),
+            path: format!("file://{}", parquet_file.display()),
             min_event_time: Some(min_event_time.into()),
             max_event_time: Some(max_event_time.into()),
             num_rows,
-            metadata_path: metadata_parquet_file.to_string_lossy().to_string(),
+            metadata_path: format!("file://{}", metadata_parquet_file.display()),
         };
 
         (parquet_file, prepared)

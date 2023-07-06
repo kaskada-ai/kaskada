@@ -4950,6 +4950,7 @@ dependencies = [
  "aws-types",
  "bit-set",
  "bitvec",
+ "bytes",
  "chrono",
  "clap 4.3.2",
  "criterion",

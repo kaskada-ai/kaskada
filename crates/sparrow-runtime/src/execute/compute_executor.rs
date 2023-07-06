@@ -150,18 +150,6 @@ impl ComputeExecutor {
             );
         }
 
-        // Spawn a task to pre-fetch the data files.
-        //
-        // This currently tries to eagerly fetch all of the data files ordered by
-        // min event time, which should correspond to the order they are needed.
-        // If we want to be able to "page" these files out, we may want to have a
-        // separate process to
-        crate::execute::input_prefetch::spawn_prefetch(
-            &context.data_manager,
-            &mut spawner,
-            output_tx,
-        );
-
         Ok(Self {
             compute_store: context.compute_store,
             plan_hash: context.plan_hash,

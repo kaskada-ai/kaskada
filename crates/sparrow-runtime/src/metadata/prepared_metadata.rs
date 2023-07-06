@@ -1,17 +1,15 @@
-use std::path::Path;
 use std::sync::Arc;
 
-use arrow::datatypes::{Schema, SchemaRef};
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use parquet::file::metadata::ParquetMetaData;
-use parquet::file::statistics::ValueStatistics;
+use arrow::array::TimestampNanosecondArray;
+use arrow::datatypes::{ArrowPrimitiveType, Schema, SchemaRef, TimestampNanosecondType};
+use arrow::record_batch::RecordBatch;
+
 use sparrow_api::kaskada::v1alpha::PreparedFile;
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::TableSchema;
 
-use crate::metadata::file_from_path;
-
 #[non_exhaustive]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PreparedMetadata {
     pub path: String,
 
@@ -42,64 +40,48 @@ pub struct PreparedMetadata {
     pub metadata_path: String,
 }
 
-fn get_time_statistics(
-    metadata: &ParquetMetaData,
-    row_group: usize,
-) -> anyhow::Result<Option<&ValueStatistics<i64>>> {
-    if metadata.file_metadata().num_rows() == 0 {
-        Ok(None)
-    } else {
-        use parquet::file::statistics::Statistics;
-        match metadata.row_group(row_group).column(0).statistics() {
-            Some(Statistics::Int64(stats)) => {
-                anyhow::ensure!(
-                    stats.has_min_max_set(),
-                    "Time column statistics missing min/max for row_group {row_group}",
-                );
-
-                Ok(Some(stats))
-            }
-            stats => Err(anyhow::anyhow!(
-                "Time column missing or invalid for row_group {row_group}: {stats:?}"
-            )),
-        }
-    }
-}
-
 impl PreparedMetadata {
-    /// Create a `PreparedMetadata` from the path to a parquet file.
-    pub fn try_from_local_parquet_path(
-        parquet_path: &Path,
-        metadata_parquet_path: &Path,
+    pub fn try_from_data(
+        data_path: String,
+        data: &RecordBatch,
+        metadata_path: String,
     ) -> anyhow::Result<Self> {
-        let file = file_from_path(parquet_path)?;
-
-        let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?;
-        let metadata = parquet_reader.metadata();
-        let num_rows = metadata.file_metadata().num_rows();
-
-        let prepared_schema = parquet_reader.schema();
+        let prepared_schema = data.schema();
 
         anyhow::ensure!(
             prepared_schema.field(0).name() == "_time",
             "First column of prepared files must be '_time'"
         );
+        anyhow::ensure!(
+            prepared_schema.field(0).data_type() == &TimestampNanosecondType::DATA_TYPE,
+            "First column of prepared files must be TimestmapNanosecondType"
+        );
 
-        let min_time = get_time_statistics(metadata.as_ref(), 0)?
-            .map(|stats| *stats.min())
+        // Compute the time statistics directly from the data.
+        //
+        // TODO: We could instead just get this from the parquet metadata.
+        let time = data.column(0);
+        let time: &TimestampNanosecondArray = downcast_primitive_array(time.as_ref())?;
+
+        let num_rows = data.num_rows() as i64;
+        // Time column is sorted (since the file is already prepared).
+        let min_time = time
+            .values()
+            .first()
+            .copied()
             // Empty files contain no stats. We default to assuming the min time.
             .unwrap_or(i64::MIN);
-
-        let max_time = get_time_statistics(metadata.as_ref(), metadata.num_row_groups() - 1)?
-            .map(|stats| *stats.max())
+        let max_time = time
+            .values()
+            .last()
+            .copied()
             // Empty files contain no stats. We default to assuming the min time.
             .unwrap_or(i64::MIN);
+        tracing::info!("Determined times {min_time} to {max_time} for file '{data_path}'");
 
-        let path = parquet_path.to_string_lossy().into_owned();
-        let metadata_path = metadata_parquet_path.to_string_lossy().into_owned();
         Self::try_from_prepared_schema(
-            path,
-            prepared_schema.clone(),
+            data_path,
+            prepared_schema,
             min_time,
             max_time,
             num_rows,

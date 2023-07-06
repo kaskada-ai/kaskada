@@ -619,14 +619,16 @@ async fn test_invalid_type_ident() {
     message: 1 errors in Fenl statements; see diagnostics
     fenl_diagnostics:
       - severity: error
-        code: E0011
-        message: Invalid syntax
+        code: E0002
+        message: Illegal cast
         formatted:
-          - "error[E0011]: Invalid syntax"
+          - "error[E0002]: Illegal cast"
           - "  --> Query:1:19"
           - "  |"
           - "1 | { n: Numbers.n as ben } "
-          - "  |                   ^^^ Invalid Fenl Type 'ben'"
+          - "  |                   ^^^ Unable to cast to type 'ben'"
+          - "  |"
+          - "  = From type i64"
           - ""
           - ""
     "###);

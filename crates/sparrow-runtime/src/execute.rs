@@ -14,15 +14,14 @@ use sparrow_compiler::{hash_compute_plan_proto, DataContext};
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 
-use crate::data_manager::DataManager;
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::OperationContext;
 use crate::s3::S3Helper;
+use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
 
 mod compute_executor;
 mod error;
-mod input_prefetch;
 pub(crate) mod key_hash_inverse;
 pub(crate) mod operation;
 pub mod output;
@@ -44,7 +43,6 @@ const STORE_PATH_PREFIX: &str = "compute_snapshot_";
 /// execute response.
 pub async fn execute(
     request: ExecuteRequest,
-    s3_helper: S3Helper,
     bounded_lateness_ns: Option<i64>,
     _flight_record_local_path: Option<std::path::PathBuf>,
     _flight_record_header: FlightRecordHeader,
@@ -87,6 +85,8 @@ pub async fn execute(
     let mut data_context = DataContext::try_from_tables(request.tables.to_vec())
         .into_report()
         .change_context(Error::internal_msg("create data context"))?;
+
+    let s3_helper = S3Helper::new().await;
 
     // If the snapshot config exists, sparrow should attempt to resume from state,
     // and store new state. Create a new storage path for the local store to
@@ -157,6 +157,8 @@ pub async fn execute(
         None
     };
 
+    let object_stores = ObjectStoreRegistry::default();
+
     let primary_grouping_key_type = plan
         .primary_grouping_key_type
         .to_owned()
@@ -178,9 +180,8 @@ pub async fn execute(
         .change_context(Error::internal_msg("get primary grouping ID"))?;
 
     key_hash_inverse
-        .add_from_data_context(&data_context, primary_group_id, s3_helper.clone())
+        .add_from_data_context(&data_context, primary_group_id, &object_stores)
         .await
-        .into_report()
         .change_context(Error::internal_msg("initialize key hash inverse"))?;
     let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
 
@@ -203,7 +204,7 @@ pub async fn execute(
     let context = OperationContext {
         plan,
         plan_hash,
-        data_manager: DataManager::new(s3_helper.clone()),
+        object_stores,
         data_context,
         compute_store,
         key_hash_inverse,
@@ -299,10 +300,10 @@ pub async fn materialize(
         .into_report()
         .change_context(Error::internal_msg("get primary grouping ID"))?;
 
+    let object_stores = ObjectStoreRegistry::default();
     key_hash_inverse
-        .add_from_data_context(&data_context, primary_group_id, s3_helper.clone())
+        .add_from_data_context(&data_context, primary_group_id, &object_stores)
         .await
-        .into_report()
         .change_context(Error::internal_msg("initialize key hash inverse"))?;
     let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
 
@@ -316,7 +317,7 @@ pub async fn materialize(
     let context = OperationContext {
         plan,
         plan_hash,
-        data_manager: DataManager::new(s3_helper.clone()),
+        object_stores,
         data_context,
         compute_store: snapshot_compute_store,
         key_hash_inverse,

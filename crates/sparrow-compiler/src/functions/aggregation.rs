@@ -8,9 +8,9 @@ const AGGREGATION_IS_NEW: &str = "(logical_or ?window_is_new ?input_is_new)";
 
 pub(super) fn register(registry: &mut Registry) {
     registry
-        .register("count_if(input: any, window: window = null) -> u32")
+        .register("count_if<T: any>(input: T, window: window = null) -> u32")
         .with_dfg_signature(
-            "count_if(input: any, window: window = null, duration: i64 = null) -> u32",
+            "count_if<T: any>(input: T, window: window = null, duration: i64 = null) -> u32",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(count_if ({}) ({}) ({}))",
@@ -22,9 +22,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("count(input: any, window: window = null) -> u32")
+        .register("count<T: any>(input: T, window: window = null) -> u32")
         .with_dfg_signature(
-            "count_if(input: any, window: window = null, duration: i64 = null) -> u32",
+            "count_if<T: any>(input: T, window: window = null, duration: i64 = null) -> u32",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(count_if ({}) ({}) ({}))",
@@ -37,9 +37,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("sum(input: number, window: window = null) -> number")
+        .register("sum<N: number>(input: N, window: window = null) -> N ")
         .with_dfg_signature(
-            "sum(input: number, window: window = null, duration: i64 = null) -> number",
+            "sum<N: number>(input: N, window: window = null, duration: i64 = null) -> N",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(sum ({}) ({}) ({}))",
@@ -51,9 +51,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("min(input: ordered, window: window = null) -> ordered")
+        .register("min<O: ordered>(input: O, window: window = null) -> O")
         .with_dfg_signature(
-            "min(input: ordered, window: window = null, duration: i64 = null) -> ordered",
+            "min<O: ordered>(input: O, window: window = null, duration: i64 = null) -> O",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(min ({}) ({}) ({}))",
@@ -65,9 +65,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("max(input: ordered, window: window = null) -> ordered")
+        .register("max<O: ordered>(input: O, window: window = null) -> O")
         .with_dfg_signature(
-            "max(input: ordered, window: window = null, duration: i64 = null) -> ordered",
+            "max<O: ordered>(input: O, window: window = null, duration: i64 = null) -> O",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(max ({}) ({}) ({}))",
@@ -79,9 +79,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("mean(input: number, window: window = null) -> f64")
+        .register("mean<N: number>(input: N, window: window = null) -> f64")
         .with_dfg_signature(
-            "mean(input: number, window: window = null, duration: i64 = null) -> f64",
+            "mean<N: number>(input: N, window: window = null, duration: i64 = null) -> f64",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(mean ({}) ({}) ({}))",
@@ -93,9 +93,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("variance(input: number, window: window = null) -> f64")
+        .register("variance<N: number>(input: N, window: window = null) -> f64")
         .with_dfg_signature(
-            "variance(input: number, window: window = null, duration: i64 = null) -> f64",
+            "variance<N: number>(input: N, window: window = null, duration: i64 = null) -> f64",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(variance ({}) ({}) ({}))",
@@ -107,9 +107,9 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("stddev(input: number, window: window = null) -> f64")
+        .register("stddev<N: number>(input: N, window: window = null) -> f64")
         .with_dfg_signature(
-            "stddev(input: number, window: window = null, duration: i64 = null) -> f64",
+            "stddev<N: number>(input: N, window: window = null, duration: i64 = null) -> f64",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(powf (variance ({}) ({}) ({})) 0.5f64)",
@@ -120,8 +120,10 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("last(input: any, window: window = null) -> any")
-        .with_dfg_signature("last(input: any, window: window = null, duration: i64 = null) -> any")
+        .register("last<T: any>(input: T, window: window = null) -> T")
+        .with_dfg_signature(
+            "last<T: any>(input: T, window: window = null, duration: i64 = null) -> T",
+        )
         .with_implementation(Implementation::Pushdown(Box::new(
             Pushdown::try_new(
                 0,
@@ -160,8 +162,10 @@ pub(super) fn register(registry: &mut Registry) {
         .with_time_domain_check(TimeDomainCheck::Aggregation);
 
     registry
-        .register("first(input: any, window: window = null) -> any")
-        .with_dfg_signature("first(input: any, window: window = null, duration: i64 = null) -> any")
+        .register("first<T: any>(input: T, window: window = null) -> T")
+        .with_dfg_signature(
+            "first<T: any>(input: T, window: window = null, duration: i64 = null) -> T",
+        )
         .with_implementation(Implementation::Pushdown(Box::new(
             Pushdown::try_new(
                 0,

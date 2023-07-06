@@ -6,7 +6,7 @@ use arrow::datatypes::{DataType, Field, TimeUnit};
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use itertools::{izip, Itertools};
-use sparrow_syntax::{FenlType, Located, Resolved, Signature, TypeConstraint};
+use sparrow_syntax::{FenlType, Located, Resolved, Signature, TypeConstraint, TypeVariable};
 
 use crate::{DiagnosticBuilder, DiagnosticCode};
 
@@ -25,8 +25,7 @@ pub(crate) fn instantiate(
         "Arguments being instantiated should have been resolved against the signature"
     );
 
-    let mut types_for_constraints: HashMap<TypeConstraint, Vec<&Located<FenlType>>> =
-        HashMap::new();
+    let mut types_for_variable: HashMap<TypeVariable, Vec<&Located<FenlType>>> = HashMap::new();
 
     // Make sure the number of arguments are correct.
     match arguments.len().cmp(&parameters.types().len()) {
@@ -69,10 +68,12 @@ pub(crate) fn instantiate(
         izip!(arguments.iter(), &parameter_types).enumerate()
     {
         match (parameter_type.inner(), argument_type.inner()) {
-            (FenlType::Generic(constraint), _) => types_for_constraints
-                .entry(*constraint)
-                .or_default()
-                .push(argument_type),
+            (FenlType::Generic(type_var), _) => {
+                types_for_variable
+                    .entry(type_var.clone())
+                    .or_default()
+                    .push(argument_type);
+            }
             (_, FenlType::Error) => {
                 // No problem here -- the argument is an error, but we already
                 // reported it. Don't hide the actual error.
@@ -109,22 +110,39 @@ pub(crate) fn instantiate(
         }
     }
 
-    let solutions: HashMap<TypeConstraint, FenlType> = types_for_constraints
-        .into_iter()
-        .filter_map(|(constraint, argument_types)| {
+    let solutions: HashMap<TypeVariable, FenlType> = signature
+        .type_parameters
+        .iter()
+        .filter_map(|p| {
+            // This expect should never fail -- it would mean no arguments used the type variable
+            // Which would have been an invalid signature.
+            let argument_types = types_for_variable
+                .remove(&p.name)
+                .expect("unused type variable");
+
             if argument_types.is_empty() {
                 None
             } else {
+                debug_assert!(
+                    p.constraints.len() == 1,
+                    "only one constraint currently supported"
+                );
+                let constraint = p.constraints[0];
+
                 // Can't use `?` because we want Option<Result<...>>.
                 // This allows `filter_map` to filter out the `None` before the errors are
                 // collected.
                 Some(
                     solve_constraint(call, &constraint, &argument_types)
-                        .map(|unified| (constraint, unified)),
+                        .map(|unified| (p.name.clone(), unified)),
                 )
             }
         })
         .try_collect()?;
+
+    // types_for_variables should be empty, asserting that each parameter was assigned a defined
+    // type variable.
+    debug_assert!(types_for_variable.is_empty(), "unassigned type variables");
 
     let instantiated_arguments = parameter_types
         .iter()
@@ -160,32 +178,33 @@ pub fn validate_instantiation(
         "Arguments being instantiated should have the same name as parameters"
     );
 
-    let mut type_for_constraint: HashMap<TypeConstraint, FenlType> = HashMap::new();
-
+    let mut types_for_variable: HashMap<TypeVariable, FenlType> = HashMap::new();
     for (argument_type, parameter_type) in izip!(argument_types.iter(), parameters.types()) {
         if matches!(argument_type, FenlType::Concrete(DataType::Null)) {
             // Skip -- null arguments satisfy any parameter.
             continue;
         }
         match parameter_type.inner() {
-            FenlType::Generic(constraint) => match type_for_constraint.entry(*constraint) {
-                Entry::Occupied(occupied) => {
-                    // When validating, we assume that all uses of a constraint are
-                    // the same. This should be the case for the DFG and plan, since
-                    // explicit casts have been added.
-                    anyhow::ensure!(
-                        occupied.get() == argument_type
-                            || matches!(occupied.get(), FenlType::Error)
-                            || matches!(argument_type, FenlType::Error),
-                        "Failed type validation: expected {} but was {}",
-                        occupied.get(),
-                        argument_type
-                    );
+            FenlType::Generic(type_var) => {
+                match types_for_variable.entry(type_var.clone()) {
+                    Entry::Occupied(occupied) => {
+                        // When validating, we assume that all uses of a constraint are
+                        // the same. This should be the case for the DFG and plan, since
+                        // explicit casts have been added.
+                        anyhow::ensure!(
+                            occupied.get() == argument_type
+                                || matches!(occupied.get(), FenlType::Error)
+                                || matches!(argument_type, FenlType::Error),
+                            "Failed type validation: expected {} but was {}",
+                            occupied.get(),
+                            argument_type
+                        );
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(argument_type.clone());
+                    }
                 }
-                Entry::Vacant(vacant) => {
-                    vacant.insert(argument_type.clone());
-                }
-            },
+            }
             FenlType::Error => {
                 // Assume the argument matches (since we already reported what
                 // caused the error to appear). We may be able
@@ -216,7 +235,7 @@ pub fn validate_instantiation(
         return Ok(FenlType::Error);
     }
 
-    let instantiated_return = instantiate_type(signature.result(), &type_for_constraint);
+    let instantiated_return = instantiate_type(signature.result(), &types_for_variable);
     Ok(instantiated_return)
 }
 
@@ -283,13 +302,10 @@ fn solve_constraint(
 
 /// Instantiate the (possibly generic) `FenlType` using the computed
 /// solutions.
-fn instantiate_type(
-    fenl_type: &FenlType,
-    solutions: &HashMap<TypeConstraint, FenlType>,
-) -> FenlType {
+fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, FenlType>) -> FenlType {
     match fenl_type {
-        FenlType::Generic(constraint) => solutions
-            .get(constraint)
+        FenlType::Generic(type_var) => solutions
+            .get(type_var)
             .cloned()
             .unwrap_or(FenlType::Concrete(DataType::Null)),
         FenlType::Concrete(_) => fenl_type.clone(),
@@ -597,6 +613,9 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeConstraint) -> Option<F
             }
         }
 
+        // errors propagate.
+        (TypeConstraint::Error, _) => Some(FenlType::Error),
+
         // Generics can never be concrete.
         (_, FenlType::Generic(_)) => None,
 
@@ -694,8 +713,8 @@ mod tests {
         Signature::try_from_str(FeatureSetPart::Internal(signature), signature).unwrap()
     }
 
-    const ADD_SIGNATURE: &str = "add(lhs: number, rhs: number) -> number";
-    const NEG_SIGNATURE: &str = "neg(n: signed) -> signed";
+    const ADD_SIGNATURE: &str = "add<N: number>(lhs: N, rhs: N) -> N";
+    const NEG_SIGNATURE: &str = "neg<S: signed>(n: S) -> S";
 
     #[test]
     fn test_instantiate_add() {
