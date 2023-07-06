@@ -35,6 +35,12 @@ use crate::{streams, PreparedMetadata, RawMetadata};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 
+/// Initial size of the upload buffer.
+///
+/// This balances size (if we have multiple uploads in parallel) with
+/// number of "parts" required to perform an upload.
+const UPLOAD_BUFFER_SIZE_IN_BYTES: usize = 5_000_000;
+
 /// Prepare batches from the file according to the `config` and `slice`.
 ///
 /// Returns a fallible iterator over pairs containing the data and metadata
@@ -204,9 +210,14 @@ async fn write_parquet(
         .change_context_lazy(|| Error::Write(url.url().clone()))?;
     tracing::info!("Multipart upload to {url} started with ID {upload_id}");
 
-    let mut writer = parquet::arrow::AsyncArrowWriter::try_new(writer, batch.schema(), 1024, None)
-        .into_report()
-        .change_context_lazy(|| Error::Write(url.url().clone()))?;
+    let mut writer = parquet::arrow::AsyncArrowWriter::try_new(
+        writer,
+        batch.schema(),
+        UPLOAD_BUFFER_SIZE_IN_BYTES,
+        None,
+    )
+    .into_report()
+    .change_context_lazy(|| Error::Write(url.url().clone()))?;
 
     writer
         .write(&batch)
