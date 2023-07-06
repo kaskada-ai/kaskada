@@ -265,9 +265,7 @@ func (m *prepareManager) executePrepare(ctx context.Context, owner *ent.Owner, p
 		prepareClient := m.computeClients.NewPrepareServiceClient(ctx)
 		defer prepareClient.Close()
 		prepareReq := &v1alpha.PrepareDataRequest{
-			Source: &v1alpha.PrepareDataRequest_SourceData{
-				SourceData: sourceData,
-			},
+			SourceData:       sourceData,
 			Config:           computeTable.Config,
 			OutputPathPrefix: prepareOutputURI,
 			FilePrefix:       prepareFilePrefix,

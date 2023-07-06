@@ -9,7 +9,7 @@ message Source {
   oneof source {
     KaskadaSource kaskada = 1;
     PulsarSource pulsar = 2;
-    KafkaConfig kafka = 3;
+    KafkaSource kafka = 3;
   }
 }
 

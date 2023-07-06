@@ -56,10 +56,8 @@ func (m *fileManager) GetFileSchema(ctx context.Context, fileInput internal.File
 
 func (m *fileManager) GetPulsarSchema(ctx context.Context, pulsarConfig *v1alpha.PulsarConfig) (*v1alpha.Schema, error) {
 	metadataReq := &v1alpha.GetMetadataRequest{
-		Source: &v1alpha.GetMetadataRequest_PulsarSubscription{
-			PulsarSubscription: &v1alpha.PulsarSubscription{
-				Config: pulsarConfig,
-			},
+		Source: &v1alpha.GetMetadataRequest_PulsarConfig{
+			PulsarConfig: pulsarConfig,
 		},
 	}
 
