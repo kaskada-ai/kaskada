@@ -45,13 +45,13 @@ impl ParquetFile {
     ///
     /// This will return an error if the file doesn't exist.
     pub async fn try_new(
-        registry: &ObjectStoreRegistry,
+        object_stores: &ObjectStoreRegistry,
         url: ObjectStoreUrl,
     ) -> error_stack::Result<Self, Error> {
-        let key = url.key().change_context(Error::InvalidUrl)?;
-        let object_store = registry
-            .object_store(key)
-            .change_context(Error::InvalidUrl)?;
+        let object_store = object_stores
+            .object_store(&url)
+            .change_context(Error::InvalidUrl)?
+            .clone();
         let path = url.path().change_context(Error::InvalidUrl)?;
 
         let metadata = get_parquet_metadata(object_store.as_ref(), &path).await?;

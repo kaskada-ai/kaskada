@@ -46,7 +46,11 @@ impl ObjectStoreUrl {
         Ok(Self { url })
     }
 
-    pub fn key(&self) -> error_stack::Result<ObjectStoreKey, Error> {
+    pub fn is_local(&self) -> bool {
+        self.url.scheme() == "file"
+    }
+
+    pub(super) fn key(&self) -> error_stack::Result<ObjectStoreKey, Error> {
         match self.url.scheme() {
             "file" => Ok(ObjectStoreKey::Local),
             "mem" => Ok(ObjectStoreKey::Memory),
@@ -124,22 +128,27 @@ impl ObjectStoreUrl {
         file_path: &Path,
     ) -> error_stack::Result<(), Error> {
         let path = self.path()?;
-        let object_store = object_store_registry.object_store(self.key()?)?;
+        let object_store = object_store_registry.object_store(self)?;
+
+        let download_error = || Error::DownloadingObject {
+            from: self.clone(),
+            to: file_path.to_owned(),
+        };
         let stream = object_store
             .get(&path)
             .await
             .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?
+            .change_context_lazy(download_error)?
             .into_stream();
         let mut file = tokio::fs::File::create(file_path)
             .await
             .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;
+            .change_context_lazy(download_error)?;
         let mut body = StreamReader::new(stream);
         tokio::io::copy(&mut body, &mut file)
             .await
             .into_report()
-            .change_context_lazy(|| Error::DownloadingObject(file_path.to_path_buf()))?;
+            .change_context_lazy(download_error)?;
         Ok(())
     }
 }
@@ -168,7 +177,7 @@ impl std::fmt::Display for ObjectStoreUrl {
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
-pub enum ObjectStoreKey {
+pub(super) enum ObjectStoreKey {
     Local,
     Memory,
     Aws {
