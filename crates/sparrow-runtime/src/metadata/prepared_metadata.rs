@@ -54,7 +54,7 @@ impl PreparedMetadata {
         );
         anyhow::ensure!(
             prepared_schema.field(0).data_type() == &TimestampNanosecondType::DATA_TYPE,
-            "First column of prepared files must be '_time'"
+            "First column of prepared files must be TimestmapNanosecondType"
         );
 
         // Compute the time statistics directly from the data.
