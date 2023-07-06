@@ -50,7 +50,7 @@ impl ObjectStoreUrl {
         self.url.scheme() == "file"
     }
 
-    pub(super) fn key(&self) -> error_stack::Result<ObjectStoreKey, Error> {
+    pub fn key(&self) -> error_stack::Result<ObjectStoreKey, Error> {
         match self.url.scheme() {
             "file" => Ok(ObjectStoreKey::Local),
             "mem" => Ok(ObjectStoreKey::Memory),
@@ -177,7 +177,7 @@ impl std::fmt::Display for ObjectStoreUrl {
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
-pub(super) enum ObjectStoreKey {
+pub enum ObjectStoreKey {
     Local,
     Memory,
     Aws {
