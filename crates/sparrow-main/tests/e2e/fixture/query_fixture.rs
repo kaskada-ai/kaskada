@@ -19,7 +19,6 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
-use sparrow_runtime::s3::S3Helper;
 
 use crate::DataFixture;
 
@@ -263,11 +262,6 @@ impl QueryFixture {
             return Err(compile_result.fenl_diagnostics.unwrap_or_default().into());
         };
 
-        // TODO: If this is expensive to construct each time in tests (it shouldn't be)
-        // we could put it in a `[dynamic]` static, and clone it. Or we could have a
-        // special "for test" version.
-        let s3_helper = S3Helper::new().await;
-
         let destination = ObjectStoreDestination {
             output_prefix_uri: format!("file:///{}", output_dir.display()),
             file_type: output_format.into(),
@@ -285,15 +279,10 @@ impl QueryFixture {
             ..self.execute_request.clone()
         };
 
-        let mut stream = sparrow_runtime::execute::execute(
-            request,
-            s3_helper,
-            None,
-            None,
-            FlightRecordHeader::default(),
-        )
-        .await?
-        .boxed();
+        let mut stream =
+            sparrow_runtime::execute::execute(request, None, None, FlightRecordHeader::default())
+                .await?
+                .boxed();
 
         let mut output_files = Vec::new();
         let mut snapshots = Vec::new();

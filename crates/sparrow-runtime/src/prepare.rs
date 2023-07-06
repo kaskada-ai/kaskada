@@ -296,9 +296,12 @@ async fn upload_prepared_files(
                     || Error::InvalidUrl(metadata_prepared_url.as_str().to_string()),
                 )?;
 
+            let local_path = prepared_metadata
+                .path
+                .strip_prefix("file://")
+                .expect("starts with file://");
             parquet_uploads.push(
-                object_store_registry
-                    .upload(prepare_object_store_url, Path::new(&prepared_metadata.path)),
+                object_store_registry.upload(prepare_object_store_url, Path::new(local_path)),
             );
 
             parquet_uploads.push(object_store_registry.upload(
