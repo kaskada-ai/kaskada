@@ -65,7 +65,7 @@ hex = "0.4.3"
 index_vec = { version = "0.1.3", features = ["serde"] }
 indoc = "1.0.9"
 insta = { version = "1.29.0", features = ["ron", "yaml", "json"] }
-inventory = "0.3.5"
+inventory = "0.3.8"
 itertools = "0.10.5"
 lalrpop = "0.19.9"
 lalrpop-util = "0.19.9"
