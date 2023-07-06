@@ -8,7 +8,6 @@ use sparrow_api::kaskada::v1alpha::{destination, CompileRequest, ExecuteRequest,
 
 use sparrow_compiler::CompilerOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
-use sparrow_runtime::s3::S3Helper;
 use tracing::{info, info_span};
 
 use crate::script::{Schema, Script, ScriptPath};
@@ -109,8 +108,6 @@ impl MaterializeCommand {
             error_stack::bail!(Error::InvalidQuery(diagnostics));
         };
 
-        let s3_helper = S3Helper::new().await;
-
         // Note: it might be cleaner to create a separate entry point for materialize, but for now it's ok.
         let result_stream = sparrow_runtime::execute::execute(
             ExecuteRequest {
@@ -122,7 +119,6 @@ impl MaterializeCommand {
                 changed_since: None,
                 final_result_time: None,
             },
-            s3_helper,
             Some(script.bounded_lateness_ns),
             self.flight_record_path,
             FlightRecordHeader::default(),

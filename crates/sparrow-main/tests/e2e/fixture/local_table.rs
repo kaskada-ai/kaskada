@@ -130,7 +130,7 @@ impl LocalTestTable {
                 let prepared_metadata = PreparedMetadata::try_from_data(
                     format!("file://{}", prepared_file.path().display()),
                     &prepared_batch,
-                    format!("{}", metadata_output_file.path().display()),
+                    format!("file://{}", metadata_output_file.path().display()),
                 )?;
 
                 prepared_batches_and_metadata.push((
