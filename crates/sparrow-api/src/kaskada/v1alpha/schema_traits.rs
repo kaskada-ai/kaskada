@@ -15,6 +15,32 @@ impl DataType {
         }
     }
 
+    /// Creates a new map from the given fields.
+    ///
+    /// `fields` should have two elements, the first being the key type
+    /// and the second being the value type.
+    pub fn new_map(fields: Vec<schema::Field>) -> Self {
+        debug_assert!(fields.len() == 2);
+        Self {
+            kind: Some(data_type::Kind::Map(Box::new(data_type::Map {
+                key: Some(Box::new(
+                    fields[0]
+                        .data_type
+                        .as_ref()
+                        .expect("data type to exist")
+                        .clone(),
+                )),
+                value: Some(Box::new(
+                    fields[1]
+                        .data_type
+                        .as_ref()
+                        .expect("data type to exist")
+                        .clone(),
+                )),
+            }))),
+        }
+    }
+
     pub fn new_primitive(primitive: data_type::PrimitiveType) -> Self {
         Self {
             kind: Some(data_type::Kind::Primitive(primitive as i32)),
@@ -155,6 +181,37 @@ impl TryFrom<&arrow::datatypes::DataType> for DataType {
                     .try_collect()?;
                 Ok(DataType::new_struct(fields))
             }
+            // Note: the `ordered` field may let us specialize the implementation
+            // to use binary search in the future.
+            arrow::datatypes::DataType::Map(s, _) => {
+                // [DataType::Map] is represented as a list of structs with two fields: `key` and `value`
+                let arrow::datatypes::DataType::Struct(fields) = s.data_type() else {
+                    // unexpected - maps should always contain a struct
+                    return Err(ConversionError::new_unsupported(s.data_type().clone()))
+                };
+
+                debug_assert!(fields.len() == 2, "expect two fields in map");
+                let key = &fields[0];
+                let value = &fields[1];
+                let key = schema::Field {
+                    name: "key".to_owned(),
+                    data_type: Some(key.data_type().try_into().map_err(
+                        |err: ConversionError<arrow::datatypes::DataType>| {
+                            err.with_prepend_field("key".to_owned())
+                        },
+                    )?),
+                };
+                let value = schema::Field {
+                    name: "value".to_owned(),
+                    data_type: Some(value.data_type().try_into().map_err(
+                        |err: ConversionError<arrow::datatypes::DataType>| {
+                            err.with_prepend_field("value".to_owned())
+                        },
+                    )?),
+                };
+
+                Ok(DataType::new_map(vec![key, value]))
+            }
             unsupported => Err(ConversionError::new_unsupported(unsupported.clone())),
         }
     }
@@ -181,6 +238,7 @@ impl TryFrom<&FenlType> for DataType {
 
     fn try_from(value: &FenlType) -> Result<Self, Self::Error> {
         match value {
+            FenlType::Collection(_, _) => Err(ConversionError::new_unsupported(value.clone())),
             FenlType::Concrete(data_type) => {
                 data_type
                     .try_into()
@@ -275,6 +333,26 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                 let item_type = arrow::datatypes::Field::new("item", item_type, true);
                 Ok(arrow::datatypes::DataType::List(Arc::new(item_type)))
             }
+            Some(data_type::Kind::Map(map)) => match (map.key.as_ref(), map.value.as_ref()) {
+                (Some(key), Some(value)) => {
+                    let key = arrow::datatypes::DataType::try_from(key.as_ref())
+                        .map_err(|e| e.with_prepend_field("map key".to_owned()))?;
+                    let value = arrow::datatypes::DataType::try_from(value.as_ref())
+                        .map_err(|e| e.with_prepend_field("map value".to_owned()))?;
+
+                    let fields = arrow::datatypes::Fields::from(vec![
+                        arrow::datatypes::Field::new("key", key, false),
+                        arrow::datatypes::Field::new("value", value, false),
+                    ]);
+                    let s = arrow::datatypes::Field::new(
+                        "entries",
+                        arrow::datatypes::DataType::Struct(fields),
+                        false,
+                    );
+                    Ok(arrow::datatypes::DataType::Map(Arc::new(s), false))
+                }
+                _ => Err(ConversionError::new_unsupported(value.clone())),
+            },
             None | Some(data_type::Kind::Window(_)) => {
                 Err(ConversionError::new_unsupported(value.clone()))
             }

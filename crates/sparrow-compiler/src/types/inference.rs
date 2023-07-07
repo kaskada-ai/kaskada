@@ -1,12 +1,14 @@
 //! Utilities for working with argument and parameter types.
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::Arc};
 
-use arrow::datatypes::{DataType, Field, TimeUnit};
+use arrow::datatypes::{DataType, Field, Fields, TimeUnit};
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use itertools::{izip, Itertools};
-use sparrow_syntax::{FenlType, Located, Resolved, Signature, TypeClass, TypeVariable};
+use sparrow_syntax::{
+    Collection, FenlType, Located, Resolved, Signature, TypeClass, TypeParameter, TypeVariable,
+};
 
 use crate::{DiagnosticBuilder, DiagnosticCode};
 
@@ -24,8 +26,6 @@ pub(crate) fn instantiate(
         parameters.names(),
         "Arguments being instantiated should have been resolved against the signature"
     );
-
-    let mut types_for_variable: HashMap<TypeVariable, Vec<&Located<FenlType>>> = HashMap::new();
 
     // Make sure the number of arguments are correct.
     match arguments.len().cmp(&parameters.types().len()) {
@@ -64,30 +64,16 @@ pub(crate) fn instantiate(
     // chain).
     let parameter_types = arguments.vec_for_varargs(parameters.types());
 
+    // Contains the fenl type(s) for each type variable.
+    let mut types_for_variable = TypeConstraints::default();
+
     for (index, (argument_type, parameter_type)) in
-        izip!(arguments.iter(), &parameter_types).enumerate()
+        izip!(arguments.iter(), parameter_types.clone()).enumerate()
     {
-        match (parameter_type.inner(), argument_type.inner()) {
-            (FenlType::TypeRef(type_var), _) => {
-                types_for_variable
-                    .entry(type_var.clone())
-                    .or_default()
-                    .push(argument_type);
-            }
-            (_, FenlType::Error) => {
-                // No problem here -- the argument is an error, but we already
-                // reported it. Don't hide the actual error.
-            }
-            (FenlType::Concrete(expected), FenlType::Concrete(arg_type))
-                if can_implicitly_cast(arg_type, expected) =>
-            {
-                // No problem -- either same type or can implicitly convert.
-            }
-            (FenlType::Window, FenlType::Window | FenlType::Concrete(DataType::Null)) => {
-                // No problem -- can use `null` as a window.
-            }
-            _ => {
-                return Err(DiagnosticCode::InvalidArgumentType
+        types_for_variable
+            .unify_one(parameter_type.inner(), argument_type.clone())
+            .map_err(|_| {
+                DiagnosticCode::InvalidArgumentType
                     .builder()
                     .with_label(call.location().primary_label().with_message(format!(
                         "Invalid types for parameter '{}' in call to '{}'",
@@ -105,45 +91,15 @@ pub(crate) fn instantiate(
                             .location()
                             .secondary_label()
                             .with_message(format!("Expected type: {parameter_type}")),
-                    ));
-            }
-        }
+                    )
+            })?;
     }
 
-    let solutions: HashMap<TypeVariable, FenlType> = signature
-        .type_parameters
-        .iter()
-        .filter_map(|p| {
-            // This expect should never fail -- it would mean no arguments used the type variable
-            // Which would have been an invalid signature.
-            let argument_types = types_for_variable
-                .remove(&p.name)
-                .expect("unused type variable");
+    // Solve for each type parameter in the signature.
+    let solutions: HashMap<TypeVariable, FenlType> =
+        types_for_variable.solutions(call, signature.type_parameters.iter())?;
 
-            if argument_types.is_empty() {
-                None
-            } else {
-                debug_assert!(
-                    p.constraints.len() == 1,
-                    "only one constraint currently supported"
-                );
-                let constraint = p.constraints[0];
-
-                // Can't use `?` because we want Option<Result<...>>.
-                // This allows `filter_map` to filter out the `None` before the errors are
-                // collected.
-                Some(
-                    solve_constraint(call, &constraint, &argument_types)
-                        .map(|unified| (p.name.clone(), unified)),
-                )
-            }
-        })
-        .try_collect()?;
-
-    // types_for_variables should be empty, asserting that each parameter was assigned a defined
-    // type variable.
-    debug_assert!(types_for_variable.is_empty(), "unassigned type variables");
-
+    // Instantiate the actual types for the signature.
     let instantiated_arguments = parameter_types
         .iter()
         .map(|parameter_type| instantiate_type(parameter_type, &solutions))
@@ -184,11 +140,12 @@ pub fn validate_instantiation(
             // Skip -- null arguments satisfy any parameter.
             continue;
         }
+
         match parameter_type.inner() {
             FenlType::TypeRef(type_var) => {
                 match types_for_variable.entry(type_var.clone()) {
                     Entry::Occupied(occupied) => {
-                        // When validating, we assume that all uses of a constraint are
+                        // When validating, we assume that all uses of a type class are
                         // the same. This should be the case for the DFG and plan, since
                         // explicit casts have been added.
                         anyhow::ensure!(
@@ -204,6 +161,57 @@ pub fn validate_instantiation(
                         vacant.insert(argument_type.clone());
                     }
                 }
+            }
+            FenlType::Collection(Collection::Map, type_vars) => {
+                debug_assert!(type_vars.len() == 2);
+                let (key_type, value_type) = match argument_type {
+                    FenlType::Concrete(DataType::Map(f, _)) => match f.data_type() {
+                        DataType::Struct(fields) => {
+                            debug_assert!(fields.len() == 2);
+                            (
+                                FenlType::Concrete(fields[0].data_type().clone()),
+                                FenlType::Concrete(fields[1].data_type().clone()),
+                            )
+                        }
+                        other => anyhow::bail!("expected struct, saw {:?}", other),
+                    },
+                    other => anyhow::bail!("expected map, saw {:?}", other),
+                };
+
+                match types_for_variable.entry(type_vars[0].clone()) {
+                    Entry::Occupied(occupied) => {
+                        anyhow::ensure!(
+                            occupied.get() == argument_type
+                                || matches!(occupied.get(), FenlType::Error)
+                                || matches!(argument_type, FenlType::Error),
+                            "Failed type validation: expected {} but was {}",
+                            occupied.get(),
+                            key_type
+                        );
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(key_type.clone());
+                    }
+                }
+
+                match types_for_variable.entry(type_vars[1].clone()) {
+                    Entry::Occupied(occupied) => {
+                        anyhow::ensure!(
+                            occupied.get() == argument_type
+                                || matches!(occupied.get(), FenlType::Error)
+                                || matches!(argument_type, FenlType::Error),
+                            "Failed type validation: expected {} but was {}",
+                            occupied.get(),
+                            value_type
+                        );
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(value_type.clone());
+                    }
+                }
+            }
+            FenlType::Collection(Collection::List, _) => {
+                todo!("list unsupported")
             }
             FenlType::Error => {
                 // Assume the argument matches (since we already reported what
@@ -239,25 +247,24 @@ pub fn validate_instantiation(
     Ok(instantiated_return)
 }
 
-/// Determine the type for a constraint based on the associated argument types.
+/// Determine the type for a type class based on the associated argument types.
 ///
 /// # Fails
-/// If the types are empty. If no parameters use the constraint (and there are
+/// If the types are empty. If no parameters use the type class (and there are
 /// no associated parameters) we shouldn't try to determine the corresponding
 /// type.
-fn solve_constraint(
+fn solve_type_class(
     call: &Located<String>,
-    constraint: &TypeClass,
-    types: &[&Located<FenlType>],
+    type_class: &TypeClass,
+    types: &[Located<FenlType>],
 ) -> Result<FenlType, DiagnosticBuilder> {
     debug_assert!(!types.is_empty());
-
     if types.iter().any(|t| t.inner().is_error()) {
         return Ok(FenlType::Error);
     }
 
     // Find the minimum type compatible with all the arguments associated with the
-    // constraint.
+    // type class.
     let mut result = Some(types[0].inner().clone());
     for arg_type in &types[1..] {
         if let Some(prev) = result {
@@ -266,11 +273,11 @@ fn solve_constraint(
     }
 
     result
-        // Promote the minimum type to be compatible with the constraint, if necessary.
-        .and_then(|data_type| promote_concrete(data_type, constraint))
+        // Promote the minimum type to be compatible with the type class, if necessary.
+        .and_then(|data_type| promote_concrete(data_type, type_class))
         // Return an error if either (a) there wasn't a least-upper bound or
         // (b) it wasn't possible to promote the least-upper bound to be compatible
-        // with the type constraint.
+        // with the type type class.
         .ok_or_else(|| {
             // Only report each distinct type as a problem once. This reduces clutter in the
             // error. TODO: Attempt to minimize the number of types involved
@@ -296,7 +303,7 @@ fn solve_constraint(
                         .with_message(format!("Invalid types for call to '{call}'")),
                 )
                 .with_labels(distinct_arg_types)
-                .with_note(format!("Expected '{constraint}'"))
+                .with_note(format!("Expected '{type_class}'"))
         })
 }
 
@@ -308,6 +315,34 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
             .get(type_var)
             .cloned()
             .unwrap_or(FenlType::Concrete(DataType::Null)),
+        FenlType::Collection(Collection::Map, type_vars) => {
+            debug_assert!(type_vars.len() == 2);
+
+            // TODO: Ask ben logic behind the concrete::null, instead of error?
+            let concrete_key_type = solutions
+                .get(&type_vars[0])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
+            let concrete_value_type = solutions
+                .get(&type_vars[1])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
+
+            // `solutions` map should contain concrete types for all type variables.
+            let key_field = match concrete_key_type {
+                FenlType::Concrete(t) => Field::new("key", t, false),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
+            let value_field = match concrete_value_type {
+                FenlType::Concrete(t) => Field::new("value", t, false),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
+
+            let fields = Fields::from(vec![key_field, value_field]);
+            let s = Arc::new(Field::new("entries", DataType::Struct(fields), false));
+            FenlType::Concrete(DataType::Map(s, false))
+        }
+        FenlType::Collection(Collection::List, _) => todo!("unsupported"),
         FenlType::Concrete(_) => fenl_type.clone(),
         FenlType::Window => fenl_type.clone(),
         FenlType::Json => fenl_type.clone(),
@@ -538,14 +573,14 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
     }
 }
 
-/// Promote a concrete type to satisfy this constraint.
+/// Promote a concrete type to satisfy this type class.
 ///
-/// If the `concrete` type already satisfies this constraint, it is
+/// If the `concrete` type already satisfies this type class, it is
 /// returned. If the `concrete` may be promoted to satisfy this
-/// constraint, it is. Otherwise, `None` is returned.
-fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlType> {
+/// type class, it is. Otherwise, `None` is returned.
+fn promote_concrete(concrete: FenlType, type_class: &TypeClass) -> Option<FenlType> {
     use DataType::*;
-    match (constraint, &concrete) {
+    match (type_class, &concrete) {
         // Any type may be null.
         (_, FenlType::Concrete(Null)) => Some(concrete),
 
@@ -555,7 +590,7 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlTy
         // Any concrete type satisfies `any`.
         (TypeClass::Any, _) => Some(concrete),
 
-        // Json types should not promote into other constraints.
+        // Json types should not promote into other type class
         (_, FenlType::Json) => None,
 
         // All numeric types satisfy `number`.
@@ -612,6 +647,9 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlTy
         // errors propagate.
         (TypeClass::Error, _) => Some(FenlType::Error),
 
+        // Collections can never be concrete as they contain type variables.
+        (_, FenlType::Collection(_, _)) => None,
+
         // Generics can never be concrete.
         (_, FenlType::TypeRef(_)) => None,
 
@@ -654,6 +692,139 @@ fn can_implicitly_cast(from: &DataType, to: &DataType) -> bool {
         (Timestamp(_, _), Timestamp(TimeUnit::Nanosecond, None)) => true,
         // Other promotions must be explicitly requested.
         (_, _) => false,
+    }
+}
+
+#[derive(Default)]
+struct TypeConstraints(HashMap<TypeVariable, Vec<Located<FenlType>>>);
+
+impl TypeConstraints {
+    /// Add a constraint that the type variable includes the given type.
+    fn constrain(&mut self, variable: &TypeVariable, ty: Located<FenlType>) {
+        self.0.entry_ref(variable).or_default().push(ty)
+    }
+
+    fn constrain_all(
+        &mut self,
+        variable: &[TypeVariable],
+        types: Vec<Located<FenlType>>,
+    ) -> Result<(), ()> {
+        if variable.len() != types.len() {
+            return Err(());
+        }
+        for (variable, ty) in variable.iter().zip(types) {
+            self.constrain(variable, ty);
+        }
+        Ok(())
+    }
+
+    /// Unify the type of one parameter with the corresponding argument.
+    fn unify_one(&mut self, parameter: &FenlType, argument: Located<FenlType>) -> Result<(), ()> {
+        match (parameter, argument.inner()) {
+            (FenlType::TypeRef(variable), _) => self.constrain(variable, argument),
+            (FenlType::Collection(p_collection, p_type_vars), arg_type) => match arg_type {
+                FenlType::Concrete(DataType::List(field)) => {
+                    debug_assert_eq!(
+                        p_type_vars.len(),
+                        1,
+                        "List type must have one type variable"
+                    );
+                    self.constrain_all(
+                        p_type_vars,
+                        vec![argument.with_value(FenlType::Concrete(field.data_type().clone()))],
+                    )?;
+                }
+                FenlType::Concrete(DataType::Map(s, _)) => {
+                    debug_assert_eq!(
+                        p_type_vars.len(),
+                        2,
+                        "Map type must have two type variables"
+                    );
+                    let DataType::Struct(fields) = s.data_type() else {
+                        panic!("Map type has a struct type with key/value")
+                    };
+                    debug_assert_eq!(fields.len(), 2, "Map type struct should have two fields");
+                    self.constrain_all(
+                        p_type_vars,
+                        vec![
+                            argument.with_value(FenlType::Concrete(fields[0].data_type().clone())),
+                            argument.with_value(FenlType::Concrete(fields[1].data_type().clone())),
+                        ],
+                    )?;
+                }
+                FenlType::Collection(a_collection, a_type_vars) => {
+                    if a_collection != p_collection {
+                        return Err(());
+                    }
+
+                    self.constrain_all(
+                        p_type_vars,
+                        a_type_vars
+                            .iter()
+                            .map(|a_type_var| {
+                                argument.with_value(FenlType::TypeRef(a_type_var.clone()))
+                            })
+                            .collect(),
+                    )?;
+                }
+                other => panic!("Expected collection type, saw: {:?}", other),
+            },
+            (_, FenlType::Error) => {
+                // The argument is an error, but we already reported it.
+                // Don't need to do anything.
+            }
+            (FenlType::Concrete(parameter), FenlType::Concrete(argument))
+                if can_implicitly_cast(argument, parameter) =>
+            {
+                // Already solved -- the argument is either the same as the parameter
+                // or can be cast to match the type of the parameter.
+            }
+            (FenlType::Window, FenlType::Window | FenlType::Concrete(DataType::Null)) => {
+                // No problem -- can use `null` as a window.
+            }
+            _ => return Err(()),
+        };
+        Ok(())
+    }
+
+    fn solutions<'a>(
+        self,
+        call: &Located<String>,
+        parameters: impl Iterator<Item = &'a TypeParameter>,
+    ) -> Result<HashMap<TypeVariable, FenlType>, DiagnosticBuilder> {
+        let mut types_for_variable = self.0;
+        let solutions = parameters
+            .filter_map(|p| {
+                // This expect should never fail -- it would mean no arguments used the type variable
+                // which would have been an invalid signature.
+                let argument_types = types_for_variable
+                    .remove(&p.name)
+                    .expect("unused type variable");
+
+                if argument_types.is_empty() {
+                    None
+                } else {
+                    debug_assert!(
+                        p.type_classes.len() == 1,
+                        "only one type class currently supported"
+                    );
+                    let type_class = p.type_classes[0];
+
+                    // Can't use `?` because we want Option<Result<...>>.
+                    // This allows `filter_map` to filter out the `None` before the errors are
+                    // collected.
+                    Some(
+                        solve_type_class(call, &type_class, &argument_types)
+                            .map(|unified| (p.name.clone(), unified)),
+                    )
+                }
+            })
+            .try_collect()?;
+
+        // types_for_variables should be empty, since every type variable added to the map
+        // should have been used in the signature (the list of parameters).
+        debug_assert!(types_for_variable.is_empty(), "unreferenced type variable");
+        Ok(solutions)
     }
 }
 
@@ -709,11 +880,10 @@ mod tests {
         Signature::try_from_str(FeatureSetPart::Internal(signature), signature).unwrap()
     }
 
-    const ADD_SIGNATURE: &str = "add<N: number>(lhs: N, rhs: N) -> N";
-    const NEG_SIGNATURE: &str = "neg<S: signed>(n: S) -> S";
-
     #[test]
     fn test_instantiate_add() {
+        const ADD_SIGNATURE: &str = "add<N: number>(lhs: N, rhs: N) -> N";
+
         // i32 should be widened to i64
         assert_eq!(
             instantiate_types(ADD_SIGNATURE, &["i32", "i64"]),
@@ -739,6 +909,8 @@ mod tests {
 
     #[test]
     fn test_instantiate_neg() {
+        const NEG_SIGNATURE: &str = "neg<S: signed>(n: S) -> S";
+
         // i32 is signed
         assert_eq!(
             instantiate_types(NEG_SIGNATURE, &["i32"]),
@@ -756,5 +928,23 @@ mod tests {
         );
     }
 
-    // TODO: Test error cases
+    #[test]
+    fn test_instantiate_get_map() {
+        const GET_SIGNATURE: &str = "get<K: key, V: any>(key: K, map: map<K, V>) -> V";
+
+        assert_eq!(
+            instantiate_types(GET_SIGNATURE, &["i32", "map<i32, f32>"]),
+            Ok("(key: i32, map: map<i32, f32>) -> f32".to_owned())
+        );
+
+        assert_eq!(
+            instantiate_types(GET_SIGNATURE, &["i64", "map<i64, f32>"]),
+            Ok("(key: i64, map: map<i64, f32>) -> f32".to_owned())
+        );
+
+        assert_eq!(
+            instantiate_types(GET_SIGNATURE, &["i32", "map<i32, i32>"]),
+            Ok("(key: i32, map: map<i32, i32>) -> i32".to_owned())
+        );
+    }
 }
