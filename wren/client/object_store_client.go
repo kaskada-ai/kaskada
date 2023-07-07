@@ -51,6 +51,15 @@ func (o Object) Path() string {
 	return o.path
 }
 
+type objectStoreClient struct {
+	awsS3           s3iface.S3API
+	dataLocation    vfs.Location
+	disableSSL      bool
+	endpoint        string
+	forcePathStyle  bool
+	objectStoreType string
+}
+
 // NewObjectStoreClient creates a new ObjectStoreClient
 func NewObjectStoreClient(env string, objectStoreType string, bucket string, path string, endpoint string, disableSSL bool, forcePathStyle bool) ObjectStoreClient {
 	objectStoreType = strings.ToLower(objectStoreType)
@@ -95,36 +104,8 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 	case object_store_type_local:
 		rootObjectStore = backend.Backend(os.Scheme)
 	case object_store_type_s3:
-		//vfs client config
-		s3Options := s3.Options{
-			DisableServerSideEncryption: disableSSL,
-			ForcePathStyle:              forcePathStyle,
-		}
-
-		// aws s3 client config
-		awsConfig := aws.NewConfig().WithDisableSSL(disableSSL).WithS3ForcePathStyle(forcePathStyle)
-
-		// config endoint
-		if endpoint != "" {
-			s3Options.Endpoint = endpoint
-			awsConfig = awsConfig.WithEndpoint(endpoint)
-		}
-
-		// create vfs client
-		rootObjectStore = s3.NewFileSystem().WithOptions(s3Options)
-
-		// create aws s3 client
-		opts := session.Options{
-			SharedConfigState: session.SharedConfigEnable,
-			Config:            *awsConfig,
-		}
-
-		sess, err := session.NewSessionWithOptions(opts)
-		if err != nil {
-			log.Fatal().Err(err).Msg("not able to initialize a new s3 session to aws")
-		}
-		awsS3 = aws_s3.New(sess)
-
+		rootObjectStore = getS3FileSystem(endpoint, disableSSL, forcePathStyle)
+		awsS3 = getS3Client(endpoint, disableSSL, forcePathStyle)
 	default:
 		log.Fatal().Msg("invalid value set for `object-store-type`. Should be  `local`, `s3`, `gcs`, or `azure`")
 	}
@@ -135,16 +116,45 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 	}
 
 	return objectStoreClient{
-		objectStoreType: objectStoreType,
-		dataLocation:    dataLocation,
 		awsS3:           awsS3,
+		dataLocation:    dataLocation,
+		disableSSL:      disableSSL,
+		endpoint:        endpoint,
+		forcePathStyle:  forcePathStyle,
+		objectStoreType: objectStoreType,
 	}
 }
 
-type objectStoreClient struct {
-	objectStoreType string
-	dataLocation    vfs.Location
-	awsS3           s3iface.S3API
+func getS3FileSystem(endpoint string, disableSSL bool, forcePathStyle bool) *s3.FileSystem {
+	s3Options := s3.Options{
+		DisableServerSideEncryption: disableSSL,
+		ForcePathStyle:              forcePathStyle,
+	}
+
+	if endpoint != "" {
+		s3Options.Endpoint = endpoint
+	}
+
+	return s3.NewFileSystem().WithOptions(s3Options)
+}
+
+func getS3Client(endpoint string, disableSSL bool, forcePathStyle bool) *aws_s3.S3 {
+	awsConfig := aws.NewConfig().WithDisableSSL(disableSSL).WithS3ForcePathStyle(forcePathStyle)
+
+	if endpoint != "" {
+		awsConfig = awsConfig.WithEndpoint(endpoint)
+	}
+
+	opts := session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config:            *awsConfig,
+	}
+
+	sess, err := session.NewSessionWithOptions(opts)
+	if err != nil {
+		log.Fatal().Err(err).Msg("not able to initialize a new s3 session to aws")
+	}
+	return aws_s3.New(sess)
 }
 
 // copies an object into our object store
@@ -153,7 +163,7 @@ func (c objectStoreClient) CopyObjectIn(ctx context.Context, fromURI string, toP
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.CopyObjectIn").Str("fromURI", fromURI).Str("toPath", toPath).Logger()
 
 	var fromFile, toFile vfs.File
-	fromFile, err = newFile(fromURI)
+	fromFile, err = c.newFile(fromURI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue accessing fromURI")
 		return
@@ -225,7 +235,7 @@ func (c objectStoreClient) DeleteObjects(ctx context.Context, subPath string) er
 
 // true if the URI exists and is accessible, otherwise returns error
 func (c objectStoreClient) URIExists(ctx context.Context, URI string) (bool, error) {
-	file, err := newFile(URI)
+	file, err := c.newFile(URI)
 	if err != nil {
 		return false, err
 	}
@@ -238,7 +248,7 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetPresignedDownloadURL").Str("uri", URI).Logger()
 
 	var file vfs.File
-	file, err = newFile(URI)
+	file, err = c.newFile(URI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue accessing URI")
 		return
@@ -295,7 +305,7 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI string) (*string, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetObjectIdentifier").Str("file_uri", fileURI).Logger()
 
-	fs, host, path, err := parseSupportedURI(fileURI)
+	fs, host, path, err := c.parseSupportedURI(fileURI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("unable to create vfs.File for file_uri")
 		return nil, err
@@ -378,8 +388,8 @@ var (
 // NewFile is a convenience function that allows for instantiating a file based on a uri string. Any
 // backend file system is supported, though some may require prior configuration. See the docs for
 // specific requirements of each.
-func newFile(uri string) (vfs.File, error) {
-	fs, host, path, err := parseSupportedURI(uri)
+func (c objectStoreClient) newFile(uri string) (vfs.File, error) {
+	fs, host, path, err := c.parseSupportedURI(uri)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create vfs.File for uri %q: %w", uri, err)
 	}
@@ -429,7 +439,7 @@ func parseURI(uri string) (scheme, authority, path string, err error) {
 }
 
 // parseSupportedURI checks if URI matches any backend name as prefix, capturing the longest(most specific) match found.
-func parseSupportedURI(uri string) (vfs.FileSystem, string, string, error) {
+func (c objectStoreClient) parseSupportedURI(uri string) (vfs.FileSystem, string, string, error) {
 	_, authority, path, err := parseURI(uri)
 	if err != nil {
 		return nil, "", "", err
@@ -456,5 +466,9 @@ func parseSupportedURI(uri string) (vfs.FileSystem, string, string, error) {
 		err = ErrRegFsNotFound
 	}
 
-	return backend.Backend(longest), authority, path, err
+	if longest == "s3" {
+		return getS3FileSystem(c.endpoint, c.disableSSL, c.forcePathStyle), authority, path, err
+	} else {
+		return backend.Backend(longest), authority, path, err
+	}
 }

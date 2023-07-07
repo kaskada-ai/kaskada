@@ -214,7 +214,7 @@ min_amount: query_v1_test.amount | min(),
 				Expect(stream).ShouldNot(BeNil())
 
 				queryResponses, err := helpers.GetCreateQueryResponses(stream)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
 
 				var firstResponse, secondResponse, thirdResponse, lastResponse *v1alpha.CreateQueryResponse
