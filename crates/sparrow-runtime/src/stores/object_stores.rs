@@ -1,11 +1,9 @@
-use std::{
-    path::{self, PathBuf},
-    sync::{Arc, RwLock},
-};
+use std::path;
+use std::sync::Arc;
 
+use dashmap::DashMap;
 use derive_more::Display;
 use error_stack::{IntoReport, ResultExt};
-use hashbrown::HashMap;
 use object_store::ObjectStore;
 use tokio::{fs, io::AsyncWriteExt};
 use url::Url;
@@ -23,29 +21,27 @@ use super::{object_store_url::ObjectStoreKey, ObjectStoreUrl};
 /// For now, the registry exists as a cache for the clients due to the overhead
 /// required to create the cache. The future goal for the registry is to
 /// control the number of possibile open connections.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ObjectStoreRegistry {
-    object_stores: RwLock<HashMap<ObjectStoreKey, Arc<dyn ObjectStore>>>,
+    object_stores: DashMap<ObjectStoreKey, Arc<dyn ObjectStore>>,
 }
 
 impl ObjectStoreRegistry {
     pub fn new() -> Self {
-        let object_stores = hashbrown::HashMap::new();
-        ObjectStoreRegistry {
-            object_stores: RwLock::new(object_stores),
-        }
+        Self::default()
     }
 
     pub fn object_store(
         &self,
-        key: ObjectStoreKey,
+        url: &ObjectStoreUrl,
     ) -> error_stack::Result<Arc<dyn ObjectStore>, Error> {
-        if let Some(object_store) = self.get_object_store(&key)? {
-            Ok(object_store)
-        } else {
-            let object_store = create_object_store(&key)?;
-            self.put_object_store(key, object_store.clone())?;
-            Ok(object_store)
+        let key = url.key()?;
+        match self.object_stores.entry(key) {
+            dashmap::mapref::entry::Entry::Occupied(entry) => Ok(entry.get().clone()),
+            dashmap::mapref::entry::Entry::Vacant(vacant) => {
+                let object_store = create_object_store(vacant.key())?;
+                Ok(vacant.insert(object_store).value().clone())
+            }
         }
     }
 
@@ -55,8 +51,7 @@ impl ObjectStoreRegistry {
         local_file_path: &path::Path,
     ) -> error_stack::Result<(), Error> {
         let target_path = target_url.path()?;
-        let target_key = target_url.key()?;
-        let object_store = self.object_store(target_key)?;
+        let object_store = self.object_store(&target_url)?;
         let mut local_file = fs::File::open(local_file_path)
             .await
             .into_report()
@@ -80,39 +75,6 @@ impl ObjectStoreRegistry {
             .change_context(Error::Internal)?;
         Ok(())
     }
-
-    fn get_object_store(
-        &self,
-        key: &ObjectStoreKey,
-    ) -> Result<Option<Arc<dyn ObjectStore>>, Error> {
-        let object_stores = self
-            .object_stores
-            .read()
-            .map_err(|_| Error::ReadWriteObjectStore)?;
-        Ok(object_stores.get(key).cloned())
-    }
-
-    fn put_object_store(
-        &self,
-        key: ObjectStoreKey,
-        object_store: Arc<dyn ObjectStore>,
-    ) -> Result<(), Error> {
-        let mut object_stores = self
-            .object_stores
-            .write()
-            .map_err(|_| Error::ReadWriteObjectStore)?;
-        object_stores.insert(key, object_store);
-        Ok(())
-    }
-}
-
-impl std::fmt::Debug for ObjectStoreRegistry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let object_stores = self.object_stores.read().unwrap();
-        f.debug_struct("ObjectStoreRegistry")
-            .field("object_stores", &*object_stores)
-            .finish()
-    }
 }
 
 #[derive(Display, Debug)]
@@ -134,10 +96,13 @@ pub enum Error {
     UrlUnsupportedScheme(Url),
     #[display(fmt = "invalid path '{}' in URL '{_0}'", "_0.path()")]
     UrlInvalidPath(Url),
-    #[display(fmt = "error creating object store for {_0:?}")]
-    CreatingObjectStore(ObjectStoreKey),
-    #[display(fmt = "downloading object for {_0:?}")]
-    DownloadingObject(PathBuf),
+    #[display(fmt = "error creating object store")]
+    CreatingObjectStore,
+    #[display(fmt = "downloading object from '{from}' to '{}'", "to.display()")]
+    DownloadingObject {
+        from: ObjectStoreUrl,
+        to: path::PathBuf,
+    },
     #[display(fmt = "internal error")]
     Internal,
 }
@@ -164,7 +129,7 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
             let object_store = builder
                 .build()
                 .into_report()
-                .change_context(Error::CreatingObjectStore(key.clone()))?;
+                .change_context(Error::CreatingObjectStore)?;
             Ok(Arc::new(object_store))
         }
         ObjectStoreKey::Gcs { bucket } => {
@@ -173,7 +138,7 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
             let object_store = builder
                 .build()
                 .into_report()
-                .change_context(Error::CreatingObjectStore(key.clone()))?;
+                .change_context(Error::CreatingObjectStore)?;
             Ok(Arc::new(object_store))
         }
     }
@@ -181,6 +146,9 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use crate::stores::ObjectStoreUrl;
     use crate::stores::{
         object_store_url::ObjectStoreKey, object_stores::create_object_store, ObjectStoreRegistry,
     };
@@ -223,18 +191,15 @@ mod tests {
     fn test_object_store_registry_creates_if_not_exists() {
         let object_store_registry = ObjectStoreRegistry::new();
         let key = ObjectStoreKey::Local;
+        let url = ObjectStoreUrl::from_str("file:///foo").unwrap();
+        assert_eq!(key, url.key().unwrap());
+
         // Verify there is no object store for local first
-        assert!(object_store_registry
-            .get_object_store(&key)
-            .unwrap()
-            .is_none());
+        assert!(!object_store_registry.object_stores.contains_key(&key));
         // Call the public method
-        let object_store = object_store_registry.object_store(key.clone());
+        let object_store = object_store_registry.object_store(&url);
         // Verify the result is valid and that
         assert!(object_store.is_ok());
-        assert!(object_store_registry
-            .get_object_store(&key)
-            .unwrap()
-            .is_some());
+        assert!(object_store_registry.object_stores.contains_key(&key));
     }
 }

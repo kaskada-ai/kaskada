@@ -5,7 +5,6 @@ use std::sync::Arc;
 use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{DataType, Field, FieldRef, Schema, SchemaRef, TimestampMillisecondType};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use tempfile::NamedTempFile;
 
 use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
@@ -13,7 +12,7 @@ use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
 use sparrow_api::kaskada::v1alpha::PulsarConfig;
 
 use crate::metadata::file_from_path;
-use crate::stores::object_store_url::ObjectStoreKey;
+use crate::read::ParquetFile;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use crate::streams;
 
@@ -106,75 +105,58 @@ impl RawMetadata {
         })
     }
 
-    /// Create a `RawMetadata` from a parquet string path and object store registry
+    /// Create a `RawMetadata` from a parquet string path and object store registry.
+    ///
+    /// This uses `object_store` to asynchronously retrieve only the Parquet
+    /// footer to determine the schema.
     async fn try_from_parquet(
         path: &str,
-        object_store_registry: &ObjectStoreRegistry,
+        object_stores: &ObjectStoreRegistry,
     ) -> error_stack::Result<Self, Error> {
-        let object_store_url = ObjectStoreUrl::from_str(path)
+        let url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
-        let object_store_key = object_store_url
-            .key()
+
+        let parquet_file = ParquetFile::try_new(object_stores, url)
+            .await
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
-        match object_store_key {
-            ObjectStoreKey::Local => {
-                let path = object_store_url
-                    .path()
-                    .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
-                    .to_string();
-                // The local paths are formatted file:///absolute/path/to/file.file
-                // The Object Store path strips the prefix file:/// but we need to add the
-                // root slash back prior to opening the file.
-                let path = format!("/{}", path);
-                let path = std::path::Path::new(&path);
-                Self::try_from_parquet_path(path)
-            }
-            _ => {
-                let download_file = NamedTempFile::new().map_err(|_| Error::Download)?;
-                object_store_url
-                    .download(object_store_registry, download_file.path())
-                    .await
-                    .change_context_lazy(|| Error::Download)?;
-                Self::try_from_parquet_path(download_file.path())
-            }
-        }
+
+        Self::from_raw_schema(parquet_file.schema)
     }
 
-    /// Create a `RawMetadata` from a CSV string path and object store registry
+    /// Create a `RawMetadata` from a CSV string path and object store registry.
+    ///
+    /// For CSV, this currently needs to download a local copy of the file, since
+    /// Arrow does not (as of 2023-July-06) support reading CSV using `AsyncWrite`.
+    // TODO(https://github.com/kaskada-ai/kaskada/issues/486): Async CSV support.
     async fn try_from_csv(
         path: &str,
-        object_store_registry: &ObjectStoreRegistry,
+        object_stores: &ObjectStoreRegistry,
     ) -> error_stack::Result<Self, Error> {
         let object_store_url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
-        let object_store_key = object_store_url
-            .key()
-            .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
-        match object_store_key {
-            ObjectStoreKey::Local => {
-                let path = object_store_url
-                    .path()
-                    .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
-                    .to_string();
-                let path = format!("/{}", path);
-                let file = file_from_path(std::path::Path::new(&path))
-                    .into_report()
-                    .change_context_lazy(|| Error::LocalFile)?;
-                Self::try_from_csv_reader(file)
-            }
-            _ => {
-                let download_file = NamedTempFile::new()
-                    .into_report()
-                    .change_context_lazy(|| Error::Download)?;
-                object_store_url
-                    .download(object_store_registry, download_file.path())
-                    .await
-                    .change_context_lazy(|| Error::Download)?;
-                let file = file_from_path(download_file.path())
-                    .into_report()
-                    .change_context_lazy(|| Error::Download)?;
-                Self::try_from_csv_reader(file)
-            }
+
+        if object_store_url.is_local() {
+            let path = object_store_url
+                .path()
+                .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
+                .to_string();
+            let path = format!("/{}", path);
+            let file = file_from_path(std::path::Path::new(&path))
+                .into_report()
+                .change_context_lazy(|| Error::LocalFile)?;
+            Self::try_from_csv_reader(file)
+        } else {
+            let download_file = NamedTempFile::new()
+                .into_report()
+                .change_context_lazy(|| Error::Download)?;
+            object_store_url
+                .download(object_stores, download_file.path())
+                .await
+                .change_context_lazy(|| Error::Download)?;
+            let file = file_from_path(download_file.path())
+                .into_report()
+                .change_context_lazy(|| Error::Download)?;
+            Self::try_from_csv_reader(file)
         }
     }
 
@@ -217,18 +199,6 @@ impl RawMetadata {
             user_schema: Arc::new(pulsar_schema),
             sparrow_metadata: Self::from_raw_schema(Arc::new(Schema::new(new_fields)))?,
         })
-    }
-
-    /// Create a `RawMetadata` fram a Parquet file path.
-    fn try_from_parquet_path(path: &std::path::Path) -> error_stack::Result<Self, Error> {
-        let file = file_from_path(path)
-            .into_report()
-            .change_context_lazy(|| Error::LocalFile)?;
-        let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)
-            .into_report()
-            .change_context_lazy(|| Error::ReadSchema)?;
-        let raw_schema = parquet_reader.schema();
-        Self::from_raw_schema(raw_schema.clone())
     }
 
     /// Create a `RawMetadata` from a reader of a CSV file or string.

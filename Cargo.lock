@@ -4940,6 +4940,7 @@ dependencies = [
  "chrono",
  "clap 4.3.2",
  "criterion",
+ "dashmap",
  "data-encoding",
  "derive_more",
  "enum-map",
