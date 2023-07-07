@@ -127,6 +127,7 @@ impl RawMetadata {
     ///
     /// For CSV, this currently needs to download a local copy of the file, since
     /// Arrow does not (as of 2023-July-06) support reading CSV using `AsyncWrite`.
+    // TODO(https://github.com/kaskada-ai/kaskada/issues/486): Async CSV support.
     async fn try_from_csv(
         path: &str,
         object_stores: &ObjectStoreRegistry,
