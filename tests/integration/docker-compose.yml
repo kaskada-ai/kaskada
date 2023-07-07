@@ -4,13 +4,6 @@ networks:
   integration:
 
 services:
-  # redis:
-  #  container_name: redis
-  #  image: redislabs/redisai:1.2.4-cpu-bionic
-  #  networks:
-  #    - integration
-  #  ports:
-  #  - "6379:6379"
   
   pulsar:
     image: apachepulsar/pulsar:3.0.0
@@ -23,7 +16,7 @@ services:
       - "8080:8080"
     networks:
       - integration
-    command: ["bin/pulsar", "standalone"]
+    command: [ "bin/pulsar", "standalone" ]
     healthcheck:
       test: curl --fail  http://localhost:8080/admin/v2/brokers/health
       interval: 60s

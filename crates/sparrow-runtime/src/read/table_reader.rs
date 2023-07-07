@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Context;
 use arrow::datatypes::SchemaRef;
 use arrow::record_batch::RecordBatch;
@@ -10,6 +8,7 @@ use futures::Stream;
 use hashbrown::HashSet;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
+use sparrow_api::kaskada::v1alpha::PreparedFile;
 use sparrow_compiler::TableInfo;
 use sparrow_core::TableSchema;
 use sparrow_qfr::{
@@ -18,11 +17,11 @@ use sparrow_qfr::{
 use tokio_stream::StreamExt;
 use tracing::info;
 
-use crate::data_manager::{DataHandle, DataManager};
 use crate::merge::{homogeneous_merge, GatheredBatches, Gatherer};
 use crate::min_heap::{HasPriority, MinHeap};
 use crate::read::error::Error;
 use crate::read::parquet_stream::{self, new_parquet_stream};
+use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
 
 const READ_TABLE: Activity = activity!("scan.read_file");
@@ -54,8 +53,8 @@ static REGISTRATION: Registration = Registration::new(|| {
 inventory::submit!(&REGISTRATION);
 
 /// Create a stream that reads the contents of the given table.
-pub fn table_reader(
-    data_manager: &mut DataManager,
+pub async fn table_reader(
+    object_stores: &ObjectStoreRegistry,
     table_info: &TableInfo,
     requested_slice: &Option<Slice>,
     projected_columns: Option<Vec<String>>,
@@ -63,17 +62,22 @@ pub fn table_reader(
     max_event_in_snapshot: Option<NaiveDateTime>,
     upper_bound_opt: Option<NaiveDateTime>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<Batch, Error>> + 'static, Error> {
-    let data_handles = select_prepared_files(
-        data_manager,
-        table_info,
-        requested_slice,
-        max_event_in_snapshot,
-    )?;
+    let data_handles = select_prepared_files(table_info, requested_slice, max_event_in_snapshot)?;
 
     let mut gatherer = Gatherer::new(data_handles.len(), None);
     let mut active = Vec::with_capacity(data_handles.len());
 
-    for (index, data_handle) in data_handles.into_iter().enumerate() {
+    // This schema came from Wren, therefore it should be the user facing schema.
+    // Therefore it should *not* already have the key columns.
+    // This adds the key columns to the schema.
+    let schema = TableSchema::try_from_data_schema(table_info.schema().as_ref())
+        .into_report()
+        .change_context(Error::LoadTableSchema)?;
+    // Project the columns from the schema.
+    // TODO: Cleanup this duplication.
+    let projected_schema = projected_schema(schema, &projected_columns)?;
+
+    for (index, prepared_file) in data_handles.into_iter().enumerate() {
         // The file contains no data less than the first row in the file.
         //
         // Inform the gatherer that this input is empty up to that point so it doesn't
@@ -83,43 +87,41 @@ pub fn table_reader(
         // TODO: This would be cleaner if we could instead *add* the file to the
         // gatherer once it has data. This would require the gatherer have a bit
         // more logic for dynamically growing the set of managed files.
-        let min_event_time = data_handle.min_event_time().timestamp_nanos();
-        let max_event_time = data_handle.max_event_time().timestamp_nanos();
+        let min_event_time = prepared_file
+            .min_event_time()
+            .change_context(Error::Internal)?
+            .timestamp_nanos();
+        let max_event_time = prepared_file
+            .max_event_time()
+            .change_context(Error::Internal)?
+            .timestamp_nanos();
 
+        info!(
+            "Skipping to time {} for data file {:?} for index {}",
+            min_event_time, prepared_file, index
+        );
         gatherer
             .skip_to(index, min_event_time)
             .into_report()
             .change_context(Error::SkippingToMinEvent)?;
-        info!(
-            "Skipping to time {} for data file {:?} for index {}",
-            min_event_time, data_handle, index
-        );
 
+        let stream = new_parquet_stream(object_stores, &prepared_file.path, &projected_schema)
+            .await
+            .change_context(Error::CreateStream)?;
         active.push(ActiveInput {
             min_next_time: min_event_time,
             max_event_time,
             index,
-            data_handle,
-            stream: None,
+            stream,
         });
     }
 
     let mut active = MinHeap::from(active);
 
-    // This schema came from Wren, therefore it should be the user facing schema.
-    // Therefore it should *not* already have the key columns.
-    // This adds the key columns to the schema.
-    let schema = TableSchema::try_from_data_schema(table_info.schema().as_ref())
-        .into_report()
-        .change_context(Error::LoadTableSchema)?;
-
     // Create an owned version of the table info so the stream can be `'static`.
     let table_name = table_info.name().to_owned();
 
     Ok(async_stream::try_stream! {
-        // Project the columns from the schema.
-        // TODO: Cleanup this duplication.
-        let projected_schema = projected_schema(schema, &projected_columns)?;
         let projected_schema_ref = projected_schema.schema_ref();
 
         while let Some(mut next_input) = active.pop() {
@@ -128,7 +130,7 @@ pub fn table_reader(
             let next_batch = READ_TABLE.instrument::<error_stack::Result<_, Error>, _>(&flight_recorder, |metrics| {
                 // Weird syntax because we can't easily say "move metrics but not projected schema".
                 // This may get easier with async closures https://github.com/rust-lang/rust/issues/62290.
-                let input = next_input.next_batch(&projected_schema, upper_bound_opt);
+                let input = next_input.next_batch(upper_bound_opt);
                 async move {
                     let input = input.await?;
 
@@ -191,11 +193,10 @@ fn gather_next_output(
 
 /// Select the necessary prepared files for the given silce.
 fn select_prepared_files(
-    data_manager: &mut DataManager,
     table_info: &TableInfo,
     requested_slice: &Option<Slice>,
     max_event_in_snapshot: Option<NaiveDateTime>,
-) -> error_stack::Result<Vec<Arc<DataHandle>>, Error> {
+) -> error_stack::Result<Vec<PreparedFile>, Error> {
     let prepared_files = table_info
         .prepared_files_for_slice(requested_slice)
         .into_report()
@@ -232,14 +233,6 @@ fn select_prepared_files(
             continue;
         }
 
-        // Don't queue the download until we know we want the file.
-        let data_handle = data_manager
-            .queue_download(prepared_file)
-            .into_report()
-            .change_context(Error::QueueFileDownloads)?;
-        debug_assert_eq!(min_event_time, data_handle.min_event_time());
-        debug_assert_eq!(max_event_time, data_handle.max_event_time());
-
         // Currently, incremental relies on finding a snapshot completely before the
         // new data. Thus, any given source file should either be
         // (a) completely old (min_time <= max_time < max_time_processed)
@@ -252,16 +245,15 @@ fn select_prepared_files(
         error_stack::ensure!(
             max_event_in_snapshot.iter().all(|t| &min_event_time > t),
             Error::PartialOverlap {
-                file: data_handle,
+                file: prepared_file.path.clone(),
                 table_name: table_info.name().to_owned(),
                 snapshot_time: max_event_in_snapshot
             }
         );
 
-        selected_files.push(data_handle);
+        selected_files.push(prepared_file.clone());
     }
 
-    selected_files.sort_by(|a, b| a.cmp_time(b));
     Ok(selected_files)
 }
 
@@ -335,8 +327,7 @@ struct ActiveInput {
     max_event_time: i64,
     /// Index of this input within the gatherer.
     index: usize,
-    data_handle: Arc<DataHandle>,
-    stream: Option<BoxStream<'static, error_stack::Result<Batch, parquet_stream::Error>>>,
+    stream: BoxStream<'static, error_stack::Result<Batch, parquet_stream::Error>>,
 }
 
 impl ActiveInput {
@@ -348,20 +339,10 @@ impl ActiveInput {
     /// should be removed from the active inputs and not consulted again.
     async fn next_batch(
         &mut self,
-        projected_schema: &TableSchema,
         upper_bound_opt: Option<NaiveDateTime>,
     ) -> error_stack::Result<Option<Batch>, Error> {
-        if self.stream.is_none() {
-            let stream = new_parquet_stream(self.data_handle.as_ref(), projected_schema)
-                .await
-                .change_context(Error::CreateStream)?;
-            self.stream = Some(stream);
-        }
-
-        // SAFETY: If `reader.is_none()` we created it above.
-        let stream = unsafe { self.stream.as_mut().unwrap_unchecked() };
-
-        if let Some(next) = stream
+        if let Some(next) = self
+            .stream
             .try_next()
             .await
             .change_context(Error::ReadNextBatch)?
@@ -467,9 +448,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
-    use crate::data_manager::DataManager;
     use crate::read::testing::write_parquet_file;
-    use crate::s3::S3Helper;
 
     #[tokio::test]
     async fn test_single_parquet_file_ordered() {
@@ -697,17 +676,11 @@ mod tests {
             .unwrap();
         let table_info = data_context.table_info(table_id).unwrap();
 
-        let mut data_manager = DataManager::new(S3Helper::new().await);
-        let data_handles = select_prepared_files(
-            &mut data_manager,
-            table_info,
-            &None,
-            Some(max_event_in_snapshot),
-        )
-        .unwrap();
-        assert_eq!(data_handles.len(), 2);
-        for d in data_handles {
-            assert!(d.max_event_time() > max_event_in_snapshot)
+        let prepared_files =
+            select_prepared_files(table_info, &None, Some(max_event_in_snapshot)).unwrap();
+        assert_eq!(prepared_files.len(), 2);
+        for f in prepared_files {
+            assert!(f.max_event_time().unwrap() > max_event_in_snapshot)
         }
     }
 
@@ -767,16 +740,16 @@ mod tests {
             None
         };
 
-        let mut data_manager = DataManager::new(S3Helper::new().await);
         let actual: Vec<_> = table_reader(
-            &mut data_manager,
+            &ObjectStoreRegistry::default(),
             table_info,
             &None,
             None,
             FlightRecorder::disabled(),
             max_time_processed,
             upper_bound_opt,
-        )?
+        )
+        .await?
         .try_collect()
         .await?;
 
@@ -903,11 +876,11 @@ mod tests {
         let metadata_parquet_file = write_parquet_file(&metadata, None);
 
         let prepared = PreparedFile {
-            path: parquet_file.to_string_lossy().to_string(),
+            path: format!("file://{}", parquet_file.display()),
             min_event_time: Some(min_event_time.into()),
             max_event_time: Some(max_event_time.into()),
             num_rows,
-            metadata_path: metadata_parquet_file.to_string_lossy().to_string(),
+            metadata_path: format!("file://{}", metadata_parquet_file.display()),
         };
 
         (parquet_file, prepared)

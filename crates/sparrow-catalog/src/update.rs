@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use error_stack::{IntoReport, ResultExt};
 use futures::TryStreamExt;
 use itertools::Itertools;
-use sparrow_runtime::s3::S3Helper;
 use tracing::{error, info, info_span};
 
 use crate::list_doc_files;
@@ -29,12 +28,10 @@ pub(super) async fn update_doc_structs(
     options: &UpdateOptions,
     doc_root: PathBuf,
 ) -> error_stack::Result<Vec<PathBuf>, Error> {
-    let s3_helper = S3Helper::new().await;
-
     if let Some(example) = &options.example {
         let doc_path = doc_root.join(format!("{example}.toml"));
         error_stack::ensure!(doc_path.is_file(), Error::NonFile(doc_path));
-        let changed = update_doc_struct(command, doc_path.clone(), s3_helper)
+        let changed = update_doc_struct(command, doc_path.clone())
             .await
             .attach_printable_lazy(|| DocFile(doc_path.clone()))?;
         if changed {
@@ -50,17 +47,14 @@ pub(super) async fn update_doc_structs(
             .map_err(|e| error_stack::report!(e).change_context(Error::ListingFiles));
 
         let changed = file_stream
-            .map_ok(move |doc_path| {
-                let s3_helper = s3_helper.clone();
-                async move {
-                    let changed = update_doc_struct(command, doc_path.clone(), s3_helper)
-                        .await
-                        .change_context(Error::UpdatingDocs)?;
-                    if changed {
-                        Ok(Some(doc_path))
-                    } else {
-                        Ok(None)
-                    }
+            .map_ok(move |doc_path| async move {
+                let changed = update_doc_struct(command, doc_path.clone())
+                    .await
+                    .change_context(Error::UpdatingDocs)?;
+                if changed {
+                    Ok(Some(doc_path))
+                } else {
+                    Ok(None)
                 }
             })
             .try_buffer_unordered(4)
@@ -107,7 +101,6 @@ impl error_stack::Context for Error {}
 async fn update_doc_struct(
     command: UpdateCommand,
     doc_path: PathBuf,
-    s3_helper: S3Helper,
 ) -> error_stack::Result<bool, Error> {
     let input = tokio::fs::read_to_string(&doc_path)
         .await
@@ -139,7 +132,7 @@ async fn update_doc_struct(
         let span = info_span!("Execute example", function = ?catalog_entry.name, index);
         let _enter = span.enter();
 
-        let output_csv = execute_example::execute_example(example, s3_helper.clone())
+        let output_csv = execute_example::execute_example(example)
             .await
             .change_context(Error::ExecuteExample(index))?;
         example.output_csv = Some(output_csv);

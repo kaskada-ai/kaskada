@@ -45,7 +45,7 @@ pub enum StepKind {
     },
     /// Merge the given relations.
     Merge,
-    /// Apply a projection to adjust columns in the table.
+    /// Apply stateless projections to columns in the table.
     ///
     /// The output includes the same rows as the input, but with columns
     /// projected as configured.

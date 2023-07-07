@@ -2165,17 +2165,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ghost"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e77ac7b51b8e6313251737fcef4b1c01a2ea102bde68415b62c0ee9268fec357"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.18",
-]
-
-[[package]]
 name = "gimli"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2581,12 +2570,9 @@ checksum = "8bb03732005da905c88227371639bf1ad885cc712789c011c31c5fb3ab3ccf02"
 
 [[package]]
 name = "inventory"
-version = "0.3.6"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0539b5de9241582ce6bd6b0ba7399313560151e58c9aaf8b74b711b1bdce644"
-dependencies = [
- "ghost",
-]
+checksum = "c38a87a1e0e2752433cd4b26019a469112a25fb43b30f5ee9b3b898925c5a0f9"
 
 [[package]]
 name = "io-lifetimes"
@@ -4687,6 +4673,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-expressions"
+version = "0.8.3"
+dependencies = [
+ "approx 0.5.1",
+ "arrow-arith",
+ "arrow-array",
+ "arrow-buffer",
+ "arrow-cast",
+ "arrow-data",
+ "arrow-ord",
+ "arrow-schema",
+ "arrow-select",
+ "arrow-string",
+ "derive_more",
+ "error-stack",
+ "hashbrown 0.13.2",
+ "index_vec",
+ "inventory",
+ "itertools",
+ "num",
+ "serde_json",
+ "sparrow-arrow",
+ "sparrow-physical",
+ "static_init",
+ "substring",
+]
+
+[[package]]
 name = "sparrow-instructions"
 version = "0.8.3"
 dependencies = [
@@ -4830,6 +4844,7 @@ dependencies = [
  "insta",
  "serde",
  "serde_yaml",
+ "sparrow-arrow",
 ]
 
 [[package]]
@@ -4921,6 +4936,7 @@ dependencies = [
  "aws-types",
  "bit-set",
  "bitvec",
+ "bytes",
  "chrono",
  "clap 4.3.2",
  "criterion",

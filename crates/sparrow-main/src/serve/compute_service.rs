@@ -272,7 +272,6 @@ async fn execute_impl(
 
     let progress_stream = sparrow_runtime::execute::execute(
         request,
-        s3_helper.clone(),
         None,
         flight_record_local_path,
         flight_record_header,
@@ -690,11 +689,13 @@ mod tests {
             output.close().unwrap();
         }
 
-        let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
-            prepared_file.path(),
-            metadata_file.path(),
+        let prepared_metadata = PreparedMetadata::try_from_data(
+            format!("file://{}", prepared_file.path().display()),
+            record_batch,
+            format!("file://{}", metadata_file.path().display()),
         )
         .unwrap();
+
         let file_set = compute_table::FileSet {
             slice_plan: Some(slice_plan),
             prepared_files: vec![prepared_metadata.try_into().unwrap()],

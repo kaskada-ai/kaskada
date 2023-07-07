@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use url::Url;
+
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
     #[display(fmt = "unable to open '{path:?}'")]
@@ -28,10 +30,8 @@ pub enum Error {
     DetermineMetadata,
     #[display(fmt = "invalid schema provided")]
     ReadSchema,
-    #[display(fmt = "failed to write Parquet file")]
-    WriteParquetData,
-    #[display(fmt = "failed to write metadata file")]
-    WriteMetadata,
+    #[display(fmt = "failed to write to '{_0}")]
+    Write(Url),
     #[display(fmt = "prepare request missing '{_0}'")]
     MissingField(&'static str),
     #[display(

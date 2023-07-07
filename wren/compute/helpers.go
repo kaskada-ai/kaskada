@@ -84,11 +84,11 @@ func getComputePreparedFiles(prepareJobs []*ent.PrepareJob) []*v1alpha.PreparedF
 				metadataPath = *preparedFile.MetadataPath
 			}
 			computePreparedFiles = append(computePreparedFiles, &v1alpha.PreparedFile{
-				Path:         ConvertURIForCompute(preparedFile.Path),
+				Path:         preparedFile.Path,
 				MaxEventTime: timestamppb.New(time.Unix(0, preparedFile.MaxEventTime)),
 				MinEventTime: timestamppb.New(time.Unix(0, preparedFile.MinEventTime)),
 				NumRows:      preparedFile.RowCount,
-				MetadataPath: ConvertURIForCompute(metadataPath),
+				MetadataPath: metadataPath,
 			})
 		}
 	}

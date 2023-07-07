@@ -62,11 +62,11 @@ use self::scan::ScanOperation;
 use self::select::SelectOperation;
 use self::tick::TickOperation;
 use self::with_key::WithKeyOperation;
-use crate::data_manager::DataManager;
 use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::expression_executor::{ExpressionExecutor, InputColumn};
 use crate::execute::operation::shift_until::ShiftUntilOperation;
 use crate::execute::Error;
+use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
 
 /// Information used while creating operations.
@@ -81,7 +81,7 @@ use crate::Batch;
 pub(crate) struct OperationContext {
     pub plan: ComputePlan,
     pub plan_hash: PlanHash,
-    pub data_manager: DataManager,
+    pub object_stores: ObjectStoreRegistry,
     pub data_context: DataContext,
     pub compute_store: Option<Arc<ComputeStore>>,
     /// The key hash inverse to produce the output results, if one exists.
