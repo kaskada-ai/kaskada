@@ -146,18 +146,24 @@ class FenlMagics(Magics):
             )
             query_result = QueryResult(expression, resp)
             if not dry_run and render_dataframe:
-                output_paths = query_result.query_response.destination.object_store.output_paths.paths
-                if len(output_paths) > 0: 
+                output_paths = (
+                    query_result.query_response.destination.object_store.output_paths.paths
+                )
+                if len(output_paths) > 0:
                     dataframes = []
                     for parquet_output_path in output_paths:
                         if response_as == query.ResponseType.FILE_TYPE_PARQUET:
-                            df = pandas.read_parquet(parquet_output_path, engine="pyarrow")
+                            df = pandas.read_parquet(
+                                parquet_output_path, engine="pyarrow"
+                            )
                             dataframes.append(df)
                         elif response_as == query.ResponseType.FILE_TYPE_CSV:
                             df = pandas.read_csv(parquet_output_path, engine="pyarrow")
                             dataframes.append(df)
                         else:
-                            raise NotImplementedError(f"unknown response type: {response_as}", response_as)
+                            raise NotImplementedError(
+                                f"unknown response type: {response_as}", response_as
+                            )
                     query_result.set_dataframe(pandas.concat(dataframes))
 
             if var is not None:
