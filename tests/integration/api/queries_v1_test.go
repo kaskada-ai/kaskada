@@ -79,16 +79,16 @@ var _ = Describe("Queries V1", Ordered, func() {
 		// create a pulsar producer and push initial data to pulsar
 		pulsarProducer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{
 			Topic:  pulsarTopicName,
-			Schema: pulsar.NewAvroSchema(string(helpers.ReadFile("avro/schema.json")), map[string]string{}),
+			Schema: pulsar.NewAvroSchema(string(helpers.ReadTestFile("avro/schema.json")), map[string]string{}),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
 
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg_0.avro"),
+			Payload: helpers.ReadTestFile("avro/msg_0.avro"),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg_1.avro"),
+			Payload: helpers.ReadTestFile("avro/msg_1.avro"),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 

@@ -6,7 +6,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
@@ -20,6 +22,8 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 	var conn *grpc.ClientConn
 	var tableClient v1alpha.TableServiceClient
 	var queryClient v1alpha.QueryServiceClient
+	var destination *v1alpha.Destination
+	var sliceRequest *v1alpha.SliceRequest
 	var tableName string
 
 	BeforeAll(func() {
@@ -44,7 +48,25 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 		}
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
-		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_part1.parquet")
+
+		helpers.WriteTestFile("purchases/purchases_temp.parquet", helpers.ReadTestFile("purchases/purchases_part1.parquet"))
+		helpers.LoadTestFileIntoTable(ctx, conn, table, "purchases/purchases_temp.parquet")
+
+		destination = &v1alpha.Destination{
+			Destination: &v1alpha.Destination_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			},
+		}
+
+		sliceRequest = &v1alpha.SliceRequest{
+			Slice: &v1alpha.SliceRequest_Percent{
+				Percent: &v1alpha.SliceRequest_PercentSlice{
+					Percent: 100,
+				},
+			},
+		}
 	})
 
 	AfterAll(func() {
@@ -59,18 +81,10 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 	Context("When the table schema is created correctly", func() {
 		Describe("Reference an invalid field", func() {
 			It("should return an invalid argument error", func() {
-				destination := &v1alpha.Destination{}
-				destination.Destination = &v1alpha.Destination_ObjectStore{
-					ObjectStore: &v1alpha.ObjectStoreDestination{
-						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-					},
-				}
-
 				createQueryRequest := &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
-						Expression:     "sum(query_v1_errors.Tacos)",
-						Destination:    destination,
-						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
+						Expression:  "sum(query_v1_errors.Tacos)",
+						Destination: destination,
 					},
 				}
 
@@ -102,18 +116,10 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 
 		Describe("Reference an invalid field, with dry-run", func() {
 			It("should return an invalid argument error", func() {
-				destination := &v1alpha.Destination{}
-				destination.Destination = &v1alpha.Destination_ObjectStore{
-					ObjectStore: &v1alpha.ObjectStoreDestination{
-						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-					},
-				}
-
 				createQueryRequest := &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
-						Expression:     "sum(query_v1_errors.Tacos)",
-						Destination:    destination,
-						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
+						Expression:  "sum(query_v1_errors.Tacos)",
+						Destination: destination,
 					},
 					QueryOptions: &v1alpha.QueryOptions{
 						DryRun: true,
@@ -145,5 +151,88 @@ var _ = Describe("Query V1 gRPC Errors", Ordered, func() {
 				Expect(diagnostics).Should(ContainElement(ContainSubstring("No field named 'Tacos'")))
 			})
 		})
+	})
+
+	Context("verifying that compute in-place file handeling works correctly", func() {
+		Describe("Run a basic query, to populate the prepare cache based on an empty slice config", func() {
+			It("should work without error", func() {
+				createQueryRequest := &v1alpha.CreateQueryRequest{
+					Query: &v1alpha.Query{
+						Expression:  tableName,
+						Destination: destination,
+						Slice:       nil,
+					},
+				}
+
+				stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
+				Expect(err).ShouldNot(HaveOccurredGrpc())
+				Expect(stream).ShouldNot(BeNil())
+
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(len(queryResponses)).Should(BeNumerically(">=", 3))
+			})
+		})
+
+		Describe("alter the underlying table data, and compute on a non-nil slice config", func() {
+			It("should return an error indicating the data has changed", func() {
+				helpers.WriteTestFile("purchases/purchases_temp.parquet", helpers.ReadTestFile("purchases/purchases_part2.parquet"))
+
+				createQueryRequest := &v1alpha.CreateQueryRequest{
+					Query: &v1alpha.Query{
+						Expression:  tableName,
+						Destination: destination,
+						Slice:       sliceRequest,
+					},
+				}
+
+				stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
+				Expect(err).ShouldNot(HaveOccurredGrpc())
+				Expect(stream).ShouldNot(BeNil())
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
+				Expect(err).Should(HaveOccurredGrpc())
+				Expect(queryResponses).Should(HaveLen(4))
+
+				//inspect error response
+				errStatus, ok := status.FromError(err)
+				Expect(ok).Should(BeTrue())
+				Expect(errStatus.Code()).Should(Equal(codes.FailedPrecondition))
+				Expect(errStatus.Message()).Should(ContainSubstring("contents has changed"))
+
+				//inspect last response
+				Expect(queryResponses[3].State).Should(Equal(v1alpha.CreateQueryResponse_STATE_FAILURE))
+			})
+		})
+
+		Describe("remove underlying table data, and compute on a non-nil slice config", func() {
+			It("should return an error indicating the data no longer exists", func() {
+				helpers.DeleteTestFile("purchases/purchases_temp.parquet")
+
+				createQueryRequest := &v1alpha.CreateQueryRequest{
+					Query: &v1alpha.Query{
+						Expression:  tableName,
+						Destination: destination,
+						Slice:       sliceRequest,
+					},
+				}
+
+				stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
+				Expect(err).ShouldNot(HaveOccurredGrpc())
+				Expect(stream).ShouldNot(BeNil())
+				queryResponses, err := helpers.GetCreateQueryResponses(stream)
+				Expect(err).Should(HaveOccurredGrpc())
+				Expect(queryResponses).Should(HaveLen(4))
+
+				//inspect error response
+				errStatus, ok := status.FromError(err)
+				Expect(ok).Should(BeTrue())
+				Expect(errStatus.Code()).Should(Equal(codes.FailedPrecondition))
+				Expect(errStatus.Message()).Should(ContainSubstring("has been removed or is no longer accessible"))
+
+				//inspect last response
+				Expect(queryResponses[3].State).Should(Equal(v1alpha.CreateQueryResponse_STATE_FAILURE))
+			})
+		})
+
 	})
 })

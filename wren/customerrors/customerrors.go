@@ -54,6 +54,13 @@ func NewFailedPreconditionError(msg string) *FailedPreconditionError {
 	}
 }
 
+func NewFailedPreconditionErrorf(format string, a ...any) *FailedPreconditionError {
+	return &FailedPreconditionError{
+		Err:        fmt.Errorf(format, a...),
+		Violations: []*Violation{},
+	}
+}
+
 type InternalError struct {
 	Err error
 }
