@@ -54,8 +54,6 @@
 //! This makes use of the `inventory` crate so evaluators may be registered
 //! in other modules and discovered automatically.
 //!
-//!
-//!
 //! ```
 //! inventory::submit!(crate::evaluators::EvaluatorFactory {
 //!     name: "not",
