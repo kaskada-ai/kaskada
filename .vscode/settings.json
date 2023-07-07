@@ -1,4 +1,3 @@
 {
     "rust-analyzer.cargo.features": "all",
-    "rust-analyzer.showUnlinkedFileNotification": false,
 }

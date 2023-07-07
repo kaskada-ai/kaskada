@@ -29,6 +29,16 @@ mod string;
 mod time;
 
 /// Type alias for a function used to create an [Evaluator].
+///
+/// This type is equivalent to dynamic functions with signatures like:
+///
+/// ```
+/// fn f<'a>(info: StaticInfo<'a>) -> error_stack::Result<Box<dyn Evaluator>, Error> + Send + Sync
+/// ```
+///
+/// This corresponds to the functions each evaluator registers for creating
+/// an evaluator from the static information (types, constant arguments, and
+/// information about the arguments).
 type EvaluatorFactoryFn =
     dyn for<'a> Fn(StaticInfo<'a>) -> error_stack::Result<Box<dyn Evaluator>, Error> + Send + Sync;
 
