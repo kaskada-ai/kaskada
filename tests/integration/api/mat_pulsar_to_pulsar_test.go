@@ -66,16 +66,16 @@ var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar
 		topicNameOut = "topic_pulsarToPulsar_Out"
 		pulsarProducer, err = pulsarClient.CreateProducer(pulsar.ProducerOptions{
 			Topic:  topicNameIn,
-			Schema: pulsar.NewAvroSchema(string(helpers.ReadFile("avro/schema.json")), map[string]string{}),
+			Schema: pulsar.NewAvroSchema(string(helpers.ReadTestFile("avro/schema.json")), map[string]string{}),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "issue creating pulsar producer")
 
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg_0.avro"),
+			Payload: helpers.ReadTestFile("avro/msg_0.avro"),
 		})
 		Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: helpers.ReadFile("avro/msg_1.avro"),
+			Payload: helpers.ReadTestFile("avro/msg_1.avro"),
 		})
 
 		// create a pulsar consumer
@@ -183,11 +183,11 @@ var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar
 	Describe("Load more data into the table", func() {
 		It("Should work without error", func() {
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg_2.avro"),
+				Payload: helpers.ReadTestFile("avro/msg_2.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 			_, err = pulsarProducer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: helpers.ReadFile("avro/msg_3.avro"),
+				Payload: helpers.ReadTestFile("avro/msg_3.avro"),
 			})
 			Expect(err).ShouldNot(HaveOccurred(), "failed to publish message")
 		})

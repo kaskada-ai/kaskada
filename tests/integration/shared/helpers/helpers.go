@@ -141,11 +141,35 @@ func GetFileURI(fileName string) string {
 }
 
 // Reads a file from the testdata path
-func ReadFile(fileName string) []byte {
+func ReadTestFile(fileName string) []byte {
 	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
 	fileData, err := os.ReadFile(filePath)
-	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue finding testdata file: %s", fileName))
+	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue reading testdata file: %s", fileName))
 	return fileData
+}
+
+// Writes a file to the testdata path
+func WriteTestFile(fileName string, data []byte) {
+	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	err := os.WriteFile(filePath, data, 0666)
+	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue writing testdata file: %s", fileName))
+}
+
+// Deletes a file from the testdata path
+func DeleteTestFile(fileName string) {
+	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	if fileExists(filePath) {
+		err := os.Remove(filePath)
+		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue deleting testdata file: %s", fileName))
+	}
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
 
 // loads files from testdata/ into a table.

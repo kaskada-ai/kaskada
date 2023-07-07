@@ -210,7 +210,9 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 	// do prepare
 	tables, err := q.prepareManager.PrepareTablesForCompute(ctx, owner, dataToken, compileResponse.TableSlices)
 	if err != nil {
-		subLogger.Error().Err(err).Str("data_token", dataToken.ID.String()).Msg("issue getting tables for compute")
+		subLogger.Warn().Err(err).Str("data_token", dataToken.ID.String()).Msg("issue preparing tables for compute")
+		prepareResponse.State = v1alpha.CreateQueryResponse_STATE_FAILURE
+		responseStream.Send(prepareResponse)
 		return wrapErrorWithStatus(err, subLogger)
 	}
 

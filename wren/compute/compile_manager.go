@@ -227,7 +227,11 @@ func (m *compileManager) compile(ctx context.Context, owner *ent.Owner, request 
 	defer compileTimeoutCancel()
 
 	compileResponse, err := computeClient.Compile(compileTimeoutCtx, compileRequest)
-	subLogger.Info().Err(err).
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue on compile")
+		return nil, nil, err
+	}
+	subLogger.Info().
 		Interface("fenl_diagnostics", compileResponse.FenlDiagnostics).
 		Bool("incremental_enabled", compileResponse.IncrementalEnabled).
 		Strs("free_names", compileResponse.FreeNames).
@@ -235,9 +239,6 @@ func (m *compileManager) compile(ctx context.Context, owner *ent.Owner, request 
 		Interface("plan_hash", compileResponse.PlanHash).
 		Interface("result_type", compileResponse.ResultType).
 		Interface("slices", compileResponse.TableSlices).Msg("received compile response")
-	if err != nil {
-		return nil, nil, err
-	}
 
 	views := []*v1alpha.View{}
 	for _, freeName := range compileResponse.FreeNames {

@@ -275,7 +275,7 @@ func (t *tableService) loadData(ctx context.Context, owner *ent.Owner, request *
 	switch r := request.SourceData.(type) {
 	case *v1alpha.LoadDataRequest_FileInput:
 		fileInput := internal.FileInputFromV1Alpha(r.FileInput)
-		newDataToken, err = t.loadFileIntoTable(ctx, owner, fileInput, kaskadaTable)
+		newDataToken, err = t.loadFileIntoTable(ctx, owner, fileInput, kaskadaTable, request.CopyToFilesystem)
 		if err != nil {
 			return nil, err
 		}
@@ -294,7 +294,7 @@ func (t *tableService) loadData(ctx context.Context, owner *ent.Owner, request *
 	}, nil
 }
 
-func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, fileInput internal.FileInput, kaskadaTable *ent.KaskadaTable) (*ent.DataToken, error) {
+func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, fileInput internal.FileInput, kaskadaTable *ent.KaskadaTable, copyToFilesystem bool) (*ent.DataToken, error) {
 	subLogger := log.Ctx(ctx).With().
 		Str("method", "table.loadFileIntoTable").
 		Str("table_name", kaskadaTable.Name).
@@ -322,32 +322,41 @@ func (t *tableService) loadFileIntoTable(ctx context.Context, owner *ent.Owner, 
 	if err != nil {
 		return nil, err
 	}
-	toPath := t.tableStore.GetFileSubPath(owner, kaskadaTable, fileInput.GetExtension())
 
-	newObject, err := t.objectStoreClient.CopyObjectIn(ctx, fileInput.GetURI(), toPath)
-	if err != nil {
-		subLogger.Error().Err(err).Msg("issue copying file into table")
-		return nil, err
+	var cleanupOnError func() error
+	var newFileURI string
+	if copyToFilesystem {
+		toPath := t.tableStore.GetFileSubPath(owner, kaskadaTable, fileInput.GetExtension())
+		newObject, err := t.objectStoreClient.CopyObjectIn(ctx, fileInput.GetURI(), toPath)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue copying file into table")
+			return nil, err
+		}
+		newFileURI = newObject.URI()
+
+		cleanupOnError = func() error {
+			return t.objectStoreClient.DeleteObject(ctx, newObject)
+		}
+	} else {
+		newFileURI = fileInput.GetURI()
+
+		cleanupOnError = func() error { return nil }
+
 	}
 
-	fileIdentifier, err := t.objectStoreClient.GetObjectIdentifier(ctx, newObject)
+	fileIdentifier, err := t.objectStoreClient.GetObjectIdentifier(ctx, newFileURI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue getting identifier for file")
 		return nil, err
 	}
 
 	newFiles := []internal.AddFileProps{}
-
 	newFiles = append(newFiles, internal.AddFileProps{
-		URI:        newObject.URI(),
-		Identifier: fileIdentifier,
+		URI:        newFileURI,
+		Identifier: *fileIdentifier,
 		Schema:     fileSchema,
 		FileType:   fileInput.GetType(),
 	})
-
-	cleanupOnError := func() error {
-		return t.objectStoreClient.DeleteObject(ctx, newObject)
-	}
 
 	newDataToken, err := t.kaskadaTableClient.AddFilesToTable(ctx, owner, kaskadaTable, newFiles, fileSchema, nil, cleanupOnError)
 	if err != nil {

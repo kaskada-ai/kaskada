@@ -13,6 +13,7 @@ import (
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	"github.com/kaskada-ai/kaskada/wren/client"
+	"github.com/kaskada-ai/kaskada/wren/customerrors"
 	"github.com/kaskada-ai/kaskada/wren/ent"
 	"github.com/kaskada-ai/kaskada/wren/ent/kaskadafile"
 	"github.com/kaskada-ai/kaskada/wren/internal"
@@ -34,16 +35,18 @@ type PrepareManager interface {
 type prepareManager struct {
 	computeClients     client.ComputeClients
 	kaskadaTableClient internal.KaskadaTableClient
+	objectStore        client.ObjectStoreClient
 	prepareJobClient   internal.PrepareJobClient
 	parallelizeConfig  utils.ParallelizeConfig
 	tableStore         store.TableStore
 	tr                 trace.Tracer
 }
 
-func NewPrepareManager(computeClients *client.ComputeClients, kaskadaTableClient *internal.KaskadaTableClient, prepareJobClient *internal.PrepareJobClient, parallelizeConfig *utils.ParallelizeConfig, tableStore *store.TableStore) PrepareManager {
+func NewPrepareManager(computeClients *client.ComputeClients, kaskadaTableClient *internal.KaskadaTableClient, objectStore *client.ObjectStoreClient, prepareJobClient *internal.PrepareJobClient, parallelizeConfig *utils.ParallelizeConfig, tableStore *store.TableStore) PrepareManager {
 	return &prepareManager{
 		computeClients:     *computeClients,
 		kaskadaTableClient: *kaskadaTableClient,
+		objectStore:        *objectStore,
 		prepareJobClient:   *prepareJobClient,
 		parallelizeConfig:  *parallelizeConfig,
 		tableStore:         *tableStore,
@@ -92,7 +95,6 @@ func (m *prepareManager) PrepareTablesForCompute(ctx context.Context, owner *ent
 
 	err = m.parallelPrepare(ctx, owner, sliceTableMap)
 	if err != nil {
-		subLogger.Error().Err(err).Msg("issue preparing tables")
 		return nil, err
 	}
 
@@ -167,9 +169,9 @@ func (m *prepareManager) parallelPrepare(ctx context.Context, owner *ent.Owner, 
 					continue
 				}
 
-				err := m.executePrepare(ctx, owner, prepareJob)
+				err := m.executePrepare(prepareCtx, owner, prepareJob)
 				if err != nil {
-					subLogger.Error().Err(err).Str("prepare_job_id", prepareJob.ID.String()).Msg("unable to execute prepare")
+					subLogger.Warn().Err(err).Str("prepare_job_id", prepareJob.ID.String()).Msg("unable to execute prepare")
 					return err
 				}
 
@@ -246,6 +248,25 @@ func (m *prepareManager) executePrepare(ctx context.Context, owner *ent.Owner, p
 
 	kaskadaTable := prepareJob.Edges.KaskadaTable
 	for _, kaskadaFile := range prepareJob.Edges.KaskadaFiles {
+
+		// test if file still exists and hasn't changed
+		exists, err := m.objectStore.URIExists(ctx, kaskadaFile.Path)
+		if err != nil {
+			subLogger.Error().Err(err).Str("path", kaskadaFile.Path).Msg("issue checking if file still exists before prepare")
+			return err
+		}
+		if !exists {
+			return customerrors.NewFailedPreconditionErrorf("%s has been removed or is no longer accessible", kaskadaFile.Path)
+		}
+		currentIdentifier, err := m.objectStore.GetObjectIdentifier(ctx, kaskadaFile.Path)
+		if err != nil {
+			subLogger.Error().Err(err).Str("path", kaskadaFile.Path).Msg("issue getting file identifier before prepare")
+			return err
+		}
+		if *currentIdentifier != kaskadaFile.Identifier {
+			return customerrors.NewFailedPreconditionErrorf("%s contents has changed", kaskadaFile.Path)
+		}
+
 		prepareOutputURI := m.tableStore.GetPrepareOutputURI(owner, kaskadaTable, kaskadaFile, prepareJob.PrepareCacheBuster, prepareJob.SliceHash)
 
 		computeTable := convertKaskadaTableToComputeTable(kaskadaTable)
