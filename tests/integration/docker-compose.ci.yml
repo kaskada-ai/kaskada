@@ -1,0 +1,6 @@
+version: "3"
+
+services:
+  kaskada:
+    build:
+      dockerfile: Dockerfile.release

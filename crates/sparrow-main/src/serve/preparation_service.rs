@@ -99,7 +99,7 @@ pub async fn prepare_data(
         temp_file.path(),
     )
     .await?;
-    let (_prepared_metadata, prepared_files) = prepare_file(
+    let prepared_files = prepare_file(
         &object_store_registry,
         &source_data,
         &prepare_request.output_path_prefix,

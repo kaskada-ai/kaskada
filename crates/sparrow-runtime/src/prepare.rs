@@ -2,19 +2,17 @@ use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
-use std::path;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use futures::stream::BoxStream;
+use futures::stream::{BoxStream, FuturesUnordered};
 use futures::{StreamExt, TryStreamExt};
+use object_store::ObjectStore;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use parquet::arrow::ArrowWriter;
 
-use serde_yaml;
 use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{
     slice_plan, source_data, KafkaSubscription, PreparedFile, PulsarSubscription, SourceData,
@@ -31,13 +29,17 @@ mod slice_preparer;
 pub use error::*;
 pub(crate) use prepare_metadata::*;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
-use tracing::Instrument;
 
-use crate::stores::object_store_url::ObjectStoreKey;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use crate::{streams, PreparedMetadata, RawMetadata};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
+
+/// Initial size of the upload buffer.
+///
+/// This balances size (if we have multiple uploads in parallel) with
+/// number of "parts" required to perform an upload.
+const UPLOAD_BUFFER_SIZE_IN_BYTES: usize = 5_000_000;
 
 /// Prepare batches from the file according to the `config` and `slice`.
 ///
@@ -147,209 +149,95 @@ async fn reader_from_pulsar<'a>(
 }
 
 pub async fn prepare_file(
-    object_store_registry: &ObjectStoreRegistry,
+    object_stores: &ObjectStoreRegistry,
     source_data: &SourceData,
     output_path_prefix: &str,
     output_file_prefix: &str,
     table_config: &TableConfig,
     slice: &Option<slice_plan::Slice>,
-) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
-    let prepare_stream = prepared_batches(source_data, table_config, slice).await?;
-    let result = prepare_source_stream(
-        object_store_registry,
-        prepare_stream,
-        output_path_prefix,
-        output_file_prefix,
-    )
-    .await?;
-    Ok(result)
-}
-
-/// Prepare the given file and return the list of prepared files.
-async fn prepare_source_stream<'a>(
-    object_store_registry: &ObjectStoreRegistry,
-    prepare_stream: BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>,
-    output_path_prefix: &str,
-    output_file_prefix: &str,
-) -> error_stack::Result<(Vec<PreparedMetadata>, Vec<PreparedFile>), Error> {
+) -> error_stack::Result<Vec<PreparedFile>, Error> {
     let output_url = ObjectStoreUrl::from_str(output_path_prefix)
         .change_context_lazy(|| Error::InvalidUrl(output_path_prefix.to_owned()))?;
-    let output_key = output_url
-        .key()
-        .change_context_lazy(|| Error::InvalidUrl(format!("{}", output_url)))?;
 
-    let temp_dir = tempfile::tempdir()
-        .into_report()
+    let object_store = object_stores
+        .object_store(output_url.key().change_context(Error::Internal)?)
         .change_context(Error::Internal)?;
-    let temp_dir = temp_dir.path().to_str().ok_or(Error::Internal)?;
 
-    let path = format!(
-        "/{}",
-        output_url
-            .path()
-            .change_context_lazy(|| Error::InvalidUrl(format!("{}", output_url)))?
-    );
+    let mut prepare_stream = prepared_batches(source_data, table_config, slice)
+        .await?
+        .enumerate();
 
-    // If the output path is to a local destination, we'll use that. If it's to
-    // a remote destination, we'll first write to a local temp file, then upload
-    // that to the remote destination.
-    let local_output_prefix = match output_key {
-        ObjectStoreKey::Local => path::Path::new(&path),
-        _ => path::Path::new(temp_dir),
-    };
+    let mut prepared_files = Vec::new();
+    let mut uploads = FuturesUnordered::new();
+    while let Some((n, next)) = prepare_stream.next().await {
+        let (data, metadata) = next?;
 
-    let batch_count = std::sync::atomic::AtomicUsize::new(0);
-    let write_results = |output_ordinal: usize, records: RecordBatch, metadata: RecordBatch| {
-        // Defines the local path to the result file
-        let local_result_path =
-            local_output_prefix.join(format!("{output_file_prefix}-{output_ordinal}.parquet"));
-        let local_result_file = create_file(&local_result_path)?;
-
-        // Defines the local path to the metadata file
-        let local_metadata_output = local_output_prefix.join(format!(
-            "{output_file_prefix}-{output_ordinal}-metadata.parquet"
-        ));
-        let local_metadata_file = create_file(&local_metadata_output)?;
-
-        // Defines the local path to the metadata yaml file
-        let metadata_yaml_output = local_output_prefix.join(format!(
-            "{output_file_prefix}-{output_ordinal}-metadata.yaml"
-        ));
-        let metadata_yaml_output_file = create_file(&metadata_yaml_output)?;
-
-        // Write batches to the local output files
-        write_batch(local_result_file, records).change_context(Error::WriteParquetData)?;
-        write_batch(local_metadata_file, metadata).change_context(Error::WriteMetadata)?;
-
-        let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
-            &local_result_path,
-            &local_metadata_output,
-        )
-        .into_report()
-        .change_context(Error::DetermineMetadata)?;
-
-        let prepared_file: PreparedFile = prepared_metadata
-            .to_owned()
-            .try_into()
+        let data_url = output_url
+            .join(&format!("{output_file_prefix}-{n}.parquet"))
+            .change_context(Error::Internal)?;
+        let metadata_url = output_url
+            .join(&format!("{output_file_prefix}-{n}-metadata.parquet"))
             .change_context(Error::Internal)?;
 
-        tracing::info!("Prepared batch {output_ordinal} with metadata {prepared_metadata:?}");
-
-        serde_yaml::to_writer(metadata_yaml_output_file, &prepared_file)
-            .into_report()
-            .change_context(Error::Internal)?;
-        tracing::info!("Wrote metadata yaml to {:?}", metadata_yaml_output);
-
-        Ok((prepared_metadata, prepared_file))
-    };
-
-    let results = prepare_stream.filter_map(|r| {
-        let n = batch_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        async move {
-            match r {
-                Ok((records, metadata)) => {
-                    tracing::debug!("Prepared batch {n} has {} rows", records.num_rows());
-
-                    if records.num_rows() == 0 {
-                        return None;
-                    }
-                    Some(write_results(n, records, metadata))
-                }
-                Err(e) => Some(Err(e.change_context(Error::Internal))),
-            }
-        }
-    });
-
-    // unzip the stream of (prepared_file, prepared_metadata) into two vectors
-    let (pm, pf): (Vec<_>, Vec<_>) = results.try_collect::<Vec<_>>().await?.into_iter().unzip();
-    match output_key {
-        ObjectStoreKey::Local | ObjectStoreKey::Memory => {
-            // Prepared files are stored locally
-            Ok((pm, pf))
-        }
-        _ => {
-            // Upload the local prepared files to the remote destination
-            let upload_results = upload_prepared_files(
-                object_store_registry,
-                &pm,
-                output_path_prefix,
-                output_file_prefix,
-            )
-            .await?;
-            Ok((pm, upload_results))
-        }
-    }
-}
-
-async fn upload_prepared_files(
-    object_store_registry: &ObjectStoreRegistry,
-    prepared_metadata: &[PreparedMetadata],
-    output_path_prefix: &str,
-    output_file_prefix: &str,
-) -> error_stack::Result<Vec<PreparedFile>, Error> {
-    let span = tracing::info_span!(
-        "Uploading prepared files to object store",
-        ?output_path_prefix
-    );
-    let _enter = span.enter();
-
-    let mut parquet_uploads: Vec<_> = Vec::new();
-    let mut prepared_files: Vec<_> = Vec::new();
-    {
-        for (batch_count, prepared_metadata) in prepared_metadata.iter().enumerate() {
-            tracing::debug!(
-                "Prepared batch {batch_count} has {} rows",
-                prepared_metadata.num_rows
-            );
-
-            tracing::debug!(
-                "Prepared batch {batch_count} with metadata {:?}",
-                prepared_metadata
-            );
-
-            let prepared_url =
-                format!("{output_path_prefix}/{output_file_prefix}-{batch_count}.parquet");
-            let metadata_prepared_url =
-                format!("{output_path_prefix}/{output_file_prefix}-{batch_count}-metadata.parquet");
-
-            let prepare_object_store_url = ObjectStoreUrl::from_str(prepared_url.as_str())
-                .change_context_lazy(|| Error::InvalidUrl(prepared_url.as_str().to_string()))?;
-            let metadata_object_store_url =
-                ObjectStoreUrl::from_str(metadata_prepared_url.as_str()).change_context_lazy(
-                    || Error::InvalidUrl(metadata_prepared_url.as_str().to_string()),
-                )?;
-
-            let local_path = prepared_metadata
-                .path
-                .strip_prefix("file://")
-                .expect("starts with file://");
-            parquet_uploads.push(
-                object_store_registry.upload(prepare_object_store_url, Path::new(local_path)),
-            );
-
-            parquet_uploads.push(object_store_registry.upload(
-                metadata_object_store_url,
-                Path::new(&prepared_metadata.metadata_path),
-            ));
-
-            let result_prepared_file: PreparedFile = prepared_metadata
-                .to_owned()
-                .with_path(prepared_url)
-                .with_metadata_path(metadata_prepared_url)
+        // Create the prepared file via PreparedMetadata.
+        // TODO: We could probably do this directly, eliminating the PreparedMetadata struct.
+        let prepared_file: PreparedFile =
+            PreparedMetadata::try_from_data(data_url.to_string(), &data, metadata_url.to_string())
+                .into_report()
+                .change_context(Error::Internal)?
                 .try_into()
                 .change_context(Error::Internal)?;
-            prepared_files.push(result_prepared_file)
-        }
+        prepared_files.push(prepared_file);
+
+        uploads.push(write_parquet(data, data_url, object_store.clone()));
+        uploads.push(write_parquet(metadata, metadata_url, object_store.clone()));
     }
 
-    // TODO: We could (instead) use a loop and select, which would allow us
-    // to fail early if anything failed. But it is more book-keeping.
-    let parquet_uploads = futures::future::join_all(parquet_uploads).in_current_span();
-    for result in parquet_uploads.await {
-        result.change_context(Error::UploadResult)?;
+    // Wait for the uploads.
+    while let Some(upload) = uploads.try_next().await? {
+        tracing::info!("Finished uploading {upload}");
     }
 
     Ok(prepared_files)
+}
+
+async fn write_parquet(
+    batch: RecordBatch,
+    url: ObjectStoreUrl,
+    object_store: Arc<dyn ObjectStore>,
+) -> error_stack::Result<ObjectStoreUrl, Error> {
+    let path = url
+        .path()
+        .change_context_lazy(|| Error::Write(url.url().clone()))?;
+    let (upload_id, writer) = object_store
+        .put_multipart(&path)
+        .await
+        .into_report()
+        .change_context_lazy(|| Error::Write(url.url().clone()))?;
+    tracing::info!("Multipart upload to {url} started with ID {upload_id}");
+
+    let mut writer = parquet::arrow::AsyncArrowWriter::try_new(
+        writer,
+        batch.schema(),
+        UPLOAD_BUFFER_SIZE_IN_BYTES,
+        None,
+    )
+    .into_report()
+    .change_context_lazy(|| Error::Write(url.url().clone()))?;
+
+    writer
+        .write(&batch)
+        .await
+        .into_report()
+        .change_context_lazy(|| Error::Write(url.url().clone()))?;
+
+    writer
+        .close()
+        .await
+        .into_report()
+        .change_context_lazy(|| Error::Write(url.url().clone()))?;
+
+    Ok(url)
 }
 
 fn open_file(path: impl AsRef<Path>) -> error_stack::Result<File, Error> {
@@ -361,24 +249,6 @@ fn open_file(path: impl AsRef<Path>) -> error_stack::Result<File, Error> {
             })
     }
     inner(path.as_ref())
-}
-
-fn create_file(path: &Path) -> error_stack::Result<File, Error> {
-    File::create(path)
-        .into_report()
-        .change_context_lazy(|| Error::OpenFile {
-            path: path.to_owned(),
-        })
-}
-
-fn write_batch(
-    file: File,
-    record_batch: RecordBatch,
-) -> error_stack::Result<(), parquet::errors::ParquetError> {
-    let mut writer = ArrowWriter::try_new(file, record_batch.schema(), None)?;
-    writer.write(&record_batch)?;
-    writer.close()?;
-    Ok(())
 }
 
 fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error> {

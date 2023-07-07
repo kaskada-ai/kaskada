@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use arrow_schema::DataType;
 use index_vec::IndexVec;
+use sparrow_arrow::scalar_value::ScalarValue;
 
 index_vec::define_index_type! {
     /// The identifier (index) of an expression.
@@ -61,45 +62,20 @@ impl Exprs {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 
 pub struct Expr {
-    /// The kind of expression being applied.
+    /// The instruction being applied by this expression.
     ///
     /// Similar to an opcode or function.
-    pub kind: ExprKind,
+    ///
+    /// Generally, interning owned strings to the specific owned static strings is preferred.
+    pub name: Cow<'static, str>,
+    /// Zero or more literal-valued arguments.
+    pub literal_args: Vec<ScalarValue>,
     /// Arguments to the expression.
     ///
     /// These are indices referencing earlier expressions.
     pub args: Vec<ExprId>,
     /// The type produced by the expression.
     pub result_type: DataType,
-}
-
-#[derive(
-    Clone,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    serde::Serialize,
-    serde::Deserialize,
-    enum_as_inner::EnumAsInner,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum ExprKind {
-    /// Apply the named instruction to the given children.
-    Call(Cow<'static, str>),
-    /// Reference an input column by name.
-    Column(String),
-    /// A boolean literal.
-    BooleanLiteral(bool),
-    /// A string literal.
-    StringLiteral(String),
-    /// A numeric literal.
-    ///
-    /// Other primitive literals (such as date times) may be expressed
-    /// using numeric literals with an appropriate datatype.
-    NumericLiteral(bigdecimal::BigDecimal),
 }
 
 #[cfg(test)]
@@ -110,17 +86,20 @@ mod tests {
     fn test_physical_exprs_yaml() {
         let exprs = vec![
             Expr {
-                kind: ExprKind::Column("foo".to_owned()),
+                name: "column".into(),
+                literal_args: vec![ScalarValue::Utf8(Some("foo".to_owned()))],
                 args: vec![],
                 result_type: DataType::Int32,
             },
             Expr {
-                kind: ExprKind::Column("bar".to_owned()),
+                name: "column".into(),
+                literal_args: vec![ScalarValue::Utf8(Some("bar".to_owned()))],
                 args: vec![],
                 result_type: DataType::Int32,
             },
             Expr {
-                kind: ExprKind::Call("add".into()),
+                name: "add".into(),
+                literal_args: vec![],
                 args: vec![0.into(), 1.into()],
                 result_type: DataType::Int32,
             },

@@ -96,14 +96,14 @@ pub async fn table_reader(
             .change_context(Error::Internal)?
             .timestamp_nanos();
 
-        gatherer
-            .skip_to(index, min_event_time)
-            .into_report()
-            .change_context(Error::SkippingToMinEvent)?;
         info!(
             "Skipping to time {} for data file {:?} for index {}",
             min_event_time, prepared_file, index
         );
+        gatherer
+            .skip_to(index, min_event_time)
+            .into_report()
+            .change_context(Error::SkippingToMinEvent)?;
 
         let stream = new_parquet_stream(object_stores, &prepared_file.path, &projected_schema)
             .await

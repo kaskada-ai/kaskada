@@ -16,7 +16,9 @@ use crate::utils::make_struct_array;
 /// Represents a single value of a given data type.
 ///
 /// This corresponds to a single row of an Arrow array.
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(
+    Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum ScalarValue {
     Null,
     Boolean(Option<bool>),
@@ -60,14 +62,18 @@ impl From<bool> for ScalarValue {
         ScalarValue::Boolean(Some(b))
     }
 }
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(
+    Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ScalarTimestamp {
     value: Option<i64>,
     unit: TimeUnit,
     tz: Option<Arc<str>>,
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(
+    Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ScalarRecord {
     value: Option<Vec<ScalarValue>>,
     fields: Fields,

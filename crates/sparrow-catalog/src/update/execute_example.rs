@@ -249,9 +249,10 @@ impl ExampleInputPreparer {
         metadata_output.write(metadata).unwrap();
         metadata_output.close().unwrap();
 
-        let prepared_metadata = PreparedMetadata::try_from_local_parquet_path(
-            prepared_file.path(),
-            metadata_file.path(),
+        let prepared_metadata = PreparedMetadata::try_from_data(
+            format!("file://{}", prepared_file.path().display()),
+            prepared_batch,
+            format!("file://{}", metadata_file.path().display()),
         )
         .into_report()
         .change_context(Error::PrepareInput)?;
