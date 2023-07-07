@@ -154,7 +154,7 @@ pub async fn prepare_file(
         .change_context_lazy(|| Error::InvalidUrl(output_path_prefix.to_owned()))?;
 
     let object_store = object_stores
-        .object_store(output_url.key().change_context(Error::Internal)?)
+        .object_store(&output_url)
         .change_context(Error::Internal)?;
 
     let mut prepare_stream = prepared_batches(source_data, table_config, slice)

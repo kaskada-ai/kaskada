@@ -29,6 +29,7 @@ bitvec.workspace = true
 bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
+dashmap.workspace = true
 data-encoding.workspace = true
 derive_more.workspace = true
 enum-map.workspace = true
