@@ -96,17 +96,17 @@ test/int/run-api-s3:
 ####
 ci/integration/tests/docker-compose-up:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml up --build --detach
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml up --build --detach
 
 ci/integration/tests/docker-compose-logs:
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml logs -t
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml logs -t
 
 ci/integration/tests/docker-compose-logs-kaskada-only:
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml logs -t kaskada
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml logs -t kaskada
 
 ci/integration/tests/docker-compose-down:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml down
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml down
 
 ci/integration/tests/run/api: test/int/run-api-docker
 
@@ -116,18 +116,18 @@ ci/integration/tests/run/api: test/int/run-api-docker
 ####
 ci/integration/tests/docker-compose-up-s3:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml up --build --detach
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.s3.yml up --build --detach
 
 ci/integration/tests/docker-compose-down-s3:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml down
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.s3.yml down
 
 
 ci/integration/tests/docker-compose-s3-logs-kaskada-only:
-	 docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t kaskada
+	 docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.s3.yml logs -t kaskada
 
 ci/integration/tests/docker-compose-s3-logs:
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.s3.yml logs -t
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.s3.yml logs -t
 
 ci/integration/tests/run/api-s3: test/int/run-api-s3-docker
 
@@ -136,11 +136,11 @@ ci/integration/tests/run/api-s3: test/int/run-api-s3-docker
 ####
 ci/integration/tests/docker-compose-up-postgres:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.postgres.yml up --build --detach
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.postgres.yml up --build --detach
 
 ci/integration/tests/docker-compose-down-postgres:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.postgres.yml down
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.postgres.yml down
 
 ci/integration/tests/run/api-postgres: test/int/run-api-postgres
 
@@ -149,11 +149,11 @@ ci/integration/tests/run/api-postgres: test/int/run-api-postgres
 ####
 ci/integration/tests/docker-compose-up-postgres-s3:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml up --build --detach
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml up --build --detach
 
 ci/integration/tests/docker-compose-down-postgres-s3:
 	export DOCKER_BUILDKIT=1
-	docker compose -f ./tests/integration/docker-compose-ci-integration.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml down
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.ci.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml down
 
 ci/integration/tests/run/api-postgres-s3: test/int/run-api-postgres-s3
 
@@ -173,6 +173,7 @@ wren/run:
 	cd wren && \
 	DB_IN_MEMORY=false \
 	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	DEBUG=true \
 	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \
 	go run main.go
 
@@ -184,6 +185,7 @@ wren/run-s3:
 	AWS_REGION=us-west-2 \
 	DB_IN_MEMORY=false \
 	DB_PATH=$(shell pwd)/tests/integration/data/kaskada.db \
+	DEBUG=true \
 	OBJECT_STORE_TYPE=s3 \
 	OBJECT_STORE_BUCKET=integration \
 	OBJECT_STORE_PATH=$(shell pwd)/tests/integration/data \
