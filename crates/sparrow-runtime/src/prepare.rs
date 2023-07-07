@@ -91,7 +91,7 @@ pub async fn prepared_from_pulsar_batches<'a>(
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     let prepare_hash = get_pulsar_prepare_hash(ps)?;
-    Ok(reader_from_pulsar(config, ps, prepare_hash, slice).await?)
+    reader_from_pulsar(config, ps, prepare_hash, slice).await
 }
 
 /// Prepares batches from the Kafka Subscription
@@ -104,7 +104,7 @@ pub async fn prepared_from_kafka_batches<'a>(
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     let kafka_hash = get_kafka_prepare_hash(ks)?;
-    Ok(reader_from_kafka(config, ks, kafka_hash, slice).await?)
+    reader_from_kafka(config, ks, kafka_hash, slice).await
 }
 
 async fn reader_from_kafka<'a>(
