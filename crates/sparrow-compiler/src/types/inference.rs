@@ -1,12 +1,12 @@
 //! Utilities for working with argument and parameter types.
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::Arc};
 
-use arrow::datatypes::{DataType, Field, TimeUnit};
+use arrow::datatypes::{DataType, Field, Fields, TimeUnit};
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use itertools::{izip, Itertools};
-use sparrow_syntax::{FenlType, Located, Resolved, Signature, TypeClass, TypeVariable};
+use sparrow_syntax::{Collection, FenlType, Located, Resolved, Signature, TypeClass, TypeVariable};
 
 use crate::{DiagnosticBuilder, DiagnosticCode};
 
@@ -25,7 +25,10 @@ pub(crate) fn instantiate(
         "Arguments being instantiated should have been resolved against the signature"
     );
 
-    let mut types_for_variable: HashMap<TypeVariable, Vec<&Located<FenlType>>> = HashMap::new();
+    println!(
+        "FRAZ - Instantiate: Call = {}, \narguments: {:?}, \nsignature: {:?}",
+        call, arguments, signature
+    );
 
     // Make sure the number of arguments are correct.
     match arguments.len().cmp(&parameters.types().len()) {
@@ -64,16 +67,71 @@ pub(crate) fn instantiate(
     // chain).
     let parameter_types = arguments.vec_for_varargs(parameters.types());
 
+    // Contains the fenl type(s) for each type variable.
+    let mut types_for_variable: HashMap<TypeVariable, Vec<Located<FenlType>>> = HashMap::new();
+
     for (index, (argument_type, parameter_type)) in
-        izip!(arguments.iter(), &parameter_types).enumerate()
+        izip!(arguments.iter(), parameter_types.clone()).enumerate()
     {
         match (parameter_type.inner(), argument_type.inner()) {
             (FenlType::TypeRef(type_var), _) => {
                 types_for_variable
                     .entry(type_var.clone())
                     .or_default()
-                    .push(argument_type);
+                    .push(argument_type.clone());
             }
+            (FenlType::Collection(_, type_vars), arg_type) => match arg_type {
+                FenlType::Concrete(DataType::List(field)) => {
+                    debug_assert!(
+                        type_vars.len() == 1,
+                        "List type must have one type variable",
+                    );
+                    let fenl_type =
+                        argument_type.with_value(FenlType::Concrete(field.data_type().clone()));
+                    types_for_variable
+                        .entry(type_vars[0].clone())
+                        .or_default()
+                        .push(fenl_type)
+                }
+                FenlType::Concrete(DataType::Struct(fields)) => {
+                    // assert both fields are the same type (because this is a map)
+                    debug_assert!(
+                        type_vars.len() == 2 && fields.len() == 2,
+                        "Map type must have two type variables",
+                    );
+                    if fields[0].data_type() != fields[1].data_type() {
+                        return Err(DiagnosticCode::InvalidArgumentType
+                            .builder()
+                            .with_label(
+                                call.location()
+                                    .primary_label()
+                                    .with_message(format!("Invalid types for call to '{call}'")),
+                            )
+                            .with_note(format!(
+                                "maps must have one value type; saw {} and {}",
+                                fields[0].data_type(),
+                                fields[1].data_type()
+                            )));
+                    }
+
+                    // TODO: I don't have the "key" type..it's just assumed it's a string I think.
+                    // Because it's being encoded a struct here, rather than a Map.
+
+                    let key_type = argument_type.with_value(FenlType::Concrete(DataType::Utf8));
+                    types_for_variable
+                        .entry(type_vars[0].clone())
+                        .or_default()
+                        .push(key_type);
+
+                    let value_type =
+                        argument_type.with_value(FenlType::Concrete(fields[0].data_type().clone()));
+                    types_for_variable
+                        .entry(type_vars[1].clone())
+                        .or_default()
+                        .push(value_type);
+                }
+                other => panic!("Expected collection type, saw: {:?}", other),
+            },
             (_, FenlType::Error) => {
                 // No problem here -- the argument is an error, but we already
                 // reported it. Don't hide the actual error.
@@ -110,12 +168,13 @@ pub(crate) fn instantiate(
         }
     }
 
+    println!("FRAZ - Types for variable: {:?}", types_for_variable);
     let solutions: HashMap<TypeVariable, FenlType> = signature
         .type_parameters
         .iter()
         .filter_map(|p| {
             // This expect should never fail -- it would mean no arguments used the type variable
-            // Which would have been an invalid signature.
+            // which would have been an invalid signature.
             let argument_types = types_for_variable
                 .remove(&p.name)
                 .expect("unused type variable");
@@ -124,16 +183,16 @@ pub(crate) fn instantiate(
                 None
             } else {
                 debug_assert!(
-                    p.constraints.len() == 1,
-                    "only one constraint currently supported"
+                    p.type_classes.len() == 1,
+                    "only one type class currently supported"
                 );
-                let constraint = p.constraints[0];
+                let type_class = p.type_classes[0];
 
                 // Can't use `?` because we want Option<Result<...>>.
                 // This allows `filter_map` to filter out the `None` before the errors are
                 // collected.
                 Some(
-                    solve_constraint(call, &constraint, &argument_types)
+                    solve_type_class(call, &type_class, &argument_types)
                         .map(|unified| (p.name.clone(), unified)),
                 )
             }
@@ -143,6 +202,8 @@ pub(crate) fn instantiate(
     // types_for_variables should be empty, asserting that each parameter was assigned a defined
     // type variable.
     debug_assert!(types_for_variable.is_empty(), "unassigned type variables");
+
+    println!("FRAZ - Solutions: {:?}", solutions);
 
     let instantiated_arguments = parameter_types
         .iter()
@@ -155,6 +216,11 @@ pub(crate) fn instantiate(
         instantiate_type(signature.result(), &solutions)
     };
 
+    println!(
+        "FRAZ - instantiated_arguments: {:?}",
+        instantiated_arguments
+    );
+    println!("FRAZ - instantiated_return: {:?}", instantiated_return);
     Ok((instantiated_arguments, instantiated_return))
 }
 
@@ -188,7 +254,7 @@ pub fn validate_instantiation(
             FenlType::TypeRef(type_var) => {
                 match types_for_variable.entry(type_var.clone()) {
                     Entry::Occupied(occupied) => {
-                        // When validating, we assume that all uses of a constraint are
+                        // When validating, we assume that all uses of a type class are
                         // the same. This should be the case for the DFG and plan, since
                         // explicit casts have been added.
                         anyhow::ensure!(
@@ -239,25 +305,30 @@ pub fn validate_instantiation(
     Ok(instantiated_return)
 }
 
-/// Determine the type for a constraint based on the associated argument types.
+/// Determine the type for a type class based on the associated argument types.
 ///
 /// # Fails
-/// If the types are empty. If no parameters use the constraint (and there are
+/// If the types are empty. If no parameters use the type class (and there are
 /// no associated parameters) we shouldn't try to determine the corresponding
 /// type.
-fn solve_constraint(
+fn solve_type_class(
     call: &Located<String>,
-    constraint: &TypeClass,
-    types: &[&Located<FenlType>],
+    type_class: &TypeClass,
+    types: &[Located<FenlType>],
 ) -> Result<FenlType, DiagnosticBuilder> {
     debug_assert!(!types.is_empty());
+    // print all arguments:
+    println!("Solving for type class");
+    println!("FRAZ - call: {:?}", call);
+    println!("FRAZ - type_class: {:?}", type_class);
+    println!("FRAZ - types: {:?}", types);
 
     if types.iter().any(|t| t.inner().is_error()) {
         return Ok(FenlType::Error);
     }
 
     // Find the minimum type compatible with all the arguments associated with the
-    // constraint.
+    // type class.
     let mut result = Some(types[0].inner().clone());
     for arg_type in &types[1..] {
         if let Some(prev) = result {
@@ -265,12 +336,14 @@ fn solve_constraint(
         }
     }
 
+    println!("FRAZ - result: {:?}", result);
+    println!("FRAZ - type_class: {:?}", type_class);
     result
-        // Promote the minimum type to be compatible with the constraint, if necessary.
-        .and_then(|data_type| promote_concrete(data_type, constraint))
+        // Promote the minimum type to be compatible with the type class, if necessary.
+        .and_then(|data_type| promote_concrete(data_type, type_class))
         // Return an error if either (a) there wasn't a least-upper bound or
         // (b) it wasn't possible to promote the least-upper bound to be compatible
-        // with the type constraint.
+        // with the type type class.
         .ok_or_else(|| {
             // Only report each distinct type as a problem once. This reduces clutter in the
             // error. TODO: Attempt to minimize the number of types involved
@@ -296,7 +369,7 @@ fn solve_constraint(
                         .with_message(format!("Invalid types for call to '{call}'")),
                 )
                 .with_labels(distinct_arg_types)
-                .with_note(format!("Expected '{constraint}'"))
+                .with_note(format!("Expected '{type_class}'"))
         })
 }
 
@@ -308,6 +381,42 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
             .get(type_var)
             .cloned()
             .unwrap_or(FenlType::Concrete(DataType::Null)),
+        FenlType::Collection(c, type_vars) => match c {
+            Collection::Map => {
+                println!(
+                    "FRAZ - Instantiating type in inference for map vars: {:?}",
+                    type_vars
+                );
+                debug_assert!(type_vars.len() == 2);
+                // TODO: Ask ben logic behind the concrete::null, instead of error?
+                let concrete_key_type = solutions
+                    .get(&type_vars[0])
+                    .cloned()
+                    .unwrap_or(FenlType::Concrete(DataType::Null));
+                let concrete_value_type = solutions
+                    .get(&type_vars[1])
+                    .cloned()
+                    .unwrap_or(FenlType::Concrete(DataType::Null));
+
+                // `solutions` map should contain concrete types for all type variables.
+                let key_field = match concrete_key_type {
+                    FenlType::Concrete(t) => Field::new("key", t.clone(), false),
+                    _ => panic!("expected concrete type"),
+                };
+                let value_field = match concrete_value_type {
+                    FenlType::Concrete(t) => Field::new("value", t.clone(), false),
+                    _ => panic!("expected concrete type"),
+                };
+
+                // TODO: FRAZ - should you be using the struct or map type? And hardcoding key value?
+                // How does arrow read in record? Can we convert it to a Map type?
+                let fields = Fields::from(vec![key_field, value_field]);
+                // let map_struct = Arc::new(Field::new("struct", DataType::Struct(fields), false));
+                FenlType::Concrete(DataType::Struct(fields))
+                // FenlType::Concrete(DataType::Map(map_struct, false))
+            }
+            Collection::List => todo!("unsupported"),
+        },
         FenlType::Concrete(_) => fenl_type.clone(),
         FenlType::Window => fenl_type.clone(),
         FenlType::Json => fenl_type.clone(),
@@ -538,14 +647,15 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
     }
 }
 
-/// Promote a concrete type to satisfy this constraint.
+/// Promote a concrete type to satisfy this type class.
 ///
-/// If the `concrete` type already satisfies this constraint, it is
+/// If the `concrete` type already satisfies this type class, it is
 /// returned. If the `concrete` may be promoted to satisfy this
-/// constraint, it is. Otherwise, `None` is returned.
-fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlType> {
+/// type class, it is. Otherwise, `None` is returned.
+fn promote_concrete(concrete: FenlType, type_class: &TypeClass) -> Option<FenlType> {
+    println!("FRAZ - promoting {:?} to {:?}", concrete, type_class);
     use DataType::*;
-    match (constraint, &concrete) {
+    match (type_class, &concrete) {
         // Any type may be null.
         (_, FenlType::Concrete(Null)) => Some(concrete),
 
@@ -555,7 +665,7 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlTy
         // Any concrete type satisfies `any`.
         (TypeClass::Any, _) => Some(concrete),
 
-        // Json types should not promote into other constraints.
+        // Json types should not promote into other type class
         (_, FenlType::Json) => None,
 
         // All numeric types satisfy `number`.
@@ -611,6 +721,9 @@ fn promote_concrete(concrete: FenlType, constraint: &TypeClass) -> Option<FenlTy
 
         // errors propagate.
         (TypeClass::Error, _) => Some(FenlType::Error),
+
+        // TODO: FRAZ
+        (_, FenlType::Collection(_, _)) => None,
 
         // Generics can never be concrete.
         (_, FenlType::TypeRef(_)) => None,

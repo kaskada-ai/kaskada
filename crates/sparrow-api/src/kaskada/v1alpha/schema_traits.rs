@@ -181,6 +181,7 @@ impl TryFrom<&FenlType> for DataType {
 
     fn try_from(value: &FenlType) -> Result<Self, Self::Error> {
         match value {
+            FenlType::Collection(_, _) => Err(ConversionError::new_unsupported(value.clone())),
             FenlType::Concrete(data_type) => {
                 data_type
                     .try_into()

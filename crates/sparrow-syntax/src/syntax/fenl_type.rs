@@ -20,6 +20,10 @@ pub enum FenlType {
     Concrete(DataType),
     /// A generic type with the given type variable.
     TypeRef(TypeVariable),
+    /// A collection type with the given type variable(s).
+    ///
+    /// e.g. (DataType::Map, [TypeVariable("K"), TypeVariable("V")])
+    Collection(Collection, Vec<TypeVariable>),
     /// A type for describing a windowing behavior.
     Window,
     /// A type for describing a string that will be interpreted
@@ -30,6 +34,22 @@ pub enum FenlType {
     /// This indicates the error has already been reported, so no more error
     /// reports are needed.
     Error,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(serde::Serialize))]
+pub enum Collection {
+    List,
+    Map,
+}
+
+impl std::fmt::Display for Collection {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Collection::List => fmt.write_str("list"),
+            Collection::Map => fmt.write_str("map"),
+        }
+    }
 }
 
 /// A wrapper for formatting DataTypes.
@@ -173,6 +193,9 @@ impl Display for FenlType {
             FenlType::TypeRef(type_param) => write!(fmt, "{type_param}"),
             FenlType::Concrete(data_type) => write!(fmt, "{}", FormatDataType(data_type)),
             FenlType::Error => write!(fmt, "error"),
+            FenlType::Collection(c, vars) => {
+                write!(fmt, "{}<{}>", c, vars.iter().format(", "))
+            }
         }
     }
 }
@@ -205,8 +228,26 @@ impl FromStr for FenlType {
             "duration_ns" => Ok(DataType::Duration(TimeUnit::Nanosecond).into()),
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
-            // catch-all assumes the type is a type variable, which will be validated in the signature creation
-            name => Ok(FenlType::TypeRef(TypeVariable(name.to_owned()))),
+            s => {
+                if s.starts_with("list<") && s.ends_with('>') {
+                    // Split the inner type variables
+                    let type_vars: Vec<TypeVariable> = s[5..s.len() - 1]
+                        .split(',')
+                        .map(|s| s.trim())
+                        .map(|s| TypeVariable(s.to_owned()))
+                        .collect();
+                    Ok(FenlType::Collection(Collection::List, type_vars))
+                } else if s.starts_with("map<") && s.ends_with('>') {
+                    let type_vars: Vec<TypeVariable> = s[4..s.len() - 1]
+                        .split(',')
+                        .map(|s| s.trim())
+                        .map(|s| TypeVariable(s.to_owned()))
+                        .collect();
+                    Ok(FenlType::Collection(Collection::Map, type_vars))
+                } else {
+                    Ok(FenlType::TypeRef(TypeVariable(s.to_owned())))
+                }
+            }
         }
     }
 }
@@ -230,6 +271,7 @@ impl FenlType {
 
     pub fn arrow_type(&self) -> Option<&DataType> {
         match self {
+            FenlType::Collection(_, _) => None,
             FenlType::TypeRef(_) => None,
             FenlType::Concrete(t) => Some(t),
             FenlType::Window => None,
@@ -247,6 +289,7 @@ impl FenlType {
 
     pub fn take_arrow_type(self) -> Option<DataType> {
         match self {
+            FenlType::Collection(_, _) => None,
             FenlType::TypeRef(_) => None,
             FenlType::Concrete(t) => Some(t),
             FenlType::Window => None,

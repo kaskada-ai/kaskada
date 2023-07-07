@@ -18,6 +18,7 @@ extern {
     literal  => Token::Literal(<LiteralValue>),
     ident    => Token::Ident(<&'input str>),
 
+    // "map" => Token::KwMap,
     "let" => Token::KwLet,
     "const" => Token::KwConst,
     "in" => Token::KwIn,
@@ -243,8 +244,8 @@ TypeParams: Vec<TypeParameter> = {
 }
 
 pub(crate) TypeParameter: TypeParameter = {
-  <name:ident> ":" <l:@L> <constraint:Located<Constraint>> <r:@R> =>
-    TypeParameter::new(name.to_owned(), vec![constraint.inner().clone()])
+  <name:ident> ":" <l:@L> <type_class:Located<TypeClass>> <r:@R> =>
+    TypeParameter::new(name.to_owned(), vec![type_class.inner().clone()])
 }
 
 pub(crate) Signature: Signature = {
@@ -253,9 +254,9 @@ pub(crate) Signature: Signature = {
       ParseError::User{ error: (l, e.to_string(), r) })
 }
 
-Constraint: TypeClass = {
+TypeClass: TypeClass = {
   <l:@L> <name:ident> <r:@R> => TypeClass::from_str(name).unwrap_or_else(|e| {
-    errors.push(ParseError::User{ error: (l, format!("Invalid Type Constraint '{}'", name), r)});
+    errors.push(ParseError::User{ error: (l, format!("Invalid Type Class '{}'", name), r)});
     e
   }),
   ! => {
@@ -265,7 +266,7 @@ Constraint: TypeClass = {
 }
 
 Type: FenlType = {
-  <l:@L> <name:ident> <r:@R> => FenlType::from_str(name).unwrap_or_else(|e| {
+  <l:@L> <name:ParameterWithTypeVars> <r:@R> => FenlType::from_str(&name).unwrap_or_else(|e| {
     errors.push(ParseError::User{ error: (l, format!("Invalid Fenl Type '{}'", name), r)});
     e
   }),
@@ -273,6 +274,22 @@ Type: FenlType = {
     errors.push(<>.error);
     FenlType::Error
   }
+}
+
+ParameterWithTypeVars: String = {
+  <name:ident> => name.to_string(),
+  <name:ident> <type_vars:TypeVariables> => {
+    let mut result = String::new();
+    result.push_str(name);
+    result.push('<');
+    result.push_str(&type_vars.join(","));
+    result.push('>');
+    result
+  },
+}
+
+TypeVariables: ArgVec<&'input str> = {
+  "<" <args:Comma<ident>> ">" => args,
 }
 
 Located<T>: Located<T> = {

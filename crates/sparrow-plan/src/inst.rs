@@ -93,6 +93,8 @@ pub enum InstOp {
     First,
     #[strum(props(signature = "floor<N: number>(n: N) -> N"))]
     Floor,
+    #[strum(props(signature = "get<K: key, V: any>(map: map<K, V>, key: K) -> V"))]
+    Get,
     #[strum(props(signature = "gt<O: ordered>(a: O, b: O) -> bool"))]
     Gt,
     #[strum(props(signature = "gte<O: ordered>(a: O, b: O) -> bool"))]

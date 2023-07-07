@@ -14,29 +14,29 @@ impl std::fmt::Display for TypeVariable {
     }
 }
 
-/// Contains the type variable and the constraints for
+/// Contains the type variable and the classes for
 /// that variable.
 ///
-/// e.g. N(type variable): Eq(constraint) + Hash(constraint)
+/// e.g. N(type variable): Eq(type_class) + Hash(type_class)
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct TypeParameter {
     pub name: TypeVariable,
-    pub constraints: Vec<TypeClass>,
+    pub type_classes: Vec<TypeClass>,
 }
 
 impl std::fmt::Display for TypeParameter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Note: this excludes the type constraints
+        // Note: this excludes the type classes
         write!(f, "{}", self.name.0)
     }
 }
 
 impl TypeParameter {
-    pub fn new(name: String, constraints: Vec<TypeClass>) -> Self {
+    pub fn new(name: String, type_classes: Vec<TypeClass>) -> Self {
         Self {
             name: TypeVariable(name),
-            constraints,
+            type_classes,
         }
     }
 }
@@ -66,13 +66,35 @@ impl Signature {
         type_parameters: Vec<TypeParameter>,
         result: FenlType,
     ) -> anyhow::Result<Self> {
-        if matches!(result, FenlType::TypeRef(_)) {
+        let mut type_vars = Vec::new();
+        for t in parameters.types() {
+            match t.inner() {
+                FenlType::TypeRef(type_var) => type_vars.push(type_var),
+                FenlType::Collection(_, coll_types) => {
+                    for type_var in coll_types {
+                        type_vars.push(type_var);
+                    }
+                }
+                _ => (),
+            }
+        }
+
+        // check that all type variables defined are used in the parameters or result
+        for tp in &type_parameters {
+            let ty = tp.name.clone();
             anyhow::ensure!(
-                parameters
-                    .types()
-                    .iter()
-                    .map(Located::inner)
-                    .contains(&result),
+                type_vars.iter().contains(&&ty),
+                "Type variable '{:?}' is defined in the type parameters for signature '{}',
+                    but is not used in the parameters or result",
+                ty,
+                name
+            );
+        }
+
+        // check that the result type variable is defined
+        if let FenlType::TypeRef(result_var) = &result {
+            anyhow::ensure!(
+                type_vars.iter().contains(&result_var),
                 "Illegal signature for '{}': {} must appear in the parameters to be used in the \
                  result",
                 name,
@@ -97,27 +119,22 @@ impl Signature {
 
         // check that all type variables referenced in parameters are defined
         for t in parameters.types() {
-            if let FenlType::TypeRef(type_variable) = t.inner() {
-                if !type_parameters.iter().any(|tp| &tp.name == type_variable) {
-                    anyhow::bail!(
-                        "Type variable '{:?}' is not defined in the type parameters for signature \
-                         '{}'",
-                        type_variable,
-                        name
-                    )
+            match t.inner() {
+                FenlType::TypeRef(type_var) => {
+                    verify_is_defined(type_var, &type_parameters)?;
                 }
+                FenlType::Collection(_, type_vars) => {
+                    for type_var in type_vars {
+                        verify_is_defined(type_var, &type_parameters)?;
+                    }
+                }
+                _ => (),
             }
         }
 
         // check result type variable is defined
-        if let FenlType::TypeRef(result_variable) = &result {
-            if !type_parameters.iter().any(|p| &p.name == result_variable) {
-                anyhow::bail!(
-                    "Type variable '{:?}' is not defined in the type parameters for signature '{}'",
-                    result_variable,
-                    name
-                )
-            }
+        if let FenlType::TypeRef(type_var) = &result {
+            verify_is_defined(type_var, &type_parameters)?;
         }
 
         Ok(Self {
@@ -168,6 +185,21 @@ impl Signature {
         }
     }
 }
+
+/// Verifies the type variable is defined in the type parameters.
+fn verify_is_defined(
+    type_var: &TypeVariable,
+    type_parameters: &[TypeParameter],
+) -> anyhow::Result<()> {
+    if !type_parameters.iter().any(|tp| &tp.name == type_var) {
+        anyhow::bail!(
+            "Type variable '{:?}' is not defined in the type parameters for signature",
+            type_var
+        )
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
 

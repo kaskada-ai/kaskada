@@ -88,6 +88,9 @@ pub(crate) fn typecheck_inst(
                 argument_types
             );
 
+            println!("FRAZ - argument_types: {:?}", argument_types);
+            println!("FRAZ - data_type: {:?}", data_type);
+
             anyhow::ensure!(
                 CastEvaluator::is_supported_fenl(
                     &argument_types[0],
