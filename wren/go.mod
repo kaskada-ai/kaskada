@@ -5,6 +5,7 @@ go 1.19
 replace github.com/kaskada-ai/kaskada/gen/proto/go => ../gen/proto/go
 
 require (
+	cloud.google.com/go/storage v1.27.0
 	github.com/aws/aws-sdk-go v1.44.122
 	github.com/cheapRoc/grpc-zerolog v0.0.0-20180425150930-27ca9d023ead
 	github.com/google/uuid v1.3.0
@@ -20,7 +21,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/zerolog v1.26.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.26.1
 	go.opentelemetry.io/otel v1.2.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.2.0
@@ -37,7 +38,6 @@ require (
 	cloud.google.com/go/compute v1.18.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.11.0 // indirect
-	cloud.google.com/go/storage v1.27.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-storage-blob-go v0.15.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect

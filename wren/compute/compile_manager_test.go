@@ -9,6 +9,7 @@ import (
 	ent_materialization "github.com/kaskada-ai/kaskada/wren/ent/materialization"
 	"github.com/kaskada-ai/kaskada/wren/internal"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -149,23 +150,27 @@ var _ = Describe("CompileManager", func() {
 				},
 			}
 
-			compileRequest := &v1alpha.CompileRequest{
-				Experimental: false,
-				FeatureSet: &v1alpha.FeatureSet{
-					Formulas: formulas,
-					Query:    entMaterialization.Expression,
-				},
-				PerEntityBehavior: v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL,
-				SliceRequest:      sliceRequest,
-				Tables:            computeTables,
-				ExpressionKind:    v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE,
+			matchingFunc := func(compileRequest *v1alpha.CompileRequest) bool {
+				expectedCompileRequest := &v1alpha.CompileRequest{
+					Experimental: false,
+					FeatureSet: &v1alpha.FeatureSet{
+						Formulas: formulas,
+						Query:    entMaterialization.Expression,
+					},
+					PerEntityBehavior: v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL,
+					SliceRequest:      sliceRequest,
+					Tables:            computeTables,
+					ExpressionKind:    v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE,
+				}
+
+				return proto.Equal(expectedCompileRequest, compileRequest)
 			}
 
 			compileResponse := &v1alpha.CompileResponse{
 				FreeNames: []string{"with_view", "overwritten_view", "persisted_table1"},
 			}
 
-			mockComputeServiceClient.EXPECT().Compile(mock.Anything, compileRequest).Return(compileResponse, nil)
+			mockComputeServiceClient.On("Compile", mock.MatchedBy(matchingFunc)).Return(compileResponse,nil)
 
 			computeClients := newMockComputeServiceClients(mockFileServiceClient, mockPreparationServiceClient, mockComputeServiceClient)
 			compManager := &compileManager{
@@ -191,7 +196,6 @@ var _ = Describe("CompileManager", func() {
 			}
 
 			Expect(views).To(Equal(expectedViews))
-
 		})
 	})
 })
