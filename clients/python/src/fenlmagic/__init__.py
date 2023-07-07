@@ -145,30 +145,26 @@ class FenlMagics(Magics):
                 client=self.client,
             )
             query_result = QueryResult(expression, resp)
-
             if not dry_run and render_dataframe:
-                # TODO: figure out how to support reading from multiple parquet paths
-                if (
-                    len(
-                        query_result.query_response.destination.object_store.output_paths.paths
-                    )
-                    > 0
-                ):
-                    if response_as == query.ResponseType.FILE_TYPE_PARQUET:
-                        df = pandas.read_parquet(
-                            query_result.query_response.destination.object_store.output_paths.paths[
-                                0
-                            ],
-                            engine="pyarrow",
-                        )
-                        query_result.set_dataframe(df)
-                    elif response_as == query.ResponseType.FILE_TYPE_CSV:
-                        df = pandas.read_csv(
-                            query_result.query_response.destination.object_store.output_paths.paths[
-                                0
-                            ],
-                        )
-                        query_result.set_dataframe(df)
+                output_paths = (
+                    query_result.query_response.destination.object_store.output_paths.paths
+                )
+                if len(output_paths) > 0:
+                    dataframes = []
+                    for parquet_output_path in output_paths:
+                        if response_as == query.ResponseType.FILE_TYPE_PARQUET:
+                            df = pandas.read_parquet(
+                                parquet_output_path, engine="pyarrow"
+                            )
+                            dataframes.append(df)
+                        elif response_as == query.ResponseType.FILE_TYPE_CSV:
+                            df = pandas.read_csv(parquet_output_path, engine="pyarrow")
+                            dataframes.append(df)
+                        else:
+                            raise NotImplementedError(
+                                f"unknown response type: {response_as}", response_as
+                            )
+                    query_result.set_dataframe(pandas.concat(dataframes))
 
             if var is not None:
                 IPython.get_ipython().push({var: query_result})
