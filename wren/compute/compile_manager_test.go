@@ -151,26 +151,31 @@ var _ = Describe("CompileManager", func() {
 			}
 
 			matchingFunc := func(compileRequest *v1alpha.CompileRequest) bool {
-				expectedCompileRequest := &v1alpha.CompileRequest{
-					Experimental: false,
-					FeatureSet: &v1alpha.FeatureSet{
-						Formulas: formulas,
-						Query:    entMaterialization.Expression,
-					},
-					PerEntityBehavior: v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL,
-					SliceRequest:      sliceRequest,
-					Tables:            computeTables,
-					ExpressionKind:    v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE,
+				if protoSliceHasSameElements[*v1alpha.Formula](compileRequest.FeatureSet.Formulas, formulas) {
+					if protoSliceHasSameElements[*v1alpha.ComputeTable](compileRequest.Tables, computeTables) {
+						compileRequest.FeatureSet.Formulas = nil
+						compileRequest.Tables = nil
+						expectedCompileRequest := &v1alpha.CompileRequest{
+							Experimental: false,
+							FeatureSet: &v1alpha.FeatureSet{
+								Query: entMaterialization.Expression,
+							},
+							PerEntityBehavior: v1alpha.PerEntityBehavior_PER_ENTITY_BEHAVIOR_FINAL,
+							SliceRequest:      sliceRequest,
+							ExpressionKind:    v1alpha.CompileRequest_EXPRESSION_KIND_COMPLETE,
+						}
+						return proto.Equal(expectedCompileRequest, compileRequest)
+					}
 				}
 
-				return proto.Equal(expectedCompileRequest, compileRequest)
+				return false
 			}
 
 			compileResponse := &v1alpha.CompileResponse{
 				FreeNames: []string{"with_view", "overwritten_view", "persisted_table1"},
 			}
 
-			mockComputeServiceClient.On("Compile", mock.MatchedBy(matchingFunc)).Return(compileResponse,nil)
+			mockComputeServiceClient.Mock.On("Compile", mock.Anything, mock.MatchedBy(matchingFunc)).Return(compileResponse, nil)
 
 			computeClients := newMockComputeServiceClients(mockFileServiceClient, mockPreparationServiceClient, mockComputeServiceClient)
 			compManager := &compileManager{
