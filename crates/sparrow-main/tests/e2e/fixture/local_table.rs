@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use arrow::datatypes::Schema;
 use futures::StreamExt;
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
 use sparrow_api::kaskada::v1alpha::SourceData;
@@ -148,8 +149,17 @@ impl LocalTestTable {
         for (prepared_metadata, prepared_file, metadata_output_file) in
             prepared_batches_and_metadata
         {
+            println!(
+                "Updating Table metadata: {:?}\n",
+                prepared_metadata.table_schema
+            );
+
+            let x = prepared_metadata.table_schema.as_ref().try_into();
+            if let Err(e) = &x {
+                println!("Error: {:?}", e);
+            }
             self.update_table_metadata(TableMetadata {
-                schema: Some(prepared_metadata.table_schema.as_ref().try_into().unwrap()),
+                schema: Some(x.unwrap()),
                 file_count: 1,
             });
 

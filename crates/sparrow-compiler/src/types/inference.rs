@@ -27,7 +27,9 @@ pub(crate) fn instantiate(
 
     println!(
         "FRAZ - Instantiate: Call = {}, \narguments: {:?}, \nsignature: {:?}",
-        call, arguments, signature
+        call,
+        arguments.values(),
+        signature
     );
 
     // Make sure the number of arguments are correct.
@@ -93,38 +95,27 @@ pub(crate) fn instantiate(
                         .or_default()
                         .push(fenl_type)
                 }
-                FenlType::Concrete(DataType::Struct(fields)) => {
-                    // assert both fields are the same type (because this is a map)
+                FenlType::Concrete(DataType::Map(s, _)) => {
+                    let fields = match s.data_type() {
+                        DataType::Struct(fields) => fields,
+                        _ => panic!("expected struct"),
+                    };
+
                     debug_assert!(
                         type_vars.len() == 2 && fields.len() == 2,
                         "Map type must have two type variables",
                     );
-                    if fields[0].data_type() != fields[1].data_type() {
-                        return Err(DiagnosticCode::InvalidArgumentType
-                            .builder()
-                            .with_label(
-                                call.location()
-                                    .primary_label()
-                                    .with_message(format!("Invalid types for call to '{call}'")),
-                            )
-                            .with_note(format!(
-                                "maps must have one value type; saw {} and {}",
-                                fields[0].data_type(),
-                                fields[1].data_type()
-                            )));
-                    }
 
-                    // TODO: I don't have the "key" type..it's just assumed it's a string I think.
-                    // Because it's being encoded a struct here, rather than a Map.
+                    let key_type =
+                        argument_type.with_value(FenlType::Concrete(fields[0].data_type().clone()));
+                    let value_type =
+                        argument_type.with_value(FenlType::Concrete(fields[1].data_type().clone()));
 
-                    let key_type = argument_type.with_value(FenlType::Concrete(DataType::Utf8));
                     types_for_variable
                         .entry(type_vars[0].clone())
                         .or_default()
                         .push(key_type);
 
-                    let value_type =
-                        argument_type.with_value(FenlType::Concrete(fields[0].data_type().clone()));
                     types_for_variable
                         .entry(type_vars[1].clone())
                         .or_default()
@@ -237,6 +228,10 @@ pub fn validate_instantiation(
     argument_types: &Resolved<FenlType>,
     signature: &Signature,
 ) -> anyhow::Result<FenlType> {
+    println!(
+        "Validate instantiation for signature {:?}",
+        signature.name()
+    );
     let parameters = signature.parameters();
     debug_assert_eq!(
         argument_types.names(),
@@ -250,6 +245,8 @@ pub fn validate_instantiation(
             // Skip -- null arguments satisfy any parameter.
             continue;
         }
+        println!("Argument type: {:?}", argument_type);
+        println!("Parameter type: {:?}", parameter_type);
         match parameter_type.inner() {
             FenlType::TypeRef(type_var) => {
                 match types_for_variable.entry(type_var.clone()) {
@@ -269,6 +266,73 @@ pub fn validate_instantiation(
                     Entry::Vacant(vacant) => {
                         vacant.insert(argument_type.clone());
                     }
+                }
+            }
+            FenlType::Collection(c, type_vars) => {
+                match c {
+                    Collection::Map => {
+                        debug_assert!(type_vars.len() == 2);
+                        let (key_type, value_type) = match argument_type {
+                            FenlType::Concrete(DataType::Map(f, _)) => match f.data_type() {
+                                DataType::Struct(fields) => {
+                                    debug_assert!(fields.len() == 2);
+                                    (
+                                        FenlType::Concrete(fields[0].data_type().clone()),
+                                        FenlType::Concrete(fields[1].data_type().clone()),
+                                    )
+                                }
+                                other => panic!("expected struct, saw {:?}", other),
+                            },
+                            other2 => panic!("expected map, saw {:?}", other2),
+                        };
+                        println!("FRAZ - validating types for map vars: {:?}", type_vars);
+                        println!("key_type: {:?}", key_type);
+                        println!("value_type: {:?}", value_type);
+
+                        match types_for_variable.entry(type_vars[0].clone()) {
+                            Entry::Occupied(occupied) => {
+                                // When validating, we assume that all uses of a type class are
+                                // the same. This should be the case for the DFG and plan, since
+                                // explicit casts have been added.
+                                anyhow::ensure!(
+                                    occupied.get() == argument_type
+                                        || matches!(occupied.get(), FenlType::Error)
+                                        || matches!(argument_type, FenlType::Error),
+                                    "Failed type validation: expected {} but was {}",
+                                    occupied.get(),
+                                    key_type
+                                );
+                            }
+                            Entry::Vacant(vacant) => {
+                                vacant.insert(key_type.clone());
+                            }
+                        }
+
+                        match types_for_variable.entry(type_vars[1].clone()) {
+                            Entry::Occupied(occupied) => {
+                                // When validating, we assume that all uses of a type class are
+                                // the same. This should be the case for the DFG and plan, since
+                                // explicit casts have been added.
+                                anyhow::ensure!(
+                                    occupied.get() == argument_type
+                                        || matches!(occupied.get(), FenlType::Error)
+                                        || matches!(argument_type, FenlType::Error),
+                                    "Failed type validation: expected {} but was {}",
+                                    occupied.get(),
+                                    value_type
+                                );
+                            }
+                            Entry::Vacant(vacant) => {
+                                vacant.insert(value_type.clone());
+                            }
+                        }
+
+                        println!(
+                            "Validated types for map vars: {:?}, here is types_for_variable: {:?}",
+                            type_vars, types_for_variable
+                        );
+                    }
+                    Collection::List => todo!("unsupported"),
                 }
             }
             FenlType::Error => {
@@ -321,7 +385,10 @@ fn solve_type_class(
     println!("Solving for type class");
     println!("FRAZ - call: {:?}", call);
     println!("FRAZ - type_class: {:?}", type_class);
-    println!("FRAZ - types: {:?}", types);
+    println!(
+        "FRAZ - types: {:?}",
+        types.iter().map(|t| t.inner()).collect::<Vec<_>>()
+    );
 
     if types.iter().any(|t| t.inner().is_error()) {
         return Ok(FenlType::Error);
@@ -408,12 +475,11 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
                     _ => panic!("expected concrete type"),
                 };
 
-                // TODO: FRAZ - should you be using the struct or map type? And hardcoding key value?
-                // How does arrow read in record? Can we convert it to a Map type?
                 let fields = Fields::from(vec![key_field, value_field]);
-                // let map_struct = Arc::new(Field::new("struct", DataType::Struct(fields), false));
-                FenlType::Concrete(DataType::Struct(fields))
-                // FenlType::Concrete(DataType::Map(map_struct, false))
+                // TODO: The field name is affecting equality in fenl_type???
+                // Failed type validation: expected map<K, V> but was map<{key: string, value: i64}, {key: string, value: i64}>
+                let map_struct = Arc::new(Field::new("map", DataType::Struct(fields), false));
+                FenlType::Concrete(DataType::Map(map_struct, false))
             }
             Collection::List => todo!("unsupported"),
         },

@@ -22,7 +22,8 @@ pub enum FenlType {
     TypeRef(TypeVariable),
     /// A collection type with the given type variable(s).
     ///
-    /// e.g. (DataType::Map, [TypeVariable("K"), TypeVariable("V")])
+    /// e.g. (Collection::Map, [TypeVariable("K"), TypeVariable("V")])
+    /// // TODO: FRAZ - equality not correct?
     Collection(Collection, Vec<TypeVariable>),
     /// A type for describing a windowing behavior.
     Window,
@@ -79,6 +80,17 @@ impl<'a> std::fmt::Display for FormatDataType<'a> {
                 write!(fmt, "{}", FormatStruct(fields))
             }
             DataType::Date32 => fmt.write_str("date32"),
+            DataType::Map(f, _) => match f.data_type() {
+                DataType::Struct(fields) => {
+                    write!(
+                        fmt,
+                        "map<{}, {}>",
+                        FormatStruct(fields),
+                        FormatStruct(fields)
+                    )
+                }
+                _ => unimplemented!("Display for type {:?}", self.0),
+            },
             _ => unimplemented!("Display for type {:?}", self.0),
         }
     }

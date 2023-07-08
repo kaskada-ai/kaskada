@@ -490,6 +490,11 @@ pub(super) fn ast_to_dfg(
             // Add cast operations as necessary
             let args: Vec<_> = izip!(arguments, instantiated_types)
                 .map(|(arg, expected_type)| -> anyhow::Result<_> {
+                    println!(
+                        "Casting if needed is next: value: {:?}\n expected: {:?}",
+                        arg.value_type(),
+                        expected_type
+                    );
                     let ast_dfg = Rc::new(AstDfg::new(
                         cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
                         arg.is_new(),
@@ -676,10 +681,15 @@ fn cast_if_needed(
 
             dfg.add_expression(Expression::Inst(InstKind::Record), args)
         }
-        (_, FenlType::Concrete(dt)) => Ok(dfg.add_expression(
-            Expression::Inst(InstKind::Cast(dt.clone())),
-            smallvec![value],
-        )?),
+        (_, FenlType::Concrete(dt)) => {
+            println!("--- Adding cast {} to {}", value_type, expected_type);
+            println!("are they equal: {:?}", value_type == expected_type);
+
+            Ok(dfg.add_expression(
+                Expression::Inst(InstKind::Cast(dt.clone())),
+                smallvec![value],
+            )?)
+        }
         (_, _) => {
             // Note: Only supports casting on `DataTypes`
             Err(anyhow!(

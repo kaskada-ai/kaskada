@@ -136,6 +136,7 @@ impl TryFrom<PreparedMetadata> for PreparedFile {
     type Error = error_stack::Report<ConversionError>;
 
     fn try_from(metadata: PreparedMetadata) -> error_stack::Result<Self, ConversionError> {
+        println!("HERE");
         let min_event_time =
             arrow::temporal_conversions::timestamp_ns_to_datetime(metadata.min_time)
                 .ok_or(ConversionError)?;

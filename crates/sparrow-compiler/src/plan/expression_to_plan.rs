@@ -20,6 +20,8 @@ pub(super) fn dfg_to_plan(
 ) -> anyhow::Result<u32> {
     let arguments = plan_builder.resolve_arguments(operation_index, arguments)?;
 
+    println!("DFG to Plan: {:?}", expression);
+
     let (operator, result_type) = match expression {
         Expression::Literal(literal) => {
             let operator = expression_plan::Operator::Literal(literal.into());
@@ -97,6 +99,10 @@ fn infer_result_type(
         }
     }
 
+    println!(
+        "FRAZ - typechecking instruction {:?} with argument types {:?} and literals {:?}",
+        inst_kind, argument_types, argument_literals
+    );
     let result_type = crate::types::instruction::typecheck_inst(
         inst_kind,
         argument_types,

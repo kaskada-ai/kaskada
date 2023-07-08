@@ -352,16 +352,19 @@ async fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static
     let stream_reader = futures::stream::iter(reader);
 
     println!("FRAZ - preparing input now");
-    prepare_input_stream::prepare_input(
+    let x = prepare_input_stream::prepare_input(
         stream_reader.boxed(),
         config,
         raw_metadata,
         prepare_hash,
         slice,
     )
-    .await
-    .into_report()
-    .change_context(Error::CreateParquetReader)
+    .await;
+
+    if let Err(e) = &x {
+        println!("FRAZ - Prepared input results: {:?}", e);
+    }
+    x.into_report().change_context(Error::CreateParquetReader)
 }
 
 const BATCH_SIZE: usize = 1_000_000;

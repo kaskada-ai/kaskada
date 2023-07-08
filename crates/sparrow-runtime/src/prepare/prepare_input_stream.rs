@@ -133,6 +133,7 @@ pub async fn prepare_input<'a>(
 
             // 5. Produce the fully ordered record batch by taking the indices out from the
             // columns
+            println!("Prepared columns: {:?}", prepared_columns);
             let prepared_columns: Vec<_> = prepared_columns
                 .iter()
                 .map(|column| arrow::compute::take(column.as_ref(), &sorted_indices, None))
