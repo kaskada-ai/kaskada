@@ -476,9 +476,7 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
                 };
 
                 let fields = Fields::from(vec![key_field, value_field]);
-                // TODO: The field name is affecting equality in fenl_type???
-                // Failed type validation: expected map<K, V> but was map<{key: string, value: i64}, {key: string, value: i64}>
-                let map_struct = Arc::new(Field::new("map", DataType::Struct(fields), false));
+                let map_struct = Arc::new(Field::new("entries", DataType::Struct(fields), false));
                 FenlType::Concrete(DataType::Map(map_struct, false))
             }
             Collection::List => todo!("unsupported"),

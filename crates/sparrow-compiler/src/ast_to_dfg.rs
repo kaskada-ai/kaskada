@@ -681,15 +681,10 @@ fn cast_if_needed(
 
             dfg.add_expression(Expression::Inst(InstKind::Record), args)
         }
-        (_, FenlType::Concrete(dt)) => {
-            println!("--- Adding cast {} to {}", value_type, expected_type);
-            println!("are they equal: {:?}", value_type == expected_type);
-
-            Ok(dfg.add_expression(
-                Expression::Inst(InstKind::Cast(dt.clone())),
-                smallvec![value],
-            )?)
-        }
+        (_, FenlType::Concrete(dt)) => Ok(dfg.add_expression(
+            Expression::Inst(InstKind::Cast(dt.clone())),
+            smallvec![value],
+        )?),
         (_, _) => {
             // Note: Only supports casting on `DataTypes`
             Err(anyhow!(

@@ -330,7 +330,7 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                         arrow::datatypes::Field::new("value", value, false),
                     ]);
                     let s = arrow::datatypes::Field::new(
-                        "map",
+                        "entries",
                         arrow::datatypes::DataType::Struct(fields),
                         false,
                     );
@@ -339,7 +339,6 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                 _ => panic!("expected key and value"),
             },
             None | Some(data_type::Kind::Window(_)) => {
-                println!("window?");
                 Err(ConversionError::new_unsupported(value.clone()))
             }
         }
