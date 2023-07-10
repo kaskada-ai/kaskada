@@ -26,7 +26,7 @@ type pulsarToPulsarTestSchema struct {
 	Count    int `json:"count"`
 }
 
-var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), FlakeAttempts(3), func() {
+var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -176,7 +176,7 @@ var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar
 				g.Expect(data.Count).Should(Equal(1))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 		})
 	})
 
@@ -204,7 +204,9 @@ var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar
 				g.Expect(data.LastTime).Should(Equal(1687303803000000000))
 				g.Expect(data.Count).Should(Equal(1))
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 
+			Eventually(func(g Gomega) {
 				msg2 := receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
 				g.Expect(msg2).ShouldNot(BeNil())
 
@@ -214,8 +216,7 @@ var _ = Describe("Materialization from Pulsar to Pulsar", Ordered, Label("pulsar
 				g.Expect(data2.LastId).Should(Equal(4))
 				g.Expect(data2.LastTime).Should(Equal(1687303805000000000))
 				g.Expect(data2.Count).Should(Equal(1))
-
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 		})
 	})
 })

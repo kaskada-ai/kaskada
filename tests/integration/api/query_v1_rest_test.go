@@ -73,7 +73,7 @@ var _ = PDescribe("Query V1 REST", Ordered, func() {
 		waitForMinio()
 	})
 
-	AfterEach(func() {
+	AfterAll(func() {
 		// clean up items used in the test
 		req = getRestRequest(ctx, "DELETE", "v1alpha/tables/purchases_rest", nil)
 		res, err = client.Do(req)
