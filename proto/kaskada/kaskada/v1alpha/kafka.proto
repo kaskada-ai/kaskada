@@ -1,0 +1,27 @@
+syntax = "proto3";
+package kaskada.kaskada.v1alpha;
+
+// The configurations required to define a kafka consumer
+message KafkaConfig {
+  // The list of kafka hosts e.g. localhost:9092
+  repeated string hosts = 1;
+
+  // The name of the topic to consume
+  string topic = 2;
+
+  oneof schema {
+    // Avro schema as a string
+    string avro_schema = 100;
+    // Schema registry
+    string schema_registry_url = 101;
+  }
+}
+
+// Configuration for a single source of data from a Kafka topic.
+message KafkaSubscription {
+  // The Kafka config
+  KafkaConfig config = 1;
+
+  // The group on whose behalf to maintain consumed message offsets.
+  string group = 2;
+}

@@ -89,9 +89,13 @@ pub async fn prepare_data(
     let temp_file = NamedTempFile::new()
         .into_report()
         .change_context(Error::Internal)?;
+    let source_data = prepare_request
+        .source_data
+        .ok_or(Error::MissingField("source"))?;
+
     let source_data = convert_to_local_sourcedata(
         object_store_registry.clone(),
-        prepare_request.source_data.as_ref(),
+        &source_data,
         temp_file.path(),
     )
     .await?;
@@ -116,74 +120,65 @@ pub async fn prepare_data(
 /// If the source data is a remote file, it will be downloaded to the local path.
 pub async fn convert_to_local_sourcedata(
     object_store_registry: Arc<ObjectStoreRegistry>,
-    source_data: Option<&SourceData>,
+    source_data: &SourceData,
     local_path: &Path,
 ) -> error_stack::Result<SourceData, Error> {
-    match source_data {
-        None => error_stack::bail!(Error::MissingField("source_data")),
-        Some(sd) => {
-            let source = sd.source.as_ref().ok_or(Error::MissingField("source"))?;
-            let local_path = match source {
-                source_data::Source::ParquetPath(parquet_source_path) => {
-                    let object_store_url = ObjectStoreUrl::from_str(parquet_source_path)
-                        .change_context_lazy(|| Error::InvalidUrl(parquet_source_path.clone()))?;
-                    let object_store_key = object_store_url.key().change_context_lazy(|| {
-                        Error::InvalidUrl(format!("{}", object_store_url))
-                    })?;
-                    match object_store_key {
-                        ObjectStoreKey::Local | ObjectStoreKey::Memory => {
-                            Source::ParquetPath(format!("/{}", object_store_url.path().unwrap()))
-                        }
-                        ObjectStoreKey::Aws {
-                            bucket: _,
-                            region: _,
-                            virtual_hosted_style_request: _,
-                        }
-                        | ObjectStoreKey::Gcs { bucket: _ } => {
-                            let downloaded_path = download_source_file(
-                                &object_store_url,
-                                &object_store_registry,
-                                local_path,
-                            )
-                            .await?;
-                            Source::ParquetPath(downloaded_path)
-                        }
-                    }
+    let source = source_data
+        .source
+        .as_ref()
+        .ok_or(Error::MissingField("source"))?;
+    let local_path = match source {
+        source_data::Source::ParquetPath(parquet_source_path) => {
+            let object_store_url = ObjectStoreUrl::from_str(parquet_source_path)
+                .change_context_lazy(|| Error::InvalidUrl(parquet_source_path.clone()))?;
+            let object_store_key = object_store_url
+                .key()
+                .change_context_lazy(|| Error::InvalidUrl(format!("{}", object_store_url)))?;
+            match object_store_key {
+                ObjectStoreKey::Local | ObjectStoreKey::Memory => {
+                    Source::ParquetPath(format!("/{}", object_store_url.path().unwrap()))
                 }
-                source_data::Source::CsvPath(csv_source_path) => {
-                    let object_store_url = ObjectStoreUrl::from_str(csv_source_path)
-                        .change_context_lazy(|| Error::InvalidUrl(csv_source_path.clone()))?;
-                    let object_store_key = object_store_url.key().change_context_lazy(|| {
-                        Error::InvalidUrl(format!("{}", object_store_url))
-                    })?;
-                    match object_store_key {
-                        ObjectStoreKey::Local | ObjectStoreKey::Memory => {
-                            Source::CsvPath(format!("/{}", object_store_url.path().unwrap()))
-                        }
-                        ObjectStoreKey::Aws {
-                            bucket: _,
-                            region: _,
-                            virtual_hosted_style_request: _,
-                        }
-                        | ObjectStoreKey::Gcs { bucket: _ } => {
-                            let downloaded_path = download_source_file(
-                                &object_store_url,
-                                &object_store_registry,
-                                local_path,
-                            )
-                            .await?;
-                            Source::CsvPath(downloaded_path)
-                        }
-                    }
+                ObjectStoreKey::Aws {
+                    bucket: _,
+                    region: _,
+                    virtual_hosted_style_request: _,
                 }
-                source_data::Source::CsvData(data) => source_data::Source::CsvData(data.to_owned()),
-                source_data::Source::PulsarSubscription(_) => source.clone(),
-            };
-            Ok(SourceData {
-                source: Some(local_path),
-            })
+                | ObjectStoreKey::Gcs { bucket: _ } => {
+                    let downloaded_path =
+                        download_source_file(&object_store_url, &object_store_registry, local_path)
+                            .await?;
+                    Source::ParquetPath(downloaded_path)
+                }
+            }
         }
-    }
+        source_data::Source::CsvPath(csv_source_path) => {
+            let object_store_url = ObjectStoreUrl::from_str(csv_source_path)
+                .change_context_lazy(|| Error::InvalidUrl(csv_source_path.clone()))?;
+            let object_store_key = object_store_url
+                .key()
+                .change_context_lazy(|| Error::InvalidUrl(format!("{}", object_store_url)))?;
+            match object_store_key {
+                ObjectStoreKey::Local | ObjectStoreKey::Memory => {
+                    Source::CsvPath(format!("/{}", object_store_url.path().unwrap()))
+                }
+                ObjectStoreKey::Aws {
+                    bucket: _,
+                    region: _,
+                    virtual_hosted_style_request: _,
+                }
+                | ObjectStoreKey::Gcs { bucket: _ } => {
+                    let downloaded_path =
+                        download_source_file(&object_store_url, &object_store_registry, local_path)
+                            .await?;
+                    Source::CsvPath(downloaded_path)
+                }
+            }
+        }
+        source_data::Source::CsvData(data) => source_data::Source::CsvData(data.to_owned()),
+    };
+    Ok(SourceData {
+        source: Some(local_path),
+    })
 }
 
 /// Downloads the remote source file to the given local path.

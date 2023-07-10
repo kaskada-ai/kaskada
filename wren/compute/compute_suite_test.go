@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/kaskada-ai/kaskada/wren/client"
 	. "github.com/onsi/ginkgo/v2"
@@ -70,4 +72,19 @@ type mockComputeServiceClient struct {
 
 func (s mockComputeServiceClient) Close() error {
 	return nil
+}
+
+func protoSliceHasSameElements[K protoreflect.ProtoMessage](aa []K, bb []K) bool {
+	if len(aa) != len(bb) {
+		return false
+	}
+	eqCtr := 0
+	for _, a := range aa {
+		for _, b := range bb {
+			if proto.Equal(a, b) {
+				eqCtr++
+			}
+		}
+	}
+	return eqCtr == len(aa)
 }
