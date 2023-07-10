@@ -50,3 +50,9 @@ pub(crate) struct RuntimeOptions {
     /// Defaults to not storing anything.
     pub flight_record_path: Option<PathBuf>,
 }
+
+/// Initial size of the upload buffer.
+///
+/// This balances size (if we have multiple uploads in parallel) with
+/// number of "parts" required to perform an upload.
+const UPLOAD_BUFFER_SIZE_IN_BYTES: usize = 5_000_000;

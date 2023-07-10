@@ -182,7 +182,7 @@ pub(super) async fn run_operation(
             ..ComputePlan::default()
         },
         plan_hash: PlanHash::default(),
-        object_stores: ObjectStoreRegistry::default(),
+        object_stores: Arc::new(ObjectStoreRegistry::default()),
         data_context: DataContext::default(),
         compute_store: None,
         key_hash_inverse,
@@ -240,7 +240,7 @@ pub(super) async fn run_operation_json(
             ..ComputePlan::default()
         },
         plan_hash: PlanHash::default(),
-        object_stores: ObjectStoreRegistry::default(),
+        object_stores: Arc::new(ObjectStoreRegistry::default()),
         data_context: DataContext::default(),
         compute_store: None,
         key_hash_inverse,

@@ -81,7 +81,7 @@ use crate::Batch;
 pub(crate) struct OperationContext {
     pub plan: ComputePlan,
     pub plan_hash: PlanHash,
-    pub object_stores: ObjectStoreRegistry,
+    pub object_stores: Arc<ObjectStoreRegistry>,
     pub data_context: DataContext,
     pub compute_store: Option<Arc<ComputeStore>>,
     /// The key hash inverse to produce the output results, if one exists.

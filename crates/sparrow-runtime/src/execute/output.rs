@@ -18,9 +18,7 @@ use crate::execute::operation::OperationContext;
 use crate::execute::progress_reporter::ProgressUpdate;
 use crate::Batch;
 
-mod csv;
 mod object_store;
-mod parquet;
 mod redis;
 
 pub mod pulsar;
@@ -49,7 +47,7 @@ pub(super) fn write(
     batches: BoxStream<'static, Batch>,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     destination: v1alpha::Destination,
-) -> error_stack::Result<impl Future<Output = Result<(), Error>>, Error> {
+) -> error_stack::Result<impl Future<Output = Result<(), Error>> + 'static, Error> {
     let sink_schema = determine_output_schema(context)?;
 
     // Clone things that need to move into the async stream.
@@ -89,15 +87,17 @@ pub(super) fn write(
         .destination
         .ok_or(Error::UnspecifiedDestination)?;
     match destination {
-        Destination::ObjectStore(store) => {
-            Ok(
-                object_store::write(store, sink_schema, progress_updates_tx, batches)
-                    .change_context(Error::WritingToDestination {
-                        dest_name: "object_store".to_owned(),
-                    })
-                    .boxed(),
-            )
-        }
+        Destination::ObjectStore(store) => Ok(object_store::write(
+            context.object_stores.clone(),
+            store,
+            sink_schema,
+            progress_updates_tx,
+            batches,
+        )
+        .change_context(Error::WritingToDestination {
+            dest_name: "object_store".to_owned(),
+        })
+        .boxed()),
         Destination::Redis(redis) => {
             Ok(
                 redis::write(redis, sink_schema, progress_updates_tx, batches)

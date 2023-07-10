@@ -157,7 +157,7 @@ pub async fn execute(
         None
     };
 
-    let object_stores = ObjectStoreRegistry::default();
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
 
     let primary_grouping_key_type = plan
         .primary_grouping_key_type
@@ -300,7 +300,7 @@ pub async fn materialize(
         .into_report()
         .change_context(Error::internal_msg("get primary grouping ID"))?;
 
-    let object_stores = ObjectStoreRegistry::default();
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
     key_hash_inverse
         .add_from_data_context(&data_context, primary_group_id, &object_stores)
         .await
