@@ -226,6 +226,7 @@ impl ScanOperation {
 
                 input_stream
             }
+            v1alpha::source::Source::Kafka(_) => todo!(),
         };
 
         // Currently configures the stream for the following cases:

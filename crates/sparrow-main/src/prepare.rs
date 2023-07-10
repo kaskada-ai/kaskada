@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use sparrow_api::kaskada::v1alpha::{source_data, PrepareDataRequest, PulsarConfig, SlicePlan};
-use sparrow_api::kaskada::v1alpha::{PulsarSubscription, SourceData};
+use sparrow_api::kaskada::v1alpha::SourceData;
+use sparrow_api::kaskada::v1alpha::{PrepareDataRequest, SlicePlan};
 
 use sparrow_runtime::stores::ObjectStoreRegistry;
 
@@ -112,92 +109,18 @@ impl PrepareCommand {
         };
 
         // if input is "pulsar" then turn it into a PulsarSource
-        let source_data = if self
+        let input = self
             .input
-            .to_str()
-            .expect("unable to convert input to str (not utf8)")
-            == "pulsar"
-        {
-            // read webServiceUrl, brokerServiceUrl, authPlugin, authParams from config file
-            // given by env var PULSAR_CLIENT_CONF
-            let fname = std::env::var("PULSAR_CLIENT_CONF")
-                .into_report()
-                .change_context(Error::MissingTableConfig)
-                .attach_printable("missing env var PULSAR_CLIENT_CONF")?;
-            let f = File::open(&fname)
-                .into_report()
-                .change_context(Error::MissingTableConfig)
-                .attach_printable_lazy(|| format!("unable to read file at {:?}", fname))?;
-            let mut config = HashMap::new();
-            for line in BufReader::new(f).lines() {
-                let line = line
-                    .into_report()
-                    .change_context(Error::MissingTableConfig)
-                    .attach_printable_lazy(|| format!("error reading line from {}", fname))?;
-                let mut parts = line.splitn(2, '=');
-                if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-                    config.insert(key.to_string(), value.to_string());
-                } else if !line.chars().all(|c| c.is_whitespace()) {
-                    tracing::trace!("ignoring config line {:?}", line);
-                }
-            }
-            for key in [
-                "webServiceUrl",
-                "brokerServiceUrl",
-                "authPlugin",
-                "authParams",
-            ] {
-                if !config.contains_key(key) {
-                    return Err(error_stack::report!(Error::MissingTableConfig)
-                        .attach_printable(format!("missing config key {:?}", key)));
-                }
-            }
+            .canonicalize()
+            .into_report()
+            .change_context(Error::Canonicalize)
+            .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
 
-            // fully-qualified topic name
-            let pulsar_tenant = std::env::var("PULSAR_TENANT").unwrap_or("public".to_owned());
-            let pulsar_namespace =
-                std::env::var("PULSAR_NAMESPACE").unwrap_or("default".to_owned());
-            let pulsar_subscription =
-                std::env::var("PULSAR_SUBSCRIPTION").unwrap_or("subscription-default".to_owned());
-            let pulsar_topic = std::env::var("PULSAR_TOPIC")
-                .into_report()
-                .change_context(Error::MissingTableConfig)
-                .attach_printable("missing env var PULSAR_TOPIC")?;
-
-            let pulsar_config = PulsarConfig {
-                admin_service_url: config["webServiceUrl"].clone(),
-                broker_service_url: config["brokerServiceUrl"].clone(),
-                auth_plugin: config["authPlugin"].clone(),
-                auth_params: config["authParams"].clone(),
-                tenant: pulsar_tenant,
-                namespace: pulsar_namespace,
-                topic_name: pulsar_topic,
-            };
-            tracing::debug!("Pulsar config is {:?}", redact_auth_field(&pulsar_config));
-
-            SourceData {
-                source: Some(source_data::Source::PulsarSubscription(
-                    PulsarSubscription {
-                        config: Some(pulsar_config),
-                        subscription_id: pulsar_subscription,
-                        last_publish_time: 0,
-                    },
-                )),
-            }
-        } else {
-            let input = self
-                .input
-                .canonicalize()
-                .into_report()
-                .change_context(Error::Canonicalize)
-                .attach_printable_lazy(|| LabeledPath::new("input path", self.input.clone()))?;
-
-            let file_path = SourceData::try_from_local(input.as_path())
-                .into_report()
-                .change_context(Error::UnrecognizedInputFormat)?;
-            SourceData {
-                source: Some(file_path),
-            }
+        let file_path = SourceData::try_from_local(input.as_path())
+            .into_report()
+            .change_context(Error::UnrecognizedInputFormat)?;
+        let source_data = SourceData {
+            source: Some(file_path),
         };
 
         if table.file_sets.is_empty() {
@@ -230,14 +153,4 @@ impl PrepareCommand {
 
         Ok(())
     }
-}
-
-// Hack to remove auth fields from log output.
-//
-// Ideally, we use tonic or prost reflection to redact all
-// fields marked as sensitive.
-fn redact_auth_field(pulsar: &PulsarConfig) -> PulsarConfig {
-    let mut clone = pulsar.clone();
-    clone.auth_params = "...redacted...".to_owned();
-    clone
 }

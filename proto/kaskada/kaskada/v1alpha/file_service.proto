@@ -2,6 +2,8 @@ syntax = "proto3";
 package kaskada.kaskada.v1alpha;
 
 import "kaskada/kaskada/v1alpha/common.proto";
+import "kaskada/kaskada/v1alpha/kafka.proto";
+import "kaskada/kaskada/v1alpha/pulsar.proto";
 import "kaskada/kaskada/v1alpha/schema.proto";
 
 message SourceMetadata {
@@ -10,7 +12,11 @@ message SourceMetadata {
 }
 
 message GetMetadataRequest {
-  SourceData source_data = 1;
+  oneof source {
+    SourceData source_data = 1;
+    PulsarConfig pulsar_config = 2;
+    KafkaConfig kafka_config = 3;
+  }
 }
 
 message GetMetadataResponse {
