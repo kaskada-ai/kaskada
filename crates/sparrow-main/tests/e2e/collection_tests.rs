@@ -23,18 +23,32 @@ const JSON_INPUT: &str = r#"
             "#;
 
 #[tokio::test]
-#[ignore]
 async fn test_get_static_key() {
     insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.e0) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,m,n,eq
     "###);
 }
 
 #[tokio::test]
-#[ignore]
-async fn test_get_data_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ value: Input.key | get(Input.map)} }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,m,n,eq
+async fn test_get_static_key_second_field() {
+    insta::assert_snapshot!(QueryFixture::new("{ f2: \"f2\" | get(Input.e0) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f2
+    1970-01-01T00:00:00.000002000,7673491505576241514,2359047937476779835,1,22
+    1970-01-01T00:00:00.000003000,7673491505576241515,2359047937476779835,1,10
+    1970-01-01T00:00:00.000003000,7673491505576241516,2359047937476779835,1,3
+    1970-01-01T00:00:00.000003000,7673491505576241517,2359047937476779835,1,13
+    1970-01-01T00:00:00.000004000,7673491505576241518,2359047937476779835,1,
+    "###);
+}
+
+#[tokio::test]
+async fn test_get_dynamic_key() {
+    insta::assert_snapshot!(QueryFixture::new("{ value: Input.e3 | get(Input.e0) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,value
+    1970-01-01T00:00:00.000002000,1642954577267095822,2359047937476779835,1,0
+    1970-01-01T00:00:00.000003000,1642954577267095823,2359047937476779835,1,10
+    1970-01-01T00:00:00.000003000,1642954577267095824,2359047937476779835,1,
+    1970-01-01T00:00:00.000003000,1642954577267095825,2359047937476779835,1,13
+    1970-01-01T00:00:00.000004000,1642954577267095826,2359047937476779835,1,11
     "###);
 }
 
@@ -82,7 +96,7 @@ async fn json_to_parquet_file(json_input: &str, file: File) {
         Field::new("value", DataType::Int64, false),
     ]);
 
-    let m1 = Arc::new(Field::new("map", DataType::Struct(fields), false));
+    let m1 = Arc::new(Field::new("entries", DataType::Struct(fields), false));
     let column_types = vec![
         DataType::Map(m1, false),
         DataType::Int64,

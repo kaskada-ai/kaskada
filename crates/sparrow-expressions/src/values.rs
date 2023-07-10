@@ -1,8 +1,10 @@
 use std::marker::PhantomData;
 
-use arrow_array::cast::{as_boolean_array, as_primitive_array, as_string_array, as_struct_array};
+use arrow_array::cast::{
+    as_boolean_array, as_map_array, as_primitive_array, as_string_array, as_struct_array,
+};
 use arrow_array::types::ArrowPrimitiveType;
-use arrow_array::{ArrayRef, BooleanArray, PrimitiveArray, StringArray, StructArray};
+use arrow_array::{ArrayRef, BooleanArray, MapArray, PrimitiveArray, StringArray, StructArray};
 use arrow_schema::DataType;
 
 use crate::Error;
@@ -158,5 +160,31 @@ impl WorkAreaValue for ArrayRefValue {
 
     fn access<'a>(&self, arrays: &'a [ArrayRef]) -> Self::Array<'a> {
         &arrays[self.index]
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct MapValue {
+    index: usize,
+}
+
+impl MapValue {
+    pub fn try_new(index: usize, data_type: &DataType) -> error_stack::Result<Self, Error> {
+        error_stack::ensure!(
+            matches!(data_type, DataType::Struct(_)),
+            Error::InvalidNonStructArgumentType {
+                actual: data_type.clone()
+            }
+        );
+        Ok(Self { index })
+    }
+}
+
+impl WorkAreaValue for MapValue {
+    type Array<'a> = &'a MapArray;
+
+    fn access<'a>(&self, arrays: &'a [ArrayRef]) -> Self::Array<'a> {
+        as_map_array(arrays[self.index].as_ref())
     }
 }

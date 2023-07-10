@@ -318,15 +318,15 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
         FenlType::Collection(Collection::Map, type_vars) => {
             debug_assert!(type_vars.len() == 2);
 
-            // TODO: Ask ben logic behind the concrete::null, instead of error?
-            let concrete_key_type = solutions
-                .get(&type_vars[0])
-                .cloned()
-                .unwrap_or(FenlType::Concrete(DataType::Null));
-            let concrete_value_type = solutions
-                .get(&type_vars[1])
-                .cloned()
-                .unwrap_or(FenlType::Concrete(DataType::Null));
+            // `solutions` map should contain concrete types for all type variables.
+            let key_field = match concrete_key_type {
+                FenlType::Concrete(t) => Field::new("key", t.clone(), false),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
+            let value_field = match concrete_value_type {
+                FenlType::Concrete(t) => Field::new("value", t.clone(), false),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
 
             // `solutions` map should contain concrete types for all type variables.
             let key_field = match concrete_key_type {

@@ -11,7 +11,7 @@ use sparrow_core::{KeyTriple, TableSchema};
 
 use crate::read::parquet_file::ParquetFile;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
-use crate::{validate_batch_schema, Batch};
+use crate::{read, validate_batch_schema, Batch};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -45,9 +45,13 @@ pub(super) async fn new_parquet_stream(
         .await
         .change_context(Error::OpenParquetFile)?;
 
+    println!("Parquet schema: {:?}", parquet_file.schema);
+    println!("Projected schema: {:?}", projected_schema);
+
     let reader_columns = get_columns_to_read(parquet_file.schema.as_ref(), projected_schema)
         .into_report()
         .change_context(Error::DetermineColumns)?;
+    println!("Reader columns: {:?}", reader_columns);
 
     let stream = parquet_file
         .read_stream(None, Some(reader_columns))
@@ -67,6 +71,8 @@ pub(super) async fn new_parquet_stream(
         // Recreate the RecordBatch, to adjust nullability of columns.
         // The schemas should be identical / compatible, but may have different
         // nullability.
+        println!("Schema: {:?}", projected_schema);
+        println!("Raw batch: {:?}", raw_batch);
         let batch = RecordBatch::try_new(projected_schema.clone(), raw_batch.columns().to_vec())
             .into_report()
             .change_context(Error::ReadingBatch)
