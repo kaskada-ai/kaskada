@@ -39,38 +39,48 @@ async fn collection_data_fixture() -> DataFixture {
 
 async fn json_input() -> &'static str {
     let input = r#"
-            {"time": 2000, "key": 1, "e0": {"f1": 0,  "f2": 22},   "e1": 1,  "e2": 2.7}
-            {"time": 3000, "key": 1, "e0": {"f1": 1,  "f2": 10},   "e1": 2,  "e2": 3.8}
-            {"time": 3000, "key": 1, "e0": {"f1": 5,  "f2": 3},    "e1": 42, "e2": 4.0}
-            {"time": 3000, "key": 1, "e0": {"f2": 13},             "e1": 42, "e2": null}
-            {"time": 4000, "key": 1, "e0": {"f1": 15, "f3": 11},   "e1": 3,  "e2": 7}
+            {"time": 2000, "key": 1, "e0": {"f1": 0,  "f2": 22},   "e1": 1,  "e2": 2.7,  "e3": "f1" }
+            {"time": 3000, "key": 1, "e0": {"f1": 1,  "f2": 10},   "e1": 2,  "e2": 3.8,  "e3": "f2" }
+            {"time": 3000, "key": 1, "e0": {"f1": 5,  "f2": 3},    "e1": 42, "e2": 4.0,  "e3": "f3" }
+            {"time": 3000, "key": 1, "e0": {"f2": 13},             "e1": 42, "e2": null, "e3": "f2" }
+            {"time": 4000, "key": 1, "e0": {"f1": 15, "f3": 11},   "e1": 3,  "e2": 7,    "e3": "f3" }
             "#;
     input
 }
 
 #[tokio::test]
 async fn test_get_static_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(Input.e0, \"f1\") }").with_dump_dot("namasdfe").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,m,n,eq
-    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,21,0
-    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,14,0
-    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,17,17,1
-    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,,20,
-    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,12,,
-    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,,,
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(Input.e0, \"f1\") }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
+    1970-01-01T00:00:00.000002000,7673491505576241514,2359047937476779835,1,0
+    1970-01-01T00:00:00.000003000,7673491505576241515,2359047937476779835,1,1
+    1970-01-01T00:00:00.000003000,7673491505576241516,2359047937476779835,1,5
+    1970-01-01T00:00:00.000003000,7673491505576241517,2359047937476779835,1,
+    1970-01-01T00:00:00.000004000,7673491505576241518,2359047937476779835,1,15
     "###);
 }
 
 #[tokio::test]
-async fn test_get_data_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ value: Input.map | get(Input.key)} }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,m,n,eq
-    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,21,0
-    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,14,0
-    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,17,17,1
-    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,,20,
-    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,12,,
-    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,,,
+async fn test_get_static_key_second_field() {
+    insta::assert_snapshot!(QueryFixture::new("{ f2: \"f2\" | get(Input.e0) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f2
+    1970-01-01T00:00:00.000002000,7673491505576241514,2359047937476779835,1,22
+    1970-01-01T00:00:00.000003000,7673491505576241515,2359047937476779835,1,10
+    1970-01-01T00:00:00.000003000,7673491505576241516,2359047937476779835,1,3
+    1970-01-01T00:00:00.000003000,7673491505576241517,2359047937476779835,1,13
+    1970-01-01T00:00:00.000004000,7673491505576241518,2359047937476779835,1,
+    "###);
+}
+
+#[tokio::test]
+async fn test_get_dynamic_key() {
+    insta::assert_snapshot!(QueryFixture::new("{ value: Input.e3 | get(Input.e0) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,value
+    1970-01-01T00:00:00.000002000,1642954577267095822,2359047937476779835,1,0
+    1970-01-01T00:00:00.000003000,1642954577267095823,2359047937476779835,1,10
+    1970-01-01T00:00:00.000003000,1642954577267095824,2359047937476779835,1,
+    1970-01-01T00:00:00.000003000,1642954577267095825,2359047937476779835,1,13
+    1970-01-01T00:00:00.000004000,1642954577267095826,2359047937476779835,1,11
     "###);
 }
 
@@ -117,9 +127,17 @@ async fn json_to_parquet_file(json_input: &str, file: File) {
         Field::new("key", DataType::Utf8, false),
         Field::new("value", DataType::Int64, false),
     ]);
-    let m1 = Arc::new(Field::new("map", DataType::Struct(fields), false));
-    let column_types = vec![DataType::Map(m1, false), DataType::Int64, DataType::Float64];
+    // TODO: need to figure out type equality - if this is changed to "map" field name it fails
+    let m1 = Arc::new(Field::new("entries", DataType::Struct(fields), false));
+    let column_types = vec![
+        DataType::Map(m1, false),
+        DataType::Int64,
+        DataType::Float64,
+        DataType::Utf8,
+    ];
     let record_batch = batch_from_json(json_input, column_types).unwrap();
+
+    println!("ORIGINAL RECORD BATCH: {:?}", record_batch);
 
     // Create a Parquet writer
     let mut writer = ArrowWriter::try_new(file, record_batch.schema(), None).unwrap();

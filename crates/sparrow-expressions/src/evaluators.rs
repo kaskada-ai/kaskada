@@ -9,7 +9,7 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_physical::Expr;
 
 use crate::evaluator::Evaluator;
-use crate::values::{ArrayRefValue, BooleanValue, PrimitiveValue, StringValue, StructValue};
+use crate::values::{ArrayRefValue, BooleanValue, PrimitiveValue, StringValue, StructValue, MapValue};
 use crate::Error;
 
 mod cast;
@@ -24,6 +24,7 @@ mod literal;
 mod logical;
 mod macros;
 mod math;
+mod map;
 mod record;
 mod string;
 mod time;
@@ -87,6 +88,10 @@ impl<'a> StaticArg<'a> {
 
     pub fn struct_(&self) -> error_stack::Result<StructValue, Error> {
         StructValue::try_new(self.index, self.data_type)
+    }
+    
+    pub fn map_(&self) -> error_stack::Result<MapValue, Error> {
+        MapValue::try_new(self.index, self.data_type)
     }
 }
 

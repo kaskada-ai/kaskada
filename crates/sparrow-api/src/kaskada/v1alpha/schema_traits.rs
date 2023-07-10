@@ -245,7 +245,6 @@ impl TryFrom<&FenlType> for DataType {
 impl TryFrom<&DataType> for arrow::datatypes::DataType {
     type Error = ConversionError<DataType>;
     fn try_from(value: &DataType) -> Result<Self, Self::Error> {
-        println!("TRY FROM : {:?}", value);
         match &value.kind {
             Some(data_type::Kind::Primitive(primitive)) => {
                 use data_type::PrimitiveType;

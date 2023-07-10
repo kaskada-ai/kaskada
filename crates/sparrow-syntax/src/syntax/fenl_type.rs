@@ -84,7 +84,7 @@ impl<'a> std::fmt::Display for FormatDataType<'a> {
                 DataType::Struct(fields) => {
                     write!(
                         fmt,
-                        "map<{}, {}>",
+                        "entries<{}, {}>",
                         FormatStruct(fields),
                         FormatStruct(fields)
                     )

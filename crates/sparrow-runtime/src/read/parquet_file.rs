@@ -89,10 +89,10 @@ impl ParquetFile {
             .attach_printable_lazy(|| path.clone())?;
 
         batch_stream = batch_stream.with_batch_size(BATCH_SIZE_ROWS);
-        if let Some(projection) = projection {
-            let mask = ProjectionMask::leaves(metadata.file_metadata().schema_descr(), projection);
-            batch_stream = batch_stream.with_projection(mask);
-        }
+        // if let Some(projection) = projection {
+        //     let mask = ProjectionMask::leaves(metadata.file_metadata().schema_descr(), projection);
+        //     batch_stream = batch_stream.with_projection(mask);
+        // }
 
         let batch_stream = batch_stream
             .build()

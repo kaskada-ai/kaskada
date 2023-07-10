@@ -468,11 +468,11 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
                 // `solutions` map should contain concrete types for all type variables.
                 let key_field = match concrete_key_type {
                     FenlType::Concrete(t) => Field::new("key", t.clone(), false),
-                    _ => panic!("expected concrete type"),
+                    other => panic!("expected concrete type, got {:?}", other),
                 };
                 let value_field = match concrete_value_type {
                     FenlType::Concrete(t) => Field::new("value", t.clone(), false),
-                    _ => panic!("expected concrete type"),
+                    other => panic!("expected concrete type, got {:?}", other),
                 };
 
                 let fields = Fields::from(vec![key_field, value_field]);

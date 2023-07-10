@@ -4,6 +4,7 @@ use itertools::Itertools;
 use sparrow_plan::{InstKind, InstOp};
 
 use self::macros::create_signed_evaluator;
+use self::map::GetEvaluator;
 use crate::evaluators::macros::{
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
     create_typed_evaluator,
@@ -19,6 +20,7 @@ mod general;
 mod json_field;
 mod logical;
 mod macros;
+mod map;
 mod math;
 mod record;
 mod string;
@@ -201,7 +203,7 @@ fn create_simple_evaluator(
             )
         }
         InstOp::Floor => FloorEvaluator::try_new(info),
-        InstOp::Get => todo!("FRAZ"),
+        InstOp::Get => GetEvaluator::try_new(info),
         InstOp::Gt => match (info.args[0].is_literal(), info.args[1].is_literal()) {
             (_, true) => {
                 create_ordered_evaluator!(&info.args[0].data_type, GtScalarEvaluator, info)
