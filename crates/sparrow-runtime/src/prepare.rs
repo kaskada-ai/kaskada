@@ -218,6 +218,57 @@ async fn write_parquet(
     Ok(url)
 }
 
+fn open_file(path: impl AsRef<Path>) -> error_stack::Result<File, Error> {
+    fn inner(path: &Path) -> error_stack::Result<File, Error> {
+        File::open(path)
+            .into_report()
+            .change_context_lazy(|| Error::OpenFile {
+                path: path.to_owned(),
+            })
+    }
+    inner(path.as_ref())
+}
+
+fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error> {
+    let source = source_data.source.as_ref().ok_or(Error::Internal)?;
+    let hex_encoding = match source {
+        source_data::Source::ParquetPath(source) => {
+            let file = open_file(source)?;
+            let mut file = BufReader::new(file);
+            let mut hasher = sha2::Sha224::new();
+            std::io::copy(&mut file, &mut hasher).unwrap();
+            let hash = hasher.finalize();
+
+            data_encoding::HEXUPPER.encode(&hash)
+        }
+        source_data::Source::CsvPath(source) => {
+            let file = open_file(source)?;
+            let mut file = BufReader::new(file);
+            let mut hasher = sha2::Sha224::new();
+            std::io::copy(&mut file, &mut hasher).unwrap();
+            let hash = hasher.finalize();
+
+            data_encoding::HEXUPPER.encode(&hash)
+        }
+        source_data::Source::CsvData(content) => {
+            let content = Cursor::new(content.to_string());
+            let mut file = BufReader::new(content);
+            let mut hasher = sha2::Sha224::new();
+            std::io::copy(&mut file, &mut hasher).unwrap();
+            let hash = hasher.finalize();
+
+            data_encoding::HEXUPPER.encode(&hash)
+        }
+    };
+    Ok(get_u64_hash(&hex_encoding))
+}
+
+fn get_u64_hash(str: &str) -> u64 {
+    let mut h = DefaultHasher::new();
+    str.hash(&mut h);
+    h.finish()
+}
+
 fn get_num_files(file_size: usize) -> usize {
     // The number of files is the ceiling of the number of gigabytes in the file
     // e.g. 2.5 gb -> 3 files or 1 gb -> 1 file
