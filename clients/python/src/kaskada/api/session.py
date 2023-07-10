@@ -1,16 +1,14 @@
 import logging
 import os
-import time
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import kaskada.client
 from kaskada.api import release
 from kaskada.api.local_session.local_service import KaskadaLocalService
 from kaskada.api.local_session.local_session_keep_alive import LocalSessionKeepAlive
-from kaskada.api.local_session.object_store import ObjectStoreConfig, ObjectStoreType
 
 logger = logging.getLogger(__name__)
 
@@ -194,62 +192,17 @@ class LocalBuilder(Builder):
         self.in_memory(False)
         return self
 
+    def with_manager_configs(self, configs: List[Tuple[str, Any]]):
+        for config in configs:
+            self.manager_configs[config[0]] = config[1]
+        return self
+
     def manager_rest_port(self, port: int):
         self.manager_configs["-rest-port"] = port
         return self
 
     def manager_grpc_port(self, port: int):
         self.manager_configs["-grpc-port"] = port
-        return self
-
-    def object_store_type(self, object_store_type: str):
-        self.manager_configs["-object-store-type"] = object_store_type
-        return self
-
-    def object_store_bucket(self, object_store_bucket: str):
-        self.manager_configs["-object-store-bucket"] = object_store_bucket
-        return self
-
-    def object_store_disable_ssl(self, disable_ssl: bool):
-        self.manager_configs["-object-store-disable-ssl"] = "1" if disable_ssl else "0"
-        return self
-
-    def object_store_endpoint(self, endpoint: str):
-        self.manager_configs["-object-store-endpoint"] = endpoint
-        return self
-
-    def object_store_force_path_style(self, force_path_style: bool):
-        self.manager_configs["-object-store-force-path-style"] = (
-            "1" if force_path_style else "0"
-        )
-        return self
-
-    def object_store_path(self, path: str):
-        self.manager_configs["-object-store-path"] = path
-        return self
-
-    def object_store(self, object_store: ObjectStoreConfig):
-        if object_store.object_store_type == ObjectStoreType.LOCAL:
-            self.object_store_type("local")
-        elif object_store.object_store_type == ObjectStoreType.S3:
-            self.object_store_type("s3")
-        elif object_store.object_store_type == ObjectStoreType.GS:
-            self.object_store_type("gs")
-
-        self.object_store_path(object_store.path)
-
-        if object_store.bucket is not None:
-            self.object_store_bucket(object_store.bucket)
-
-        if object_store.disable_ssl is not None:
-            self.object_store_disable_ssl(object_store.disable_ssl)
-
-        if object_store.endpoint is not None:
-            self.object_store_endpoint(object_store.endpoint)
-
-        if object_store.force_path_style is not None:
-            self.object_store_force_path_style(object_store.force_path_style)
-
         return self
 
     def __get_log_path(self, file_name: str) -> Path:
