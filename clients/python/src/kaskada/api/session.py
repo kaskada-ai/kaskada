@@ -194,7 +194,7 @@ class LocalBuilder(Builder):
 
     def with_manager_args(self, configs: List[Tuple[str, Any]]):
         """Configure the Manager to run with a list of arguments. The arguments must be prefixed with a "-" and boolean values are represented as "1" or "0".
-        
+
         For example:
         ```
         from kaskada.api.session import LocalBuilder
@@ -205,7 +205,7 @@ class LocalBuilder(Builder):
                 ("-rest-port", 12345)
             ]).build()
         ```
-        
+
         Args:
             configs (List[Tuple[str, Any]]): Manager arguments
         """
