@@ -50,23 +50,6 @@ pub fn execution_stream(
     }
 }
 
-/// Creates a pulsar stream to be used during preparation.
-///
-/// This stream reads messages until it times out, which (generally) indicates that
-/// no more messages exist on the stream at that point in time.
-pub fn preparation_stream(
-    schema: SchemaRef,
-    consumer: Consumer<AvroWrapper, TokioExecutor>,
-    last_publish_time: i64,
-) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
-    async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema.clone(), schema, consumer, last_publish_time, true , true);
-        while let Some(next) = reader.next_result_async().await? {
-            yield next
-        }
-    }
-}
-
 struct PulsarReader {
     /// The raw schema; includes all columns in the stream.
     raw_schema: SchemaRef,
