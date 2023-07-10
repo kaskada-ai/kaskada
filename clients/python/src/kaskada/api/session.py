@@ -192,7 +192,23 @@ class LocalBuilder(Builder):
         self.in_memory(False)
         return self
 
-    def with_manager_configs(self, configs: List[Tuple[str, Any]]):
+    def with_manager_args(self, configs: List[Tuple[str, Any]]):
+        """Configure the Manager to run with a list of arguments. The arguments must be prefixed with a "-" and boolean values are represented as "1" or "0".
+        
+        For example:
+        ```
+        from kaskada.api.session import LocalBuilder
+            session = LocalBuilder().with_manager_configs([
+                ("-object-store-type", "local"),
+                ("-object-store-path", "/Users/kevin.nguyen/Github/kaskada/examples3"),
+                ("-db-in-memory", "1"),
+                ("-rest-port", 12345)
+            ]).build()
+        ```
+        
+        Args:
+            configs (List[Tuple[str, Any]]): Manager arguments
+        """
         for config in configs:
             self.manager_configs[config[0]] = config[1]
         return self
