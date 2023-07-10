@@ -15,13 +15,28 @@ impl DataType {
         }
     }
 
+    /// Creates a new map from the given fields.
+    ///
+    /// `fields` should have two elements, the first being the key type
+    /// and the second being the value type, but this is not enforced.
     pub fn new_map(fields: Vec<schema::Field>) -> Self {
         debug_assert!(fields.len() == 2);
-        // TODO: Unwrap
         Self {
             kind: Some(data_type::Kind::Map(Box::new(data_type::Map {
-                key: Some(Box::new(fields[0].data_type.as_ref().unwrap().clone())),
-                value: Some(Box::new(fields[1].data_type.as_ref().unwrap().clone())),
+                key: Some(Box::new(
+                    fields[0]
+                        .data_type
+                        .as_ref()
+                        .expect("data type to exist")
+                        .clone(),
+                )),
+                value: Some(Box::new(
+                    fields[1]
+                        .data_type
+                        .as_ref()
+                        .expect("data type to exist")
+                        .clone(),
+                )),
             }))),
         }
     }
@@ -335,7 +350,7 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                     );
                     Ok(arrow::datatypes::DataType::Map(Arc::new(s), false))
                 }
-                _ => panic!("expected key and value"),
+                _ => Err(ConversionError::new_unsupported(value.clone())),
             },
             None | Some(data_type::Kind::Window(_)) => {
                 Err(ConversionError::new_unsupported(value.clone()))

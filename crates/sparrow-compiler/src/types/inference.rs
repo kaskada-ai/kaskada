@@ -96,6 +96,7 @@ pub(crate) fn instantiate(
                         .push(fenl_type)
                 }
                 FenlType::Concrete(DataType::Map(s, _)) => {
+                    // NOTE: This impl only supports single-level maps.
                     let fields = match s.data_type() {
                         DataType::Struct(fields) => fields,
                         _ => panic!("expected struct"),
@@ -103,7 +104,7 @@ pub(crate) fn instantiate(
 
                     debug_assert!(
                         type_vars.len() == 2 && fields.len() == 2,
-                        "Map type must have two type variables",
+                        "map type must have two type variables and fields",
                     );
 
                     let key_type =
@@ -268,72 +269,64 @@ pub fn validate_instantiation(
                     }
                 }
             }
-            FenlType::Collection(c, type_vars) => {
-                match c {
-                    Collection::Map => {
-                        debug_assert!(type_vars.len() == 2);
-                        let (key_type, value_type) = match argument_type {
-                            FenlType::Concrete(DataType::Map(f, _)) => match f.data_type() {
-                                DataType::Struct(fields) => {
-                                    debug_assert!(fields.len() == 2);
-                                    (
-                                        FenlType::Concrete(fields[0].data_type().clone()),
-                                        FenlType::Concrete(fields[1].data_type().clone()),
-                                    )
-                                }
-                                other => panic!("expected struct, saw {:?}", other),
-                            },
-                            other2 => panic!("expected map, saw {:?}", other2),
-                        };
-                        println!("FRAZ - validating types for map vars: {:?}", type_vars);
-                        println!("key_type: {:?}", key_type);
-                        println!("value_type: {:?}", value_type);
-
-                        match types_for_variable.entry(type_vars[0].clone()) {
-                            Entry::Occupied(occupied) => {
-                                // When validating, we assume that all uses of a type class are
-                                // the same. This should be the case for the DFG and plan, since
-                                // explicit casts have been added.
-                                anyhow::ensure!(
-                                    occupied.get() == argument_type
-                                        || matches!(occupied.get(), FenlType::Error)
-                                        || matches!(argument_type, FenlType::Error),
-                                    "Failed type validation: expected {} but was {}",
-                                    occupied.get(),
-                                    key_type
-                                );
-                            }
-                            Entry::Vacant(vacant) => {
-                                vacant.insert(key_type.clone());
-                            }
+            FenlType::Collection(Collection::Map, type_vars) => {
+                debug_assert!(type_vars.len() == 2);
+                let (key_type, value_type) = match argument_type {
+                    FenlType::Concrete(DataType::Map(f, _)) => match f.data_type() {
+                        DataType::Struct(fields) => {
+                            debug_assert!(fields.len() == 2);
+                            (
+                                FenlType::Concrete(fields[0].data_type().clone()),
+                                FenlType::Concrete(fields[1].data_type().clone()),
+                            )
                         }
+                        other => anyhow::bail!("expected struct, saw {:?}", other),
+                    },
+                    other => anyhow::bail!("expected map, saw {:?}", other),
+                };
+                println!("FRAZ - validating types for map vars: {:?}", type_vars);
+                println!("key_type: {:?}", key_type);
+                println!("value_type: {:?}", value_type);
 
-                        match types_for_variable.entry(type_vars[1].clone()) {
-                            Entry::Occupied(occupied) => {
-                                // When validating, we assume that all uses of a type class are
-                                // the same. This should be the case for the DFG and plan, since
-                                // explicit casts have been added.
-                                anyhow::ensure!(
-                                    occupied.get() == argument_type
-                                        || matches!(occupied.get(), FenlType::Error)
-                                        || matches!(argument_type, FenlType::Error),
-                                    "Failed type validation: expected {} but was {}",
-                                    occupied.get(),
-                                    value_type
-                                );
-                            }
-                            Entry::Vacant(vacant) => {
-                                vacant.insert(value_type.clone());
-                            }
-                        }
-
-                        println!(
-                            "Validated types for map vars: {:?}, here is types_for_variable: {:?}",
-                            type_vars, types_for_variable
+                match types_for_variable.entry(type_vars[0].clone()) {
+                    Entry::Occupied(occupied) => {
+                        anyhow::ensure!(
+                            occupied.get() == argument_type
+                                || matches!(occupied.get(), FenlType::Error)
+                                || matches!(argument_type, FenlType::Error),
+                            "Failed type validation: expected {} but was {}",
+                            occupied.get(),
+                            key_type
                         );
                     }
-                    Collection::List => todo!("unsupported"),
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(key_type.clone());
+                    }
                 }
+
+                match types_for_variable.entry(type_vars[1].clone()) {
+                    Entry::Occupied(occupied) => {
+                        anyhow::ensure!(
+                            occupied.get() == argument_type
+                                || matches!(occupied.get(), FenlType::Error)
+                                || matches!(argument_type, FenlType::Error),
+                            "Failed type validation: expected {} but was {}",
+                            occupied.get(),
+                            value_type
+                        );
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(value_type.clone());
+                    }
+                }
+
+                println!(
+                    "Validated types for map vars: {:?}, here is types_for_variable: {:?}",
+                    type_vars, types_for_variable
+                );
+            }
+            FenlType::Collection(Collection::List, type_vars) => {
+                todo!("list unsupported")
             }
             FenlType::Error => {
                 // Assume the argument matches (since we already reported what
