@@ -5,6 +5,7 @@ use std::sync::Arc;
 use arrow::array::ArrowPrimitiveType;
 use arrow::datatypes::{DataType, Field, FieldRef, Schema, SchemaRef, TimestampMillisecondType};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use sparrow_arrow::avro::from_avro_schema;
 use tempfile::NamedTempFile;
 
 use sparrow_api::kaskada::v1alpha::source_data::{self, Source};
@@ -32,6 +33,10 @@ pub enum Error {
     PulsarSchema(String),
     #[display(fmt = "unsupport column detected: '{_0}")]
     UnsupportedColumn(String),
+    #[display(fmt = "no kafka schema config")]
+    MissingKafkaSchemaConfig,
+    #[display(fmt = "unable to parse kafka avro schema: {_0}")]
+    KafkaSchema(String),
 }
 
 impl error_stack::Context for Error {}
@@ -78,9 +83,7 @@ impl RawMetadata {
         }
     }
 
-    pub async fn try_from_pulsar_subscription(
-        ps: &PulsarConfig,
-    ) -> error_stack::Result<Self, Error> {
+    pub async fn try_from_pulsar_config(ps: &PulsarConfig) -> error_stack::Result<Self, Error> {
         // The `_publish_time` is metadata on the pulsar message, and required
         // by the `prepare` step. However, that is not part of the user's schema.
         // The prepare path calls `try_from_pulsar` directly, so for all other cases
@@ -94,8 +97,28 @@ impl RawMetadata {
             .sparrow_metadata)
     }
 
-    pub async fn try_from_kafka_subscription(_: &KafkaConfig) -> error_stack::Result<Self, Error> {
-        todo!()
+    pub async fn try_from_kafka_config(config: &KafkaConfig) -> error_stack::Result<Self, Error> {
+        let schema = config
+            .schema
+            .to_owned()
+            .ok_or(Error::MissingKafkaSchemaConfig)?;
+        match schema {
+            sparrow_api::kaskada::v1alpha::kafka_config::Schema::AvroSchema(avro_schema) => {
+                let parsed_schema: avro_schema::schema::Schema = serde_json::from_str(&avro_schema)
+                    .into_report()
+                    .change_context_lazy(|| Error::KafkaSchema(avro_schema))?;
+                // let parsed_schema = Arc::new(parsed_schema);
+                let converted_schema = Arc::new(
+                    from_avro_schema(&parsed_schema)
+                        .change_context(Error::KafkaSchema("".to_owned()))?,
+                );
+                Ok(RawMetadata {
+                    raw_schema: converted_schema.clone(),
+                    table_schema: converted_schema.clone(),
+                })
+            }
+            sparrow_api::kaskada::v1alpha::kafka_config::Schema::SchemaRegistryUrl(_) => todo!(),
+        }
     }
 
     /// Create `RawMetadata` from a raw schema.
@@ -267,6 +290,7 @@ mod tests {
     use std::sync::Arc;
 
     use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
+    use sparrow_api::kaskada::v1alpha::KafkaConfig;
 
     use crate::RawMetadata;
 
@@ -400,5 +424,29 @@ mod tests {
                 )
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_raw_metadata_from_kafka_schema() {
+        let schema_def = "{\"type\": \"record\", \"name\": \"MyRecord\", \"fields\": [{\"name\": \"time\", \"type\":\"long\"}, {\"name\": \"id\", \"type\": \"long\"}, {\"name\": \"my_val\", \"type\": \"long\"}]}";
+        let expected = Arc::new(Schema::new(vec![
+            Field::new("time", DataType::Int64, false),
+            Field::new("id", DataType::Int64, false),
+            Field::new("my_val", DataType::Int64, false),
+        ]));
+
+        let kafka_config = KafkaConfig {
+            hosts: vec![],
+            topic: "awkward-topic".to_string(),
+            schema: Some(
+                sparrow_api::kaskada::v1alpha::kafka_config::Schema::AvroSchema(
+                    schema_def.to_owned(),
+                ),
+            ),
+        };
+        let metadata = RawMetadata::try_from_kafka_config(&kafka_config)
+            .await
+            .unwrap();
+        assert_eq!(metadata.raw_schema, expected);
     }
 }
