@@ -15,35 +15,13 @@ use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
 
-/// Fixture for testing collection operations.
-async fn invalid_map_type_fixture() -> DataFixture {
-    DataFixture::new()
-        .with_table_from_files(
-            TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", None, "name", ""),
-            &["parquet/data_with_invalid_map_types.parquet"],
-        )
-        .await
-        .unwrap()
-}
-
-/// Fixture for testing collection operations.
-async fn collection_data_fixture() -> DataFixture {
-    DataFixture::new()
-        .with_table_from_files(
-            TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", None, "name", ""),
-            &["parquet/data_with_map.parquet"],
-        )
-        .await
-        .unwrap()
-}
-
 async fn json_input() -> &'static str {
     let input = r#"
-            {"time": 2000, "key": 1, "e0": {"f1": 0,  "f2": 22},   "e1": 1,  "e2": 2.7,  "e3": "f1" }
-            {"time": 3000, "key": 1, "e0": {"f1": 1,  "f2": 10},   "e1": 2,  "e2": 3.8,  "e3": "f2" }
-            {"time": 3000, "key": 1, "e0": {"f1": 5,  "f2": 3},    "e1": 42, "e2": 4.0,  "e3": "f3" }
-            {"time": 3000, "key": 1, "e0": {"f2": 13},             "e1": 42, "e2": null, "e3": "f2" }
-            {"time": 4000, "key": 1, "e0": {"f1": 15, "f3": 11},   "e1": 3,  "e2": 7,    "e3": "f3" }
+            {"time": 2000, "key": 1, "e0": {"f1": 0,  "f2": 22}, "e1": 1,  "e2": 2.7,  "e3": "f1" }
+            {"time": 3000, "key": 1, "e0": {"f1": 1,  "f2": 10}, "e1": 2,  "e2": 3.8,  "e3": "f2" }
+            {"time": 3000, "key": 1, "e0": {"f1": 5,  "f2": 3},  "e1": 42, "e2": 4.0,  "e3": "f3" }
+            {"time": 3000, "key": 1, "e0": {"f2": 13},           "e1": 42, "e2": null, "e3": "f2" }
+            {"time": 4000, "key": 1, "e0": {"f1": 15, "f3": 11}, "e1": 3,  "e2": 7,    "e3": "f3" }
             "#;
     input
 }
@@ -124,11 +102,15 @@ fn batch_from_json(json: &str, column_types: Vec<DataType>) -> anyhow::Result<Re
 
 async fn json_to_parquet_file(json_input: &str, file: File) {
     let fields = Fields::from(vec![
-        Field::new("key", DataType::Utf8, false),
-        Field::new("value", DataType::Int64, false),
+        Field::new("skey", DataType::Utf8, false),
+        Field::new("svalue", DataType::Int64, false),
     ]);
     // TODO: need to figure out type equality - if this is changed to "map" field name it fails
-    let m1 = Arc::new(Field::new("entries", DataType::Struct(fields), false));
+    let m1 = Arc::new(Field::new(
+        "test_s_diff_variable",
+        DataType::Struct(fields),
+        false,
+    ));
     let column_types = vec![
         DataType::Map(m1, false),
         DataType::Int64,
@@ -153,7 +135,7 @@ async fn arrow_collection_data_fixture() -> DataFixture {
     path.pop();
     path.pop();
     path.push("testdata");
-    path.push("test.parquet");
+    path.push("parquet/data_with_map.parquet");
 
     let file = File::create(path).unwrap();
     json_to_parquet_file(input, file).await;
@@ -161,7 +143,7 @@ async fn arrow_collection_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
             TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", None, "key", ""),
-            &[&"test.parquet"],
+            &[&"data_with_map.parquet"],
         )
         .await
         .unwrap()

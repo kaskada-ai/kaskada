@@ -325,7 +325,7 @@ pub fn validate_instantiation(
                     type_vars, types_for_variable
                 );
             }
-            FenlType::Collection(Collection::List, type_vars) => {
+            FenlType::Collection(Collection::List, _) => {
                 todo!("list unsupported")
             }
             FenlType::Error => {
@@ -441,39 +441,37 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
             .get(type_var)
             .cloned()
             .unwrap_or(FenlType::Concrete(DataType::Null)),
-        FenlType::Collection(c, type_vars) => match c {
-            Collection::Map => {
-                println!(
-                    "FRAZ - Instantiating type in inference for map vars: {:?}",
-                    type_vars
-                );
-                debug_assert!(type_vars.len() == 2);
-                // TODO: Ask ben logic behind the concrete::null, instead of error?
-                let concrete_key_type = solutions
-                    .get(&type_vars[0])
-                    .cloned()
-                    .unwrap_or(FenlType::Concrete(DataType::Null));
-                let concrete_value_type = solutions
-                    .get(&type_vars[1])
-                    .cloned()
-                    .unwrap_or(FenlType::Concrete(DataType::Null));
+        FenlType::Collection(Collection::Map, type_vars) => {
+            println!(
+                "FRAZ - Instantiating type in inference for map vars: {:?}",
+                type_vars
+            );
+            debug_assert!(type_vars.len() == 2);
+            // TODO: Ask ben logic behind the concrete::null, instead of error?
+            let concrete_key_type = solutions
+                .get(&type_vars[0])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
+            let concrete_value_type = solutions
+                .get(&type_vars[1])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
 
-                // `solutions` map should contain concrete types for all type variables.
-                let key_field = match concrete_key_type {
-                    FenlType::Concrete(t) => Field::new("key", t.clone(), false),
-                    other => panic!("expected concrete type, got {:?}", other),
-                };
-                let value_field = match concrete_value_type {
-                    FenlType::Concrete(t) => Field::new("value", t.clone(), false),
-                    other => panic!("expected concrete type, got {:?}", other),
-                };
+            // `solutions` map should contain concrete types for all type variables.
+            let key_field = match concrete_key_type {
+                FenlType::Concrete(t) => Field::new("key", t.clone(), false),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
+            let value_field = match concrete_value_type {
+                FenlType::Concrete(t) => Field::new("value", t.clone(), false),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
 
-                let fields = Fields::from(vec![key_field, value_field]);
-                let map_struct = Arc::new(Field::new("entries", DataType::Struct(fields), false));
-                FenlType::Concrete(DataType::Map(map_struct, false))
-            }
-            Collection::List => todo!("unsupported"),
-        },
+            let fields = Fields::from(vec![key_field, value_field]);
+            let map_struct = Arc::new(Field::new("entries", DataType::Struct(fields), false));
+            FenlType::Concrete(DataType::Map(map_struct, false))
+        }
+        FenlType::Collection(Collection::List, _) => todo!("unsupported"),
         FenlType::Concrete(_) => fenl_type.clone(),
         FenlType::Window => fenl_type.clone(),
         FenlType::Json => fenl_type.clone(),
@@ -779,7 +777,7 @@ fn promote_concrete(concrete: FenlType, type_class: &TypeClass) -> Option<FenlTy
         // errors propagate.
         (TypeClass::Error, _) => Some(FenlType::Error),
 
-        // TODO: FRAZ
+        // Collections can never be concrete as they contain type variables.
         (_, FenlType::Collection(_, _)) => None,
 
         // Generics can never be concrete.
