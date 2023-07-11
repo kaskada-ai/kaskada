@@ -5,13 +5,12 @@ use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt, TryFutureExt};
-use object_store::ObjectStore;
+use object_store::{ObjectMeta, ObjectStore};
 use parquet::arrow::{
     parquet_to_arrow_schema_by_columns, ParquetRecordBatchStreamBuilder, ProjectionMask,
 };
 use parquet::errors::ParquetError;
 use parquet::file::metadata::ParquetMetaData;
-use parquet::file::FOOTER_SIZE;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 
@@ -19,8 +18,8 @@ use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 #[derive(Clone)]
 pub struct ParquetFile {
     object_store: Arc<dyn ObjectStore>,
-    path: object_store::path::Path,
-    metadata: Arc<ParquetMetaData>,
+    pub object_meta: ObjectMeta,
+    parquet_metadata: Arc<ParquetMetaData>,
     pub schema: SchemaRef,
 }
 
@@ -36,7 +35,7 @@ pub enum Error {
     ReadingParquetFile,
 }
 
-const BATCH_SIZE_ROWS: usize = 100_000;
+const BATCH_SIZE_ROWS: usize = 4_096;
 
 impl error_stack::Context for Error {}
 
@@ -47,6 +46,7 @@ impl ParquetFile {
     pub async fn try_new(
         object_stores: &ObjectStoreRegistry,
         url: ObjectStoreUrl,
+        object_meta: Option<ObjectMeta>,
     ) -> error_stack::Result<Self, Error> {
         let object_store = object_stores
             .object_store(&url)
@@ -54,7 +54,16 @@ impl ParquetFile {
             .clone();
         let path = url.path().change_context(Error::InvalidUrl)?;
 
-        let metadata = get_parquet_metadata(object_store.as_ref(), &path).await?;
+        let object_meta = match object_meta {
+            Some(object_meta) => object_meta,
+            None => object_store
+                .head(&path)
+                .await
+                .into_report()
+                .change_context(Error::InvalidParquetMetadata)?,
+        };
+
+        let metadata = get_parquet_metadata(object_store.as_ref(), &object_meta).await?;
 
         let key_value_metadata = metadata.file_metadata().key_value_metadata();
         let schema = parquet_to_arrow_schema_by_columns(
@@ -68,29 +77,40 @@ impl ParquetFile {
 
         Ok(Self {
             object_store,
-            path,
-            metadata,
+            object_meta,
+            parquet_metadata: metadata,
             schema,
         })
     }
 
+    pub fn num_rows(&self) -> usize {
+        self.parquet_metadata.file_metadata().num_rows() as usize
+    }
+
     pub async fn read_stream(
-        self,
+        &self,
+        batch_size: Option<usize>,
         projection: Option<Vec<usize>>,
     ) -> error_stack::Result<BoxStream<'static, error_stack::Result<RecordBatch, Error>>, Error>
     {
-        let path = self.path.clone();
-        let metadata = self.metadata.clone();
+        let reader = AsyncParquetObjectReader {
+            object_store: self.object_store.clone(),
+            object_meta: self.object_meta.clone(),
+            parquet_metadata: self.parquet_metadata.clone(),
+        };
 
-        let mut batch_stream = ParquetRecordBatchStreamBuilder::new(self)
+        let mut batch_stream = ParquetRecordBatchStreamBuilder::new(reader)
             .await
             .into_report()
             .change_context(Error::ReadingParquetFile)
-            .attach_printable_lazy(|| path.clone())?;
+            .attach_printable_lazy(|| self.object_meta.location.clone())?;
 
-        batch_stream = batch_stream.with_batch_size(BATCH_SIZE_ROWS);
+        batch_stream = batch_stream.with_batch_size(batch_size.unwrap_or(BATCH_SIZE_ROWS));
         if let Some(projection) = projection {
-            let mask = ProjectionMask::leaves(metadata.file_metadata().schema_descr(), projection);
+            let mask = ProjectionMask::leaves(
+                self.parquet_metadata.file_metadata().schema_descr(),
+                projection,
+            );
             batch_stream = batch_stream.with_projection(mask);
         }
 
@@ -98,28 +118,37 @@ impl ParquetFile {
             .build()
             .into_report()
             .change_context(Error::ReadingParquetFile)
-            .attach_printable_lazy(|| path.clone())?;
+            .attach_printable_lazy(|| self.object_meta.location.clone())?;
 
+        let location = self.object_meta.location.clone();
         Ok(batch_stream
             .map(move |batch| {
                 batch
                     .into_report()
                     .change_context(Error::ReadingParquetFile)
-                    .attach_printable_lazy(|| path.clone())
+                    .attach_printable_lazy(|| location.clone())
             })
             .boxed())
     }
 }
 
-impl parquet::arrow::async_reader::AsyncFileReader for ParquetFile {
+struct AsyncParquetObjectReader {
+    object_store: Arc<dyn ObjectStore>,
+    object_meta: ObjectMeta,
+    parquet_metadata: Arc<ParquetMetaData>,
+}
+
+impl parquet::arrow::async_reader::AsyncFileReader for AsyncParquetObjectReader {
     fn get_bytes(
         &mut self,
         range: std::ops::Range<usize>,
     ) -> futures::future::BoxFuture<'_, parquet::errors::Result<bytes::Bytes>> {
         self.object_store
-            .get_range(&self.path, range)
+            .get_range(&self.object_meta.location, range)
             // Need to produce parquet error, so can't use `error_stack` here.
-            .map_err(|e| ParquetError::General(format!("AsyncFileReader::get_bytes error: {e}")))
+            .map_err(|e| {
+                ParquetError::General(format!("AsyncParquetObjectReader::get_bytes error: {e}"))
+            })
             .boxed()
     }
 
@@ -129,11 +158,13 @@ impl parquet::arrow::async_reader::AsyncFileReader for ParquetFile {
     ) -> futures::future::BoxFuture<'_, parquet::errors::Result<Vec<bytes::Bytes>>> {
         async move {
             self.object_store
-                .get_ranges(&self.path, &ranges)
+                .get_ranges(&self.object_meta.location, &ranges)
                 .await
                 // Need to produce parquet error, so can't use `error_stack` here.
                 .map_err(|e| {
-                    ParquetError::General(format!("AsyncFileReader::get_byte_ranges error: {e}"))
+                    ParquetError::General(format!(
+                        "AsyncParquetObjectReader::get_byte_ranges error: {e}"
+                    ))
                 })
         }
         .boxed()
@@ -145,55 +176,37 @@ impl parquet::arrow::async_reader::AsyncFileReader for ParquetFile {
         '_,
         parquet::errors::Result<Arc<parquet::file::metadata::ParquetMetaData>>,
     > {
-        futures::future::ready(Ok(self.metadata.clone())).boxed()
+        futures::future::ready(Ok(self.parquet_metadata.clone())).boxed()
     }
 }
 
-/// Fetch the parquet metadata for the given path.
+/// Number of bytes to prefetch of the footer.
 ///
-/// # Optimization Opportunity
-/// This does two `get_range` calls -- one for the FOOTER_SIZE bytes to determine
-/// the footer size, then one for the appropriate number of bytes. It may be better
-/// to start with a reasonable guess (a few KB) and fetch that, and only do the second
-/// fetch if the FOOTER_SIZE indicates it wasn't enough. This could cut the number of
-/// object store calls to get metadata in half. Of course, if the metadata is stored in
-/// the database, then the calls wouldn't be needed at all.
+/// Providing a larger than default (8) value allows skipping an extra round
+/// of fetches:
+///
+/// 1. Fetch last `PREFETCH_FOOTER_BYTES`
+/// 2. Look at last 8 bytes to determine size of footer.
+/// 3. If the footer is larger than `PREFETCH_FOOTER_BYTES` fetch more.
+const PREFETCH_FOOTER_BYTES: usize = 1024;
+
+/// Fetch the parquet metadata for the given path.
 async fn get_parquet_metadata(
     object_store: &dyn ObjectStore,
-    path: &object_store::path::Path,
+    object_meta: &ObjectMeta,
 ) -> error_stack::Result<Arc<ParquetMetaData>, Error> {
-    // First determine the length of the file.
-    let metadata = object_store
-        .head(path)
-        .await
-        .into_report()
-        .change_context(Error::InvalidParquetMetadata)?;
-    let length = metadata.size;
-
-    let footer_bytes = object_store
-        .get_range(path, length - FOOTER_SIZE..length)
-        .await
-        .into_report()
-        .change_context(Error::InvalidParquetMetadata)?;
-    let footer_bytes: &[u8; FOOTER_SIZE] = footer_bytes
-        .as_ref()
-        .try_into()
-        .expect("Footer bytes should have been FOOTER_SIZE");
-    let metadata_len = parquet::file::footer::decode_footer(footer_bytes)
-        .into_report()
-        .change_context(Error::InvalidParquetMetadata)?;
-
-    let metadata_bytes = object_store
-        .get_range(
-            path,
-            length - metadata_len - FOOTER_SIZE..length - FOOTER_SIZE,
-        )
-        .await
-        .into_report()
-        .change_context(Error::InvalidParquetMetadata)?;
-
-    parquet::file::footer::decode_metadata(metadata_bytes.as_ref())
-        .into_report()
-        .map(Arc::new)
-        .change_context(Error::InvalidParquetMetadata)
+    let fetch = |byte_range| {
+        object_store
+            .get_range(&object_meta.location, byte_range)
+            .map_err(|e| parquet::errors::ParquetError::External(Box::new(e)))
+    };
+    parquet::arrow::async_reader::fetch_parquet_metadata(
+        fetch,
+        object_meta.size,
+        Some(PREFETCH_FOOTER_BYTES),
+    )
+    .await
+    .into_report()
+    .change_context(Error::InvalidParquetMetadata)
+    .map(Arc::new)
 }

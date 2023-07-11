@@ -166,14 +166,14 @@ mod tests {
         let path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
         let file_service = FileServiceImpl::new(object_store_registry);
-        let path = path.canonicalize().unwrap().to_string_lossy().to_string();
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 source: Some(
                     sparrow_api::kaskada::v1alpha::get_metadata_request::Source::SourceData(
                         SourceData {
                             source: Some(source_data::Source::ParquetPath(format!(
-                                "file:///{path}"
+                                "file:///{}",
+                                path.display()
                             ))),
                         },
                     ),
@@ -193,13 +193,15 @@ mod tests {
 
         let object_store_registry = Arc::new(ObjectStoreRegistry::new());
         let file_service = FileServiceImpl::new(object_store_registry);
-        let path = path.canonicalize().unwrap().to_string_lossy().to_string();
         let result = file_service
             .get_metadata(tonic::Request::new(GetMetadataRequest {
                 source: Some(
                     sparrow_api::kaskada::v1alpha::get_metadata_request::Source::SourceData(
                         SourceData {
-                            source: Some(source_data::Source::CsvPath(format!("file:///{path}"))),
+                            source: Some(source_data::Source::CsvPath(format!(
+                                "file:///{}",
+                                path.display()
+                            ))),
                         },
                     ),
                 ),

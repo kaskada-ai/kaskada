@@ -13,6 +13,7 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_compiler::InternalCompileOptions;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use sparrow_runtime::PreparedMetadata;
 use tempfile::NamedTempFile;
 use uuid::Uuid;
@@ -209,12 +210,16 @@ impl ExampleInputPreparer {
         let sd = SourceData {
             source: Some(source_data::Source::CsvData(input_csv.to_owned())),
         };
-        let prepared_batches: Vec<_> =
-            sparrow_runtime::prepare::prepared_batches(&sd, &config, &None)
-                .await
-                .change_context(Error::PrepareInput)?
-                .collect::<Vec<_>>()
-                .await;
+        let prepared_batches: Vec<_> = sparrow_runtime::prepare::prepared_batches(
+            &ObjectStoreRegistry::default(),
+            &sd,
+            &config,
+            &None,
+        )
+        .await
+        .change_context(Error::PrepareInput)?
+        .collect::<Vec<_>>()
+        .await;
 
         let (prepared_batch, metadata) = match prepared_batches[0].as_ref() {
             Ok((prepared_batch, metadata)) => (prepared_batch, metadata),

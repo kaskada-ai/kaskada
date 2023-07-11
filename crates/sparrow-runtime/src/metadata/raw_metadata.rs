@@ -120,7 +120,7 @@ impl RawMetadata {
         let url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
 
-        let parquet_file = ParquetFile::try_new(object_stores, url)
+        let parquet_file = ParquetFile::try_new(object_stores, url, None)
             .await
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
 

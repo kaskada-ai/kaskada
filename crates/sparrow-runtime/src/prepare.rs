@@ -1,8 +1,4 @@
-use std::collections::hash_map::DefaultHasher;
-use std::fs::File;
-use std::hash::{Hash, Hasher};
 use std::io::{BufReader, Cursor};
-use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -11,12 +7,8 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::{BoxStream, FuturesUnordered};
 use futures::{StreamExt, TryStreamExt};
 use object_store::ObjectStore;
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-
-use sha2::Digest;
 use sparrow_api::kaskada::v1alpha::{
-    slice_plan, source_data, KafkaSubscription, PreparedFile, PulsarSubscription, SourceData,
-    TableConfig,
+    slice_plan, source_data, PreparedFile, SourceData, TableConfig,
 };
 
 mod column_behavior;
@@ -28,10 +20,10 @@ mod slice_preparer;
 
 pub use error::*;
 pub(crate) use prepare_metadata::*;
-use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 
-use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
-use crate::{streams, PreparedMetadata, RawMetadata};
+use crate::read::ParquetFile;
+use crate::stores::{ObjectMetaExt, ObjectStoreRegistry, ObjectStoreUrl};
+use crate::{PreparedMetadata, RawMetadata, DETERMINISTIC_RUNTIME_HASHER};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
 
@@ -46,30 +38,89 @@ const UPLOAD_BUFFER_SIZE_IN_BYTES: usize = 5_000_000;
 /// Returns a fallible iterator over pairs containing the data and metadata
 /// batches.
 pub async fn prepared_batches<'a>(
+    object_stores: &ObjectStoreRegistry,
     source_data: &SourceData,
     config: &'a TableConfig,
     slice: &'a Option<slice_plan::Slice>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
-    let prepare_hash = get_prepare_hash(source_data)?;
     let prepare_iter = match source_data.source.as_ref() {
         None => error_stack::bail!(Error::MissingField("source")),
         Some(source) => match source {
             source_data::Source::ParquetPath(source) => {
-                let reader = open_file(source)?;
-                let file_size = reader
-                    .metadata()
-                    .into_report()
-                    .change_context(Error::Internal)?
-                    .len();
-                reader_from_parquet(config, reader, file_size, prepare_hash, slice).await?
+                let url = ObjectStoreUrl::from_str(source)
+                    .change_context(Error::InvalidUrl(source.to_owned()))?;
+                let file = ParquetFile::try_new(object_stores, url, None)
+                    .await
+                    .change_context(Error::CreateReader)?;
+
+                let file_size = file.object_meta.size;
+                let num_rows = file.num_rows();
+                let num_files = get_num_files(file_size);
+                let batch_size = get_batch_size(num_rows, num_files);
+
+                let prepare_hash = file.object_meta.etag_hash();
+
+                let raw_metadata = RawMetadata::from_raw_schema(file.schema.clone())
+                    .change_context(Error::ReadSchema)?;
+
+                let reader = file
+                    .read_stream(Some(batch_size), None)
+                    .await
+                    .change_context(Error::CreateReader)?
+                    .map(|batch| batch.change_context(Error::ReadingBatch))
+                    .boxed();
+                prepare_input_stream::prepare_input(
+                    reader,
+                    config,
+                    raw_metadata,
+                    prepare_hash,
+                    slice,
+                )
+                .await
+                .into_report()
+                .change_context(Error::CreateReader)?
             }
             source_data::Source::CsvPath(source) => {
-                let file = open_file(source)?;
-                let reader = BufReader::new(file);
+                let url = ObjectStoreUrl::from_str(source)
+                    .change_context(Error::InvalidUrl(source.to_owned()))?;
+                let local_file = tempfile::Builder::new()
+                    .suffix(".csv")
+                    .tempfile()
+                    .into_report()
+                    .change_context(Error::CreateReader)?;
+
+                // Get the prepare hash. This could be cleaned up if we had a better wrapper
+                // around the object stores.
+                let object_store = object_stores
+                    .object_store(&url)
+                    .change_context(Error::CreateReader)?;
+                let location = url.path().change_context(Error::CreateReader)?;
+                let object_meta = object_store
+                    .head(&location)
+                    .await
+                    .into_report()
+                    .change_context(Error::CreateReader)?;
+                let prepare_hash = object_meta.etag_hash();
+
+                // For CSV we need to download the file (for now) to perform inference.
+                // We could improve this by looking at the size and creating an in-memory
+                // buffer and/or looking at a prefix of the file...
+                url.download(object_stores, local_file.path())
+                    .await
+                    .change_context_lazy(|| Error::DownloadingObject {
+                        url,
+                        local: local_file.path().to_owned(),
+                    })?;
+
+                // Transfer the local file to the reader. When the CSV reader
+                // completes the reader will be dropped, and the file deleted.
+                let reader = BufReader::new(local_file);
                 reader_from_csv(config, reader, prepare_hash, slice).await?
             }
             source_data::Source::CsvData(content) => {
+                let prepare_hash = DETERMINISTIC_RUNTIME_HASHER.hash_one(content);
+
                 let content = Cursor::new(content.to_string());
                 let reader = BufReader::new(content);
                 reader_from_csv(config, reader, prepare_hash, slice).await?
@@ -78,74 +129,6 @@ pub async fn prepared_batches<'a>(
     };
 
     Ok(prepare_iter)
-}
-
-/// Prepares batches from the Pulsar Subscription
-///
-/// Returns a fallible iterator over pairs containing the data and metadata
-/// batches.
-pub async fn prepared_from_pulsar_batches<'a>(
-    ps: &PulsarSubscription,
-    config: &'a TableConfig,
-    slice: &'a Option<slice_plan::Slice>,
-) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
-{
-    let prepare_hash = get_pulsar_prepare_hash(ps)?;
-    reader_from_pulsar(config, ps, prepare_hash, slice).await
-}
-
-/// Prepares batches from the Kafka Subscription
-///
-/// Not Implemented
-pub async fn prepared_from_kafka_batches<'a>(
-    ks: &KafkaSubscription,
-    config: &'a TableConfig,
-    slice: &'a Option<slice_plan::Slice>,
-) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
-{
-    let kafka_hash = get_kafka_prepare_hash(ks)?;
-    reader_from_kafka(config, ks, kafka_hash, slice).await
-}
-
-async fn reader_from_kafka<'a>(
-    _config: &'a TableConfig,
-    _kafka_subscription: &KafkaSubscription,
-    _prepare_hash: u64,
-    _slice: &'a Option<Slice>,
-) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
-{
-    todo!()
-}
-
-async fn reader_from_pulsar<'a>(
-    config: &'a TableConfig,
-    pulsar_subscription: &PulsarSubscription,
-    prepare_hash: u64,
-    slice: &'a Option<Slice>,
-) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
-{
-    let pulsar_config = pulsar_subscription.config.as_ref().ok_or(Error::Internal)?;
-    let pm = RawMetadata::try_from_pulsar(pulsar_config, true)
-        .await
-        .change_context(Error::CreatePulsarReader)?;
-
-    let consumer =
-        streams::pulsar::stream::consumer(pulsar_subscription, pm.user_schema.clone()).await?;
-    let stream = streams::pulsar::stream::preparation_stream(
-        pm.sparrow_metadata.raw_schema.clone(),
-        consumer,
-        pulsar_subscription.last_publish_time,
-    );
-    prepare_input_stream::prepare_input(
-        stream.boxed(),
-        config,
-        pm.sparrow_metadata,
-        prepare_hash,
-        slice,
-    )
-    .await
-    .into_report()
-    .change_context(Error::CreatePulsarReader)
 }
 
 pub async fn prepare_file(
@@ -163,7 +146,7 @@ pub async fn prepare_file(
         .object_store(&output_url)
         .change_context(Error::Internal)?;
 
-    let mut prepare_stream = prepared_batches(source_data, table_config, slice)
+    let mut prepare_stream = prepared_batches(object_stores, source_data, table_config, slice)
         .await?
         .enumerate();
 
@@ -240,125 +223,16 @@ async fn write_parquet(
     Ok(url)
 }
 
-fn open_file(path: impl AsRef<Path>) -> error_stack::Result<File, Error> {
-    fn inner(path: &Path) -> error_stack::Result<File, Error> {
-        File::open(path)
-            .into_report()
-            .change_context_lazy(|| Error::OpenFile {
-                path: path.to_owned(),
-            })
-    }
-    inner(path.as_ref())
-}
-
-fn get_prepare_hash(source_data: &SourceData) -> error_stack::Result<u64, Error> {
-    let source = source_data.source.as_ref().ok_or(Error::Internal)?;
-    let hex_encoding = match source {
-        source_data::Source::ParquetPath(source) => {
-            let file = open_file(source)?;
-            let mut file = BufReader::new(file);
-            let mut hasher = sha2::Sha224::new();
-            std::io::copy(&mut file, &mut hasher).unwrap();
-            let hash = hasher.finalize();
-
-            data_encoding::HEXUPPER.encode(&hash)
-        }
-        source_data::Source::CsvPath(source) => {
-            let file = open_file(source)?;
-            let mut file = BufReader::new(file);
-            let mut hasher = sha2::Sha224::new();
-            std::io::copy(&mut file, &mut hasher).unwrap();
-            let hash = hasher.finalize();
-
-            data_encoding::HEXUPPER.encode(&hash)
-        }
-        source_data::Source::CsvData(content) => {
-            let content = Cursor::new(content.to_string());
-            let mut file = BufReader::new(content);
-            let mut hasher = sha2::Sha224::new();
-            std::io::copy(&mut file, &mut hasher).unwrap();
-            let hash = hasher.finalize();
-
-            data_encoding::HEXUPPER.encode(&hash)
-        }
-    };
-    Ok(get_u64_hash(&hex_encoding))
-}
-
-fn get_pulsar_prepare_hash(ps: &PulsarSubscription) -> error_stack::Result<u64, Error> {
-    let mut hasher = sha2::Sha224::new();
-    let config = ps.config.as_ref().ok_or(Error::Internal)?;
-    hasher.update(&config.broker_service_url);
-    hasher.update(&config.tenant);
-    hasher.update(&config.namespace);
-    hasher.update(&config.topic_name);
-    hasher.update(&ps.subscription_id);
-    let mut bytes = [0u8; 8];
-    bytes.copy_from_slice(&ps.last_publish_time.to_be_bytes());
-    hasher.update(bytes);
-    let hash = hasher.finalize();
-    Ok(get_u64_hash(&data_encoding::HEXUPPER.encode(&hash)))
-}
-
-fn get_kafka_prepare_hash(_ks: &KafkaSubscription) -> error_stack::Result<u64, Error> {
-    todo!()
-}
-
-fn get_u64_hash(str: &str) -> u64 {
-    let mut h = DefaultHasher::new();
-    str.hash(&mut h);
-    h.finish()
-}
-
-fn get_num_files(file_size: u64) -> usize {
+fn get_num_files(file_size: usize) -> usize {
     // The number of files is the ceiling of the number of gigabytes in the file
     // e.g. 2.5 gb -> 3 files or 1 gb -> 1 file
-    let file_size = file_size as usize;
     (file_size + GIGABYTE_IN_BYTES - 1) / GIGABYTE_IN_BYTES
 }
 
-fn get_batch_size(num_rows: i64, num_files: usize) -> usize {
-    let num_rows = num_rows as usize;
+fn get_batch_size(num_rows: usize, num_files: usize) -> usize {
     // To get the files ~1GB in size, we assume that the ceiling of the total number
     // of rows divided by the number of files.
     (num_rows + num_files - 1) / num_files
-}
-
-async fn reader_from_parquet<'a, R: parquet::file::reader::ChunkReader + 'static>(
-    config: &'a TableConfig,
-    reader: R,
-    file_size: u64,
-    prepare_hash: u64,
-    slice: &'a Option<slice_plan::Slice>,
-) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
-{
-    let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(reader)
-        .into_report()
-        .change_context(Error::CreateParquetReader)?;
-    let num_rows = parquet_reader.metadata().file_metadata().num_rows();
-    let num_files = get_num_files(file_size);
-    let batch_size = get_batch_size(num_rows, num_files);
-    let parquet_reader = parquet_reader.with_batch_size(batch_size);
-
-    let raw_metadata = RawMetadata::from_raw_schema(parquet_reader.schema().clone())
-        .change_context_lazy(|| Error::ReadSchema)?;
-    let reader = parquet_reader
-        .build()
-        .into_report()
-        .change_context(Error::CreateParquetReader)?;
-    // create a Stream from reader
-    let stream_reader = futures::stream::iter(reader);
-
-    prepare_input_stream::prepare_input(
-        stream_reader.boxed(),
-        config,
-        raw_metadata,
-        prepare_hash,
-        slice,
-    )
-    .await
-    .into_report()
-    .change_context(Error::CreateParquetReader)
 }
 
 const BATCH_SIZE: usize = 1_000_000;
@@ -395,25 +269,17 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
     let reader = csv_reader
         .build(reader)
         .into_report()
-        .change_context(Error::CreateCsvReader)?;
+        .change_context(Error::CreateReader)?;
     let raw_metadata =
         RawMetadata::from_raw_schema(raw_schema.clone()).change_context(Error::ReadSchema)?;
-    let stream_reader = futures::stream::iter(reader);
+    let reader = futures::stream::iter(reader)
+        .map(|batch| batch.into_report().change_context(Error::ReadingBatch))
+        .boxed();
 
-    prepare_input_stream::prepare_input(
-        stream_reader.boxed(),
-        config,
-        raw_metadata,
-        prepare_hash,
-        slice,
-    )
-    .await
-    .into_report()
-    .change_context(Error::CreateCsvReader)
-}
-
-pub fn file_sourcedata(path: source_data::Source) -> SourceData {
-    SourceData { source: Some(path) }
+    prepare_input_stream::prepare_input(reader, config, raw_metadata, prepare_hash, slice)
+        .await
+        .into_report()
+        .change_context(Error::CreateReader)
 }
 
 #[cfg(test)]
@@ -422,19 +288,12 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{source_data, SourceData, TableConfig};
     use uuid::Uuid;
 
-    use crate::prepare::{get_batch_size, get_num_files, get_u64_hash, GIGABYTE_IN_BYTES};
-
-    #[test]
-    fn test_get_u64_hash() {
-        let str = "time travel".to_string();
-        let expected_hash: u64 = 15924138204015979085;
-        let str_hash = get_u64_hash(&str);
-        assert_eq!(expected_hash, str_hash)
-    }
+    use crate::prepare::{get_batch_size, get_num_files, GIGABYTE_IN_BYTES};
+    use crate::stores::ObjectStoreRegistry;
 
     #[test]
     fn test_get_num_files_one_file() {
-        let file_size: u64 = 500_000_000;
+        let file_size = 500_000_000;
         let expected_num_files = 1;
 
         let num_files = get_num_files(file_size);
@@ -443,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_get_num_files_round_up_files() {
-        let file_size: u64 = GIGABYTE_IN_BYTES as u64 + 500_000_000;
+        let file_size = GIGABYTE_IN_BYTES + 500_000_000;
         let expected_num_files = 2;
 
         let num_files = get_num_files(file_size);
@@ -452,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_get_num_files_zero_files() {
-        let file_size: u64 = 0;
+        let file_size = 0;
         let expected_num_files = 0;
 
         let num_files = get_num_files(file_size);
@@ -462,12 +321,12 @@ mod tests {
     #[test]
     fn test_get_batch_size_single_batch() {
         // Test file size half a gig with a million rows
-        let num_rows: i64 = 1_000_000;
-        let file_size: u64 = 500_000_000;
-        let num_files: usize = get_num_files(file_size);
+        let num_rows = 1_000_000;
+        let file_size = 500_000_000;
+        let num_files = get_num_files(file_size);
 
         // Since the file is less than 1 GB, the num rows is the expected batch size
-        let expected_batch_size: usize = 1_000_000;
+        let expected_batch_size = 1_000_000;
 
         let batch_size = get_batch_size(num_rows, num_files);
         assert_eq!(batch_size, expected_batch_size)
@@ -476,9 +335,9 @@ mod tests {
     #[test]
     fn test_get_batch_size_multiple_batches() {
         // Test file size is 2.5 gigs with a million rows
-        let num_rows: i64 = 1_000_000;
-        let file_size: u64 = 2_500_000_000;
-        let num_files: usize = get_num_files(file_size);
+        let num_rows = 1_000_000;
+        let file_size = 2_500_000_000;
+        let num_files = get_num_files(file_size);
 
         // Since each batch is supposed to at most be ~1GB, and the file is 2.5GB
         // there should be 3 parts. Therefore the expected batch size should 1/3 of the
@@ -491,13 +350,8 @@ mod tests {
     async fn test_timestamp_with_timezone_data_prepares() {
         let input_path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
 
-        let input_path = source_data::Source::ParquetPath(
-            input_path
-                .canonicalize()
-                .unwrap()
-                .to_string_lossy()
-                .to_string(),
-        );
+        let input_path =
+            source_data::Source::ParquetPath(format!("file:///{}", input_path.display()));
         let source_data = SourceData {
             source: Some(input_path),
         };
@@ -511,11 +365,16 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
-            .await
-            .unwrap()
-            .collect::<Vec<_>>()
-            .await;
+        let prepared_batches = super::prepared_batches(
+            &ObjectStoreRegistry::default(),
+            &source_data,
+            &table_config,
+            &None,
+        )
+        .await
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
@@ -527,13 +386,7 @@ mod tests {
         let input_path =
             sparrow_testing::testdata_path("eventdata/2c889258-d676-4922-9a92-d7e9c60c1dde.csv");
 
-        let input_path = source_data::Source::CsvPath(
-            input_path
-                .canonicalize()
-                .unwrap()
-                .to_string_lossy()
-                .to_string(),
-        );
+        let input_path = source_data::Source::CsvPath(format!("file:///{}", input_path.display()));
         let source_data = SourceData {
             source: Some(input_path),
         };
@@ -547,11 +400,16 @@ mod tests {
             "user",
         );
 
-        let prepared_batches = super::prepared_batches(&source_data, &table_config, &None)
-            .await
-            .unwrap()
-            .collect::<Vec<_>>()
-            .await;
+        let prepared_batches = super::prepared_batches(
+            &ObjectStoreRegistry::default(),
+            &source_data,
+            &table_config,
+            &None,
+        )
+        .await
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
