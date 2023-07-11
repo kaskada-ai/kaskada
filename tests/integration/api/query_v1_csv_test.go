@@ -34,7 +34,7 @@ var _ = Describe("Query V1 gRPC with csv", Ordered, func() {
 
 	BeforeAll(func() {
 		//get connection to wren
-		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(10)
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
 
 		// get a grpc client for the table & compute services

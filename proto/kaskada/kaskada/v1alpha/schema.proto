@@ -33,6 +33,14 @@ message DataType {
 
     // A list of a different type.
     DataType list = 4;
+
+    // A map<k, v> type.
+    Map map = 5;
+  }
+
+  message Map {
+    DataType key = 1;
+    DataType value = 2;
   }
 
   enum PrimitiveType {
@@ -104,7 +112,7 @@ message DataType {
     // Represents a json object in fenl
     PRIMITIVE_TYPE_JSON = 25;
 
-    // Currently nsupported in fenl functions.
+    // Currently unsupported in fenl functions.
     PRIMITIVE_TYPE_DATE32 = 26;
   }
 }

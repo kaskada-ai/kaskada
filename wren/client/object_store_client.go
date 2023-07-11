@@ -79,6 +79,12 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 			log.Fatal().Msgf("could not locate local data path: %s", path)
 		}
 		path = vfs_utils.EnsureTrailingSlash(absPath)
+
+		// create local data path if it doesn't exist
+		err = go_os.MkdirAll(path, go_os.ModePerm)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("unable to create local data path: %s", path)
+		}
 	case object_store_type_azure, object_store_type_gcs, object_store_type_s3:
 		if bucket == "" {
 			log.Fatal().Msgf("when using %s for the `object-store-type`, `object-store-bucket` is requried.", objectStoreType)

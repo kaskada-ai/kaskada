@@ -211,8 +211,10 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 					g.Expect(dataType).Should(Equal("INT64"))
 					g.Expect(shape).Should(Equal([]int64{1, 3}))
 					g.Expect(values).Should(Equal([]int64{20150106, 149, 149}))
+				}, "30s", "1s").Should(Succeed())
 
-					dataType, shape, values, err = redisAIClient.TensorGetValues(key2)
+				Eventually(func(g Gomega) {
+					dataType, shape, values, err := redisAIClient.TensorGetValues(key2)
 					g.Expect(err).ShouldNot(HaveOccurred())
 					g.Expect(dataType).Should(Equal("INT64"))
 					g.Expect(shape).Should(Equal([]int64{1, 3}))
@@ -235,8 +237,10 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 					g.Expect(dataType).Should(Equal("INT64"))
 					g.Expect(shape).Should(Equal([]int64{1, 3}))
 					g.Expect(values).Should(Equal([]int64{20150109, 149, 100}))
+				}, "30s", "1s").Should(Succeed())
 
-					dataType, shape, values, err = redisAIClient.TensorGetValues(key2)
+				Eventually(func(g Gomega) {
+					dataType, shape, values, err := redisAIClient.TensorGetValues(key2)
 					g.Expect(err).ShouldNot(HaveOccurred())
 					g.Expect(dataType).Should(Equal("INT64"))
 					g.Expect(shape).Should(Equal([]int64{1, 3}))

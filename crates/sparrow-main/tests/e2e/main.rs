@@ -19,6 +19,7 @@ mod aggregation_tests;
 mod basic_error_tests;
 mod cast_tests;
 mod coalesce_tests;
+mod collection_tests;
 mod comparison_tests;
 mod decoration_tests;
 mod entity_key_output_tests;

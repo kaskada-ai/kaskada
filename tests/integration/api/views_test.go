@@ -21,6 +21,7 @@ var _ = Describe("Views", Ordered, func() {
 	var cancel context.CancelFunc
 	var conn *grpc.ClientConn
 	var tableClient v1alpha.TableServiceClient
+	var tableName string
 	var viewClient v1alpha.ViewServiceClient
 	var view1, view2 *v1alpha.View
 	var maxAmount, minAmount string
@@ -48,9 +49,11 @@ entity: purchases_views_test.customer_id,
 min_amount: purchases_views_test.amount | min(),
 }`
 
+		tableName = "purchases_views_test"
+
 		// create table, load data
 		table := &v1alpha.Table{
-			TableName:           "purchases_views_test",
+			TableName:           tableName,
 			TimeColumnName:      "purchase_time",
 			EntityKeyColumnName: "customer_id",
 			SubsortColumnName: &wrapperspb.StringValue{
@@ -66,7 +69,7 @@ min_amount: purchases_views_test.amount | min(),
 
 	AfterAll(func() {
 		// clean up the items used in the test
-		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: "purchases_views_test"})
+		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		cancel()
