@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use std::str::FromStr;
+use std::{fmt::Display, sync::Arc};
 
 use arrow_schema::{DataType, Field, FieldRef, Fields, IntervalUnit, TimeUnit};
 use itertools::Itertools;
@@ -19,7 +19,13 @@ pub enum FenlType {
     /// A specific Arrow DataType.
     Concrete(DataType),
     /// A generic type with the given type variable.
-    Generic(TypeVariable),
+    TypeRef(TypeVariable),
+    /// A collection type with the given type variable(s).
+    ///
+    /// e.g. (Collection::Map, [TypeVariable("K"), TypeVariable("V")])
+    ///
+    /// TODO(https://github.com/kaskada-ai/kaskada/issues/494): Support FenlType
+    Collection(Collection, Vec<TypeVariable>),
     /// A type for describing a windowing behavior.
     Window,
     /// A type for describing a string that will be interpreted
@@ -30,6 +36,22 @@ pub enum FenlType {
     /// This indicates the error has already been reported, so no more error
     /// reports are needed.
     Error,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(serde::Serialize))]
+pub enum Collection {
+    List,
+    Map,
+}
+
+impl std::fmt::Display for Collection {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Collection::List => fmt.write_str("list"),
+            Collection::Map => fmt.write_str("map"),
+        }
+    }
 }
 
 /// A wrapper for formatting DataTypes.
@@ -59,6 +81,17 @@ impl<'a> std::fmt::Display for FormatDataType<'a> {
                 write!(fmt, "{}", FormatStruct(fields))
             }
             DataType::Date32 => fmt.write_str("date32"),
+            DataType::Map(f, _) => match f.data_type() {
+                DataType::Struct(fields) => {
+                    write!(
+                        fmt,
+                        "map<{}, {}>",
+                        FormatDataType(fields[0].data_type()),
+                        FormatDataType(fields[1].data_type()),
+                    )
+                }
+                other => panic!("expected struct, saw {:?}", other),
+            },
             _ => unimplemented!("Display for type {:?}", self.0),
         }
     }
@@ -94,7 +127,7 @@ impl<'a> std::fmt::Display for FormatStruct<'a> {
 /// actual arguments is chosen for constrained type.
 #[derive(PartialOrd, Ord, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 #[repr(u8)]
-pub enum TypeConstraint {
+pub enum TypeClass {
     /// Any type.
     Any,
     /// Any type that is a valid key.
@@ -116,34 +149,34 @@ pub enum TypeConstraint {
     Error,
 }
 
-impl Display for TypeConstraint {
+impl Display for TypeClass {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TypeConstraint::Number => fmt.write_str("number"),
-            TypeConstraint::Key => fmt.write_str("key"),
-            TypeConstraint::Any => fmt.write_str("any"),
-            TypeConstraint::Signed => fmt.write_str("signed"),
-            TypeConstraint::Float => fmt.write_str("float"),
-            TypeConstraint::TimeDelta => fmt.write_str("timedelta"),
-            TypeConstraint::Ordered => fmt.write_str("ordered"),
-            TypeConstraint::Error => fmt.write_str("error"),
+            TypeClass::Number => fmt.write_str("number"),
+            TypeClass::Key => fmt.write_str("key"),
+            TypeClass::Any => fmt.write_str("any"),
+            TypeClass::Signed => fmt.write_str("signed"),
+            TypeClass::Float => fmt.write_str("float"),
+            TypeClass::TimeDelta => fmt.write_str("timedelta"),
+            TypeClass::Ordered => fmt.write_str("ordered"),
+            TypeClass::Error => fmt.write_str("error"),
         }
     }
 }
 
-impl FromStr for TypeConstraint {
-    type Err = TypeConstraint;
+impl FromStr for TypeClass {
+    type Err = TypeClass;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "number" => Ok(TypeConstraint::Number),
-            "key" => Ok(TypeConstraint::Key),
-            "any" => Ok(TypeConstraint::Any),
-            "signed" => Ok(TypeConstraint::Signed),
-            "float" => Ok(TypeConstraint::Float),
-            "timedelta" => Ok(TypeConstraint::TimeDelta),
-            "ordered" => Ok(TypeConstraint::Ordered),
-            _ => Err(TypeConstraint::Error),
+            "number" => Ok(TypeClass::Number),
+            "key" => Ok(TypeClass::Key),
+            "any" => Ok(TypeClass::Any),
+            "signed" => Ok(TypeClass::Signed),
+            "float" => Ok(TypeClass::Float),
+            "timedelta" => Ok(TypeClass::TimeDelta),
+            "ordered" => Ok(TypeClass::Ordered),
+            _ => Err(TypeClass::Error),
         }
     }
 }
@@ -170,9 +203,12 @@ impl Display for FenlType {
         match self {
             FenlType::Json => write!(fmt, "json"),
             FenlType::Window => write!(fmt, "window"),
-            FenlType::Generic(type_param) => write!(fmt, "{type_param}"),
+            FenlType::TypeRef(type_param) => write!(fmt, "{type_param}"),
             FenlType::Concrete(data_type) => write!(fmt, "{}", FormatDataType(data_type)),
             FenlType::Error => write!(fmt, "error"),
+            FenlType::Collection(c, vars) => {
+                write!(fmt, "{}<{}>", c, vars.iter().format(", "))
+            }
         }
     }
 }
@@ -205,8 +241,58 @@ impl FromStr for FenlType {
             "duration_ns" => Ok(DataType::Duration(TimeUnit::Nanosecond).into()),
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
-            // catch-all assumes the type is a type variable, which will be validated in the signature creation
-            name => Ok(FenlType::Generic(TypeVariable(name.to_owned()))),
+            // TODO(https://github.com/kaskada-ai/kaskada/issues/494): Support fenl types
+            // in collections
+            s if s.starts_with("list<") && s.ends_with('>') => {
+                let type_var = &s[5..s.len() - 1]
+                    .split(',')
+                    .map(|s| s.trim())
+                    .collect::<Vec<_>>();
+
+                // One type var for a list
+                if type_var.len() != 1 {
+                    return Err(FenlType::Error);
+                }
+
+                match FenlType::from_str(type_var[0])? {
+                    FenlType::Concrete(dt) => {
+                        let f = Field::new("item", dt, true);
+                        Ok(DataType::List(Arc::new(f)).into())
+                    }
+                    FenlType::TypeRef(type_var) => {
+                        Ok(FenlType::Collection(Collection::List, vec![type_var]))
+                    }
+                    other => panic!("unexpected type: {:?}", other),
+                }
+            }
+            s if s.starts_with("map<") && s.ends_with('>') => {
+                let type_var = &s[4..s.len() - 1]
+                    .split(',')
+                    .map(|s| s.trim())
+                    .collect::<Vec<_>>();
+
+                // Two type vars for a map
+                if type_var.len() != 2 {
+                    return Err(FenlType::Error);
+                }
+                let key_type = FenlType::from_str(type_var[0])?;
+                let value_type = FenlType::from_str(type_var[1])?;
+
+                match (key_type, value_type) {
+                    (FenlType::Concrete(kt), FenlType::Concrete(vt)) => {
+                        let f1 = Field::new("key", kt, true);
+                        let f2 = Field::new("value", vt, true);
+                        let s = DataType::Struct(Fields::from(vec![f1, f2]));
+                        let f = Field::new("entries", s, true);
+                        Ok(DataType::Map(Arc::new(f), false).into())
+                    }
+                    (FenlType::TypeRef(ktv), FenlType::TypeRef(vtv)) => {
+                        Ok(FenlType::Collection(Collection::Map, vec![ktv, vtv]))
+                    }
+                    (_, _) => unimplemented!("map with concrete and type variable mix"),
+                }
+            }
+            s => Ok(FenlType::TypeRef(TypeVariable(s.to_owned()))),
         }
     }
 }
@@ -230,7 +316,8 @@ impl FenlType {
 
     pub fn arrow_type(&self) -> Option<&DataType> {
         match self {
-            FenlType::Generic(_) => None,
+            FenlType::Collection(_, _) => None,
+            FenlType::TypeRef(_) => None,
             FenlType::Concrete(t) => Some(t),
             FenlType::Window => None,
             FenlType::Json => None,
@@ -247,7 +334,8 @@ impl FenlType {
 
     pub fn take_arrow_type(self) -> Option<DataType> {
         match self {
-            FenlType::Generic(_) => None,
+            FenlType::Collection(_, _) => None,
+            FenlType::TypeRef(_) => None,
             FenlType::Concrete(t) => Some(t),
             FenlType::Window => None,
             FenlType::Json => None,
