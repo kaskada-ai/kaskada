@@ -15,9 +15,12 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	aws_s3 "github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/c2fo/vfs/v6"
 	"github.com/c2fo/vfs/v6/backend"
 	"github.com/c2fo/vfs/v6/backend/azure"
@@ -52,14 +55,15 @@ func (o Object) Path() string {
 }
 
 type objectStoreClient struct {
-	awsS3           s3iface.S3API
-	bucket          string
-	dataLocation    vfs.Location
-	disableSSL      bool
-	endpoint        string
-	forcePathStyle  bool
-	objectStoreType string
-	path            string
+	dataLocation   vfs.Location
+	dataFileSystem vfs.FileSystem
+	dataStoreType  string
+
+	bucket         string
+	disableSSL     bool
+	endpoint       string
+	forcePathStyle bool
+	path           string
 }
 
 // NewObjectStoreClient creates a new ObjectStoreClient
@@ -99,39 +103,36 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 	}
 	log.Info().Msgf("objectStorePath: %s", path)
 
-	var (
-		rootObjectStore vfs.FileSystem
-		awsS3           s3iface.S3API
-	)
+	var dataFileSystem vfs.FileSystem
 
 	switch objectStoreType {
 	case object_store_type_azure:
-		rootObjectStore = backend.Backend(azure.Scheme)
+		dataFileSystem = backend.Backend(azure.Scheme)
 	case object_store_type_gcs:
-		rootObjectStore = backend.Backend(gs.Scheme)
+		dataFileSystem = backend.Backend(gs.Scheme)
 	case object_store_type_local:
-		rootObjectStore = backend.Backend(os.Scheme)
+		dataFileSystem = backend.Backend(os.Scheme)
 	case object_store_type_s3:
-		rootObjectStore = getS3FileSystem(endpoint, disableSSL, forcePathStyle)
-		awsS3 = getS3Client(endpoint, disableSSL, forcePathStyle)
+		dataFileSystem = getS3FileSystem(endpoint, disableSSL, forcePathStyle)
 	default:
 		log.Fatal().Msg("invalid value set for `object-store-type`. Should be  `local`, `s3`, `gcs`, or `azure`")
 	}
 
-	dataLocation, err := rootObjectStore.NewLocation(bucket, path)
+	dataLocation, err := dataFileSystem.NewLocation(bucket, path)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to initialize object store")
 	}
 
 	return objectStoreClient{
-		awsS3:           awsS3,
-		bucket:          bucket,
-		dataLocation:    dataLocation,
-		disableSSL:      disableSSL,
-		endpoint:        endpoint,
-		forcePathStyle:  forcePathStyle,
-		objectStoreType: objectStoreType,
-		path:            vfs_utils.EnsureLeadingSlash(path),
+		dataFileSystem: dataFileSystem,
+		dataLocation:   dataLocation,
+		dataStoreType:  objectStoreType,
+
+		bucket:         bucket,
+		disableSSL:     disableSSL,
+		endpoint:       endpoint,
+		forcePathStyle: forcePathStyle,
+		path:           vfs_utils.EnsureLeadingSlash(path),
 	}
 }
 
@@ -148,32 +149,13 @@ func getS3FileSystem(endpoint string, disableSSL bool, forcePathStyle bool) *s3.
 	return s3.NewFileSystem().WithOptions(s3Options)
 }
 
-func getS3Client(endpoint string, disableSSL bool, forcePathStyle bool) *aws_s3.S3 {
-	awsConfig := aws.NewConfig().WithDisableSSL(disableSSL).WithS3ForcePathStyle(forcePathStyle)
-
-	if endpoint != "" {
-		awsConfig = awsConfig.WithEndpoint(endpoint)
-	}
-
-	opts := session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Config:            *awsConfig,
-	}
-
-	sess, err := session.NewSessionWithOptions(opts)
-	if err != nil {
-		log.Fatal().Err(err).Msg("not able to initialize a new s3 session to aws")
-	}
-	return aws_s3.New(sess)
-}
-
 // copies an object into our object store
 // returns the URI of the object in our object store
 func (c objectStoreClient) CopyObjectIn(ctx context.Context, fromURI string, toPath string) (newObject Object, err error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.CopyObjectIn").Str("fromURI", fromURI).Str("toPath", toPath).Logger()
 
 	var fromFile, toFile vfs.File
-	fromFile, err = c.newFile(fromURI)
+	fromFile, err = c.newFile(ctx, fromURI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue accessing fromURI")
 		return
@@ -192,7 +174,8 @@ func (c objectStoreClient) CopyObjectIn(ctx context.Context, fromURI string, toP
 		path: strings.TrimPrefix(toFile.Path(), c.dataLocation.Path()),
 	}
 
-	if c.objectStoreType == object_store_type_local {
+	//if local fileSystem
+	if c.dataStoreType == object_store_type_local {
 		err = go_os.MkdirAll(vfs_utils.EnsureTrailingSlash(toFile.Location().Path()), go_os.ModePerm)
 		if err != nil {
 			subLogger.Error().Err(err).Str("toURI", newObject.uri).Msg("issue creating directory for file")
@@ -245,7 +228,7 @@ func (c objectStoreClient) DeleteObjects(ctx context.Context, subPath string) er
 
 // true if the URI exists and is accessible, otherwise returns error
 func (c objectStoreClient) URIExists(ctx context.Context, URI string) (bool, error) {
-	file, err := c.newFile(URI)
+	file, err := c.newFile(ctx, URI)
 	if err != nil {
 		return false, err
 	}
@@ -258,7 +241,7 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetPresignedDownloadURL").Str("uri", URI).Logger()
 
 	var file vfs.File
-	file, err = c.newFile(URI)
+	file, err = c.newFile(ctx, URI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("issue accessing URI")
 		return
@@ -268,32 +251,36 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 	path := file.Path()
 	duration := 60 * time.Minute
 
-	switch c.objectStoreType {
+	switch c.dataStoreType {
 	case object_store_type_local:
 		presignedURL = file.Path()
 		return
 
 	case object_store_type_s3:
-		c.dataLocation.FileSystem()
+		var s3Client s3iface.S3API
+		s3Client, err = c.dataFileSystem.(*s3.FileSystem).Client()
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting s3_client")
+			return
+		}
+
 		getObjectInput := &aws_s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(path),
 		}
-		req, _ := c.awsS3.GetObjectRequest(getObjectInput)
+		req, _ := s3Client.GetObjectRequest(getObjectInput)
 		presignedURL, err = req.Presign(duration)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue generating presigned download url for uri")
 		}
 		return
 	case object_store_type_gcs:
-		// Set up a GCS client
 		var gscClient *storage.Client
-		gscClient, err = storage.NewClient(ctx)
+		gscClient, err = c.dataFileSystem.(*gs.FileSystem).Client()
 		if err != nil {
-			subLogger.Error().Err(err).Msg("issue creating GCS client")
+			subLogger.Error().Err(err).Msg("issue getting gcs_client")
 			return
 		}
-		defer gscClient.Close()
 
 		opts := &storage.SignedURLOptions{
 			Scheme:  storage.SigningSchemeV4,
@@ -306,8 +293,8 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 		}
 		return
 	default:
-		subLogger.Error().Str("type", c.objectStoreType).Msg("presigning download URLs is unimplemented for this object-store-type")
-		err = fmt.Errorf("presigning download URLs is unimplemented for object-store-type: %s", c.objectStoreType)
+		subLogger.Error().Str("type", c.dataStoreType).Msg("presigning download URLs is unimplemented for this object-store-type")
+		err = fmt.Errorf("presigning download URLs is unimplemented for object-store-type: %s", c.dataStoreType)
 		return
 	}
 }
@@ -316,7 +303,7 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI string) (*string, error) {
 	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.GetObjectIdentifier").Str("file_uri", fileURI).Logger()
 
-	fs, host, path, err := c.parseSupportedURI(fileURI)
+	fs, host, path, err := c.parseSupportedURI(ctx, fileURI)
 	if err != nil {
 		subLogger.Error().Err(err).Msg("unable to create vfs.File for file_uri")
 		return nil, err
@@ -339,12 +326,17 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 		return &identifier, nil
 
 	case "s3":
+		s3Client, err := fs.(*s3.FileSystem).Client()
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting s3_client")
+		}
+
 		headObjectInput := &aws_s3.HeadObjectInput{
 			Bucket: aws.String(file.Location().Volume()),
 			Key:    aws.String(file.Path()),
 		}
 
-		result, err := c.awsS3.HeadObjectWithContext(ctx, headObjectInput)
+		result, err := s3Client.HeadObjectWithContext(ctx, headObjectInput)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
 			return nil, err
@@ -352,17 +344,14 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 		identifier := utils.TrimQuotes(*result.ETag)
 		return &identifier, nil
 	case "gs":
-		// Set up a GCS client
-		gscClient, err := storage.NewClient(ctx)
+		gcsClient, err := fs.(*gs.FileSystem).Client()
 		if err != nil {
-			subLogger.Error().Err(err).Msg("issue creating GCS client")
-			return nil, err
+			subLogger.Error().Err(err).Msg("issue getting gcs_client")
 		}
-		defer gscClient.Close()
 
 		// Retrieve object metadata
 		var attrs *storage.ObjectAttrs
-		attrs, err = gscClient.Bucket(file.Location().Volume()).Object(file.Path()).Attrs(ctx)
+		attrs, err = gcsClient.Bucket(file.Location().Volume()).Object(file.Path()).Attrs(ctx)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
 			return nil, err
@@ -377,7 +366,7 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 
 // returns the absolute URI of a path inside our object store
 func (c objectStoreClient) GetDataPathURI(subPath string) string {
-	if c.objectStoreType == object_store_type_local {
+	if c.dataStoreType == object_store_type_local {
 		absPath := c.dataLocation.Path() + subPath
 		go_os.MkdirAll(absPath, go_os.ModePerm)
 	}
@@ -399,8 +388,8 @@ var (
 // NewFile is a convenience function that allows for instantiating a file based on a uri string. Any
 // backend file system is supported, though some may require prior configuration. See the docs for
 // specific requirements of each.
-func (c objectStoreClient) newFile(uri string) (vfs.File, error) {
-	fs, host, path, err := c.parseSupportedURI(uri)
+func (c objectStoreClient) newFile(ctx context.Context, uri string) (vfs.File, error) {
+	fs, host, path, err := c.parseSupportedURI(ctx, uri)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create vfs.File for uri %q: %w", uri, err)
 	}
@@ -450,8 +439,10 @@ func parseURI(uri string) (scheme, authority, path string, err error) {
 }
 
 // parseSupportedURI checks if URI matches any backend name as prefix, capturing the longest(most specific) match found.
-func (c objectStoreClient) parseSupportedURI(uri string) (vfs.FileSystem, string, string, error) {
-	_, authority, path, err := parseURI(uri)
+func (c objectStoreClient) parseSupportedURI(ctx context.Context, uri string) (vfs.FileSystem, string, string, error) {
+	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.parseSupportedURI").Str("uri", uri).Logger()
+
+	_, bucket, path, err := parseURI(uri)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -477,15 +468,66 @@ func (c objectStoreClient) parseSupportedURI(uri string) (vfs.FileSystem, string
 		err = ErrRegFsNotFound
 	}
 
-	log.Debug().Err(err).Str("file_system", fileSystem).Str("authority", authority).Str("path", path).Msg("parseSupportedURI return values")
+	subLogger.Debug().Err(err).Str("file_system", fileSystem).Str("bucket", bucket).Str("path", path).Msg("parseSupportedURI return values")
 
 	switch fileSystem {
 	case "s3":
-		if c.objectStoreType == object_store_type_s3 && c.bucket == authority && strings.HasPrefix(path, c.path) {
-			log.Debug().Msg("parseSupportedURI returning kaskada-owned filesystem")
-			return getS3FileSystem(c.endpoint, c.disableSSL, c.forcePathStyle), authority, path, err
+		// if uri is for kaskada-owned s3 bucket, use that
+		if c.dataStoreType == object_store_type_s3 && c.bucket == bucket && strings.HasPrefix(path, c.path) {
+			subLogger.Debug().Msg("parseSupportedURI returning kaskada-owned s3 filesystem")
+			return getS3FileSystem(c.endpoint, c.disableSSL, c.forcePathStyle), bucket, path, err
+		} else {
+			// try to deterimine if bucket is public
+
+			// first figure out bucket region, using hint-region
+			hintRegion := "us-west-2"
+			sess, err := getAnonymousAwsSession(hintRegion)
+			if err != nil {
+				subLogger.Error().Err(err).Msg("issue getting anonymous aws session")
+				return nil, "", "", err
+			}
+
+			region, err := s3manager.GetBucketRegion(ctx, sess, bucket, hintRegion)
+			if err != nil {
+				if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "NotFound" {
+					subLogger.Warn().Err(err).Msg("bucket region not found in hint-region")
+				}
+				return nil, "", "", err
+			}
+
+			// get new session using the correct bucket region
+			sess, err = getAnonymousAwsSession(region)
+			if err != nil {
+				subLogger.Error().Err(err).Msg("issue getting anonymous aws session")
+				return nil, "", "", err
+			}
+
+			anonymous_client := aws_s3.New(sess)
+			input := &aws_s3.HeadBucketInput{
+				Bucket: aws.String(bucket),
+			}
+
+			// get bucket to check if public
+			result, err := anonymous_client.HeadBucketWithContext(ctx, input)
+			if err != nil {
+				subLogger.Warn().Err(err).Msg("issue checking if bucket is public")
+			}
+			subLogger.Debug().Str("result", result.String())
+
+			if true {
+				log.Debug().Str("region", region).Msg("parseSupportedURI returning anonymous s3 filesystem")
+				return s3.NewFileSystem().WithClient(anonymous_client), bucket, path, err
+			}
 		}
 	}
 
-	return backend.Backend(fileSystem), authority, path, err
+	return backend.Backend(fileSystem), bucket, path, err
 }
+
+func getAnonymousAwsSession(region string) (*session.Session, error) {
+	awsConfig := aws.NewConfig().
+		WithCredentials(credentials.AnonymousCredentials).
+		WithRegion(region)
+	return session.NewSession(awsConfig)
+}
+
