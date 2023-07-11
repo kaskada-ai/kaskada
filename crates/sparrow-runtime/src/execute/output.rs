@@ -87,9 +87,9 @@ pub(super) fn write(
         .destination
         .ok_or(Error::UnspecifiedDestination)?;
     match destination {
-        Destination::ObjectStore(store) => Ok(object_store::write(
+        Destination::ObjectStore(destination) => Ok(object_store::write(
             context.object_stores.clone(),
-            store,
+            destination,
             sink_schema,
             progress_updates_tx,
             batches,
