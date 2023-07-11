@@ -64,6 +64,14 @@ pub struct PulsarMetadata {
     pub sparrow_metadata: RawMetadata,
 }
 
+pub struct KafkaMetadata {
+    pub user_schema: SchemaRef,
+
+    pub sparrow_metadata: RawMetadata,
+
+    pub kafka_avro_schema: avro_rs::Schema,
+}
+
 impl RawMetadata {
     pub async fn try_from(
         source: &Source,
@@ -97,28 +105,9 @@ impl RawMetadata {
             .sparrow_metadata)
     }
 
+    /// TODO: Docs
     pub async fn try_from_kafka_config(config: &KafkaConfig) -> error_stack::Result<Self, Error> {
-        let schema = config
-            .schema
-            .to_owned()
-            .ok_or(Error::MissingKafkaSchemaConfig)?;
-        match schema {
-            sparrow_api::kaskada::v1alpha::kafka_config::Schema::AvroSchema(avro_schema) => {
-                let parsed_schema: avro_schema::schema::Schema = serde_json::from_str(&avro_schema)
-                    .into_report()
-                    .change_context_lazy(|| Error::KafkaSchema(avro_schema))?;
-                // let parsed_schema = Arc::new(parsed_schema);
-                let converted_schema = Arc::new(
-                    from_avro_schema(&parsed_schema)
-                        .change_context(Error::KafkaSchema("".to_owned()))?,
-                );
-                Ok(RawMetadata {
-                    raw_schema: converted_schema.clone(),
-                    table_schema: converted_schema.clone(),
-                })
-            }
-            sparrow_api::kaskada::v1alpha::kafka_config::Schema::SchemaRegistryUrl(_) => todo!(),
-        }
+        Ok(Self::try_from_kafka(&config).await?.sparrow_metadata)
     }
 
     /// Create `RawMetadata` from a raw schema.
@@ -234,6 +223,36 @@ impl RawMetadata {
             .change_context(Error::ReadSchema)?;
 
         Self::from_raw_schema(Arc::new(raw_schema))
+    }
+
+    pub(crate) async fn try_from_kafka(
+        config: &KafkaConfig,
+    ) -> error_stack::Result<KafkaMetadata, Error> {
+        let schema = config
+            .schema
+            .to_owned()
+            .ok_or(Error::MissingKafkaSchemaConfig)?;
+        match schema {
+            sparrow_api::kaskada::v1alpha::kafka_config::Schema::AvroSchema(avro_schema) => {
+                let parsed_schema: avro_schema::schema::Schema = serde_json::from_str(&avro_schema)
+                    .into_report()
+                    .change_context_lazy(|| Error::KafkaSchema(avro_schema.to_owned()))?;
+                // let parsed_schema = Arc::new(parsed_schema);
+                let converted_schema = Arc::new(
+                    from_avro_schema(&parsed_schema)
+                        .change_context(Error::KafkaSchema("".to_owned()))?,
+                );
+                let avro_schema = avro_rs::Schema::parse_str(&avro_schema)
+                    .into_report()
+                    .change_context_lazy(|| Error::KafkaSchema(avro_schema.to_owned()))?;
+                Ok(KafkaMetadata {
+                    user_schema: converted_schema.clone(),
+                    sparrow_metadata: Self::from_raw_schema(converted_schema.clone())?,
+                    kafka_avro_schema: avro_schema,
+                })
+            }
+            sparrow_api::kaskada::v1alpha::kafka_config::Schema::SchemaRegistryUrl(_) => todo!(),
+        }
     }
 }
 

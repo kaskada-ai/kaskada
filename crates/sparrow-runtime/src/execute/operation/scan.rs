@@ -19,6 +19,7 @@ use crate::execute::operation::{InputBatch, Operation, OperationContext};
 use crate::execute::progress_reporter::ProgressUpdate;
 use crate::execute::{error, Error};
 use crate::key_hash_index::KeyHashIndex;
+use crate::read::stream_reader::kafka_stream_reader;
 use crate::stream_reader::stream_reader;
 use crate::table_reader::table_reader;
 use crate::Batch;
@@ -279,7 +280,22 @@ impl ScanOperation {
 
                 input_stream
             }
-            v1alpha::source::Source::Kafka(_) => todo!(),
+            v1alpha::source::Source::Kafka(k) => {
+                let input_stream = kafka_stream_reader(
+                    context,
+                    table_info,
+                    requested_slice.as_ref(),
+                    projected_columns,
+                    // TODO: Fix flight recorder
+                    FlightRecorder::disabled(),
+                    k,
+                )
+                .await
+                .change_context(Error::internal_msg("failed to create stream reader"))?
+                .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+                .boxed();
+                input_stream
+            }
         };
 
         // Currently configures the stream for the following cases:

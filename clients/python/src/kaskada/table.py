@@ -2,7 +2,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import google.protobuf.wrappers_pb2 as wrappers
 import grpc
@@ -39,6 +39,18 @@ class PulsarTableSource(TableSource):
         self._tenant = tenant
         self._namespace = namespace
         self._topic_name = topic_name
+        
+        
+class KafkaTableSource(TableSource):
+    def __init__(
+        self,
+        hosts: List[str],
+        topic: str,
+        avro_schema: str
+    ):
+        self._hosts = hosts
+        self._topic = topic
+        self._avro_schema = avro_schema
 
 
 def get_table_name(
@@ -185,6 +197,16 @@ def create_table(
                             "tenant": source._tenant,
                             "namespace": source._namespace,
                             "topic_name": source._topic_name,
+                        }
+                    }
+                }
+            elif isinstance(source, KafkaTableSource):
+                table_args["source"] = {
+                    "kafka": {
+                        "config": {
+                            "hosts": source._hosts,
+                            "topic": source._topic,
+                            "avro_schema": source._avro_schema
                         }
                     }
                 }
