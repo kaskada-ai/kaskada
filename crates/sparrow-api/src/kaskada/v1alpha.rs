@@ -163,9 +163,9 @@ impl SourceData {
     pub fn try_from_local(path: &std::path::Path) -> anyhow::Result<source_data::Source> {
         let path = match path.extension().and_then(|ext| ext.to_str()) {
             Some("parquet") => {
-                source_data::Source::ParquetPath(path.to_string_lossy().into_owned())
+                source_data::Source::ParquetPath(format!("file://{}", path.display()))
             }
-            Some("csv") => source_data::Source::CsvPath(path.to_string_lossy().into_owned()),
+            Some("csv") => source_data::Source::CsvPath(format!("file://{}", path.display())),
             unsupported => anyhow::bail!("Unsupported extension {:?}", unsupported),
         };
         Ok(path)

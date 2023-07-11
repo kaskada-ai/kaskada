@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use url::Url;
 
+use crate::stores::ObjectStoreUrl;
+
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
     #[display(fmt = "unable to open '{path:?}'")]
@@ -11,11 +13,7 @@ pub enum Error {
     #[display(fmt = "internal error")]
     Internal,
     #[display(fmt = "failed to create Parquet file reader")]
-    CreateParquetReader,
-    #[display(fmt = "failed to create CSV file reader")]
-    CreateCsvReader,
-    #[display(fmt = "failed to create Pulsar reader")]
-    CreatePulsarReader,
+    CreateReader,
     #[display(fmt = "reading batch")]
     ReadingBatch,
     #[display(fmt = "slicing batch")]
@@ -49,8 +47,8 @@ pub enum Error {
     ReadInput,
     #[display(fmt = "failed to upload result")]
     UploadResult,
-    #[display(fmt = "downloading object {_0} to path {_0}")]
-    DownloadingObject(String, String),
+    #[display(fmt = "downloading object {url} to path {}", "local.display()")]
+    DownloadingObject { url: ObjectStoreUrl, local: PathBuf },
     #[display(fmt = "invalid url: {_0}")]
     InvalidUrl(String),
 }

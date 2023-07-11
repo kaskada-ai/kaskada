@@ -42,6 +42,9 @@ pub use metadata::*;
 use read::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 
+static DETERMINISTIC_RUNTIME_HASHER: ahash::RandomState =
+    ahash::RandomState::with_seeds(8723, 8737, 8736, 9871);
+
 #[derive(Debug, Default, Clone)]
 pub(crate) struct RuntimeOptions {
     pub limits: Limits,

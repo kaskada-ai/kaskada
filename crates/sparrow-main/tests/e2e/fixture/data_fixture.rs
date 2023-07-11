@@ -67,9 +67,10 @@ impl DataFixture {
         let temp_file = table.finish();
         let table = self.add_table(config);
         table
-            .add_file_source(&source_data::Source::ParquetPath(
-                temp_file.path().to_str().unwrap().to_owned(),
-            ))
+            .add_file_source(&source_data::Source::ParquetPath(format!(
+                "file:///{}",
+                temp_file.path().display()
+            )))
             .await
             .unwrap();
         Ok(self)
