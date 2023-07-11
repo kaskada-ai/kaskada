@@ -14,7 +14,7 @@ impl ObjectMetaExt for ObjectMeta {
     fn etag_hash(&self) -> u64 {
         match &self.e_tag {
             None => {
-                // The underling store doesn't provide an etag.
+                // The underlying store doesn't provide an etag.
                 //
                 // We generate the hash of the etag by hashing the last_modified
                 // time. Technically, we could also generate the etag, but this
