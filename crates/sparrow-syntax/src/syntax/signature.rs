@@ -1,12 +1,18 @@
 use itertools::Itertools;
 
 use crate::parser::try_parse_signature;
-use crate::{ExprRef, FeatureSetPart, FenlType, Located, Parameters, ParseErrors, TypeConstraint};
+use crate::{ExprRef, FeatureSetPart, FenlType, Located, Parameters, ParseErrors, TypeClass};
 
 /// Type variable defined by a signature
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct TypeVariable(pub String);
+
+impl From<&TypeVariable> for TypeVariable {
+    fn from(value: &TypeVariable) -> Self {
+        value.clone()
+    }
+}
 
 impl std::fmt::Display for TypeVariable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -14,29 +20,29 @@ impl std::fmt::Display for TypeVariable {
     }
 }
 
-/// Contains the type variable and the constraints for
+/// Contains the type variable and the classes for
 /// that variable.
 ///
-/// e.g. N(type variable): Eq(constraint) + Hash(constraint)
+/// e.g. N(type variable): Eq(type_class) + Hash(type_class)
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct TypeParameter {
     pub name: TypeVariable,
-    pub constraints: Vec<TypeConstraint>,
+    pub type_classes: Vec<TypeClass>,
 }
 
 impl std::fmt::Display for TypeParameter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Note: this excludes the type constraints
+        // Note: this excludes the type classes
         write!(f, "{}", self.name.0)
     }
 }
 
 impl TypeParameter {
-    pub fn new(name: String, constraints: Vec<TypeConstraint>) -> Self {
+    pub fn new(name: String, type_classes: Vec<TypeClass>) -> Self {
         Self {
             name: TypeVariable(name),
-            constraints,
+            type_classes,
         }
     }
 }
@@ -66,18 +72,37 @@ impl Signature {
         type_parameters: Vec<TypeParameter>,
         result: FenlType,
     ) -> anyhow::Result<Self> {
-        if matches!(result, FenlType::Generic(_)) {
+        // collect all the type variables and verify they are defined
+        let mut type_vars = Vec::new();
+        for t in parameters.types() {
+            match t.inner() {
+                FenlType::TypeRef(type_var) => {
+                    verify_is_defined(type_var, &type_parameters, &name)?;
+                    type_vars.push(type_var)
+                }
+                FenlType::Collection(_, coll_types) => {
+                    for type_var in coll_types {
+                        verify_is_defined(type_var, &type_parameters, &name)?;
+                        type_vars.push(type_var);
+                    }
+                }
+                _ => (),
+            }
+        }
+        if let FenlType::TypeRef(type_var) = &result {
+            verify_is_defined(type_var, &type_parameters, &name)?;
+            type_vars.push(type_var);
+        }
+
+        // check that all type parameters defined are used in the parameters or result
+        for tp in &type_parameters {
             anyhow::ensure!(
-                parameters
-                    .types()
-                    .iter()
-                    .map(Located::inner)
-                    .contains(&result),
-                "Illegal signature for '{}': {} must appear in the parameters to be used in the \
-                 result",
-                name,
-                result
-            )
+                type_vars.iter().contains(&&tp.name),
+                "Type variable '{:?}' is defined in the type parameters for signature '{}',
+                    but is not used in the parameters or result",
+                tp.name,
+                name
+            );
         }
 
         // check that no duplicates exist in the type_parameters
@@ -94,31 +119,6 @@ impl Signature {
                     .format_with(",", |elt, f| f(&format_args!("'{elt}'")))
             );
         };
-
-        // check that all type variables referenced in parameters are defined
-        for t in parameters.types() {
-            if let FenlType::Generic(type_variable) = t.inner() {
-                if !type_parameters.iter().any(|tp| &tp.name == type_variable) {
-                    anyhow::bail!(
-                        "Type variable '{:?}' is not defined in the type parameters for signature \
-                         '{}'",
-                        type_variable,
-                        name
-                    )
-                }
-            }
-        }
-
-        // check result type variable is defined
-        if let FenlType::Generic(result_variable) = &result {
-            if !type_parameters.iter().any(|p| &p.name == result_variable) {
-                anyhow::bail!(
-                    "Type variable '{:?}' is not defined in the type parameters for signature '{}'",
-                    result_variable,
-                    name
-                )
-            }
-        }
 
         Ok(Self {
             name,
@@ -168,6 +168,23 @@ impl Signature {
         }
     }
 }
+
+/// Verifies the type variable is defined in the type parameters.
+fn verify_is_defined(
+    type_var: &TypeVariable,
+    type_parameters: &[TypeParameter],
+    signature: &str,
+) -> anyhow::Result<()> {
+    if !type_parameters.iter().any(|tp| &tp.name == type_var) {
+        anyhow::bail!(
+            "Type variable '{:?}' is not defined in the type parameters for signature: '{:?}'",
+            type_var,
+            signature
+        )
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -223,7 +240,7 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(TypeVariable("N")),
+                value: TypeRef(TypeVariable("N")),
                 location: Location(
                   part: Internal("test<N: number, O: ordered>(input: N, input2: O) -> O"),
                   start: 35,
@@ -231,7 +248,7 @@ mod tests {
                 ),
               ),
               Located(
-                value: Generic(TypeVariable("O")),
+                value: TypeRef(TypeVariable("O")),
                 location: Location(
                   part: Internal("test<N: number, O: ordered>(input: N, input2: O) -> O"),
                   start: 46,
@@ -248,18 +265,18 @@ mod tests {
           type_parameters: [
             TypeParameter(
               name: TypeVariable("N"),
-              constraints: [
+              type_classes: [
                 Number,
               ],
             ),
             TypeParameter(
               name: TypeVariable("O"),
-              constraints: [
+              type_classes: [
                 Ordered,
               ],
             ),
           ],
-          result: Generic(TypeVariable("O")),
+          result: TypeRef(TypeVariable("O")),
         ))
         "###);
     }
@@ -355,7 +372,7 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(TypeVariable("N")),
+                value: TypeRef(TypeVariable("N")),
                 location: Location(
                   part: Internal("add<N: number>(lhs: N, rhs: N) -> N"),
                   start: 20,
@@ -363,7 +380,7 @@ mod tests {
                 ),
               ),
               Located(
-                value: Generic(TypeVariable("N")),
+                value: TypeRef(TypeVariable("N")),
                 location: Location(
                   part: Internal("add<N: number>(lhs: N, rhs: N) -> N"),
                   start: 28,
@@ -380,12 +397,12 @@ mod tests {
           type_parameters: [
             TypeParameter(
               name: TypeVariable("N"),
-              constraints: [
+              type_classes: [
                 Number,
               ],
             ),
           ],
-          result: Generic(TypeVariable("N")),
+          result: TypeRef(TypeVariable("N")),
         ))
         "###);
     }
@@ -431,7 +448,7 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(TypeVariable("O")),
+                value: TypeRef(TypeVariable("O")),
                 location: Location(
                   part: Internal("lag<O: ordered>(e: O, const n: i64) -> O"),
                   start: 19,
@@ -456,12 +473,12 @@ mod tests {
           type_parameters: [
             TypeParameter(
               name: TypeVariable("O"),
-              constraints: [
+              type_classes: [
                 Ordered,
               ],
             ),
           ],
-          result: Generic(TypeVariable("O")),
+          result: TypeRef(TypeVariable("O")),
         ))
         "###);
     }
@@ -497,7 +514,7 @@ mod tests {
             ),
             types: [
               Located(
-                value: Generic(TypeVariable("T")),
+                value: TypeRef(TypeVariable("T")),
                 location: Location(
                   part: Internal("coalesce<T: any>(values+: T) -> T"),
                   start: 26,
@@ -513,12 +530,12 @@ mod tests {
           type_parameters: [
             TypeParameter(
               name: TypeVariable("T"),
-              constraints: [
+              type_classes: [
                 Any,
               ],
             ),
           ],
-          result: Generic(TypeVariable("T")),
+          result: TypeRef(TypeVariable("T")),
         ))
         "###);
     }
@@ -527,6 +544,6 @@ mod tests {
     fn test_reject_number_on_rhs() {
         insta::assert_ron_snapshot!(
         test_parse_signature("add(lhs: f64, rhs: f64) -> number"),
-        @r###"Err("User { error: (4, \"Illegal signature for \'add\': number must appear in the parameters to be used in the result\", 22) }")"###);
+        @r###"Err("User { error: (4, \"Type variable \'TypeVariable(\\\"number\\\")\' is not defined in the type parameters for signature: \'\\\"add\\\"\'\", 22) }")"###);
     }
 }

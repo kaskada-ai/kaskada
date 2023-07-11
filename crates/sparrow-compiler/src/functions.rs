@@ -1,6 +1,7 @@
 //! Information about the built-in functions for compilation.
 
 mod aggregation;
+mod collection;
 mod comparison;
 mod function;
 mod general;
@@ -23,6 +24,7 @@ pub use registry::*;
 /// Register all the functions available in the registry.
 fn register_functions(registry: &mut Registry) {
     aggregation::register(registry);
+    collection::register(registry);
     comparison::register(registry);
     general::register(registry);
     logical::register(registry);
