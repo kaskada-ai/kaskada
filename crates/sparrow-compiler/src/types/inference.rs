@@ -181,9 +181,9 @@ pub fn validate_instantiation(
                 match types_for_variable.entry(type_vars[0].clone()) {
                     Entry::Occupied(occupied) => {
                         anyhow::ensure!(
-                            occupied.get() == argument_type
+                            occupied.get() == &key_type
                                 || matches!(occupied.get(), FenlType::Error)
-                                || matches!(argument_type, FenlType::Error),
+                                || matches!(key_type, FenlType::Error),
                             "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             key_type
@@ -197,9 +197,9 @@ pub fn validate_instantiation(
                 match types_for_variable.entry(type_vars[1].clone()) {
                     Entry::Occupied(occupied) => {
                         anyhow::ensure!(
-                            occupied.get() == argument_type
+                            occupied.get() == &value_type
                                 || matches!(occupied.get(), FenlType::Error)
-                                || matches!(argument_type, FenlType::Error),
+                                || matches!(value_type, FenlType::Error),
                             "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             value_type
@@ -318,15 +318,14 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
         FenlType::Collection(Collection::Map, type_vars) => {
             debug_assert!(type_vars.len() == 2);
 
-            // `solutions` map should contain concrete types for all type variables.
-            let key_field = match concrete_key_type {
-                FenlType::Concrete(t) => Field::new("key", t.clone(), false),
-                other => panic!("expected concrete type, got {:?}", other),
-            };
-            let value_field = match concrete_value_type {
-                FenlType::Concrete(t) => Field::new("value", t.clone(), false),
-                other => panic!("expected concrete type, got {:?}", other),
-            };
+            let concrete_key_type = solutions
+                .get(&type_vars[0])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
+            let concrete_value_type = solutions
+                .get(&type_vars[1])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
 
             // `solutions` map should contain concrete types for all type variables.
             let key_field = match concrete_key_type {
@@ -767,7 +766,7 @@ impl TypeConstraints {
                             .collect(),
                     )?;
                 }
-                other => panic!("Expected collection type, saw: {:?}", other),
+                _ => return Err(()),
             },
             (_, FenlType::Error) => {
                 // The argument is an error, but we already reported it.

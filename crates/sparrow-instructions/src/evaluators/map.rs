@@ -21,8 +21,8 @@ pub struct GetEvaluator {
 
 impl EvaluatorFactory for GetEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
-        let map_type = &info.args[0].data_type;
-        let key_type = info.args[1].data_type.clone();
+        let key_type = info.args[0].data_type.clone();
+        let map_type = &info.args[1].data_type;
         let value_type = match map_type {
             DataType::Map(s, _) => match s.data_type() {
                 DataType::Struct(fields) => {
@@ -44,7 +44,7 @@ impl EvaluatorFactory for GetEvaluator {
             other => anyhow::bail!("expected map type, saw {:?}", other),
         };
 
-        let (map, key) = info.unpack_arguments()?;
+        let (key, map) = info.unpack_arguments()?;
         Ok(Box::new(Self {
             map,
             key,

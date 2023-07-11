@@ -180,3 +180,22 @@ pub(crate) async fn timestamp_ns_data_fixture() -> DataFixture {
         .await
         .unwrap()
 }
+
+/// Create a simple table with a collection type (map).
+///
+/// ```json
+/// {"time": 2000, "key": 1, "e0": {"f1": 0,  "f2": 22}, "e1": 1,  "e2": 2.7,  "e3": "f1" }
+/// {"time": 3000, "key": 1, "e0": {"f1": 1,  "f2": 10}, "e1": 2,  "e2": 3.8,  "e3": "f2" }
+/// {"time": 3000, "key": 1, "e0": {"f1": 5,  "f2": 3},  "e1": 42, "e2": 4.0,  "e3": "f3" }
+/// {"time": 3000, "key": 1, "e0": {"f2": 13},           "e1": 42, "e2": null, "e3": "f2" }
+/// {"time": 4000, "key": 1, "e0": {"f1": 15, "f3": 11}, "e1": 3,  "e2": 7,    "e3": "f3" }
+/// ```
+pub(crate) async fn collection_data_fixture() -> DataFixture {
+    DataFixture::new()
+        .with_table_from_files(
+            TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", None, "key", ""),
+            &[&"parquet/data_with_map.parquet"],
+        )
+        .await
+        .unwrap()
+}

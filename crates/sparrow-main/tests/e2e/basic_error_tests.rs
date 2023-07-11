@@ -7,7 +7,9 @@ use arrow::datatypes::{DataType, Field, Schema};
 use sparrow_api::kaskada::v1alpha::{TableConfig, TableMetadata};
 use uuid::Uuid;
 
-use crate::fixtures::{f64_data_fixture, i64_data_fixture, strings_data_fixture};
+use crate::fixtures::{
+    collection_data_fixture, f64_data_fixture, i64_data_fixture, strings_data_fixture,
+};
 use crate::{DataFixture, QueryFixture};
 
 #[tokio::test]
@@ -1082,6 +1084,35 @@ async fn test_unsupported_output_type_with_nested_formulas_2() {
           - "  |"
           - 1 | last(b)
           - "  | ^^^^ Output field 'output' has unsupported output type 'Duration(Second)'. Try adding 'as i64'"
+          - ""
+          - ""
+    "###);
+}
+
+#[tokio::test]
+async fn test_swapped_args_for_get_map() {
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: get(Input.e0, \"f1\") }")
+        .run_to_csv(&collection_data_fixture().await).await.unwrap_err(), @r###"
+    ---
+    code: Client specified an invalid argument
+    message: 1 errors in Fenl statements; see diagnostics
+    fenl_diagnostics:
+      - severity: error
+        code: E0010
+        message: Invalid argument type(s)
+        formatted:
+          - "error[E0010]: Invalid argument type(s)"
+          - "  --> Query:1:7"
+          - "  |"
+          - "1 | { f1: get(Input.e0, \"f1\") }"
+          - "  |       ^^^           ---- Actual type: string"
+          - "  |       |              "
+          - "  |       Invalid types for parameter 'map' in call to 'get'"
+          - "  |"
+          - "  --> built-in signature 'get<K: key, V: any>(key: K, map: map<K, V>) -> V':1:34"
+          - "  |"
+          - "1 | get<K: key, V: any>(key: K, map: map<K, V>) -> V"
+          - "  |                                  --------- Expected type: map<K, V>"
           - ""
           - ""
     "###);
