@@ -22,7 +22,7 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = Describe("Queries V1", Ordered, func() {
+var _ = Describe("Queries V1", Ordered, Label("pulsar"), func() {
 	var (
 		ctx    context.Context
 		cancel context.CancelFunc

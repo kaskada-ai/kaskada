@@ -1,10 +1,9 @@
 import logging
 import os
-import time
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import kaskada.client
 from kaskada.api import release
@@ -191,6 +190,27 @@ class LocalBuilder(Builder):
     def database_path(self, path: str):
         self.manager_configs["-db-path"] = path
         self.in_memory(False)
+        return self
+
+    def with_manager_args(self, configs: List[Tuple[str, Any]]):
+        """Configure the Manager to run with a list of arguments. The arguments must be prefixed with a "-" and boolean values are represented as "1" or "0".
+
+        For example:
+        ```
+        from kaskada.api.session import LocalBuilder
+            session = LocalBuilder().with_manager_configs([
+                ("-object-store-type", "local"),
+                ("-object-store-path", "/Users/kevin.nguyen/Github/kaskada/examples3"),
+                ("-db-in-memory", "1"),
+                ("-rest-port", 12345)
+            ]).build()
+        ```
+
+        Args:
+            configs (List[Tuple[str, Any]]): Manager arguments
+        """
+        for config in configs:
+            self.manager_configs[config[0]] = config[1]
         return self
 
     def manager_rest_port(self, port: int):

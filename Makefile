@@ -59,19 +59,19 @@ proto/generate: proto/clean proto/kaskada
 	@ echo done!
 
 test/int/docker-up:
-	docker compose -f ./tests/integration/docker-compose.yml up --build --remove-orphans
+	docker compose -f ./tests/integration/docker-compose.yml up --build --remove-orphans --force-recreate
 
 test/int/docker-up-s3:
-	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans --force-recreate
 
 test/int/docker-up-s3-only:
-	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans minio
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans --force-recreate minio
 
 test/int/docker-up-postgres:
-	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml up --build --remove-orphans
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml up --build --remove-orphans --force-recreate
 
 test/int/docker-up-postgres-s3:
-	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans --force-recreate
 
 test/int/run-api-docker:
 	cd tests/integration/api && ENV=local-docker go run github.com/onsi/ginkgo/v2/ginkgo -vv ./...
