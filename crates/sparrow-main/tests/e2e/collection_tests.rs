@@ -14,16 +14,13 @@ use uuid::Uuid;
 
 use crate::{DataFixture, QueryFixture};
 
-async fn json_input() -> &'static str {
-    let input = r#"
+const JSON_INPUT: &str = r#"
             {"time": 2000, "key": 1, "e0": {"f1": 0,  "f2": 22}, "e1": 1,  "e2": 2.7,  "e3": "f1" }
             {"time": 3000, "key": 1, "e0": {"f1": 1,  "f2": 10}, "e1": 2,  "e2": 3.8,  "e3": "f2" }
             {"time": 3000, "key": 1, "e0": {"f1": 5,  "f2": 3},  "e1": 42, "e2": 4.0,  "e3": "f3" }
             {"time": 3000, "key": 1, "e0": {"f2": 13},           "e1": 42, "e2": null, "e3": "f2" }
             {"time": 4000, "key": 1, "e0": {"f1": 15, "f3": 11}, "e1": 3,  "e2": 7,    "e3": "f3" }
             "#;
-    input
-}
 
 #[tokio::test]
 #[ignore]
@@ -103,7 +100,6 @@ async fn json_to_parquet_file(json_input: &str, file: File) {
 }
 
 async fn arrow_collection_data_fixture() -> DataFixture {
-    let input = json_input().await;
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.pop();
     path.pop();
@@ -111,12 +107,12 @@ async fn arrow_collection_data_fixture() -> DataFixture {
     path.push("parquet/data_with_map.parquet");
 
     let file = File::create(path).unwrap();
-    json_to_parquet_file(input, file).await;
+    json_to_parquet_file(JSON_INPUT, file).await;
 
     DataFixture::new()
         .with_table_from_files(
             TableConfig::new_with_table_source("Input", &Uuid::new_v4(), "time", None, "key", ""),
-            &[&"parquet/data_with_map.parquet"],
+            &["parquet/data_with_map.parquet"],
         )
         .await
         .unwrap()
