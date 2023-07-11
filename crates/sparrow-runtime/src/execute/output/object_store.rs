@@ -25,6 +25,8 @@ pub enum Error {
     ProgressUpdate,
     #[display(fmt = "invalid destination prefix")]
     InvalidDestination,
+    #[display(fmt = "unspecified file type")]
+    UnspecifiedFileType,
     #[display(fmt = "internal error")]
     Internal,
     #[display(fmt = "error starting multi-part upload for output")]
@@ -52,11 +54,21 @@ impl WriterState {
     async fn open(
         object_store: &dyn ObjectStore,
         output_prefix: &ObjectStoreUrl,
+        file_uuid: &Uuid,
+        file_index: usize,
         file_type: FileType,
         schema: SchemaRef,
     ) -> error_stack::Result<Self, Error> {
+        let suffix = match file_type {
+            FileType::Unspecified => error_stack::bail!(Error::UnspecifiedFileType),
+            FileType::Parquet => "parquet",
+            FileType::Csv => "csv",
+        };
         let url = output_prefix
-            .join(&format!("{}", Uuid::new_v4().as_hyphenated()))
+            .join(&format!(
+                "{}-part-{file_index}.{suffix}",
+                file_uuid.as_hyphenated()
+            ))
             .change_context(Error::Internal)?;
         let path = url.path().change_context(Error::Internal)?;
         let (_multipart_id, mut writer) = object_store
@@ -66,7 +78,7 @@ impl WriterState {
             .change_context(Error::Upload)?;
 
         match file_type {
-            FileType::Unspecified => todo!(),
+            FileType::Unspecified => error_stack::bail!(Error::UnspecifiedFileType),
             FileType::Parquet => {
                 let writer = parquet::arrow::AsyncArrowWriter::try_new(
                     writer,
@@ -185,6 +197,8 @@ pub(super) async fn write(
         .object_store(&output_prefix)
         .change_context(Error::InvalidDestination)?;
 
+    let file_uuid = Uuid::new_v4();
+    let mut num_files = 0;
     let mut num_rows_in_file = 0;
 
     // Always create at least one writer. This ensures that if there are
@@ -193,11 +207,14 @@ pub(super) async fn write(
         WriterState::open(
             object_store.as_ref(),
             &output_prefix,
+            &file_uuid,
+            num_files,
             destination.file_type(),
             schema.clone(),
         )
         .await?,
     );
+    num_files += 1;
 
     // Currently, we pull batches and upload them asynchronously.
     // We could increase concurrency by buffering some batches and performing
@@ -215,11 +232,14 @@ pub(super) async fn write(
                 WriterState::open(
                     object_store.as_ref(),
                     &output_prefix,
+                    &file_uuid,
+                    num_files,
                     destination.file_type(),
                     schema.clone(),
                 )
                 .await?,
             );
+            num_files += 1;
         }
 
         // Write the batch.
