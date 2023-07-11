@@ -44,7 +44,6 @@ pub async fn prepared_batches<'a>(
     slice: &'a Option<slice_plan::Slice>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
-    // let prepare_hash = get_prepare_hash(source_data)?;
     let prepare_iter = match source_data.source.as_ref() {
         None => error_stack::bail!(Error::MissingField("source")),
         Some(source) => match source {
