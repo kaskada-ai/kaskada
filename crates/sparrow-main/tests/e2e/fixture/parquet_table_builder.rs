@@ -5,6 +5,8 @@ use arrow::datatypes::{Field, Schema};
 use arrow::record_batch::RecordBatch;
 use tempfile::NamedTempFile;
 
+const PARQUET_FILE_TIME: filetime::FileTime = filetime::FileTime::from_unix_time(100_042, 42);
+
 /// Utility for creating a Parquet file from Arrow arrays.
 pub(crate) struct ParquetTableBuilder {
     fields: Vec<Field>,
@@ -61,7 +63,6 @@ impl ParquetTableBuilder {
             .suffix(".parquet")
             .tempfile()
             .unwrap();
-
         {
             let mut parquet_writer = parquet::arrow::ArrowWriter::try_new(
                 temp_file.reopen().unwrap(),
@@ -78,6 +79,11 @@ impl ParquetTableBuilder {
             parquet_writer.write(&batch).unwrap();
             parquet_writer.close().unwrap();
         }
+
+        // The file modification time is used as the prepare hash for local files.
+        // For determinism, we set this to a fixed value in tests.
+        filetime::set_file_mtime(temp_file.path(), PARQUET_FILE_TIME)
+            .expect("set modification time");
 
         temp_file
     }

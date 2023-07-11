@@ -7,6 +7,7 @@ use sparrow_api::kaskada::v1alpha::{
     source_data, ComputeTable, PreparedFile, TableConfig, TableMetadata,
 };
 use sparrow_runtime::prepare::prepared_batches;
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use sparrow_runtime::PreparedMetadata;
 use tempfile::NamedTempFile;
 
@@ -70,7 +71,10 @@ impl LocalTestTable {
         raw_file_path: &source_data::Source,
     ) -> anyhow::Result<()> {
         tracing::info!("Adding file source: {:?}", raw_file_path);
-        let source_data = sparrow_runtime::prepare::file_sourcedata(raw_file_path.clone());
+        let source_data = SourceData {
+            source: Some(raw_file_path.clone()),
+        };
+
         self.add_source(&source_data).await
     }
 
@@ -82,9 +86,14 @@ impl LocalTestTable {
             //
             // TODO: Simulate the actual interaction with prepare (eg., collect raw files
             // and run prepare in response to analysis).
-            let mut iter = prepared_batches(source_data, &self.config, &None)
-                .await
-                .map_err(|e| e.into_error())?;
+            let mut iter = prepared_batches(
+                &ObjectStoreRegistry::default(),
+                source_data,
+                &self.config,
+                &None,
+            )
+            .await
+            .map_err(|e| e.into_error())?;
             while let Some(prepared_batch) = iter.next().await {
                 let (prepared_batch, metadata) = prepared_batch
                     .map_err(|err| anyhow::anyhow!("failed getting batch {:?}", err))?;

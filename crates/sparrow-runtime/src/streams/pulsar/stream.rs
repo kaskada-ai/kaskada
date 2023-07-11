@@ -50,23 +50,6 @@ pub fn execution_stream(
     }
 }
 
-/// Creates a pulsar stream to be used during preparation.
-///
-/// This stream reads messages until it times out, which (generally) indicates that
-/// no more messages exist on the stream at that point in time.
-pub fn preparation_stream(
-    schema: SchemaRef,
-    consumer: Consumer<AvroWrapper, TokioExecutor>,
-    last_publish_time: i64,
-) -> impl Stream<Item = Result<RecordBatch, ArrowError>> {
-    async_stream::try_stream! {
-        let mut reader = PulsarReader::new(schema.clone(), schema, consumer, last_publish_time, true , true);
-        while let Some(next) = reader.next_result_async().await? {
-            yield next
-        }
-    }
-}
-
 struct PulsarReader {
     /// The raw schema; includes all columns in the stream.
     raw_schema: SchemaRef,
@@ -310,7 +293,7 @@ pub async fn consumer(
     // without auth for exploration/testing purposes.
     let client = if !config.auth_params.is_empty() {
         let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
-            .change_context(Error::CreatePulsarReader)?;
+            .change_context(Error::CreateReader)?;
         let auth = Authentication {
             name: "token".to_string(),
             data: auth_token.as_bytes().to_vec(),
@@ -321,17 +304,17 @@ pub async fn consumer(
             .build()
             .await
             .into_report()
-            .change_context(Error::CreatePulsarReader)?
+            .change_context(Error::CreateReader)?
     } else {
         Pulsar::builder(&config.broker_service_url, TokioExecutor)
             .build()
             .await
             .into_report()
-            .change_context(Error::CreatePulsarReader)?
+            .change_context(Error::CreateReader)?
     };
 
     let formatted_schema =
-        super::schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
+        super::schema::format_schema(schema).change_context(Error::CreateReader)?;
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),
@@ -355,7 +338,7 @@ pub async fn consumer(
         .build()
         .await
         .into_report()
-        .change_context(Error::CreatePulsarReader)?;
+        .change_context(Error::CreateReader)?;
 
     Ok(consumer)
 }

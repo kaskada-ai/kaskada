@@ -62,6 +62,7 @@ uuid.workspace = true
 [dev-dependencies]
 assert_cmd = "2.0.10"
 data-encoding.workspace = true
+filetime = "0.2"
 indoc.workspace = true
 insta.workspace = true
 sha2.workspace = true

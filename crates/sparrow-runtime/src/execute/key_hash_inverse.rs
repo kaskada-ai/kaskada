@@ -91,11 +91,11 @@ impl KeyHashInverse {
         for file in metadata_files {
             let url =
                 ObjectStoreUrl::from_str(&file).change_context(Error::InvalidMetadataUrl(file))?;
-            let file = ParquetFile::try_new(registry, url)
+            let file = ParquetFile::try_new(registry, url, None)
                 .await
                 .change_context(Error::OpeningMetadata)?;
             let stream = file
-                .read_stream(None)
+                .read_stream(None, None)
                 .await
                 .change_context(Error::OpeningMetadata)?;
             streams.push(stream);
