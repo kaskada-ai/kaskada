@@ -53,11 +53,13 @@ func (o Object) Path() string {
 
 type objectStoreClient struct {
 	awsS3           s3iface.S3API
+	bucket          string
 	dataLocation    vfs.Location
 	disableSSL      bool
 	endpoint        string
 	forcePathStyle  bool
 	objectStoreType string
+	path            string
 }
 
 // NewObjectStoreClient creates a new ObjectStoreClient
@@ -123,11 +125,13 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 
 	return objectStoreClient{
 		awsS3:           awsS3,
+		bucket:          bucket,
 		dataLocation:    dataLocation,
 		disableSSL:      disableSSL,
 		endpoint:        endpoint,
 		forcePathStyle:  forcePathStyle,
 		objectStoreType: objectStoreType,
+		path:            vfs_utils.EnsureLeadingSlash(path),
 	}
 }
 
@@ -270,6 +274,7 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 		return
 
 	case object_store_type_s3:
+		c.dataLocation.FileSystem()
 		getObjectInput := &aws_s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(path),
@@ -451,30 +456,36 @@ func (c objectStoreClient) parseSupportedURI(uri string) (vfs.FileSystem, string
 		return nil, "", "", err
 	}
 
-	var longest string
+	var fileSystem string
 	backends := backend.RegisteredBackends()
 	for _, backendName := range backends {
 		if strings.HasPrefix(uri, backendName) {
 			// The first match always becomes the longest
-			if longest == "" {
-				longest = backendName
+			if fileSystem == "" {
+				fileSystem = backendName
 				continue
 			}
 
 			// we found a longer (more specific) backend prefix matching URI
-			if len(backendName) > len(longest) {
-				longest = backendName
+			if len(backendName) > len(fileSystem) {
+				fileSystem = backendName
 			}
 		}
 	}
 
-	if longest == "" {
+	if fileSystem == "" {
 		err = ErrRegFsNotFound
 	}
 
-	if longest == "s3" {
-		return getS3FileSystem(c.endpoint, c.disableSSL, c.forcePathStyle), authority, path, err
-	} else {
-		return backend.Backend(longest), authority, path, err
+	log.Debug().Err(err).Str("file_system", fileSystem).Str("authority", authority).Str("path", path).Msg("parseSupportedURI return values")
+
+	switch fileSystem {
+	case "s3":
+		if c.objectStoreType == object_store_type_s3 && c.bucket == authority && strings.HasPrefix(path, c.path) {
+			log.Debug().Msg("parseSupportedURI returning kaskada-owned filesystem")
+			return getS3FileSystem(c.endpoint, c.disableSSL, c.forcePathStyle), authority, path, err
+		}
 	}
+
+	return backend.Backend(fileSystem), authority, path, err
 }

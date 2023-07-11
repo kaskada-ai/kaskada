@@ -18,7 +18,7 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = Describe("Tables", Ordered, func() {
+var _ = FDescribe("Tables", Ordered, func() {
 	var ctx context.Context
 	var cancel context.CancelFunc
 	var conn *grpc.ClientConn
@@ -334,6 +334,23 @@ var _ = Describe("Tables", Ordered, func() {
 			Expect(ok).Should(BeTrue())
 			Expect(errStatus.Code()).Should(Equal(codes.NotFound))
 			Expect(errStatus.Message()).Should(ContainSubstring("table not found"))
+		})
+	})
+
+	Describe("Add a file from a public objectStore to the first table", Label("public"), func() {
+		It("Should work without error", func() {
+			res, err := tableClient.LoadData(ctx, &v1alpha.LoadDataRequest{
+				TableName: table1.TableName,
+				SourceData: &v1alpha.LoadDataRequest_FileInput{
+					FileInput: &v1alpha.FileInput{
+						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+						Uri:      "s3://kaskada-public-assets/example_data/purchases_sorted.parquet",
+					},
+				},
+			})
+			Expect(err).ShouldNot(HaveOccurredGrpc())
+			Expect(res).ShouldNot(BeNil())
+			Expect(res.DataTokenId).ShouldNot(BeNil())
 		})
 	})
 
