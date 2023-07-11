@@ -132,14 +132,17 @@ impl WriterState {
                 // try to slice the batch into small enough chunks that we don't need to
                 // and upload in a sequence of "pages".
                 let mut buffer = Vec::new();
-                let mut csv_writer = arrow::csv::WriterBuilder::new()
-                    .has_headers(false)
-                    .build(&mut buffer);
-                csv_writer
-                    .write(&batch)
-                    .into_report()
-                    .change_context(Error::Write)?;
-                std::mem::drop(csv_writer);
+
+                // Write the CSV batch to a buffer, for writing to the object store.
+                {
+                    let mut csv_writer = arrow::csv::WriterBuilder::new()
+                        .has_headers(false)
+                        .build(&mut buffer);
+                    csv_writer
+                        .write(&batch)
+                        .into_report()
+                        .change_context(Error::Write)?;
+                }
                 writer
                     .write_all(&buffer)
                     .await
