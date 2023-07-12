@@ -102,12 +102,10 @@ pub async fn prepared_batches<'a>(
                 // For CSV we need to download the file (for now) to perform inference.
                 // We could improve this by looking at the size and creating an in-memory
                 // buffer and/or looking at a prefix of the file...
-                url.download(object_stores, local_file.path())
+                object_stores
+                    .download(url, local_file.path())
                     .await
-                    .change_context_lazy(|| Error::DownloadingObject {
-                        url,
-                        local: local_file.path().to_owned(),
-                    })?;
+                    .change_context(Error::DownloadingObject)?;
 
                 // Transfer the local file to the reader. When the CSV reader
                 // completes the reader will be dropped, and the file deleted.
