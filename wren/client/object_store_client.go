@@ -15,7 +15,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	aws_s3 "github.com/aws/aws-sdk-go/service/s3"
@@ -477,47 +476,12 @@ func (c objectStoreClient) parseSupportedURI(ctx context.Context, uri string) (v
 			subLogger.Debug().Msg("parseSupportedURI returning kaskada-owned s3 filesystem")
 			return getS3FileSystem(c.endpoint, c.disableSSL, c.forcePathStyle), bucket, path, err
 		} else {
-			// try to deterimine if bucket is public
-
-			// first figure out bucket region, using hint-region
-			hintRegion := "us-west-2"
-			sess, err := getAnonymousAwsSession(hintRegion)
-			if err != nil {
-				subLogger.Error().Err(err).Msg("issue getting anonymous aws session")
-				return nil, "", "", err
+			//try to get public s3 fileSystem first
+			s3FileSystem := getFileSystemForPublicS3Bucket(ctx, bucket)
+			if s3FileSystem != nil {
+				return s3FileSystem, bucket, path, err
 			}
-
-			region, err := s3manager.GetBucketRegion(ctx, sess, bucket, hintRegion)
-			if err != nil {
-				if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "NotFound" {
-					subLogger.Warn().Err(err).Msg("bucket region not found in hint-region")
-				}
-				return nil, "", "", err
-			}
-
-			// get new session using the correct bucket region
-			sess, err = getAnonymousAwsSession(region)
-			if err != nil {
-				subLogger.Error().Err(err).Msg("issue getting anonymous aws session")
-				return nil, "", "", err
-			}
-
-			anonymous_client := aws_s3.New(sess)
-			input := &aws_s3.HeadBucketInput{
-				Bucket: aws.String(bucket),
-			}
-
-			// get bucket to check if public
-			result, err := anonymous_client.HeadBucketWithContext(ctx, input)
-			if err != nil {
-				subLogger.Warn().Err(err).Msg("issue checking if bucket is public")
-			}
-			subLogger.Debug().Str("result", result.String())
-
-			if true {
-				log.Debug().Str("region", region).Msg("parseSupportedURI returning anonymous s3 filesystem")
-				return s3.NewFileSystem().WithClient(anonymous_client), bucket, path, err
-			}
+			// else return standard s3 filesystem
 		}
 	}
 
@@ -531,3 +495,44 @@ func getAnonymousAwsSession(region string) (*session.Session, error) {
 	return session.NewSession(awsConfig)
 }
 
+func getFileSystemForPublicS3Bucket(ctx context.Context, bucket string) *s3.FileSystem {
+	subLogger := log.Ctx(ctx).With().Str("method", "objectStoreClient.getFileSystemForPublicS3Bucket").Str("bucket", bucket).Logger()
+	// first figure out bucket region, using hint-region
+	hintRegion := "us-west-2"
+	sess, err := getAnonymousAwsSession(hintRegion)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue getting anonymous aws session")
+		return nil
+	}
+
+	region, err := s3manager.GetBucketRegion(ctx, sess, bucket, hintRegion)
+	if err != nil {
+		subLogger.Warn().Err(err).Msg("bucket region not found in hint-region")
+		return nil
+	}
+
+	subLogger.Debug().Str("region", region).Msg("found bucket region")
+
+	// get new session using the correct bucket region
+	sess, err = getAnonymousAwsSession(region)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue getting anonymous aws session")
+		return nil
+	}
+
+	// list bucket to check if public
+	input := &aws_s3.ListObjectsInput{
+		Bucket:  aws.String(bucket),
+		MaxKeys: aws.Int64(0),
+	}
+
+	anonymous_client := aws_s3.New(sess)
+	_, err = anonymous_client.ListObjects(input)
+	if err != nil {
+		subLogger.Error().Err(err).Msg("issue checking if bucket is public")
+		return nil
+	}
+
+	log.Debug().Str("region", region).Msg("returning anonymous s3 filesystem")
+	return s3.NewFileSystem().WithClient(anonymous_client)
+}

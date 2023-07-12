@@ -344,7 +344,7 @@ var _ = FDescribe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      "s3://kaskada-public-assets/example_data/purchases_sorted.parquet",
+						Uri:      "s3://access-logs.us-west-2.prod.kaskada/2022-08-16-10-29-54-3945E45FEB7423C0",
 					},
 				},
 			})
