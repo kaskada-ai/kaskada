@@ -230,9 +230,9 @@ func (q *queryV1Service) CreateQuery(request *v1alpha.CreateQueryRequest, respon
 
 	destination := &v1alpha.Destination{}
 	if request.Query.Destination != nil {
-		outputURI := q.computeManager.GetOutputURI(owner, compileResponse.PlanHash.Hash)
 		switch kind := request.Query.Destination.Destination.(type) {
 		case *v1alpha.Destination_ObjectStore:
+			outputURI := q.computeManager.GetOutputURI(owner, compileResponse.PlanHash.Hash)
 			destination.Destination = &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType:        kind.ObjectStore.FileType,

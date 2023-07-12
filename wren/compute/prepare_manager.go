@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	vfs_utils "github.com/c2fo/vfs/v6/utils"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -288,7 +289,7 @@ func (m *prepareManager) executePrepare(ctx context.Context, owner *ent.Owner, p
 		prepareReq := &v1alpha.PrepareDataRequest{
 			SourceData:       sourceData,
 			Config:           computeTable.Config,
-			OutputPathPrefix: prepareOutputURI + "/",
+			OutputPathPrefix: vfs_utils.EnsureTrailingSlash(prepareOutputURI),
 			FilePrefix:       prepareFilePrefix,
 			SlicePlan:        prepareJob.SlicePlan,
 		}

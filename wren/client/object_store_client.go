@@ -377,7 +377,7 @@ func (c objectStoreClient) GetDataPathURI(subPath string) string {
 		go_os.MkdirAll(absPath, go_os.ModePerm)
 	}
 
-	return c.dataLocation.URI() + subPath
+	return vfs_utils.EnsureTrailingSlash(c.dataLocation.URI() + subPath)
 }
 
 /*
