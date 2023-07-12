@@ -15,15 +15,7 @@ The example commands below will download the latest Kaskada binaries and applies
 
 [source,bash]
 ----
-curl -s https://api.github.com/repos/kaskada-ai/kaskada/releases/latest |\
-grep "browser_download_url.*" |\
-grep $(uname -m | sed 's/x86_64/amd64/') |\
-grep $(uname -s | tr '[:upper:]' '[:lower:]') |\
-cut -d ':' -f2,3 |\ 
-tr -d \" |\ 
-xargs -I {} sh -c 'curl -L {} -o $(basename {}| cut -d '-' -f1,2)'
-
-chmod +x kaskada-*
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/kaskada-ai/kaskada/main/install/install.sh)"
 ----
 
 
