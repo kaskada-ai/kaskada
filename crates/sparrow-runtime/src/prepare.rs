@@ -23,15 +23,11 @@ pub(crate) use prepare_metadata::*;
 
 use crate::read::ParquetFile;
 use crate::stores::{ObjectMetaExt, ObjectStoreRegistry, ObjectStoreUrl};
-use crate::{PreparedMetadata, RawMetadata, DETERMINISTIC_RUNTIME_HASHER};
+use crate::{
+    PreparedMetadata, RawMetadata, DETERMINISTIC_RUNTIME_HASHER, UPLOAD_BUFFER_SIZE_IN_BYTES,
+};
 
 const GIGABYTE_IN_BYTES: usize = 1_000_000_000;
-
-/// Initial size of the upload buffer.
-///
-/// This balances size (if we have multiple uploads in parallel) with
-/// number of "parts" required to perform an upload.
-const UPLOAD_BUFFER_SIZE_IN_BYTES: usize = 5_000_000;
 
 /// Prepare batches from the file according to the `config` and `slice`.
 ///

@@ -9,6 +9,7 @@ import (
 	"path"
 	"strconv"
 
+	vfs_utils "github.com/c2fo/vfs/v6/utils"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -277,7 +278,7 @@ func (m *computeManager) processMaterializations(requestCtx context.Context, own
 			destination.Destination = &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
 					FileType:        kind.ObjectStore.GetFileType(),
-					OutputPrefixUri: outputPrefixUri,
+					OutputPrefixUri: vfs_utils.EnsureTrailingSlash(outputPrefixUri),
 				},
 			}
 		case *v1alpha.Destination_Pulsar:

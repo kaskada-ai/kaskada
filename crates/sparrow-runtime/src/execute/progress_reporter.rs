@@ -14,6 +14,8 @@ use tokio_stream::StreamExt;
 #[cfg(feature = "pulsar")]
 use sparrow_api::kaskada::v1alpha::PulsarDestination;
 
+use crate::stores::ObjectStoreUrl;
+
 use super::Error;
 
 /// Report progress every 10 seconds.
@@ -50,7 +52,7 @@ pub(crate) enum ProgressUpdate {
     /// Progress update indicating the given number of rows have been output.
     Output { num_rows: usize },
     /// Progress update reporting the output files produced.
-    FilesProduced { paths: Vec<String> },
+    FilesProduced { paths: Vec<ObjectStoreUrl> },
     /// Sent to indicate all operations have completed.
     ///
     /// For now, contains the compute snapshots, as we only snapshot
@@ -100,8 +102,10 @@ impl ProgressTracker {
                 self.output_batches_since_progress += 1;
                 self.progress.produced_output_rows += num_rows as i64;
             }
-            ProgressUpdate::FilesProduced { mut paths } => {
-                self.output_paths.append(&mut paths);
+            ProgressUpdate::FilesProduced { paths } => {
+                for path in paths {
+                    self.output_paths.push(path.to_string());
+                }
             }
             ProgressUpdate::ExecutionComplete { .. } | ProgressUpdate::ExecutionFailed { .. } => {
                 panic!("Shouldn't update process on final message")

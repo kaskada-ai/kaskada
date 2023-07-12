@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"strconv"
 
+	vfs_utils "github.com/c2fo/vfs/v6/utils"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -166,6 +167,18 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 
 	if request.Materialization.Destination == nil {
 		return nil, customerrors.NewInvalidArgumentErrorWithCustomText("missing materialization destination")
+	}
+
+	switch kind := request.Materialization.Destination.Destination.(type) {
+
+	case *v1alpha.Destination_ObjectStore:
+		// ensure output prefix has an ending slash
+		if kind.ObjectStore != nil {
+			kind.ObjectStore.OutputPrefixUri = vfs_utils.EnsureTrailingSlash(kind.ObjectStore.OutputPrefixUri)
+			request.Materialization.Destination.Destination = kind
+		}
+	default:
+		// nothing
 	}
 
 	subLogger := log.Ctx(ctx).With().Str("method", "materializationService.createMaterialization").Str("expression", request.Materialization.Expression).Logger()
