@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-
 use arrow::array::{Array, ArrayRef, PrimitiveArray, StringArray};
 use arrow::datatypes::{ArrowPrimitiveType, DataType};
 use itertools::Itertools;
@@ -115,6 +114,7 @@ where
                 })
                 .try_collect()?;
 
+            // SAFETY: `map` is a trusted length iterator
             unsafe { PrimitiveArray::from_trusted_len_iter(values.iter()) }
         };
 
