@@ -170,7 +170,7 @@ pub struct MapValue {
 }
 
 impl MapValue {
-    pub fn try_new(index: usize, data_type: &DataType) -> error_stack::Result<Self, Error> {
+    pub fn _try_new(index: usize, data_type: &DataType) -> error_stack::Result<Self, Error> {
         error_stack::ensure!(
             matches!(data_type, DataType::Struct(_)),
             Error::InvalidNonStructArgumentType {

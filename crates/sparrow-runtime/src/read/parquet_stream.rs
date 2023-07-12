@@ -11,7 +11,7 @@ use sparrow_core::{KeyTriple, TableSchema};
 
 use crate::read::parquet_file::ParquetFile;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
-use crate::{read, validate_batch_schema, Batch};
+use crate::{validate_batch_schema, Batch};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {

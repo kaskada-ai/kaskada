@@ -92,8 +92,8 @@ impl<'a> StaticArg<'a> {
         StructValue::try_new(self.index, self.data_type)
     }
 
-    pub fn map_(&self) -> error_stack::Result<MapValue, Error> {
-        MapValue::try_new(self.index, self.data_type)
+    pub fn _map_(&self) -> error_stack::Result<MapValue, Error> {
+        MapValue::_try_new(self.index, self.data_type)
     }
 }
 

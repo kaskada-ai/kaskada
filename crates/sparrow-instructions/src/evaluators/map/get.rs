@@ -1,13 +1,13 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context};
+
 use arrow::array::{Array, ArrayRef, PrimitiveArray, StringArray};
-use arrow::datatypes::{ArrowPrimitiveType, DataType, Int64Type};
+use arrow::datatypes::{ArrowPrimitiveType, DataType};
 use itertools::Itertools;
 use owning_ref::ArcRef;
 use sparrow_arrow::downcast::{downcast_primitive_array, downcast_string_array};
-use sparrow_arrow::scalar_value::ScalarValue;
+
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};

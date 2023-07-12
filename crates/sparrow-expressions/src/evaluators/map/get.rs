@@ -1,6 +1,4 @@
-use arrow_array::{ArrayRef, BooleanArray};
-use error_stack::{IntoReport, ResultExt};
-use sparrow_arrow::downcast::downcast_primitive_array;
+use arrow_array::ArrayRef;
 
 use crate::evaluator::Evaluator;
 use crate::evaluators::StaticInfo;
@@ -14,14 +12,14 @@ inventory::submit!(crate::evaluators::EvaluatorFactory {
 
 /// Evaluator for `get` on maps.
 struct GetEvaluator {
-    map: MapValue,
-    key: ArrayRefValue,
+    _map: MapValue,
+    _key: ArrayRefValue,
 }
 
 impl Evaluator for GetEvaluator {
     fn evaluate(
         &self,
-        work_area: &crate::work_area::WorkArea<'_>,
+        _work_area: &crate::work_area::WorkArea<'_>,
     ) -> error_stack::Result<ArrayRef, Error> {
         todo!("unimplemented");
     }
