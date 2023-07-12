@@ -170,15 +170,7 @@ This example assumes you have installed `curl`.
 
 [source,bash]
 ----
-curl -s https://api.github.com/repos/kaskada-ai/kaskada/releases/latest |\
-grep "browser_download_url.*" |\
-grep $(uname -m | sed 's/x86_64/amd64/') |\
-grep $(uname -s | tr '[:upper:]' '[:lower:]') |\
-cut -d ':' -f2,3 |\ 
-tr -d \" |\ 
-xargs -I {} sh -c 'curl -L {} -o $(basename {}| cut -d '-' -f1,2)'
-
-chmod +x kaskada-*
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/kaskada-ai/kaskada/main/install/install.sh)"
 ----
 
 To simplify running the Kaskada components you can move them to a directory in your path.
