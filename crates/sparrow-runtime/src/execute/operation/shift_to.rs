@@ -1,7 +1,6 @@
 use std::cmp;
 use std::sync::Arc;
 
-use crate::execute::{invalid_operation, Error};
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, TimestampNanosecondArray, UInt32Array, UInt64Array};
 use arrow::compute::SortColumn;
@@ -20,6 +19,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tracing::info;
 
 use super::BoxedOperation;
+use crate::execute::error::{invalid_operation, Error};
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::spread_zip::spread_zip;

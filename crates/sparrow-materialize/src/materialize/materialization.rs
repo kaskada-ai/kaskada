@@ -1,6 +1,5 @@
 use error_stack::ResultExt;
 use sparrow_api::kaskada::v1alpha::{ComputePlan, ComputeTable, Destination, ExecuteResponse};
-use sparrow_runtime::s3::S3Helper;
 use tokio_stream::Stream;
 
 use crate::Error;
@@ -48,18 +47,16 @@ impl Materialization {
     /// * stop_rx - receiver for the stop signal, allowing cancellation of the materialization process
     pub async fn start(
         materialization: Materialization,
-        s3_helper: S3Helper,
         bounded_lateness_ns: Option<i64>,
         stop_rx: tokio::sync::watch::Receiver<bool>,
     ) -> error_stack::Result<
-        impl Stream<Item = error_stack::Result<ExecuteResponse, sparrow_runtime::execute::Error>>,
+        impl Stream<Item = error_stack::Result<ExecuteResponse, sparrow_runtime::execute::error::Error>>,
         Error,
     > {
         let progress_stream = sparrow_runtime::execute::materialize(
             materialization.plan,
             materialization.destination,
             materialization.tables,
-            s3_helper,
             bounded_lateness_ns,
             stop_rx,
         )

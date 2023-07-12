@@ -17,14 +17,12 @@ use crate::serve::error_status::IntoStatus;
 
 #[derive(Debug)]
 pub(super) struct FileServiceImpl {
-    object_store_registry: Arc<ObjectStoreRegistry>,
+    object_stores: Arc<ObjectStoreRegistry>,
 }
 
 impl FileServiceImpl {
-    pub fn new(object_store_registry: Arc<ObjectStoreRegistry>) -> Self {
-        Self {
-            object_store_registry,
-        }
+    pub fn new(object_stores: Arc<ObjectStoreRegistry>) -> Self {
+        Self { object_stores }
     }
 }
 
@@ -35,7 +33,7 @@ impl FileService for FileServiceImpl {
         &self,
         request: tonic::Request<GetMetadataRequest>,
     ) -> Result<tonic::Response<GetMetadataResponse>, tonic::Status> {
-        let object_store = self.object_store_registry.clone();
+        let object_store = self.object_stores.clone();
         match tokio::spawn(get_metadata(object_store, request)).await {
             Ok(result) => result.into_status(),
             Err(panic) => {

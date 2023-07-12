@@ -44,6 +44,13 @@ impl ObjectStoreUrl {
         Ok(Self { url })
     }
 
+    /// Creates a relative URL if possible, with this URL as the base URL.
+    ///
+    /// This is the inverse of [`join`].
+    pub fn relative_path(&self, url: &Self) -> Option<String> {
+        self.url.make_relative(&url.url)
+    }
+
     /// Return the local path, if this is a local file.
     pub fn local_path(&self) -> Option<&Path> {
         if self.url.scheme() == "file" {
@@ -52,6 +59,11 @@ impl ObjectStoreUrl {
         } else {
             None
         }
+    }
+
+    /// Return true if the URL ends with a delimiter.
+    pub fn is_delimited(&self) -> bool {
+        self.url.path().ends_with('/')
     }
 }
 
@@ -111,5 +123,25 @@ mod tests {
                 .local_path(),
             None
         );
+    }
+
+    #[test]
+    fn test_make_relative() {
+        let local_prefix = ObjectStoreUrl::from_str("file:///absolute/path/").unwrap();
+        let local_file = ObjectStoreUrl::from_str("file:///absolute/path/some/file").unwrap();
+        let s3_prefix = ObjectStoreUrl::from_str("s3://bucket/prefix/").unwrap();
+        let s3_file = ObjectStoreUrl::from_str("s3://bucket/prefix/some/object").unwrap();
+
+        assert_eq!(
+            local_prefix.relative_path(&local_file),
+            Some("some/file".to_owned())
+        );
+        assert_eq!(local_prefix.relative_path(&s3_file), None);
+
+        assert_eq!(
+            s3_prefix.relative_path(&s3_file),
+            Some("some/object".to_owned())
+        );
+        assert_eq!(s3_prefix.relative_path(&local_file), None);
     }
 }

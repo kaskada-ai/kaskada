@@ -260,7 +260,7 @@ pub(super) async fn write(
         if num_rows_in_file > ROWS_PER_FILE {
             let url = state.expect("opened above").close().await?;
 
-            tracing::info!("Wrote {num_rows_in_file} to {url}");
+            tracing::info!("Wrote {num_rows_in_file} rows to file {url}");
             progress_updates_tx
                 .try_send(ProgressUpdate::FilesProduced { paths: vec![url] })
                 .into_report()

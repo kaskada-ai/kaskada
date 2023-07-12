@@ -28,10 +28,6 @@ async-stream = "0.3.4"
 async-trait = "0.1.68"
 avro-rs = "0.13.0"
 avro-schema = "0.3.0"
-aws-config = "0.11.0"
-aws-sdk-s3 = "0.11.0"
-pulsar = { version = "5.1.0", default-features = false, features = ["async-std-runtime", "tokio-runtime", "lz4"] }
-aws-types = "0.11.0"
 bigdecimal = { version = "0.3.1", features = ["serde"] }
 bincode = "1.3.3"
 bit-set = "0.5.3"
@@ -91,6 +87,7 @@ prost-types = "0.11.8"
 prost-wkt = "0.4.1"
 prost-wkt-build = "0.4.1"
 prost-wkt-types = "0.4.1"
+pulsar = { version = "5.1.0", default-features = false, features = ["async-std-runtime", "tokio-runtime", "lz4"] }
 rand = "0.8.5"
 reqwest = "0.11.14"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
