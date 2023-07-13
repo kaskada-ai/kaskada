@@ -39,7 +39,7 @@ where
         let input = info.unpack_argument()?;
         Ok(Box::new(Self {
             input,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }))
     }
 }
