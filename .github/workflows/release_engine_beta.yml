@@ -1,7 +1,7 @@
 on:
   push:
     tags:
-      - "engine@v[0-9]+\.[0-9]+\.[0-9]+" # Create tags matching 'engine@v*'', i.e. engine@v1.0.0
+      - "engine@v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+" # Create tags matching beta version numbers, i.e. engine@v1.0.0-beta.1
 
   # Allow the workflow to be manually run.
   # When doing so, artifacts will be built but not associated with a release.
@@ -11,7 +11,7 @@ on:
 # leave the latest workflow and cancel the other (older) workflows
 # See https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-  group: engine-release
+  group: engine-release-beta
   cancel-in-progress: true
 
 permissions:
@@ -29,55 +29,35 @@ env:
   DOCKERHUB_ENGINE: kaskadaio/engine
   DOCKERHUB_JUPYTER: kaskadaio/jupyter
 
-name: Engine Release
+name: Engine Beta Release
 jobs:
-  release_engine_draft:
-    name: Engine Release Draft
+  release_engine_beta_version:
+    name: Extract Version and Tag
     outputs:
       version: ${{ steps.determine_version.outputs.version }}
-      release_id: ${{ steps.draft_release.outputs.id }}
-      release_tag: ${{ steps.draft_release.outputs.tag_name }}
-      release_url: ${{ steps.draft_release.outputs.html_url }}
-      upload_url: ${{ steps.draft_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:
       # Determine the version being released (if tagged).
       - name: Determine version
         id: determine_version
-        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
+        if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
           echo "version=${GITHUB_REF_NAME#engine@}" | tee -a "$GITHUB_OUTPUT"
           echo "tag=${GITHUB_REF_NAME#}" | tee -a "$GITHUB_OUTPUT"
-      # Run the release drafter to update the release notes for this tag.
-      - name: Draft Engine release
-        id: draft_release
-        uses: release-drafter/release-drafter@v5
-        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
-        with:
-          config-name: release-drafter-engine.yml
-          disable-autolabeler: true
-          tag: ${{ github.ref_name }}
-          version: ${{ steps.determine_version.outputs.version }}
-          # Set commitish to the sha, otherwise it falls back on the branch.
-          # This should be the sha matching the tag.
-          commitish: ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Diagnostics
         run: |
           echo Release Input Version: ${{ steps.determine_version.outputs.version }}
-          echo Release ID: ${{ steps.draft_release.outputs.id }}
-          echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
-          echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
 
   release_engine_cross_build:
     name: Cross build release for aarch64 linux
-    needs: ["release_engine_draft"]
+    needs: ["release_engine_beta_version"]
     uses: ./.github/workflows/reusable_ci_arm64_release.yml
 
   release_engine_build:
     name: Engine Release Build
-    needs: ["release_engine_draft"]
+    needs: ["release_engine_beta_version"]
     strategy:
       matrix:
         include:
@@ -200,8 +180,9 @@ jobs:
             release/cli${{ matrix.exe }}
 
       - name: Add artifacts to release
-        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
+        if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
+          gh release create ${TAG} --generate-notes -p -t "Engine BETA : ${TAG}"
           cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
           cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
@@ -223,10 +204,10 @@ jobs:
   release_docker_images:
     name: Build and push Docker images for releases
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
+    if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
     needs:
       [
-        "release_engine_draft",
+        "release_engine_beta_version",
         "release_engine_build",
         "release_engine_cross_build",
       ]
@@ -288,13 +269,13 @@ jobs:
           platforms: linux/amd64, linux/arm64
           file: Dockerfile.release
           push: true
-          tags: ${{ env.IMAGE_ENGINE }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_ENGINE }}:latest, ${{ env.DOCKERHUB_ENGINE }}:${{ needs.release_engine_draft.outputs.version }}, ${{ env.DOCKERHUB_ENGINE }}:latest
+          tags: ${{ env.IMAGE_ENGINE }}:${{ needs.release_engine_beta_version.outputs.version }}, ${{ env.DOCKERHUB_ENGINE }}:${{ needs.release_engine_beta_version.outputs.version }}
           labels: |
             org.opencontainers.image.title=kaskada engine 
             org.opencontainers.image.description=The kaskada engine
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.version=${{ needs.release_engine_beta_version.outputs.version }}
             org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
@@ -306,13 +287,13 @@ jobs:
           platforms: linux/amd64, linux/arm64
           file: Dockerfile.jupyter
           push: true
-          tags: ${{ env.IMAGE_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }},${{ env.IMAGE_JUPYTER }}:latest, ${{ env.DOCKERHUB_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }},${{ env.DOCKERHUB_JUPYTER }}:latest
+          tags: ${{ env.IMAGE_JUPYTER }}:${{ needs.release_engine_beta_version.outputs.version }}, ${{ env.DOCKERHUB_JUPYTER }}:${{ needs.release_engine_beta_version.outputs.version }}
           labels: |
             org.opencontainers.image.title=kaskada engine with Jupyter
             org.opencontainers.image.description=The kaskada engine with pre-installed Jupyter notebook environment
             org.opencontainers.image.url=${{ github.repositoryUrl }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.version=${{ needs.release_engine_beta_version.outputs.version }}
             org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
@@ -320,8 +301,8 @@ jobs:
   release_engine_release:
     name: Create and upload engine release
     runs-on: ubuntu-20.04
-    if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
-    needs: ["release_engine_draft", "release_engine_build"]
+    if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
+    needs: ["release_engine_beta_version", "release_engine_build"]
     steps:
       - name: Checkout code
         uses: actions/checkout@master
@@ -338,7 +319,3 @@ jobs:
         run: buf push --tag ${{ github.ref_name }} --tag ${{ github.sha }}
         working-directory: proto
 
-      - name: Publish release
-        run: gh release edit ${{ github.ref_name }} --draft=false --discussion-category="Announcements" --latest
-        env:
-          GH_TOKEN: ${{ github.token }}
