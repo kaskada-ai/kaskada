@@ -142,7 +142,7 @@ pub(crate) async fn upload(
         let source_prefix = storage_dir.path();
 
         let destination = output_prefix
-            .join(&dest_name)
+            .join(&format!("{dest_name}/"))
             .change_context_lazy(|| Error::InvalidPathPart(dest_name.clone()))?;
 
         tracing::info!(

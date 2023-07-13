@@ -132,10 +132,15 @@ impl ObjectStoreRegistry {
             .into_report()
             .change_context_lazy(download_error)?;
         let mut source = tokio_util::io::StreamReader::new(stream);
-        tokio::io::copy(&mut source, &mut destination)
+        let length = tokio::io::copy(&mut source, &mut destination)
             .await
             .into_report()
             .change_context_lazy(download_error)?;
+
+        tracing::info!(
+            "Downloaded {length} bytes from {source_url} to {}",
+            destination_path.display()
+        );
         Ok(())
     }
 }
