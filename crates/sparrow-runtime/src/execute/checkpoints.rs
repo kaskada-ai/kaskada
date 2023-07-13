@@ -51,7 +51,7 @@ pub(crate) async fn download(
         Error::InvalidOutputPrefix(config.output_prefix.clone())
     );
     let resume_from = output_prefix
-        .join(&format!("{resume_from}/"))
+        .join(resume_from)
         .change_context_lazy(|| Error::InvalidResumeFrom(resume_from.to_owned()))?;
 
     let object_store = object_stores
@@ -67,6 +67,11 @@ pub(crate) async fn download(
 
     // Do the downloads, reporting progress (and remaining files).
     let count = list_result.objects.len();
+    tracing::info!(
+        "Downloading {count} files for checkpoint from {resume_from} to {}",
+        storage_path.display()
+    );
+
     let resume_from_path = resume_from.path().change_context(Error::DownloadIo)?;
     futures::stream::iter(list_result.objects)
         .map(|object| {
@@ -142,13 +147,14 @@ pub(crate) async fn upload(
         let source_prefix = storage_dir.path();
 
         let destination = output_prefix
-            .join(&dest_name)
+            .join(&format!("{dest_name}/"))
             .change_context_lazy(|| Error::InvalidPathPart(dest_name.clone()))?;
 
         tracing::info!(
-            "Uploading compute snapshot files from '{:?}' to '{}'",
+            "Uploading compute snapshot files from '{:?}' to '{}' (output prefix '{}')",
             source_prefix,
             destination,
+            output_prefix,
         );
 
         let entries: Vec<_> = dir

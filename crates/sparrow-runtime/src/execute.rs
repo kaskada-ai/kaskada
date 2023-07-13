@@ -101,7 +101,7 @@ pub async fn execute(
         // If a `resume_from` path is specified, download the existing state from s3.
         if let Some(resume_from) = &config.resume_from {
             checkpoints::download(resume_from, object_stores.as_ref(), dir.path(), config)
-                .instrument(tracing::info_span!("Downloading checkpoint files", ?resume_from, storage_path=?dir.path()))
+                .instrument(tracing::info_span!("Downloading checkpoint files"))
                 .await
                 .change_context(Error::internal_msg("download snapshot"))?;
         } else {

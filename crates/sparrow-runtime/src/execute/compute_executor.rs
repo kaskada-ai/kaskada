@@ -17,7 +17,7 @@ use sparrow_qfr::FlightRecorderFactory;
 use tempfile::TempDir;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
-use tracing::{error, info, info_span};
+use tracing::{error, info, info_span, Instrument};
 
 use crate::execute::operation::{OperationContext, OperationExecutor};
 use crate::execute::progress_reporter::{progress_stream, ProgressUpdate};
@@ -226,6 +226,7 @@ impl ComputeExecutor {
                     compute_snapshot_config,
                     compute_result,
                 )
+                .instrument(tracing::info_span!("Uploading checkpoint files"))
                 .await
                 .unwrap_or_else(|e| {
                     // Log, but don't fail if we couldn't upload snapshots.
