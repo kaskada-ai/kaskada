@@ -423,6 +423,7 @@ mod tests {
             arrow::datatypes::DataType::Float32,
             arrow::datatypes::DataType::Float64,
             arrow::datatypes::DataType::Utf8,
+            arrow::datatypes::DataType::LargeUtf8,
             arrow::datatypes::DataType::Timestamp(arrow::datatypes::TimeUnit::Second, None),
             arrow::datatypes::DataType::Timestamp(arrow::datatypes::TimeUnit::Millisecond, None),
             arrow::datatypes::DataType::Timestamp(arrow::datatypes::TimeUnit::Microsecond, None),

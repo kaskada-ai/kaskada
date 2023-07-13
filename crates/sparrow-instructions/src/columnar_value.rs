@@ -121,6 +121,10 @@ impl ColumnarValue {
                 literal: ScalarValue::Utf8(str),
                 ..
             } => Ok(str.as_deref()),
+            Self::Literal {
+                literal: ScalarValue::LargeUtf8(str),
+                ..
+            } => Ok(str.as_deref()),
             _ => Err(anyhow!(
                 "Literal {:?} is not of type {:?}",
                 self,

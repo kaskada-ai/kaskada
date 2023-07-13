@@ -70,7 +70,7 @@ pub(super) async fn new_parquet_stream(
         let batch = RecordBatch::try_new(projected_schema.clone(), raw_batch.columns().to_vec())
             .into_report()
             .change_context(Error::ReadingBatch)
-            .attach_printable_lazy(|| RecordBatchAttachment::new("raw_batch", &raw_batch))
+            // .attach_printable_lazy(|| RecordBatchAttachment::new("raw_batch", &raw_batch))
             .attach_printable_lazy(|| {
                 SchemaAttachment::new("projected_schema", &projected_schema)
             })?;
