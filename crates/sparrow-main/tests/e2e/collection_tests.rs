@@ -1,6 +1,9 @@
 //! e2e tests for the collection operators.
 
-use crate::{fixtures::collection_data_fixture, QueryFixture};
+use crate::{
+    fixtures::{collection_data_fixture, supplant_data_fixture},
+    QueryFixture,
+};
 
 #[tokio::test]
 async fn test_get_static_key() {
@@ -35,5 +38,12 @@ async fn test_get_dynamic_key() {
     1970-01-01T00:00:00.000003000,5039430902799166707,2359047937476779835,1,
     1970-01-01T00:00:00.000003000,5039430902799166708,2359047937476779835,1,13
     1970-01-01T00:00:00.000004000,5039430902799166709,2359047937476779835,1,11
+    "###);
+}
+
+#[tokio::test]
+async fn test_supplant() {
+    insta::assert_snapshot!(QueryFixture::new("{ value: get(\"airTemperature\" as large_string, Input.readings) | when(is_valid($input)) } ").with_dump_dot("asdf").run_to_csv(&supplant_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,value
     "###);
 }

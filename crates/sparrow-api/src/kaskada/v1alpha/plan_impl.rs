@@ -71,6 +71,7 @@ impl Literal {
             }
             Some(literal::Literal::IntervalMonths(v)) => ScalarValue::IntervalMonths(Some(*v)),
             Some(literal::Literal::Utf8(v)) => ScalarValue::Utf8(Some(v.clone())),
+            Some(literal::Literal::LargeUtf8(v)) => ScalarValue::LargeUtf8(Some(v.clone())),
             Some(literal::Literal::Record(v)) => {
                 let values = v
                     .values
@@ -132,6 +133,7 @@ impl From<&ScalarValue> for Literal {
             )),
             ScalarValue::IntervalMonths(Some(v)) => Some(literal::Literal::IntervalMonths(*v)),
             ScalarValue::Utf8(Some(v)) => Some(literal::Literal::Utf8(v.clone())),
+            ScalarValue::LargeUtf8(Some(v)) => Some(literal::Literal::LargeUtf8(v.clone())),
             ScalarValue::Record(v) => {
                 let values: Vec<_> = v
                     .values()
@@ -423,6 +425,7 @@ impl std::fmt::Display for super::Literal {
                 write!(f, "interval_months:{i}")
             }
             Some(literal::Literal::Utf8(ref str)) => write!(f, "\\\"{str}\\\""),
+            Some(literal::Literal::LargeUtf8(ref str)) => write!(f, "\\\"{str}\\\""),
             unreachable => unreachable!("Unable to format {:?}", unreachable),
         }
     }

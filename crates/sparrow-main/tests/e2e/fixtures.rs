@@ -199,3 +199,20 @@ pub(crate) async fn collection_data_fixture() -> DataFixture {
         .await
         .unwrap()
 }
+
+pub(crate) async fn supplant_data_fixture() -> DataFixture {
+    DataFixture::new()
+        .with_table_from_files(
+            TableConfig::new_with_table_source(
+                "Input",
+                &Uuid::new_v4(),
+                "timestamp_utc",
+                None,
+                "system_serial",
+                "",
+            ),
+            &[&"parquet/supplant.parquet"],
+        )
+        .await
+        .unwrap()
+}

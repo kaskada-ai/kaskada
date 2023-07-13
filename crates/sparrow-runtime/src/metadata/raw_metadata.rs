@@ -123,6 +123,10 @@ impl RawMetadata {
         let parquet_file = ParquetFile::try_new(object_stores, url, None)
             .await
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
+        println!(
+            "FRAZ - Getting initial schema from parquet file: {:?}",
+            parquet_file.schema
+        );
 
         Self::from_raw_schema(parquet_file.schema)
     }

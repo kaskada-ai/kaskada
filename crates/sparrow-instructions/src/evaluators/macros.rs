@@ -297,80 +297,91 @@ macro_rules! create_typed_evaluator {
     }};
 }
 
-/// Create a `Box<dyn Evaluator>` for a generic instruction with a primitive type.
+/// Create a `Box<dyn Evaluator>` for a map instruction.
 ///
-/// The `$evaluator` must be a `struct` that takes a single `T:
-/// ArrowPrimitiveType` generic and which implements `Evaluator`.
+/// The `$evaluator` must be a `struct` that takes a generic datatype T
+///  and which implements `Evaluator`.
 ///
 /// The `$info` should be a `StaticInfo`, which contains information relevant
 /// to creating a new evaluator.
 /// # Example
 ///
 /// ```no_run
-/// struct LtEvaluator<T: ArrowPrimitiveType>;
-/// impl<T: ArrowPrimitiveType> Evaluator for LtEvaluator<T> { ... }
+/// struct GetStringToPrimitiveEvaluator<T: ArrowPrimitiveType>;
+/// impl<T: ArrowPrimitiveType> Evaluator for GetStringToPrimitiveEvaluator<T> { ... }
 ///
 /// fn create_evaluator(args: Vec<StaticArg>, result_type: &DataType) -> anyhow::Result<Self> {
-///   create_primitive_evaluator!(&args[0].data_type, LtEvaluator, args, result_type)
+///   create_map_evaluator!(key_type, map_value_type, GetStringToPrimitiveEvaluator, info)
 /// }
 /// ```
+macro_rules! create_map_evaluator {
+    ($key_type:expr, $input_type:expr, $string_evaluator:ident, $large_string_evaluator:ident, $info:expr) => {{
+        use arrow::datatypes::*;
+        use create_primitive_evaluator;
+        match $key_type {
+            DataType::Utf8 => create_primitive_evaluator!($input_type, $string_evaluator, $info),
+            DataType::LargeUtf8 => {
+                create_primitive_evaluator!($input_type, $large_string_evaluator, $info)
+            }
+            unsupported_type => Err(anyhow::anyhow!(format!(
+                "unsupported key type {:?} for map evaluator",
+                unsupported_type
+            ))),
+        }
+    }};
+}
+
 macro_rules! create_primitive_evaluator {
     ($input_type:expr, $evaluator:ident, $info:expr) => {{
-        use $crate::evaluators::macros::Identity;
-        create_ordered_evaluator! {$input_type, $evaluator, Identity, $info}
-    }};
-    ($input_type:expr, $evaluator:ident, $aggf:ident, $info:expr) => {{
         use arrow::datatypes::*;
         match $input_type {
-            DataType::Int32 => $evaluator::<$aggf<Int32Type>>::try_new($info),
-            DataType::Int64 => $evaluator::<$aggf<Int64Type>>::try_new($info),
-            DataType::UInt32 => $evaluator::<$aggf<UInt32Type>>::try_new($info),
-            DataType::UInt64 => $evaluator::<$aggf<UInt64Type>>::try_new($info),
-            DataType::Float32 => $evaluator::<$aggf<Float32Type>>::try_new($info),
-            DataType::Float64 => $evaluator::<$aggf<Float64Type>>::try_new($info),
+            DataType::Int32 => $evaluator::<Int32Type>::try_new($info),
+            DataType::Int64 => $evaluator::<Int64Type>::try_new($info),
+            DataType::UInt32 => $evaluator::<UInt32Type>::try_new($info),
+            DataType::UInt64 => $evaluator::<UInt64Type>::try_new($info),
+            DataType::Float32 => $evaluator::<Float32Type>::try_new($info),
+            DataType::Float64 => $evaluator::<Float64Type>::try_new($info),
             DataType::Timestamp(TimeUnit::Second, None) => {
-                $evaluator::<$aggf<TimestampSecondType>>::try_new($info)
+                $evaluator::<TimestampSecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Millisecond, None) => {
-                $evaluator::<$aggf<TimestampMillisecondType>>::try_new($info)
+                $evaluator::<TimestampMillisecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Microsecond, None) => {
-                $evaluator::<$aggf<TimestampMicrosecondType>>::try_new($info)
+                $evaluator::<TimestampMicrosecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Nanosecond, None) => {
-                $evaluator::<$aggf<TimestampNanosecondType>>::try_new($info)
+                $evaluator::<TimestampNanosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Second) => {
-                $evaluator::<$aggf<DurationSecondType>>::try_new($info)
+                $evaluator::<DurationSecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Millisecond) => {
-                $evaluator::<$aggf<DurationMillisecondType>>::try_new($info)
+                $evaluator::<DurationMillisecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Microsecond) => {
-                $evaluator::<$aggf<DurationMicrosecondType>>::try_new($info)
+                $evaluator::<DurationMicrosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Nanosecond) => {
-                $evaluator::<$aggf<DurationNanosecondType>>::try_new($info)
+                $evaluator::<DurationNanosecondType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::DayTime) => {
-                $evaluator::<$aggf<IntervalDayTimeType>>::try_new($info)
+                $evaluator::<IntervalDayTimeType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::YearMonth) => {
-                $evaluator::<$aggf<IntervalYearMonthType>>::try_new($info)
+                $evaluator::<IntervalYearMonthType>::try_new($info)
             }
-            unsupported_type => {
-                // This macro should only be used on primitive types.
-                Err(anyhow::anyhow!(format!(
-                    "Unsupported non-primitive type {:?} for {}",
-                    unsupported_type,
-                    stringify!($evaluator)
-                )))
-            }
+            unsupported_type => Err(anyhow::anyhow!(format!(
+                "Unsupported non-primitive value type {:?} for {}",
+                unsupported_type,
+                stringify!($evaluator)
+            ))),
         }
     }};
 }
 
 pub(super) use {
-    create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
-    create_primitive_evaluator, create_signed_evaluator, create_typed_evaluator,
+    create_float_evaluator, create_map_evaluator, create_number_evaluator,
+    create_ordered_evaluator, create_primitive_evaluator, create_signed_evaluator,
+    create_typed_evaluator,
 };

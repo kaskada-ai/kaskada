@@ -9,7 +9,7 @@ mod tests;
 use std::rc::Rc;
 
 use anyhow::{anyhow, Context};
-use arrow::datatypes::{DataType, FieldRef};
+use arrow::datatypes::{DataType, FieldRef, Fields};
 pub use ast_dfg::*;
 use egg::Id;
 use itertools::{izip, Itertools};
@@ -640,6 +640,7 @@ fn cast_if_needed(
     value_type: &FenlType,
     expected_type: &FenlType,
 ) -> anyhow::Result<Id> {
+    println!("cast_if_needed: {:?} -> {:?}", value_type, expected_type);
     match (value_type, expected_type) {
         // Cast from error to anything produces an error. Value is already an error.
         (FenlType::Error, _) => Ok(value),
@@ -647,6 +648,11 @@ fn cast_if_needed(
         // TODO: This maybe should create an error node and return it.
         (_, FenlType::Error) => Ok(value),
         (actual, expected) if actual == expected => Ok(value),
+        (FenlType::Concrete(DataType::Map(s, _)), FenlType::Concrete(DataType::Map(s2, _)))
+            if map_types_are_equal(s, s2) =>
+        {
+            Ok(value)
+        }
         (FenlType::Concrete(DataType::Null), FenlType::Window) => Ok(value),
         (
             FenlType::Concrete(DataType::Struct(actual_fields)),
@@ -688,6 +694,17 @@ fn cast_if_needed(
                 expected_type
             ))
         }
+    }
+}
+
+fn map_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
+    match (a.data_type(), b.data_type()) {
+        (DataType::Struct(a_fields), DataType::Struct(b_fields)) => {
+            assert_eq!(a_fields.len() == 2, a_fields.len() == b_fields.len());
+            a_fields[0].data_type() == b_fields[0].data_type()
+                && a_fields[1].data_type() == b_fields[1].data_type()
+        }
+        _ => panic!("expected struct in map"),
     }
 }
 

@@ -11,7 +11,7 @@ use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
-/// Evaluator for `get` on maps.
+/// Evaluator for `get` on maps for string keys and primitive values.
 #[derive(Debug)]
 pub(in crate::evaluators) struct GetStringToPrimitiveEvaluator<T>
 where
@@ -81,7 +81,7 @@ where
 {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let map_input = info.value(&self.map)?.map_array()?;
-        let key_input: ArcRef<dyn Array, StringArray> = info.value(&self.key)?.string_array()?;
+        let key_input = info.value(&self.key)?.string_array::<i32>()?;
 
         let result: PrimitiveArray<T> = {
             anyhow::ensure!(

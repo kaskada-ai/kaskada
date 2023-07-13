@@ -115,6 +115,7 @@ impl<'a> StaticInfo<'a> {
     fn literal_string(&self) -> error_stack::Result<&'a str, Error> {
         match self.literal()? {
             ScalarValue::Utf8(Some(string)) => Ok(string),
+            ScalarValue::LargeUtf8(Some(string)) => Ok(string),
             other => {
                 error_stack::bail!(Error::InvalidLiteral {
                     expected: "non-null string",

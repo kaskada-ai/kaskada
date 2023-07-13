@@ -295,6 +295,21 @@ fn solve_type_class(
                 })
                 .collect();
 
+            // TODO: Map type arguments are reported at the location of the outer `map`,
+            // which is confusing.
+            // The actual error is that `large_string` is the `map.key` type,
+            // and we're expected `string`.
+            //
+            // error[E0010]: Invalid argument type(s)
+            //   --> Query:1:10
+            //   |
+            // 1 | { value: get("test" , Input.readings )}
+            //   |          ^^^ ------   -------------- Type: large_string
+            //   |          |   |
+            //   |          |   Type: string
+            //   |          Invalid types for call to 'get'
+            //   |
+            //   = Expected 'key'
             DiagnosticCode::InvalidArgumentType
                 .builder()
                 .with_label(
@@ -688,6 +703,7 @@ fn can_implicitly_cast(from: &DataType, to: &DataType) -> bool {
         (Float64, Float64) => true,
         // Other promotions that we allow implicitly.
         (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
+        (Utf8, LargeUtf8) => true,
         (Timestamp(_, _), Timestamp(TimeUnit::Nanosecond, None)) => true,
         // Other promotions must be explicitly requested.
         (_, _) => false,

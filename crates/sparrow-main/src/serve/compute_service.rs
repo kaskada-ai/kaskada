@@ -439,6 +439,7 @@ mod tests {
                             data_type::PrimitiveType::TimestampNanosecond as i32,
                         )),
                     }),
+                    nullable: false,
                 },
                 schema::Field {
                     name: "subsort".to_owned(),
@@ -447,6 +448,7 @@ mod tests {
                             data_type::PrimitiveType::I32 as i32,
                         )),
                     }),
+                    nullable: false,
                 },
                 schema::Field {
                     name: "entity".to_owned(),
@@ -455,6 +457,7 @@ mod tests {
                             data_type::PrimitiveType::String as i32,
                         )),
                     }),
+                    nullable: false,
                 },
                 schema::Field {
                     name: "str".to_owned(),
@@ -463,6 +466,7 @@ mod tests {
                             data_type::PrimitiveType::String as i32,
                         )),
                     }),
+                    nullable: false,
                 },
             ],
         }
