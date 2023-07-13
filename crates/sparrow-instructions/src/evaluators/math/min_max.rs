@@ -25,7 +25,7 @@ where
         Ok(Box::new(Self {
             lhs,
             rhs,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }))
     }
 }
@@ -59,7 +59,7 @@ where
         Ok(Box::new(Self {
             lhs,
             rhs,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }))
     }
 }

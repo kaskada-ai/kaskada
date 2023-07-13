@@ -123,7 +123,7 @@ impl<AggF: AggFn> TwoStacks<AggF> {
         // Each item should be the sum of its accumulator and the cumulative
         // values below it.
         let mut accum = AggF::zero();
-        for mut outgoing in &mut self.outgoing {
+        for outgoing in &mut self.outgoing {
             AggF::merge(&mut accum, &outgoing.accum);
             outgoing.cumulative = accum.clone();
         }

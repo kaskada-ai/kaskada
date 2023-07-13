@@ -9,7 +9,7 @@ fn benchmark_serialize(vec: &[i64]) {
 }
 
 fn serialize_unsafe(vec: &[i64]) -> &[u8] {
-    let len = size_of::<i64>() * vec.len();
+    let len = std::mem::size_of_val(vec);
     // SAFETY: `ptr` has valid alignment (came from a vec) and contains `len` bytes.
     unsafe {
         let ptr = vec.as_ptr();
