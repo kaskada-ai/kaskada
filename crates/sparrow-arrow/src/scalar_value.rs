@@ -396,7 +396,6 @@ impl ScalarValue {
                 Arc::new(iter.cloned().collect::<StringArray>())
             }
             ScalarValue::LargeUtf8(s) => {
-                println!("Creating literal array for large utf8 {:?}", s);
                 let iter = std::iter::repeat(s).take(len);
                 Arc::new(iter.cloned().collect::<LargeStringArray>())
             }

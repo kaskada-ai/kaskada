@@ -83,8 +83,6 @@ where
         let map_input = info.value(&self.map)?.map_array()?;
         let key_input = info.value(&self.key)?.string_array::<i64>()?;
 
-        println!("key_input: {:?}", key_input);
-
         let result: PrimitiveArray<T> = {
             anyhow::ensure!(
                 key_input.len() == map_input.len(),
@@ -120,8 +118,6 @@ where
             // SAFETY: `map` is a trusted length iterator
             unsafe { PrimitiveArray::from_trusted_len_iter(values.iter()) }
         };
-
-        // println!("MAP: Producing result: {:?}", result);
 
         Ok(Arc::new(result))
     }

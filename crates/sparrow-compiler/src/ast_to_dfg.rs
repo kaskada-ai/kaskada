@@ -640,7 +640,6 @@ fn cast_if_needed(
     value_type: &FenlType,
     expected_type: &FenlType,
 ) -> anyhow::Result<Id> {
-    println!("cast_if_needed: {:?} -> {:?}", value_type, expected_type);
     match (value_type, expected_type) {
         // Cast from error to anything produces an error. Value is already an error.
         (FenlType::Error, _) => Ok(value),

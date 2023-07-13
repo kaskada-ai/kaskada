@@ -14,9 +14,6 @@ impl DataType {
             kind: Some(data_type::Kind::Struct(Schema { fields })),
         }
     }
-    // Field { name: "readings", data_type: Map(Field { name: "key_value", data_type: Struct([Field { name: "key", data_type: LargeUtf8, nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }, Field { name: "value", data_type: Float64, nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }]), nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }, false), nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} },
-    // Field { name:                                          "key_value", data_type: Struct([Field { name: "key", data_type: LargeUtf8, nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }, Field { name: "value", data_type: Float64, nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }]), nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }, false)
-    // Field { name: "readings", data_type: Map(Field { name: "key_value", data_type: Struct([Field { name: "key", data_type: LargeUtf8, nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }, Field { name: "value", data_type: Float64, nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }]), nullable: false, dict_id: 0, dict_is_ordered: false, metadata: {} }, false), nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} },
     /// Creates a new map from the given fields.
     ///
     /// `fields` should have two elements, the first being the key type
@@ -25,7 +22,6 @@ impl DataType {
         debug_assert!(fields.len() == 2);
         let key = &fields[0];
         let value = &fields[1];
-        println!("---value nullable: {}", value.nullable);
         Self {
             kind: Some(data_type::Kind::Map(Box::new(data_type::Map {
                 name: name.to_string(),
@@ -223,7 +219,6 @@ impl TryFrom<&arrow::datatypes::DataType> for DataType {
                     nullable: value.is_nullable(),
                 };
 
-                println!("key, value: {:?}, {:?}", key, value);
                 Ok(DataType::new_map(s.name(), *is_ordered, vec![key, value]))
             }
             unsupported => Err(ConversionError::new_unsupported(unsupported.clone())),
