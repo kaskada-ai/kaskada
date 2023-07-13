@@ -335,7 +335,7 @@ mod tests {
             children: Vec::new(),
         };
 
-        let mut analysis = DfgAnalysis::default();
+        let mut analysis = DfgAnalysis;
         let merge_result = analysis.merge(&mut a, b);
         assert!(!merge_result.0);
         assert!(!merge_result.1);
@@ -370,7 +370,7 @@ mod tests {
             children: Vec::new(),
         };
 
-        let mut analysis = DfgAnalysis::default();
+        let mut analysis = DfgAnalysis;
         let merge_result = analysis.merge(&mut a, b);
         assert!(!merge_result.0);
         assert!(merge_result.1);
@@ -405,7 +405,7 @@ mod tests {
             children: Vec::new(),
         };
 
-        let mut analysis = DfgAnalysis::default();
+        let mut analysis = DfgAnalysis;
         let merge_result = analysis.merge(&mut a, b);
         assert!(merge_result.0);
         assert!(!merge_result.1);
@@ -441,7 +441,7 @@ mod tests {
             children: Vec::new(),
         };
 
-        let mut analysis = DfgAnalysis::default();
+        let mut analysis = DfgAnalysis;
         let merge_result = analysis.merge(&mut a, b);
         assert!(merge_result.0);
         assert!(!merge_result.1);

@@ -25,7 +25,7 @@ impl<T: ArrowNumericType> EvaluatorFactory for ClampEvaluator<T> {
             input,
             min,
             max,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }))
     }
 }
