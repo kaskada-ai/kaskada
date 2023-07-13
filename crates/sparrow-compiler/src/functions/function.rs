@@ -38,27 +38,27 @@ impl<'building> FunctionBuilder<'building> {
         Self(instruction)
     }
 
-    pub fn set_internal(mut self) -> Self {
+    pub fn set_internal(self) -> Self {
         self.0.internal = true;
         self
     }
 
-    pub fn with_implementation(mut self, implementation: Implementation) -> Self {
+    pub fn with_implementation(self, implementation: Implementation) -> Self {
         self.0.implementation = implementation;
         self
     }
 
-    pub fn with_is_new(mut self, is_new: Implementation) -> Self {
+    pub fn with_is_new(self, is_new: Implementation) -> Self {
         self.0.is_new = is_new;
         self
     }
 
-    pub fn with_time_domain_check(mut self, time_domain_check: TimeDomainCheck) -> Self {
+    pub fn with_time_domain_check(self, time_domain_check: TimeDomainCheck) -> Self {
         self.0.time_domain_check = time_domain_check;
         self
     }
 
-    pub fn with_dfg_signature(mut self, signature_str: &'static str) -> Self {
+    pub fn with_dfg_signature(self, signature_str: &'static str) -> Self {
         let signature =
             Signature::try_from_str(FeatureSetPart::Function(signature_str), signature_str)
                 .unwrap_or_else(|e| panic!("Failed to parse signature '{signature_str}': {e:?}"));

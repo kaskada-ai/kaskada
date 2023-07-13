@@ -61,7 +61,7 @@ where
         Ok(Box::new(Self {
             base,
             exp,
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }))
     }
 }
