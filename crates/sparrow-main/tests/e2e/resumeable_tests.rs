@@ -37,7 +37,7 @@ async fn assert_final_incremental_same_as_complete(
         Ok(mut result) => {
             // Only one snapshot per query execution is currently supported.
             assert_eq!(result.snapshots.len(), 1);
-            std::path::PathBuf::from(result.snapshots.remove(0).path)
+            result.snapshots.remove(0).path
         }
     };
 
@@ -65,7 +65,7 @@ async fn assert_final_incremental_same_as_complete(
     numbers.clear();
     numbers.add_file_source(&csv2).await.unwrap();
     let persistent_results = persistent_query
-        .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
+        .with_rocksdb(snapshot_dir.path(), Some(snapshot_path))
         .run_to_csv(&data_fixture)
         .await
         .unwrap();
@@ -210,7 +210,7 @@ async fn test_resumeable_with_unordered_file_sets() {
         Ok(mut result) => {
             // Only one snapshot is currently supported.
             assert_eq!(result.snapshots.len(), 1);
-            std::path::PathBuf::from(result.snapshots.remove(0).path)
+            result.snapshots.remove(0).path
         }
     };
 
@@ -231,7 +231,7 @@ async fn test_resumeable_with_unordered_file_sets() {
         .unwrap();
 
     let persistent_results = persistent_query
-        .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
+        .with_rocksdb(snapshot_dir.path(), Some(snapshot_path))
         .run_to_csv(&data_fixture)
         .await
         .unwrap();
@@ -634,7 +634,7 @@ async fn test_resumeable_final_no_new_data() {
         Ok(mut result) => {
             // Only one snapshot is currently supported.
             assert_eq!(result.snapshots.len(), 1);
-            let snapshot_path = std::path::PathBuf::from(result.snapshots.remove(0).path);
+            let snapshot_path = result.snapshots.remove(0).path;
             (result.inner, snapshot_path)
         }
     };
@@ -646,7 +646,7 @@ async fn test_resumeable_final_no_new_data() {
 
     let result2 = query
         .clone()
-        .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
+        .with_rocksdb(snapshot_dir.path(), Some(snapshot_path.clone()))
         .run_to_csv(&data_fixture)
         .await
         .unwrap();
@@ -663,7 +663,7 @@ async fn test_resumeable_final_no_new_data() {
 
     // Run the query again
     let result3 = query
-        .with_rocksdb(snapshot_dir.path(), Some(&snapshot_path))
+        .with_rocksdb(snapshot_dir.path(), Some(snapshot_path))
         .run_to_csv(&data_fixture)
         .await
         .unwrap();

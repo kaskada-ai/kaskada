@@ -110,14 +110,14 @@ message ProgressInformation {
 }
 
 message ComputeSnapshotConfig {
-  // S3 URI prefix where *all* snapshots should be written.
+  // URI prefix where *all* snapshots should be written.
   // This should be unique to the query hash.
   // Snapshots will be written to this prefix.
   //
   // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data`.
   string output_prefix = 1;
 
-  // If set, the S3 URI prefix of a snapshot to resume from.
+  // If set, the URI prefix of a snapshot to resume from.
   //
   // Example: `s3://<bucket>/wren/v1alpha/computeSnapshots/<snapshotVersion>/<clientId>/<planHash>/data/<snapshotId>`.
   google.protobuf.StringValue resume_from = 2;

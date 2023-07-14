@@ -139,7 +139,8 @@ pub(crate) async fn upload(
             .await
             .into_report()
             .change_context(Error::UploadIo)?;
-        destination.to_string_lossy().into_owned()
+
+        format!("{}/", destination.display())
     } else {
         let dir = std::fs::read_dir(storage_dir.path())
             .into_report()
