@@ -159,9 +159,9 @@ jobs:
       - name: Create GitHub Beta release
         if: startsWith(github.ref, 'refs/tags/python@v') && contains(github.ref, 'beta')
         run: | 
-          gh release create ${TAG} -p -t "Python Client BETA: ${TAG}"
-          gh release upload ${TAG} clients/python/dist/kaskada-*.whl --clobber 
-          gh release upload ${TAG} clients/python/dist/kaskada-*.tar.gz --clobber
+          gh release create ${TAG} --repo ${GITHUB_REPOSITORY} -p -t "Python Client BETA: ${TAG}"
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} clients/python/dist/kaskada-*.whl --clobber 
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} clients/python/dist/kaskada-*.tar.gz --clobber
         shell: bash
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
