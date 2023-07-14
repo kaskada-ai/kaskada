@@ -72,11 +72,11 @@ jobs:
           echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
           echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
       
-      - name: Diagnostics for Beta 
+      - name: Create Release for Beta 
         if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
             echo Release Input Version: ${{ steps.determine_version.outputs.version }}
- 
+            gh release create ${TAG} --repo ${GITHUB_REPOSITORY} -p -t "Engine BETA : ${TAG}"
 
   release_engine_cross_build:
     name: Cross build release for aarch64 linux
@@ -231,7 +231,7 @@ jobs:
       - name: Create Beta release and add artifacts 
         if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
-          gh release create ${TAG} --repo ${GITHUB_REPOSITORY} -p -t "Engine BETA : ${TAG}"
+        
           cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
           gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${ENGINE_ASSET_NAME} --clobber
           cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
