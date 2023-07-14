@@ -231,13 +231,13 @@ jobs:
       - name: Create Beta release and add artifacts 
         if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
-          gh release create ${TAG} -p -t "Engine BETA : ${TAG}"
+          gh release create ${TAG} --repo ${GITHUB_REPOSITORY} -p -t "Engine BETA : ${TAG}"
           cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
-          gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${ENGINE_ASSET_NAME} --clobber
           cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
-          gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${WREN_ASSET_NAME} --clobber
           cp release/cli${{ matrix.exe }} ${CLI_ASSET_NAME}
-          gh release upload ${TAG} ${CLI_ASSET_NAME} --clobber
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${CLI_ASSET_NAME} --clobber
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -254,7 +254,6 @@ jobs:
   release_docker_images:
     name: Build and push Docker images for releases
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
     needs:
       [
         "release_engine_draft",
