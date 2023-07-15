@@ -230,7 +230,7 @@ jobs:
 
             - name: Show all container logs in case of failure
               if: failure() && steps.s3-integration-tests.outcome != 'success'
-              run: make  ci/integration/tests/docker-compose-s3-logs
+              run: make  ci/integration/tests/docker-compose-s3-logs-kaskada-only
 
             - name: Docker compose down for integration tests
               run: make ci/integration/tests/docker-compose-down-postgres-s3
