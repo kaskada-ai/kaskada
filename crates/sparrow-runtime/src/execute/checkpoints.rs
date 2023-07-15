@@ -89,7 +89,6 @@ pub(crate) async fn download(
             Ok((source_url, destination_path))
         })
         .map_ok(|(source_url, destination_path)| async move {
-            // DO NOT SUBMIT: Can we fix this?
             // This is a bit hacky since we need to go back to a URL to use our
             // existing `download` method and go back through the registry.
             object_stores
