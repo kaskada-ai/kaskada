@@ -72,11 +72,16 @@ jobs:
           echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
           echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
       
-      - name: Diagnostics for Beta 
+      # For beta releases we need to create the beta release first so that 
+      # jobs and steps that follow can upload artifacts.  
+      - name: Create Release for Beta 
         if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
             echo Release Input Version: ${{ steps.determine_version.outputs.version }}
- 
+            gh release create ${TAG} --repo ${GITHUB_REPOSITORY} -p -t "Engine BETA : ${TAG}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
 
   release_engine_cross_build:
     name: Cross build release for aarch64 linux
@@ -228,16 +233,15 @@ jobs:
 
           # Currently we create a Beta release without any notes or changelog in the GitHub release page. 
           # Need to figure out how to use the drafter without taking over the draft release. 
-      - name: Create Beta release and add artifacts 
+      - name: Add artifacts to Beta release
         if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
         run: |
-          gh release create ${TAG} -p -t "Engine BETA : ${TAG}"
           cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
-          gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${ENGINE_ASSET_NAME} --clobber
           cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
-          gh release upload ${TAG} ${WREN_ASSET_NAME} --clobber
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${WREN_ASSET_NAME} --clobber
           cp release/cli${{ matrix.exe }} ${CLI_ASSET_NAME}
-          gh release upload ${TAG} ${CLI_ASSET_NAME} --clobber
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${CLI_ASSET_NAME} --clobber
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -254,7 +258,6 @@ jobs:
   release_docker_images:
     name: Build and push Docker images for releases
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
     needs:
       [
         "release_engine_draft",
