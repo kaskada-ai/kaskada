@@ -413,7 +413,7 @@ var _ = Describe("Query V1 with incremental", Ordered, func() {
 
 				// Run the query with the new table
 				stream, err := queryClient.CreateQuery(ctx, queryRequestIncremental)
-				Expect(err).ShouldNot(HaveOccurred()	)
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(stream).ShouldNot(BeNil())
 
 				queryResponses, err := helpers.GetCreateQueryResponses(stream)

@@ -10,6 +10,9 @@ use tokio::io::AsyncWriteExt;
 use crate::stores::object_store_key::ObjectStoreKey;
 use crate::stores::ObjectStoreUrl;
 
+/// If a file is smaller than this, use upload rather than multipart upload.
+const SINGLE_PART_UPLOAD_LIMIT_BYTES: u64 = 5_000_000;
+
 /// Map from URL scheme to object store for that prefix.
 ///
 /// Currently, we use a single object store or each scheme. This covers
@@ -57,24 +60,51 @@ impl ObjectStoreRegistry {
             from: source_path.to_path_buf(),
             to: destination_url.clone(),
         };
-        let mut source = tokio::fs::File::open(source_path)
+        let metadata = tokio::fs::metadata(source_path)
             .await
             .into_report()
             .change_context_lazy(upload_error)?;
-        let (_id, mut destination) = object_store
-            .put_multipart(&target_path)
-            .await
-            .into_report()
-            .change_context_lazy(upload_error)?;
-        tokio::io::copy(&mut source, &mut destination)
-            .await
-            .into_report()
-            .change_context_lazy(upload_error)?;
-        destination
-            .shutdown()
-            .await
-            .into_report()
-            .change_context_lazy(upload_error)?;
+
+        let length = metadata.len();
+
+        tracing::info!(
+            "Uploading {length} bytes from {} to {destination_url}",
+            source_path.display()
+        );
+
+        if length <= SINGLE_PART_UPLOAD_LIMIT_BYTES {
+            let bytes = tokio::fs::read(source_path)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+            let bytes = bytes::Bytes::from(bytes);
+            object_store
+                .put(&target_path, bytes)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+        } else {
+            let mut source = tokio::fs::File::open(source_path)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+
+            let (_id, mut destination) = object_store
+                .put_multipart(&target_path)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+            tokio::io::copy(&mut source, &mut destination)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+            destination
+                .shutdown()
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+        }
+
         Ok(())
     }
 
@@ -102,10 +132,15 @@ impl ObjectStoreRegistry {
             .into_report()
             .change_context_lazy(download_error)?;
         let mut source = tokio_util::io::StreamReader::new(stream);
-        tokio::io::copy(&mut source, &mut destination)
+        let length = tokio::io::copy(&mut source, &mut destination)
             .await
             .into_report()
             .change_context_lazy(download_error)?;
+
+        tracing::info!(
+            "Downloaded {length} bytes from {source_url} to {}",
+            destination_path.display()
+        );
         Ok(())
     }
 }

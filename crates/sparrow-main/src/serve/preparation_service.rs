@@ -20,9 +20,9 @@ pub(super) struct PreparationServiceImpl {
 }
 
 impl PreparationServiceImpl {
-    pub fn new(object_store_registry: Arc<ObjectStoreRegistry>) -> Self {
+    pub fn new(object_stores: Arc<ObjectStoreRegistry>) -> Self {
         Self {
-            object_store_registry,
+            object_store_registry: object_stores,
         }
     }
 }
