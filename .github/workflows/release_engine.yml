@@ -72,7 +72,7 @@ jobs:
           echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
           echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
       
-      # For beta releases we need to craete the beta release first so that 
+      # For beta releases we need to create the beta release first so that 
       # jobs and steps that follow can upload artifacts.  
       - name: Create Release for Beta 
         if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
