@@ -5,17 +5,17 @@ mod compute_service;
 mod error_status;
 mod file_service;
 pub(crate) mod preparation_service;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReport, ResultExt};
 pub use error_status::*;
 
 use sparrow_api::kaskada::v1alpha::compute_service_server::ComputeServiceServer;
 use sparrow_api::kaskada::v1alpha::file_service_server::FileServiceServer;
 use sparrow_api::kaskada::v1alpha::preparation_service_server::PreparationServiceServer;
 
-use sparrow_runtime::s3::{S3Helper, S3Object};
-use sparrow_runtime::stores::ObjectStoreRegistry;
+use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use std::net::SocketAddr;
 
+use std::str::FromStr;
 use std::sync::Arc;
 use tonic::transport::Server;
 use tracing::{info, info_span};
@@ -61,26 +61,28 @@ impl ServeCommand {
 
         let _enter = span.enter();
 
-        let s3 = S3Helper::new().await;
-        let object_store_registry = Arc::new(ObjectStoreRegistry::new());
-        let file_service = FileServiceImpl::new(object_store_registry.clone());
+        let object_stores = Arc::new(ObjectStoreRegistry::default());
+        let file_service = FileServiceImpl::new(object_stores.clone());
 
         // Leak the diagnostic prefix to create a `&'static` reference.
         // This simplifies the lifetime management of the futures.
         // This string is fixed for the lifetime of `serve`, so leaking
         // it once doesn't create a problem.
         let flight_record_path = if let Some(flight_record_path) = &self.flight_record_path {
-            Some(
-                S3Object::try_from_uri(flight_record_path)
-                    .into_report()
-                    .change_context(Error::InvalidFlightRecordPath)?,
-            )
+            let prefix = ObjectStoreUrl::from_str(flight_record_path)
+                .change_context(Error::InvalidFlightRecordPath)?;
+            assert!(
+                prefix.is_delimited(),
+                "Flight record path must end with `/` but was {flight_record_path}"
+            );
+
+            Some(prefix)
         } else {
             None
         };
         let flight_record_path = Box::leak(Box::new(flight_record_path));
-        let compute_service = ComputeServiceImpl::new(flight_record_path, s3.clone());
-        let preparation_service = PreparationServiceImpl::new(object_store_registry.clone());
+        let compute_service = ComputeServiceImpl::new(flight_record_path, object_stores.clone());
+        let preparation_service = PreparationServiceImpl::new(object_stores.clone());
 
         let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
 

@@ -17,18 +17,19 @@ use sparrow_qfr::FlightRecorderFactory;
 use tempfile::TempDir;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
-use tracing::{error, info, info_span};
+use tracing::{error, info, info_span, Instrument};
 
 use crate::execute::operation::{OperationContext, OperationExecutor};
 use crate::execute::progress_reporter::{progress_stream, ProgressUpdate};
 use crate::execute::spawner::ComputeTaskSpawner;
 use crate::execute::Error;
 use crate::execute::Error::Internal;
-use crate::s3::S3Helper;
+use crate::stores::ObjectStoreRegistry;
 use crate::util::JoinTask;
 use crate::{Batch, RuntimeOptions};
 
 pub(crate) struct ComputeExecutor {
+    object_stores: Arc<ObjectStoreRegistry>,
     compute_store: Option<Arc<ComputeStore>>,
     plan_hash: PlanHash,
     futures: FuturesUnordered<JoinTask<()>>,
@@ -38,6 +39,7 @@ pub(crate) struct ComputeExecutor {
 }
 
 /// The final results returned after the compute executor finishes.
+#[derive(Default)]
 pub struct ComputeResult {
     /// The timestamp of the maximum input event processed by the query.
     pub max_input_timestamp: Timestamp,
@@ -151,6 +153,7 @@ impl ComputeExecutor {
         }
 
         Ok(Self {
+            object_stores: context.object_stores,
             compute_store: context.compute_store,
             plan_hash: context.plan_hash,
             futures: spawner.finish(),
@@ -165,11 +168,11 @@ impl ComputeExecutor {
     /// created, but before progress information stops being streamed.
     pub fn execute_with_progress(
         self,
-        s3_helper: S3Helper,
         storage_dir: Option<TempDir>,
         compute_snapshot_config: Option<ComputeSnapshotConfig>,
     ) -> impl Stream<Item = error_stack::Result<ExecuteResponse, Error>> {
         let Self {
+            object_stores,
             compute_store,
             plan_hash,
             futures,
@@ -218,11 +221,12 @@ impl ComputeExecutor {
                 }
 
                 let compute_snapshots = upload_compute_snapshots(
-                    s3_helper.clone(),
+                    object_stores,
                     storage_dir,
                     compute_snapshot_config,
                     compute_result,
                 )
+                .instrument(tracing::info_span!("Uploading checkpoint files"))
                 .await
                 .unwrap_or_else(|e| {
                     // Log, but don't fail if we couldn't upload snapshots.
@@ -265,7 +269,7 @@ fn select_biased<T: 'static>(
 }
 
 async fn upload_compute_snapshots(
-    s3_helper: S3Helper,
+    object_stores: Arc<ObjectStoreRegistry>,
     storage_dir: Option<TempDir>,
     compute_snapshot_config: Option<ComputeSnapshotConfig>,
     compute_result: ComputeResult,
@@ -280,11 +284,17 @@ async fn upload_compute_snapshots(
     if let Some(snapshot_config) = compute_snapshot_config {
         let storage_dir = storage_dir.ok_or(Error::Internal("missing storage dir"))?;
 
-        let snapshot_metadata =
-            crate::s3::upload_snapshot(s3_helper, storage_dir, snapshot_config, compute_result)
-                .await
-                .change_context(Error::Internal("uploading snapshot"))?;
+        let snapshot_metadata = super::checkpoints::upload(
+            object_stores.as_ref(),
+            storage_dir,
+            snapshot_config,
+            compute_result,
+        )
+        .await
+        .change_context(Error::Internal("uploading snapshot"))?;
         snapshots.push(snapshot_metadata);
+    } else {
+        tracing::info!("No snapshot config; not uploading compute store.")
     }
 
     Ok(snapshots)

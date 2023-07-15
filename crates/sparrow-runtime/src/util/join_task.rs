@@ -7,7 +7,7 @@ use futures::ready;
 use futures::task::{Context, Poll};
 use pin_project::pin_project;
 
-use crate::execute::Error;
+use crate::execute::error::Error;
 
 /// A custom `Future` that can be wrapped around a JoinHandle.
 ///

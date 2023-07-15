@@ -3,7 +3,6 @@ use std::sync::Arc;
 use error_stack::{IntoReport, ResultExt};
 use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::ProgressInformation;
-use sparrow_runtime::s3::S3Helper;
 use tokio::task::JoinHandle;
 
 use crate::{Error, Materialization};
@@ -28,11 +27,7 @@ impl MaterializationControl {
     ///
     /// Kicks off a query and begins producing results to the
     /// destination supplied in the `materialization`.
-    pub fn start(
-        materialization: Materialization,
-        s3_helper: S3Helper,
-        bounded_lateness_ns: Option<i64>,
-    ) -> Self {
+    pub fn start(materialization: Materialization, bounded_lateness_ns: Option<i64>) -> Self {
         let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
         let (progress_tx, progress_rx) = tokio::sync::watch::channel(MaterializationStatus {
             state: State::Uninitialized,
@@ -43,8 +38,7 @@ impl MaterializationControl {
         let handle = tokio::spawn(async move {
             let id = materialization.id.clone();
             let progress_stream =
-                Materialization::start(materialization, s3_helper, bounded_lateness_ns, stop_rx)
-                    .await?;
+                Materialization::start(materialization, bounded_lateness_ns, stop_rx).await?;
             let mut progress_stream = progress_stream.boxed();
             let mut last_progress = ProgressInformation::default();
             while let Some(message) = progress_stream
