@@ -647,11 +647,7 @@ fn cast_if_needed(
         // TODO: This maybe should create an error node and return it.
         (_, FenlType::Error) => Ok(value),
         (actual, expected) if actual == expected => Ok(value),
-
-        // This handles the case where user `map` types have different names but are
-        // otherwise identical. When constructing the concrete map during inference,
-        // we make up names for the map types, so this is a common case. This ensures that
-        // the types themselves are still treated as equal.
+        // Ensures that map types with the same inner types are compatible, regardless of the (arbitary) field naming.
         (FenlType::Concrete(DataType::Map(s, _)), FenlType::Concrete(DataType::Map(s2, _)))
             if map_types_are_equal(s, s2) =>
         {
@@ -701,6 +697,10 @@ fn cast_if_needed(
     }
 }
 
+// When constructing the concrete map during inference, we use arbitary names for the inner data
+// fields since we don't have access to the user's naming patterns there.
+// By comparing the map types based on just the inner types, we can ensure that the types are
+// still treated as equal.
 fn map_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
     match (a.data_type(), b.data_type()) {
         (DataType::Struct(a_fields), DataType::Struct(b_fields)) => {
