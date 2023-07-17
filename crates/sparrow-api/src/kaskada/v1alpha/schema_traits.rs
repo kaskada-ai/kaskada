@@ -511,15 +511,18 @@ mod tests {
 
     #[test]
     fn test_unsupported_datatype() {
-        let err = DataType::try_from(&arrow::datatypes::DataType::LargeUtf8).unwrap_err();
+        let err = DataType::try_from(&arrow::datatypes::DataType::FixedSizeBinary(1)).unwrap_err();
         assert_eq!(
             err,
             ConversionError {
                 fields: vec![],
-                data_type: arrow::datatypes::DataType::LargeUtf8
+                data_type: arrow::datatypes::DataType::FixedSizeBinary(1)
             }
         );
-        assert_eq!(&err.to_string(), "Unsupported conversion from 'LargeUtf8'");
+        assert_eq!(
+            &err.to_string(),
+            "Unsupported conversion from 'FixedSizeBinary(1)'"
+        );
     }
 
     #[test]
@@ -527,7 +530,11 @@ mod tests {
         let inner_struct_type = arrow::datatypes::DataType::Struct(
             vec![
                 arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
+                arrow::datatypes::Field::new(
+                    "b",
+                    arrow::datatypes::DataType::FixedSizeBinary(1),
+                    true,
+                ),
             ]
             .into(),
         );
@@ -543,12 +550,12 @@ mod tests {
             err,
             ConversionError {
                 fields: vec!["b".to_owned(), "x".to_owned()],
-                data_type: arrow::datatypes::DataType::LargeUtf8,
+                data_type: arrow::datatypes::DataType::FixedSizeBinary(1),
             }
         );
         assert_eq!(
             &err.to_string(),
-            "Unsupported conversion from 'LargeUtf8' for field 'x.b'"
+            "Unsupported conversion from 'FixedSizeBinary(1)' for field 'x.b'"
         );
     }
 
@@ -557,7 +564,11 @@ mod tests {
         let inner_struct_type = arrow::datatypes::DataType::Struct(
             vec![
                 arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
+                arrow::datatypes::Field::new(
+                    "b",
+                    arrow::datatypes::DataType::FixedSizeBinary(1),
+                    true,
+                ),
             ]
             .into(),
         );
@@ -570,12 +581,12 @@ mod tests {
             err,
             ConversionError {
                 fields: vec!["b".to_owned(), "x".to_owned()],
-                data_type: arrow::datatypes::DataType::LargeUtf8,
+                data_type: arrow::datatypes::DataType::FixedSizeBinary(1),
             }
         );
         assert_eq!(
             &err.to_string(),
-            "Unsupported conversion from 'LargeUtf8' for field 'x.b'"
+            "Unsupported conversion from 'FixedSizeBinary(1)' for field 'x.b'"
         );
     }
 }

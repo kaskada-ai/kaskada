@@ -7,9 +7,7 @@ use arrow::datatypes::{DataType, Field, Schema};
 use sparrow_api::kaskada::v1alpha::{TableConfig, TableMetadata};
 use uuid::Uuid;
 
-use crate::fixtures::{
-    collection_data_fixture, f64_data_fixture, i64_data_fixture, strings_data_fixture,
-};
+use crate::fixtures::{f64_data_fixture, i64_data_fixture, strings_data_fixture};
 use crate::{DataFixture, QueryFixture};
 
 #[tokio::test]

@@ -1,5 +1,5 @@
 ---
-source: sparrow-compiler/tests/compiler_golden_tests.rs
+source: crates/sparrow-compiler/tests/compiler_golden_tests.rs
 expression: compute_plan
 ---
 per_entity_behavior: 1
@@ -14,14 +14,17 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: store_id
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
                 - name: sender_id
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
         output: true
         operator:
           Input:
@@ -67,14 +70,17 @@ operations:
               data_type:
                 kind:
                   Primitive: 13
+              nullable: true
             - name: store_id
               data_type:
                 kind:
                   Primitive: 10
+              nullable: true
             - name: sender_id
               data_type:
                 kind:
                   Primitive: 10
+              nullable: true
         slice_plan:
           table_name: StoreReceived
           slice: ~
@@ -112,14 +118,17 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: store_id
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
                 - name: sender_id
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
         output: false
         operator:
           Input:
@@ -188,6 +197,7 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
         output: true
         operator:
           Instruction: record
@@ -228,6 +238,7 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
         output: true
         operator:
           Input:
