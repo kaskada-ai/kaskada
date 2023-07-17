@@ -132,7 +132,7 @@ entity_filter = EntityFilter(entity_keys)
 set_default_slice(entity_filter)
 ----
 
-The example above creates a new `EntityFilter` from the Kaskada Slice Filters
+The example above creates a new `EntityFilter` from the Kaskada Slicing
 module with entity key filters for "customer_01" and "customer_03".
 
 === Entity Key Filter Additional Details
