@@ -248,4 +248,51 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			Expect(len(results)).Should(BeNumerically("~", 50, 25))
 		})
 	})
+
+	Describe("Run the query with an entity key filter", func() {
+		It("should return X number of results", func() {
+			destination := &v1alpha.Destination{}
+			destination.Destination = &v1alpha.Destination_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
+			createQueryRequest := &v1alpha.CreateQueryRequest{
+				Query: &v1alpha.Query{
+					Expression:     expression,
+					Destination:    destination,
+					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
+					Slice: &v1alpha.SliceRequest{
+						Slice: &v1alpha.SliceRequest_EntityKeys{
+							EntityKeys: &v1alpha.SliceRequest_EntityKeysSlice{
+								EntityKeys: []string{
+									"2798e270c7cab8c9eeacc046a3100a57",
+								},
+							},
+						},
+					},
+				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
+			}
+			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
+			Expect(err).ShouldNot(HaveOccurredGrpc())
+			Expect(stream).ShouldNot(BeNil())
+
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(res).ShouldNot(BeNil())
+			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
+			Expect(res.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetDestination().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
+
+			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
+			results := helpers.DownloadParquet(resultsUrl)
+
+			helpers.LogLn(fmt.Sprintf("Result set size, with entity key filter: %d", len(results)))
+
+			Expect(len(results)).Should(BeNumerically("~", 300))
+		})
+	})
 })
