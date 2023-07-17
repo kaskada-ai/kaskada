@@ -38,7 +38,7 @@ entity_filter = EntityPercentFilter(filter_percentage)
 ----
 
 The example above creates a new `EntityPercentFilter` from the Kaskada
-Slice Filters module with a filtering percentage of 12.34%.
+Slicing module with a filtering percentage of 12.34%.
 
 === Entity Key Percent Filter Additional Details
 
