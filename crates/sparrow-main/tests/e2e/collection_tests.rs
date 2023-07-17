@@ -1,14 +1,5 @@
 //! e2e tests for the collection operators.
 
-use std::{fs::File, path::PathBuf, sync::Arc};
-
-use anyhow::Context;
-use arrow::{
-    datatypes::{DataType, Field, Fields, Schema, TimeUnit},
-    record_batch::RecordBatch,
-};
-use itertools::Itertools;
-use parquet::arrow::ArrowWriter;
 use sparrow_api::kaskada::v1alpha::TableConfig;
 use uuid::Uuid;
 
