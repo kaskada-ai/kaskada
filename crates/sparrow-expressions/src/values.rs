@@ -1,10 +1,8 @@
 use std::marker::PhantomData;
 
-use arrow_array::cast::{
-    as_boolean_array, as_map_array, as_primitive_array, as_string_array, as_struct_array,
-};
+use arrow_array::cast::{as_boolean_array, as_primitive_array, as_string_array, as_struct_array};
 use arrow_array::types::ArrowPrimitiveType;
-use arrow_array::{ArrayRef, BooleanArray, MapArray, PrimitiveArray, StringArray, StructArray};
+use arrow_array::{ArrayRef, BooleanArray, PrimitiveArray, StringArray, StructArray};
 use arrow_schema::DataType;
 
 use crate::Error;

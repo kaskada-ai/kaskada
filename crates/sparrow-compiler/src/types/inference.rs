@@ -152,7 +152,7 @@ pub fn validate_instantiation(
                             occupied.get() == argument_type
                                 || matches!(occupied.get(), FenlType::Error)
                                 || matches!(argument_type, FenlType::Error),
-                            "IFailed type validation: expected {} but was {}",
+                            "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             argument_type
                         );
@@ -184,7 +184,7 @@ pub fn validate_instantiation(
                             occupied.get() == &key_type
                                 || matches!(occupied.get(), FenlType::Error)
                                 || matches!(key_type, FenlType::Error),
-                            "KFailed type validation: expected {} but was {}",
+                            "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             key_type
                         );
@@ -231,7 +231,7 @@ pub fn validate_instantiation(
                             argument_type,
                             FenlType::Error | FenlType::Concrete(DataType::Null)
                         ),
-                    "ZFailed type validation: expected {} but was {}",
+                    "Failed type validation: expected {} but was {}",
                     parameter_type,
                     argument_type
                 );

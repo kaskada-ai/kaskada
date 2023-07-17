@@ -300,15 +300,15 @@ macro_rules! create_typed_evaluator {
 /// Create a `Box<dyn Evaluator>` for a map instruction.
 ///
 /// The `$evaluator` must be a `struct` that takes a generic datatype T
-///  and which implements `Evaluator`.
+/// and Offset O and which implements `Evaluator`.
 ///
 /// The `$info` should be a `StaticInfo`, which contains information relevant
 /// to creating a new evaluator.
 /// # Example
 ///
 /// ```no_run
-/// struct GetStringToPrimitiveEvaluator<T: ArrowPrimitiveType>;
-/// impl<T: ArrowPrimitiveType> Evaluator for GetStringToPrimitiveEvaluator<T> { ... }
+/// struct GetStringToPrimitiveEvaluator<O: OffsetTrait, T: ArrowPrimitiveType>;
+/// impl<O: OffsetTrait, T: ArrowPrimitiveType> Evaluator for GetStringToPrimitiveEvaluator<O, T> { ... }
 ///
 /// fn create_evaluator(args: Vec<StaticArg>, result_type: &DataType) -> anyhow::Result<Self> {
 ///   create_map_evaluator!(key_type, map_value_type, GetStringToPrimitiveEvaluator, info)

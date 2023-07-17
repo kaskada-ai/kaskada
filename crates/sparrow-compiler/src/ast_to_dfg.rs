@@ -9,7 +9,7 @@ mod tests;
 use std::rc::Rc;
 
 use anyhow::{anyhow, Context};
-use arrow::datatypes::{DataType, FieldRef, Fields};
+use arrow::datatypes::{DataType, FieldRef};
 pub use ast_dfg::*;
 use egg::Id;
 use itertools::{izip, Itertools};
@@ -647,6 +647,11 @@ fn cast_if_needed(
         // TODO: This maybe should create an error node and return it.
         (_, FenlType::Error) => Ok(value),
         (actual, expected) if actual == expected => Ok(value),
+
+        // This handles the case where user `map` types have different names but are
+        // otherwise identical. When constructing the concrete map during inference,
+        // we make up names for the map types, so this is a common case. This ensures that
+        // the types themselves are still treated as equal.
         (FenlType::Concrete(DataType::Map(s, _)), FenlType::Concrete(DataType::Map(s2, _)))
             if map_types_are_equal(s, s2) =>
         {
