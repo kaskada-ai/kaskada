@@ -1,10 +1,9 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, PrimitiveArray, StringArray};
+use arrow::array::{Array, ArrayRef, GenericStringArray, OffsetSizeTrait, PrimitiveArray};
 use arrow::datatypes::{ArrowPrimitiveType, DataType};
 use itertools::Itertools;
-use owning_ref::ArcRef;
 use sparrow_arrow::downcast::{downcast_primitive_array, downcast_string_array};
 
 use sparrow_plan::ValueRef;
@@ -13,18 +12,20 @@ use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
 /// Evaluator for `get` on maps for string keys and primitive values.
 #[derive(Debug)]
-pub(in crate::evaluators) struct GetStringToPrimitiveEvaluator<T>
+pub(in crate::evaluators) struct GetStringToPrimitiveEvaluator<O, T>
 where
+    O: OffsetSizeTrait,
     T: ArrowPrimitiveType + Sync + Send,
 {
     map: ValueRef,
     key: ValueRef,
-    // Make the compiler happy by using the type parameter
-    _phantom: PhantomData<T>,
+    // Make the compiler happy by using the type parameters
+    _phantom: PhantomData<(O, T)>,
 }
 
-impl<T> EvaluatorFactory for GetStringToPrimitiveEvaluator<T>
+impl<O, T> EvaluatorFactory for GetStringToPrimitiveEvaluator<O, T>
 where
+    O: OffsetSizeTrait,
     T: ArrowPrimitiveType + Sync + Send,
 {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
@@ -32,7 +33,7 @@ where
 
         // Key should be a string
         anyhow::ensure!(
-            matches!(key_type, DataType::Utf8),
+            matches!(key_type, DataType::Utf8 | DataType::LargeUtf8),
             "expected string key type, saw {:?}",
             key_type
         );
@@ -75,13 +76,14 @@ where
     }
 }
 
-impl<T> Evaluator for GetStringToPrimitiveEvaluator<T>
+impl<O, T> Evaluator for GetStringToPrimitiveEvaluator<O, T>
 where
+    O: OffsetSizeTrait,
     T: ArrowPrimitiveType + Sync + Send,
 {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let map_input = info.value(&self.map)?.map_array()?;
-        let key_input = info.value(&self.key)?.string_array::<i32>()?;
+        let key_input = info.value(&self.key)?.string_array::<O>()?;
 
         let result: PrimitiveArray<T> = {
             anyhow::ensure!(
@@ -96,7 +98,8 @@ where
 
                     // Iterate through map_entry, match on key, return value.
                     // Note: if the map were ordered, we could more efficiently find the value.
-                    let m_keys: &StringArray = downcast_string_array(cur_map.column(0).as_ref())?;
+                    let m_keys: &GenericStringArray<O> =
+                        downcast_string_array(cur_map.column(0).as_ref())?;
                     let m_values: &PrimitiveArray<T> =
                         downcast_primitive_array(cur_map.column(1).as_ref())?;
 

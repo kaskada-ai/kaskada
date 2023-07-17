@@ -424,8 +424,8 @@ impl std::fmt::Display for super::Literal {
             Some(literal::Literal::IntervalMonths(i)) => {
                 write!(f, "interval_months:{i}")
             }
-            Some(literal::Literal::Utf8(ref str)) => write!(f, "\\\"{str}\\\""),
-            Some(literal::Literal::LargeUtf8(ref str)) => write!(f, "\\\"{str}\\\""),
+            Some(literal::Literal::Utf8(str)) => write!(f, "\\\"{str}\\\""),
+            Some(literal::Literal::LargeUtf8(str)) => write!(f, "\\\"{str}\\\""),
             unreachable => unreachable!("Unable to format {:?}", unreachable),
         }
     }

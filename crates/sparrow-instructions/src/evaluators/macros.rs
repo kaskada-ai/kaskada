@@ -315,13 +315,15 @@ macro_rules! create_typed_evaluator {
 /// }
 /// ```
 macro_rules! create_map_evaluator {
-    ($key_type:expr, $input_type:expr, $string_evaluator:ident, $large_string_evaluator:ident, $info:expr) => {{
+    ($key_type:expr, $value_type:expr, $string_evaluator:ident, $info:expr) => {{
         use arrow::datatypes::*;
-        use create_primitive_evaluator;
+        use create_string_map_evaluator;
         match $key_type {
-            DataType::Utf8 => create_primitive_evaluator!($input_type, $string_evaluator, $info),
+            DataType::Utf8 => {
+                create_string_map_evaluator!(i32, $value_type, $string_evaluator, $info)
+            }
             DataType::LargeUtf8 => {
-                create_primitive_evaluator!($input_type, $large_string_evaluator, $info)
+                create_string_map_evaluator!(i64, $value_type, $string_evaluator, $info)
             }
             unsupported_type => Err(anyhow::anyhow!(format!(
                 "unsupported key type {:?} for map evaluator",
@@ -331,45 +333,45 @@ macro_rules! create_map_evaluator {
     }};
 }
 
-macro_rules! create_primitive_evaluator {
-    ($input_type:expr, $evaluator:ident, $info:expr) => {{
+macro_rules! create_string_map_evaluator {
+    ($offset_size:ident, $input_type:expr, $evaluator:ident, $info:expr) => {{
         use arrow::datatypes::*;
         match $input_type {
-            DataType::Int32 => $evaluator::<Int32Type>::try_new($info),
-            DataType::Int64 => $evaluator::<Int64Type>::try_new($info),
-            DataType::UInt32 => $evaluator::<UInt32Type>::try_new($info),
-            DataType::UInt64 => $evaluator::<UInt64Type>::try_new($info),
-            DataType::Float32 => $evaluator::<Float32Type>::try_new($info),
-            DataType::Float64 => $evaluator::<Float64Type>::try_new($info),
+            DataType::Int32 => $evaluator::<$offset_size, Int32Type>::try_new($info),
+            DataType::Int64 => $evaluator::<$offset_size, Int64Type>::try_new($info),
+            DataType::UInt32 => $evaluator::<$offset_size, UInt32Type>::try_new($info),
+            DataType::UInt64 => $evaluator::<$offset_size, UInt64Type>::try_new($info),
+            DataType::Float32 => $evaluator::<$offset_size, Float32Type>::try_new($info),
+            DataType::Float64 => $evaluator::<$offset_size, Float64Type>::try_new($info),
             DataType::Timestamp(TimeUnit::Second, None) => {
-                $evaluator::<TimestampSecondType>::try_new($info)
+                $evaluator::<$offset_size, TimestampSecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Millisecond, None) => {
-                $evaluator::<TimestampMillisecondType>::try_new($info)
+                $evaluator::<$offset_size, TimestampMillisecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Microsecond, None) => {
-                $evaluator::<TimestampMicrosecondType>::try_new($info)
+                $evaluator::<$offset_size, TimestampMicrosecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Nanosecond, None) => {
-                $evaluator::<TimestampNanosecondType>::try_new($info)
+                $evaluator::<$offset_size, TimestampNanosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Second) => {
-                $evaluator::<DurationSecondType>::try_new($info)
+                $evaluator::<$offset_size, DurationSecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Millisecond) => {
-                $evaluator::<DurationMillisecondType>::try_new($info)
+                $evaluator::<$offset_size, DurationMillisecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Microsecond) => {
-                $evaluator::<DurationMicrosecondType>::try_new($info)
+                $evaluator::<$offset_size, DurationMicrosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Nanosecond) => {
-                $evaluator::<DurationNanosecondType>::try_new($info)
+                $evaluator::<$offset_size, DurationNanosecondType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::DayTime) => {
-                $evaluator::<IntervalDayTimeType>::try_new($info)
+                $evaluator::<$offset_size, IntervalDayTimeType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::YearMonth) => {
-                $evaluator::<IntervalYearMonthType>::try_new($info)
+                $evaluator::<$offset_size, IntervalYearMonthType>::try_new($info)
             }
             unsupported_type => Err(anyhow::anyhow!(format!(
                 "Unsupported non-primitive value type {:?} for {}",
@@ -382,6 +384,6 @@ macro_rules! create_primitive_evaluator {
 
 pub(super) use {
     create_float_evaluator, create_map_evaluator, create_number_evaluator,
-    create_ordered_evaluator, create_primitive_evaluator, create_signed_evaluator,
+    create_ordered_evaluator, create_signed_evaluator, create_string_map_evaluator,
     create_typed_evaluator,
 };

@@ -162,29 +162,3 @@ impl WorkAreaValue for ArrayRefValue {
         &arrays[self.index]
     }
 }
-
-#[derive(Debug, Clone, Copy)]
-#[repr(transparent)]
-pub struct MapValue {
-    index: usize,
-}
-
-impl MapValue {
-    pub fn _try_new(index: usize, data_type: &DataType) -> error_stack::Result<Self, Error> {
-        error_stack::ensure!(
-            matches!(data_type, DataType::Struct(_)),
-            Error::InvalidNonStructArgumentType {
-                actual: data_type.clone()
-            }
-        );
-        Ok(Self { index })
-    }
-}
-
-impl WorkAreaValue for MapValue {
-    type Array<'a> = &'a MapArray;
-
-    fn access<'a>(&self, arrays: &'a [ArrayRef]) -> Self::Array<'a> {
-        as_map_array(arrays[self.index].as_ref())
-    }
-}

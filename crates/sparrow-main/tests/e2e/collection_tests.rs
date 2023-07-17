@@ -43,7 +43,7 @@ async fn test_get_dynamic_key() {
 
 #[tokio::test]
 async fn test_supplant() {
-    insta::assert_snapshot!(QueryFixture::new("{ value: get(\"airTemperature\" as large_string, Input.readings) | when(is_valid($input)) } ").with_dump_dot("asdf").run_to_csv(&supplant_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ value: get(\"airTemperature\", Input.readings) | when(is_valid($input)) } ").with_dump_dot("asdf").run_to_csv(&supplant_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,value
     "###);
 }

@@ -152,7 +152,7 @@ pub fn validate_instantiation(
                             occupied.get() == argument_type
                                 || matches!(occupied.get(), FenlType::Error)
                                 || matches!(argument_type, FenlType::Error),
-                            "Failed type validation: expected {} but was {}",
+                            "IFailed type validation: expected {} but was {}",
                             occupied.get(),
                             argument_type
                         );
@@ -184,7 +184,7 @@ pub fn validate_instantiation(
                             occupied.get() == &key_type
                                 || matches!(occupied.get(), FenlType::Error)
                                 || matches!(key_type, FenlType::Error),
-                            "Failed type validation: expected {} but was {}",
+                            "KFailed type validation: expected {} but was {}",
                             occupied.get(),
                             key_type
                         );
@@ -231,7 +231,7 @@ pub fn validate_instantiation(
                             argument_type,
                             FenlType::Error | FenlType::Concrete(DataType::Null)
                         ),
-                    "Failed type validation: expected {} but was {}",
+                    "ZFailed type validation: expected {} but was {}",
                     parameter_type,
                     argument_type
                 );
@@ -295,21 +295,6 @@ fn solve_type_class(
                 })
                 .collect();
 
-            // TODO: Map type arguments are reported at the location of the outer `map`,
-            // which is confusing.
-            // The actual error is that `large_string` is the `map.key` type,
-            // and we're expected `string`.
-            //
-            // error[E0010]: Invalid argument type(s)
-            //   --> Query:1:10
-            //   |
-            // 1 | { value: get("test" , Input.readings )}
-            //   |          ^^^ ------   -------------- Type: large_string
-            //   |          |   |
-            //   |          |   Type: string
-            //   |          Invalid types for call to 'get'
-            //   |
-            //   = Expected 'key'
             DiagnosticCode::InvalidArgumentType
                 .builder()
                 .with_label(
@@ -530,6 +515,8 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
 
         // Row 17: A is Utf8
         (Utf8, Utf8) => Some(Utf8),
+        (LargeUtf8, Utf8) => Some(LargeUtf8),
+        (Utf8, LargeUtf8) => Some(LargeUtf8),
         (Utf8, ts @ Timestamp(_, _)) => Some(ts.clone()),
         (ts @ Timestamp(_, _), Utf8) => Some(ts),
 

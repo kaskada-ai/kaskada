@@ -7,9 +7,8 @@ use self::macros::create_signed_evaluator;
 use self::map::get_string_to_primitive::GetStringToPrimitiveEvaluator;
 use crate::evaluators::macros::{
     create_float_evaluator, create_map_evaluator, create_number_evaluator,
-    create_ordered_evaluator, create_primitive_evaluator, create_typed_evaluator,
+    create_ordered_evaluator, create_string_map_evaluator, create_typed_evaluator,
 };
-use crate::evaluators::map::get_large_string_to_primitive::GetLargeStringToPrimitiveEvaluator;
 use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
 pub mod aggregation;
@@ -213,7 +212,6 @@ fn create_simple_evaluator(
                         &info.args[0].data_type,
                         &fields[1].data_type(),
                         GetStringToPrimitiveEvaluator,
-                        GetLargeStringToPrimitiveEvaluator,
                         info
                     )
                 }
