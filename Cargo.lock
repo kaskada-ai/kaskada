@@ -4158,7 +4158,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-api"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4189,7 +4189,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-arrow"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4216,7 +4216,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-backend"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "arrow-schema",
  "index_vec",
@@ -4226,7 +4226,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-catalog"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "arrow",
  "clap 4.3.2",
@@ -4262,7 +4262,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-compiler"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4314,7 +4314,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-core"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4334,7 +4334,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-expressions"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "approx 0.5.1",
  "arrow-arith",
@@ -4362,7 +4362,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-instructions"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4400,7 +4400,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-kernels"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4418,7 +4418,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-main"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4477,7 +4477,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-materialize"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "dashmap",
  "derive_more",
@@ -4493,7 +4493,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-physical"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "arrow-schema",
  "bigdecimal",
@@ -4507,7 +4507,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-plan"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "arrow",
@@ -4528,7 +4528,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "cpu-time",
  "derive_more",
@@ -4554,7 +4554,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-qfr-tool"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "clap 4.3.2",
  "cpu-time",
@@ -4579,7 +4579,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-runtime"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "ahash 0.8.3",
  "anyhow",
@@ -4649,7 +4649,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-syntax"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -4675,7 +4675,7 @@ dependencies = [
 
 [[package]]
 name = "sparrow-testing"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "arrow-array",
  "arrow-csv",
