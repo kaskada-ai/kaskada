@@ -66,6 +66,7 @@ inventory = "0.3.8"
 itertools = "0.11.0"
 lalrpop = "0.20.0"
 lalrpop-util = "0.20.0"
+kafka = "0.9.0"
 logos = "0.12.1"
 lz4 = "1.24.0"
 lz4-sys = "1.9.4"
@@ -97,6 +98,7 @@ pulsar = { version = "5.1.0", default-features = false, features = [
 rand = "0.8.5"
 regex = "1.9.3"
 reqwest = { version = "0.11.14", features = ["native-tls-vendored"] }
+schema_registry_converter = { version = "3.1.0", features = ["avro"] }
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_json = "1.0.95"
 serde_yaml = "0.9.19"
