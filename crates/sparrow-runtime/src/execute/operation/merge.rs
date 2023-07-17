@@ -720,7 +720,8 @@ mod tests {
         "###)
     }
 
-    #[ignore]
+    #[tokio::test]
+    #[ignore = "https://github.com/kaskada-ai/kaskada/issues/524"]
     async fn test_merge_drops_duplicate_rows() {
         let plan = default_plan();
         let operation_0 = batch_from_csv(
