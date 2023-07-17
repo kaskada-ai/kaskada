@@ -67,6 +67,7 @@ indoc = "1.0.9"
 insta = { version = "1.29.0", features = ["ron", "yaml", "json"] }
 inventory = "0.3.8"
 itertools = "0.10.5"
+kafka = "0.9.0"
 lalrpop = "0.19.9"
 lalrpop-util = "0.19.9"
 logos = "0.12.1"
@@ -93,6 +94,7 @@ prost-wkt-build = "0.4.1"
 prost-wkt-types = "0.4.1"
 rand = "0.8.5"
 reqwest = "0.11.14"
+schema_registry_converter = { version = "3.1.0", features = ["avro"] }
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_json = "1.0.95"
 serde_yaml = "0.9.19"
