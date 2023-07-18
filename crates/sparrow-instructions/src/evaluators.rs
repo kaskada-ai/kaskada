@@ -11,6 +11,7 @@ use crate::evaluators::macros::{
     create_typed_evaluator,
 };
 use crate::evaluators::map::get_primitive_to_primitive::GetPrimitiveToPrimitiveEvaluator;
+use crate::evaluators::map::get_primitive_to_string::GetPrimitiveToStringEvaluator;
 use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
 pub mod aggregation;
@@ -215,6 +216,7 @@ fn create_simple_evaluator(
                         &fields[1].data_type(),
                         GetStringToPrimitiveEvaluator,
                         GetPrimitiveToPrimitiveEvaluator,
+                        GetPrimitiveToStringEvaluator,
                         info
                     )
                 }

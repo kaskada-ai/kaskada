@@ -10,29 +10,29 @@ use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
-/// Evaluator for `get` on maps for string keys and primitive values.
+/// Evaluator for `get` on maps for primitive keys and string values.
 #[derive(Debug)]
-pub(in crate::evaluators) struct GetStringToPrimitiveEvaluator<O, T>
+pub(in crate::evaluators) struct GetPrimitiveToStringEvaluator<T, O>
 where
-    O: OffsetSizeTrait,
     T: ArrowPrimitiveType + Sync + Send,
+    O: OffsetSizeTrait,
 {
     map: ValueRef,
     key: ValueRef,
     // Make the compiler happy by using the type parameters
-    _phantom: PhantomData<(O, T)>,
+    _phantom: PhantomData<(T, O)>,
 }
 
-impl<O, T> EvaluatorFactory for GetStringToPrimitiveEvaluator<O, T>
+impl<T, O> EvaluatorFactory for GetPrimitiveToStringEvaluator<T, O>
 where
-    O: OffsetSizeTrait,
     T: ArrowPrimitiveType + Sync + Send,
+    O: OffsetSizeTrait,
 {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let key_type = info.args[0].data_type.clone();
-        anyhow::ensure!(
-            matches!(key_type, DataType::Utf8 | DataType::LargeUtf8),
-            "expected string key type, saw {:?}",
+        assert!(
+            key_type.is_primitive(),
+            "expected primitive key type, saw {:?}",
             key_type
         );
 
@@ -58,11 +58,10 @@ where
             other => anyhow::bail!("expected map type, saw {:?}", other),
         };
 
-        // Value should be a primitive type
         anyhow::ensure!(
-            value_type.is_primitive(),
-            "expected primitive value type in map, saw {:?}",
-            value_type
+            matches!(value_type, DataType::Utf8 | DataType::LargeUtf8),
+            "expected string value type, saw {:?}",
+            key_type
         );
 
         let (key, map) = info.unpack_arguments()?;
@@ -74,21 +73,21 @@ where
     }
 }
 
-impl<O, T> Evaluator for GetStringToPrimitiveEvaluator<O, T>
+impl<T, O> Evaluator for GetPrimitiveToStringEvaluator<T, O>
 where
-    O: OffsetSizeTrait,
     T: ArrowPrimitiveType + Sync + Send,
+    O: OffsetSizeTrait,
 {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let map_input = info.value(&self.map)?.map_array()?;
-        let key_input = info.value(&self.key)?.string_array::<O>()?;
+        let key_input = info.value(&self.key)?.primitive_array::<T>()?;
 
-        let result: PrimitiveArray<T> = {
+        let result: GenericStringArray<O> = {
             anyhow::ensure!(
                 key_input.len() == map_input.len(),
                 "key and map lengths don't match"
             );
-            let values: Vec<Option<T::Native>> = (0..key_input.len())
+            let values: Vec<Option<String>> = (0..key_input.len())
                 .map(|i| -> anyhow::Result<_> {
                     let cur_key = key_input.value(i);
                     let cur_map = map_input.value(i);
@@ -96,10 +95,10 @@ where
 
                     // Iterate through map_entry, match on key, return value.
                     // Note: if the map were ordered, we could more efficiently find the value.
-                    let m_keys: &GenericStringArray<O> =
-                        downcast_string_array(cur_map.column(0).as_ref())?;
-                    let m_values: &PrimitiveArray<T> =
-                        downcast_primitive_array(cur_map.column(1).as_ref())?;
+                    let m_keys: &PrimitiveArray<T> =
+                        downcast_primitive_array(cur_map.column(0).as_ref())?;
+                    let m_values: &GenericStringArray<O> =
+                        downcast_string_array(cur_map.column(1).as_ref())?;
 
                     let value_pos = m_keys.iter().position(|x| x == Some(cur_key));
                     match value_pos {
@@ -107,7 +106,7 @@ where
                             if m_values.is_null(value_pos) {
                                 Ok(None)
                             } else {
-                                Ok(Some(m_values.value(value_pos)))
+                                Ok(Some(m_values.value(value_pos).to_owned()))
                             }
                         }
                         None => Ok(None),
@@ -115,8 +114,7 @@ where
                 })
                 .try_collect()?;
 
-            // SAFETY: `map` is a trusted length iterator
-            unsafe { PrimitiveArray::from_trusted_len_iter(values.iter()) }
+            GenericStringArray::<O>::from_iter(values.iter())
         };
 
         Ok(Arc::new(result))
