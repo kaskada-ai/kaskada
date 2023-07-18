@@ -5,8 +5,9 @@ use arrow::array::ArrayRef;
 use sparrow_plan::ValueRef;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
-use pyo3_polars::PySeries;
-use polars::chunked_array::ChunkedArray;
+use arrow::datatypes::DataType;
+use arrow::array::Array;
+use arrow::array;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
@@ -99,18 +100,34 @@ impl EvaluatorFactory for PythonUDFEvaluator {
 
 impl Evaluator for PythonUDFEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let chunked_arrays: Vec<_> = self.values.iter().map(|value_ref| {
-            let chunk = info.value(value_ref)?.array_ref()?;
-            ChunkedArray::from_chunks("foo", vec!(chunk)) // <- ISSUE: This is an arrow array, but needs to be an arrow2 array for polars
-        }).collect();
+        // let chunked_arrays: Vec<_> = self.values.iter().map(|value_ref| {
+        //     let chunk = info.value(value_ref)?.array_ref()?;
+        //     ChunkedArray::from_chunks("foo", vec!(chunk)) // <- ISSUE: This is an arrow array, but needs to be an arrow2 array for polars
+        // }).collect();
+
+        let array_refs: anyhow::Result<Vec<_>> = self.values.iter().map::<anyhow::Result<_>,_>(|value_ref| Ok(info.value(value_ref)?.array_ref()?)).collect();
 
         Python::with_gil(|py| -> PyResult<()> {
-            let code = printf("udf = new {}\n udf.map(input)", "module.Class");
-            let locals = [("input", PySeries(chunked_arrays[0].into_series()))].into_py_dict(py);
-            let result = py.eval(code, None, Some(&locals))?.extract()?;
+            for i in 0..info.num_rows() {
+                let values: Vec<Py<PyAny>> = array_refs.iter().map(|array_ref| match array_ref.data_type() {
+                    DataType::Null => array::as_null_array(array_ref).value(i).into(),
+                    // DataType::Boolean => Array::as_boolean_array(array_ref).value(i).into(),
+                    // DataType::Int32 => Array::as_primitive_array::<Int32Type>(array_ref).value(i).into(),
+                    // DataType::Int64 => Array::as_primitive_array::<Int64Type>(array_ref).value(i).into(),
+                    // DataType::Float32 => Array::as_primitive_array::<Float32Type>(array_ref).value(i).into(),
+                    // DataType::Float64 => Array::as_primitive_array::<Float64Type>(array_ref).value(i).into(),
+                    // DataType::Struct(_) => Array::as_struct_array(array_ref),
+                });
+            }
+            // let code = printf("udf = new {}\n udf.map(input)", "module.Class");
+            // let locals = [("input", PySeries(chunked_arrays[0].into_series()))].into_py_dict(py);
+            // let result = py.eval(code, None, Some(&locals))?.extract()?;
 
             Ok(())
         });
+        
+        // let primitive_array = array_refs[0].as_primitive_opt::<i64>()?
+        // let value = primitive_array.value(0);
 
         self.values
             .iter()

@@ -82,7 +82,6 @@ owning_ref = "0.4.1"
 parquet = { version = "43.0.0", features = ["async"] }
 parse-display = "0.8.0"
 pin-project = "1.0.12"
-polars = "0.31.1"
 postcard = { version = "1.0.4", features = ["use-std"] }
 prettytable-rs = "0.10.0"
 proptest = "1.1.0"
@@ -93,7 +92,6 @@ prost-wkt = "0.4.1"
 prost-wkt-build = "0.4.1"
 prost-wkt-types = "0.4.1"
 pyo3 = { version = "0.19.1", features = ["auto-initialize"] }
-pyo3-polars = "0.5.0"
 rand = "0.8.5"
 reqwest = "0.11.14"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
