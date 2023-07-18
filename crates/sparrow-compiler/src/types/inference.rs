@@ -181,9 +181,9 @@ pub fn validate_instantiation(
                 match types_for_variable.entry(type_vars[0].clone()) {
                     Entry::Occupied(occupied) => {
                         anyhow::ensure!(
-                            occupied.get() == argument_type
+                            occupied.get() == &key_type
                                 || matches!(occupied.get(), FenlType::Error)
-                                || matches!(argument_type, FenlType::Error),
+                                || matches!(key_type, FenlType::Error),
                             "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             key_type
@@ -197,9 +197,9 @@ pub fn validate_instantiation(
                 match types_for_variable.entry(type_vars[1].clone()) {
                     Entry::Occupied(occupied) => {
                         anyhow::ensure!(
-                            occupied.get() == argument_type
+                            occupied.get() == &value_type
                                 || matches!(occupied.get(), FenlType::Error)
-                                || matches!(argument_type, FenlType::Error),
+                                || matches!(value_type, FenlType::Error),
                             "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             value_type
@@ -318,7 +318,6 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
         FenlType::Collection(Collection::Map, type_vars) => {
             debug_assert!(type_vars.len() == 2);
 
-            // TODO: Ask ben logic behind the concrete::null, instead of error?
             let concrete_key_type = solutions
                 .get(&type_vars[0])
                 .cloned()
@@ -516,6 +515,8 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
 
         // Row 17: A is Utf8
         (Utf8, Utf8) => Some(Utf8),
+        (LargeUtf8, Utf8) => Some(LargeUtf8),
+        (Utf8, LargeUtf8) => Some(LargeUtf8),
         (Utf8, ts @ Timestamp(_, _)) => Some(ts.clone()),
         (ts @ Timestamp(_, _), Utf8) => Some(ts),
 
@@ -689,6 +690,7 @@ fn can_implicitly_cast(from: &DataType, to: &DataType) -> bool {
         (Float64, Float64) => true,
         // Other promotions that we allow implicitly.
         (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
+        (Utf8, LargeUtf8) => true,
         (Timestamp(_, _), Timestamp(TimeUnit::Nanosecond, None)) => true,
         // Other promotions must be explicitly requested.
         (_, _) => false,
@@ -767,7 +769,7 @@ impl TypeConstraints {
                             .collect(),
                     )?;
                 }
-                other => panic!("Expected collection type, saw: {:?}", other),
+                _ => return Err(()),
             },
             (_, FenlType::Error) => {
                 // The argument is an error, but we already reported it.

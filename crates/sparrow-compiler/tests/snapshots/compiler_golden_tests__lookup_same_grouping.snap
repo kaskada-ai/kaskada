@@ -1,5 +1,5 @@
 ---
-source: sparrow-compiler/tests/compiler_golden_tests.rs
+source: crates/sparrow-compiler/tests/compiler_golden_tests.rs
 expression: compute_plan
 ---
 per_entity_behavior: 1
@@ -14,10 +14,12 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: receiver
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
         output: false
         operator:
           Input:
@@ -73,10 +75,12 @@ operations:
               data_type:
                 kind:
                   Primitive: 13
+              nullable: true
             - name: receiver
               data_type:
                 kind:
                   Primitive: 10
+              nullable: true
         slice_plan:
           table_name: Received
           slice: ~
@@ -90,18 +94,22 @@ operations:
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
                 - name: amount
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: receiver
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
                 - name: store
                   data_type:
                     kind:
                       Primitive: 10
+                  nullable: true
         output: false
         operator:
           Input:
@@ -185,18 +193,22 @@ operations:
               data_type:
                 kind:
                   Primitive: 10
+              nullable: true
             - name: amount
               data_type:
                 kind:
                   Primitive: 13
+              nullable: true
             - name: receiver
               data_type:
                 kind:
                   Primitive: 10
+              nullable: true
             - name: store
               data_type:
                 kind:
                   Primitive: 10
+              nullable: true
         slice_plan:
           table_name: Sent
           slice: ~
@@ -340,10 +352,12 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: sum_received
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
         output: true
         operator:
           Instruction: record
@@ -378,10 +392,12 @@ operations:
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: sum_received
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
         output: true
         operator:
           Input:

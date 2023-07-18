@@ -109,7 +109,8 @@ impl Pushdown {
             | DataType::Time64(_)
             | DataType::Duration(_)
             | DataType::Interval(_)
-            | DataType::Utf8 => {
+            | DataType::Utf8
+            | DataType::LargeUtf8 => {
                 let mut subst = subst.clone();
                 subst.insert(
                     Var::from_str("?input_value").context("Failed to parse ?input_value")?,
