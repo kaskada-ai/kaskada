@@ -8,6 +8,7 @@ import kaskada.kaskada.v1alpha.common_pb2 as common_pb
 import kaskada.kaskada.v1alpha.destinations_pb2 as destinations_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
 import kaskada.query
+from kaskada.slice_filters import EntityPercentFilter
 
 """
 def create_query(
@@ -42,6 +43,56 @@ def test_create_query_with_defaults(mockClient):
         query_options=query_pb.QueryOptions(presign_results=True),
     )
 
+    kaskada.query.create_query(expression, client=mockClient)
+    mockClient.query_stub.CreateQuery.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+
+@patch("kaskada.client.Client")
+def test_query_uses_client_global_slice_filter(mockClient):
+    filter_percentage = 65
+    entity_filter = EntityPercentFilter(filter_percentage)
+    kaskada.client.set_default_slice(entity_filter)
+    expression = "test_with_defaults"
+    expected_request = query_pb.CreateQueryRequest(
+        query=query_pb.Query(
+            expression=expression,
+            destination={
+                "object_store": destinations_pb.ObjectStoreDestination(
+                    file_type=common_pb.FILE_TYPE_PARQUET
+                )
+            },
+            result_behavior="RESULT_BEHAVIOR_ALL_RESULTS",
+            slice=common_pb.SliceRequest(
+                percent=common_pb.SliceRequest.PercentSlice(percent=65),
+            ),
+        ),
+        query_options=query_pb.QueryOptions(presign_results=True),
+    )
+    kaskada.query.create_query(expression, client=mockClient)
+    mockClient.query_stub.CreateQuery.assert_called_with(
+        expected_request, metadata=mockClient.get_metadata()
+    )
+
+    filter_percentage = 10
+    entity_filter = EntityPercentFilter(filter_percentage)
+    kaskada.client.set_default_slice(entity_filter)
+    expected_request = query_pb.CreateQueryRequest(
+        query=query_pb.Query(
+            expression=expression,
+            destination={
+                "object_store": destinations_pb.ObjectStoreDestination(
+                    file_type=common_pb.FILE_TYPE_PARQUET
+                )
+            },
+            result_behavior="RESULT_BEHAVIOR_ALL_RESULTS",
+            slice=common_pb.SliceRequest(
+                percent=common_pb.SliceRequest.PercentSlice(percent=10),
+            ),
+        ),
+        query_options=query_pb.QueryOptions(presign_results=True),
+    )
     kaskada.query.create_query(expression, client=mockClient)
     mockClient.query_stub.CreateQuery.assert_called_with(
         expected_request, metadata=mockClient.get_metadata()

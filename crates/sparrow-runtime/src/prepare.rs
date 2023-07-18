@@ -278,7 +278,11 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use arrow::datatypes::{DataType, Field, Schema};
     use futures::StreamExt;
+    use sparrow_api::kaskada::v1alpha::slice_plan::{EntityKeysSlice, Slice};
     use sparrow_api::kaskada::v1alpha::{source_data, SourceData, TableConfig};
     use uuid::Uuid;
 
@@ -408,5 +412,118 @@ mod tests {
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
         let _prepared_schema = prepared_batch.schema();
         let _metadata_schema = metadata.schema();
+    }
+
+    #[tokio::test]
+    async fn test_preparation_single_entity_key_slicing() {
+        let entity_keys = vec!["0b00083c-5c1e-47f5-abba-f89b12ae3cf4".to_owned()];
+        let slice = Some(Slice::EntityKeys(EntityKeysSlice { entity_keys }));
+        test_slicing_config(&slice, 23, 1).await;
+    }
+
+    #[tokio::test]
+    async fn test_preparation_no_matching_entity_key_slicing() {
+        let entity_keys = vec!["some-random-invalid-entity-key".to_owned()];
+        let slice = Some(Slice::EntityKeys(EntityKeysSlice { entity_keys }));
+        test_slicing_config(&slice, 0, 0).await;
+    }
+
+    #[tokio::test]
+    async fn test_preparation_multiple_matching_entity_key_slicing() {
+        let entity_keys = vec![
+            "0b00083c-5c1e-47f5-abba-f89b12ae3cf4".to_owned(),
+            "8a16beda-c07a-4625-a805-2d28f5934107".to_owned(),
+        ];
+        let slice = Some(Slice::EntityKeys(EntityKeysSlice { entity_keys }));
+        test_slicing_config(&slice, 41, 2).await;
+    }
+
+    #[tokio::test]
+    async fn test_slicing_issue() {
+        let input_path = sparrow_testing::testdata_path("transactions/transactions_part1.parquet");
+
+        let input_path =
+            source_data::Source::ParquetPath(format!("file:///{}", input_path.display()));
+        let source_data = SourceData {
+            source: Some(input_path),
+        };
+
+        let table_config = TableConfig::new_with_table_source(
+            "transactions_slicing",
+            &Uuid::new_v4(),
+            "transaction_time",
+            Some("idx"),
+            "purchaser_id",
+            "",
+        );
+
+        let entity_keys = vec!["2798e270c7cab8c9eeacc046a3100a57".to_owned()];
+        let slice = Some(Slice::EntityKeys(EntityKeysSlice { entity_keys }));
+
+        let prepared_batches = super::prepared_batches(
+            &ObjectStoreRegistry::default(),
+            &source_data,
+            &table_config,
+            &slice,
+        )
+        .await
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
+        assert_eq!(prepared_batches.len(), 1);
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
+        assert_eq!(prepared_batch.num_rows(), 300);
+        let _prepared_schema = prepared_batch.schema();
+        assert_metadata_schema_eq(metadata.schema());
+        assert_eq!(metadata.num_rows(), 1);
+    }
+
+    async fn test_slicing_config(
+        slice: &Option<Slice>,
+        num_prepared_rows: usize,
+        num_metadata_rows: usize,
+    ) {
+        let input_path = sparrow_testing::testdata_path("eventdata/sample_event_data.parquet");
+
+        let input_path =
+            source_data::Source::ParquetPath(format!("file:///{}", input_path.display()));
+        let source_data = SourceData {
+            source: Some(input_path),
+        };
+
+        let table_config = TableConfig::new_with_table_source(
+            "Event",
+            &Uuid::new_v4(),
+            "timestamp",
+            Some("subsort_id"),
+            "anonymousId",
+            "user",
+        );
+
+        let prepared_batches = super::prepared_batches(
+            &ObjectStoreRegistry::default(),
+            &source_data,
+            &table_config,
+            slice,
+        )
+        .await
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
+        assert_eq!(prepared_batches.len(), 1);
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
+        assert_eq!(prepared_batch.num_rows(), num_prepared_rows);
+        let _prepared_schema = prepared_batch.schema();
+        assert_metadata_schema_eq(metadata.schema());
+        assert_eq!(metadata.num_rows(), num_metadata_rows);
+    }
+
+    fn assert_metadata_schema_eq(metadata_schema: Arc<Schema>) {
+        let fields = vec![
+            Field::new("_hash", DataType::UInt64, false),
+            Field::new("_entity_key", DataType::Utf8, true),
+        ];
+        let schema = Arc::new(Schema::new(fields));
+        assert_eq!(metadata_schema, schema);
     }
 }
