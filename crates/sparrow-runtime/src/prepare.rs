@@ -438,6 +438,46 @@ mod tests {
         test_slicing_config(&slice, 41, 2).await;
     }
 
+    #[tokio::test]
+    async fn test_slicing_issue() {
+        let input_path = sparrow_testing::testdata_path("transactions/transactions_part1.parquet");
+
+        let input_path =
+            source_data::Source::ParquetPath(format!("file:///{}", input_path.display()));
+        let source_data = SourceData {
+            source: Some(input_path),
+        };
+
+        let table_config = TableConfig::new_with_table_source(
+            "transactions_slicing",
+            &Uuid::new_v4(),
+            "transaction_time",
+            Some("idx"),
+            "idx",
+            "",
+        );
+
+        let entity_keys = vec!["2798e270c7cab8c9eeacc046a3100a57".to_owned()];
+        let slice = Some(Slice::EntityKeys(EntityKeysSlice { entity_keys }));
+
+        let prepared_batches = super::prepared_batches(
+            &ObjectStoreRegistry::default(),
+            &source_data,
+            &table_config,
+            &slice,
+        )
+        .await
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
+        assert_eq!(prepared_batches.len(), 1);
+        let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
+        assert_eq!(prepared_batch.num_rows(), 1);
+        let _prepared_schema = prepared_batch.schema();
+        assert_metadata_schema_eq(metadata.schema());
+        assert_eq!(metadata.num_rows(), 1);
+    }
+
     async fn test_slicing_config(
         slice: &Option<Slice>,
         num_prepared_rows: usize,
