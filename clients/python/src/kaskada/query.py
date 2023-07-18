@@ -134,6 +134,18 @@ def create_query(
         query_pb.CreateQueryResponse
     """
     if slice_filter is None:
+        """
+        Subtle Python Implementation Note:
+
+        The KASKADA_DEFAULT_SLICE is a global variable that varies at runtime. Users can set the default slice at any point.
+        The value of the slice is evaluated at execution time of this method.
+
+        Incorrect: from kaskada.client import KASKADA_DEFAULT_SLICE
+            This value is evaluated once at the import of the query module.
+
+        Correct: import kaskada.client
+            The value is then fetched from the module every time a query is invoked.
+        """
         slice_filter = kaskada.client.KASKADA_DEFAULT_SLICE
 
     change_since_time = get_timestamp(changed_since_time)
