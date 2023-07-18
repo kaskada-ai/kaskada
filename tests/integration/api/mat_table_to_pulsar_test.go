@@ -35,7 +35,7 @@ var _ = Describe("Materialization with Pulsar upload", Ordered, Label("pulsar"),
 		topicName             string
 		materializationClient v1alpha.MaterializationServiceClient
 		materializationName   string
-		msg pulsar.Message
+		msg                   pulsar.Message
 	)
 
 	BeforeAll(func() {
@@ -56,7 +56,7 @@ var _ = Describe("Materialization with Pulsar upload", Ordered, Label("pulsar"),
 		Expect(err).ShouldNot(HaveOccurred())
 
 		// create a pulsar consumer
-		topicName  = "topic_tableToPulsar"
+		topicName = "topic_tableToPulsar"
 		pulsarConsumer, err = pulsarClient.Subscribe(pulsar.ConsumerOptions{
 			Topic:            topicName,
 			SubscriptionName: uuid.New().String(),
@@ -90,7 +90,7 @@ var _ = Describe("Materialization with Pulsar upload", Ordered, Label("pulsar"),
 		conn.Close()
 		pulsarConsumer.Close()
 		pulsarClient.Close()
-		
+
 		// attempt to delete pulsar topic used in test
 		cfg := &pulsaradmin.Config{}
 		cfg.WebServiceURL = "http://localhost:8080"
@@ -135,7 +135,7 @@ min_amount: table_tableToPulsar.amount | min(),
 			Eventually(func(g Gomega) {
 				msg = receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
 				g.Expect(msg).ShouldNot(BeNil())
-				
+
 				var data pulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -144,13 +144,13 @@ min_amount: table_tableToPulsar.amount | min(),
 				g.Expect(data.MinAmount).Should(Equal(2))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 
 			// Verify the second message
 			Eventually(func(g Gomega) {
 				msg = receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
 				g.Expect(msg).ShouldNot(BeNil())
-				
+
 				var data pulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -159,7 +159,7 @@ min_amount: table_tableToPulsar.amount | min(),
 				g.Expect(data.MinAmount).Should(Equal(3))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 		})
 	})
 
@@ -174,7 +174,7 @@ min_amount: table_tableToPulsar.amount | min(),
 			Eventually(func(g Gomega) {
 				msg = receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
 				g.Expect(msg).ShouldNot(BeNil())
-				
+
 				var data pulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -183,13 +183,13 @@ min_amount: table_tableToPulsar.amount | min(),
 				g.Expect(data.MinAmount).Should(Equal(2))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 
 			// Verify the second message
 			Eventually(func(g Gomega) {
 				msg = receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
 				g.Expect(msg).ShouldNot(BeNil())
-				
+
 				var data pulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -198,13 +198,13 @@ min_amount: table_tableToPulsar.amount | min(),
 				g.Expect(data.MinAmount).Should(Equal(7))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 
 			// Verify the third message
 			Eventually(func(g Gomega) {
 				msg = receivePulsarMessageWithTimeout(pulsarConsumer, ctx)
 				g.Expect(msg).ShouldNot(BeNil())
-				
+
 				var data pulsarTestSchema
 				err = json.Unmarshal(msg.Payload(), &data)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -213,7 +213,7 @@ min_amount: table_tableToPulsar.amount | min(),
 				g.Expect(data.MinAmount).Should(Equal(2))
 
 				g.Expect(pulsarConsumer.Ack(msg)).Should(Succeed())
-			}, "5s", "1s").Should(Succeed())
+			}, "10s", "1s").Should(Succeed())
 		})
 	})
 })

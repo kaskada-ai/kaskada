@@ -1,8 +1,8 @@
 on:
   push:
     tags:
-      - "engine@v*" # Create tags matching 'engine@v*'', i.e. engine@v1.0.0
-
+      - 'engine@v[0-9]+\.[0-9]+\.[0-9]+' # Create tags matching 'engine@v*'', i.e. engine@v1.0.0
+      - 'engine@v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+' # Create tags matching beta version numbers, i.e. engine@v1.0.0-beta.1
   # Allow the workflow to be manually run.
   # When doing so, artifacts will be built but not associated with a release.
   workflow_dispatch:
@@ -44,15 +44,15 @@ jobs:
       # Determine the version being released (if tagged).
       - name: Determine version
         id: determine_version
-        if: startsWith(github.ref, 'refs/tags/engine@v')
         run: |
           echo "version=${GITHUB_REF_NAME#engine@}" | tee -a "$GITHUB_OUTPUT"
           echo "tag=${GITHUB_REF_NAME#}" | tee -a "$GITHUB_OUTPUT"
+
       # Run the release drafter to update the release notes for this tag.
       - name: Draft Engine release
         id: draft_release
+        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
         uses: release-drafter/release-drafter@v5
-        if: startsWith(github.ref, 'refs/tags/engine@v')
         with:
           config-name: release-drafter-engine.yml
           disable-autolabeler: true
@@ -63,12 +63,25 @@ jobs:
           commitish: ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Diagnostics
+        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
         run: |
           echo Release Input Version: ${{ steps.determine_version.outputs.version }}
           echo Release ID: ${{ steps.draft_release.outputs.id }}
           echo Release Tag: ${{ steps.draft_release.outputs.tag_name }}
           echo Release HTML URL: ${{ steps.draft_release.outputs.html_url }}
+      
+      # For beta releases we need to create the beta release first so that 
+      # jobs and steps that follow can upload artifacts.  
+      - name: Create Release for Beta 
+        if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
+        run: |
+            echo Release Input Version: ${{ steps.determine_version.outputs.version }}
+            gh release create ${TAG} --repo ${GITHUB_REPOSITORY} -p -t "Engine BETA : ${TAG}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
 
   release_engine_cross_build:
     name: Cross build release for aarch64 linux
@@ -200,7 +213,7 @@ jobs:
             release/cli${{ matrix.exe }}
 
       - name: Add artifacts to release
-        if: startsWith(github.ref, 'refs/tags/engine@v')
+        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
         run: |
           cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
           gh release upload ${TAG} ${ENGINE_ASSET_NAME} --clobber
@@ -218,12 +231,33 @@ jobs:
           WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
           CLI_ASSET_NAME: kaskada-cli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
 
+          # Currently we create a Beta release without any notes or changelog in the GitHub release page. 
+          # Need to figure out how to use the drafter without taking over the draft release. 
+      - name: Add artifacts to Beta release
+        if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
+        run: |
+          cp release/sparrow-main${{ matrix.exe }} ${ENGINE_ASSET_NAME}
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${ENGINE_ASSET_NAME} --clobber
+          cp release/wren${{ matrix.exe }} ${WREN_ASSET_NAME}
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${WREN_ASSET_NAME} --clobber
+          cp release/cli${{ matrix.exe }} ${CLI_ASSET_NAME}
+          gh release upload ${TAG} --repo ${GITHUB_REPOSITORY} ${CLI_ASSET_NAME} --clobber
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          # Name of the assets to produce. We don't include the version
+          # so can have a stable link to the latest asset.
+          ENGINE_ASSET_NAME: kaskada-engine-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+          WREN_ASSET_NAME: kaskada-manager-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+          CLI_ASSET_NAME: kaskada-cli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.exe }}
+
+
   # Not building docker image for ubuntu 22.04 (libc 2.35 libssl 3.0) 
   # See https://github.com/cross-rs/cross/pull/973 on the cross repo 
   release_docker_images:
     name: Build and push Docker images for releases
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/engine@v')
     needs:
       [
         "release_engine_draft",
@@ -283,6 +317,7 @@ jobs:
 
       - name: Build and push Docker images for Engine
         uses: docker/build-push-action@v4
+        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
         with:
           context: .
           platforms: linux/amd64, linux/arm64
@@ -301,6 +336,7 @@ jobs:
 
       - name: Build and push Docker images for Jupyter
         uses: docker/build-push-action@v4
+        if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
         with:
           context: .
           platforms: linux/amd64, linux/arm64
@@ -317,10 +353,47 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
 
-  release_engine_release:
+      - name: Build and push Docker images for Engine Beta
+        if: startsWith(github.ref, 'refs/tags/engine@v') && contains(github.ref, 'beta')
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64, linux/arm64
+          file: Dockerfile.release
+          push: true
+          tags: ${{ env.IMAGE_ENGINE }}:${{ needs.release_engine_draft.outputs.version }}, ${{ env.DOCKERHUB_ENGINE }}:${{ needs.release_engine_draft.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=kaskada engine beta
+            org.opencontainers.image.description=The kaskada engine beta
+            org.opencontainers.image.url=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0 
+      
+      - name: Build and push Docker images for Jupyter Beta
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64, linux/arm64
+          file: Dockerfile.jupyter
+          push: true
+          tags: ${{ env.IMAGE_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }}, ${{ env.DOCKERHUB_JUPYTER }}:${{ needs.release_engine_draft.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=kaskada engine Beta with Jupyter
+            org.opencontainers.image.description=The kaskada engine Beta with pre-installed Jupyter notebook environment
+            org.opencontainers.image.url=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{ needs.release_engine_draft.outputs.version }}
+            org.opencontainers.image.created=${{ steps.current_date.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0 
+  
+  relase_engine_release:
     name: Create and upload engine release
     runs-on: ubuntu-20.04
-    if: startsWith(github.ref, 'refs/tags/engine@v')
+    if: startsWith(github.ref, 'refs/tags/engine@v') && !contains(github.ref, 'beta')
     needs: ["release_engine_draft", "release_engine_build"]
     steps:
       - name: Checkout code

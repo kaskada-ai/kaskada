@@ -1,14 +1,18 @@
 image:
   tag: v0.5.4
 
+namespace: s3-with-key
+
+auth:
+  aws:
+    secretAccessKey: mySeCRETaCCessKey
+    accessKeyId: AWSACCESSKEYID
+    region: us-west-2
+
 storage:
   objectStore:
-    bucket: kaskada-us-west-2-demo
+    bucket: kaskada-bucket
     type: s3
-    s3:
-      region: us-west-2
-      secretAccessKey: mySeCRETaCCessKey
-      accessKeyId: AWSACCESSKEYID
   dbData:
     storageClassName: gp2
   tmpData:

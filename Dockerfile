@@ -62,7 +62,7 @@ RUN cargo build --bin sparrow-main
 ###############################################################################
 # Build the wren code
 
-FROM golang:1.19 AS wren-build
+FROM golang:1.19.9 AS wren-build
 
 RUN mkdir -p /builds/kaskada/wren
 RUN mkdir -p /builds/kaskada/gen/proto/go

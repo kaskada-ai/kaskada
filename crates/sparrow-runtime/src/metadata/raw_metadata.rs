@@ -132,7 +132,7 @@ impl RawMetadata {
         let url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
 
-        let parquet_file = ParquetFile::try_new(object_stores, url)
+        let parquet_file = ParquetFile::try_new(object_stores, url, None)
             .await
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
 
@@ -151,13 +151,8 @@ impl RawMetadata {
         let object_store_url = ObjectStoreUrl::from_str(path)
             .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?;
 
-        if object_store_url.is_local() {
-            let path = object_store_url
-                .path()
-                .change_context_lazy(|| Error::ObjectStore(path.to_owned()))?
-                .to_string();
-            let path = format!("/{}", path);
-            let file = file_from_path(std::path::Path::new(&path))
+        if let Some(local_path) = object_store_url.local_path() {
+            let file = file_from_path(local_path)
                 .into_report()
                 .change_context_lazy(|| Error::LocalFile)?;
             Self::try_from_csv_reader(file)
@@ -165,14 +160,13 @@ impl RawMetadata {
             let download_file = NamedTempFile::new()
                 .into_report()
                 .change_context_lazy(|| Error::Download)?;
-            object_store_url
-                .download(object_stores, download_file.path())
+            object_stores
+                .download(object_store_url, download_file.path())
                 .await
                 .change_context_lazy(|| Error::Download)?;
-            let file = file_from_path(download_file.path())
-                .into_report()
-                .change_context_lazy(|| Error::Download)?;
-            Self::try_from_csv_reader(file)
+            // Pass the download_file (which implements read) directly.
+            // The file will be deleted when the reader completes.
+            Self::try_from_csv_reader(download_file)
         }
     }
 

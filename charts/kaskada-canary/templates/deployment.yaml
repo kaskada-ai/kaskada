@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "kaskada-canary.fullname" . }}
-  namespace: {{ include "kaskada-canary.namespaceName" . }}
+  namespace: {{ include "kaskada-canary.namespace" . }}
   labels:
     {{- include "kaskada-canary.labels" . | nindent 4 }}
 spec:
@@ -29,7 +29,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            {{- include "kaskada-canary.s3Env" . | nindent 12 }}
+            {{- include "kaskada-canary.awsEnv" . | nindent 12 }}
             {{- include "kaskada-canary.engineLogging" . | nindent 12 }}
             {{- range $key, $value := .Values.extraEnv }}
             - name: {{ $key }}
@@ -45,6 +45,10 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
+            {{- if (eq .Values.storage.objectStore.type "local") }}
+            - mountPath: "/data"
+              name: kaskada-canary-data
+            {{- end }}
             - mountPath: "/tmp"
               name: kaskada-canary-tmp
         - name: manager
@@ -54,16 +58,18 @@ spec:
             - name: DB_DIALECT
               value: sqlite
             - name: DB_PATH
-              value: /data/kaskada.db
+              value: /db/kaskada.db
             - name: DB_IN_MEMORY
               value: "false"
+            {{- if .Values.storage.objectStore.bucket }}
             - name: OBJECT_STORE_BUCKET
               value: {{ .Values.storage.objectStore.bucket }}
+            {{- end }}
             - name: OBJECT_STORE_PATH
               value: {{ .Values.storage.objectStore.path }}
             - name: OBJECT_STORE_TYPE 
               value: {{ .Values.storage.objectStore.type }}
-            {{- include "kaskada-canary.s3Env" . | nindent 12 }}
+            {{- include "kaskada-canary.awsEnv" . | nindent 12 }}
             {{- include "kaskada-canary.managerLogging" . | nindent 12 }}
             {{- range $key, $value := .Values.extraEnv }}
             - name: {{ $key }}
@@ -82,9 +88,18 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
+            {{- if (eq .Values.storage.objectStore.type "local") }}
             - mountPath: "/data"
+              name: kaskada-canary-data
+            {{- end }}
+            - mountPath: "/db"
               name: kaskada-canary-db
       volumes:
+        {{- if (eq .Values.storage.objectStore.type "local") }}
+        - name: kaskada-canary-data
+          persistentVolumeClaim:
+            claimName: kaskada-canary-data
+        {{- end }}
         - name: kaskada-canary-db
           persistentVolumeClaim:
             claimName: kaskada-canary-db
@@ -100,7 +115,9 @@ spec:
                 resources:
                   requests:
                     storage: {{ .Values.storage.tmpData.storage }}
+      {{- if .Values.auth.serviceAccount.create }}
       serviceAccountName: {{ include "kaskada-canary.serviceAccountName" . }}
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

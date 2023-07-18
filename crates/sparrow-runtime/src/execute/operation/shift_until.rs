@@ -16,10 +16,10 @@ use sparrow_instructions::{ComputeStore, StoreKey};
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::BoxedOperation;
+use crate::execute::error::{invalid_operation, Error};
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::{invalid_operation, Error};
 use crate::key_hash_index::KeyHashIndex;
 use crate::Batch;
 

@@ -297,7 +297,93 @@ macro_rules! create_typed_evaluator {
     }};
 }
 
+/// Create a `Box<dyn Evaluator>` for a map instruction.
+///
+/// The `$evaluator` must be a `struct` that takes a generic datatype T
+/// and Offset O and which implements `Evaluator`.
+///
+/// The `$info` should be a `StaticInfo`, which contains information relevant
+/// to creating a new evaluator.
+/// # Example
+///
+/// ```no_run
+/// struct GetStringToPrimitiveEvaluator<O: OffsetTrait, T: ArrowPrimitiveType>;
+/// impl<O: OffsetTrait, T: ArrowPrimitiveType> Evaluator for GetStringToPrimitiveEvaluator<O, T> { ... }
+///
+/// fn create_evaluator(args: Vec<StaticArg>, result_type: &DataType) -> anyhow::Result<Self> {
+///   create_map_evaluator!(key_type, map_value_type, GetStringToPrimitiveEvaluator, info)
+/// }
+/// ```
+macro_rules! create_map_evaluator {
+    ($key_type:expr, $value_type:expr, $string_evaluator:ident, $info:expr) => {{
+        use arrow::datatypes::*;
+        use create_string_map_evaluator;
+        match $key_type {
+            DataType::Utf8 => {
+                create_string_map_evaluator!(i32, $value_type, $string_evaluator, $info)
+            }
+            DataType::LargeUtf8 => {
+                create_string_map_evaluator!(i64, $value_type, $string_evaluator, $info)
+            }
+            unsupported_type => Err(anyhow::anyhow!(format!(
+                "unsupported key type {:?} for map evaluator",
+                unsupported_type
+            ))),
+        }
+    }};
+}
+
+macro_rules! create_string_map_evaluator {
+    ($offset_size:ident, $input_type:expr, $evaluator:ident, $info:expr) => {{
+        use arrow::datatypes::*;
+        match $input_type {
+            DataType::Int32 => $evaluator::<$offset_size, Int32Type>::try_new($info),
+            DataType::Int64 => $evaluator::<$offset_size, Int64Type>::try_new($info),
+            DataType::UInt32 => $evaluator::<$offset_size, UInt32Type>::try_new($info),
+            DataType::UInt64 => $evaluator::<$offset_size, UInt64Type>::try_new($info),
+            DataType::Float32 => $evaluator::<$offset_size, Float32Type>::try_new($info),
+            DataType::Float64 => $evaluator::<$offset_size, Float64Type>::try_new($info),
+            DataType::Timestamp(TimeUnit::Second, None) => {
+                $evaluator::<$offset_size, TimestampSecondType>::try_new($info)
+            }
+            DataType::Timestamp(TimeUnit::Millisecond, None) => {
+                $evaluator::<$offset_size, TimestampMillisecondType>::try_new($info)
+            }
+            DataType::Timestamp(TimeUnit::Microsecond, None) => {
+                $evaluator::<$offset_size, TimestampMicrosecondType>::try_new($info)
+            }
+            DataType::Timestamp(TimeUnit::Nanosecond, None) => {
+                $evaluator::<$offset_size, TimestampNanosecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Second) => {
+                $evaluator::<$offset_size, DurationSecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Millisecond) => {
+                $evaluator::<$offset_size, DurationMillisecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Microsecond) => {
+                $evaluator::<$offset_size, DurationMicrosecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Nanosecond) => {
+                $evaluator::<$offset_size, DurationNanosecondType>::try_new($info)
+            }
+            DataType::Interval(IntervalUnit::DayTime) => {
+                $evaluator::<$offset_size, IntervalDayTimeType>::try_new($info)
+            }
+            DataType::Interval(IntervalUnit::YearMonth) => {
+                $evaluator::<$offset_size, IntervalYearMonthType>::try_new($info)
+            }
+            unsupported_type => Err(anyhow::anyhow!(format!(
+                "Unsupported non-primitive value type {:?} for {}",
+                unsupported_type,
+                stringify!($evaluator)
+            ))),
+        }
+    }};
+}
+
 pub(super) use {
-    create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
-    create_signed_evaluator, create_typed_evaluator,
+    create_float_evaluator, create_map_evaluator, create_number_evaluator,
+    create_ordered_evaluator, create_signed_evaluator, create_string_map_evaluator,
+    create_typed_evaluator,
 };

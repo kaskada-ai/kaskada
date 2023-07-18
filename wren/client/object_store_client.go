@@ -15,7 +15,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	aws_s3 "github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/c2fo/vfs/v6"
@@ -52,10 +51,10 @@ func (o Object) Path() string {
 }
 
 type objectStoreClient struct {
-	awsS3           s3iface.S3API
 	dataLocation    vfs.Location
 	disableSSL      bool
 	endpoint        string
+	fileSystem      vfs.FileSystem
 	forcePathStyle  bool
 	objectStoreType string
 }
@@ -79,6 +78,12 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 			log.Fatal().Msgf("could not locate local data path: %s", path)
 		}
 		path = vfs_utils.EnsureTrailingSlash(absPath)
+
+		// create local data path if it doesn't exist
+		err = go_os.MkdirAll(path, go_os.ModePerm)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("unable to create local data path: %s", path)
+		}
 	case object_store_type_azure, object_store_type_gcs, object_store_type_s3:
 		if bucket == "" {
 			log.Fatal().Msgf("when using %s for the `object-store-type`, `object-store-bucket` is requried.", objectStoreType)
@@ -91,35 +96,31 @@ func NewObjectStoreClient(env string, objectStoreType string, bucket string, pat
 	}
 	log.Info().Msgf("objectStorePath: %s", path)
 
-	var (
-		rootObjectStore vfs.FileSystem
-		awsS3           s3iface.S3API
-	)
+	var fileSystem vfs.FileSystem
 
 	switch objectStoreType {
 	case object_store_type_azure:
-		rootObjectStore = backend.Backend(azure.Scheme)
+		fileSystem = backend.Backend(azure.Scheme)
 	case object_store_type_gcs:
-		rootObjectStore = backend.Backend(gs.Scheme)
+		fileSystem = backend.Backend(gs.Scheme)
 	case object_store_type_local:
-		rootObjectStore = backend.Backend(os.Scheme)
+		fileSystem = backend.Backend(os.Scheme)
 	case object_store_type_s3:
-		rootObjectStore = getS3FileSystem(endpoint, disableSSL, forcePathStyle)
-		awsS3 = getS3Client(endpoint, disableSSL, forcePathStyle)
+		fileSystem = getS3FileSystem(endpoint, disableSSL, forcePathStyle)
 	default:
 		log.Fatal().Msg("invalid value set for `object-store-type`. Should be  `local`, `s3`, `gcs`, or `azure`")
 	}
 
-	dataLocation, err := rootObjectStore.NewLocation(bucket, path)
+	dataLocation, err := fileSystem.NewLocation(bucket, path)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to initialize object store")
 	}
 
 	return objectStoreClient{
-		awsS3:           awsS3,
 		dataLocation:    dataLocation,
 		disableSSL:      disableSSL,
 		endpoint:        endpoint,
+		fileSystem:      fileSystem,
 		forcePathStyle:  forcePathStyle,
 		objectStoreType: objectStoreType,
 	}
@@ -136,25 +137,6 @@ func getS3FileSystem(endpoint string, disableSSL bool, forcePathStyle bool) *s3.
 	}
 
 	return s3.NewFileSystem().WithOptions(s3Options)
-}
-
-func getS3Client(endpoint string, disableSSL bool, forcePathStyle bool) *aws_s3.S3 {
-	awsConfig := aws.NewConfig().WithDisableSSL(disableSSL).WithS3ForcePathStyle(forcePathStyle)
-
-	if endpoint != "" {
-		awsConfig = awsConfig.WithEndpoint(endpoint)
-	}
-
-	opts := session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Config:            *awsConfig,
-	}
-
-	sess, err := session.NewSessionWithOptions(opts)
-	if err != nil {
-		log.Fatal().Err(err).Msg("not able to initialize a new s3 session to aws")
-	}
-	return aws_s3.New(sess)
 }
 
 // copies an object into our object store
@@ -264,32 +246,40 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 		return
 
 	case object_store_type_s3:
+		s3FileSystem := c.fileSystem.(*s3.FileSystem)
+		var s3Client s3iface.S3API
+		s3Client, err = s3FileSystem.Client()
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting s3 client")
+			return
+		}
+
 		getObjectInput := &aws_s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(path),
 		}
-		req, _ := c.awsS3.GetObjectRequest(getObjectInput)
+
+		req, _ := s3Client.GetObjectRequest(getObjectInput)
 		presignedURL, err = req.Presign(duration)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue generating presigned download url for uri")
 		}
 		return
 	case object_store_type_gcs:
-		// Set up a GCS client
+		gcsFileSystem := c.fileSystem.(*gs.FileSystem)
 		var gscClient *storage.Client
-		gscClient, err = storage.NewClient(ctx)
+		gscClient, err = gcsFileSystem.Client()
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue creating GCS client")
 			return
 		}
-		defer gscClient.Close()
 
 		opts := &storage.SignedURLOptions{
 			Scheme:  storage.SigningSchemeV4,
 			Method:  "GET",
 			Expires: time.Now().Add(duration),
 		}
-		presignedURL, err = gscClient.Bucket(bucket).SignedURL(path, opts)
+		presignedURL, err = gscClient.Bucket(bucket).SignedURL(vfs_utils.RemoveLeadingSlash(path), opts)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue generating presigned download url for uri")
 		}
@@ -328,12 +318,19 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 		return &identifier, nil
 
 	case "s3":
+		s3FileSystem := c.fileSystem.(*s3.FileSystem)
+		s3Client, err := s3FileSystem.Client()
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting s3 client")
+			return nil, err
+		}
+
 		headObjectInput := &aws_s3.HeadObjectInput{
 			Bucket: aws.String(file.Location().Volume()),
 			Key:    aws.String(file.Path()),
 		}
 
-		result, err := c.awsS3.HeadObjectWithContext(ctx, headObjectInput)
+		result, err := s3Client.HeadObjectWithContext(ctx, headObjectInput)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
 			return nil, err
@@ -341,17 +338,14 @@ func (c objectStoreClient) GetObjectIdentifier(ctx context.Context, fileURI stri
 		identifier := utils.TrimQuotes(*result.ETag)
 		return &identifier, nil
 	case "gs":
-		// Set up a GCS client
-		gscClient, err := storage.NewClient(ctx)
+		gcsFileSystem := c.fileSystem.(*gs.FileSystem)
+		gscClient, err := gcsFileSystem.Client()
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue creating GCS client")
 			return nil, err
 		}
-		defer gscClient.Close()
 
-		// Retrieve object metadata
-		var attrs *storage.ObjectAttrs
-		attrs, err = gscClient.Bucket(file.Location().Volume()).Object(file.Path()).Attrs(ctx)
+		attrs, err := gscClient.Bucket(file.Location().Volume()).Object(vfs_utils.RemoveLeadingSlash(file.Path())).Attrs(ctx)
 		if err != nil {
 			subLogger.Error().Err(err).Msg("issue getting object indentifier")
 			return nil, err
@@ -371,7 +365,7 @@ func (c objectStoreClient) GetDataPathURI(subPath string) string {
 		go_os.MkdirAll(absPath, go_os.ModePerm)
 	}
 
-	return c.dataLocation.URI() + subPath
+	return vfs_utils.EnsureTrailingSlash(c.dataLocation.URI() + subPath)
 }
 
 /*

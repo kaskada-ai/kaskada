@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dashmap::DashMap;
 use error_stack::{IntoReport, ResultExt};
 use futures::stream::BoxStream;
@@ -17,31 +19,34 @@ use sparrow_compiler::InternalCompileOptions;
 use sparrow_instructions::ComputeStore;
 use sparrow_materialize::{Materialization, MaterializationControl};
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
-use sparrow_runtime::execute::Error;
-use sparrow_runtime::s3::{S3Helper, S3Object};
+use sparrow_runtime::execute::error::Error;
+use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use tempfile::NamedTempFile;
 
 use tonic::{Request, Response, Status};
-use tracing::{error, info, Instrument};
+use tracing::Instrument;
 use uuid::Uuid;
 
 use crate::serve::error_status::IntoStatus;
 use crate::BuildInfo;
 
 pub(super) struct ComputeServiceImpl {
-    flight_record_path: &'static Option<S3Object>,
-    s3_helper: S3Helper,
+    flight_record_path: &'static Option<ObjectStoreUrl>,
+    object_stores: Arc<ObjectStoreRegistry>,
     /// Thread-safe map containing the materialization id to control handles.
     materializations: DashMap<String, MaterializationControl>,
 }
 
 impl ComputeServiceImpl {
-    pub(super) fn new(flight_record_path: &'static Option<S3Object>, s3_helper: S3Helper) -> Self {
+    pub(super) fn new(
+        flight_record_path: &'static Option<ObjectStoreUrl>,
+        object_stores: Arc<ObjectStoreRegistry>,
+    ) -> Self {
         let materializations = DashMap::new();
 
         Self {
             flight_record_path,
-            s3_helper,
+            object_stores,
             materializations,
         }
     }
@@ -89,7 +94,7 @@ impl ComputeService for ComputeServiceImpl {
         let handle = tokio::spawn(
             execute_impl(
                 self.flight_record_path,
-                self.s3_helper.clone(),
+                self.object_stores.clone(),
                 request.into_inner(),
             )
             .in_current_span(),
@@ -112,11 +117,10 @@ impl ComputeService for ComputeServiceImpl {
     ) -> Result<Response<StartMaterializationResponse>, Status> {
         let span = tracing::info_span!("StartMaterialization");
         let _enter = span.enter();
-        let s3_helper = self.s3_helper.clone();
         let id = request.get_ref().materialization_id.clone();
         tracing::info!("id: {}", id);
 
-        match start_materialization_impl(s3_helper, request.into_inner()) {
+        match start_materialization_impl(request.into_inner()) {
             Ok(handle) => {
                 self.materializations.insert(id, handle);
                 Ok(Response::new(StartMaterializationResponse {}))
@@ -208,12 +212,12 @@ async fn compile_impl(
 }
 
 async fn execute_impl(
-    flight_record_path: &'static Option<S3Object>,
-    s3_helper: S3Helper,
+    flight_record_path: &'static Option<ObjectStoreUrl>,
+    object_stores: Arc<ObjectStoreRegistry>,
     request: ExecuteRequest,
 ) -> error_stack::Result<
     impl Stream<Item = Result<ExecuteResponse, Status>> + Send,
-    sparrow_runtime::execute::Error,
+    sparrow_runtime::execute::error::Error,
 > {
     // Create a path for the plan yaml tempfile (if needed).
     // TODO: We could include the plan as part of the flight record proto.
@@ -235,7 +239,7 @@ async fn execute_impl(
         serde_yaml::to_writer(writer, plan)
             .into_report()
             .change_context(Error::internal_msg("writing plan tempfile"))?;
-        info!("Wrote plan yaml to {:?}", tempfile);
+        tracing::info!("Wrote plan yaml to {:?}", tempfile);
 
         Some(tempfile)
     } else {
@@ -280,7 +284,7 @@ async fn execute_impl(
 
     Ok(progress_stream
         .chain(futures::stream::once(debug_message(
-            s3_helper,
+            object_stores,
             flight_record_path,
             plan_yaml_tempfile,
             flight_record_tempfile,
@@ -289,7 +293,6 @@ async fn execute_impl(
 }
 
 fn start_materialization_impl(
-    s3_helper: S3Helper,
     request: StartMaterializationRequest,
 ) -> error_stack::Result<MaterializationControl, Error> {
     let id = request.materialization_id.clone();
@@ -302,11 +305,7 @@ fn start_materialization_impl(
     let materialization = Materialization::new(id, plan, tables, destination);
     // TODO: Support lateness
     // Spawns the materialization thread and begin exeution
-    Ok(MaterializationControl::start(
-        materialization,
-        s3_helper,
-        None,
-    ))
+    Ok(MaterializationControl::start(materialization, None))
 }
 
 /// Sends the debug message after the end of the stream.
@@ -314,22 +313,22 @@ fn start_materialization_impl(
 /// Upload the flight record files (plan yaml and flight record),
 /// compute snapshots (if applicable), and marks this as the final message.
 async fn debug_message(
-    s3_helper: S3Helper,
-    flight_record_path: &'static Option<S3Object>,
+    object_stores: Arc<ObjectStoreRegistry>,
+    flight_record_path: &'static Option<ObjectStoreUrl>,
     plan_yaml_tempfile: Option<NamedTempFile>,
     flight_record_tempfile: Option<NamedTempFile>,
 ) -> error_stack::Result<ExecuteResponse, Error> {
     let diagnostic_id = Uuid::new_v4();
 
     let uploaded_plan_yaml_path = upload_flight_record_file(
-        &s3_helper,
+        object_stores.as_ref(),
         flight_record_path,
         plan_yaml_tempfile,
         DiagnosticFile::PlanYaml,
         &diagnostic_id,
     );
     let uploaded_flight_record_path = upload_flight_record_file(
-        &s3_helper,
+        object_stores.as_ref(),
         flight_record_path,
         flight_record_tempfile,
         DiagnosticFile::FlightRecord,
@@ -337,11 +336,11 @@ async fn debug_message(
     );
     // Wait for all futures to complete
     let uploaded_plan_yaml_path = uploaded_plan_yaml_path.await.unwrap_or_else(|e| {
-        error!("Failed to plan yaml: {:?}", e);
+        tracing::error!("Failed to plan yaml: {:?}", e);
         None
     });
     let uploaded_flight_record_path = uploaded_flight_record_path.await.unwrap_or_else(|e| {
-        error!("Failed to upload flight record: {:?}", e);
+        tracing::error!("Failed to upload flight record: {:?}", e);
         None
     });
 
@@ -374,8 +373,8 @@ impl DiagnosticFile {
 }
 
 async fn upload_flight_record_file<'a>(
-    s3_helper: &'a S3Helper,
-    flight_record_path: &'static Option<S3Object>,
+    object_stores: &'a ObjectStoreRegistry,
+    flight_record_path: &'static Option<ObjectStoreUrl>,
     tempfile: Option<NamedTempFile>,
     kind: DiagnosticFile,
     diagnostic_id: &'a Uuid,
@@ -383,26 +382,27 @@ async fn upload_flight_record_file<'a>(
     let tempfile = if let Some(tempfile) = tempfile {
         tempfile
     } else {
-        info!("No diagnostic to upload for kind {:?}", kind);
+        tracing::info!("No diagnostic to upload for kind {:?}", kind);
         return Ok(None);
     };
 
-    let path = if let Some(prefix) = flight_record_path {
-        prefix.join_delimited(&kind.file_name(diagnostic_id))
+    let destination = if let Some(prefix) = flight_record_path {
+        prefix
+            .join(&kind.file_name(diagnostic_id))
+            .map_err(|e| e.into_error())?
     } else {
-        info!("No diagnostic prefix -- not uploading {:?}", kind);
+        tracing::info!("No diagnostic prefix -- not uploading {:?}", kind);
         return Ok(None);
     };
 
-    let destination = path.get_formatted_key();
-    s3_helper
-        .upload_tempfile_to_s3(path, tempfile.into_temp_path())
-        .await?;
-    info!(
-        "Uploaded {:?}. To retrieve: `s3 cp {} .`",
-        kind, destination
-    );
-    Ok(Some(destination))
+    let destination_string = destination.to_string();
+    object_stores
+        .upload(tempfile.path(), destination)
+        .await
+        .map_err(|e| e.into_error())?;
+
+    tracing::info!("Uploaded {kind:?} to {destination_string}");
+    Ok(Some(destination_string))
 }
 
 #[cfg(test)]
@@ -423,7 +423,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{data_type, schema, DataType, Schema};
     use sparrow_api::kaskada::v1alpha::{slice_request, SliceRequest};
     use sparrow_api::kaskada::v1alpha::{Destination, SourceData};
-    use sparrow_runtime::prepare::{file_sourcedata, prepared_batches};
+    use sparrow_runtime::prepare::prepared_batches;
     use sparrow_runtime::stores::ObjectStoreRegistry;
     use sparrow_runtime::{PreparedMetadata, RawMetadata};
 
@@ -439,6 +439,7 @@ mod tests {
                             data_type::PrimitiveType::TimestampNanosecond as i32,
                         )),
                     }),
+                    nullable: false,
                 },
                 schema::Field {
                     name: "subsort".to_owned(),
@@ -447,6 +448,7 @@ mod tests {
                             data_type::PrimitiveType::I32 as i32,
                         )),
                     }),
+                    nullable: false,
                 },
                 schema::Field {
                     name: "entity".to_owned(),
@@ -455,6 +457,7 @@ mod tests {
                             data_type::PrimitiveType::String as i32,
                         )),
                     }),
+                    nullable: false,
                 },
                 schema::Field {
                     name: "str".to_owned(),
@@ -463,6 +466,7 @@ mod tests {
                             data_type::PrimitiveType::String as i32,
                         )),
                     }),
+                    nullable: false,
                 },
             ],
         }
@@ -607,7 +611,6 @@ mod tests {
         // make sure that the sliced file set is properly used.
 
         let file_path = "eventdata/event_data.parquet";
-        let s3_helper = S3Helper::new().await;
         let part1_file_path = sparrow_testing::testdata_path(file_path);
         let table = TableConfig::new_with_table_source(
             "Events",
@@ -626,7 +629,10 @@ mod tests {
         };
         let input_path = SourceData::try_from_local(&part1_file_path).unwrap();
         let prepared_batches: Vec<_> = prepared_batches(
-            &file_sourcedata(input_path),
+            &ObjectStoreRegistry::default(),
+            &SourceData {
+                source: Some(input_path),
+            },
             &table,
             &Some(slice_plan::Slice::Percent(slice_plan::PercentSlice {
                 percent: 50.0,
@@ -739,10 +745,11 @@ mod tests {
         let output_to = Destination {
             destination: Some(destination::Destination::ObjectStore(store)),
         };
+        let object_stores = Arc::new(ObjectStoreRegistry::default());
 
         let mut results: Vec<ExecuteResponse> = execute_impl(
             &None,
-            s3_helper,
+            object_stores,
             ExecuteRequest {
                 plan: compile_response.plan,
                 tables: vec![ComputeTable {

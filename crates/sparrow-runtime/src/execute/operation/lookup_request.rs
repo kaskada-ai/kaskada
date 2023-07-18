@@ -16,10 +16,10 @@ use sparrow_instructions::{ComputeStore, GroupingIndices};
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::BoxedOperation;
+use crate::execute::error::{invalid_operation, Error};
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::{invalid_operation, Error};
 use crate::Batch;
 
 #[derive(Debug)]
@@ -374,7 +374,7 @@ mod tests {
 
         let input = batch_from_json(input_json, vec![DataType::UInt64]).unwrap();
 
-        // The output (e0) should be the list of originall requesting keys.
+        // The output (e0) should be the list of original requesting keys.
         // The key_hash should be the hash of e0 from the input.
         run_operation_json(vec![input], plan).await.unwrap()
     }

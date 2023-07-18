@@ -14,9 +14,6 @@ ahash.workspace = true
 anyhow.workspace = true
 arrow.workspace = true
 async-stream.workspace = true
-aws-config.workspace = true
-aws-sdk-s3.workspace = true
-aws-types.workspace = true
 chrono.workspace = true
 clap.workspace = true
 dashmap.workspace = true
@@ -62,6 +59,7 @@ uuid.workspace = true
 [dev-dependencies]
 assert_cmd = "2.0.10"
 data-encoding.workspace = true
+filetime = "0.2"
 indoc.workspace = true
 insta.workspace = true
 sha2.workspace = true

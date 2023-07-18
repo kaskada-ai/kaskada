@@ -1,10 +1,9 @@
 suite: s3 with access-key snapshot test
 templates:
   - deployment.yaml
-  - persistantVolumeClaim.yaml
+  - persistantVolumeClaims.yaml
   - secret.yaml
   - service.yaml
-  - serviceAccount.yaml
 release:
   name: my-release
   namespace: my-namespace

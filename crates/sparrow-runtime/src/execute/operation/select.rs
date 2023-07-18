@@ -1,4 +1,3 @@
-use crate::execute::{invalid_operation, Error};
 use anyhow::Context;
 use arrow::array::BooleanArray;
 use async_trait::async_trait;
@@ -11,6 +10,7 @@ use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::BoxedOperation;
+use crate::execute::error::{invalid_operation, Error};
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation};

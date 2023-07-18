@@ -1,0 +1,21 @@
+namespace: s3-with-irsa
+
+storage:
+  objectStore:
+    bucket: kaskada-us-west-2-demo
+    type: s3
+  dbData:
+    storageClassName: gp2
+  tmpData:
+    storageClassName: gp2
+
+
+service:
+  type: LoadBalancer
+
+auth:
+  serviceAccount:
+    create: true
+    name: kaskada
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::581634802795:role/irsa_s3

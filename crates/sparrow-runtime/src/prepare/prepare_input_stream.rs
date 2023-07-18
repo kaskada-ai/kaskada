@@ -4,7 +4,6 @@ use anyhow::Context;
 use arrow::array::{ArrayRef, UInt64Array};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, TimestampNanosecondType};
-use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::BoxStream;
@@ -30,7 +29,7 @@ use super::PrepareMetadata;
 /// 3. Sorting the record batches by the time column, subsort column, and key hash
 /// 4. Computing the key-hash and key batch metadata.
 pub async fn prepare_input<'a>(
-    mut reader: BoxStream<'a, Result<RecordBatch, ArrowError>>,
+    mut reader: BoxStream<'a, error_stack::Result<RecordBatch, Error>>,
     config: &TableConfig,
     raw_metadata: RawMetadata,
     prepare_hash: u64,

@@ -5,10 +5,13 @@ use dashmap::DashMap;
 use derive_more::Display;
 use error_stack::{IntoReport, ResultExt};
 use object_store::ObjectStore;
-use tokio::{fs, io::AsyncWriteExt};
-use url::Url;
+use tokio::io::AsyncWriteExt;
 
-use super::{object_store_url::ObjectStoreKey, ObjectStoreUrl};
+use crate::stores::object_store_key::ObjectStoreKey;
+use crate::stores::ObjectStoreUrl;
+
+/// If a file is smaller than this, use upload rather than multipart upload.
+const SINGLE_PART_UPLOAD_LIMIT_BYTES: u64 = 5_000_000;
 
 /// Map from URL scheme to object store for that prefix.
 ///
@@ -35,7 +38,7 @@ impl ObjectStoreRegistry {
         &self,
         url: &ObjectStoreUrl,
     ) -> error_stack::Result<Arc<dyn ObjectStore>, Error> {
-        let key = url.key()?;
+        let key = ObjectStoreKey::from_url(url.url()).change_context(Error::InvalidObjectStore)?;
         match self.object_stores.entry(key) {
             dashmap::mapref::entry::Entry::Occupied(entry) => Ok(entry.get().clone()),
             dashmap::mapref::entry::Entry::Vacant(vacant) => {
@@ -47,32 +50,97 @@ impl ObjectStoreRegistry {
 
     pub async fn upload(
         &self,
-        target_url: ObjectStoreUrl,
-        local_file_path: &path::Path,
+        source_path: &path::Path,
+        destination_url: ObjectStoreUrl,
     ) -> error_stack::Result<(), Error> {
-        let target_path = target_url.path()?;
-        let object_store = self.object_store(&target_url)?;
-        let mut local_file = fs::File::open(local_file_path)
+        let target_path = destination_url.path()?;
+        let object_store = self.object_store(&destination_url)?;
+
+        let upload_error = || Error::UploadingObject {
+            from: source_path.to_path_buf(),
+            to: destination_url.clone(),
+        };
+        let metadata = tokio::fs::metadata(source_path)
             .await
             .into_report()
-            .change_context(Error::Internal)?;
-        let (_id, mut writer) = object_store
-            .put_multipart(&target_path)
+            .change_context_lazy(upload_error)?;
+
+        let length = metadata.len();
+
+        tracing::info!(
+            "Uploading {length} bytes from {} to {destination_url}",
+            source_path.display()
+        );
+
+        if length <= SINGLE_PART_UPLOAD_LIMIT_BYTES {
+            let bytes = tokio::fs::read(source_path)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+            let bytes = bytes::Bytes::from(bytes);
+            object_store
+                .put(&target_path, bytes)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+        } else {
+            let mut source = tokio::fs::File::open(source_path)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+
+            let (_id, mut destination) = object_store
+                .put_multipart(&target_path)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+            tokio::io::copy(&mut source, &mut destination)
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+            destination
+                .shutdown()
+                .await
+                .into_report()
+                .change_context_lazy(upload_error)?;
+        }
+
+        Ok(())
+    }
+
+    /// Download the given object to the given local file path.
+    pub async fn download(
+        &self,
+        source_url: ObjectStoreUrl,
+        destination_path: &path::Path,
+    ) -> error_stack::Result<(), Error> {
+        let path = source_url.path()?;
+        let object_store = self.object_store(&source_url)?;
+
+        let download_error = || Error::DownloadingObject {
+            from: source_url.clone(),
+            to: destination_path.to_owned(),
+        };
+        let stream = object_store
+            .get(&path)
             .await
             .into_report()
-            .change_context(Error::ReadWriteObjectStore)
-            .attach_printable_lazy(|| {
-                format!("failed to write multipart upload to path {}", target_path)
-            })?;
-        tokio::io::copy(&mut local_file, &mut writer)
+            .change_context_lazy(download_error)?
+            .into_stream();
+        let mut destination = tokio::fs::File::create(destination_path)
             .await
             .into_report()
-            .change_context(Error::Internal)?;
-        writer
-            .shutdown()
+            .change_context_lazy(download_error)?;
+        let mut source = tokio_util::io::StreamReader::new(stream);
+        let length = tokio::io::copy(&mut source, &mut destination)
             .await
             .into_report()
-            .change_context(Error::Internal)?;
+            .change_context_lazy(download_error)?;
+
+        tracing::info!(
+            "Downloaded {length} bytes from {source_url} to {}",
+            destination_path.display()
+        );
         Ok(())
     }
 }
@@ -85,23 +153,19 @@ pub enum Error {
     ObjectStore,
     #[display(fmt = "invalid URL '{_0}'")]
     InvalidUrl(String),
-    #[display(fmt = "missing host in URL '{_0}'")]
-    UrlMissingHost(Url),
-    #[display(fmt = "unsupported host '{}' in URL '{_0}", "_0.host().unwrap()")]
-    UrlUnsupportedHost(Url),
-    #[display(
-        fmt = "unsupported scheme '{}' in URL '{_0}'; expected one of 'file' or 's3'",
-        "_0.scheme()"
-    )]
-    UrlUnsupportedScheme(Url),
-    #[display(fmt = "invalid path '{}' in URL '{_0}'", "_0.path()")]
-    UrlInvalidPath(Url),
+    #[display(fmt = "invalid object stroe")]
+    InvalidObjectStore,
     #[display(fmt = "error creating object store")]
     CreatingObjectStore,
     #[display(fmt = "downloading object from '{from}' to '{}'", "to.display()")]
     DownloadingObject {
         from: ObjectStoreUrl,
         to: path::PathBuf,
+    },
+    #[display(fmt = "uploading object from '{}' to '{to}'", "from.display()")]
+    UploadingObject {
+        from: path::PathBuf,
+        to: ObjectStoreUrl,
     },
     #[display(fmt = "internal error")]
     Internal,
@@ -148,10 +212,9 @@ fn create_object_store(key: &ObjectStoreKey) -> error_stack::Result<Arc<dyn Obje
 mod tests {
     use std::str::FromStr;
 
+    use crate::stores::object_store_key::ObjectStoreKey;
     use crate::stores::ObjectStoreUrl;
-    use crate::stores::{
-        object_store_url::ObjectStoreKey, object_stores::create_object_store, ObjectStoreRegistry,
-    };
+    use crate::stores::{registry::create_object_store, ObjectStoreRegistry};
 
     #[test]
     fn test_create_object_store_local() {
@@ -192,7 +255,7 @@ mod tests {
         let object_store_registry = ObjectStoreRegistry::new();
         let key = ObjectStoreKey::Local;
         let url = ObjectStoreUrl::from_str("file:///foo").unwrap();
-        assert_eq!(key, url.key().unwrap());
+        assert_eq!(key, ObjectStoreKey::from_url(url.url()).unwrap());
 
         // Verify there is no object store for local first
         assert!(!object_store_registry.object_stores.contains_key(&key));

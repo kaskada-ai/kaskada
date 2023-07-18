@@ -41,7 +41,7 @@ pub(super) async fn new_parquet_stream(
 ) -> error_stack::Result<BoxStream<'static, error_stack::Result<Batch, Error>>, Error> {
     let object_path =
         ObjectStoreUrl::from_str(object_path).change_context(Error::ParseObjectUrl)?;
-    let parquet_file = ParquetFile::try_new(object_stores, object_path)
+    let parquet_file = ParquetFile::try_new(object_stores, object_path, None)
         .await
         .change_context(Error::OpenParquetFile)?;
 
@@ -50,7 +50,7 @@ pub(super) async fn new_parquet_stream(
         .change_context(Error::DetermineColumns)?;
 
     let stream = parquet_file
-        .read_stream(Some(reader_columns))
+        .read_stream(None, Some(reader_columns))
         .await
         .change_context(Error::OpenParquetFile)?;
 

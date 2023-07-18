@@ -14,6 +14,35 @@ impl DataType {
             kind: Some(data_type::Kind::Struct(Schema { fields })),
         }
     }
+    /// Creates a new map from the given fields.
+    ///
+    /// `fields` should have two elements, the first being the key type
+    /// and the second being the value type.
+    pub fn new_map(name: &str, ordered: bool, fields: Vec<schema::Field>) -> Self {
+        debug_assert!(fields.len() == 2);
+        let key = &fields[0];
+        let value = &fields[1];
+        Self {
+            kind: Some(data_type::Kind::Map(Box::new(data_type::Map {
+                name: name.to_string(),
+                ordered,
+                key_name: key.name.clone(),
+                key_type: Some(Box::new(
+                    key.data_type.as_ref().expect("data type to exist").clone(),
+                )),
+                key_is_nullable: key.nullable,
+                value_name: value.name.clone(),
+                value_type: Some(Box::new(
+                    value
+                        .data_type
+                        .as_ref()
+                        .expect("data type to exist")
+                        .clone(),
+                )),
+                value_is_nullable: value.nullable,
+            }))),
+        }
+    }
 
     pub fn new_primitive(primitive: data_type::PrimitiveType) -> Self {
         Self {
@@ -139,6 +168,9 @@ impl TryFrom<&arrow::datatypes::DataType> for DataType {
                 Ok(DataType::new_primitive(PrimitiveType::IntervalYearMonth))
             }
             arrow::datatypes::DataType::Utf8 => Ok(DataType::new_primitive(PrimitiveType::String)),
+            arrow::datatypes::DataType::LargeUtf8 => {
+                Ok(DataType::new_primitive(PrimitiveType::LargeString))
+            }
             arrow::datatypes::DataType::Struct(fields) => {
                 let fields = fields
                     .iter()
@@ -148,12 +180,46 @@ impl TryFrom<&arrow::datatypes::DataType> for DataType {
                             Ok(data_type) => Ok(schema::Field {
                                 name,
                                 data_type: Some(data_type),
+                                nullable: field.is_nullable(),
                             }),
                             Err(err) => Err(err.with_prepend_field(name)),
                         }
                     })
                     .try_collect()?;
                 Ok(DataType::new_struct(fields))
+            }
+            // Note: the `ordered` field may let us specialize the implementation
+            // to use binary search in the future.
+            arrow::datatypes::DataType::Map(s, is_ordered) => {
+                // [DataType::Map] is represented as a list of structs with two fields: `key` and `value`
+                let arrow::datatypes::DataType::Struct(fields) = s.data_type() else {
+                    // unexpected - maps should always contain a struct
+                    return Err(ConversionError::new_unsupported(s.data_type().clone()))
+                };
+
+                debug_assert!(fields.len() == 2, "expect two fields in map");
+                let key = &fields[0];
+                let value = &fields[1];
+                let key = schema::Field {
+                    name: key.name().to_owned(),
+                    data_type: Some(key.data_type().try_into().map_err(
+                        |err: ConversionError<arrow::datatypes::DataType>| {
+                            err.with_prepend_field("key".to_owned())
+                        },
+                    )?),
+                    nullable: key.is_nullable(),
+                };
+                let value = schema::Field {
+                    name: value.name().to_owned(),
+                    data_type: Some(value.data_type().try_into().map_err(
+                        |err: ConversionError<arrow::datatypes::DataType>| {
+                            err.with_prepend_field("value".to_owned())
+                        },
+                    )?),
+                    nullable: value.is_nullable(),
+                };
+
+                Ok(DataType::new_map(s.name(), *is_ordered, vec![key, value]))
             }
             unsupported => Err(ConversionError::new_unsupported(unsupported.clone())),
         }
@@ -181,6 +247,7 @@ impl TryFrom<&FenlType> for DataType {
 
     fn try_from(value: &FenlType) -> Result<Self, Self::Error> {
         match value {
+            FenlType::Collection(_, _) => Err(ConversionError::new_unsupported(value.clone())),
             FenlType::Concrete(data_type) => {
                 data_type
                     .try_into()
@@ -188,7 +255,7 @@ impl TryFrom<&FenlType> for DataType {
                         e.map_data_type(FenlType::Concrete)
                     })
             }
-            FenlType::Generic(_) => Err(ConversionError::new_unsupported(value.clone())),
+            FenlType::TypeRef(_) => Err(ConversionError::new_unsupported(value.clone())),
             FenlType::Window => Ok(Self {
                 kind: Some(data_type::Kind::Window(())),
             }),
@@ -224,6 +291,7 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                     Some(PrimitiveType::F32) => Ok(arrow::datatypes::DataType::Float32),
                     Some(PrimitiveType::F64) => Ok(arrow::datatypes::DataType::Float64),
                     Some(PrimitiveType::String) => Ok(arrow::datatypes::DataType::Utf8),
+                    Some(PrimitiveType::LargeString) => Ok(arrow::datatypes::DataType::LargeUtf8),
                     Some(PrimitiveType::IntervalDayTime) => {
                         Ok(arrow::datatypes::DataType::Interval(
                             arrow::datatypes::IntervalUnit::DayTime,
@@ -275,6 +343,36 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
                 let item_type = arrow::datatypes::Field::new("item", item_type, true);
                 Ok(arrow::datatypes::DataType::List(Arc::new(item_type)))
             }
+            Some(data_type::Kind::Map(map)) => {
+                match (map.key_type.as_ref(), map.value_type.as_ref()) {
+                    (Some(key), Some(value)) => {
+                        let key = arrow::datatypes::DataType::try_from(key.as_ref())
+                            .map_err(|e| e.with_prepend_field("map key".to_owned()))?;
+                        let value = arrow::datatypes::DataType::try_from(value.as_ref())
+                            .map_err(|e| e.with_prepend_field("map value".to_owned()))?;
+
+                        let fields = arrow::datatypes::Fields::from(vec![
+                            arrow::datatypes::Field::new(
+                                map.key_name.clone(),
+                                key,
+                                map.key_is_nullable,
+                            ),
+                            arrow::datatypes::Field::new(
+                                map.value_name.clone(),
+                                value,
+                                map.value_is_nullable,
+                            ),
+                        ]);
+                        let s = arrow::datatypes::Field::new(
+                            map.name.clone(),
+                            arrow::datatypes::DataType::Struct(fields),
+                            false,
+                        );
+                        Ok(arrow::datatypes::DataType::Map(Arc::new(s), map.ordered))
+                    }
+                    _ => Err(ConversionError::new_unsupported(value.clone())),
+                }
+            }
             None | Some(data_type::Kind::Window(_)) => {
                 Err(ConversionError::new_unsupported(value.clone()))
             }
@@ -306,6 +404,7 @@ impl TryFrom<&arrow::datatypes::Schema> for Schema {
                     Ok(data_type) => Ok(schema::Field {
                         name,
                         data_type: Some(data_type),
+                        nullable: field.is_nullable(),
                     }),
                     Err(err) => Err(err.with_prepend_field(name)),
                 }
@@ -345,6 +444,7 @@ mod tests {
             arrow::datatypes::DataType::Float32,
             arrow::datatypes::DataType::Float64,
             arrow::datatypes::DataType::Utf8,
+            arrow::datatypes::DataType::LargeUtf8,
             arrow::datatypes::DataType::Timestamp(arrow::datatypes::TimeUnit::Second, None),
             arrow::datatypes::DataType::Timestamp(arrow::datatypes::TimeUnit::Millisecond, None),
             arrow::datatypes::DataType::Timestamp(arrow::datatypes::TimeUnit::Microsecond, None),
@@ -411,15 +511,18 @@ mod tests {
 
     #[test]
     fn test_unsupported_datatype() {
-        let err = DataType::try_from(&arrow::datatypes::DataType::LargeUtf8).unwrap_err();
+        let err = DataType::try_from(&arrow::datatypes::DataType::FixedSizeBinary(1)).unwrap_err();
         assert_eq!(
             err,
             ConversionError {
                 fields: vec![],
-                data_type: arrow::datatypes::DataType::LargeUtf8
+                data_type: arrow::datatypes::DataType::FixedSizeBinary(1)
             }
         );
-        assert_eq!(&err.to_string(), "Unsupported conversion from 'LargeUtf8'");
+        assert_eq!(
+            &err.to_string(),
+            "Unsupported conversion from 'FixedSizeBinary(1)'"
+        );
     }
 
     #[test]
@@ -427,7 +530,11 @@ mod tests {
         let inner_struct_type = arrow::datatypes::DataType::Struct(
             vec![
                 arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
+                arrow::datatypes::Field::new(
+                    "b",
+                    arrow::datatypes::DataType::FixedSizeBinary(1),
+                    true,
+                ),
             ]
             .into(),
         );
@@ -443,12 +550,12 @@ mod tests {
             err,
             ConversionError {
                 fields: vec!["b".to_owned(), "x".to_owned()],
-                data_type: arrow::datatypes::DataType::LargeUtf8,
+                data_type: arrow::datatypes::DataType::FixedSizeBinary(1),
             }
         );
         assert_eq!(
             &err.to_string(),
-            "Unsupported conversion from 'LargeUtf8' for field 'x.b'"
+            "Unsupported conversion from 'FixedSizeBinary(1)' for field 'x.b'"
         );
     }
 
@@ -457,7 +564,11 @@ mod tests {
         let inner_struct_type = arrow::datatypes::DataType::Struct(
             vec![
                 arrow::datatypes::Field::new("a", arrow::datatypes::DataType::Int64, true),
-                arrow::datatypes::Field::new("b", arrow::datatypes::DataType::LargeUtf8, true),
+                arrow::datatypes::Field::new(
+                    "b",
+                    arrow::datatypes::DataType::FixedSizeBinary(1),
+                    true,
+                ),
             ]
             .into(),
         );
@@ -470,12 +581,12 @@ mod tests {
             err,
             ConversionError {
                 fields: vec!["b".to_owned(), "x".to_owned()],
-                data_type: arrow::datatypes::DataType::LargeUtf8,
+                data_type: arrow::datatypes::DataType::FixedSizeBinary(1),
             }
         );
         assert_eq!(
             &err.to_string(),
-            "Unsupported conversion from 'LargeUtf8' for field 'x.b'"
+            "Unsupported conversion from 'FixedSizeBinary(1)' for field 'x.b'"
         );
     }
 }

@@ -1,5 +1,5 @@
 ---
-source: sparrow-compiler/src/plan.rs
+source: crates/sparrow-compiler/src/plan.rs
 expression: "create_plan(\"simple_plan\", &DataContext::for_test(),\n            FeatureSet::new(\"{ x: Table1.x_i64 + 10 }\", vec![]), None,\n            PerEntityBehavior::All).await.unwrap()"
 ---
 per_entity_behavior: 1
@@ -14,30 +14,37 @@ operations:
                   data_type:
                     kind:
                       Primitive: 6
+                  nullable: true
                 - name: y_i64
                   data_type:
                     kind:
                       Primitive: 6
+                  nullable: true
                 - name: s_str
                   data_type:
                     kind:
                       Primitive: 14
+                  nullable: true
                 - name: z_i32
                   data_type:
                     kind:
                       Primitive: 5
+                  nullable: true
                 - name: f_f64
                   data_type:
                     kind:
                       Primitive: 13
+                  nullable: true
                 - name: a_bool
                   data_type:
                     kind:
                       Primitive: 2
+                  nullable: true
                 - name: b_bool
                   data_type:
                     kind:
                       Primitive: 2
+                  nullable: true
         output: false
         operator:
           Input:
@@ -109,6 +116,7 @@ operations:
                   data_type:
                     kind:
                       Primitive: 6
+                  nullable: true
         output: true
         operator:
           Instruction: record
@@ -140,30 +148,37 @@ operations:
               data_type:
                 kind:
                   Primitive: 6
+              nullable: true
             - name: y_i64
               data_type:
                 kind:
                   Primitive: 6
+              nullable: true
             - name: s_str
               data_type:
                 kind:
                   Primitive: 14
+              nullable: true
             - name: z_i32
               data_type:
                 kind:
                   Primitive: 5
+              nullable: true
             - name: f_f64
               data_type:
                 kind:
                   Primitive: 13
+              nullable: true
             - name: a_bool
               data_type:
                 kind:
                   Primitive: 2
+              nullable: true
             - name: b_bool
               data_type:
                 kind:
                   Primitive: 2
+              nullable: true
         slice_plan:
           table_name: Table1
           slice: ~
@@ -177,6 +192,7 @@ operations:
                   data_type:
                     kind:
                       Primitive: 6
+                  nullable: true
         output: true
         operator:
           Input:

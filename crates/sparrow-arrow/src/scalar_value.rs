@@ -4,6 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context};
 use arrow::array::{Array, ArrayRef, BooleanArray, NullArray, PrimitiveArray, StringArray};
 use arrow::datatypes::*;
+use arrow_array::LargeStringArray;
 use decorum::Total;
 use itertools::izip;
 use num::{One, Signed, Zero};
@@ -53,6 +54,8 @@ pub enum ScalarValue {
     IntervalMonths(Option<i32>),
     /// UTF-8 encoded strings with 32 bit offsets.
     Utf8(Option<String>),
+    /// Large UTF-8 encoded strings with 64 bit offsets.
+    LargeUtf8(Option<String>),
     /// Records.
     Record(Box<ScalarRecord>),
 }
@@ -144,6 +147,7 @@ impl std::fmt::Display for ScalarValue {
             }
             ScalarValue::IntervalMonths(Some(months)) => write!(f, "interval_months:{months}"),
             ScalarValue::Utf8(Some(str)) => write!(f, "\\\"{str}\\\""),
+            ScalarValue::LargeUtf8(Some(str)) => write!(f, "\\\"{str}\\\""),
             unreachable => unreachable!("Unable to format {unreachable:?}"),
         }
     }
@@ -289,6 +293,7 @@ impl ScalarValue {
             DataType::Interval(IntervalUnit::DayTime) => Ok(Self::IntervalDayTime(None)),
             DataType::Interval(IntervalUnit::YearMonth) => Ok(Self::IntervalMonths(None)),
             DataType::Utf8 => Ok(Self::Utf8(None)),
+            DataType::LargeUtf8 => Ok(Self::LargeUtf8(None)),
             DataType::Struct(fields) => Ok(Self::Record(Box::new(ScalarRecord {
                 value: None,
                 fields: fields.clone(),
@@ -326,6 +331,7 @@ impl ScalarValue {
             ScalarValue::IntervalDayTime(_) => DataType::Interval(IntervalUnit::DayTime),
             ScalarValue::IntervalMonths(_) => DataType::Interval(IntervalUnit::YearMonth),
             ScalarValue::Utf8(_) => DataType::Utf8,
+            ScalarValue::LargeUtf8(_) => DataType::LargeUtf8,
             ScalarValue::Record(record) => DataType::Struct(record.fields.clone()),
         }
     }
@@ -388,6 +394,10 @@ impl ScalarValue {
             ScalarValue::Utf8(s) => {
                 let iter = std::iter::repeat(s).take(len);
                 Arc::new(iter.cloned().collect::<StringArray>())
+            }
+            ScalarValue::LargeUtf8(s) => {
+                let iter = std::iter::repeat(s).take(len);
+                Arc::new(iter.cloned().collect::<LargeStringArray>())
             }
             ScalarValue::Record(record) => {
                 let fields: Vec<(FieldRef, ArrayRef)> = if let Some(values) = &record.value {
@@ -544,6 +554,15 @@ impl ScalarValue {
                     Ok(Self::Utf8(None))
                 }
             }
+            DataType::LargeUtf8 => {
+                if array.is_valid(row) {
+                    let array: &LargeStringArray = downcast_string_array(array)?;
+                    let string = array.value(row).to_owned();
+                    Ok(Self::LargeUtf8(Some(string)))
+                } else {
+                    Ok(Self::LargeUtf8(None))
+                }
+            }
             DataType::Struct(fields) => {
                 let value = if array.is_valid(row) {
                     let array = downcast_struct_array(array)?;
@@ -589,6 +608,7 @@ impl ScalarValue {
             ScalarValue::IntervalDayTime(n) => n.is_none(),
             ScalarValue::IntervalMonths(n) => n.is_none(),
             ScalarValue::Utf8(n) => n.is_none(),
+            ScalarValue::LargeUtf8(n) => n.is_none(),
             ScalarValue::Record(record) => record.value.is_none(),
         }
     }
@@ -623,6 +643,7 @@ impl ScalarValue {
             ScalarValue::IntervalDayTime(_) => ScalarValue::IntervalDayTime(None),
             ScalarValue::IntervalMonths(_) => ScalarValue::IntervalMonths(None),
             ScalarValue::Utf8(_) => ScalarValue::Utf8(None),
+            ScalarValue::LargeUtf8(_) => ScalarValue::LargeUtf8(None),
             ScalarValue::Record(record) => ScalarValue::Record(Box::new(ScalarRecord {
                 value: None,
                 fields: record.fields.clone(),

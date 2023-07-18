@@ -30,7 +30,6 @@ mod metadata;
 mod min_heap;
 pub mod prepare;
 mod read;
-pub mod s3;
 pub mod stores;
 mod streams;
 mod util;
@@ -42,6 +41,9 @@ pub use metadata::*;
 use read::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 
+static DETERMINISTIC_RUNTIME_HASHER: ahash::RandomState =
+    ahash::RandomState::with_seeds(8723, 8737, 8736, 9871);
+
 #[derive(Debug, Default, Clone)]
 pub(crate) struct RuntimeOptions {
     pub limits: Limits,
@@ -50,3 +52,9 @@ pub(crate) struct RuntimeOptions {
     /// Defaults to not storing anything.
     pub flight_record_path: Option<PathBuf>,
 }
+
+/// Initial size of the upload buffer.
+///
+/// This balances size (if we have multiple uploads in parallel) with
+/// number of "parts" required to perform an upload.
+const UPLOAD_BUFFER_SIZE_IN_BYTES: usize = 5_000_000;

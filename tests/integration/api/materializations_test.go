@@ -21,6 +21,7 @@ var _ = Describe("Materializations", Ordered, Label("redis"), Label("redis-ai"),
 	var cancel context.CancelFunc
 	var conn *grpc.ClientConn
 	var tableClient v1alpha.TableServiceClient
+	var tableName string
 	var matClient v1alpha.MaterializationServiceClient
 	var mat1, mat2 *v1alpha.Materialization
 	var maxAmount, minAmount string
@@ -34,6 +35,8 @@ var _ = Describe("Materializations", Ordered, Label("redis"), Label("redis-ai"),
 		// get the required grpc clients
 		tableClient = v1alpha.NewTableServiceClient(conn)
 		matClient = v1alpha.NewMaterializationServiceClient(conn)
+
+		tableName = "purchases_mat_test"
 
 		maxAmount = `
 {
@@ -60,7 +63,7 @@ min_amount: purchases_mat_test.amount | min(),
 
 		// create a table for the tests and load data into it
 		table := &v1alpha.Table{
-			TableName:           "purchases_mat_test",
+			TableName:           tableName,
 			TimeColumnName:      "purchase_time",
 			EntityKeyColumnName: "customer_id",
 			SubsortColumnName: &wrapperspb.StringValue{
@@ -76,7 +79,7 @@ min_amount: purchases_mat_test.amount | min(),
 
 	AfterAll(func() {
 		// cleanup items created in the test
-		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: "purchases_mat_test"})
+		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
 
 		cancel()

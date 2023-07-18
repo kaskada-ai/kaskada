@@ -13,23 +13,23 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
+use tracing::Instrument;
 
+use crate::execute::error::Error;
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::OperationContext;
-use crate::s3::S3Helper;
 use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
 
+mod checkpoints;
 mod compute_executor;
-mod error;
+pub mod error;
 pub(crate) mod key_hash_inverse;
 pub(crate) mod operation;
 pub mod output;
 mod progress_reporter;
 mod spawner;
-
 pub use compute_executor::*;
-pub use error::*;
 
 // The path prefix to the local compute store db.
 const STORE_PATH_PREFIX: &str = "compute_snapshot_";
@@ -86,7 +86,7 @@ pub async fn execute(
         .into_report()
         .change_context(Error::internal_msg("create data context"))?;
 
-    let s3_helper = S3Helper::new().await;
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
 
     // If the snapshot config exists, sparrow should attempt to resume from state,
     // and store new state. Create a new storage path for the local store to
@@ -99,15 +99,18 @@ pub async fn execute(
             .change_context(Error::internal_msg("create snapshot dir"))?;
 
         // If a `resume_from` path is specified, download the existing state from s3.
-        if config.resume_from.is_some() {
-            crate::s3::download_snapshot(&s3_helper, dir.path(), config)
+        if let Some(resume_from) = &config.resume_from {
+            checkpoints::download(resume_from, object_stores.as_ref(), dir.path(), config)
+                .instrument(tracing::info_span!("Downloading checkpoint files"))
                 .await
-                .into_report()
                 .change_context(Error::internal_msg("download snapshot"))?;
-        };
+        } else {
+            tracing::info!("No snapshot set to resume from. Using empty compute store.");
+        }
 
         Some(dir)
     } else {
+        tracing::info!("No snapshot config; not creating compute store.");
         None
     };
 
@@ -156,8 +159,6 @@ pub async fn execute(
     } else {
         None
     };
-
-    let object_stores = ObjectStoreRegistry::default();
 
     let primary_grouping_key_type = plan
         .primary_grouping_key_type
@@ -234,11 +235,7 @@ pub async fn execute(
     .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
 
-    Ok(compute_executor.execute_with_progress(
-        s3_helper,
-        storage_dir,
-        request.compute_snapshot_config,
-    ))
+    Ok(compute_executor.execute_with_progress(storage_dir, request.compute_snapshot_config))
 }
 
 /// The main method for starting a materialization process.
@@ -249,7 +246,6 @@ pub async fn materialize(
     plan: ComputePlan,
     destination: Destination,
     tables: Vec<ComputeTable>,
-    s3_helper: S3Helper,
     bounded_lateness_ns: Option<i64>,
     stop_signal_rx: tokio::sync::watch::Receiver<bool>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
@@ -300,7 +296,7 @@ pub async fn materialize(
         .into_report()
         .change_context(Error::internal_msg("get primary grouping ID"))?;
 
-    let object_stores = ObjectStoreRegistry::default();
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
     key_hash_inverse
         .add_from_data_context(&data_context, primary_group_id, &object_stores)
         .await
@@ -350,5 +346,5 @@ pub async fn materialize(
     // TODO: the `execute_with_progress` method contains a lot of additional logic that is theoretically not needed,
     // as the materialization does not exit, and should not need to handle cleanup tasks that regular
     // queries do. We should likely refactor this to use a separate `materialize_with_progress` method.
-    Ok(compute_executor.execute_with_progress(s3_helper, storage_dir, None))
+    Ok(compute_executor.execute_with_progress(storage_dir, None))
 }

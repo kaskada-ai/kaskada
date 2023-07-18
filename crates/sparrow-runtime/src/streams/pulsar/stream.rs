@@ -293,7 +293,7 @@ pub async fn consumer(
     // without auth for exploration/testing purposes.
     let client = if !config.auth_params.is_empty() {
         let auth_token = super::schema::pulsar_auth_token(config.auth_params.as_str())
-            .change_context(Error::CreatePulsarReader)?;
+            .change_context(Error::CreateReader)?;
         let auth = Authentication {
             name: "token".to_string(),
             data: auth_token.as_bytes().to_vec(),
@@ -304,17 +304,17 @@ pub async fn consumer(
             .build()
             .await
             .into_report()
-            .change_context(Error::CreatePulsarReader)?
+            .change_context(Error::CreateReader)?
     } else {
         Pulsar::builder(&config.broker_service_url, TokioExecutor)
             .build()
             .await
             .into_report()
-            .change_context(Error::CreatePulsarReader)?
+            .change_context(Error::CreateReader)?
     };
 
     let formatted_schema =
-        super::schema::format_schema(schema).change_context(Error::CreatePulsarReader)?;
+        super::schema::format_schema(schema).change_context(Error::CreateReader)?;
     let pulsar_schema = pulsar::message::proto::Schema {
         r#type: pulsar::message::proto::schema::Type::Avro as i32,
         schema_data: formatted_schema.as_bytes().to_vec(),
@@ -338,7 +338,7 @@ pub async fn consumer(
         .build()
         .await
         .into_report()
-        .change_context(Error::CreatePulsarReader)?;
+        .change_context(Error::CreateReader)?;
 
     Ok(consumer)
 }

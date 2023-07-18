@@ -1,0 +1,17 @@
+suite: s3 with irsa snapshot test
+templates:
+  - deployment.yaml
+  - persistantVolumeClaims.yaml
+  - service.yaml
+  - serviceAccount.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+values: 
+  - ./values/s3_with_irsa.yaml
+tests:
+  - it: manifest should match snapshot
+    asserts:
+      - matchSnapshot: {}

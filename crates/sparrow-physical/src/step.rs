@@ -34,7 +34,7 @@ pub struct Step {
     pub schema: SchemaRef,
 }
 
-/// The kinds of stesp that can occur in the physical plan.
+/// The kinds of steps that can occur in the physical plan.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 

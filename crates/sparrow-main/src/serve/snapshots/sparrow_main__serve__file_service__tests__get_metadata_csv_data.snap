@@ -9,16 +9,20 @@ source_metadata:
         data_type:
           kind:
             Primitive: 6
+        nullable: true
       - name: name
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: value
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: value2
         data_type:
           kind:
             Primitive: 6
+        nullable: true
 

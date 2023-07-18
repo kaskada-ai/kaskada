@@ -67,15 +67,10 @@ impl QueryFixture {
     pub fn with_rocksdb(
         mut self,
         snapshot_prefix: &std::path::Path,
-        resume_from: Option<&std::path::Path>,
+        resume_from: Option<String>,
     ) -> Self {
-        let resume_from = resume_from.map(|snapshot_dir| {
-            let snapshot_dir = snapshot_dir.strip_prefix(snapshot_prefix).unwrap();
-            snapshot_dir.to_string_lossy().into_owned()
-        });
-
         self.execute_request.compute_snapshot_config = Some(ComputeSnapshotConfig {
-            output_prefix: snapshot_prefix.to_string_lossy().into_owned(),
+            output_prefix: format!("file:///{}/", snapshot_prefix.display()),
             resume_from,
         });
         self

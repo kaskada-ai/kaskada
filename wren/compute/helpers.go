@@ -2,8 +2,6 @@ package compute
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/kaskada-ai/kaskada/wren/ent"
@@ -15,17 +13,6 @@ import (
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 )
-
-func ConvertURIForCompute(URI string) string {
-	return strings.TrimPrefix(URI, "file://")
-}
-
-func ConvertURIForManager(URI string) string {
-	if strings.HasPrefix(URI, "/") {
-		return fmt.Sprintf("file://%s", URI)
-	}
-	return URI
-}
 
 func reMapSparrowError(ctx context.Context, err error) error {
 	subLogger := log.Ctx(ctx).With().Str("method", "manager.reMapSparrowError").Logger()

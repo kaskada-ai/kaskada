@@ -38,7 +38,7 @@ entity_filter = EntityPercentFilter(filter_percentage)
 ----
 
 The example above creates a new `EntityPercentFilter` from the Kaskada
-Compute module with a filtering percentage of 12.34%.
+Slicing module with a filtering percentage of 12.34%.
 
 === Entity Key Percent Filter Additional Details
 
@@ -71,10 +71,11 @@ filter on the same session.
 [source,python]
 ----
 from kaskada.slice_filters import EntityPercentFilter
+from kaskada.client import set_default_slice
 
 filter_percentage = 12.34
 entity_filter = EntityPercentFilter(filter_percentage)
-kda.set_default_slice(entity_filter)
+set_default_slice(entity_filter)
 ----
 
 
@@ -93,15 +94,13 @@ kda.set_default_slice(entity_filter)
 
 [source,python]
 ----
-from kaskada import compute
-from kaskada.api.session import LocalBuilder
+from kaskada import query
 from kaskada.slice_filters import EntityPercentFilter
-
-session = LocalBuilder().build()
+from kaskada.client import set_default_slice
 
 filter_percentage = 12.34
 entity_filter = EntityPercentFilter(filter_percentage)
-kda.set_default_slice(entity_filter)
+set_default_slice(entity_filter)
 
 query = '''
 {
@@ -111,7 +110,7 @@ query = '''
 }
 '''
 
-compute.query(query=query)
+query.create_query(expression=query)
 ----
 
 == Entity Keys Filter
@@ -126,12 +125,14 @@ Here is an example of creating an entity key filter:
 [source,python]
 ----
 from kaskada.slice_filters import EntityFilter
+from kaskada.client import set_default_slice
 
 entity_keys = ["customer_01", "customer_03"]
 entity_filter = EntityFilter(entity_keys)
+set_default_slice(entity_filter)
 ----
 
-The example above creates a new `EntityFilter` from the Kaskada Compute
+The example above creates a new `EntityFilter` from the Kaskada Slicing
 module with entity key filters for "customer_01" and "customer_03".
 
 === Entity Key Filter Additional Details

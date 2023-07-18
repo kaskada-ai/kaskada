@@ -489,7 +489,7 @@ impl<T: ArrowPrimitiveType> std::fmt::Debug for UnlatchedPrimitiveSpread<T> {
 impl<T: ArrowPrimitiveType> UnlatchedPrimitiveSpread<T> {
     fn new() -> Self {
         Self {
-            _phantom: PhantomData::default(),
+            _phantom: PhantomData,
         }
     }
 }

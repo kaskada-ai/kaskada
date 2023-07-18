@@ -200,6 +200,7 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 				Primitive: primitiveType,
 			},
 		},
+		Nullable: true,
 	}
 }
 
@@ -224,7 +225,7 @@ func getPulsarConfig(topicName string) *v1alpha.PulsarConfig {
 }
 
 func receivePulsarMessageWithTimeout(pulsarConsumer pulsar.Consumer, ctx context.Context) pulsar.Message {
-	timeout, timeoutCancel := context.WithTimeout(ctx, 100 * time.Millisecond)
+	timeout, timeoutCancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer timeoutCancel()
 	msg, err := pulsarConsumer.Receive(timeout)
 	if err != nil {
@@ -234,4 +235,8 @@ func receivePulsarMessageWithTimeout(pulsarConsumer pulsar.Consumer, ctx context
 		helpers.LogLn("recieved pulsar response: %v", msg)
 		return msg
 	}
+}
+
+func getUniqueName(tableNamePrefix string) string {
+	return fmt.Sprintf("%s_%d", tableNamePrefix, time.Now().Unix())
 }
