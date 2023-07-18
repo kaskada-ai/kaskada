@@ -89,4 +89,8 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("coalesce<T: any>(values+: T) -> T")
         .with_implementation(Implementation::Instruction(InstOp::Coalesce));
+
+    registry
+        .register("python_udf<T: any>(class: string, values+: T) -> T")
+        .with_implementation(Implementation::Instruction(InstOp::PythonUDF));
 }

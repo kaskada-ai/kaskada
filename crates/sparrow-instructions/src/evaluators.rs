@@ -302,6 +302,7 @@ fn create_simple_evaluator(
         InstOp::Neq => NeqEvaluatorFactory::try_new(info),
         InstOp::Not => NotEvaluator::try_new(info),
         InstOp::NullIf => NullIfEvaluator::try_new(info),
+        InstOp::PythonUDF => PythonUDFEvaluator::try_new(info),
         InstOp::Powf => {
             create_float_evaluator!(&info.args[0].data_type, PowfEvaluator, info)
         }

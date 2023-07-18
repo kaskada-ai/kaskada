@@ -168,6 +168,8 @@ pub enum InstOp {
     NullIf,
     #[strum(props(signature = "powf(base: f64, power: f64) -> f64"))]
     Powf,
+    #[strum(props(signature = "python_udf<T: any>(class: string, values+: T) -> T"))]
+    PythonUDF,
     #[strum(props(signature = "round<N: number>(n: N) -> N"))]
     Round,
     #[strum(props(signature = "seconds(seconds: i64) -> duration_s"))]
