@@ -453,7 +453,7 @@ mod tests {
             &Uuid::new_v4(),
             "transaction_time",
             Some("idx"),
-            "idx",
+            "purchaser_id",
             "",
         );
 
@@ -472,7 +472,7 @@ mod tests {
         .await;
         assert_eq!(prepared_batches.len(), 1);
         let (prepared_batch, metadata) = prepared_batches[0].as_ref().unwrap();
-        assert_eq!(prepared_batch.num_rows(), 1);
+        assert_eq!(prepared_batch.num_rows(), 300);
         let _prepared_schema = prepared_batch.schema();
         assert_metadata_schema_eq(metadata.schema());
         assert_eq!(metadata.num_rows(), 1);
