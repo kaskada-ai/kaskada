@@ -9,6 +9,7 @@ from __future__ import print_function
 import logging
 import os
 import sys
+from typing import Optional
 
 import IPython
 import pandas
@@ -40,12 +41,10 @@ class QueryResult(object):
 
 @magics_class
 class FenlMagics(Magics):
-    client = None
-
-    def __init__(self, shell, client):
+    def __init__(self, shell, client: Optional[client.Client]):
         super(FenlMagics, self).__init__(shell)
-        self.client = client
         logger.info("extension loaded")
+        self.client = client
 
     @magic_arguments()
     @argument(
@@ -174,19 +173,8 @@ class FenlMagics(Magics):
             raise UsageError(e)
 
 
-def load_ipython_extension(ipython):
-    if client.KASKADA_DEFAULT_CLIENT is None:
-        logger.warn(
-            "No client was initialized. Initializing default client to connect to localhost:50051."
-        )
-        default_client = client.Client(
-            client_id=os.getenv("KASKADA_CLIENT_ID", None),
-            endpoint=client.KASKADA_DEFAULT_ENDPOINT,
-            is_secure=client.KASKADA_IS_SECURE,
-        )
-        client.set_default_client(default_client)
-
-    magics = FenlMagics(ipython, client.get_client())
+def load_ipython_extension(ipython, client: Optional[client.Client]):
+    magics = FenlMagics(ipython)
     ipython.register_magics(magics)
 
 
