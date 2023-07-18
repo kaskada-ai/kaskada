@@ -173,8 +173,8 @@ class FenlMagics(Magics):
             raise UsageError(e)
 
 
-def load_ipython_extension(ipython, client: Optional[client.Client]):
-    magics = FenlMagics(ipython)
+def load_ipython_extension(ipython, client: Optional[client.Client] = None):
+    magics = FenlMagics(ipython, client)
     ipython.register_magics(magics)
 
 
