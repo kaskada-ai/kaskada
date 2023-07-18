@@ -25,7 +25,7 @@ pub(crate) async fn collection_data_fixture() -> DataFixture {
 
 #[tokio::test]
 async fn test_string_to_i64_get_static_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.s_to_i64) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.s_to_i64) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,0
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,1
@@ -63,11 +63,11 @@ async fn test_string_to_i64_get_dynamic_key() {
 async fn test_i64_to_i64_get_static_key() {
     insta::assert_snapshot!(QueryFixture::new("{ f1: get(1, Input.i64_to_i64) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
-    1996-12-19T16:39:57.000000000,7519342507628837311,2359047937476779835,1,1
-    1996-12-19T16:40:57.000000000,7519342507628837312,2359047937476779835,1,2
-    1996-12-19T16:40:59.000000000,7519342507628837313,2359047937476779835,1,
-    1996-12-19T16:41:57.000000000,7519342507628837314,2359047937476779835,1,
-    1996-12-19T16:42:57.000000000,7519342507628837315,2359047937476779835,1,10
+    1996-12-19T16:39:57.000000000,0,2359047937476779835,1,1
+    1996-12-19T16:40:57.000000000,0,2359047937476779835,1,2
+    1996-12-19T16:40:59.000000000,0,2359047937476779835,1,
+    1996-12-19T16:41:57.000000000,0,2359047937476779835,1,
+    1996-12-19T16:42:57.000000000,0,2359047937476779835,1,10
     "###);
 }
 
@@ -99,9 +99,9 @@ async fn test_swapped_args_for_get_map() {
           - "error[E0010]: Invalid argument type(s)"
           - "  --> Query:1:7"
           - "  |"
-          - "1 | { f1: get(Input.e0, \"f1\") }"
-          - "  |       ^^^           ---- Actual type: string"
-          - "  |       |              "
+          - "1 | { f1: get(Input.s_to_i64, \"f1\") }"
+          - "  |       ^^^                 ---- Actual type: string"
+          - "  |       |                    "
           - "  |       Invalid types for parameter 'map' in call to 'get'"
           - "  |"
           - "  --> built-in signature 'get<K: key, V: any>(key: K, map: map<K, V>) -> V':1:34"
