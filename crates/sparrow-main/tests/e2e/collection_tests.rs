@@ -66,6 +66,32 @@ async fn test_get_dynamic_key() {
     1996-12-19T16:42:57.000000000,0,2359047937476779835,1,11
     "###);
 }
+#[tokio::test]
+async fn test_supplant() {
+    insta::assert_snapshot!(QueryFixture::new("{ 
+        map: Input, 
+        value: get(\"airTemperature\", Input.readings) | when(is_valid($input)) 
+    } ").with_dump_dot("asdf").run_to_csv(&supplant_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,value
+    "###);
+}
+
+pub(crate) async fn supplant_data_fixture() -> DataFixture {
+    DataFixture::new()
+        .with_table_from_files(
+            TableConfig::new_with_table_source(
+                "Input",
+                &Uuid::new_v4(),
+                "timestamp_utc",
+                None,
+                "system_serial",
+                "",
+            ),
+            &[&"parquet/supplant.parquet"],
+        )
+        .await
+        .unwrap()
+}
 
 #[tokio::test]
 async fn test_swapped_args_for_get_map() {
