@@ -1,5 +1,15 @@
 //! e2e tests for the collection operators.
 
+use std::{fs::File, path::PathBuf, sync::Arc};
+
+use anyhow::Context;
+use arrow::{
+    array::{Int64Builder, MapBuilder, StringBuilder},
+    datatypes::{DataType, Field, Fields, Schema, TimeUnit},
+    record_batch::RecordBatch,
+};
+use itertools::Itertools;
+use parquet::arrow::ArrowWriter;
 use sparrow_api::kaskada::v1alpha::TableConfig;
 use uuid::Uuid;
 
@@ -8,11 +18,11 @@ use crate::{fixture::DataFixture, QueryFixture};
 /// Create a simple table with a collection type (map).
 ///
 /// ```json
-/// {"time": "1996-12-19T16:39:57Z", "subsort": 0, "key": 1, "e0": {"f1": 0,  "f2": 22}, "e1": 1,  "e2": 2.7,  "e3": "f1" }
-/// {"time": "1996-12-19T16:40:57Z", "subsort": 0, "key": 1, "e0": {"f1": 1,  "f2": 10}, "e1": 2,  "e2": 3.8,  "e3": "f2" }
-/// {"time": "1996-12-19T16:40:59Z", "subsort": 0, "key": 1, "e0": {"f1": 5,  "f2": 3},  "e1": 42, "e2": 4.0,  "e3": "f3" }
-/// {"time": "1996-12-19T16:41:57Z", "subsort": 0, "key": 1, "e0": {"f2": 13},           "e1": 42, "e2": null, "e3": "f2" }
-/// {"time": "1996-12-19T16:42:57Z", "subsort": 0, "key": 1, "e0": {"f1": 15, "f3": 11}, "e1": 3,  "e2": 7,    "e3": "f3" }
+/// {"time": "1996-12-19T16:39:57Z", "subsort": 0, "key": 1, "e0": {"f1": 0,  "f2": 22}, "e1": 1,  "e2": 2.7,  "e3": "f1", "e4": {1: 1} }
+/// {"time": "1996-12-19T16:40:57Z", "subsort": 0, "key": 1, "e0": {"f1": 1,  "f2": 10}, "e1": 2,  "e2": 3.8,  "e3": "f2", "e4": {1: 2, 2: 4} }
+/// {"time": "1996-12-19T16:40:59Z", "subsort": 0, "key": 1, "e0": {"f1": 5,  "f2": 3},  "e1": 42, "e2": 4.0,  "e3": "f3", "e4": {} }
+/// {"time": "1996-12-19T16:41:57Z", "subsort": 0, "key": 1, "e0": {"f2": 13},           "e1": 42, "e2": null, "e3": "f2", "e4": {2: 99} }
+/// {"time": "1996-12-19T16:42:57Z", "subsort": 0, "key": 1, "e0": {"f1": 15, "f3": 11}, "e1": 3,  "e2": 7,    "e3": "f3", "e4": {1: 10, 3: 7} }
 /// ```
 pub(crate) async fn collection_data_fixture() -> DataFixture {
     DataFixture::new()
@@ -32,8 +42,8 @@ pub(crate) async fn collection_data_fixture() -> DataFixture {
 }
 
 #[tokio::test]
-async fn test_get_static_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.e0) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+async fn test_string_get_static_key() {
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.e0) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,0
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,1
@@ -44,7 +54,7 @@ async fn test_get_static_key() {
 }
 
 #[tokio::test]
-async fn test_get_static_key_second_field() {
+async fn test_string_get_static_key_second_field() {
     insta::assert_snapshot!(QueryFixture::new("{ f2: Input.e0 | get(\"f2\") }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f2
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,22
@@ -56,7 +66,7 @@ async fn test_get_static_key_second_field() {
 }
 
 #[tokio::test]
-async fn test_get_dynamic_key() {
+async fn test_string_get_dynamic_key() {
     insta::assert_snapshot!(QueryFixture::new("{ value: Input.e0 | get(Input.e3) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,value
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,0
@@ -64,6 +74,18 @@ async fn test_get_dynamic_key() {
     1996-12-19T16:40:59.000000000,0,2359047937476779835,1,
     1996-12-19T16:41:57.000000000,0,2359047937476779835,1,13
     1996-12-19T16:42:57.000000000,0,2359047937476779835,1,11
+    "###);
+}
+
+#[tokio::test]
+async fn test_i64_get_static_key() {
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(1, Input.e4) }").run_to_csv(&arrow_collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
+    1996-12-19T16:39:57.000000000,7519342507628837311,2359047937476779835,1,1
+    1996-12-19T16:40:57.000000000,7519342507628837312,2359047937476779835,1,2
+    1996-12-19T16:40:59.000000000,7519342507628837313,2359047937476779835,1,
+    1996-12-19T16:41:57.000000000,7519342507628837314,2359047937476779835,1,
+    1996-12-19T16:42:57.000000000,7519342507628837315,2359047937476779835,1,10
     "###);
 }
 
@@ -91,6 +113,31 @@ async fn test_swapped_args_for_get_map() {
           - "  |"
           - "1 | get<K: key, V: any>(key: K, map: map<K, V>) -> V"
           - "  |                                  --------- Expected type: map<K, V>"
+          - ""
+          - ""
+    "###);
+}
+
+#[tokio::test]
+async fn test_incompatible_key_types() {
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.e4) }")
+        .run_to_csv(&collection_data_fixture().await).await.unwrap_err(), @r###"
+    ---
+    code: Client specified an invalid argument
+    message: 1 errors in Fenl statements; see diagnostics
+    fenl_diagnostics:
+      - severity: error
+        code: E0015
+        message: Incompatible argument types
+        formatted:
+          - "error[E0015]: Incompatible argument types"
+          - "  --> Query:1:7"
+          - "  |"
+          - "1 | { f1: get(\"f1\", Input.e4) }"
+          - "  |       ^^^ ----  -------- Type: i64"
+          - "  |       |   |      "
+          - "  |       |   Type: string"
+          - "  |       Incompatible types for call to 'get'"
           - ""
           - ""
     "###);
