@@ -84,6 +84,7 @@ impl TestTable {
             .map(|field| Field {
                 name: field.name.clone(),
                 data_type: Some((&field.data_type).try_into().unwrap()),
+                nullable: false,
             })
             .collect();
         Schema { fields }

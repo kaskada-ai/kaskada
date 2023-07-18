@@ -39,8 +39,16 @@ message DataType {
   }
 
   message Map {
-    DataType key = 1;
-    DataType value = 2;
+    string name = 1;
+    bool ordered = 2;
+
+    string key_name = 3;
+    DataType key_type = 4;
+    bool key_is_nullable = 5;
+
+    string value_name = 6;
+    DataType value_type = 7;
+    bool value_is_nullable = 8;
   }
 
   enum PrimitiveType {
@@ -74,6 +82,8 @@ message DataType {
     PRIMITIVE_TYPE_F64 = 13;
     // Fenl type `string`.
     PRIMITIVE_TYPE_STRING = 14;
+    // Fenl type `large_string`.
+    PRIMITIVE_TYPE_LARGE_STRING = 27;
 
     // Fenl type `interval_days`.
     // A time interval represented as calendar days and milliseconds.
@@ -127,5 +137,6 @@ message Schema {
   message Field {
     string name = 1;
     DataType data_type = 2;
+    bool nullable = 3;
   }
 }

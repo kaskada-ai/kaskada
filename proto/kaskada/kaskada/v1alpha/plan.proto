@@ -207,6 +207,8 @@ message Literal {
     IntervalDayTimeValue interval_day_time = 25;
     int32 interval_months = 26;
     string utf8 = 27;
+    string large_utf8 = 29;
+
     RecordValue record = 28;
   }
   message TimestampValue {

@@ -6,6 +6,7 @@ use arrow::array::{
     StructArray,
 };
 use arrow::datatypes::ArrowPrimitiveType;
+use arrow_array::MapArray;
 
 /// Downcast an `ArrayRef` to a `PrimitiveArray<T>`.
 pub fn downcast_primitive_array<T: ArrowPrimitiveType>(
@@ -53,6 +54,14 @@ pub fn downcast_struct_array(array: &dyn Array) -> anyhow::Result<&StructArray> 
         .as_any()
         .downcast_ref::<StructArray>()
         .with_context(|| format!("Unable to downcast {:?} to struct array", array.data_type()))
+}
+
+/// Downcast an `ArrayRef` to a `MapArray`.
+pub fn downcast_map_array(array: &dyn Array) -> anyhow::Result<&MapArray> {
+    array
+        .as_any()
+        .downcast_ref::<MapArray>()
+        .with_context(|| format!("Unable to downcast {:?} to map array", array.data_type()))
 }
 
 /// Downcast an `ArrayRef` to a `BooleanArray`.
