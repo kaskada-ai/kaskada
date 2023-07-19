@@ -25,7 +25,7 @@ pub(crate) async fn collection_data_fixture() -> DataFixture {
                 "key",
                 "",
             ),
-            &[&"parquet/data_with_map.parquet"],
+            &["parquet/data_with_map.parquet"],
         )
         .await
         .unwrap()

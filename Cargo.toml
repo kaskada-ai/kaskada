@@ -103,7 +103,7 @@ strum = "0.24.1"
 strum_macros = "0.24.3"
 substring = "1.4.5"
 tempfile = "3.4.0"
-tera = "1.18.1"
+tera = "1.19.0"
 termcolor = "1.2.0"
 thiserror = "1.0.40"
 tokio = { version = "1.27.0", features = [
