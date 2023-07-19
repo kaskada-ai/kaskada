@@ -10,7 +10,7 @@ use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
-/// Evaluator for `get` on maps for primitive keys and primitive values.
+/// Evaluator for `get` on maps for primitive keys and boolean values.
 #[derive(Debug)]
 pub(in crate::evaluators) struct GetPrimitiveToBooleanEvaluator<T>
 where

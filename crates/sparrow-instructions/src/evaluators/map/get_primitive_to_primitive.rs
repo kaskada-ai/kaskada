@@ -58,7 +58,6 @@ where
             other => anyhow::bail!("expected map type, saw {:?}", other),
         };
 
-        // Value should be a primitive type
         anyhow::ensure!(
             value_type.is_primitive(),
             "expected primitive value type in map, saw {:?}",
