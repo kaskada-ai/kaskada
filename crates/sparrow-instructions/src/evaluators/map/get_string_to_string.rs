@@ -1,38 +1,38 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, GenericStringArray, OffsetSizeTrait, PrimitiveArray};
-use arrow::datatypes::{ArrowPrimitiveType, DataType};
+use arrow::array::{Array, ArrayRef, GenericStringArray, OffsetSizeTrait};
+use arrow::datatypes::DataType;
 use itertools::Itertools;
-use sparrow_arrow::downcast::{downcast_primitive_array, downcast_string_array};
+use sparrow_arrow::downcast::downcast_string_array;
 
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
-/// Evaluator for `get` on maps for primitive keys and string values.
+/// Evaluator for `get` on maps for string keys and primitive values.
 #[derive(Debug)]
-pub(in crate::evaluators) struct GetPrimitiveToStringEvaluator<T, O>
+pub(in crate::evaluators) struct GetStringToStringEvaluator<O1, O2>
 where
-    T: ArrowPrimitiveType + Sync + Send,
-    O: OffsetSizeTrait,
+    O1: OffsetSizeTrait,
+    O2: OffsetSizeTrait,
 {
     map: ValueRef,
     key: ValueRef,
     // Make the compiler happy by using the type parameters
-    _phantom: PhantomData<(T, O)>,
+    _phantom: PhantomData<(O1, O2)>,
 }
 
-impl<T, O> EvaluatorFactory for GetPrimitiveToStringEvaluator<T, O>
+impl<O1, O2> EvaluatorFactory for GetStringToStringEvaluator<O1, O2>
 where
-    T: ArrowPrimitiveType + Sync + Send,
-    O: OffsetSizeTrait,
+    O1: OffsetSizeTrait,
+    O2: OffsetSizeTrait,
 {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let key_type = info.args[0].data_type.clone();
-        assert!(
-            key_type.is_primitive(),
-            "expected primitive key type, saw {:?}",
+        anyhow::ensure!(
+            matches!(key_type, DataType::Utf8 | DataType::LargeUtf8),
+            "expected string key type, saw {:?}",
             key_type
         );
 
@@ -73,16 +73,16 @@ where
     }
 }
 
-impl<T, O> Evaluator for GetPrimitiveToStringEvaluator<T, O>
+impl<O1, O2> Evaluator for GetStringToStringEvaluator<O1, O2>
 where
-    T: ArrowPrimitiveType + Sync + Send,
-    O: OffsetSizeTrait,
+    O1: OffsetSizeTrait,
+    O2: OffsetSizeTrait,
 {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let map_input = info.value(&self.map)?.map_array()?;
-        let key_input = info.value(&self.key)?.primitive_array::<T>()?;
+        let key_input = info.value(&self.key)?.string_array::<O1>()?;
 
-        let result: GenericStringArray<O> = {
+        let result: GenericStringArray<O2> = {
             anyhow::ensure!(
                 key_input.len() == map_input.len(),
                 "key and map lengths don't match"
@@ -95,9 +95,9 @@ where
 
                     // Iterate through map_entry, match on key, return value.
                     // Note: if the map were ordered, we could more efficiently find the value.
-                    let m_keys: &PrimitiveArray<T> =
-                        downcast_primitive_array(cur_map.column(0).as_ref())?;
-                    let m_values: &GenericStringArray<O> =
+                    let m_keys: &GenericStringArray<O1> =
+                        downcast_string_array(cur_map.column(0).as_ref())?;
+                    let m_values: &GenericStringArray<O2> =
                         downcast_string_array(cur_map.column(1).as_ref())?;
 
                     let value_pos = m_keys.iter().position(|x| x == Some(cur_key));
@@ -114,7 +114,7 @@ where
                 })
                 .try_collect()?;
 
-            GenericStringArray::<O>::from_iter(values.iter())
+            GenericStringArray::<O2>::from_iter(values.iter())
         };
 
         Ok(Arc::new(result))

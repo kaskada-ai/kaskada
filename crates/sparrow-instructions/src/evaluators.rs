@@ -3,15 +3,11 @@ use arrow::datatypes::DataType;
 use itertools::Itertools;
 use sparrow_plan::{InstKind, InstOp};
 
-use self::macros::create_signed_evaluator;
-use self::map::get_string_to_primitive::GetStringToPrimitiveEvaluator;
 use crate::evaluators::macros::{
-    create_float_evaluator, create_map_evaluator, create_number_evaluator,
-    create_ordered_evaluator, create_primitive_map_evaluator, create_string_map_evaluator,
-    create_typed_evaluator,
+    create_boolean_map_evaluator, create_float_evaluator, create_map_evaluator,
+    create_number_evaluator, create_ordered_evaluator, create_primitive_map_evaluator,
+    create_signed_evaluator, create_string_map_evaluator, create_typed_evaluator,
 };
-use crate::evaluators::map::get_primitive_to_primitive::GetPrimitiveToPrimitiveEvaluator;
-use crate::evaluators::map::get_primitive_to_string::GetPrimitiveToStringEvaluator;
 use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
 pub mod aggregation;
@@ -37,6 +33,7 @@ use field_ref::*;
 use general::*;
 use json_field::*;
 use logical::*;
+use map::*;
 use math::*;
 use record::*;
 use sparrow_plan::ValueRef;
@@ -215,8 +212,14 @@ fn create_simple_evaluator(
                         &info.args[0].data_type,
                         &fields[1].data_type(),
                         GetStringToPrimitiveEvaluator,
+                        GetStringToStringEvaluator,
+                        GetStringToBooleanEvaluator,
                         GetPrimitiveToPrimitiveEvaluator,
                         GetPrimitiveToStringEvaluator,
+                        GetPrimitiveToBooleanEvaluator,
+                        GetBooleanToPrimitiveEvaluator,
+                        GetBooleanToStringEvaluator,
+                        GetBooleanToBooleanEvaluator,
                         info
                     )
                 }

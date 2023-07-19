@@ -315,8 +315,13 @@ macro_rules! create_typed_evaluator {
 /// }
 /// ```
 macro_rules! create_map_evaluator {
-    ($key_type:expr, $value_type:expr, $string_to_primitive_evaluator:ident, $primitive_to_primitive_evaluator:ident, $primitive_to_string_evaluator:ident, $info:expr) => {{
+    ($key_type:expr, $value_type:expr, $string_to_primitive_evaluator:ident,
+        $string_to_string_evaluator:ident, $string_to_boolean_evaluator:ident,
+        $primitive_to_primitive_evaluator:ident, $primitive_to_string_evaluator:ident,
+        $primitive_to_boolean_evaluator:ident, $boolean_to_primitive_evaluator:ident,
+        $boolean_to_string_evaluator:ident, $boolean_to_boolean_evaluator:ident, $info:expr) => {{
         use arrow::datatypes::*;
+        use create_boolean_map_evaluator;
         use create_primitive_map_evaluator;
         use create_string_map_evaluator;
         // Only types that are hashable (`key` type_class) can be used as keys are maps.
@@ -326,6 +331,8 @@ macro_rules! create_map_evaluator {
                     i32,
                     $value_type,
                     $string_to_primitive_evaluator,
+                    $string_to_string_evaluator,
+                    $string_to_boolean_evaluator,
                     $info
                 )
             }
@@ -334,6 +341,8 @@ macro_rules! create_map_evaluator {
                     i64,
                     $value_type,
                     $string_to_primitive_evaluator,
+                    $string_to_string_evaluator,
+                    $string_to_boolean_evaluator,
                     $info
                 )
             }
@@ -343,6 +352,7 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
@@ -352,6 +362,7 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
@@ -361,6 +372,7 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
@@ -370,6 +382,7 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
@@ -379,6 +392,7 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
@@ -388,6 +402,7 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
@@ -397,10 +412,19 @@ macro_rules! create_map_evaluator {
                     $value_type,
                     $primitive_to_primitive_evaluator,
                     $primitive_to_string_evaluator,
+                    $primitive_to_boolean_evaluator,
                     $info
                 )
             }
-            // TODO: Bool
+            DataType::Boolean => {
+                create_boolean_map_evaluator!(
+                    $value_type,
+                    $boolean_to_primitive_evaluator,
+                    $boolean_to_string_evaluator,
+                    $boolean_to_boolean_evaluator,
+                    $info
+                )
+            }
             unsupported_type => Err(anyhow::anyhow!(format!(
                 "unsupported key type {:?} for map evaluator",
                 unsupported_type
@@ -410,47 +434,49 @@ macro_rules! create_map_evaluator {
 }
 
 macro_rules! create_primitive_map_evaluator {
-    ($key_type:ident, $value_type:expr, $primitive_evaluator:ident, $string_evaluator:ident, $info:expr) => {{
+    ($key_type:ident, $value_type:expr, $to_primitive_evaluator:ident,
+        $to_string_evaluator:ident, $to_boolean_evaluator:ident, $info:expr) => {{
         use arrow::datatypes::*;
         match $value_type {
-            DataType::Int32 => $primitive_evaluator::<$key_type, Int32Type>::try_new($info),
-            DataType::Int64 => $primitive_evaluator::<$key_type, Int64Type>::try_new($info),
-            DataType::UInt32 => $primitive_evaluator::<$key_type, UInt32Type>::try_new($info),
-            DataType::UInt64 => $primitive_evaluator::<$key_type, UInt64Type>::try_new($info),
-            DataType::Float32 => $primitive_evaluator::<$key_type, Float32Type>::try_new($info),
-            DataType::Float64 => $primitive_evaluator::<$key_type, Float64Type>::try_new($info),
+            DataType::Int32 => $to_primitive_evaluator::<$key_type, Int32Type>::try_new($info),
+            DataType::Int64 => $to_primitive_evaluator::<$key_type, Int64Type>::try_new($info),
+            DataType::UInt32 => $to_primitive_evaluator::<$key_type, UInt32Type>::try_new($info),
+            DataType::UInt64 => $to_primitive_evaluator::<$key_type, UInt64Type>::try_new($info),
+            DataType::Float32 => $to_primitive_evaluator::<$key_type, Float32Type>::try_new($info),
+            DataType::Float64 => $to_primitive_evaluator::<$key_type, Float64Type>::try_new($info),
             DataType::Timestamp(TimeUnit::Second, None) => {
-                $primitive_evaluator::<$key_type, TimestampSecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, TimestampSecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Millisecond, None) => {
-                $primitive_evaluator::<$key_type, TimestampMillisecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, TimestampMillisecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Microsecond, None) => {
-                $primitive_evaluator::<$key_type, TimestampMicrosecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, TimestampMicrosecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Nanosecond, None) => {
-                $primitive_evaluator::<$key_type, TimestampNanosecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, TimestampNanosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Second) => {
-                $primitive_evaluator::<$key_type, DurationSecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, DurationSecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Millisecond) => {
-                $primitive_evaluator::<$key_type, DurationMillisecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, DurationMillisecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Microsecond) => {
-                $primitive_evaluator::<$key_type, DurationMicrosecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, DurationMicrosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Nanosecond) => {
-                $primitive_evaluator::<$key_type, DurationNanosecondType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, DurationNanosecondType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::DayTime) => {
-                $primitive_evaluator::<$key_type, IntervalDayTimeType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, IntervalDayTimeType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::YearMonth) => {
-                $primitive_evaluator::<$key_type, IntervalYearMonthType>::try_new($info)
+                $to_primitive_evaluator::<$key_type, IntervalYearMonthType>::try_new($info)
             }
-            DataType::Utf8 => $string_evaluator::<$key_type, i32>::try_new($info),
-            DataType::LargeUtf8 => $string_evaluator::<$key_type, i64>::try_new($info),
+            DataType::Utf8 => $to_string_evaluator::<$key_type, i32>::try_new($info),
+            DataType::LargeUtf8 => $to_string_evaluator::<$key_type, i64>::try_new($info),
+            DataType::Boolean => $to_boolean_evaluator::<$key_type>::try_new($info),
             unsupported_type => Err(anyhow::anyhow!(format!(
                 "unsupported value type {:?} for primitive map evaluator",
                 unsupported_type
@@ -460,56 +486,115 @@ macro_rules! create_primitive_map_evaluator {
 }
 
 macro_rules! create_string_map_evaluator {
-    ($offset_size:ident, $input_type:expr, $evaluator:ident, $info:expr) => {{
+    ($offset_size:ident, $input_type:expr, $to_primitive_evaluator:ident,
+        $to_string_evaluator:ident, $to_boolean_evaluator:ident, $info:expr) => {{
         use arrow::datatypes::*;
         match $input_type {
-            DataType::Int32 => $evaluator::<$offset_size, Int32Type>::try_new($info),
-            DataType::Int64 => $evaluator::<$offset_size, Int64Type>::try_new($info),
-            DataType::UInt32 => $evaluator::<$offset_size, UInt32Type>::try_new($info),
-            DataType::UInt64 => $evaluator::<$offset_size, UInt64Type>::try_new($info),
-            DataType::Float32 => $evaluator::<$offset_size, Float32Type>::try_new($info),
-            DataType::Float64 => $evaluator::<$offset_size, Float64Type>::try_new($info),
+            DataType::Int32 => $to_primitive_evaluator::<$offset_size, Int32Type>::try_new($info),
+            DataType::Int64 => $to_primitive_evaluator::<$offset_size, Int64Type>::try_new($info),
+            DataType::UInt32 => $to_primitive_evaluator::<$offset_size, UInt32Type>::try_new($info),
+            DataType::UInt64 => $to_primitive_evaluator::<$offset_size, UInt64Type>::try_new($info),
+            DataType::Float32 => {
+                $to_primitive_evaluator::<$offset_size, Float32Type>::try_new($info)
+            }
+            DataType::Float64 => {
+                $to_primitive_evaluator::<$offset_size, Float64Type>::try_new($info)
+            }
             DataType::Timestamp(TimeUnit::Second, None) => {
-                $evaluator::<$offset_size, TimestampSecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, TimestampSecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Millisecond, None) => {
-                $evaluator::<$offset_size, TimestampMillisecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, TimestampMillisecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Microsecond, None) => {
-                $evaluator::<$offset_size, TimestampMicrosecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, TimestampMicrosecondType>::try_new($info)
             }
             DataType::Timestamp(TimeUnit::Nanosecond, None) => {
-                $evaluator::<$offset_size, TimestampNanosecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, TimestampNanosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Second) => {
-                $evaluator::<$offset_size, DurationSecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, DurationSecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Millisecond) => {
-                $evaluator::<$offset_size, DurationMillisecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, DurationMillisecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Microsecond) => {
-                $evaluator::<$offset_size, DurationMicrosecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, DurationMicrosecondType>::try_new($info)
             }
             DataType::Duration(TimeUnit::Nanosecond) => {
-                $evaluator::<$offset_size, DurationNanosecondType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, DurationNanosecondType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::DayTime) => {
-                $evaluator::<$offset_size, IntervalDayTimeType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, IntervalDayTimeType>::try_new($info)
             }
             DataType::Interval(IntervalUnit::YearMonth) => {
-                $evaluator::<$offset_size, IntervalYearMonthType>::try_new($info)
+                $to_primitive_evaluator::<$offset_size, IntervalYearMonthType>::try_new($info)
             }
+            DataType::Utf8 => $to_string_evaluator::<$offset_size, i32>::try_new($info),
+            DataType::LargeUtf8 => $to_string_evaluator::<$offset_size, i64>::try_new($info),
+            DataType::Boolean => $to_boolean_evaluator::<$offset_size>::try_new($info),
             unsupported_type => Err(anyhow::anyhow!(format!(
-                "Unsupported non-primitive value type {:?} for {}",
+                "Unsupported value type {:?} for string map evaluator",
                 unsupported_type,
-                stringify!($evaluator)
+            ))),
+        }
+    }};
+}
+
+macro_rules! create_boolean_map_evaluator {
+    ($input_type:expr, $to_primitive_evaluator:ident, $to_string_evaluator:ident,
+        $to_boolean_evaluator:ident, $info:expr) => {{
+        use arrow::datatypes::*;
+        match $input_type {
+            DataType::Int32 => $to_primitive_evaluator::<Int32Type>::try_new($info),
+            DataType::Int64 => $to_primitive_evaluator::<Int64Type>::try_new($info),
+            DataType::UInt32 => $to_primitive_evaluator::<Int32Type>::try_new($info),
+            DataType::UInt64 => $to_primitive_evaluator::<UInt64Type>::try_new($info),
+            DataType::Float32 => $to_primitive_evaluator::<Float32Type>::try_new($info),
+            DataType::Float64 => $to_primitive_evaluator::<Float64Type>::try_new($info),
+            DataType::Timestamp(TimeUnit::Second, None) => {
+                $to_primitive_evaluator::<TimestampSecondType>::try_new($info)
+            }
+            DataType::Timestamp(TimeUnit::Millisecond, None) => {
+                $to_primitive_evaluator::<TimestampMillisecondType>::try_new($info)
+            }
+            DataType::Timestamp(TimeUnit::Microsecond, None) => {
+                $to_primitive_evaluator::<TimestampMicrosecondType>::try_new($info)
+            }
+            DataType::Timestamp(TimeUnit::Nanosecond, None) => {
+                $to_primitive_evaluator::<TimestampNanosecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Second) => {
+                $to_primitive_evaluator::<DurationSecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Millisecond) => {
+                $to_primitive_evaluator::<DurationMillisecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Microsecond) => {
+                $to_primitive_evaluator::<DurationMicrosecondType>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Nanosecond) => {
+                $to_primitive_evaluator::<DurationNanosecondType>::try_new($info)
+            }
+            DataType::Interval(IntervalUnit::DayTime) => {
+                $to_primitive_evaluator::<IntervalDayTimeType>::try_new($info)
+            }
+            DataType::Interval(IntervalUnit::YearMonth) => {
+                $to_primitive_evaluator::<IntervalYearMonthType>::try_new($info)
+            }
+            DataType::Utf8 => $to_string_evaluator::<i32>::try_new($info),
+            DataType::LargeUtf8 => $to_string_evaluator::<i64>::try_new($info),
+            DataType::Boolean => $to_boolean_evaluator::try_new($info),
+            unsupported_type => Err(anyhow::anyhow!(format!(
+                "Unsupported value type {:?} for boolean map evaluator",
+                unsupported_type,
             ))),
         }
     }};
 }
 
 pub(super) use {
-    create_float_evaluator, create_map_evaluator, create_number_evaluator,
-    create_ordered_evaluator, create_primitive_map_evaluator, create_signed_evaluator,
-    create_string_map_evaluator, create_typed_evaluator,
+    create_boolean_map_evaluator, create_float_evaluator, create_map_evaluator,
+    create_number_evaluator, create_ordered_evaluator, create_primitive_map_evaluator,
+    create_signed_evaluator, create_string_map_evaluator, create_typed_evaluator,
 };
