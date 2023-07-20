@@ -886,3 +886,22 @@ async fn test_output_type_is_struct_diagnostic() {
      = Output type must be a record, but was f64
     "###);
 }
+
+#[tokio::test]
+async fn test_python_udf() {
+    insta::assert_yaml_snapshot!(
+        compile(
+            TestScript {
+                tables: vec![account_sent_table()],
+                feature_set: FeatureSet {
+                    formulas: vec![
+                        formula("f1", "python_udf(\"example.UDF\", Sent.amount)"),
+                    ],
+                    query: "{f1}".to_owned(),
+                },
+            },
+            None
+        )
+        .await
+    );
+}
