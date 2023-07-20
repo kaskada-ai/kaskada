@@ -1,6 +1,6 @@
 use sparrow_arrow::Batch;
 
-use crate::{Error, Injector, Partition, Partitioned, Queue, Task, TaskRef};
+use crate::{Error, Partition, Partitioned, Queue, TaskRef};
 
 /// Trait for the output of a pipeline.
 pub trait Sink: Sync + Send + std::fmt::Debug {

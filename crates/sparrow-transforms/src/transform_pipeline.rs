@@ -6,11 +6,10 @@ use itertools::Itertools;
 use parking_lot::Mutex;
 use sparrow_arrow::Batch;
 use sparrow_scheduler::{
-    Partition, Partitioned, Pipeline, PipelineSink, Queue, Scheduler, Sink, TaskRef,
+    Partition, Partitioned, Pipeline, PipelineError, PipelineSink, Queue, Scheduler, Sink, TaskRef,
 };
 
-use crate::transforms::Transform;
-use crate::Error;
+use crate::transform::Transform;
 
 /// Runs a linear sequence of transforms as a pipeline.
 pub struct TransformPipeline {
@@ -80,21 +79,25 @@ impl TransformPipeline {
 }
 
 impl Pipeline for TransformPipeline {
-    type Context = Error;
-
     fn push(
         &self,
         partition: Partition,
         input: usize,
         batch: Batch,
         queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Error> {
-        error_stack::ensure!(input == 0, Error::InvalidInput { input });
+    ) -> error_stack::Result<(), PipelineError> {
+        error_stack::ensure!(
+            input == 0,
+            PipelineError::InvalidInput {
+                input,
+                input_len: 1
+            }
+        );
 
         let mut input_partition = self.inputs[partition].lock();
         error_stack::ensure!(
             !input_partition.is_closed,
-            Error::PartitionClosed(partition)
+            PipelineError::InputClosed { input, partition }
         );
         input_partition.buffer.push_back(batch);
         queue.push(self.tasks[partition].clone());
@@ -107,19 +110,25 @@ impl Pipeline for TransformPipeline {
         partition: Partition,
         input: usize,
         queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Error> {
-        error_stack::ensure!(input == 1, Error::InvalidInput { input });
+    ) -> error_stack::Result<(), PipelineError> {
+        error_stack::ensure!(
+            input == 0,
+            PipelineError::InvalidInput {
+                input,
+                input_len: 1
+            }
+        );
 
         let mut input_partition = self.inputs[partition].lock();
         error_stack::ensure!(
             !input_partition.is_closed,
-            Error::PartitionClosed(partition)
+            PipelineError::InputClosed { input, partition }
         );
         input_partition.is_closed = true;
         if input_partition.buffer.is_empty() {
             self.sink
                 .close(partition, queue)
-                .change_context(Error::Sink)?;
+                .change_context(PipelineError::Execution)?;
         } else {
             // We shouldn't need to wake the input partition.
             // It should have been woken when we pushed the batch in the buffer,
@@ -133,9 +142,9 @@ impl Pipeline for TransformPipeline {
         &self,
         partition: Partition,
         queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), crate::Error> {
+    ) -> error_stack::Result<(), PipelineError> {
         let Some(input) = self.pop_batch(partition) else {
-            error_stack::bail!(Error::IllegalState("no input batch in do_work"))
+            error_stack::bail!(PipelineError::illegal_state("no input batch in do_work"))
         };
 
         tracing::trace!(
@@ -146,7 +155,9 @@ impl Pipeline for TransformPipeline {
         if !input.is_empty() {
             let mut batch = input;
             for transform in self.transforms.iter() {
-                batch = transform.apply(batch)?;
+                batch = transform
+                    .apply(batch)
+                    .change_context(PipelineError::Execution)?;
                 if batch.is_empty() {
                     break;
                 }
@@ -154,7 +165,7 @@ impl Pipeline for TransformPipeline {
             if !batch.is_empty() {
                 self.sink
                     .send(partition, batch, queue)
-                    .change_context(Error::Sink)?;
+                    .change_context(PipelineError::Execution)?;
             }
         }
 
@@ -166,7 +177,7 @@ impl Pipeline for TransformPipeline {
         } else if self.is_closed(partition) {
             self.sink
                 .close(partition, queue)
-                .change_context(Error::Sink)?;
+                .change_context(PipelineError::Execution)?;
         }
 
         Ok(())

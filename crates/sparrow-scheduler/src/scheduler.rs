@@ -98,10 +98,12 @@ impl Scheduler {
         F: FnOnce(Partitioned<TaskRef>) -> T,
     {
         let index = self.pipelines.len();
-        let pipeline = Arc::new_cyclic(|weak| {
+        let name = std::any::type_name::<T>();
+        let pipeline: Arc<T> = Arc::new_cyclic(|weak| {
             let tasks = (0..partitions)
                 .map(|partition| -> TaskRef {
-                    let task = Task::new(index, weak.clone(), partition.into());
+                    let weak: std::sync::Weak<T> = weak.clone();
+                    let task = Task::new(index, name, weak, partition.into());
                     Arc::new(task)
                 })
                 .collect();

@@ -3,9 +3,9 @@ use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, ResultExt};
 use sparrow_arrow::Batch;
 
-use crate::transforms::Transform;
-use crate::Error;
 use sparrow_expressions::ExpressionExecutor;
+
+use crate::transform::{Error, Transform};
 
 /// Transform for projection.
 pub struct Project {
@@ -47,5 +47,9 @@ impl Transform for Project {
             .into_report()
             .change_context_lazy(error)?;
         Ok(batch.with_projection(result))
+    }
+
+    fn name(&self) -> &'static str {
+        std::any::type_name::<Self>()
     }
 }

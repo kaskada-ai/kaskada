@@ -28,13 +28,13 @@ pub async fn execute(
     query_id: String,
     plan: &sparrow_physical::Plan,
 ) -> error_stack::Result<(), Error> {
-    let mut scheduler = Scheduler::try_new(query_id).change_context(Error::Creating)?;
+    let mut scheduler = Scheduler::start(&query_id).change_context(Error::Creating)?;
 
     for pipeline in &plan.pipelines {
         // The pipelines in the plan correspond solely to sequences of transforms
         // to run. They will all use the `TransformPipeline`.
         let transforms = pipeline.steps.iter().map(|step_id| {
-            let step = &plan.steps[step_id];
+            // TODO
         });
         todo!()
     }

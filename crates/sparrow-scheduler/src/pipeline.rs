@@ -1,12 +1,34 @@
+use std::borrow::Cow;
+
 use sparrow_arrow::Batch;
 
 use crate::queue::Queue;
-use crate::{Partition, TaskRef, Worker};
+use crate::{Partition, TaskRef};
+
+#[derive(derive_more::Display, Debug)]
+pub enum PipelineError {
+    #[display(fmt = "invalid input index {input} for pipeline with {input_len} inputs")]
+    InvalidInput { input: usize, input_len: usize },
+    #[display(fmt = "input {input} for partition {partition} is already closed")]
+    InputClosed { input: usize, partition: Partition },
+    #[display(fmt = "illegal state: {_0}")]
+    IllegalState(Cow<'static, str>),
+    #[display(fmt = "error executing pipeline")]
+    Execution,
+}
+
+impl PipelineError {
+    pub fn illegal_state(state: impl Into<Cow<'static, str>>) -> Self {
+        Self::IllegalState(state.into())
+    }
+}
+
+impl error_stack::Context for PipelineError {}
 
 /// A push-based interface used by the scheduler to drive query execution
 ///
 /// A pipeline processes data from one or more input partitions, producing output
-/// to one or more output partitions. As a [`Pipeline`] may drawn on input from
+/// to one or more output partitions. As a [`Pipeline`] may draw on input from
 /// more than one upstream [`Pipeline`], input partitions are identified by both
 /// a child index, and a partition index, whereas output partitions are only
 /// identified by a partition index.
@@ -51,12 +73,6 @@ use crate::{Partition, TaskRef, Worker};
 /// are also possible.
 ///
 pub trait Pipeline: Send + Sync + std::fmt::Debug {
-    type Context: error_stack::Context;
-
-    fn name() -> &'static str {
-        std::any::type_name::<Self>()
-    }
-
     /// Push a [`Batch`] to the given input partition.
     ///
     /// This is called from outside the pipeline -- either a Tokio thread
@@ -71,7 +87,7 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
         input: usize,
         batch: Batch,
         queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Self::Context>;
+    ) -> error_stack::Result<(), PipelineError>;
 
     /// Mark an input partition as exhausted.
     ///
@@ -81,7 +97,7 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
         input_partition: Partition,
         input: usize,
         queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Self::Context>;
+    ) -> error_stack::Result<(), PipelineError>;
 
     /// Run the pipeline on the data that has been pushed in.
     ///
@@ -92,18 +108,5 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
         &self,
         partition: Partition,
         queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Self::Context>;
-}
-
-/// Wrap a specific pipeline into a handle that produces a crate-specific error.
-pub(crate) struct PipelineHandle<T: Pipeline> {
-    pipeline: T,
-}
-
-impl<T: Pipeline> std::fmt::Debug for PipelineHandle<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PipelineHandle")
-            .field("pipeline", &self.pipeline)
-            .finish()
-    }
+    ) -> error_stack::Result<(), PipelineError>;
 }
