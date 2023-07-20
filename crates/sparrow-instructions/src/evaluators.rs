@@ -4,9 +4,8 @@ use itertools::Itertools;
 use sparrow_plan::{InstKind, InstOp};
 
 use crate::evaluators::macros::{
-    create_boolean_map_evaluator, create_float_evaluator, create_map_evaluator,
-    create_number_evaluator, create_ordered_evaluator, create_primitive_map_evaluator,
-    create_signed_evaluator, create_string_map_evaluator, create_typed_evaluator,
+    create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
+    create_signed_evaluator, create_typed_evaluator,
 };
 use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
@@ -203,30 +202,7 @@ fn create_simple_evaluator(
             )
         }
         InstOp::Floor => FloorEvaluator::try_new(info),
-        InstOp::Get => match &info.args[1].data_type {
-            DataType::Map(f, _) => match f.data_type() {
-                DataType::Struct(fields) => {
-                    debug_assert!(fields.len() == 2);
-                    // Once we support all types, we can use the `create_typed_evaluator` macro
-                    create_map_evaluator!(
-                        &info.args[0].data_type,
-                        &fields[1].data_type(),
-                        GetStringToPrimitiveEvaluator,
-                        GetStringToStringEvaluator,
-                        GetStringToBooleanEvaluator,
-                        GetPrimitiveToPrimitiveEvaluator,
-                        GetPrimitiveToStringEvaluator,
-                        GetPrimitiveToBooleanEvaluator,
-                        GetBooleanToPrimitiveEvaluator,
-                        GetBooleanToStringEvaluator,
-                        GetBooleanToBooleanEvaluator,
-                        info
-                    )
-                }
-                other => panic!("expected struct in map type, saw {:?}", other),
-            },
-            other => panic!("expected map, saw {:?}", other),
-        },
+        InstOp::Get => GetEvaluator::try_new(info),
         InstOp::Gt => match (info.args[0].is_literal(), info.args[1].is_literal()) {
             (_, true) => {
                 create_ordered_evaluator!(&info.args[0].data_type, GtScalarEvaluator, info)
