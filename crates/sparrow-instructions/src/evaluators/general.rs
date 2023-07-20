@@ -4,6 +4,7 @@ use anyhow::Context;
 use arrow::array::ArrayRef;
 use arrow::datatypes::DataType;
 use sparrow_plan::ValueRef;
+use sparrow_arrow::scalar_value::ScalarValue;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use arrow::array::{Array, ArrayData};
@@ -99,11 +100,20 @@ pub(super) struct PythonUDFEvaluator {
 impl EvaluatorFactory for PythonUDFEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         // TODO: Parse args more carefully - the first arg is currently the class name
-        let values = info.args.iter().map(|arg| arg.value_ref.clone()).collect();
+        let (first, rest) = info.args.split_first().context("Expected args to be non-empty")?;
+
+        let code =
+            if let Some(ScalarValue::Utf8(Some(code))) = first.value_ref.literal_value() {
+                code.clone()
+            } else {
+                anyhow::bail!(
+                    "Unable to create Python UDF with unexpected code {:?}",
+                    first
+                );
+            };
+
+        let values = rest.iter().map(|arg| arg.value_ref.clone()).collect();
         let result_type = info.result_type.clone();
-        // let code = format!("udf = new {}\n udf.map(*args)", "module.Class");
-        // Debugging
-        let code = "args[1]".to_string();
 
         Ok(Box::new(Self { values, result_type, code }))
     }
@@ -122,12 +132,13 @@ impl Evaluator for PythonUDFEvaluator {
             }).collect::<anyhow::Result<_>>()?;
 
             let locals = [("args", args)].into_py_dict(py);
-            let result_py: PyObject = py.eval(&self.code, None, Some(&locals))?.extract()?;
+            py.run(&self.code, None, Some(&locals))?;
+            let result_py: PyObject = locals.get_item("ret").unwrap().into();
 
             let result_array_data: ArrayData = ArrayData::from_pyarrow(result_py.as_ref(py))?;
 
             // We can't control the returned type, but we can refuse to accept the "wrong" type.
-            ensure!(*result_array_data.data_type() == self.result_type, "unexpected result type from Python UDF");
+            ensure!(*result_array_data.data_type() == self.result_type, "expected Python UDF to return type {:?}, but received {:?}", result_array_data.data_type(), self.result_type);
 
             let result_array_ref: ArrayRef = array::make_array(result_array_data);
 
