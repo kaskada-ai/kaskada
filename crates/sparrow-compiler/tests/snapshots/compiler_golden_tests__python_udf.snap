@@ -1,0 +1,178 @@
+---
+source: crates/sparrow-compiler/tests/compiler_golden_tests.rs
+assertion_line: 892
+expression: "compile(TestScript {\n            tables: vec![account_sent_table()],\n            feature_set: FeatureSet {\n                formulas: vec![formula(\"f1\",\n                    \"python_udf(\\\"example.UDF\\\", Sent.amount)\"),],\n                query: \"{f1}\".to_owned(),\n            },\n        }, None).await"
+---
+per_entity_behavior: 1
+operations:
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sender
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+                - name: store
+                  data_type:
+                    kind:
+                      Primitive: 10
+        output: false
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 0
+            interpolation: 1
+            column:
+              ScanRecord: ~
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          LateBound: 1
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: amount
+      - arguments:
+          - 0
+          - 2
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: field_ref
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: example.UDF
+      - arguments:
+          - 4
+          - 3
+        result_type:
+          kind:
+            Primitive: 13
+        output: false
+        operator:
+          Instruction: python_udf
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 14
+        output: false
+        operator:
+          Literal:
+            literal:
+              Utf8: f1
+      - arguments:
+          - 6
+          - 5
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: f1
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Instruction: record
+      - arguments:
+          - 7
+        result_type:
+          kind:
+            Primitive: 24
+        output: false
+        operator:
+          Instruction: time_of
+      - arguments:
+          - 8
+          - 1
+        result_type:
+          kind:
+            Primitive: 2
+        output: true
+        operator:
+          Instruction: gte
+    operator:
+      Scan:
+        table_id:
+          high: 1233317930569911709
+          low: 9279388510107214504
+        schema:
+          fields:
+            - name: sender
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: amount
+              data_type:
+                kind:
+                  Primitive: 13
+            - name: receiver
+              data_type:
+                kind:
+                  Primitive: 10
+            - name: store
+              data_type:
+                kind:
+                  Primitive: 10
+        slice_plan:
+          table_name: Sent
+          slice: ~
+  - expressions:
+      - arguments: []
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: f1
+                  data_type:
+                    kind:
+                      Primitive: 13
+        output: true
+        operator:
+          Input:
+            producing_operation: 0
+            input_column: 3
+            interpolation: 1
+            column:
+              ProducerExpression: 7
+    operator:
+      Select:
+        input: 0
+        condition:
+          producing_operation: 0
+          input_column: 4
+          interpolation: 1
+          column:
+            ProducerExpression: 9
+primary_grouping: account
+primary_grouping_key_type:
+  kind:
+    Primitive: 10
+

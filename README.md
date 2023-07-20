@@ -60,10 +60,3 @@ All contributions -- issues, fixes, documentation improvements, features and ide
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 
-## Python UDF's
-
-```bash
-pyenv exec pip install pyarrow pandas
-
-PYO3_PYTHON="~/.pyenv/versions/3.10.9/bin/python" cargo test
-```

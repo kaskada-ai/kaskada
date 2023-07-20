@@ -1,0 +1,78 @@
+= Using Python UDFs
+
+Timelines may be transformed in Python by using a UDF. 
+Kaskada implements UDF's by running a Python process and communicating via FFI.
+The Python UDF API is highly experimental and will almost certainly change frequently.
+
+== Setting Up Python UDF's
+
+Kaskada uses the Python installed in the environment it runs.
+To use Python UDF's, you must install the Python shared library headers.
+You'll also need to ensure that `pyarrow` and any other libraries used in your UDF's are installed in your local Python environment.
+The `pyarrow` library is required, as it's used to translate Kaskada's arrays into Python arrays.
+
+For Debin-based linux distributions this means something like
+
+```bash
+sudo apt-get install python-dev
+```
+
+For MacOS, `pyenv` can be used to install the headers:
+
+```bash
+env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.10.9
+pyenv exec pip install pyarrow pandas
+```
+
+If you use `pyenv` to install the headers, you'll need to tell Kaskada where to find them by setting the `PYO3_PYTHON` environment variable, for example:
+
+```bash
+PYO3_PYTHON="~/.pyenv/versions/3.10.9/bin/python" cargo test
+```
+
+== Writing Python UDF's
+
+Python UDF's are defined inline as string containing a Python statement in your Fenl query.
+Input args are passed to the UDF using the `args` Python variable.
+The result of the UDF is read from the `ret` Python variable after the statment is executed.
+
+```fenl
+let echo_udf_result = Python_udf("ret = args[0]", Foo.bar)
+
+in {echo_udf_result}
+```
+
+The input arguments contain pyarrow arrays, which are immutable.
+Each argument to `python_udf` following the code corresponds to an element in the `args` list.
+
+The easiest way to transform the input arrays is by converting them to pandas series:
+
+```fenl
+let increment_udf_result = python_udf("
+import pyarrow
+plus_one = args[0].to_pandas() + 1.0
+ret = pyarrow.Array.from_pandas(plus_one, type=args[0].type)
+", Foo.bar)
+
+in {increment_udf_result}
+```
+
+Currently, every argument to a UDF must be of the same type, and the UDF must return that type.
+
+== Writing "Safe" UDF's.
+
+Kaskada's engine makes several assumptions that can't be verified for UDF's, so it's up to you to make sure your code is safe.
+
+* Transformations should be deterministic. A given input should always produce the same output.
+* Transformations should be temporally correct. Information should never travel backwards in time, or in the sequence of rows.
+* Aggregated values should be exclusively computed from the entity associated with the value.
+
+== Future Directions
+
+This API is mostly intended to prove feasibility of Python UDF's - the UX is pretty terrible.
+A number of improvements are probably needed:
+
+* Arbitrary input & output types
+* Better syntax
+* Aggregation functions (state management)
+* Filters (operations)
