@@ -1,7 +1,10 @@
 use std::fs::File;
 
+use arrow::record_batch::RecordBatchWriter;
 use error_stack::{IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
+use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use parquet::arrow::ProjectionMask;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::destination;
 use sparrow_api::kaskada::v1alpha::source_data;
@@ -88,7 +91,7 @@ pub(super) async fn execute_example(
 
     let destination = ObjectStoreDestination {
         output_prefix_uri: format!("file:///{}", tempdir.path().display()),
-        file_type: FileType::Csv.into(),
+        file_type: FileType::Parquet.into(),
         output_paths: None,
     };
     let output_to = Destination {
@@ -130,23 +133,29 @@ pub(super) async fn execute_example(
     let output_path = output_paths[0].strip_prefix("file://").unwrap();
     let output_path = std::path::Path::new(output_path);
 
-    // Drop the first four (key columns).
-    //
-    // Note: This currently writes to CSV and then parses it.
-    // There may be faster ways, but this lets us re-use the existing functionality
-    // to write to CSV rather than creating special functionality just for examples.
-    // We could also consider other options for removing the rows (regex, etc.)
-    // but this works.
-    let mut table = prettytable::Table::from_csv_file(output_path).unwrap();
-    for row in table.row_iter_mut() {
-        row.remove_cell(0);
-        row.remove_cell(0);
-        row.remove_cell(0);
-        row.remove_cell(0);
-    }
+    let file = File::open(output_path).unwrap();
+    let builder = ParquetRecordBatchReaderBuilder::try_new(file).unwrap();
+    let fields = builder
+        .schema()
+        .fields()
+        .iter()
+        .enumerate()
+        .filter_map(|(index, field)| match field.name().as_ref() {
+            "_time" | "_key" | "_key_hash" | "_subsort" => None,
+            _ => Some(index),
+        });
+    let mask = ProjectionMask::roots(builder.parquet_schema(), fields);
+    let reader = builder.with_projection(mask).build().unwrap();
 
-    let content =
-        String::from_utf8(table.to_csv(Vec::new()).unwrap().into_inner().unwrap()).unwrap();
+    let mut content = Vec::new();
+    let mut writer = arrow::csv::WriterBuilder::new().build(&mut content);
+    for batch in reader {
+        let batch = batch.unwrap();
+        writer.write(&batch).unwrap();
+    }
+    writer.close().unwrap();
+
+    let content = String::from_utf8(content).unwrap();
 
     tempdir.close().unwrap();
 
