@@ -101,7 +101,9 @@ impl EvaluatorFactory for PythonUDFEvaluator {
         // TODO: Parse args more carefully - the first arg is currently the class name
         let values = info.args.iter().map(|arg| arg.value_ref.clone()).collect();
         let result_type = info.result_type.clone();
-        let code = format!("udf = new {}\n udf.map(*args)", "module.Class");
+        // let code = format!("udf = new {}\n udf.map(*args)", "module.Class");
+        // Debugging
+        let code = "args[1]".to_string();
 
         Ok(Box::new(Self { values, result_type, code }))
     }

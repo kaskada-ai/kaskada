@@ -58,3 +58,12 @@ Most development discussions take place on GitHub in this repo.
 All contributions -- issues, fixes, documentation improvements, features and ideas -- are welcome.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+
+
+## Python UDF's
+
+```bash
+pyenv exec pip install pyarrow
+
+PYO3_PYTHON="~/.pyenv/versions/3.10.9/bin/python" cargo test
+```
