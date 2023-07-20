@@ -11,7 +11,7 @@ license = "Apache-2.0"
 ahash = "0.8.3"
 anyhow = { version = "1.0.70", features = ["backtrace"] }
 approx = "0.5.1"
-arrow = { version = "43.0.0" }
+arrow = { version = "43.0.0", features= ["ffi", "pyarrow"]}
 arrow-arith = { version = "43.0.0" }
 arrow-array = { version = "43.0.0" }
 arrow-buffer = { version = "43.0.0" }
@@ -91,7 +91,7 @@ prost-types = "0.11.8"
 prost-wkt = "0.4.1"
 prost-wkt-build = "0.4.1"
 prost-wkt-types = "0.4.1"
-pyo3 = { version = "0.19.1", features = ["auto-initialize"] }
+pyo3 = { version = "0.19.1", features = ["auto-initialize", "anyhow"] }
 rand = "0.8.5"
 reqwest = "0.11.14"
 serde = { version = "1.0.159", features = ["derive", "rc"] }

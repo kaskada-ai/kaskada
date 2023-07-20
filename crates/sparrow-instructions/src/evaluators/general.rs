@@ -2,14 +2,17 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::array::ArrayRef;
+use arrow::datatypes::DataType;
 use sparrow_plan::ValueRef;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
-use arrow::datatypes::DataType;
-use arrow::array::Array;
+use arrow::array::{Array, ArrayData};
 use arrow::array;
+use arrow::pyarrow::ToPyArrow;
+use arrow::pyarrow::FromPyArrow;
+use anyhow::ensure;
 
-use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
+use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo, ColumnarValue};
 
 /// Evaluator for the `is_valid` instruction.
 pub(super) struct IsValidEvaluator {
@@ -89,75 +92,48 @@ impl Evaluator for CoalesceEvaluator {
 /// Evaluator for the `python_udf` instruction.
 pub(super) struct PythonUDFEvaluator {
     values: Vec<ValueRef>,
+    result_type: DataType,
+    code: String,
 }
 
 impl EvaluatorFactory for PythonUDFEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        // TODO: Parse args more carefully - the first arg is currently the class name
         let values = info.args.iter().map(|arg| arg.value_ref.clone()).collect();
-        Ok(Box::new(Self { values }))
+        let result_type = info.result_type.clone();
+        let code = format!("udf = new {}\n udf.map(*args)", "module.Class");
+
+        Ok(Box::new(Self { values, result_type, code }))
     }
 }
 
 impl Evaluator for PythonUDFEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        // let chunked_arrays: Vec<_> = self.values.iter().map(|value_ref| {
-        //     let chunk = info.value(value_ref)?.array_ref()?;
-        //     ChunkedArray::from_chunks("foo", vec!(chunk)) // <- ISSUE: This is an arrow array, but needs to be an arrow2 array for polars
-        // }).collect();
+        Python::with_gil(|py| -> anyhow::Result<ArrayRef> {
+            let args: Vec<PyObject> = self.values.iter().map::<anyhow::Result<_>,_>(|value_ref| {
+                let value: ColumnarValue = info.value(value_ref)?; 
+                let array_ref: ArrayRef = value.array_ref()?; 
+                let array_data: ArrayData = array_ref.to_data();
+                let py_obj: PyObject = array_data.to_pyarrow(py)?;
 
-        let array_refs: anyhow::Result<Vec<_>> = self.values.iter().map::<anyhow::Result<_>,_>(|value_ref| Ok(info.value(value_ref)?.array_ref()?)).collect();
+                Ok(py_obj)
+            }).collect::<anyhow::Result<_>>()?;
 
-        Python::with_gil(|py| -> PyResult<()> {
-            for i in 0..info.num_rows() {
-                let values: Vec<Py<PyAny>> = array_refs.iter().map(|array_ref| match array_ref.data_type() {
-                    DataType::Null => array::as_null_array(array_ref).value(i).into(),
-                    // DataType::Boolean => Array::as_boolean_array(array_ref).value(i).into(),
-                    // DataType::Int32 => Array::as_primitive_array::<Int32Type>(array_ref).value(i).into(),
-                    // DataType::Int64 => Array::as_primitive_array::<Int64Type>(array_ref).value(i).into(),
-                    // DataType::Float32 => Array::as_primitive_array::<Float32Type>(array_ref).value(i).into(),
-                    // DataType::Float64 => Array::as_primitive_array::<Float64Type>(array_ref).value(i).into(),
-                    // DataType::Struct(_) => Array::as_struct_array(array_ref),
-                });
-            }
-            // let code = printf("udf = new {}\n udf.map(input)", "module.Class");
-            // let locals = [("input", PySeries(chunked_arrays[0].into_series()))].into_py_dict(py);
-            // let result = py.eval(code, None, Some(&locals))?.extract()?;
+            let locals = [("args", args)].into_py_dict(py);
+            let result_py: PyObject = py.eval(&self.code, None, Some(&locals))?.extract()?;
 
-            Ok(())
-        });
-        
-        // let primitive_array = array_refs[0].as_primitive_opt::<i64>()?
-        // let value = primitive_array.value(0);
+            let result_array_data: ArrayData = ArrayData::from_pyarrow(result_py.as_ref(py))?;
 
-        self.values
-            .iter()
-            .map(|value_ref| info.value(value_ref)?.array_ref())
-            .reduce(|accum, item| {
-                // TODO: When we switch to `arrow2` use the `if_then_else` kernel, or create
-                // a "multi-way" version of that.
+            // We can't control the returned type, but we can refuse to accept the "wrong" type.
+            ensure!(*result_array_data.data_type() == self.result_type, "unexpected result type from Python UDF");
 
-                Python::with_gil(|py| -> PyResult<()> {
-                    let sys = py.import("sys")?;
-                    let version: String = sys.getattr("version")?.extract()?;
-            
-                    let locals = [("os", py.import("os")?)].into_py_dict(py);
-                    let code = "os.getenv('USER') or os.getenv('USERNAME') or 'Unknown'";
-                    let user: String = py.eval(code, None, Some(&locals))?.extract()?;
-            
-                    println!("Hello {}, I'm Python {}", user, version);
-                    Ok(())
-                });
+            let result_array_ref: ArrayRef = array::make_array(result_array_data);
 
-                let accum = accum?;
-                let item = item?;
+            // This is a "map" operation - each row should reflect the time of the 
+            // corresponding input row, and have the same length.
+            ensure!(result_array_ref.len() == info.num_rows(), "unexpected result length from Python UDF");
 
-                let use_item = arrow::compute::is_null(accum.as_ref())?;
-                Ok(arrow::compute::kernels::zip::zip(
-                    &use_item,
-                    item.as_ref(),
-                    accum.as_ref(),
-                )?)
-            })
-            .context("no values for python_udf")?
+            Ok(result_array_ref)
+        })
     }
 }
