@@ -18,18 +18,18 @@ impl Injector {
 }
 
 impl Queue<TaskRef> for Injector {
-    fn push_global(&self, task: TaskRef) {
+    fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_global(task)
+            self.queue.schedule_global(task)
         }
     }
 
-    fn push(&mut self, task: TaskRef) {
-        self.push_global(task)
+    fn schedule(&mut self, task: TaskRef) {
+        self.schedule_global(task)
     }
 
-    fn push_yield(&mut self, task: TaskRef) {
-        self.push_global(task)
+    fn schedule_yield(&mut self, task: TaskRef) {
+        self.schedule_global(task)
     }
 }
 
@@ -46,7 +46,7 @@ impl Worker {
                 // This means that the task was schedule while we were executing.
                 // As a result, we didn't add it to any queue yet, so we need to
                 // do so now.
-                self.queue.push_global(task);
+                self.queue.schedule_global(task);
             }
         }
         Ok(())
@@ -54,21 +54,21 @@ impl Worker {
 }
 
 impl Queue<TaskRef> for Worker {
-    fn push(&mut self, task: TaskRef) {
+    fn schedule(&mut self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push(task)
+            self.queue.schedule(task)
         }
     }
 
-    fn push_yield(&mut self, task: TaskRef) {
+    fn schedule_yield(&mut self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_yield(task)
+            self.queue.schedule_yield(task)
         }
     }
 
-    fn push_global(&self, task: TaskRef) {
+    fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_global(task)
+            self.queue.schedule_global(task)
         }
     }
 }

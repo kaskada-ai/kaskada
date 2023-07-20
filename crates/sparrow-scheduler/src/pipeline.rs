@@ -73,15 +73,15 @@ impl error_stack::Context for PipelineError {}
 /// are also possible.
 ///
 pub trait Pipeline: Send + Sync + std::fmt::Debug {
-    /// Push a [`Batch`] to the given input partition.
+    /// Add a [`Batch`] to the given input partition and input index.
     ///
     /// This is called from outside the pipeline -- either a Tokio thread
     /// reading from a source or a producing pipeline. As a result, this should
     /// generally add the batch to a mutex-protected queue and ensure a task is
     /// scheduled for executing this partition of this pipeline..
     ///
-    /// Schedules any tasks that need to be executed on the worker.
-    fn push(
+    /// Schedules any tasks that need to be executed on the `queue`.
+    fn add_input(
         &self,
         input_partition: Partition,
         input: usize,
@@ -89,10 +89,10 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
         queue: &mut dyn Queue<TaskRef>,
     ) -> error_stack::Result<(), PipelineError>;
 
-    /// Mark an input partition as exhausted.
+    /// Mark an input partition and input index as complet.
     ///
-    /// Schedules any tasks that need to be executed on the worker.
-    fn close(
+    /// Schedules any tasks that need to be executed on the `queue`.
+    fn close_input(
         &self,
         input_partition: Partition,
         input: usize,
@@ -101,9 +101,11 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
 
     /// Run the pipeline on the data that has been pushed in.
     ///
+    /// May schedule additional work to be done on the `queue`.
+    ///
     /// Generally this should return after processing / producing a single
-    /// batch. If additional work can be done, returning `Ok(true)` indicates
-    /// that this pipeline should be immediately rescheduled.
+    /// batch. If additional work must be done, this partition may be
+    /// re-scheduled with the `queue`.
     fn do_work(
         &self,
         partition: Partition,

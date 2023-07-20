@@ -80,7 +80,7 @@ impl Task {
         queue: &mut dyn Queue<TaskRef>,
     ) -> error_stack::Result<(), Error> {
         self.pipeline()?
-            .push(self.partition, input, batch, queue)
+            .add_input(self.partition, input, batch, queue)
             .change_context_lazy(|| self.error("push"))
     }
 
@@ -91,7 +91,7 @@ impl Task {
         queue: &mut dyn Queue<TaskRef>,
     ) -> error_stack::Result<(), Error> {
         self.pipeline()?
-            .close(self.partition, input, queue)
+            .close_input(self.partition, input, queue)
             .change_context_lazy(|| self.error("close"))
     }
 

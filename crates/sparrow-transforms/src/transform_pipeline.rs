@@ -79,7 +79,7 @@ impl TransformPipeline {
 }
 
 impl Pipeline for TransformPipeline {
-    fn push(
+    fn add_input(
         &self,
         partition: Partition,
         input: usize,
@@ -100,12 +100,12 @@ impl Pipeline for TransformPipeline {
             PipelineError::InputClosed { input, partition }
         );
         input_partition.buffer.push_back(batch);
-        queue.push(self.tasks[partition].clone());
+        queue.schedule(self.tasks[partition].clone());
 
         Ok(())
     }
 
-    fn close(
+    fn close_input(
         &self,
         partition: Partition,
         input: usize,
@@ -173,7 +173,7 @@ impl Pipeline for TransformPipeline {
 
         if pending > 0 {
             tracing::trace!("{pending} batches remaining in {partition}");
-            queue.push(self.tasks[partition].clone());
+            queue.schedule(self.tasks[partition].clone());
         } else if self.is_closed(partition) {
             self.sink
                 .close(partition, queue)

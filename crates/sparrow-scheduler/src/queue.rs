@@ -4,27 +4,34 @@
 //! different implementations.
 
 pub trait Queue<T> {
-    /// Push an item to the *front* of the local queue.
+    /// Schedule an item for immediate, local execution.
     ///
-    /// The item will be placed in the LIFO slot (next thing this thread runs).
-    /// If there was already an item in that slot, it will be displaced.
+    /// For local queues, this will schedule it as the next item, potentially
+    /// displacing the other item(s) scheduled at the front.
     ///
-    /// If the local queue is full, it will move half of its items to the global queue.
+    /// If the local queue is full, it will move half of its items to the global
+    /// queue.
     ///
-    /// When called on a global queue, items will be pushed to that.
-    fn push(&mut self, item: T);
+    /// For the global queue, this will add to the end of the list of items.
+    fn schedule(&mut self, item: T);
 
-    /// Push an item to the *end* of the local queue, skipping the LIFO slot.
+    /// Schedule an item for eventual, local execution.
     ///
-    /// This can be used to give other tasks a chance to run. Otherwise, there’s
-    /// a risk that one task will completely take over a thread in a push-pop
-    /// cycle due to the LIFO slot.
+    /// For local and global queues, this will add the item to the end of the queue.
     ///
-    /// When called on a global queue, items will be pushed to that.
-    fn push_yield(&mut self, item: T);
+    /// For local queues, this can be used to give other tasks a chance to run.
+    /// Otherwise, there’s a risk that one task will completely take over a
+    /// thread in a push-pop cycle due to the LIFO slot.
+    ///
+    /// If the local queue is full, it will move half of its items to the global
+    /// queue.
+    fn schedule_yield(&mut self, item: T);
 
-    /// Push an item onto the global queue.
-    fn push_global(&self, item: T);
+    /// Schedule n item for eventual execution anywher.
+    ///
+    /// For both the local and global queues this adds to the end of the global
+    /// queue.
+    fn schedule_global(&self, item: T);
 }
 
 /// A cloneable, global queue for adding elements to any worker.
@@ -74,16 +81,16 @@ impl<T> GlobalQueue<T> {
 }
 
 impl<T> Queue<T> for GlobalQueue<T> {
-    fn push_global(&self, item: T) {
+    fn schedule_global(&self, item: T) {
         self.queue.push(item)
     }
 
-    fn push(&mut self, item: T) {
-        self.push_global(item)
+    fn schedule(&mut self, item: T) {
+        self.schedule_global(item)
     }
 
-    fn push_yield(&mut self, item: T) {
-        self.push_global(item)
+    fn schedule_yield(&mut self, item: T) {
+        self.schedule_global(item)
     }
 }
 
@@ -95,15 +102,15 @@ impl<T> LocalQueue<T> {
 }
 
 impl<T> Queue<T> for LocalQueue<T> {
-    fn push(&mut self, item: T) {
+    fn schedule(&mut self, item: T) {
         self.queue.push(item)
     }
 
-    fn push_yield(&mut self, item: T) {
+    fn schedule_yield(&mut self, item: T) {
         self.queue.push_yield(item)
     }
 
-    fn push_global(&self, item: T) {
+    fn schedule_global(&self, item: T) {
         self.queue.global().push(item)
     }
 }
@@ -117,9 +124,9 @@ mod tests {
         let global = GlobalQueue::new(1, 4);
         let mut local = global.take_local_queues().next().unwrap();
 
-        local.push(1);
-        local.push(2);
-        local.push(3);
+        local.schedule(1);
+        local.schedule(2);
+        local.schedule(3);
 
         // The fact this pops 3 is important. It is what makes sure the task
         // most recently produced on this CPU (with the data already in the cache)
@@ -138,8 +145,8 @@ mod tests {
         let global = GlobalQueue::new(1, 4);
         let mut local = global.take_local_queues().next().unwrap();
 
-        global.push_global(1);
-        global.push_global(2);
+        global.schedule_global(1);
+        global.schedule_global(2);
 
         // The local queue steals work from the global queue, which is LIFO.
         assert_eq!(local.pop(), Some(1));
