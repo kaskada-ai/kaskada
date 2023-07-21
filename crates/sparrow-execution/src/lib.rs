@@ -23,7 +23,7 @@ mod tests {
     use parking_lot::Mutex;
     use sparrow_arrow::scalar_value::ScalarValue;
     use sparrow_arrow::{Batch, RowTime};
-    use sparrow_scheduler::{Pipeline, PipelineError, PipelineInput, Scheduler};
+    use sparrow_scheduler::{Pipeline, PipelineError, PipelineInput, WorkerPool};
     use sparrow_transforms::TransformPipeline;
 
     #[derive(derive_more::Display, Debug)]
@@ -105,7 +105,7 @@ mod tests {
         output_schema: SchemaRef,
         output: tokio::sync::mpsc::Sender<Batch>,
     ) -> error_stack::Result<(), Error> {
-        let mut scheduler = Scheduler::start(query_id).change_context(Error::Creating)?;
+        let mut worker_pool = WorkerPool::start(query_id).change_context(Error::Creating)?;
 
         // This sets up some fake stuff:
         // - We don't have sources / sinks yet, so we use tokio channels.
@@ -165,8 +165,8 @@ mod tests {
             schema: output_schema,
         };
 
-        let sink_pipeline = scheduler.add_pipeline(1, WriteChannelPipeline::new(output));
-        let transform_pipeline = scheduler.add_pipeline(
+        let sink_pipeline = worker_pool.add_pipeline(1, WriteChannelPipeline::new(output));
+        let transform_pipeline = worker_pool.add_pipeline(
             1,
             TransformPipeline::try_new(
                 &scan,
@@ -177,7 +177,7 @@ mod tests {
         );
         let transform_pipeline_input = PipelineInput::new(transform_pipeline, 0);
 
-        let mut injector = scheduler.injector().clone();
+        let mut injector = worker_pool.injector().clone();
         while let Some(batch) = input.recv().await {
             transform_pipeline_input
                 .add_input(0.into(), batch, &mut injector)
@@ -186,7 +186,7 @@ mod tests {
         transform_pipeline_input
             .close_input(0.into(), &mut injector)
             .change_context(Error::Executing)?;
-        scheduler.stop().change_context(Error::Executing)?;
+        worker_pool.stop().change_context(Error::Executing)?;
 
         Ok(())
     }
@@ -212,7 +212,7 @@ mod tests {
             input_partition: sparrow_scheduler::Partition,
             input: usize,
             batch: Batch,
-            _queue: &mut dyn sparrow_scheduler::Queue<sparrow_scheduler::TaskRef>,
+            _scheduler: &mut dyn sparrow_scheduler::Scheduler,
         ) -> error_stack::Result<(), PipelineError> {
             let channel = self.0.lock();
             channel
@@ -230,7 +230,7 @@ mod tests {
             &self,
             input_partition: sparrow_scheduler::Partition,
             input: usize,
-            _queue: &mut dyn sparrow_scheduler::Queue<sparrow_scheduler::TaskRef>,
+            _scheduler: &mut dyn sparrow_scheduler::Scheduler,
         ) -> error_stack::Result<(), PipelineError> {
             let mut channel = self.0.lock();
             error_stack::ensure!(
@@ -247,7 +247,7 @@ mod tests {
         fn do_work(
             &self,
             _partition: sparrow_scheduler::Partition,
-            _queue: &mut dyn sparrow_scheduler::Queue<sparrow_scheduler::TaskRef>,
+            _scheduler: &mut dyn sparrow_scheduler::Scheduler,
         ) -> error_stack::Result<(), PipelineError> {
             Ok(())
         }

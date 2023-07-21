@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use error_stack::ResultExt;
 
-use crate::queue::Queue;
 use crate::schedule_count::ScheduleCount;
-use crate::{Error, Partition, Pipeline};
+use crate::{Error, Partition, Pipeline, Scheduler};
 
 /// The unit of work executed by the scheduler.
 ///
@@ -74,11 +73,11 @@ impl Task {
     #[inline]
     pub(crate) fn do_work(
         &self,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<bool, Error> {
         let guard = self.schedule_count.guard();
         self.pipeline()?
-            .do_work(self.partition, queue)
+            .do_work(self.partition, scheduler)
             .change_context_lazy(|| self.error("do_work"))?;
         Ok(guard.finish())
     }

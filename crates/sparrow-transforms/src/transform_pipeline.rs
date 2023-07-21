@@ -7,17 +7,14 @@ use parking_lot::Mutex;
 use sparrow_arrow::Batch;
 use sparrow_physical::{StepId, StepKind};
 use sparrow_scheduler::{
-    Partition, Partitioned, Pipeline, PipelineError, PipelineInput, Queue, TaskRef,
+    Partition, Partitioned, Pipeline, PipelineError, PipelineInput, Scheduler, TaskRef,
 };
 
 use crate::transform::Transform;
 
 /// Runs a linear sequence of transforms as a pipeline.
 pub struct TransformPipeline {
-    /// The inputs this transform processes.
-    ///
-    /// For each partition:
-    ///   Hold a shared, mutex-protected input queue.
+    /// The state for each partition.
     partitions: Partitioned<TransformPartition>,
     transforms: Vec<Box<dyn Transform>>,
     /// Sink for the down-stream computation.
@@ -153,7 +150,7 @@ impl Pipeline for TransformPipeline {
         input_partition: Partition,
         input: usize,
         batch: Batch,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         error_stack::ensure!(
             input == 0,
@@ -172,7 +169,7 @@ impl Pipeline for TransformPipeline {
         );
 
         partition.add_input(batch);
-        queue.schedule(partition.task.clone());
+        scheduler.schedule(partition.task.clone());
         Ok(())
     }
 
@@ -180,7 +177,7 @@ impl Pipeline for TransformPipeline {
         &self,
         input_partition: Partition,
         input: usize,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         error_stack::ensure!(
             input == 0,
@@ -202,7 +199,7 @@ impl Pipeline for TransformPipeline {
         // loop, in which case we need to allow it to output to the sink before
         // we close it.
         partition.close_input();
-        queue.schedule(partition.task.clone());
+        scheduler.schedule(partition.task.clone());
 
         Ok(())
     }
@@ -210,7 +207,7 @@ impl Pipeline for TransformPipeline {
     fn do_work(
         &self,
         input_partition: Partition,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         let partition = &self.partitions[input_partition];
 
@@ -219,7 +216,7 @@ impl Pipeline for TransformPipeline {
                 partition.is_input_closed(),
                 PipelineError::illegal_state("scheduled without work")
             );
-            return self.sink.close_input(input_partition, queue);
+            return self.sink.close_input(input_partition, scheduler);
         };
 
         tracing::trace!(
@@ -245,7 +242,7 @@ impl Pipeline for TransformPipeline {
             // If the result is non-empty, output it.
             if !batch.is_empty() {
                 self.sink
-                    .add_input(input_partition, batch, queue)
+                    .add_input(input_partition, batch, scheduler)
                     .change_context(PipelineError::Execution)?;
             }
         }
@@ -253,7 +250,7 @@ impl Pipeline for TransformPipeline {
         // If the input is closed and empty, then we should close the sink.
         if partition.is_input_closed() && partition.is_input_empty() {
             self.sink
-                .close_input(input_partition, queue)
+                .close_input(input_partition, scheduler)
                 .change_context(PipelineError::Execution)?;
         }
 

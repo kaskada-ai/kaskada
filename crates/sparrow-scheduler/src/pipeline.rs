@@ -2,8 +2,7 @@ use std::borrow::Cow;
 
 use sparrow_arrow::Batch;
 
-use crate::queue::Queue;
-use crate::{Partition, Partitioned, TaskRef};
+use crate::{Partition, Partitioned, Scheduler, TaskRef};
 
 #[derive(derive_more::Display, Debug)]
 pub enum PipelineError {
@@ -92,38 +91,38 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
     ///
     /// This is called from outside the pipeline -- either a Tokio thread
     /// reading from a source or a producing pipeline. As a result, this should
-    /// generally add the batch to a mutex-protected queue and ensure a task is
+    /// generally add the batch to a mutex-protected buffer and ensure a task is
     /// scheduled for executing this partition of this pipeline..
     ///
-    /// Schedules any tasks that need to be executed on the `queue`.
+    /// Schedules any tasks that need to be executed on the `scheduler`.
     fn add_input(
         &self,
         input_partition: Partition,
         input: usize,
         batch: Batch,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError>;
 
     /// Mark an input partition and input index as complet.
     ///
-    /// Schedules any tasks that need to be executed on the `queue`.
+    /// Schedules any tasks that need to be executed on the `scheduler`.
     fn close_input(
         &self,
         input_partition: Partition,
         input: usize,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError>;
 
     /// Run the pipeline on the data that has been pushed in.
     ///
-    /// May schedule additional work to be done on the `queue`.
+    /// May schedule additional work to be done on the `scheduler`.
     ///
     /// Generally this should return after processing / producing a single
     /// batch. If additional work must be done, this partition may be
-    /// re-scheduled with the `queue`.
+    /// re-scheduled with the `scheduler`.
     fn do_work(
         &self,
         partition: Partition,
-        queue: &mut dyn Queue<TaskRef>,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError>;
 }

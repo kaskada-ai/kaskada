@@ -13,7 +13,7 @@ const DEFAULT_THREAD_COUNT: usize = 8;
 const LOCAL_QUEUE_SIZE: u16 = 32;
 
 #[derive(Debug)]
-pub struct Scheduler {
+pub struct WorkerPool {
     query_id: String,
     injector: Injector,
     handles: Vec<std::thread::JoinHandle<error_stack::Result<(), Error>>>,
@@ -21,7 +21,7 @@ pub struct Scheduler {
     pipelines: Vec<Arc<dyn Pipeline>>,
 }
 
-impl Scheduler {
+impl WorkerPool {
     pub fn start(query_id: String) -> error_stack::Result<Self, Error> {
         let core_ids = core_affinity::get_core_ids();
         let threads = core_ids

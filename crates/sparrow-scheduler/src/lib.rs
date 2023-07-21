@@ -15,16 +15,15 @@ mod partition;
 mod pipeline;
 mod queue;
 mod schedule_count;
-mod scheduler;
 mod sink;
 mod task;
 mod worker;
+mod worker_pool;
 
 pub use error::*;
 pub use partition::*;
 pub use pipeline::*;
-pub use queue::*;
-pub use scheduler::*;
 pub use sink::*;
 pub use task::*;
 pub use worker::*;
+pub use worker_pool::*;
