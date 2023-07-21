@@ -1,1 +1,2 @@
-pub(super) mod get_string_to_primitive;
+mod get;
+pub(super) use get::*;

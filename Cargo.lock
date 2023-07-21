@@ -4367,6 +4367,7 @@ dependencies = [
  "anyhow",
  "approx 0.5.1",
  "arrow",
+ "arrow-schema",
  "bincode",
  "bit-set",
  "bitvec",

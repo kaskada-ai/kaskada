@@ -380,19 +380,17 @@ async fn test_incompatible_actual_types_error() {
     message: 1 errors in Fenl statements; see diagnostics
     fenl_diagnostics:
       - severity: error
-        code: E0010
-        message: Invalid argument type(s)
+        code: E0015
+        message: Incompatible argument types
         formatted:
-          - "error[E0010]: Invalid argument type(s)"
+          - "error[E0015]: Incompatible argument types"
           - "  --> Query:1:16"
           - "  |"
           - "1 | { m: Strings.s + Strings.n }"
           - "  |      --------- ^ --------- Type: i64"
           - "  |      |         |  "
-          - "  |      |         Invalid types for call to 'add'"
+          - "  |      |         Incompatible types for call to 'add'"
           - "  |      Type: string"
-          - "  |"
-          - "  = Expected 'number'"
           - ""
           - ""
     "###);

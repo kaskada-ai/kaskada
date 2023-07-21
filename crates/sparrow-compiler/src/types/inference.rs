@@ -272,6 +272,18 @@ fn solve_type_class(
         }
     }
 
+    if result.is_none() {
+        let distinct_arg_types = distinct_arg_types(types);
+        return Err(DiagnosticCode::IncompatibleArgumentTypes
+            .builder()
+            .with_label(
+                call.location()
+                    .primary_label()
+                    .with_message(format!("Incompatible types for call to '{call}'")),
+            )
+            .with_labels(distinct_arg_types));
+    }
+
     result
         // Promote the minimum type to be compatible with the type class, if necessary.
         .and_then(|data_type| promote_concrete(data_type, type_class))
@@ -279,22 +291,7 @@ fn solve_type_class(
         // (b) it wasn't possible to promote the least-upper bound to be compatible
         // with the type type class.
         .ok_or_else(|| {
-            // Only report each distinct type as a problem once. This reduces clutter in the
-            // error. TODO: Attempt to minimize the number of types involved
-            // further. Find a subset of types that are compatible, and report
-            // the problem with the corresponding least-upper-bound and the
-            // remaining type(s).
-            let distinct_arg_types: Vec<_> = types
-                .iter()
-                .unique_by(|l| l.inner())
-                .map(|arg_type| {
-                    arg_type
-                        .location()
-                        .secondary_label()
-                        .with_message(format!("Type: {arg_type}"))
-                })
-                .collect();
-
+            let distinct_arg_types = distinct_arg_types(types);
             DiagnosticCode::InvalidArgumentType
                 .builder()
                 .with_label(
@@ -305,6 +302,27 @@ fn solve_type_class(
                 .with_labels(distinct_arg_types)
                 .with_note(format!("Expected '{type_class}'"))
         })
+}
+
+// Only report each distinct type as a problem once. This reduces clutter in the
+// error. TODO: Attempt to minimize the number of types involved
+// further. Find a subset of types that are compatible, and report
+// the problem with the corresponding least-upper-bound and the
+// remaining type(s).
+fn distinct_arg_types(
+    types: &[Located<FenlType>],
+) -> Vec<codespan_reporting::diagnostic::Label<sparrow_syntax::FeatureSetPart>> {
+    let distinct_arg_types: Vec<_> = types
+        .iter()
+        .unique_by(|l| l.inner())
+        .map(|arg_type| {
+            arg_type
+                .location()
+                .secondary_label()
+                .with_message(format!("Type: {arg_type}"))
+        })
+        .collect();
+    distinct_arg_types
 }
 
 /// Instantiate the (possibly generic) `FenlType` using the computed
