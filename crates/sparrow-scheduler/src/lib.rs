@@ -9,10 +9,6 @@
 )]
 
 //! Scheduler for local, multi-threaded execution of Sparrow plans.
-//!
-//! Each plan consists of one or more "pipelines". Each pipeline
-//! takes batches and transforms them in some way to produce output
-//! batches.
 
 mod error;
 mod partition;
