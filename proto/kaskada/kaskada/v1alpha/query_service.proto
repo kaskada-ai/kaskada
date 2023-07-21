@@ -69,22 +69,6 @@ message Query {
     int64 preview_rows = 1;
   }
 
-  message RedisBulkResponse {
-    // The tensor shape to output values.
-    //
-    // Exactly one dimension's value must be zero - this dimension's
-    // cardinality is determined by the number of output values. The
-    // number of output values must be a multiple of the product of
-    // the nonzero dimensions.
-    //
-    // Example:
-    //    [0] - Column vector:           [1,2,3,4,5,6]
-    //    [1, 0] - Single row vector:    [[1,2,3,4,5,6]]
-    //    [2, 0] - tuple vectors:        [[1,2], [3,4], [5,6]]
-    //    [0, 2] - two row vectors:      [[1,2,3], [4,5,6]]
-    repeated int32 shape = 1;
-  }
-
   enum ResultBehavior {
     // Unspecified - Invalid Value
     RESULT_BEHAVIOR_UNSPECIFIED = 0;

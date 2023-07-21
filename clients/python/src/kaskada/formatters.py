@@ -58,14 +58,6 @@ def get_query_response_content(resp_obj):
             path = resp_obj.file_results.paths[i]
             appendChildIfNotNone(nested_table, tr(td(pre(i)), td(a(path, _href=path))))
         resultsExist = True
-    elif hasattr(resp_obj, "redis_bulk"):
-        nested_table = table(_class="kda_table")
-        details.appendChild(html_table_row("redis_bulk", nested_table))
-        nested_table.appendChild(tr(th("index"), th("path")))
-        for i in range(len(resp_obj.redis_bulk.paths)):
-            path = resp_obj.redis_bulk.paths[i]
-            appendChildIfNotNone(nested_table, tr(td(pre(i)), td(a(path, _href=path))))
-        resultsExist = True
 
     (
         can_execute,
@@ -688,13 +680,6 @@ def try_init():
         )
         html_formatter.for_type(
             "kaskada.materialization.MaterializationView", generic_object_html_formatter
-        )
-        html_formatter.for_type(
-            "kaskada.materialization.RedisAIDestination", generic_object_html_formatter
-        )
-        html_formatter.for_type(
-            "kaskada.kaskada.v1alpha.materialization_service_pb2.RedisAI",
-            generic_object_html_formatter,
         )
         html_formatter.for_type(
             "kaskada.kaskada.v1alpha.materialization_service_pb2.Destination",

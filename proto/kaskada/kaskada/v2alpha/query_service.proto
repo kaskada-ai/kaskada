@@ -107,9 +107,6 @@ message QueryConfig {
   kaskada.v1alpha.Destination destination = 3;
 
   // Determines how results are returned.
-  //
-  // Note that for Destination -> RedisBulkResponse or RedisAI, the only
-  // valid option is `FinalResults`
   ResultBehavior result_behavior = 4;
 
   // Configure limits on the output set.
@@ -136,12 +133,6 @@ message CSVResults {
 
 message ParquetResults {
   // URIs identifying the Parquet files containing the query
-  // results.
-  repeated string paths = 1;
-}
-
-message RedisBulkResults {
-  // URIs identifying the Redis Bulk files containing the query
   // results.
   repeated string paths = 1;
 }

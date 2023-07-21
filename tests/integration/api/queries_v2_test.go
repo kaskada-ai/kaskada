@@ -112,7 +112,6 @@ var _ = Describe("Queries V2", Ordered, func() {
 				Expect(config.ExperimentalFeatures).Should(BeNil())
 				Expect(config.Limits).Should(BeNil())
 				Expect(config.Destination.GetObjectStore()).ShouldNot(BeNil())
-				Expect(config.Destination.GetRedis()).Should(BeNil())
 				Expect(config.ResultBehavior.GetAllResults()).ShouldNot(BeNil())
 				Expect(config.ResultBehavior.GetFinalResults()).Should(BeNil())
 				Expect(config.Slice).Should(BeNil())

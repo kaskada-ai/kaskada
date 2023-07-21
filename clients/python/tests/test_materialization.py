@@ -11,7 +11,6 @@ from kaskada.materialization import (
     MaterializationView,
     ObjectStoreDestination,
     PulsarDestination,
-    RedisDestination,
     create_materialization,
     delete_materialization,
     get_materialization,
@@ -19,23 +18,6 @@ from kaskada.materialization import (
     to_with_views,
 )
 from kaskada.slice_filters import EntityFilter
-
-
-def test_redis_destination_to_request():
-    params = {
-        "host_name": "my_host_name",
-        "port": 1234,
-        "use_tls": False,
-        "database_number": 4321,
-        "password": "my_password",
-        "tls_cert": "my_tls_cert",
-        "tls_key": "my_tls_key",
-        "tls_ca_cert": "my_tls_ca_cert",
-        "insecure_skip_verify": True,
-    }
-
-    result = RedisDestination(**params)
-    assert result.to_request() == params
 
 
 def test_object_store_destination_to_request():
@@ -218,7 +200,7 @@ materialization_name: "my_awkward_tacos"
       entity_keys: "my_entity_b"
     }
   }
-  
+
 """
 
 
@@ -301,7 +283,7 @@ def test_create_materialization_object_store_parquet_destination(mockClient):
 
 
 @patch("kaskada.client.Client")
-def test_create_materialization_redis_destination(mockClient):
+def test_create_materialization_pulsar_destination(mockClient):
     params = {
         "host_name": "my_host_name",
         "port": 1234,
@@ -314,11 +296,11 @@ def test_create_materialization_redis_destination(mockClient):
         "insecure_skip_verify": True,
     }
 
-    redis_destination = RedisDestination(**params)
+    pulsar_destination = PulsarDestination(**params)
 
     name = "my_awkward_tacos"
     expression = "last(tacos)"
-    destination = redis_destination
+    destination = pulsar_destination
     views = [MaterializationView("my_second_view", "last(awkward)")]
     slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
 
@@ -330,7 +312,7 @@ def test_create_materialization_redis_destination(mockClient):
                 "with_views": [
                     {"name": "my_second_view", "expression": "last(awkward)"}
                 ],
-                "destination": {"redis": redis_destination.to_request()},
+                "destination": {"pulsar": pulsar_destination.to_request()},
                 "slice": slice_filter.to_request(),
             }
         }

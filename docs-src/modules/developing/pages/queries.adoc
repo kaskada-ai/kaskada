@@ -14,12 +14,12 @@ To learn more about Fenl:
 
 == Query syntax quickstart
 
-Kaskada's query language builds on the lessons of 50+ years of query language design to provide a declarative, composable, easy-to-read, and type-safe way of describing computations related to time. 
+Kaskada's query language builds on the lessons of 50+ years of query language design to provide a declarative, composable, easy-to-read, and type-safe way of describing computations related to time.
 The following is a quick overview of the query language's main features and syntax.
 
 === Viewing and filtering the contents of a table
 
-Kaskada queries are built by composing simple expressions. 
+Kaskada queries are built by composing simple expressions.
 Every expression returns a timeline.
 
 [source,Fenl]
@@ -86,7 +86,7 @@ Pipe syntax allows multiple operations to be chained together. Write your operat
 ----
 {
   largest_spend_over_2_purchases: purchase.amount
-  | when(Purchase.category == "food") 
+  | when(Purchase.category == "food")
   | sum(window=sliding(2, Purchase.category == "food")) # Inner aggregation
   | max()                                               # Outer aggregation
 }
@@ -135,7 +135,7 @@ let purchases_yesterday =
 in { purchases_in_last_day: purchases_now - purchases_yesterday }
 ----
 
-In this example we take the timeline produced by `purchases_now` and move it forward in time by one day using the `xref:fenl:catalog.adoc#shift-by[shift_by()]` function. 
+In this example we take the timeline produced by `purchases_now` and move it forward in time by one day using the `xref:fenl:catalog.adoc#shift-by[shift_by()]` function.
 We then subtract the shifted value from the original, unshifted value
 
 === Simple, composable syntax
@@ -149,7 +149,7 @@ let cadence = hourly()
 # Anything can be named and re-used
 let hourly_big_purchases = Purchase
 | when(Purchase.amount > 10)
-# Filter anywhere 
+# Filter anywhere
 | count(window=since(cadence))
 # Aggregate anything
 | when(cadence)
@@ -243,10 +243,10 @@ from kaskada.api.session import LocalBuilder
 
 session = LocalBuilder().build()
 
-query = """{ 
-  time: Purchase.purchase_time, 
-  entity: Purchase.customer_id, 
-  max_amount: last(Purchase.amount) | max(), 
+query = """{
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  max_amount: last(Purchase.amount) | max(),
   min_amount: Purchase.amount | min()
 }"""
 
@@ -272,9 +272,7 @@ views stored in the system.
 `"all-results"` _(default)_, or `"final-results"` which returns only the
 final values for each entity.
 * *response_as*: Determines how the response is returned. Either
-`"parquet"` _(default)_ or `"redis-bulk"`.
-** If `"redis-bulk"`, result_behavior is assumed to be
-`"final-results"`.
+`"parquet"` _(default)_ or `"csv"`.
 * *data_token_id*: Enables repeatable queries. Queries performed against
 the same data token always run on the same input data.
 * *limits*: Configures limits on the output set.
@@ -317,8 +315,7 @@ available:
 `all-results` _(default)_, or `final-results` which returns only the
 final values for each entity.
 * *--output*: Output format for the query results. One of `df` dataframe
-_(default)_, `json`, `parquet` or `redis-bulk`.
-** If `redis-bulk`, --result-behavior is assumed to be `final-results`.
+_(default)_, `json`, or `parquet`.
 * *--data-token*: Enables repeatable queries. Queries performed against
 the same data token always run on the same input data.
 * *--preview-rows*: Produces a preview of the data with at least this
@@ -515,7 +512,7 @@ transactions
 Returns a dataframe of 71599 rows, instead of the full dataset of 100000
 rows.
 
-[NOTE] 
+[NOTE]
 ====
 It may seem odd that many thousands of rows were returned when
 only 50 were requested. This happens because query operates on batches
@@ -536,12 +533,12 @@ To query Kaskada using the CLI, the query string should be provided on `STDIN`.
 An easy way to define a query is to create a text file containing the query.
 
 [source,Fenl]
-.query.fenl 
+.query.fenl
 ----
-{ 
-  time: Purchase.purchase_time, 
-  entity: Purchase.customer_id, 
-  max_amount: last(Purchase.amount) | max(), 
+{
+  time: Purchase.purchase_time,
+  entity: Purchase.customer_id,
+  max_amount: last(Purchase.amount) | max(),
   min_amount: Purchase.amount | min()
 }
 ----
@@ -567,11 +564,11 @@ By default, query results are written to a Parquet file: the locations of these 
 }
 ----
 
-The resulting files are stored in the JSON path `outputTo.objectStore.outputPaths.paths` as an array of paths. 
+The resulting files are stored in the JSON path `outputTo.objectStore.outputPaths.paths` as an array of paths.
 
 [TIP]
 ====
-To slice and/or filter JSON output we can use https://stedolan.github.io/jq/[jq]. 
+To slice and/or filter JSON output we can use https://stedolan.github.io/jq/[jq].
 ====
 
 [source,bash]

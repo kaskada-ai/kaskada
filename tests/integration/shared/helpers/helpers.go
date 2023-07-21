@@ -26,6 +26,7 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/xitongsys/parquet-go-source/local"
 	"github.com/xitongsys/parquet-go/reader"
 	"google.golang.org/grpc"
@@ -33,6 +34,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
+)
+
+const (
+	localOutputPath string = "../data/output"
+	localTestdataPath string = "../../../testdata"
 )
 
 // HostConfig holds the data needed to connect to a particular grpc server
@@ -104,6 +110,14 @@ func DownloadParquet(url string) []interface{} {
 	return rows
 }
 
+func TestsAreRunningLocally() bool {
+	return os.Getenv("ENV") == "local-local"
+}
+
+func TestsAreRunningLocallyInDocker() bool {
+	return os.Getenv("ENV") == "local-docker"
+}
+
 func downloadFile(url string) (localPath string, cleanup func()) {
 	if strings.HasPrefix(url, "http://") {
 		// download to temp file
@@ -123,19 +137,80 @@ func downloadFile(url string) (localPath string, cleanup func()) {
 		}
 		return
 	}
-	localPath = strings.TrimPrefix(url, "file://")
+	localPath = strings.TrimPrefix(url, "file:///")
 	cleanup = func() {}
-	if os.Getenv("ENV") != "local-local" {
+	if TestsAreRunningLocally() || TestsAreRunningLocallyInDocker() {
 		localPath = fmt.Sprintf("../%s", localPath)
 	}
 	return
 }
 
-func GetFileURI(fileName string) string {
-	if os.Getenv("ENV") == "local-local" {
+
+
+// Gets an output path URI
+func GetOutputPathURI(subPath string) string {
+	subPath = vfs_utils.EnsureTrailingSlash(subPath)
+	if TestsAreRunningLocally() {
 		workDir, err := os.Getwd()
 		Expect(err).ShouldNot(HaveOccurred())
-		path := filepath.Join(workDir, "../../../testdata", fileName)
+		path := filepath.Join(workDir, localOutputPath, subPath)
+		return fmt.Sprintf("file://%s", path)
+	}
+	return fmt.Sprintf("file:///data/output/%s", subPath)
+}
+
+// Deletes all files at the output path
+func EmptyOutputPath(subPath string) {
+	subPath = vfs_utils.EnsureTrailingSlash(subPath)
+	workDir, err := os.Getwd()
+	Expect(err).ShouldNot(HaveOccurred())
+	path := filepath.Join(workDir, localOutputPath, subPath)
+	err = os.RemoveAll(path)
+	Expect(err).ShouldNot(HaveOccurred())
+}
+
+// Lists all files at the output path
+func ListOutputFiles(subPath string) []string {
+	subPath = vfs_utils.EnsureTrailingSlash(subPath)
+	workDir, err := os.Getwd()
+	Expect(err).ShouldNot(HaveOccurred())
+	path := filepath.Join(workDir, localOutputPath, subPath)
+	dirEntries, err := os.ReadDir(path)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	paths := []string{}
+	for _, dirEntry := range dirEntries {
+		if !dirEntry.IsDir() {
+			paths = append(paths, filepath.Join(path, dirEntry.Name()))
+		}
+	}
+	return paths
+}
+
+// Lists all files at the output path
+func EventuallyListOutputFiles(subPath string, g types.Gomega) []string {
+	subPath = vfs_utils.EnsureTrailingSlash(subPath)
+	workDir, err := os.Getwd()
+	g.Expect(err).ShouldNot(HaveOccurred())
+	path := filepath.Join(workDir, localOutputPath, subPath)
+	dirEntries, err := os.ReadDir(path)
+	g.Expect(err).ShouldNot(HaveOccurred())
+
+	paths := []string{}
+	for _, dirEntry := range dirEntries {
+		if !dirEntry.IsDir() {
+			paths = append(paths, filepath.Join(path, dirEntry.Name()))
+		}
+	}
+	return paths
+}
+
+// Gets a file URI for file in the testdata path
+func GetTestFileURI(fileName string) string {
+	if TestsAreRunningLocally() {
+		workDir, err := os.Getwd()
+		Expect(err).ShouldNot(HaveOccurred())
+		path := filepath.Join(workDir, localTestdataPath, fileName)
 		return fmt.Sprintf("file://%s", path)
 	}
 	return fmt.Sprintf("file:///testdata/%s", fileName)
@@ -143,7 +218,7 @@ func GetFileURI(fileName string) string {
 
 // Reads a file from the testdata path
 func ReadTestFile(fileName string) []byte {
-	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	filePath := fmt.Sprintf("%s/%s", localTestdataPath, fileName)
 	fileData, err := os.ReadFile(filePath)
 	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue reading testdata file: %s", fileName))
 	return fileData
@@ -151,14 +226,14 @@ func ReadTestFile(fileName string) []byte {
 
 // Writes a file to the testdata path
 func WriteTestFile(fileName string, data []byte) {
-	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	filePath := fmt.Sprintf("%s/%s", localTestdataPath, fileName)
 	err := os.WriteFile(filePath, data, 0666)
 	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue writing testdata file: %s", fileName))
 }
 
 // Deletes a file from the testdata path
 func DeleteTestFile(fileName string) {
-	filePath := fmt.Sprintf("../../../testdata/%s", fileName)
+	filePath := fmt.Sprintf("%s/%s", localTestdataPath, fileName)
 	if fileExists(filePath) {
 		err := os.Remove(filePath)
 		Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("issue deleting testdata file: %s", fileName))
@@ -194,7 +269,7 @@ func LoadTestFilesIntoTable(ctx context.Context, conn *grpc.ClientConn, table *v
 			SourceData: &v1alpha.LoadDataRequest_FileInput{
 				FileInput: &v1alpha.FileInput{
 					FileType: fileType,
-					Uri:      GetFileURI(fileName),
+					Uri:      GetTestFileURI(fileName),
 				},
 			},
 		}
@@ -363,11 +438,6 @@ func GetMergedCreateQueryResponse(stream v1alpha.QueryService_CreateQueryClient)
 		}
 		if queryResponse.RequestDetails != nil {
 			mergedResponse.RequestDetails = queryResponse.RequestDetails
-		}
-		if queryResponse.GetDestination().GetRedis() != nil {
-			mergedResponse.Destination = &v1alpha.Destination{
-				Destination: &v1alpha.Destination_Redis{Redis: queryResponse.GetDestination().GetRedis()},
-			}
 		}
 		if queryResponse.GetDestination().GetObjectStore().GetOutputPaths() != nil {
 			newPaths := queryResponse.GetDestination().GetObjectStore().GetOutputPaths().Paths
