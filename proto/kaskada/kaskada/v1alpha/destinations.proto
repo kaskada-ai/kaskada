@@ -34,6 +34,12 @@ message ObjectStoreDestination {
   // the complete output.
   ResultPaths output_paths = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
+  // When true, all result paths are pre-signed, so that the the results can
+  // be viewed without authentication to the object store.
+  //
+  // Note: this has no effect when the `output_prefix_uri` starts with `file://`
+  bool presign_result_paths = 4;
+
   message ResultPaths {
     repeated string paths = 1;
   }
