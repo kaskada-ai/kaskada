@@ -4802,9 +4802,9 @@ dependencies = [
  "index_vec",
  "parking_lot 0.12.1",
  "sparrow-arrow",
- "sparrow-expressions",
  "sparrow-physical",
  "sparrow-scheduler",
+ "sparrow-testing",
  "sparrow-transforms",
  "tokio",
 ]

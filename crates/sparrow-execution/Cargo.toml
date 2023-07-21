@@ -23,7 +23,7 @@ tokio.workspace = true
 arrow-array.workspace = true
 arrow-schema.workspace = true
 index_vec.workspace = true
-sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-testing = { path = "../sparrow-testing" }
 
 [lib]
 doctest = false

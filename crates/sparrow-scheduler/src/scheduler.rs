@@ -14,6 +14,7 @@ const LOCAL_QUEUE_SIZE: u16 = 32;
 
 #[derive(Debug)]
 pub struct Scheduler {
+    query_id: String,
     injector: Injector,
     handles: Vec<std::thread::JoinHandle<error_stack::Result<(), Error>>>,
     /// A vector of the pipelines we created.
@@ -21,7 +22,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn start(query_id: &str) -> error_stack::Result<Self, Error> {
+    pub fn start(query_id: String) -> error_stack::Result<Self, Error> {
         let core_ids = core_affinity::get_core_ids();
         let threads = core_ids
             .as_ref()
@@ -72,6 +73,7 @@ impl Scheduler {
             .try_collect()?;
 
         let scheduler = Self {
+            query_id,
             injector,
             handles,
             pipelines: vec![],
@@ -116,6 +118,7 @@ impl Scheduler {
     }
 
     pub fn stop(self) -> error_stack::Result<(), Error> {
+        tracing::info!(self.query_id, "Waiting for completion of query");
         for handle in self.handles {
             match handle.join() {
                 Ok(worker_result) => worker_result?,

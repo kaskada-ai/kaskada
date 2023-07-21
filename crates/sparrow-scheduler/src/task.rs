@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use error_stack::ResultExt;
-use sparrow_arrow::Batch;
 
 use crate::queue::Queue;
 use crate::schedule_count::ScheduleCount;
@@ -70,29 +69,6 @@ impl Task {
             name: self.name,
             partition: self.partition,
         }
-    }
-
-    #[inline]
-    pub(crate) fn push(
-        &self,
-        input: usize,
-        batch: Batch,
-        queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Error> {
-        self.pipeline()?
-            .add_input(self.partition, input, batch, queue)
-            .change_context_lazy(|| self.error("push"))
-    }
-
-    #[inline]
-    pub(crate) fn close(
-        &self,
-        input: usize,
-        queue: &mut dyn Queue<TaskRef>,
-    ) -> error_stack::Result<(), Error> {
-        self.pipeline()?
-            .close_input(self.partition, input, queue)
-            .change_context_lazy(|| self.error("close"))
     }
 
     #[inline]

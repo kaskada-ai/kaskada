@@ -15,6 +15,7 @@ mod tests {
 
     use std::sync::Arc;
 
+    use arrow_array::cast::AsArray;
     use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
     use arrow_schema::{DataType, Field, Schema, SchemaRef};
     use error_stack::{IntoReport, ResultExt};
@@ -37,6 +38,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_query() {
+        sparrow_testing::init_test_logging();
+
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(10);
         let (output_tx, mut output_rx) = tokio::sync::mpsc::channel(10);
 
@@ -71,6 +74,7 @@ mod tests {
             RowTime::from_timestamp_ns(3),
         );
         input_tx.send(input_batch).await.unwrap();
+        std::mem::drop(input_tx);
 
         execute(
             "hello".to_owned(),
@@ -83,7 +87,14 @@ mod tests {
         .unwrap();
 
         let output = output_rx.recv().await.unwrap();
-        println!("{:?}", output);
+        let output = output.into_record_batch().unwrap();
+        let ab = output.column_by_name("ab").unwrap();
+        let abc = output.column_by_name("abc").unwrap();
+        assert_eq!(ab.as_primitive(), &Int64Array::from(vec![4, 8, 12, 14]));
+        assert_eq!(
+            abc.as_primitive(),
+            &Int64Array::from(vec![Some(25), None, Some(399), Some(101)])
+        );
     }
 
     /// Execute a physical plan.
@@ -94,7 +105,7 @@ mod tests {
         output_schema: SchemaRef,
         output: tokio::sync::mpsc::Sender<Batch>,
     ) -> error_stack::Result<(), Error> {
-        let mut scheduler = Scheduler::start(&query_id).change_context(Error::Creating)?;
+        let mut scheduler = Scheduler::start(query_id).change_context(Error::Creating)?;
 
         // This sets up some fake stuff:
         // - We don't have sources / sinks yet, so we use tokio channels.
@@ -172,6 +183,9 @@ mod tests {
                 .add_input(0.into(), batch, &mut injector)
                 .change_context(Error::Executing)?;
         }
+        transform_pipeline_input
+            .close_input(0.into(), &mut injector)
+            .change_context(Error::Executing)?;
         scheduler.stop().change_context(Error::Executing)?;
 
         Ok(())
