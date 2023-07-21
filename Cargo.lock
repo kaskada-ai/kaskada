@@ -4200,6 +4200,7 @@ dependencies = [
  "arrow-select",
  "avro-rs",
  "avro-schema",
+ "bincode",
  "chrono",
  "decorum",
  "derive_more",
