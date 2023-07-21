@@ -149,6 +149,7 @@ features = ["lz4"]
 [profile.release]
 lto = "thin"
 debug = 0    # Set this to 1 or 2 to get more useful backtraces from debugger
+codegen-units = 1
 
 # Enable max optimizations for dependencies, but not for our code
 [profile.dev.package."*"]
@@ -158,3 +159,4 @@ opt-level = 3
 [profile.dev]
 opt-level = 1
 debug = 2
+codegen-units = 1

@@ -94,6 +94,7 @@ mod tests {
         let steps = index_vec::index_vec![
             // 0: scan table1
             Step {
+                id: 0.into(),
                 kind: StepKind::Scan {
                     table_name: "table1".to_owned(),
                 },
@@ -102,6 +103,7 @@ mod tests {
             },
             // 1: scan table2
             Step {
+                id: 1.into(),
                 kind: StepKind::Scan {
                     table_name: "table2".to_owned(),
                 },
@@ -110,12 +112,14 @@ mod tests {
             },
             // 2: merge 0 and 1
             Step {
+                id: 2.into(),
                 kind: StepKind::Merge,
                 inputs: vec![0.into(), 1.into()],
                 schema: schema.clone(),
             },
             // 3: project 0 -> separate pipeline since 0 has 2 consumers
             Step {
+                id: 3.into(),
                 kind: StepKind::Project {
                     exprs: Exprs::empty(),
                 },
@@ -124,6 +128,7 @@ mod tests {
             },
             // 4: project 2 -> same pipeline since only consumer
             Step {
+                id: 4.into(),
                 kind: StepKind::Project {
                     exprs: Exprs::empty(),
                 },
@@ -132,6 +137,7 @@ mod tests {
             },
             // 5: merge 3 and 4 -> new pipeline since merge
             Step {
+                id: 5.into(),
                 kind: StepKind::Merge,
                 inputs: vec![3.into(), 4.into()],
                 schema,

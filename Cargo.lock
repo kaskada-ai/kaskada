@@ -4795,11 +4795,18 @@ dependencies = [
 name = "sparrow-execution"
 version = "0.8.3"
 dependencies = [
+ "arrow-array",
+ "arrow-schema",
  "derive_more",
  "error-stack",
+ "index_vec",
+ "parking_lot 0.12.1",
+ "sparrow-arrow",
+ "sparrow-expressions",
  "sparrow-physical",
  "sparrow-scheduler",
  "sparrow-transforms",
+ "tokio",
 ]
 
 [[package]]
@@ -4976,6 +4983,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "sparrow-arrow",
+ "strum_macros 0.24.3",
 ]
 
 [[package]]

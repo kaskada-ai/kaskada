@@ -1,8 +1,7 @@
-use std::any::Any;
 use std::sync::Arc;
 
 use crate::worker::Injector;
-use crate::{Error, Partitioned, Pipeline, Task, TaskRef};
+use crate::{Error, Pipeline, Task, TaskRef};
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;
 
@@ -18,14 +17,7 @@ pub struct Scheduler {
     injector: Injector,
     handles: Vec<std::thread::JoinHandle<error_stack::Result<(), Error>>>,
     /// A vector of the pipelines we created.
-    ///
-    /// Since [`Pipeline`] is not object safe, we can't hold `Arc<dyn Pipeline>`.
-    /// This is OK since all interactions with the pipeline should happen via
-    /// the `Task` for a specific partition.
-    ///
-    /// This just needs to hold onto the pipelines during execution so the weak
-    /// references each [`Task`] holds can be upgraded as needed.
-    pipelines: Vec<Arc<dyn Any + Sync + Send>>,
+    pipelines: Vec<Arc<dyn Pipeline>>,
 }
 
 impl Scheduler {
@@ -92,14 +84,17 @@ impl Scheduler {
         &self.injector
     }
 
-    pub fn add_pipeline<T, F>(&mut self, partitions: usize, f: F)
+    /// Adds the pipeline to the scheduler and allocates tasks for executing it.
+    ///
+    /// `partitions` determines the number of task partitions to allocate.
+    pub fn add_pipeline<T>(&mut self, partitions: usize, pipeline: T) -> Arc<dyn Pipeline>
     where
         T: Pipeline + 'static,
-        F: FnOnce(Partitioned<TaskRef>) -> T,
     {
         let index = self.pipelines.len();
         let name = std::any::type_name::<T>();
-        let pipeline: Arc<T> = Arc::new_cyclic(|weak| {
+
+        let pipeline: Arc<T> = Arc::new_cyclic(move |weak| {
             let tasks = (0..partitions)
                 .map(|partition| -> TaskRef {
                     let weak: std::sync::Weak<T> = weak.clone();
@@ -107,9 +102,17 @@ impl Scheduler {
                     Arc::new(task)
                 })
                 .collect();
-            f(tasks)
+
+            // We can't create the pipeline here because creating it may have produced errors,
+            // and `new_cyclic` doesn't support that. So we instead provide the tasks after
+            // creation, using the infallible `initialize` method.
+            let mut pipeline = pipeline;
+            pipeline.initialize(tasks);
+            pipeline
         });
-        self.pipelines.push(pipeline)
+        let pipeline: Arc<dyn Pipeline> = pipeline;
+        self.pipelines.push(pipeline.clone());
+        pipeline
     }
 
     pub fn stop(self) -> error_stack::Result<(), Error> {
@@ -125,3 +128,9 @@ impl Scheduler {
         Ok(())
     }
 }
+
+#[derive(derive_more::Display, Debug)]
+#[display(fmt = "error creating pipeline '{_0}'")]
+pub struct CreateError(&'static str);
+
+impl error_stack::Context for CreateError {}

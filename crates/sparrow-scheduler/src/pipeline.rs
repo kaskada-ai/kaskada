@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use sparrow_arrow::Batch;
 
 use crate::queue::Queue;
-use crate::{Partition, TaskRef};
+use crate::{Partition, Partitioned, TaskRef};
 
 #[derive(derive_more::Display, Debug)]
 pub enum PipelineError {
@@ -73,6 +73,18 @@ impl error_stack::Context for PipelineError {}
 /// are also possible.
 ///
 pub trait Pipeline: Send + Sync + std::fmt::Debug {
+    /// Initialize the pipeline by providing the tasks it will use for scheduling.
+    ///
+    /// The number of tasks provided indicate the number of partitions this pipeline
+    /// should execute with.
+    ///
+    /// This is unfortunately separate to allow cyclic initialization. Specifically,
+    /// `Arc::new_cyclic` expects a function that doesn't take errors, while creating
+    /// many pipelines *does* produce errors. To address this, we first create the
+    /// part of the pipeline that doesn't need to reference it's own tasks, and then
+    /// we initialize it as part of `Arc::new_cyclic`.
+    fn initialize(&mut self, tasks: Partitioned<TaskRef>);
+
     /// Add a [`Batch`] to the given input partition and input index.
     ///
     /// This is called from outside the pipeline -- either a Tokio thread

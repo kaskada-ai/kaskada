@@ -6,7 +6,7 @@ use crate::Error;
 
 inventory::submit!(crate::evaluators::EvaluatorFactory {
     name: "column",
-    create: &create
+    create: &create,
 });
 
 /// Evaluator for column reference (`.c`)..
@@ -26,7 +26,13 @@ fn create(info: super::StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluator>
         .input_schema
         .column_with_name(name)
         .expect("missing column");
-    debug_assert_eq!(field.data_type(), info.result_type);
+    error_stack::ensure!(
+        field.data_type() == info.result_type,
+        Error::InvalidResultType {
+            expected: field.data_type().clone(),
+            actual: info.result_type.clone()
+        }
+    );
 
     Ok(Box::new(ColumnEvaluator { column }))
 }

@@ -4,6 +4,7 @@ use error_stack::{IntoReport, ResultExt};
 use sparrow_arrow::Batch;
 
 use sparrow_expressions::ExpressionExecutor;
+use sparrow_physical::Exprs;
 
 use crate::transform::{Error, Transform};
 
@@ -17,15 +18,14 @@ pub struct Project {
 impl Project {
     pub fn try_new(
         input_schema: &SchemaRef,
-        exprs: Vec<sparrow_physical::Expr>,
-        outputs: Vec<usize>,
+        exprs: &Exprs,
         schema: SchemaRef,
     ) -> error_stack::Result<Self, Error> {
-        let evaluators = ExpressionExecutor::try_new(input_schema.as_ref(), &exprs)
+        let evaluators = ExpressionExecutor::try_new(input_schema.as_ref(), exprs.exprs.as_vec())
             .change_context_lazy(|| Error::CreateTransform("project"))?;
         Ok(Self {
             evaluators,
-            outputs,
+            outputs: exprs.outputs.iter().map(|n| (*n).into()).collect(),
             schema,
         })
     }

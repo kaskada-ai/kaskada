@@ -10,6 +10,11 @@ pub enum Error {
         expected: DataType,
         actual: DataType,
     },
+    #[display(fmt = "invalid result type: expected {expected:?} but was {actual:?}")]
+    InvalidResultType {
+        expected: DataType,
+        actual: DataType,
+    },
     #[display(fmt = "invalid argument type: expected struct but was {actual:?}")]
     InvalidNonStructArgumentType { actual: DataType },
     #[display(fmt = "invalid result type: expected struct but was {actual:?}")]

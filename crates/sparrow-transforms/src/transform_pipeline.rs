@@ -5,8 +5,9 @@ use error_stack::ResultExt;
 use itertools::Itertools;
 use parking_lot::Mutex;
 use sparrow_arrow::Batch;
+use sparrow_physical::{StepId, StepKind};
 use sparrow_scheduler::{
-    Partition, Partitioned, Pipeline, PipelineError, PipelineSink, Queue, Scheduler, Sink, TaskRef,
+    Partition, Partitioned, Pipeline, PipelineError, PipelineInput, Queue, TaskRef,
 };
 
 use crate::transform::Transform;
@@ -22,7 +23,7 @@ pub struct TransformPipeline {
     /// Compute tasks to wake up as needed.
     tasks: Partitioned<TaskRef>,
     /// Sink for the down-stream computation.
-    sink: PipelineSink,
+    sink: PipelineInput,
 }
 
 impl std::fmt::Debug for TransformPipeline {
@@ -42,25 +43,69 @@ struct InputBuffer {
     is_closed: bool,
 }
 
+#[derive(derive_more::Display, Debug)]
+pub enum Error {
+    #[display(fmt = "transforms should accept exactly 1 input, but length for '{kind}' was {len}")]
+    TooManyInputs { kind: &'static str, len: usize },
+    #[display(fmt = "invalid transform: expected input {expected} but was {actual}")]
+    UnexpectedInput { expected: StepId, actual: StepId },
+    #[display(fmt = "step '{kind}' is not supported as a transform")]
+    UnsupportedStepKind { kind: &'static str },
+    #[display(fmt = "failed to create transform for step '{kind}'")]
+    CreatingTransform { kind: &'static str },
+}
+
+impl error_stack::Context for Error {}
+
 impl TransformPipeline {
-    pub(crate) fn schedule(
-        scheduler: &mut Scheduler,
-        partitions: usize,
-        transforms: Vec<Box<dyn Transform>>,
-        sink: PipelineSink,
-    ) {
-        scheduler.add_pipeline(partitions, |tasks| {
-            let input_partitions = tasks.len();
-            let mut inputs = Partitioned::with_capacity(input_partitions);
-            for _ in 0..input_partitions {
-                inputs.push(Arc::new(Mutex::new(InputBuffer::default())));
-            }
-            Self {
-                inputs,
-                transforms,
-                tasks,
-                sink,
-            }
+    pub fn try_new<'a>(
+        input_step: &sparrow_physical::Step,
+        steps: impl Iterator<Item = &'a sparrow_physical::Step> + ExactSizeIterator,
+        sink: PipelineInput,
+    ) -> error_stack::Result<Self, Error> {
+        let mut input_step = input_step;
+        let mut transforms = Vec::with_capacity(steps.len());
+        for step in steps {
+            error_stack::ensure!(
+                step.inputs.len() == 1,
+                Error::TooManyInputs {
+                    kind: (&step.kind).into(),
+                    len: step.inputs.len()
+                }
+            );
+            error_stack::ensure!(
+                step.inputs[0] == input_step.id,
+                Error::UnexpectedInput {
+                    expected: input_step.id,
+                    actual: step.inputs[0]
+                }
+            );
+
+            let transform: Box<dyn Transform> = match &step.kind {
+                StepKind::Project { exprs } => Box::new(
+                    crate::project::Project::try_new(
+                        &input_step.schema,
+                        exprs,
+                        step.schema.clone(),
+                    )
+                    .change_context_lazy(|| Error::CreatingTransform {
+                        kind: (&step.kind).into(),
+                    })?,
+                ),
+                unsupported => {
+                    error_stack::bail!(Error::UnsupportedStepKind {
+                        kind: unsupported.into()
+                    })
+                }
+            };
+            transforms.push(transform);
+            input_step = step;
+        }
+        Ok(Self {
+            inputs: Partitioned::default(),
+            transforms,
+            tasks: Partitioned::default(),
+            sink,
         })
     }
 
@@ -79,6 +124,14 @@ impl TransformPipeline {
 }
 
 impl Pipeline for TransformPipeline {
+    fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
+        let input_partitions = tasks.len();
+        self.inputs.resize_with(input_partitions, || {
+            Arc::new(Mutex::new(InputBuffer::default()))
+        });
+        self.tasks = tasks;
+    }
+
     fn add_input(
         &self,
         partition: Partition,
@@ -127,7 +180,7 @@ impl Pipeline for TransformPipeline {
         input_partition.is_closed = true;
         if input_partition.buffer.is_empty() {
             self.sink
-                .close(partition, queue)
+                .close_input(partition, queue)
                 .change_context(PipelineError::Execution)?;
         } else {
             // We shouldn't need to wake the input partition.
@@ -164,7 +217,7 @@ impl Pipeline for TransformPipeline {
             }
             if !batch.is_empty() {
                 self.sink
-                    .send(partition, batch, queue)
+                    .add_input(partition, batch, queue)
                     .change_context(PipelineError::Execution)?;
             }
         }
@@ -176,7 +229,7 @@ impl Pipeline for TransformPipeline {
             queue.schedule(self.tasks[partition].clone());
         } else if self.is_closed(partition) {
             self.sink
-                .close(partition, queue)
+                .close_input(partition, queue)
                 .change_context(PipelineError::Execution)?;
         }
 
