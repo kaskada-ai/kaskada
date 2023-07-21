@@ -104,7 +104,7 @@ impl WithKeyOperation {
 
         // Hash the new key column
         let new_keys = input.column(self.new_key_input_index);
-        let new_key_hashes = sparrow_arrow::hash::hash(new_keys)?;
+        let new_key_hashes = sparrow_arrow::hash::hash(new_keys).map_err(|e| e.into_error())?;
         let time = input.column(0);
         let subsort = input.column(1);
 

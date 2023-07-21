@@ -113,6 +113,19 @@ async fn test_hash_string() {
 }
 
 #[tokio::test]
+async fn test_hash_struct() {
+    insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, hash: hash({m: Numbers.m})}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,m,hash
+    1996-12-20T00:39:57.000000000,9223372036854775808,3650215962958587783,A,5,10021492687541564645
+    1996-12-20T00:39:58.000000000,9223372036854775808,11753611437813598533,B,24,9175685813237050681
+    1996-12-20T00:39:59.000000000,9223372036854775808,3650215962958587783,A,17,650022633471272026
+    1996-12-20T00:40:00.000000000,9223372036854775808,3650215962958587783,A,,11832085162654999889
+    1996-12-20T00:40:01.000000000,9223372036854775808,3650215962958587783,A,12,17018031324644251917
+    1996-12-20T00:40:02.000000000,9223372036854775808,3650215962958587783,A,,11832085162654999889
+    "###);
+}
+
+#[tokio::test]
 async fn test_hash_boolean() {
     insta::assert_snapshot!(QueryFixture::new("{ a: Booleans.a, hash: hash(Booleans.a)}").run_to_csv(&boolean_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,a,hash

@@ -4,7 +4,7 @@ use arrow::array::{Array, ArrayRef, StringArray, UInt64Array};
 use arrow::compute::eq_scalar;
 use arrow::datatypes::DataType;
 use arrow::record_batch::RecordBatch;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReport, ResultExt};
 use hashbrown::HashSet;
 use sparrow_api::kaskada::v1alpha::slice_plan;
 use sparrow_arrow::downcast::downcast_primitive_array;
@@ -47,7 +47,8 @@ impl SlicePreparer {
                         entity_keys.null_count()
                     )
                 );
-                let entity_key_hashes = sparrow_arrow::hash::hash(&entity_keys)?;
+                let entity_key_hashes =
+                    sparrow_arrow::hash::hash(&entity_keys).map_err(|e| e.into_error())?;
                 let entity_key_hashes: &UInt64Array = downcast_primitive_array(&entity_key_hashes)?;
                 let desired_keys: HashSet<u64> =
                     entity_key_hashes.values().iter().copied().collect();
@@ -125,9 +126,7 @@ impl SlicePreparer {
         record_batch: &RecordBatch,
     ) -> error_stack::Result<UInt64Array, Error> {
         let entity_column = record_batch.column(self.entity_column_index);
-        sparrow_arrow::hash::hash(entity_column)
-            .into_report()
-            .change_context(Error::SlicingBatch)
+        sparrow_arrow::hash::hash(entity_column).change_context(Error::SlicingBatch)
     }
 }
 

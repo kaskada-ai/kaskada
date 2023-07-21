@@ -137,7 +137,8 @@ impl LookupRequestOperation {
 
         // Re-key to the foreign key and hash it.
         let foreign_key_hash = input.column(self.foreign_key_column).clone();
-        let foreign_key_hash = sparrow_arrow::hash::hash(&foreign_key_hash)?;
+        let foreign_key_hash =
+            sparrow_arrow::hash::hash(&foreign_key_hash).map_err(|e| e.into_error())?;
 
         // Now, we need to determine how many actual foreign rows there are and collect
         // the requesting primary keys.

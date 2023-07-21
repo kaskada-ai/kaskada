@@ -137,31 +137,6 @@ async fn test_with_computed_key_str() {
 }
 
 #[tokio::test]
-async fn test_with_key_unsupported_type() {
-    insta::assert_yaml_snapshot!(QueryFixture::new("with_key({k: Table.foreign_key_str}, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap_err(), @r###"
-    ---
-    code: Client specified an invalid argument
-    message: 1 errors in Fenl statements; see diagnostics
-    fenl_diagnostics:
-      - severity: error
-        code: E0010
-        message: Invalid argument type(s)
-        formatted:
-          - "error[E0010]: Invalid argument type(s)"
-          - "  --> Query:1:1"
-          - "  |"
-          - "1 | with_key({k: Table.foreign_key_str}, Table)"
-          - "  | ^^^^^^^^ -------------------------- Type: {k: string}"
-          - "  | |         "
-          - "  | Invalid types for call to 'with_key'"
-          - "  |"
-          - "  = Expected 'key'"
-          - ""
-          - ""
-    "###);
-}
-
-#[tokio::test]
 async fn test_with_key_error_key() {
     insta::assert_yaml_snapshot!(QueryFixture::new("with_key(unbound_key, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap_err(), @r###"
     ---
