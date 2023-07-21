@@ -53,7 +53,7 @@ async fn test_gaming_events_to_csv() {
     insta::assert_snapshot!(QueryFixture::new(GAMING_EVENTS).with_dump_dot("gaming").run_to_csv(&gaming_data_fixture().await).await.unwrap(),
     @r###"
     _time,_subsort,_key_hash,_key,loss_duration
-    2022-01-01T03:56:00.000000000,0,17054345325612802246,Bob,11
-    2022-01-01T08:45:00.000000000,0,5902814233694669492,Alice,7
+    2022-01-01T03:56:00.000000000,0,7772866443370847918,Bob,11
+    2022-01-01T08:45:00.000000000,0,17853343368786040891,Alice,7
     "###);
 }

@@ -5,14 +5,14 @@ expression: results
 - state: 2
   is_query_done: true
   progress:
-    total_input_rows: 54068
-    processed_input_rows: 54068
+    total_input_rows: 49540
+    processed_input_rows: 49540
     buffered_rows: 0
     processed_buffered_rows: 0
     min_event_time: 0
     max_event_time: 0
     output_time: 0
-    produced_output_rows: 54068
+    produced_output_rows: 49540
   flight_record_path: ~
   plan_yaml_path: ~
   compute_snapshots: []
