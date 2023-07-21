@@ -219,7 +219,7 @@ mod tests {
                 .as_ref()
                 .ok_or(PipelineError::InputClosed {
                     input,
-                    partition: input_partition,
+                    input_partition,
                 })?
                 .blocking_send(batch)
                 .into_report()
@@ -237,7 +237,7 @@ mod tests {
                 channel.is_some(),
                 PipelineError::InputClosed {
                     input,
-                    partition: input_partition,
+                    input_partition,
                 },
             );
             *channel = None;

@@ -9,8 +9,11 @@ use crate::{Partition, Partitioned, TaskRef};
 pub enum PipelineError {
     #[display(fmt = "invalid input index {input} for pipeline with {input_len} inputs")]
     InvalidInput { input: usize, input_len: usize },
-    #[display(fmt = "input {input} for partition {partition} is already closed")]
-    InputClosed { input: usize, partition: Partition },
+    #[display(fmt = "input {input} for partition {input_partition} is already closed")]
+    InputClosed {
+        input: usize,
+        input_partition: Partition,
+    },
     #[display(fmt = "illegal state: {_0}")]
     IllegalState(Cow<'static, str>),
     #[display(fmt = "error executing pipeline")]

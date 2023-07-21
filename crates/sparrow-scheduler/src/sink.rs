@@ -27,9 +27,10 @@ impl PipelineInput {
 
     pub fn close_input(
         &self,
-        partition: Partition,
+        input_partition: Partition,
         queue: &mut dyn Queue<TaskRef>,
     ) -> error_stack::Result<(), PipelineError> {
-        self.pipeline.close_input(partition, self.input, queue)
+        self.pipeline
+            .close_input(input_partition, self.input, queue)
     }
 }
