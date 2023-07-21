@@ -13,13 +13,8 @@ import (
 func wrapErrorWithStatus(err error, subLogger zerolog.Logger) error {
 	if err != nil {
 
-		//if err object is already a status error
-		if statusErr, ok := status.FromError(err); ok {
-			// if passed an internal error, mask the details and message from the user
-			if statusErr.Code() == codes.Internal {
-				return status.Error(codes.Internal, "internal error")
-			}
-			// otherwise return status error as-is
+		//if err object is already a status error, return as-is
+		if _, ok := status.FromError(err); ok {
 			return err
 		}
 
@@ -54,7 +49,7 @@ func wrapErrorWithStatus(err error, subLogger zerolog.Logger) error {
 			return failedPrecondition.Err()
 		case *customerrors.InternalError:
 			subLogger.Error().Err(err).Stack().Msg("internal error")
-			return status.Error(codes.Internal, "internal error")
+			return status.Error(codes.Internal, originalErr.Error())
 		case *customerrors.InvalidArgumentError:
 			subLogger.Warn().Err(err).Stack().Msg("invalid argument")
 			return status.Error(codes.InvalidArgument, originalErr.Error())
@@ -72,7 +67,7 @@ func wrapErrorWithStatus(err error, subLogger zerolog.Logger) error {
 			return status.Error(codes.Unimplemented, originalErr.Error())
 		default:
 			subLogger.Error().Err(err).Stack().Msgf("unexpected error")
-			return status.Error(codes.Internal, "internal error")
+			return status.Error(codes.Internal, originalErr.Error())
 		}
 	}
 	return nil
