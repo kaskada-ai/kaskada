@@ -32,7 +32,7 @@ use field_ref::*;
 use general::*;
 use json_field::*;
 use logical::*;
-use map::*;
+pub use map::*;
 use math::*;
 use record::*;
 use sparrow_plan::ValueRef;
@@ -195,6 +195,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                FirstMapEvaluator,
                 FirstBooleanEvaluator,
                 FirstStringEvaluator,
                 FirstPrimitive,
@@ -245,6 +246,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                LastMapEvaluator,
                 LastBooleanEvaluator,
                 LastStringEvaluator,
                 LastPrimitive,

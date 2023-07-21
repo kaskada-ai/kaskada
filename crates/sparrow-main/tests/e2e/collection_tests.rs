@@ -1,5 +1,9 @@
 //! e2e tests for the collection operators.
 
+use itertools::Itertools;
+
+use arrow::record_batch::RecordBatchReader;
+use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::TableConfig;
 use uuid::Uuid;
 
@@ -107,6 +111,56 @@ async fn test_bool_to_s_get_static_key() {
     1996-12-19T16:41:57.000000000,0,2359047937476779835,1,bird
     1996-12-19T16:42:57.000000000,0,2359047937476779835,1,plant
     "###);
+}
+
+async fn test_first_map() {
+    // insta::assert_snapshot!(QueryFixture::new("{ value: Input.e0 | last() }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    // _time,_subsort,_key_hash,_key,value
+    // "###);
+
+    let hash = QueryFixture::new("{ value: Input.e0 | first() }")
+        .with_dump_dot("asdf")
+        .run_to_parquet(&collection_data_fixture().await)
+        .await
+        .unwrap();
+
+    // let expected = "adsf";
+    // assert_eq!(hash, expected);
+
+    let file = std::fs::File::open(hash).unwrap();
+    let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)
+        .unwrap()
+        .with_batch_size(1000);
+    let reader = parquet_reader.build().unwrap();
+    let schema = reader.schema();
+    let batches: Vec<_> = reader.try_collect().unwrap();
+    let concatenated = arrow::compute::concat_batches(&schema, &batches).unwrap();
+    println!("{:?}", concatenated);
+}
+
+#[tokio::test]
+async fn test_last_map() {
+    // insta::assert_snapshot!(QueryFixture::new("{ value: Input.e0 | last() }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    // _time,_subsort,_key_hash,_key,value
+    // "###);
+
+    let hash = QueryFixture::new("{ value: Input.e0 | last() }")
+        .run_to_parquet(&collection_data_fixture().await)
+        .await
+        .unwrap();
+
+    // let expected = "adsf";
+    // assert_eq!(hash, expected);
+
+    let file = std::fs::File::open(hash).unwrap();
+    let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)
+        .unwrap()
+        .with_batch_size(1000);
+    let reader = parquet_reader.build().unwrap();
+    let schema = reader.schema();
+    let batches: Vec<_> = reader.try_collect().unwrap();
+    let concatenated = arrow::compute::concat_batches(&schema, &batches).unwrap();
+    println!("{:?}", concatenated);
 }
 
 #[tokio::test]
