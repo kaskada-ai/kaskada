@@ -1,0 +1,3 @@
+[darglint]
+strictness = short
+docstring_style=numpy

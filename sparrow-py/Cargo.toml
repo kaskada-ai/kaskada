@@ -1,0 +1,22 @@
+[package]
+name = "sparrow-py"
+authors = ["Kaskada Developers"]
+edition = "2021"
+license = "Apache-2.0"
+version = "0.1.0"
+description = """
+Python library for building and executing Kaskada queries.
+"""
+
+# This needs to be its own workspace.
+[workspace]
+
+[dependencies]
+itertools = "0.11.0"
+pyo3 = {version = "0.19.1", features = ["abi3-py37", "extension-module", "generate-import-lib"]}
+
+[lib]
+name = "sparrow_py"
+# `cdylib` is necessary to produce a shared library for Python.
+# This can't be used by downstream Rust code (eg., as a library).
+crate-type = ["cdylib"]
