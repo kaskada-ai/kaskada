@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # autofilled by buildkit. Do not set explicitely in your docker build/run command, use --platform instead
 ARG TARGETARCH 
