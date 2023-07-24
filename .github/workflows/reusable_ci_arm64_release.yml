@@ -36,7 +36,7 @@ name: Build linux/aarch64
 
 jobs:
   build_cross_docker_image:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       image-name: ${{ env.IMAGE }}:v_${{ steps.vars.outputs.branch_name }}_${{ steps.vars.outputs.sha_short}}v
     steps:
@@ -87,7 +87,7 @@ jobs:
 
   build_wren:
     needs: [build_cross_docker_image]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     ## Deviation: all steps are curried inside our docker image created from `build_cross_docker_image`
     container:
       image: ${{ needs.build_cross_docker_image.outputs.image-name }}
@@ -174,7 +174,7 @@ jobs:
           CLI_ASSET_NAME: kaskada-cli-linux-aarch64
 
   sparrow_cross_amd64_arm64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@master
