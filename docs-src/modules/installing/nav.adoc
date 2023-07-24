@@ -1,3 +1,3 @@
-* xref:index.adoc[]
+* Installing
 ** xref:local.adoc[]
 ** xref:kubernetes.adoc[]
