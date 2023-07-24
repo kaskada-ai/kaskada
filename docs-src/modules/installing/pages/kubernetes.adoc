@@ -1,4 +1,4 @@
-= Installing Kaskada in Kubernetes with Helm
+= In Kubernetes with Helm
 
 xref:url:https://helm.sh/[Helm] charts allows you to configure, install, and upgrade Kaskada within a Kubernetes cluster.
 
