@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow::array::{as_map_array, new_null_array, Array, ArrayRef, AsArray, MapArray};
+use arrow::array::{new_null_array, Array, ArrayRef, AsArray, MapArray};
 
 use crate::{ComputeStore, StateToken, StoreKey};
 
@@ -45,7 +45,7 @@ impl MapAccumToken {
         let diff = len - self.accum.len();
 
         let null_array = new_null_array(self.accum.data_type(), diff);
-        let null_array = as_map_array(null_array.as_ref());
+        let null_array = null_array.as_ref().as_map();
         let new_state = arrow::compute::concat(&[&self.accum, null_array])?;
         self.accum = new_state.clone();
         Ok(())

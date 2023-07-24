@@ -128,6 +128,14 @@ async fn test_first_last_map() {
 }
 
 #[tokio::test]
+#[ignore = "https://docs.rs/arrow-ord/44.0.0/src/arrow_ord/comparison.rs.html#1746"]
+async fn test_map_equality() {
+    insta::assert_snapshot!(QueryFixture::new("{ first_eq: Input.s_to_i64 | first() == Input.s_to_i64, last_eq: Input.s_to_i64 | last() == Input.s_to_i64 }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
+    "###);
+}
+
+#[tokio::test]
 async fn test_swapped_args_for_get_map() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: get(Input.s_to_i64, \"f1\") }")
         .run_to_csv(&collection_data_fixture().await).await.unwrap_err(), @r###"
