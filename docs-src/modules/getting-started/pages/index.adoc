@@ -47,21 +47,21 @@ Kaskada is built on the idea of a _timeline_ - the history of how a value change
 ]
 ....
 
-Timelines allow you to reason about temporal context, time travel, sequencing, time-series, and more. 
-They allow simple, composable, declarative queries over events. 
+Timelines allow you to reason about temporal context, time travel, sequencing, time-series, and more.
+They allow simple, composable, declarative queries over events.
 Transforming and combining timelines allows you to intuitively express computations over events.
 
 ****
 ⭢ Read more about timelines in xref:overview:what-is-kaskada.adoc[]
 ****
 
-With Kaskada, it's timelines all the way down - every operation's inputs and outputs are timelines. 
+With Kaskada, it's timelines all the way down - every operation's inputs and outputs are timelines.
 The timeline is a flexible abstraction that can be used in different ways depending on your needs.
 In some cases, you may want to know what the timeline's value is at a specific point in time, in other cases you may want to know how the timeline's value changes over time.
 
 When making a query, you configure how to use the query's output timeline: you can use the timeline as either a _history_ or as a _snapshot_.
 
-* A timeline *History* contains a value each time the timeline changes, and each row describes a different entity at a different point in time. 
+* A timeline *History* contains a value each time the timeline changes, and each row describes a different entity at a different point in time.
 * A timeline *Snapshot* contains a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows reflect the same point in time.
 
 This output may be written in different ways -- for example, they may be written to a Parquet file or sent as events to a stream.
@@ -83,7 +83,7 @@ You can access the API using the provided Python client or using the CLI binary.
 Kaskada can be configured to run as a remote service or as a local process.
 
 ****
-⭢ Read more about installing Kaskada in xref:ROOT:installing.adoc[]
+⭢ Read more about installing Kaskada in xref:installing:local.adoc[]
 ****
 
 == Kaskada's data model
