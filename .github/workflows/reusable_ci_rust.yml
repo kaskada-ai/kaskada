@@ -44,7 +44,7 @@ jobs:
   rust_check:
     name: Rust Checks
     runs-on:
-      group: linux-rust-builds
+      group: linux-rust-builds-2204
     needs: [rust_skip]
     steps:
       - name: Checkout sources
