@@ -37,14 +37,14 @@ impl MapAccumToken {
     }
 
     pub fn array(&self) -> &MapArray {
-        &self.accum.as_map()
+        self.accum.as_map()
     }
 
     /// Concat nulls to the end of the current accumulator to grow the size.
     pub fn resize(&mut self, len: usize) -> anyhow::Result<()> {
         let diff = len - self.accum.len();
 
-        let null_array = new_null_array(&self.accum.data_type(), diff);
+        let null_array = new_null_array(self.accum.data_type(), diff);
         let null_array = as_map_array(null_array.as_ref());
         let new_state = arrow::compute::concat(&[&self.accum, null_array])?;
         self.accum = new_state.clone();

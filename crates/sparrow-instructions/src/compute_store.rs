@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Context;
-use arrow::array::ArrayRef;
+
 use prost_wkt_types::Timestamp;
 use rocksdb::DBPinnableSlice;
 use sparrow_api::kaskada::v1alpha::PlanHash;

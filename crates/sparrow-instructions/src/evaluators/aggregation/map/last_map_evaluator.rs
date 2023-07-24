@@ -1,19 +1,10 @@
-use std::sync::Arc;
+use arrow::array::{as_map_array, new_empty_array, Array, ArrayRef, PrimitiveArray, UInt32Array};
 
-use arrow::{
-    array::{
-        as_map_array, new_empty_array, Array, ArrayRef, BooleanArray, Int32Array, MapBuilder,
-        PrimitiveArray, StringArray, UInt32Array,
-    },
-    datatypes::{ArrowPrimitiveType, DataType},
-};
-use itertools::izip;
-use sparrow_arrow::downcast::downcast_string_array;
 use sparrow_plan::ValueRef;
 
 use crate::{
     AggregationArgs, Evaluator, EvaluatorFactory, MapAccumToken, RuntimeInfo, StateToken,
-    StaticInfo, StringAccumToken, TwoStacksStringAccumToken,
+    StaticInfo,
 };
 
 /// Evaluator for the `Last` instruction on strings.
@@ -37,7 +28,7 @@ impl Evaluator for LastMapEvaluator {
 
                 result
             }
-            AggregationArgs::Since { ticks, input } => {
+            AggregationArgs::Since { ticks: _, input: _ } => {
                 unimplemented!("windowed aggregation over maps")
             }
             AggregationArgs::Sliding { .. } => {
@@ -75,7 +66,7 @@ impl EvaluatorFactory for LastMapEvaluator {
 impl LastMapEvaluator {
     /// Resizes the accumulator to the new size.
     fn ensure_entity_capacity(token: &mut MapAccumToken, len: usize) -> anyhow::Result<()> {
-        Ok(token.resize(len)?)
+        token.resize(len)
     }
 
     fn concat_take(

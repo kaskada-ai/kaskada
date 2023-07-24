@@ -32,7 +32,7 @@ use field_ref::*;
 use general::*;
 use json_field::*;
 use logical::*;
-pub use map::*;
+use map::*;
 use math::*;
 use record::*;
 use sparrow_plan::ValueRef;
