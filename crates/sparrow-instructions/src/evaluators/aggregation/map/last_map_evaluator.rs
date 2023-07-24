@@ -1,4 +1,6 @@
-use arrow::array::{as_map_array, new_empty_array, Array, ArrayRef, PrimitiveArray, UInt32Array};
+use arrow::array::{
+    as_map_array, new_empty_array, Array, ArrayRef, AsArray, PrimitiveArray, UInt32Array,
+};
 
 use sparrow_plan::ValueRef;
 
@@ -7,7 +9,7 @@ use crate::{
     StaticInfo,
 };
 
-/// Evaluator for the `Last` instruction on strings.
+/// Evaluator for the `Last` instruction on maps
 pub struct LastMapEvaluator {
     args: AggregationArgs<ValueRef>,
     token: MapAccumToken,
@@ -32,7 +34,7 @@ impl Evaluator for LastMapEvaluator {
                 unimplemented!("windowed aggregation over maps")
             }
             AggregationArgs::Sliding { .. } => {
-                unreachable!("Expected Non-windowed or Since windowed aggregation, saw Sliding.")
+                panic!("expected non-windowed or since-windowed aggregation, saw sliding.")
             }
         }
     }
@@ -52,12 +54,12 @@ impl EvaluatorFactory for LastMapEvaluator {
         match args {
             AggregationArgs::NoWindow { .. } | AggregationArgs::Since { .. } => {
                 let map_type = info.result_type;
-                let accum = as_map_array(new_empty_array(map_type).as_ref()).to_owned();
+                let accum = new_empty_array(map_type).as_map().to_owned();
                 let token = MapAccumToken::new(accum);
                 Ok(Box::new(Self { token, args }))
             }
             AggregationArgs::Sliding { .. } => {
-                todo!()
+                unimplemented!("sliding window aggregation over maps unsupported")
             }
         }
     }
@@ -121,15 +123,10 @@ impl LastMapEvaluator {
 
 #[cfg(test)]
 mod tests {
-
-    use std::sync::Arc;
-
-    use arrow::array::{AsArray, Float64Array, Int64Array, Int64Builder, MapBuilder};
-    use arrow::datatypes::{Float64Type, Int64Type};
-    use arrow_schema::{DataType, Field, Fields};
-
     use super::*;
-    use crate::{FirstPrimitive, LastPrimitive, Max, Mean, Sum};
+    use arrow::array::{AsArray, Int64Builder, MapBuilder};
+    use arrow_schema::{DataType, Field, Fields};
+    use std::sync::Arc;
 
     fn default_token() -> MapAccumToken {
         let k = Field::new("keys", DataType::Int64, false);
