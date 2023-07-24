@@ -1,13 +1,15 @@
 {%- if example.name -%}
-### Example: {{ example.name }}
+.Example: {{ example.name }}
 {% else -%}
-### Example
+.Example
 {% endif %}
+====
+
 {%- if example.description -%}
 {{ example.description }}
 {% endif -%}
 
-#### Query
+= Query
 ```
 {%- if example.full_expression %}
 {{ example.full_expression | trim }}
@@ -16,23 +18,36 @@
 {% endif -%}
 ```
 {% if example.input_csv %}
-#### Table: Input
+= Table: Input
 
 * **Name**: `Input`
 * **Time Column**: `time`
 * **Group Column**: `key`
 * **Grouping**: `grouping`
 
-{{ example.input_csv | csv2md | trim }}
+[%header,format=csv]
+|===
+{{ example.input_csv }}
+|===
+
 {% endif %}
 {%- for table in example.tables | default(value=[]) %}
-#### Table: {{ table.name }}
+= Table: {{ table.name }}
 * **Name**: `{{ table.name }}`
 * **Time Column**: `{{ table.time_column_name }}`
 * **Group Column**: `{{ table.group_column_name }}`
 * **Grouping**: `{{ table.grouping }}`
 
-{{ table.input_csv | csv2md | trim }}
+[%header,format=csv]
+|===
+{{ table.input_csv }}
+|===
+
 {% endfor %}
-#### Output CSV
-{{ example.output_csv | csv2md | trim }}
+= Output CSV
+[header,format=csv]
+|===
+{{ example.output_csv }}
+|===
+
+====
