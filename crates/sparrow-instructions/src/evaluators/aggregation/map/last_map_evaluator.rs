@@ -107,11 +107,139 @@ impl LastMapEvaluator {
             take_output_builder.append_value(take_new_state[entity_index as usize])
         }
 
+        // Gather the output, using the previous state and the new input
+        let output = Self::concat_take(&token.accum, input, &take_output_builder.finish())?;
+
+        // Update the state token with the new state
         let take_new_state = PrimitiveArray::from_iter_values(take_new_state);
         let new_state = Self::concat_take(&token.accum, input, &take_new_state)?;
         token.set_state(new_state);
 
-        let output = Self::concat_take(&token.accum, input, &take_output_builder.finish())?;
         Ok(output)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::sync::Arc;
+
+    use arrow::array::{AsArray, Float64Array, Int64Array, Int64Builder, MapBuilder};
+    use arrow::datatypes::{Float64Type, Int64Type};
+    use arrow_schema::{DataType, Field, Fields};
+
+    use super::*;
+    use crate::{FirstPrimitive, LastPrimitive, Max, Mean, Sum};
+
+    fn default_token() -> MapAccumToken {
+        let k = Field::new("keys", DataType::Int64, false);
+        let v = Field::new("values", DataType::Int64, true);
+        let fields = Fields::from(vec![k, v]);
+        let s = Arc::new(Field::new("entries", DataType::Struct(fields), false));
+        let map = DataType::Map(s, false);
+        let accum = new_empty_array(&map);
+        MapAccumToken { accum }
+    }
+
+    #[test]
+    fn test_first_map_multiple_batches() {
+        let mut token = default_token();
+        let key_indices = UInt32Array::from(vec![0, 0, 0, 0, 0]);
+        let key_capacity = 1;
+
+        // Batch 1
+        let mut builder = MapBuilder::new(None, Int64Builder::new(), Int64Builder::new());
+        builder.keys().append_value(1);
+        builder.values().append_value(1);
+        builder.append(true).unwrap();
+
+        builder.keys().append_value(1);
+        builder.values().append_value(2);
+        builder.keys().append_value(2);
+        builder.values().append_value(4);
+        builder.append(true).unwrap();
+
+        builder.append(true).unwrap();
+
+        builder.keys().append_value(2);
+        builder.values().append_value(99);
+        builder.append(true).unwrap();
+
+        builder.keys().append_value(1);
+        builder.values().append_value(10);
+        builder.keys().append_value(3);
+        builder.values().append_value(7);
+        builder.append(true).unwrap();
+        let array = builder.finish();
+
+        // Last should pull latest
+        let expected = array.clone();
+
+        let input: ArrayRef = Arc::new(array);
+        let result =
+            LastMapEvaluator::aggregate(&mut token, key_capacity, &key_indices, &input).unwrap();
+        let result = result.as_map();
+
+        assert_eq!(&expected, result);
+
+        // Batch 2
+        let mut builder = MapBuilder::new(None, Int64Builder::new(), Int64Builder::new());
+        builder.append(false).unwrap();
+
+        builder.append(false).unwrap();
+
+        builder.append(false).unwrap();
+
+        builder.keys().append_value(2);
+        builder.values().append_value(99);
+        builder.append(true).unwrap();
+
+        builder.keys().append_value(1);
+        builder.values().append_value(10);
+        builder.keys().append_value(3);
+        builder.values().append_value(7);
+        builder.append(true).unwrap();
+
+        let array = builder.finish();
+        let input: ArrayRef = Arc::new(array);
+
+        // Introduce second entity key
+        let key_indices = UInt32Array::from(vec![0, 1, 0, 1, 0]);
+        let key_capacity = 2;
+        let result =
+            LastMapEvaluator::aggregate(&mut token, key_capacity, &key_indices, &input).unwrap();
+        let result = result.as_map();
+
+        let mut builder = MapBuilder::new(None, Int64Builder::new(), Int64Builder::new());
+        // Uses last non-null value
+        builder.keys().append_value(1);
+        builder.values().append_value(10);
+        builder.keys().append_value(3);
+        builder.values().append_value(7);
+        builder.append(true).unwrap();
+
+        // First value for this entity is null, so result is null
+        builder.append(false).unwrap();
+
+        // Uses last non-null value
+        builder.keys().append_value(1);
+        builder.values().append_value(10);
+        builder.keys().append_value(3);
+        builder.values().append_value(7);
+        builder.append(true).unwrap();
+
+        builder.keys().append_value(2);
+        builder.values().append_value(99);
+        builder.append(true).unwrap();
+
+        builder.keys().append_value(1);
+        builder.values().append_value(10);
+        builder.keys().append_value(3);
+        builder.values().append_value(7);
+        builder.append(true).unwrap();
+
+        let expected = builder.finish();
+
+        assert_eq!(&expected, result);
     }
 }
