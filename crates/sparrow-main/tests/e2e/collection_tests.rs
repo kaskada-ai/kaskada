@@ -1,9 +1,4 @@
 //! e2e tests for the collection operators.
-
-use itertools::Itertools;
-
-use arrow::record_batch::RecordBatchReader;
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use sparrow_api::kaskada::v1alpha::TableConfig;
 use uuid::Uuid;
 
@@ -125,6 +120,20 @@ async fn test_first_last_map() {
 
     let expected = "AB719CF6634779A5285D699A178AC69354696872E3733AA9388C9A6A";
     assert_eq!(hash, expected);
+}
+
+#[tokio::test]
+async fn test_s_to_i64_get_with_first_last_agg() {
+    // Note that the last_f2 is empty. This is expected because the last() aggregation
+    // is applied over the _map_ value, which does not necessarily hold an "f2" key.
+    insta::assert_snapshot!(QueryFixture::new("{ first_f2: Input.s_to_i64 | first() | get(\"f2\"), last_f2: Input.s_to_i64 | last() | get(\"f2\") }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,first_f2,last_f2
+    1996-12-19T16:39:57.000000000,0,2359047937476779835,1,22,22
+    1996-12-19T16:40:57.000000000,0,2359047937476779835,1,22,10
+    1996-12-19T16:40:59.000000000,0,2359047937476779835,1,22,3
+    1996-12-19T16:41:57.000000000,0,2359047937476779835,1,22,13
+    1996-12-19T16:42:57.000000000,0,2359047937476779835,1,22,
+    "###);
 }
 
 #[tokio::test]
