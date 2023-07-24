@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     AggregationArgs, Evaluator, EvaluatorFactory, MapAccumToken, RuntimeInfo, StateToken,
     StaticInfo,
@@ -53,7 +55,7 @@ impl EvaluatorFactory for FirstMapEvaluator {
             AggregationArgs::NoWindow { .. } | AggregationArgs::Since { .. } => {
                 let map_type = info.result_type;
                 let accum = new_empty_array(map_type).as_map().to_owned();
-                let token = MapAccumToken::new(accum);
+                let token = MapAccumToken::new(Arc::new(accum));
                 Ok(Box::new(Self { token, args }))
             }
             AggregationArgs::Sliding { .. } => {
@@ -67,15 +69,6 @@ impl FirstMapEvaluator {
     /// Resizes the accumulator to the new size.
     fn ensure_entity_capacity(token: &mut MapAccumToken, len: usize) -> anyhow::Result<()> {
         token.resize(len)
-    }
-
-    fn concat_take(
-        array1: &ArrayRef,
-        array2: &ArrayRef,
-        indices: &UInt32Array,
-    ) -> anyhow::Result<ArrayRef> {
-        let combined = arrow::compute::concat(&[array1, array2])?;
-        Ok(arrow::compute::take(&combined, indices, None)?)
     }
 
     /// Returns the existing value for an entity if it exists, or a new value from the
@@ -115,11 +108,12 @@ impl FirstMapEvaluator {
         }
 
         // Gather the output, using the previous state and the new input
-        let output = Self::concat_take(&token.accum, input, &take_output_builder.finish())?;
+        let output =
+            sparrow_arrow::concat_take(&token.accum, input, &take_output_builder.finish())?;
 
         // Update the state token with the new state
         let take_new_state = PrimitiveArray::from_iter_values(take_new_state);
-        let new_state = Self::concat_take(&token.accum, input, &take_new_state)?;
+        let new_state = sparrow_arrow::concat_take(&token.accum, input, &take_new_state)?;
         token.set_state(new_state);
 
         Ok(output)

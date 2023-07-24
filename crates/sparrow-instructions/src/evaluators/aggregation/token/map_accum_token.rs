@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow::array::{new_null_array, Array, ArrayRef, AsArray, MapArray};
 
 use crate::{ComputeStore, StateToken, StoreKey};
@@ -30,10 +28,8 @@ impl StateToken for MapAccumToken {
 }
 
 impl MapAccumToken {
-    pub fn new(accum: MapArray) -> Self {
-        Self {
-            accum: Arc::new(accum),
-        }
+    pub fn new(accum: ArrayRef) -> Self {
+        Self { accum }
     }
 
     pub fn array(&self) -> &MapArray {

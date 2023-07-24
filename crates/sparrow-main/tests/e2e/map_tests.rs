@@ -1,11 +1,11 @@
-//! e2e tests for the collection operators.
+//! e2e tests for map types.
 use sparrow_api::kaskada::v1alpha::TableConfig;
 use uuid::Uuid;
 
 use crate::{fixture::DataFixture, QueryFixture};
 
 /// Create a simple table with a collection type (map).
-pub(crate) async fn collection_data_fixture() -> DataFixture {
+pub(crate) async fn map_data_fixture() -> DataFixture {
     DataFixture::new()
         .with_table_from_files(
             TableConfig::new_with_table_source(
@@ -24,7 +24,7 @@ pub(crate) async fn collection_data_fixture() -> DataFixture {
 
 #[tokio::test]
 async fn test_string_to_i64_get_static_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.s_to_i64) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.s_to_i64) }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,0
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,1
@@ -36,7 +36,7 @@ async fn test_string_to_i64_get_static_key() {
 
 #[tokio::test]
 async fn test_string_to_i64_get_static_key_second_field() {
-    insta::assert_snapshot!(QueryFixture::new("{ f2: Input.s_to_i64 | get(\"f2\") }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f2: Input.s_to_i64 | get(\"f2\") }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f2
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,22
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,10
@@ -48,7 +48,7 @@ async fn test_string_to_i64_get_static_key_second_field() {
 
 #[tokio::test]
 async fn test_string_to_i64_get_dynamic_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ value: Input.s_to_i64 | get(Input.s_to_i64_key) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ value: Input.s_to_i64 | get(Input.s_to_i64_key) }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,value
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,0
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,10
@@ -60,7 +60,7 @@ async fn test_string_to_i64_get_dynamic_key() {
 
 #[tokio::test]
 async fn test_i64_to_i64_get_static_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(1, Input.i64_to_i64) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(1, Input.i64_to_i64) }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,1
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,2
@@ -73,7 +73,7 @@ async fn test_i64_to_i64_get_static_key() {
 #[tokio::test]
 async fn test_u64_to_str_get_static_key() {
     // Ideally we don't have to specify `as u64`. See https://github.com/kaskada-ai/kaskada/issues/534
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(4 as u64, Input.u64_to_s) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(4 as u64, Input.u64_to_s) }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,cat
@@ -86,7 +86,7 @@ async fn test_u64_to_str_get_static_key() {
 #[tokio::test]
 async fn test_u64_to_bool_get_static_key() {
     // Ideally we don't have to specify `as u64`. See https://github.com/kaskada-ai/kaskada/issues/534
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(4 as u64, Input.u64_to_bool) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(4 as u64, Input.u64_to_bool) }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,false
@@ -98,7 +98,7 @@ async fn test_u64_to_bool_get_static_key() {
 
 #[tokio::test]
 async fn test_bool_to_s_get_static_key() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: get(true, Input.bool_to_s) }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: get(true, Input.bool_to_s) }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,dog
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,cat
@@ -114,7 +114,7 @@ async fn test_first_last_map() {
     // manually and now just compared as the hash of the parquet output.
     let hash =
         QueryFixture::new("{ first: Input.s_to_i64 | first(), last: Input.s_to_i64 | last() }")
-            .run_to_parquet_hash(&collection_data_fixture().await)
+            .run_to_parquet_hash(&map_data_fixture().await)
             .await
             .unwrap();
 
@@ -126,7 +126,7 @@ async fn test_first_last_map() {
 async fn test_s_to_i64_get_with_first_last_agg() {
     // Note that the last_f2 is empty. This is expected because the last() aggregation
     // is applied over the _map_ value, which does not necessarily hold an "f2" key.
-    insta::assert_snapshot!(QueryFixture::new("{ first_f2: Input.s_to_i64 | first() | get(\"f2\"), last_f2: Input.s_to_i64 | last() | get(\"f2\") }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first_f2: Input.s_to_i64 | first() | get(\"f2\"), last_f2: Input.s_to_i64 | last() | get(\"f2\") }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first_f2,last_f2
     1996-12-19T16:39:57.000000000,0,2359047937476779835,1,22,22
     1996-12-19T16:40:57.000000000,0,2359047937476779835,1,22,10
@@ -139,7 +139,7 @@ async fn test_s_to_i64_get_with_first_last_agg() {
 #[tokio::test]
 #[ignore = "https://docs.rs/arrow-ord/44.0.0/src/arrow_ord/comparison.rs.html#1746"]
 async fn test_map_equality() {
-    insta::assert_snapshot!(QueryFixture::new("{ first_eq: Input.s_to_i64 | first() == Input.s_to_i64, last_eq: Input.s_to_i64 | last() == Input.s_to_i64 }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ first_eq: Input.s_to_i64 | first() == Input.s_to_i64, last_eq: Input.s_to_i64 | last() == Input.s_to_i64 }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     "###);
 }
@@ -147,7 +147,7 @@ async fn test_map_equality() {
 #[tokio::test]
 async fn test_swapped_args_for_get_map() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: get(Input.s_to_i64, \"f1\") }")
-        .run_to_csv(&collection_data_fixture().await).await.unwrap_err(), @r###"
+        .run_to_csv(&map_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
@@ -176,7 +176,7 @@ async fn test_swapped_args_for_get_map() {
 #[tokio::test]
 async fn test_incompatible_key_types() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: get(\"f1\", Input.i64_to_i64) }")
-        .run_to_csv(&collection_data_fixture().await).await.unwrap_err(), @r###"
+        .run_to_csv(&map_data_fixture().await).await.unwrap_err(), @r###"
     ---
     code: Client specified an invalid argument
     message: 1 errors in Fenl statements; see diagnostics
