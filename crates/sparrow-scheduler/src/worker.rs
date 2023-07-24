@@ -24,7 +24,7 @@ pub trait Scheduler {
     /// queue.
     fn schedule_yield(&mut self, task: TaskRef);
 
-    /// Schedule n item for eventual execution anywher.
+    /// Schedule a task for eventual execution anywhere.
     ///
     /// For both the local and global queues this adds to the end of the global
     /// queue.

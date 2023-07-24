@@ -256,7 +256,7 @@ impl Pipeline for TransformPipeline {
 
         // Note: We don't re-schedule the transform if there is input.
         // This should be handled by the fact that we scheduled the transform
-        // when we added the batch, which should trigger the "sceduled during
+        // when we added the batch, which should trigger the "scheduled during
         // execution" -> "re-schedule" logic (see ScheduleCount).
 
         Ok(())

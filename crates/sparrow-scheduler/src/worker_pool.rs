@@ -96,6 +96,9 @@ impl WorkerPool {
         let index = self.pipelines.len();
         let name = std::any::type_name::<T>();
 
+        // `new_cyclic` provides a `Weak` reference to the pipeline before it is
+        // created. This allows us to create tasks that reference the pipeline
+        // (via weak references) and pass those tasks to the pipeline.
         let pipeline: Arc<T> = Arc::new_cyclic(move |weak| {
             let tasks = (0..partitions)
                 .map(|partition| -> TaskRef {

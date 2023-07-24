@@ -44,11 +44,15 @@ impl Task {
         }
     }
 
-    /// Record a request for scheduling.
+    /// Mark this task as scheduled.
     ///
-    /// Returns true if this task wasn't previously scheduled.
+    /// Returns `false` if this task was previously scheduled and has not
+    /// yet been executed.
     ///
     /// Generally should only be called by the worker.
+    ///
+    /// If this is called while it is being executed (eg., during `do_work`) then
+    /// the `guard` will return `true` to indicate the task should be re-executed.
     pub(crate) fn schedule(&self) -> bool {
         self.schedule_count.schedule()
     }

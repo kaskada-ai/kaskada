@@ -4,7 +4,7 @@ use sparrow_arrow::Batch;
 pub enum Error {
     #[display(fmt = "failed to create {_0} transform")]
     CreateTransform(&'static str),
-    #[display(fmt = "failed to create {_0} transform")]
+    #[display(fmt = "failed to execute {_0} transform")]
     ExecuteTransform(&'static str),
 }
 

@@ -103,7 +103,7 @@ pub trait Pipeline: Send + Sync + std::fmt::Debug {
         scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError>;
 
-    /// Mark an input partition and input index as complet.
+    /// Mark an input partition and input index as complete.
     ///
     /// Schedules any tasks that need to be executed on the `scheduler`.
     fn close_input(
