@@ -93,51 +93,6 @@ pub mod array_ref {
     }
 }
 
-/// Provides serde for specific `Array` values.
-///
-/// Example:
-///
-/// ```rust
-/// #[derive(serde::Serialize, serde::Deserialize)]
-/// struct Foo {
-///   #[serde(with = "sparrow_arrow::serde::array")]
-///   array: MapArray
-/// }
-/// ```
-pub mod array {
-    use std::sync::Arc;
-
-    use arrow::array::ArrayRef;
-    use arrow_array::cast::downcast_array;
-    use arrow_array::Array;
-
-    pub fn serialize<T: Array + Clone + 'static, S>(
-        array: &T,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        // We want to serialize the array using logic for RecordBatch.
-        // This requires we get an `ArrayRef` for it.
-        // This requires creating an owned array.
-        // This cloning should only do a shallow copy.
-        let array: T = array.clone();
-        let array: ArrayRef = Arc::new(array);
-        super::array_ref::serialize(&array, serializer)
-    }
-
-    pub fn deserialize<'de, T: From<arrow::array::ArrayData>, D>(
-        deserializer: D,
-    ) -> Result<T, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let array = super::array_ref::deserialize(deserializer)?;
-        Ok(downcast_array(array.as_ref()))
-    }
-}
-
 fn encode_batch(batch: &RecordBatch) -> Result<Vec<u8>, ArrowError> {
     let c = Cursor::new(Vec::new());
 
@@ -163,7 +118,7 @@ mod tests {
     use std::sync::Arc;
 
     use arrow_array::builder::{MapBuilder, StringBuilder, UInt32Builder};
-    use arrow_array::{ArrayRef, MapArray, UInt32Array};
+    use arrow_array::{ArrayRef, UInt32Array};
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct ArrayRefTest {
@@ -171,14 +126,8 @@ mod tests {
         array: ArrayRef,
     }
 
-    #[derive(serde::Serialize, serde::Deserialize)]
-    struct MapArrayTest {
-        #[serde(with = "crate::serde::array")]
-        array: MapArray,
-    }
-
     #[test]
-    fn test_array_ref() {
+    fn test_array_ref_u32() {
         let original = ArrayRefTest {
             array: Arc::new(UInt32Array::from(vec![0, 1, 2])),
         };
@@ -187,14 +136,16 @@ mod tests {
     }
 
     #[test]
-    fn test_map_array() {
+    fn test_array_ref_map() {
         let mut builder = MapBuilder::new(None, StringBuilder::new(), UInt32Builder::new());
         builder.keys().append_value("hello");
         builder.values().append_value(5);
         builder.append(true).unwrap();
         let array = builder.finish();
 
-        let original = MapArrayTest { array };
+        let original = ArrayRefTest {
+            array: Arc::new(array),
+        };
         let copied = round_trip_bincode(&original);
         assert_eq!(&original.array, &copied.array);
     }

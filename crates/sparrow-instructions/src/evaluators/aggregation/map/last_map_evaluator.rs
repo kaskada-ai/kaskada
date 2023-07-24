@@ -38,11 +38,7 @@ impl Evaluator for LastMapEvaluator {
                 result
             }
             AggregationArgs::Since { ticks, input } => {
-                let grouping = info.grouping();
-                let input_vals = info.value(input)?.array_ref()?;
-                let ticks = info.value(ticks)?.boolean_array()?;
-                let result = todo!();
-                result
+                unimplemented!("windowed aggregation over maps")
             }
             AggregationArgs::Sliding { .. } => {
                 unreachable!("Expected Non-windowed or Since windowed aggregation, saw Sliding.")
@@ -110,7 +106,7 @@ impl LastMapEvaluator {
         Self::ensure_entity_capacity(token, key_capacity)?;
         let map_input = as_map_array(input);
 
-        let mut take_new_state: Vec<u32> = (0..token.accum().len() as u32).collect();
+        let mut take_new_state: Vec<u32> = (0..token.accum.len() as u32).collect();
         let mut take_output_builder = UInt32Array::builder(input.len());
         for input_index in 0..map_input.len() {
             let entity_index = key_indices.value(input_index);
@@ -120,14 +116,11 @@ impl LastMapEvaluator {
             take_output_builder.append_value(take_new_state[entity_index as usize])
         }
 
-        // TODO: Clone?
-        let old_state: ArrayRef = Arc::new(token.accum().clone());
-
         let take_new_state = PrimitiveArray::from_iter_values(take_new_state);
-        let new_state = Self::concat_take(&old_state, input, &take_new_state)?;
-        token.set_state(as_map_array(&new_state).clone());
+        let new_state = Self::concat_take(&token.accum, input, &take_new_state)?;
+        token.set_state(new_state);
 
-        let output = Self::concat_take(&old_state, input, &take_output_builder.finish())?;
+        let output = Self::concat_take(&token.accum, input, &take_output_builder.finish())?;
         Ok(output)
     }
 }

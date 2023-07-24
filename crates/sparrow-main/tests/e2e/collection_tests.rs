@@ -113,54 +113,18 @@ async fn test_bool_to_s_get_static_key() {
     "###);
 }
 
-async fn test_first_map() {
-    // insta::assert_snapshot!(QueryFixture::new("{ value: Input.e0 | last() }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
-    // _time,_subsort,_key_hash,_key,value
-    // "###);
-
-    let hash = QueryFixture::new("{ value: Input.e0 | first() }")
-        .with_dump_dot("asdf")
-        .run_to_parquet(&collection_data_fixture().await)
-        .await
-        .unwrap();
-
-    // let expected = "adsf";
-    // assert_eq!(hash, expected);
-
-    let file = std::fs::File::open(hash).unwrap();
-    let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)
-        .unwrap()
-        .with_batch_size(1000);
-    let reader = parquet_reader.build().unwrap();
-    let schema = reader.schema();
-    let batches: Vec<_> = reader.try_collect().unwrap();
-    let concatenated = arrow::compute::concat_batches(&schema, &batches).unwrap();
-    println!("{:?}", concatenated);
-}
-
 #[tokio::test]
-async fn test_last_map() {
-    // insta::assert_snapshot!(QueryFixture::new("{ value: Input.e0 | last() }").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
-    // _time,_subsort,_key_hash,_key,value
-    // "###);
+async fn test_first_last_map() {
+    // The csv writer does not support map types currently, so the output has been verified
+    // manually and now just compared as the hash of the parquet output.
+    let hash =
+        QueryFixture::new("{ first: Input.s_to_i64 | first(), last: Input.s_to_i64 | last() }")
+            .run_to_parquet_hash(&collection_data_fixture().await)
+            .await
+            .unwrap();
 
-    let hash = QueryFixture::new("{ value: Input.e0 | last() }")
-        .run_to_parquet(&collection_data_fixture().await)
-        .await
-        .unwrap();
-
-    // let expected = "adsf";
-    // assert_eq!(hash, expected);
-
-    let file = std::fs::File::open(hash).unwrap();
-    let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)
-        .unwrap()
-        .with_batch_size(1000);
-    let reader = parquet_reader.build().unwrap();
-    let schema = reader.schema();
-    let batches: Vec<_> = reader.try_collect().unwrap();
-    let concatenated = arrow::compute::concat_batches(&schema, &batches).unwrap();
-    println!("{:?}", concatenated);
+    let expected = "AB719CF6634779A5285D699A178AC69354696872E3733AA9388C9A6A";
+    assert_eq!(hash, expected);
 }
 
 #[tokio::test]
