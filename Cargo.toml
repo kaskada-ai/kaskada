@@ -4,7 +4,7 @@ members = ["crates/*"]
 [workspace.package]
 authors = ["Kaskada Developers"]
 edition = "2021"
-version = "0.9.0"
+version = "0.10.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]
@@ -17,7 +17,7 @@ arrow-array = { version = "43.0.0" }
 arrow-buffer = { version = "43.0.0" }
 arrow-cast = { version = "43.0.0" }
 arrow-csv = { version = "43.0.0" }
-arrow-data = { version ="43.0.0" }
+arrow-data = { version = "43.0.0" }
 arrow-json = { version = "43.0.0" }
 arrow-ord = { version = "43.0.0" }
 arrow-schema = { version = "43.0.0", features = ["serde"] }
@@ -89,7 +89,11 @@ prost-types = "0.11.8"
 prost-wkt = "0.4.1"
 prost-wkt-build = "0.4.1"
 prost-wkt-types = "0.4.1"
-pulsar = { version = "5.1.0", default-features = false, features = ["async-std-runtime", "tokio-runtime", "lz4"] }
+pulsar = { version = "5.1.0", default-features = false, features = [
+	"async-std-runtime",
+	"tokio-runtime",
+	"lz4",
+] }
 rand = "0.8.5"
 reqwest = { version = "0.11.14", features = ["native-tls-vendored"] }
 serde = { version = "1.0.159", features = ["derive", "rc"] }
