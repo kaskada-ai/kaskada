@@ -1,0 +1,9 @@
+## Operators
+
+|===
+| Function | Summary
+{% for function in functions | filter(attribute="operator") %}
+| [{{ function.name }}](#{{ function.name }})
+| {{function.short_doc | trim }}
+{% endfor -%}
+|===

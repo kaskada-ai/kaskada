@@ -112,3 +112,46 @@ fn decode_batch(bytes: Vec<u8>) -> Result<RecordBatch, ArrowError> {
     let batches: Vec<_> = file_reader.into_iter().try_collect()?;
     arrow::compute::concat_batches(&schema, &batches)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use arrow_array::builder::{MapBuilder, StringBuilder, UInt32Builder};
+    use arrow_array::{ArrayRef, UInt32Array};
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct ArrayRefTest {
+        #[serde(with = "crate::serde::array_ref")]
+        array: ArrayRef,
+    }
+
+    #[test]
+    fn test_array_ref_u32() {
+        let original = ArrayRefTest {
+            array: Arc::new(UInt32Array::from(vec![0, 1, 2])),
+        };
+        let copied = round_trip_bincode(&original);
+        assert_eq!(&original.array, &copied.array);
+    }
+
+    #[test]
+    fn test_array_ref_map() {
+        let mut builder = MapBuilder::new(None, StringBuilder::new(), UInt32Builder::new());
+        builder.keys().append_value("hello");
+        builder.values().append_value(5);
+        builder.append(true).unwrap();
+        let array = builder.finish();
+
+        let original = ArrayRefTest {
+            array: Arc::new(array),
+        };
+        let copied = round_trip_bincode(&original);
+        assert_eq!(&original.array, &copied.array);
+    }
+
+    fn round_trip_bincode<T: serde::Serialize + serde::de::DeserializeOwned>(t: &T) -> T {
+        let serialized = bincode::serialize(t).unwrap();
+        bincode::deserialize(&serialized).unwrap()
+    }
+}

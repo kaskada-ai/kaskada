@@ -135,7 +135,8 @@ func GetFileURI(fileName string) string {
 	if os.Getenv("ENV") == "local-local" {
 		workDir, err := os.Getwd()
 		Expect(err).ShouldNot(HaveOccurred())
-		return fmt.Sprintf("file://%s/../../../testdata/%s", workDir, fileName)
+		path := filepath.Join(workDir, "../../../testdata", fileName)
+		return fmt.Sprintf("file://%s", path)
 	}
 	return fmt.Sprintf("file:///testdata/%s", fileName)
 }

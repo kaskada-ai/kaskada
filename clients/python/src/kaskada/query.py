@@ -11,7 +11,7 @@ from google.protobuf.message import Message
 import kaskada.formatters
 import kaskada.kaskada.v1alpha.destinations_pb2 as destinations_pb
 import kaskada.kaskada.v1alpha.query_service_pb2 as query_pb
-from kaskada.client import KASKADA_DEFAULT_SLICE, Client, get_client
+from kaskada.client import Client, get_client
 from kaskada.slice_filters import SliceFilter
 from kaskada.utils import get_timestamp, handleException, handleGrpcError
 
@@ -134,7 +134,19 @@ def create_query(
         query_pb.CreateQueryResponse
     """
     if slice_filter is None:
-        slice_filter = KASKADA_DEFAULT_SLICE
+        """
+        Subtle Python Implementation Note:
+
+        The KASKADA_DEFAULT_SLICE is a global variable that varies at runtime. Users can set the default slice at any point.
+        The value of the slice is evaluated at execution time of this method.
+
+        Incorrect: from kaskada.client import KASKADA_DEFAULT_SLICE
+            This value is evaluated once at the import of the query module.
+
+        Correct: import kaskada.client
+            The value is then fetched from the module every time a query is invoked.
+        """
+        slice_filter = kaskada.client.KASKADA_DEFAULT_SLICE
 
     change_since_time = get_timestamp(changed_since_time)
     final_result_time = get_timestamp(final_result_time)

@@ -38,6 +38,7 @@ static_init.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+bincode.workspace = true
 insta.workspace = true
 proptest.workspace = true
 

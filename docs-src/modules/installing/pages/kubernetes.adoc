@@ -1,0 +1,63 @@
+= In Kubernetes with Helm
+
+xref:url:https://helm.sh/[Helm] charts allows you to configure, install, and upgrade Kaskada within a Kubernetes cluster.
+
+== Prerequisites
+
+* Helm 3 or above. See xref:url:https://helm.sh/docs/intro/install/[Installing Helm].
+* A running Kubernetes cluster
+
+== Kaskada-Canary Helm Chart
+
+The xref:url:https://github.com/kaskada-ai/helm-charts/tree/main/charts/kaskada-canary[Kaskada Canary Helm Chart] installs a persistant version of the kaskada service in the simplest configuration possible.
+
+In this setup, the kaskada service runs as two containers in a single pod, and persists its database as a file on attached storage. It can store data locally, but ideally it should have access to an object store.
+
+This chart is primarily intended for initial testing and should not be used in production scenarios.
+
+=== Install the Kaskada Canary Helm Chart
+
+1. Add Kaskada's Helm repository to your local Helm installation:
+
+[source,shell]
+----
+helm repo add kaskada https://kaskada.io/helm-charts
+----
+
+1. Update the chart repository:
+[source,shell]
+----
+helm repo update
+----
+
+1. If desired, override settings from the `values.yaml` file. For example, the following config configures `s3` as the object store using AWS access-key/secret as the authentication mechanism, and adds a load balancer to the service for ingress:
+[source,yaml]
+----
+auth:
+  aws:
+    accessKeyId: <your_access_key_id>
+    secretAccessKey: <your_secret_access_key>
+    region: <s3_bucket_region>
+
+storage:
+  objectStore:
+    bucket: <s3_bucket_name>
+    type: s3
+  dbData:
+    storageClassName: gp2
+  tmpData:
+    storageClassName: gp2
+
+service:
+  type: LoadBalancer
+----
+
+
+1. Deploy the chart:
+
+  * Deploy with the defined configuration:
+
+[source,shell]
+----
+helm install kaskada-canary kaskada/kaskada-canary -f values.yaml
+----

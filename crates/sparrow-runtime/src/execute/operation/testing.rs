@@ -98,7 +98,7 @@ pub(super) fn batch_from_csv(
     Ok(batch)
 }
 
-/// Parse a `RecordBatch` from the given CSV string.
+/// Parse a `RecordBatch` from the given JSON string.
 ///
 /// This expects the first 3 columns to be the "key columns"
 /// (_time, _subsort, _key_hash). As part of that, it will attempt
