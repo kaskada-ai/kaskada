@@ -115,11 +115,11 @@ async fn test_s_to_i64_get_with_first_last_agg() {
     // is applied over the _map_ value, which does not necessarily hold an "f2" key.
     insta::assert_snapshot!(QueryFixture::new("{ first_f2: Input.s_to_i64 | first() | get(\"f2\"), last_f2: Input.s_to_i64 | last() | get(\"f2\") }").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,first_f2,last_f2
-    1996-12-19T16:39:57.000000000,0,2359047937476779835,1,22,22
-    1996-12-19T16:40:57.000000000,0,2359047937476779835,1,22,10
-    1996-12-19T16:40:59.000000000,0,2359047937476779835,1,22,3
-    1996-12-19T16:41:57.000000000,0,2359047937476779835,1,22,13
-    1996-12-19T16:42:57.000000000,0,2359047937476779835,1,22,
+    1996-12-19T16:39:57.000000000,0,18433805721903975440,1,22,22
+    1996-12-19T16:40:57.000000000,0,18433805721903975440,1,22,10
+    1996-12-19T16:40:59.000000000,0,18433805721903975440,1,22,3
+    1996-12-19T16:41:57.000000000,0,18433805721903975440,1,22,13
+    1996-12-19T16:42:57.000000000,0,18433805721903975440,1,22,
     "###);
 }
 
@@ -127,11 +127,11 @@ async fn test_s_to_i64_get_with_first_last_agg() {
 async fn test_map_output_into_sum_aggregation() {
     insta::assert_snapshot!(QueryFixture::new("{ sum: Input.s_to_i64 | get(\"f1\") | sum(), value: Input.s_to_i64 | get(Input.s_to_i64_key) } | with_key(Input.s_to_i64_key)").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum,value
-    1996-12-19T16:39:57.000000000,0,18146622110643880433,f1,0,0
-    1996-12-19T16:40:57.000000000,0,7541589802123724450,f2,1,10
-    1996-12-19T16:40:59.000000000,0,5533153676183607778,f3,6,
-    1996-12-19T16:41:57.000000000,0,7541589802123724450,f2,6,13
-    1996-12-19T16:42:57.000000000,0,5533153676183607778,f3,21,11
+    1996-12-19T16:39:57.000000000,0,16639162690259065874,f1,0,0
+    1996-12-19T16:40:57.000000000,0,10324241474229410792,f2,1,10
+    1996-12-19T16:40:59.000000000,0,1256917131994086784,f3,6,
+    1996-12-19T16:41:57.000000000,0,10324241474229410792,f2,6,13
+    1996-12-19T16:42:57.000000000,0,1256917131994086784,f3,21,11
     "###);
 }
 
@@ -158,7 +158,7 @@ async fn test_query_with_merge_and_map_output() {
     .unwrap();
 
     assert_eq!(
-        "92C3C8B7E6AE6AF41266B63F3FBE11958DB5BFD23B58E891963F6287",
+        "E28AF590FCD81C1F47F79355DBCADDCBB76CF0B15091EB4D07F2E900",
         hash
     );
 }
@@ -173,7 +173,7 @@ async fn test_first_last_map() {
             .await
             .unwrap();
 
-    let expected = "AB719CF6634779A5285D699A178AC69354696872E3733AA9388C9A6A";
+    let expected = "D88A77A7F5172527642A4784A7482D17303FBE510435AA5E6BD3965C";
     assert_eq!(hash, expected);
 }
 
