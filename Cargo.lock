@@ -421,7 +421,7 @@ version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81953c529336010edd6d8e358f886d9581267795c61b19475b71314bffa46d35"
 dependencies = [
- "concurrent-queue 2.2.0",
+ "concurrent-queue",
  "event-listener",
  "futures-core",
 ]
@@ -434,7 +434,7 @@ checksum = "6fa3dc5f2a8564f07759c008b9109dc0d39de92a88d5588b8a5036d286383afb"
 dependencies = [
  "async-lock",
  "async-task",
- "concurrent-queue 2.2.0",
+ "concurrent-queue",
  "fastrand 1.9.0",
  "futures-lite",
  "slab",
@@ -464,7 +464,7 @@ dependencies = [
  "async-lock",
  "autocfg",
  "cfg-if",
- "concurrent-queue 2.2.0",
+ "concurrent-queue",
  "futures-lite",
  "log",
  "parking",
@@ -1231,12 +1231,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cache-padded"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "981520c98f422fcc584dc1a95c334e6953900b9106bc47a9839b81790009eb21"
-
-[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1440,15 +1434,6 @@ name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
-
-[[package]]
-name = "concurrent-queue"
-version = "1.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af4780a44ab5696ea9e28294517f1fffb421a83a25af521333c838635509db9c"
-dependencies = [
- "cache-padded",
-]
 
 [[package]]
 name = "concurrent-queue"
@@ -2176,19 +2161,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "generator"
-version = "0.6.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "061d3be1afec479d56fa3bd182bf966c7999ec175fcfdb87ac14d417241366c6"
-dependencies = [
- "cc",
- "libc",
- "log",
- "rustversion",
- "winapi",
 ]
 
 [[package]]
@@ -2961,23 +2933,12 @@ dependencies = [
 
 [[package]]
 name = "loom"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27a6650b2f722ae8c0e2ebc46d07f80c9923464fc206d962332f1eff83143530"
-dependencies = [
- "cfg-if",
- "generator 0.6.25",
- "scoped-tls",
-]
-
-[[package]]
-name = "loom"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce9394216e2be01e607cf9e9e2b64c387506df1e768b14cbd2854a3650c3c03e"
 dependencies = [
  "cfg-if",
- "generator 0.7.5",
+ "generator",
  "scoped-tls",
  "tracing",
  "tracing-subscriber",
@@ -3704,7 +3665,7 @@ dependencies = [
  "autocfg",
  "bitflags 1.3.2",
  "cfg-if",
- "concurrent-queue 2.2.0",
+ "concurrent-queue",
  "libc",
  "log",
  "pin-project-lite",
@@ -5155,7 +5116,7 @@ dependencies = [
  "error-stack",
  "index_vec",
  "itertools",
- "loom 0.6.1",
+ "loom",
  "serde",
  "sparrow-arrow",
  "tracing",
@@ -6554,12 +6515,12 @@ dependencies = [
 
 [[package]]
 name = "work-queue"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f54d15a54f5becdd82ef1f74f6e0951332d6b311369feb7b3cd45396fe6eb219"
+checksum = "f1c8d5eab11a669da42347cdd5244563592edabfe06c7778553185ffeedb623d"
 dependencies = [
- "concurrent-queue 1.2.4",
- "loom 0.4.1",
+ "concurrent-queue",
+ "loom",
 ]
 
 [[package]]
