@@ -125,13 +125,13 @@ async fn test_s_to_i64_get_with_first_last_agg() {
 
 #[tokio::test]
 async fn test_map_output_into_sum_aggregation() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum: Input.e0 | get(\"f1\") | sum(), value: Input.e0 | get(Input.e3) } | with_key(Input.e1)").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum: Input.s_to_i64 | get(\"f1\") | sum(), value: Input.s_to_i64 | get(Input.s_to_i64_key) } | with_key(Input.s_to_i64_key)").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum,value
-    1996-12-19T16:39:57.000000000,0,2359047937476779835,1,0,0
-    1996-12-19T16:40:57.000000000,0,1575016611515860288,2,1,10
-    1996-12-19T16:40:59.000000000,0,12336244722559374843,42,6,
-    1996-12-19T16:41:57.000000000,0,12336244722559374843,42,6,13
-    1996-12-19T16:42:57.000000000,0,14956259290599888306,3,21,11
+    1996-12-19T16:39:57.000000000,0,18146622110643880433,f1,0,0
+    1996-12-19T16:40:57.000000000,0,7541589802123724450,f2,1,10
+    1996-12-19T16:40:59.000000000,0,5533153676183607778,f3,6,
+    1996-12-19T16:41:57.000000000,0,7541589802123724450,f2,6,13
+    1996-12-19T16:42:57.000000000,0,5533153676183607778,f3,21,11
     "###);
 }
 
@@ -151,14 +151,14 @@ async fn test_query_with_merge_and_map_output() {
     //
     // It also produces a `map` as an output, verifying we can write maps to parquet.
     let hash = QueryFixture::new(
-        "{ map: Input.e0, value: Input.e0 | get(Input.e3), lookup: lookup(Input.e1 as u64, Input) }",
+        "{ map: Input.s_to_i64, value: Input.s_to_i64 | get(Input.s_to_i64_key), lookup: lookup(Input.s_to_i64_key as u64, Input) }",
     )
     .run_to_parquet_hash(&map_data_fixture().await)
     .await
     .unwrap();
 
     assert_eq!(
-        "49A80457AD0812C4EA1E88FB661D8E464C25A72FAE1094D386A555BD",
+        "92C3C8B7E6AE6AF41266B63F3FBE11958DB5BFD23B58E891963F6287",
         hash
     );
 }

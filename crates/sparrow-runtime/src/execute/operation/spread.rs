@@ -4,9 +4,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::array::{
     new_null_array, Array, ArrayData, ArrayRef, BooleanArray, BooleanBufferBuilder,
-    GenericStringArray, GenericStringBuilder, Int32BufferBuilder, LargeStringArray,
-    LargeStringBuilder, ListArray, MapArray, OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder,
-    StringArray, StringBuilder, StructArray,
+    GenericStringArray, GenericStringBuilder, Int32BufferBuilder, ListArray, MapArray,
+    OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder, StringArray, StringBuilder, StructArray,
 };
 use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
@@ -338,7 +337,7 @@ impl Spread {
                 if latched {
                     Box::<operation::spread::LatchedStringSpread<i64>>::default()
                 } else {
-                    Box::new(UnlatchedLargeStringSpread)
+                    Box::new(UnlatchedStringSpread::<i64>::default())
                 }
             }
             DataType::Struct(fields) => {
