@@ -1,0 +1,11 @@
+* xref:index.adoc[]
+
+* Categories
+** xref:category/operators.adoc[]
+{% for tag in tags | sort -%}
+** xref:category/{{ tag }}.adoc[]
+{% endfor %}
+* Functions
+{% for function in functions -%}
+** xref:function/{{ function.name }}.adoc[]
+{% endfor %}

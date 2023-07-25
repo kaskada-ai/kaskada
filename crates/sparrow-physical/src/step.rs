@@ -26,6 +26,8 @@ index_vec::define_index_type! {
 /// on the newly computed keys.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Step {
+    /// The ID of the step.
+    pub id: StepId,
     /// The kind of step being performed.
     pub kind: StepKind,
     /// Inputs to this step.
@@ -35,7 +37,7 @@ pub struct Step {
 }
 
 /// The kinds of steps that can occur in the physical plan.
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, strum_macros::IntoStaticStr)]
 #[serde(rename_all = "snake_case")]
 
 pub enum StepKind {

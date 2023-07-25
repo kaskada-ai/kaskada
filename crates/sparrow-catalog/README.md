@@ -7,11 +7,14 @@ Each `toml` file defines the documentation for a Fenl function.
 
 ## Generating Documentation
 
-Documentation may be generated using (from `sparrow-rs` directory) the following command.
-This uses the `catalog.md` template from the template-dir to render the catalog.
+Documentation may be generated using the following command.
+This renders all the templates in the template dir other than partials.
 
 ```sh
-cargo run -p sparrow-catalog -- --input-dir sparrow-catalog/catalog generate --template-dir sparrow-catalog/templates
+cargo run -p sparrow-catalog -- \
+  --input-dir crates/sparrow-catalog/catalog generate \
+  --template-dir crates/sparrow-catalog/templates \
+  --output-dir=catalog-tmp
 ```
 
 ## Updating Examples / Signatures
@@ -19,15 +22,15 @@ cargo run -p sparrow-catalog -- --input-dir sparrow-catalog/catalog generate --t
 The following updates the signature and example output in the `toml` files.
 
 ```sh
-cargo run -p sparrow-catalog -- --input-dir sparrow-catalog/catalog update
+cargo run -p sparrow-catalog -- --input-dir crates/sparrow-catalog/catalog update
 ```
 
-## Checking Examlpes / Signatures
+## Checking Examples / Signatures
 
 The following ensures that the signature and example output in the `toml` files are up to date.
 
 ```sh
-cargo run -p sparrow-catalog -- --input-dir sparrow-catalog/catalog check
+cargo run -p sparrow-catalog -- --input-dir crates/sparrow-catalog/catalog check
 ```
 
 ## Function Documentation Style Guide
