@@ -5,6 +5,7 @@ description = "Kaskada query builder and local execution engine."
 authors = []
 
 [tool.poetry.dependencies]
+pandas = "^2.0.3"
 python = ">=3.8,<4.0"
 
 [tool.poetry.dev-dependencies]
@@ -20,6 +21,7 @@ furo = ">=2021.11.12"
 isort = ">=5.10.1"
 mypy = ">=0.930"
 pep8-naming = ">=0.12.1"
+pyarrow = "^12.0.1"
 pytest = ">=6.2.5"
 pyupgrade = ">=2.29.1"
 safety = ">=1.10.3"
