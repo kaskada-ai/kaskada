@@ -114,6 +114,8 @@ session = LocalBuilder().keep_alive(False).build()
 
 ====
 
+Once we have a Kaskada `session` created we can start now interacting with the Kaskada components using the Kaskada client.
+
 Let's now create a small table and write a simple query to see that everything is working correctly with our setup.
 
 === Enable the Kaskada magic command
@@ -165,9 +167,7 @@ When creating a table, you must tell Kaskada which columns contain the time and 
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.create_table(
   # The table's name
@@ -241,9 +241,7 @@ load the contents of a Parquet file into the table.
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 # A sample Parquet file provided by Kaskada for testing
 # Available at https://drive.google.com/uc?export=download&id=1SLdIw9uc0RGHY-eKzS30UBhN0NJtslkk
@@ -379,9 +377,7 @@ When you're done with this tutorial, you can delete the table you created in ord
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.delete_table(
   # The table's name

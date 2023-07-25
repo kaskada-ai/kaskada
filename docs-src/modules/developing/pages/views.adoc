@@ -93,9 +93,7 @@ without re-typing the expression:
 [source,python]
 ----
 from kaskada import view
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 view.create_view(
     view_name = "PurchaseStats",
@@ -117,9 +115,7 @@ Python::
 [source,python]
 ----
 from kaskada import view
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 view.list_views()
 ----
@@ -143,9 +139,7 @@ Python::
 [source,python]
 ----
 from kaskada import view
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 view.get_view("PurchaseStats")
 ----
@@ -174,9 +168,7 @@ Python::
 [source,python]
 ----
 from kaskada import view
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 view.delete_view("PurchaseStats")
 ----
@@ -203,9 +195,7 @@ Python::
 [source,python]
 ----
 from kaskada import view
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 view.delete_view("PurchaseStats", force = True)
 ----
