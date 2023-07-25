@@ -125,7 +125,7 @@ async fn test_s_to_i64_get_with_first_last_agg() {
 
 #[tokio::test]
 async fn test_map_output_into_sum_aggregation() {
-    insta::assert_snapshot!(QueryFixture::new("{ sum: Input.s_to_i64 | get(\"f1\") | sum(), value: Input.s_to_i64 | get(Input.s_to_i64_key) } | with_key(Input.s_to_i64_key)").run_to_csv(&collection_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ sum: Input.s_to_i64 | get(\"f1\") | sum(), value: Input.s_to_i64 | get(Input.s_to_i64_key) } | with_key(Input.s_to_i64_key)").run_to_csv(&map_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,sum,value
     1996-12-19T16:39:57.000000000,0,18146622110643880433,f1,0,0
     1996-12-19T16:40:57.000000000,0,7541589802123724450,f2,1,10
