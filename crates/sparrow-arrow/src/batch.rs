@@ -73,6 +73,15 @@ impl Batch {
         }
     }
 
+    /// Create a new `Batch` containing the given batch data.
+    ///
+    /// `time`, `subsort` and `key_hash` are references to the key columns.
+    /// They may be references to columns within the batch or not.
+    ///
+    /// `up_to_time` is a [RowTime] such that:
+    ///  (a) all rows so far are less than or equal to `up_to_time`
+    ///  (b) all rows in this batch or less than or equal to `up_to_time`
+    ///  (c) all future rows are greater than `up_to_time`.
     pub fn new_with_data(
         batch: RecordBatch,
         time: ArrayRef,
