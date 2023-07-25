@@ -178,9 +178,9 @@ pub(crate) async fn kafka_stream_reader(
         .await
         .change_context(Error::CreateStream)?;
 
-    // TODO: Convert from avro_schema::schema::Schema -> avro_rs::schema.
     let stream = streams::kafka::stream::execution_stream(
         kafka_metadata.kafka_avro_schema,
+        kafka_metadata.sparrow_metadata.raw_schema,
         projected_schema.clone(),
         consumer,
     );
@@ -210,6 +210,7 @@ pub(crate) async fn kafka_stream_reader(
         loop {
             if let Some(next_input) = input_stream.next().await {
                 let next_input = next_input.change_context(Error::ReadNextBatch)?;
+                tracing::debug!("Stream reader next batch: {:?}", next_input);
                 match next_input {
                     None => continue,
                     Some(input) => {
