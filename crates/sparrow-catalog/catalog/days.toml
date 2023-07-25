@@ -1,7 +1,7 @@
-name = 'days'
-signature = 'days(days: i64) -> interval_days'
-short_doc = 'Produces an interval corresponding to the given number of calendar days.'
-long_doc = '''
+name = "days"
+signature = "days(days: i64) -> interval_days"
+short_doc = "Produces an interval corresponding to the given number of calendar days."
+long_doc = """
 ### Parameters
 * days: The number of days to create the interval for.
 
@@ -10,17 +10,17 @@ Returns an `interval_days` column with each row containing the
 value of `days` converted to an interval with the corresponding
 number of days. Rows where `days` is `null`, less than `0` or
 greater than `i32::MAX` will be `null`.
-'''
-tags = ['time']
+"""
+tags = ["time"]
 
 [[examples]]
-name = 'Adding a variable number of days'
-description = '''
+name = "Adding a variable number of days"
+description = """
 This example uses [`add_time`](#add-time) to add the created
 interval to the `time` column.
-'''
-expression = 'Input.time | add_time(days(Input.n))'
-input_csv = '''
+"""
+expression = "Input.time | add_time(days(Input.n))"
+input_csv = """
 time,key,n
 1996-03-21T00:00:00-00:00,Ben,1
 1996-04-21T00:00:00-00:00,Ryan,2
@@ -28,8 +28,8 @@ time,key,n
 1996-06-21T00:00:00-00:00,Ryan,
 1996-07-21T00:00:00-00:00,Ben,2
 1996-08-21T00:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,result
 1996-03-21T00:00:00.000000000,Ben,1,1996-03-22T00:00:00.000000000
 1996-04-21T00:00:00.000000000,Ryan,2,1996-04-23T00:00:00.000000000
@@ -37,4 +37,4 @@ time,key,n,result
 1996-06-21T00:00:00.000000000,Ryan,,
 1996-07-21T00:00:00.000000000,Ben,2,1996-07-23T00:00:00.000000000
 1996-08-21T00:00:00.000000000,Ben,1,1996-08-22T00:00:00.000000000
-'''
+"""

@@ -1,7 +1,7 @@
-name = 'sqrt'
-signature = 'sqrt(a: number) -> f64'
-short_doc = 'Returns the square root of `a`.'
-long_doc = '''
+name = "sqrt"
+signature = "sqrt(a: number) -> f64"
+short_doc = "Returns the square root of `a`."
+long_doc = """
 ### Parameters
 * a: The number to take the square root of.
 
@@ -9,21 +9,21 @@ long_doc = '''
 Returns a column of type `f64`.
 The result contains `null` if `a` was null at that row.
 Otherwise the row contains the square root of `a`.
-'''
-tags = ['math']
+"""
+tags = ["math"]
 
 [[examples]]
-name = 'Square Root'
-expression = 'sqrt(Input.a)'
-input_csv = '''
+name = "Square Root"
+expression = "sqrt(Input.a)"
+input_csv = """
 time,key,a
 2021-01-01T00:00:00.000000000Z,A,5.7
 2021-01-01T00:00:00.000000000Z,A,6.3
 2021-01-02T00:00:00.000000000Z,B,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,result
 2021-01-01T00:00:00.000000000,A,5.7,2.3874672772626644
 2021-01-01T00:00:00.000000000,A,6.3,2.5099800796022267
 2021-01-02T00:00:00.000000000,B,,
-'''
+"""

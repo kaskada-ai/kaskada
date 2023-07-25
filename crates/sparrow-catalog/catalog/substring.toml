@@ -1,7 +1,7 @@
-name = 'substring'
-signature = 'substring(s: string, start: i64 = null, end: i64 = null) -> string'
-short_doc = 'Takes a substring of the input between start and end indices.'
-long_doc = '''
+name = "substring"
+signature = "substring(s: string, start: i64 = null, end: i64 = null) -> string"
+short_doc = "Takes a substring of the input between start and end indices."
+long_doc = """
 ### Parameters
 * s: The string to take a substring of.
 * start: The inclusive index to start at. `null` indicates the beginning of the
@@ -15,12 +15,12 @@ starting at `start` (inclusive) up to but not including the `end`.
 
 If `s` is `null`, returns `null`. If `end > start` an empty string is
 returned.
-'''
-tags = ['string']
+"""
+tags = ["string"]
 
 [[examples]]
-name = 'Substring Suffix'
-description = '''
+name = "Substring Suffix"
+description = """
 This example shows using the `substring` function to extract
 the last 3 characters of a string. Note that if the string
 is shorter than 3 characters the empty string is returned.
@@ -28,9 +28,9 @@ is shorter than 3 characters the empty string is returned.
 Specifically, `-3` is interpreted as `len(s) - 3`, which produces
 a negative number for shorter strings, and is thus less than the
 start of the string (`0`).
-'''
-expression = 'Input.value | substring(start = -3)'
-input_csv = '''
+"""
+expression = "Input.value | substring(start = -3)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,Hello World
 2021-01-02T00:00:00.000000000Z,Ryan,
@@ -38,8 +38,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,Hello
 2021-01-03T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,hi
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,Hello World,rld
 2021-01-02T00:00:00.000000000,Ryan,,
@@ -47,13 +47,13 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,Hello,llo
 2021-01-03T00:00:00.000000000,Ben,,
 2021-01-04T00:00:00.000000000,Ryan,hi,
-'''
+"""
 
 [[examples]]
-name = 'Substring'
-description = ''
-expression = 'Input.value | substring(start = 3, end = -3)'
-input_csv = '''
+name = "Substring"
+description = ""
+expression = "Input.value | substring(start = 3, end = -3)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,Hello World
 2021-01-02T00:00:00.000000000Z,Ryan,
@@ -61,8 +61,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,Hello
 2021-01-03T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,hi
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,Hello World,lo Wo
 2021-01-02T00:00:00.000000000,Ryan,,
@@ -70,4 +70,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,Hello,
 2021-01-03T00:00:00.000000000,Ben,,
 2021-01-04T00:00:00.000000000,Ryan,hi,
-'''
+"""

@@ -1,8 +1,8 @@
-name = 'not'
-signature = 'not(input: bool) -> bool'
-operator = '!input'
-short_doc = 'Returns the logical negation of a boolean.'
-long_doc = '''
+name = "not"
+signature = "not(input: bool) -> bool"
+operator = "!input"
+short_doc = "Returns the logical negation of a boolean."
+long_doc = """
 This is the function used for the unary operation `!input`.
 
 ### Parameters
@@ -11,12 +11,12 @@ This is the function used for the unary operation `!input`.
 ### Results
 For each row, return `true` if `input` is `false`, `false` if
 `input` is `true` and `null` if `input` is `null`.
-'''
-tags = ['logical']
+"""
+tags = ["logical"]
 
 [[examples]]
-expression = '!Input.a'
-input_csv = '''
+expression = "!Input.a"
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,A,true,false
 2021-01-02T00:00:00.000000000Z,B,true,true
@@ -25,8 +25,8 @@ time,key,a,b
 2021-02-01T00:00:00.000000000Z,A,,true
 2021-02-02T00:00:00.000000000Z,B,true,
 2021-03-01T00:00:00.000000000Z,A,,false
-2021-03-03T00:00:00.000000000Z,B,false,'''
-output_csv = '''
+2021-03-03T00:00:00.000000000Z,B,false,"""
+output_csv = """
 time,key,a,b,result
 2021-01-01T00:00:00.000000000,A,true,false,false
 2021-01-02T00:00:00.000000000,B,true,true,false
@@ -36,4 +36,4 @@ time,key,a,b,result
 2021-02-02T00:00:00.000000000,B,true,,false
 2021-03-01T00:00:00.000000000,A,,false,
 2021-03-03T00:00:00.000000000,B,false,,true
-'''
+"""

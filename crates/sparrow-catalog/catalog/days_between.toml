@@ -1,7 +1,7 @@
-name = 'days_between'
-signature = 'days_between(t1: timestamp_ns, t2: timestamp_ns) -> interval_days'
-short_doc = 'Returns the number of days between the first and second timestamp.'
-long_doc = '''
+name = "days_between"
+signature = "days_between(t1: timestamp_ns, t2: timestamp_ns) -> interval_days"
+short_doc = "Returns the number of days between the first and second timestamp."
+long_doc = """
 ### Parameters
 * t1: The first timestamp
 * t2: The second timestamp
@@ -14,17 +14,17 @@ rounded towards zero.
 In rows where `t1` or `t2` are `null`, the result will be `null`.
 If `t1` is before `t2`, the result will be positive. If `t1`
 is after `t2` the result will be negative.
-'''
-tags = ['time']
+"""
+tags = ["time"]
 
 [[examples]]
-name = 'Days Between'
-description = '''
+name = "Days Between"
+description = """
 Note that the expression uses `as i32` to convert the `interval_days`
 to the integer number of days. This discards the units.
-'''
-expression = 'days_between(Input.time, Input.date) as i32'
-input_csv = '''
+"""
+expression = "days_between(Input.time, Input.date) as i32"
+input_csv = """
 time,key,date
 1996-03-21T00:00:00-00:00,Ben,1996-08-19T00:00:00-00:00
 1996-04-21T00:00:00-00:00,Ryan,1995-07-20T00:00:00-00:00
@@ -32,8 +32,8 @@ time,key,date
 1996-06-21T00:00:00-00:00,Ryan,1996-06-19T05:00:00-00:00
 1996-07-21T00:00:00-00:00,Ben,
 1996-08-21T00:00:00-00:00,Ben,1996-08-22T00:00:00-00:00
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,date,result
 1996-03-21T00:00:00.000000000,Ben,1996-08-19T00:00:00.000000000,151
 1996-04-21T00:00:00.000000000,Ryan,1995-07-20T00:00:00.000000000,-276
@@ -41,4 +41,4 @@ time,key,date,result
 1996-06-21T00:00:00.000000000,Ryan,1996-06-19T05:00:00.000000000,-1
 1996-07-21T00:00:00.000000000,Ben,,
 1996-08-21T00:00:00.000000000,Ben,1996-08-22T00:00:00.000000000,1
-'''
+"""

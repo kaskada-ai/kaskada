@@ -1,7 +1,7 @@
-name = 'sum'
-signature = 'sum(input: number, window: window = null) -> number'
-short_doc = 'Computes the sum of values across the input.'
-long_doc = '''
+name = "sum"
+signature = "sum(input: number, window: window = null) -> number"
+short_doc = "Computes the sum of values across the input."
+long_doc = """
 ### Parameters
 * input: The input to compute the sum of.
 * window: The window to aggregate within, as described in
@@ -13,16 +13,16 @@ See [window functions](#window-functions) for how to specify the aggregation win
 For each input row, return the minimum of new, non-`null` rows in `input` up to and
 including the input row for the given entity. Returns `null` until there has been
 at least one such input.
-'''
+"""
 tags = [
-    'aggregation',
-    'math',
+    "aggregation",
+    "math",
 ]
 
 [[examples]]
-name = 'Sum'
-expression = 'sum(Input.value)'
-input_csv = '''
+name = "Sum"
+expression = "sum(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,50.7
 2021-01-01T00:00:00.000000000Z,Ryan,
@@ -30,8 +30,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,1.2
 2021-01-04T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,2.3
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,50.7,50.7
 2021-01-01T00:00:00.000000000,Ryan,,
@@ -39,4 +39,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,1.2,51.900000000000006
 2021-01-04T00:00:00.000000000,Ben,,51.900000000000006
 2021-01-04T00:00:00.000000000,Ryan,2.3,69.5
-'''
+"""

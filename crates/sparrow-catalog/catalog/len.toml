@@ -1,7 +1,7 @@
-name = 'len'
-signature = 'len(s: string) -> i32'
-short_doc = 'Returns the length of the string `s`.'
-long_doc = '''
+name = "len"
+signature = "len(s: string) -> i32"
+short_doc = "Returns the length of the string `s`."
+long_doc = """
 ### Parameters
 * s: The string to compute the length of.
 
@@ -9,13 +9,13 @@ long_doc = '''
 Returns an `i32` column with each row containing the length of the
 string `s` in that row. Returns `0` for the empty string and `null`
 if `s` is `null`.
-'''
-tags = ['string']
+"""
+tags = ["string"]
 
 [[examples]]
-name = 'String Length'
-expression = 'Input.value | len()'
-input_csv = '''
+name = "String Length"
+expression = "Input.value | len()"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,Hello World
 2021-01-02T00:00:00.000000000Z,Ryan,''
@@ -23,8 +23,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,Hello
 2021-01-03T00:00:00.000000000Z,Ben,''
 2021-01-04T00:00:00.000000000Z,Ryan,hi
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,Hello World,11
 2021-01-02T00:00:00.000000000,Ryan,'',2
@@ -32,4 +32,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,Hello,5
 2021-01-03T00:00:00.000000000,Ben,'',2
 2021-01-04T00:00:00.000000000,Ryan,hi,2
-'''
+"""

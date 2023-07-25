@@ -27,7 +27,7 @@ fn parse_error_to_diagnostic(
         ParseError::InvalidToken { location } => DiagnosticCode::SyntaxError
             .builder()
             .with_label(Label::primary(part_id, location..location).with_message("Invalid token")),
-        ParseError::UnrecognizedEOF { location, expected } => {
+        ParseError::UnrecognizedEof { location, expected } => {
             let diagnostic = DiagnosticCode::SyntaxError.builder().with_label(
                 Label::primary(part_id, location..location).with_message("Unexpected EOF"),
             );
