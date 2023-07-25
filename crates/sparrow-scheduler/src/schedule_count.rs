@@ -39,9 +39,7 @@ impl<'a> ScheduleGuard<'a> {
     /// This will reset the entry count. If the count has been increased during execution
     /// this will return `true` to indicate the task should be re-scheduled.
     pub fn finish(self) -> bool {
-        let schedule_count = self
-            .count.0
-            .fetch_sub(self.entry_count, Ordering::SeqCst);
+        let schedule_count = self.count.0.fetch_sub(self.entry_count, Ordering::SeqCst);
         schedule_count != self.entry_count
     }
 }
