@@ -151,7 +151,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
-			helpers.LogLn(fmt.Sprintf("Result set size, with 100%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 100 percent slice: %d", len(results)))
 
 			Expect(len(results)).Should(Equal(rowCount))
 		})
@@ -197,7 +197,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
-			helpers.LogLn(fmt.Sprintf("Result set size, with 10%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 10 percent slice: %d", len(results)))
 
 			/*
 			 * There are 150 unique entities in this dataset.
@@ -212,8 +212,8 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 		})
 	})
 
-	Describe("Run the query with a 0.3% slice", func() {
-		It("should return about 0.3% of the results", func() {
+	Describe("Run the query with a 1% slice", func() {
+		It("should return about 1% of the results", func() {
 			destination := &v1alpha.Destination{}
 			destination.Destination = &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
@@ -228,7 +228,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 					Slice: &v1alpha.SliceRequest{
 						Slice: &v1alpha.SliceRequest_Percent{
 							Percent: &v1alpha.SliceRequest_PercentSlice{
-								Percent: 0.3,
+								Percent: 1,
 							},
 						},
 					},
@@ -252,18 +252,17 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
-			helpers.LogLn(fmt.Sprintf("Result set size, with 0.3%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 1 percent slice: %d", len(results)))
 
 			/*
 			 * There are 150 unique entities in this dataset.
 			 * Each entity has an average of 333.3 events.
 			 * The total dataset size is 50,000 (150 * 333.3 = 49,995)
-			 * Assuming uniform distribution (not entirely true), then 0.03% of the entities = ~1 entites (0.45 entities)
-			 * Since the 0.3% slice is based on a hashing function, there is some room for error.
-			 * Random Heuristic: Lower Bound -> 0% (0 entities) and Upper Bound -> 1% (1.5 entities)
-			 * Lower Bound: 0 (0 * 333.3) and Upper Bound: 499.95 (1.5 * 333.3)
+			 * Assuming uniform distribution (not entirely true), then 1% of the entities = 1.5 entites
+			 * Since the 1% slice is based on a hashing function, there is some room for error.
+			 * Lower Bound: 333 (1 * 333.3) and Upper Bound: 666 (2 * 333.3)
 			 */
-			Expect(len(results)).Should(BeNumerically("~", 250, 125))
+			Expect(len(results)).Should(BeNumerically("~", 500, 200))
 		})
 	})
 

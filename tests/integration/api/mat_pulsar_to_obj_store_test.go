@@ -174,7 +174,7 @@ var _ = Describe("Materialization from Pulsar to ObjectStore", Ordered, Label("p
 				results := helpers.GetCSV(outputPath + firstFileName)
 				g.Expect(results).Should(HaveLen(2)) //header row + 1 data row
 				g.Expect(results[0]).Should(ContainElements("_time", "_subsort", "_key_hash", "last_id", "last_time", "count"))
-				g.Expect(results[1]).Should(ContainElements("2023-06-20T23:30:01.000000000", "0", "2122274938272070218", "9", "9", "1687303801000000000", "1"))
+				g.Expect(results[1]).Should(ContainElements("2023-06-20T23:30:01.000000000", "0", "15653042715643359010", "9", "9", "1687303801000000000", "1"))
 			}, "10s", "1s").Should(Succeed())
 		})
 	})
@@ -197,15 +197,12 @@ var _ = Describe("Materialization from Pulsar to ObjectStore", Ordered, Label("p
 				g.Expect(dirs).Should(HaveLen(1))
 
 				for _, dir := range dirs {
-					if dir.Name() == firstFileName {
-						continue
-					}
 					results := helpers.GetCSV(outputPath + dir.Name())
 					g.Expect(results).Should(HaveLen(4)) //header row + 3 data row
 					g.Expect(results[0]).Should(ContainElements("_time", "_subsort", "_key_hash", "last_id", "last_time", "count"))
-					g.Expect(results[1]).Should(ContainElements("2023-06-20T23:30:01.000000000", "0", "2122274938272070218", "9", "9", "1687303801000000000", "1"))
-					g.Expect(results[1]).Should(ContainElements("2023-06-20T23:30:03.000000000", "1", "1575016611515860288", "2", "2", "1687303803000000000", "1"))
-					g.Expect(results[1]).Should(ContainElements("2023-06-20T23:30:05.000000000", "2", "11820145550582457114", "4", "4", "1687303805000000000", "1"))
+					g.Expect(results[1]).Should(ContainElements("2023-06-20T23:30:01.000000000", "0", "15653042715643359010", "9", "9", "1687303801000000000", "1"))
+					g.Expect(results[2]).Should(ContainElements("2023-06-20T23:30:03.000000000", "1", "2694864431690786590", "2", "2", "1687303803000000000", "1"))
+					g.Expect(results[3]).Should(ContainElements("2023-06-20T23:30:05.000000000", "2", "17062639839782733832", "4", "4", "1687303805000000000", "1"))
 				}
 			}, "10s", "1s").Should(Succeed())
 		})
