@@ -330,14 +330,14 @@ impl Spread {
                 if latched {
                     Box::<operation::spread::LatchedStringSpread<i32>>::default()
                 } else {
-                    Box::new(UnlatchedStringSpread::<i32>::default())
+                    Box::<operation::spread::UnlatchedStringSpread<i32>>::default()
                 }
             }
             DataType::LargeUtf8 => {
                 if latched {
                     Box::<operation::spread::LatchedStringSpread<i64>>::default()
                 } else {
-                    Box::new(UnlatchedStringSpread::<i64>::default())
+                    Box::<operation::spread::UnlatchedStringSpread<i64>>::default()
                 }
             }
             DataType::Struct(fields) => {
