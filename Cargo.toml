@@ -105,8 +105,8 @@ similar-asserts = "1.4.2"
 smallvec = { version = "1.10.0", features = ["union", "serde"] }
 static_assertions = "1.1.0"
 static_init = "1.0.3"
-strum = "0.24.1"
-strum_macros = "0.24.3"
+strum = "0.25.0"
+strum_macros = "0.25.1"
 substring = "1.4.5"
 tempfile = "3.4.0"
 tera = "1.19.0"
@@ -123,10 +123,10 @@ tokio = { version = "1.27.0", features = [
 tokio-stream = { version = "0.1.12", features = ["fs"] }
 tokio-util = { version = "0.7.7", features = ["io"] }
 toml = "0.5.11"
-tonic = "0.8.3"
-tonic-build = { version = "0.8.4", features = ["prost"] }
-tonic-health = "0.8.0"
-tonic-reflection = "0.6.0"
+tonic = "0.9.2"
+tonic-build = { version = "0.9.2", features = ["prost"] }
+tonic-health = "0.9.2"
+tonic-reflection = "0.9.2"
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 tracing-opentelemetry = "0.18.0"
