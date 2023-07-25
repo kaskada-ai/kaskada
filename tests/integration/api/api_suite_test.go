@@ -202,6 +202,16 @@ func getPulsarConfig(topicName string) *v1alpha.PulsarConfig {
 	}
 }
 
+func getKafkaConfig(topicName string) *v1alpha.KafkaConfig {
+	return &v1alpha.KafkaConfig{
+		Hosts: []string{"localhost:29092"},
+		Topic: topicName,
+		Schema: &v1alpha.KafkaConfig_AvroSchema{
+			AvroSchema: "{\"type\": \"record\", \"name\": \"MyRecord\", \"fields\": [{\"name\": \"time\", \"type\":\"long\"}, {\"name\": \"id\", \"type\": \"long\"}, {\"name\": \"my_val\", \"type\": \"long\"}]}",
+		},
+	}
+}
+
 func receivePulsarMessageWithTimeout(pulsarConsumer pulsar.Consumer, ctx context.Context) pulsar.Message {
 	timeout, timeoutCancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer timeoutCancel()

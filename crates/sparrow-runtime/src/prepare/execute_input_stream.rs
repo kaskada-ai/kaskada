@@ -116,6 +116,7 @@ pub async fn prepare_input<'a>(
     Ok(async_stream::try_stream! {
         let mut input_buffer = InputBuffer::new();
         while let Some(unfiltered_batch) = reader.next().await {
+            tracing::debug!("Execute Input Stream: {:?}", unfiltered_batch);
             let unfiltered_batch = unfiltered_batch.into_report().change_context(Error::PreparingColumn)?;
             let unfiltered_rows = unfiltered_batch.num_rows();
 
