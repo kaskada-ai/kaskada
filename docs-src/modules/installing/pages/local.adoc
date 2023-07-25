@@ -1,17 +1,16 @@
-= Installing
+= Locally
 
-Kaskada is an event-processing engine comprised of two main components: 
+Kaskada is an event-processing engine comprised of two main components:
 
 * The `kaskada-engine` component is a stateful compute engine for transforming event data.
 * The `kaskada-manager` is an (optionally) stateful API for communicating with clients
 
 
-
 == Using Kaskada with Python
 
 To use Kaskada with Python you'll need to have Python version 3.6 or above installed.
-Once you have Python installed ensure that you can run it. 
-Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
+Once you have Python installed ensure that you can run it.
+Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands
 
 .Verifying Kaskada prerequisites. The output on your machine may vary.
 [source,bash]
@@ -24,16 +23,16 @@ python --version
 .Installing Kaskada using pip
 [source,bash]
 ----
-pip install kaskada 
+pip install kaskada
 ----
 
 [NOTE]
-.Pip and pip3 and permissions 
+.Pip and pip3 and permissions
 ====
-Depending on you Python installation and configuration you may have `pip3` instead of `pip` available in your terminal. 
+Depending on you Python installation and configuration you may have `pip3` instead of `pip` available in your terminal.
 If you do have `pip3` replace `pip` with `pip3` in your command, i.e., `pip3 install kaskada`
 
-If you get a permission error when running the `pip` command, you may 
+If you get a permission error when running the `pip` command, you may
 
 * need to run as an administrator using `sudo pip install kaskada`
 * or use `pip`'s `--user` flag to install the package in your user directory for environments where you don't have administrator access (e.g., in Google Collab or other hosted environments).
@@ -74,15 +73,15 @@ For more information, please check out the https://kaskada.readthedocs.io/en/lat
 IPython is an interactive Python runtime used by Jupyter and other
 notebooks to evaluate Python code blocks. IPython supports "magic
 extensions" for customizing how code blocks are interpreted. Kaskada
-provides a magic extension that simplifies querying Kaskada. 
+provides a magic extension that simplifies querying Kaskada.
 
-To use Kaskada within a Jupyter notebook you'll need to have the following pieces of software installed 
+To use Kaskada within a Jupyter notebook you'll need to have the following pieces of software installed
 
-. https://realpython.com/installing-python/[Python] (version 3.6 and above) 
-. https://docs.jupyter.org/en/latest/install/notebook-classic.html[Jupyter] 
+. https://realpython.com/installing-python/[Python] (version 3.6 and above)
+. https://docs.jupyter.org/en/latest/install/notebook-classic.html[Jupyter]
 
-Once you have both prerequisites installed ensure that you can run them. 
-Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands 
+Once you have both prerequisites installed ensure that you can run them.
+Open a terminal in your OS (command line prompt on Windows) and check the output of the following commands
 
 .Verifying Kaskada prerequisites. The output shown here is from an Ubuntu system--the output on your machine may vary.
 [source,bash]
@@ -109,10 +108,10 @@ jupyter --version
 ----
 
 
-Kaskada's python library includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks. 
-We need to enable these customizations first before we can use them. 
+Kaskada's python library includes notebook customizations that allow us to write queries in the Fenl language but also receive and render the results of our queries in our notebooks.
+We need to enable these customizations first before we can use them.
 
-.Enable fenlmagic in this notebook 
+.Enable fenlmagic in this notebook
 [source,ipython]
 ----
 %load_ext fenlmagic
@@ -152,7 +151,7 @@ optional arguments:
                         results" (default), or "final-results" which returns
                         only the final values for each entity.
   --var VAR             Assigns the QueryResponse to a local variable with the given
-                        name. The QueryResponse contains result_url, query and dataframe. 
+                        name. The QueryResponse contains result_url, query and dataframe.
 ----
 
 For more information, please check out the https://kaskada.readthedocs.io/en/latest/autoapi/fenlmagic/index.html[Fenlmagic Client] documentation.
@@ -181,7 +180,7 @@ First, print a colon-separated list of the directories in your `PATH`.
 echo PATH
 ----
 
-Move the Kaskada binaries to one of the listed locations. 
+Move the Kaskada binaries to one of the listed locations.
 This command assumes that the binaries are currently in your working directory and that your `PATH`` includes `/usr/local/bin`, but you can customize it if your locations are different.
 
 [source,bash]

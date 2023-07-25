@@ -3,10 +3,9 @@ use arrow::datatypes::DataType;
 use itertools::Itertools;
 use sparrow_plan::{InstKind, InstOp};
 
-use self::macros::create_signed_evaluator;
 use crate::evaluators::macros::{
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
-    create_typed_evaluator,
+    create_signed_evaluator, create_typed_evaluator,
 };
 use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
@@ -19,6 +18,7 @@ mod general;
 mod json_field;
 mod logical;
 mod macros;
+mod map;
 mod math;
 mod record;
 mod string;
@@ -32,6 +32,7 @@ use field_ref::*;
 use general::*;
 use json_field::*;
 use logical::*;
+use map::*;
 use math::*;
 use record::*;
 use sparrow_plan::ValueRef;
@@ -194,6 +195,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                FirstMapEvaluator,
                 FirstBooleanEvaluator,
                 FirstStringEvaluator,
                 FirstPrimitive,
@@ -201,7 +203,7 @@ fn create_simple_evaluator(
             )
         }
         InstOp::Floor => FloorEvaluator::try_new(info),
-        InstOp::Get => todo!("unsupported"),
+        InstOp::Get => GetEvaluator::try_new(info),
         InstOp::Gt => match (info.args[0].is_literal(), info.args[1].is_literal()) {
             (_, true) => {
                 create_ordered_evaluator!(&info.args[0].data_type, GtScalarEvaluator, info)
@@ -244,6 +246,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                LastMapEvaluator,
                 LastBooleanEvaluator,
                 LastStringEvaluator,
                 LastPrimitive,

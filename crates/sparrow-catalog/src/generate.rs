@@ -1,10 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use error_stack::{IntoReport, ResultExt};
-use futures::TryStreamExt;
+use error_stack::{IntoReport, Report, ResultExt};
+use futures::{StreamExt, TryStreamExt};
 use hashbrown::HashSet;
-use serde::Serialize;
-use tokio::io::AsyncWriteExt;
+use tera::Tera;
 
 use crate::list_doc_files;
 use crate::structs::CatalogEntry;
@@ -17,104 +16,211 @@ pub(super) struct GenerateOptions {
     #[arg(long)]
     template_dir: PathBuf,
 
-    /// Output file to write the output to. Defaults to stdout.
+    /// Output directory to write the output to.
     #[arg(long)]
-    output: Option<PathBuf>,
+    output_dir: PathBuf,
 }
 
-#[derive(Serialize)]
 struct CatalogContext {
-    pub functions: Vec<CatalogEntry>,
+    functions: Vec<CatalogEntry>,
     /// The set of all tags. Computing this within the template would be
     /// painful.
-    pub tags: HashSet<String>,
+    tags: HashSet<String>,
+    base_context: tera::Context,
+}
+
+impl CatalogContext {
+    async fn try_new(doc_root: PathBuf) -> error_stack::Result<Self, Error> {
+        let mut functions: Vec<_> = list_doc_files(doc_root)
+            .await
+            .into_report()
+            .change_context(Error::ListingFiles)?
+            .map_err(|e| error_stack::report!(e).change_context(Error::ListingFiles))
+            .map_ok(parse_doc_file)
+            .try_buffer_unordered(4)
+            .try_collect()
+            .await?;
+
+        functions.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let mut tags = HashSet::new();
+        for function in &functions {
+            for tag in &function.tags {
+                tags.get_or_insert_with(tag, |tag| tag.to_owned());
+            }
+        }
+
+        let mut base_context = tera::Context::new();
+        base_context.insert("functions", &functions);
+        base_context.insert("tags", &tags);
+        Ok(Self {
+            functions,
+            tags,
+            base_context,
+        })
+    }
+
+    fn global_context(&self) -> tera::Context {
+        self.base_context.clone()
+    }
+
+    fn function_contexts(&self) -> impl Iterator<Item = (&str, tera::Context)> + '_ {
+        self.functions.iter().map(|entry| {
+            let mut context = self.base_context.clone();
+            context.insert("function", &entry);
+            (entry.name.as_ref(), context)
+        })
+    }
+
+    fn tag_contexts(&self) -> impl Iterator<Item = (&str, tera::Context)> + '_ {
+        self.tags.iter().map(|tag| {
+            let mut context = self.base_context.clone();
+            context.insert("tag", &tag);
+            (tag.as_ref(), context)
+        })
+    }
 }
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
-    #[display(fmt = "failed to write catalog")]
-    WriteCatalog,
-    #[display(fmt = "failed to print catalog")]
-    PrintCatalog,
+    #[display(fmt = "failed to make output dir")]
+    MakeOutputDir,
     #[display(fmt = "failed to list files")]
     ListingFiles,
     #[display(fmt = "failed to read input doc")]
     ReadingInputDoc,
     #[display(fmt = "failed to compile templates")]
     CompileTemplates,
-    #[display(fmt = "failed to render template")]
-    RenderTemplate,
+    #[display(fmt = "failed to render template '{_0}")]
+    RenderTemplate(String),
 }
 
 impl error_stack::Context for Error {}
 
+#[allow(clippy::print_stdout)]
 pub(super) async fn generate(
     doc_root: PathBuf,
     options: GenerateOptions,
 ) -> error_stack::Result<(), Error> {
-    let catalog = generate_catalog(doc_root, options.template_dir).await?;
+    // Create the output directory if it doesn't exist.
+    tokio::fs::create_dir_all(&options.output_dir)
+        .await
+        .into_report()
+        .change_context(Error::MakeOutputDir)?;
 
-    match options.output {
-        Some(path) => tokio::fs::write(path, catalog)
-            .await
-            .into_report()
-            .change_context(Error::WriteCatalog)?,
-        None => tokio::io::stdout()
-            .write_all(catalog.as_bytes())
-            .await
-            .into_report()
-            .change_context(Error::PrintCatalog)?,
-    }
+    render_templates(doc_root, &options.template_dir, &options.output_dir).await?;
+
+    println!(
+        "Generated catalog contents in {}",
+        options.output_dir.display()
+    );
 
     Ok(())
 }
 
-/// Generate the `catalog.md` from the templates and function docs.
-///
-/// This applies the `catalog.md` template.
-pub(super) async fn generate_catalog(
+/// Render the top-level files in the `templates` directory.
+pub(super) async fn render_templates(
     doc_root: PathBuf,
-    template_dir: PathBuf,
-) -> error_stack::Result<String, Error> {
-    let mut functions: Vec<_> = list_doc_files(doc_root)
-        .await
-        .into_report()
-        .change_context(Error::ListingFiles)?
-        .map_err(|e| error_stack::report!(e).change_context(Error::ListingFiles))
-        .map_ok(parse_doc_file)
-        .try_buffer_unordered(4)
-        .try_collect()
-        .await?;
+    template_dir: &Path,
+    output_dir: &Path,
+) -> error_stack::Result<(), Error> {
+    let context = CatalogContext::try_new(doc_root).await?;
 
-    functions.sort_by(|a, b| a.name.cmp(&b.name));
-
-    let mut tags = HashSet::new();
-    for function in &functions {
-        for tag in &function.tags {
-            tags.get_or_insert_with(tag, |tag| tag.to_owned());
-        }
-    }
-
-    let catalog = CatalogContext { functions, tags };
-
-    let template_glob = format!("{}/**/*.md", template_dir.to_string_lossy());
+    let template_glob = format!("{}/**/*", template_dir.to_string_lossy());
     let mut tera = tera::Tera::new(&template_glob)
         .into_report()
         .change_context(Error::CompileTemplates)?;
-    tera.register_filter("csv2md", filters::CsvToMdFilter);
     tera.register_filter("link_fenl_types", filters::LinkFenlTypes);
-    tera.register_filter("warning_block", filters::WarningBlockQuote);
-    let context = tera::Context::from_serialize(catalog)
+
+    // 0. Make the output directories.
+    tokio::fs::create_dir_all(output_dir.join("category"))
+        .await
         .into_report()
-        .change_context(Error::RenderTemplate)?;
+        .change_context(Error::MakeOutputDir)?;
+    tokio::fs::create_dir_all(output_dir.join("function"))
+        .await
+        .into_report()
+        .change_context(Error::MakeOutputDir)?;
 
-    let template_name = "catalog.md";
+    let mut futures = Vec::new();
 
-    let catalog = tera
+    // 1. Render `nav.adoc`, `index.adoc` and `operators.adoc`.
+    futures.push(render(
+        &tera,
+        context.global_context(),
+        "nav.adoc",
+        output_dir.join("nav.adoc"),
+    ));
+    futures.push(render(
+        &tera,
+        context.global_context(),
+        "index.adoc",
+        output_dir.join("index.adoc"),
+    ));
+    futures.push(render(
+        &tera,
+        context.global_context(),
+        "operators.adoc",
+        output_dir.join("category/operators.adoc"),
+    ));
+
+    // 2. Render `<category>.adoc` for each category.
+    for (tag, context) in context.tag_contexts() {
+        futures.push(render(
+            &tera,
+            context,
+            "category.adoc",
+            output_dir.join(format!("category/{tag}.adoc")),
+        ));
+    }
+
+    // 3. Render `function.adoc` for each function.
+    for (name, context) in context.function_contexts() {
+        futures.push(render(
+            &tera,
+            context,
+            "function.adoc",
+            output_dir.join(format!("function/{name}.adoc")),
+        ))
+    }
+
+    futures::stream::iter(futures)
+        .buffer_unordered(8)
+        .try_collect()
+        .await
+}
+
+async fn render(
+    tera: &Tera,
+    context: tera::Context,
+    template_name: &str,
+    destination: PathBuf,
+) -> error_stack::Result<(), Error> {
+    let error = || Error::RenderTemplate(template_name.to_owned());
+    let contents = tera
         .render(template_name, &context)
+        .map_err(|e| {
+            // Converting tera errors to error stack drops important context.
+            // Make sure to grab the causes.
+            let mut sources = Vec::new();
+            let mut error: &dyn std::error::Error = &e;
+            while let Some(source) = error.source() {
+                sources.push(source.to_string());
+                error = source;
+            }
+
+            let mut report = Report::new(e);
+            for source in sources {
+                report = report.attach_printable(source);
+            }
+            report
+        })
+        .change_context_lazy(error)?;
+
+    tokio::fs::write(destination, contents)
+        .await
         .into_report()
-        .change_context(Error::RenderTemplate)?;
-    Ok(catalog)
+        .change_context_lazy(error)
 }
 
 /// Parse an existing `.toml` document to a CatalogEntry.

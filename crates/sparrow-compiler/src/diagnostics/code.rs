@@ -60,6 +60,7 @@ SyntaxError(E0011, Error, "Invalid syntax", ""),
 CyclicReference(E0012, Error, "Circular dependency", ""),
 InvalidOutputType(E0013, Error, "Invalid output type", "https://kaskada.io/docs-site/kaskada/main/fenl/fenl-diagnostic-codes.html#e0013"),
 InvalidNonConstArgument(E0014, Error, "Invalid non-constant argument", ""),
+IncompatibleArgumentTypes(E0015, Error, "Incompatible argument types", ""),
 
 // Bugs: 1000 - 1999
 InternalError(B1000, Bug, "Internal error", ""),

@@ -647,6 +647,12 @@ fn cast_if_needed(
         // TODO: This maybe should create an error node and return it.
         (_, FenlType::Error) => Ok(value),
         (actual, expected) if actual == expected => Ok(value),
+        // Ensures that map types with the same inner types are compatible, regardless of the (arbitary) field naming.
+        (FenlType::Concrete(DataType::Map(s, _)), FenlType::Concrete(DataType::Map(s2, _)))
+            if map_types_are_equal(s, s2) =>
+        {
+            Ok(value)
+        }
         (FenlType::Concrete(DataType::Null), FenlType::Window) => Ok(value),
         (
             FenlType::Concrete(DataType::Struct(actual_fields)),
@@ -688,6 +694,21 @@ fn cast_if_needed(
                 expected_type
             ))
         }
+    }
+}
+
+// When constructing the concrete map during inference, we use arbitary names for the inner data
+// fields since we don't have access to the user's naming patterns there.
+// By comparing the map types based on just the inner types, we can ensure that the types are
+// still treated as equal.
+fn map_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
+    match (a.data_type(), b.data_type()) {
+        (DataType::Struct(a_fields), DataType::Struct(b_fields)) => {
+            assert_eq!(a_fields.len() == 2, a_fields.len() == b_fields.len());
+            a_fields[0].data_type() == b_fields[0].data_type()
+                && a_fields[1].data_type() == b_fields[1].data_type()
+        }
+        _ => panic!("expected struct in map"),
     }
 }
 

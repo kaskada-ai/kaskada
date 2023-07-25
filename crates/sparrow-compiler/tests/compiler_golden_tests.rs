@@ -84,6 +84,7 @@ impl TestTable {
             .map(|field| Field {
                 name: field.name.clone(),
                 data_type: Some((&field.data_type).try_into().unwrap()),
+                nullable: false,
             })
             .collect();
         Schema { fields }
@@ -613,16 +614,14 @@ async fn test_incompatible_err() {
     .await;
 
     insta::assert_snapshot!(error, @r###"
-    error[E0010]: Invalid argument type(s)
+    error[E0015]: Incompatible argument types
       --> Query:1:13
       |
     1 | Sent.amount == "hello"
       | ----------- ^^ ------- Type: string
       | |           |
-      | |           Invalid types for call to 'eq'
+      | |           Incompatible types for call to 'eq'
       | Type: f64
-      |
-      = Expected 'any'
     "###);
 }
 

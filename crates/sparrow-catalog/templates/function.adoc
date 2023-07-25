@@ -1,12 +1,11 @@
-## {{ function.name }}
+= {{ function.name }}
 
 {{ function.signature  | link_fenl_types }}
 
 {{ function.short_doc }}
 
 {%- if function.experimental %}
-
-{{ function.experimental | warning_block | trim }}
+WARNING: {{ function.experimental }}
 {%- endif %}
 {%- if function.long_doc %}
 
@@ -19,6 +18,6 @@
 {%- if function.examples -%}
 {%- for example in function.examples %}
 
-{% include "partials/example.md" %}
+{% include "partials/example.adoc" %}
 {%- endfor -%}
 {%- endif %}

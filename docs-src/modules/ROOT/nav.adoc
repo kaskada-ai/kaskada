@@ -1,4 +1,3 @@
-* xref:installing.adoc[Installing]
 * xref:loading-data.adoc[Loading Data]
 * Examples
 ** https://github.com/kaskada-ai/kaskada/blob/main/examples/Kaskada%20Demo%20for%20Event%20Processing%20and%20Time-centric%20Calculations.ipynb[Overview ↪]

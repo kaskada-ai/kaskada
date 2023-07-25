@@ -95,6 +95,26 @@ Generally, releasing a component involves:
 ... Check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
 ... Check that the release *is marked* as `latest`.
 
+
+#### Beta Releases 
+
+The steps for creating a beta release are similar to a normal release. The difference is in the version number and the tag name. Beta releases follow the pattern `engine@vX.Y.Z-beta.N` where `N` is the beta number. For example, the first beta release for version `0.3.0` would be `engine@v0.3.0-beta.1`.
+
+The steps in detail 
+
+. Check the link:{repo}/releases[release page] on GitHub to find the appropriate draft release and corresponding version number for the Engine.
+. Create a PR updating version numbers for sparrow (`Cargo.toml`) and wren (`wren/.version`) to the appropriate version number by appending `-beta.N` to the version from step 1 for an appropriate `N`. 
+. Merge the PR.
+. Create a new git tag with the appropriate tag name from step 2.
+.. Checkout the repository at the commit created by your PR in step 2. 
+.. Run `git tag -a -f engine@vX.Y.Z-beta.N -m "<message for your beta release>"`
+.. Push your new tag to GitHub with `git push -f origin engine@vX.Y.Z-beta.N`
+.. This should kick off the CI workflow for a beta release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_engine.yml[Engine Release Workflow]
+.. Once the workflow is complete
+... Check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
+... Check that the release *is marked* `pre-release`
+
+
 ### Python Component Group
 
 
@@ -120,10 +140,29 @@ If you have to release new versions for both engine and python components, do th
 .. Make sure the check box for `Set as the latest release` is *not selected*.
 .. Click `Publish release`.
 ... This should kick off the CI workflow for a release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_python_client.yml[Python Release Workflow]
-.. Once the workflow is complete, check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
+.. Once the workflow is complete, 
 ... check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
 ... check that the release is *not* marked as `latest`.
 ... check that https://pypi.org/project/kaskada/#description[Kaskada at PyPi] has the new version.
+
+
+#### Beta Releases 
+
+The steps for creating a beta release are similar to a normal release. The difference is in the version number and the tag name. Beta releases follow the pattern `python@vX.Y.Z-beta.N` where `N` is the beta number. For example, the first beta release for version `0.3.0` would be `python@v0.3.0-beta.1`.
+
+The steps in detail 
+
+. Check the link:{repo}/releases[release page] on GitHub to find the appropriate draft release and corresponding version number for the Python Client.
+. Create a PR updating version numbers for the Python client (`clients/python/pyproject.toml`) to the appropriate version number by appending `-beta.N` to the version from step 1 for an appropriate `N`. 
+. Merge the PR.
+. Create a new git tag with the appropriate tag name from step 2.
+.. Checkout the repository at the commit created by your PR in step 2. 
+.. Run `git tag -a -f python@vX.Y.Z-beta.N -m "<message for your beta release>"`
+.. Push your new tag to GitHub with `git push -f origin python@vX.Y.Z-beta.N`
+.. This should kick off the CI workflow for a beta release, monitor the progress of the workflow by going to link:{repo}actions/workflows/release_python_client.yml[Python Release Workflow]
+.. Once the workflow is complete
+... Check that the release was created successfully by going to link:{repo}/releases[releases] and checking that the release is there.
+... Check that the release *is marked* `pre-release`
 
 ### Patch Releases
 

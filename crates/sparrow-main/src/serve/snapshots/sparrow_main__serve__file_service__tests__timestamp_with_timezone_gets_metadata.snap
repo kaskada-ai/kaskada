@@ -9,28 +9,35 @@ source_metadata:
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: type
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: timestamp
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: subsort_id
         data_type:
           kind:
             Primitive: 6
+        nullable: true
       - name: context_locale
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: projectId
         data_type:
           kind:
             Primitive: 14
+        nullable: true
       - name: event
         data_type:
           kind:
             Primitive: 14
+        nullable: true
 

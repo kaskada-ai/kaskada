@@ -1,0 +1,9 @@
+# Functions
+
+|===
+| Function | Summary
+{% for function in functions %}
+| [{{ function.name }}](#{{ function.name }})
+| {{function.short_doc | trim }}
+{% endfor -%}
+|===

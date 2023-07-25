@@ -213,15 +213,17 @@ macro_rules! create_ordered_evaluator {
 macro_rules! create_typed_evaluator {
     ($input_type:expr,
         $primitive_evaluator:ident,
+        $map_evaluator:ident,
         $bool_evaluator:ident,
         $string_evaluator:ident,
         $info:expr) => {{
         use $crate::evaluators::macros::Identity;
-        create_typed_evaluator! {$input_type, $primitive_evaluator, $bool_evaluator, $string_evaluator, Identity, $info}
+        create_typed_evaluator! {$input_type, $primitive_evaluator, $map_evaluator, $bool_evaluator, $string_evaluator, Identity, $info}
     }};
 
     ($input_type:expr,
         $primitive_evaluator:ident,
+        $map_evaluator:ident,
         $bool_evaluator:ident,
         $string_evaluator:ident,
         $aggf:ident,
@@ -286,6 +288,7 @@ macro_rules! create_typed_evaluator {
             >>::try_new($info),
             Boolean => $bool_evaluator::try_new($info),
             Utf8 => $string_evaluator::try_new($info),
+            Map(..) => $map_evaluator::try_new($info),
             unsupported => {
                 Err(anyhow::anyhow!(format!(
                     "Unsupported type {:?} for {}",

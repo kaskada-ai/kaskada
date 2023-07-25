@@ -181,9 +181,9 @@ pub fn validate_instantiation(
                 match types_for_variable.entry(type_vars[0].clone()) {
                     Entry::Occupied(occupied) => {
                         anyhow::ensure!(
-                            occupied.get() == argument_type
+                            occupied.get() == &key_type
                                 || matches!(occupied.get(), FenlType::Error)
-                                || matches!(argument_type, FenlType::Error),
+                                || matches!(key_type, FenlType::Error),
                             "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             key_type
@@ -197,9 +197,9 @@ pub fn validate_instantiation(
                 match types_for_variable.entry(type_vars[1].clone()) {
                     Entry::Occupied(occupied) => {
                         anyhow::ensure!(
-                            occupied.get() == argument_type
+                            occupied.get() == &value_type
                                 || matches!(occupied.get(), FenlType::Error)
-                                || matches!(argument_type, FenlType::Error),
+                                || matches!(value_type, FenlType::Error),
                             "Failed type validation: expected {} but was {}",
                             occupied.get(),
                             value_type
@@ -272,6 +272,18 @@ fn solve_type_class(
         }
     }
 
+    if result.is_none() {
+        let distinct_arg_types = distinct_arg_types(types);
+        return Err(DiagnosticCode::IncompatibleArgumentTypes
+            .builder()
+            .with_label(
+                call.location()
+                    .primary_label()
+                    .with_message(format!("Incompatible types for call to '{call}'")),
+            )
+            .with_labels(distinct_arg_types));
+    }
+
     result
         // Promote the minimum type to be compatible with the type class, if necessary.
         .and_then(|data_type| promote_concrete(data_type, type_class))
@@ -279,22 +291,7 @@ fn solve_type_class(
         // (b) it wasn't possible to promote the least-upper bound to be compatible
         // with the type type class.
         .ok_or_else(|| {
-            // Only report each distinct type as a problem once. This reduces clutter in the
-            // error. TODO: Attempt to minimize the number of types involved
-            // further. Find a subset of types that are compatible, and report
-            // the problem with the corresponding least-upper-bound and the
-            // remaining type(s).
-            let distinct_arg_types: Vec<_> = types
-                .iter()
-                .unique_by(|l| l.inner())
-                .map(|arg_type| {
-                    arg_type
-                        .location()
-                        .secondary_label()
-                        .with_message(format!("Type: {arg_type}"))
-                })
-                .collect();
-
+            let distinct_arg_types = distinct_arg_types(types);
             DiagnosticCode::InvalidArgumentType
                 .builder()
                 .with_label(
@@ -305,6 +302,27 @@ fn solve_type_class(
                 .with_labels(distinct_arg_types)
                 .with_note(format!("Expected '{type_class}'"))
         })
+}
+
+// Only report each distinct type as a problem once. This reduces clutter in the
+// error. TODO: Attempt to minimize the number of types involved
+// further. Find a subset of types that are compatible, and report
+// the problem with the corresponding least-upper-bound and the
+// remaining type(s).
+fn distinct_arg_types(
+    types: &[Located<FenlType>],
+) -> Vec<codespan_reporting::diagnostic::Label<sparrow_syntax::FeatureSetPart>> {
+    let distinct_arg_types: Vec<_> = types
+        .iter()
+        .unique_by(|l| l.inner())
+        .map(|arg_type| {
+            arg_type
+                .location()
+                .secondary_label()
+                .with_message(format!("Type: {arg_type}"))
+        })
+        .collect();
+    distinct_arg_types
 }
 
 /// Instantiate the (possibly generic) `FenlType` using the computed
@@ -318,7 +336,6 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
         FenlType::Collection(Collection::Map, type_vars) => {
             debug_assert!(type_vars.len() == 2);
 
-            // TODO: Ask ben logic behind the concrete::null, instead of error?
             let concrete_key_type = solutions
                 .get(&type_vars[0])
                 .cloned()
@@ -516,6 +533,8 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
 
         // Row 17: A is Utf8
         (Utf8, Utf8) => Some(Utf8),
+        (LargeUtf8, Utf8) => Some(LargeUtf8),
+        (Utf8, LargeUtf8) => Some(LargeUtf8),
         (Utf8, ts @ Timestamp(_, _)) => Some(ts.clone()),
         (ts @ Timestamp(_, _), Utf8) => Some(ts),
 
@@ -689,6 +708,7 @@ fn can_implicitly_cast(from: &DataType, to: &DataType) -> bool {
         (Float64, Float64) => true,
         // Other promotions that we allow implicitly.
         (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
+        (Utf8, LargeUtf8) => true,
         (Timestamp(_, _), Timestamp(TimeUnit::Nanosecond, None)) => true,
         // Other promotions must be explicitly requested.
         (_, _) => false,
@@ -767,7 +787,7 @@ impl TypeConstraints {
                             .collect(),
                     )?;
                 }
-                other => panic!("Expected collection type, saw: {:?}", other),
+                _ => return Err(()),
             },
             (_, FenlType::Error) => {
                 // The argument is an error, but we already reported it.

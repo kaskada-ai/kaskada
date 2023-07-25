@@ -270,10 +270,12 @@ def set_default_slice(slice: SliceFilter):
     Args:
         slice (SliceFilter): SliceFilter to set the default
     """
-    logger.debug(f"Default slice set to type {type(slice)}")
-
     global KASKADA_DEFAULT_SLICE
     KASKADA_DEFAULT_SLICE = slice
+    if KASKADA_DEFAULT_SLICE is None:
+        logger.info("Slicing disabled")
+    else:
+        logger.info(f"Slicing set to: {slice.to_request()}")
 
 
 def set_default_client(client: Client):

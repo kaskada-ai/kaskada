@@ -30,7 +30,6 @@ mod metadata;
 mod min_heap;
 pub mod prepare;
 mod read;
-pub mod s3;
 pub mod stores;
 mod streams;
 mod util;

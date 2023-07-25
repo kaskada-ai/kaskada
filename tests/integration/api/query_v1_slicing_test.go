@@ -50,7 +50,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 		table = &v1alpha.Table{
 			TableName:           tableName,
 			TimeColumnName:      "transaction_time",
-			EntityKeyColumnName: "id",
+			EntityKeyColumnName: "purchaser_id",
 			SubsortColumnName: &wrapperspb.StringValue{
 				Value: "idx",
 			},
@@ -199,12 +199,21 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 
 			helpers.LogLn(fmt.Sprintf("Result set size, with 10%% slice: %d", len(results)))
 
-			Expect(len(results)).Should(BeNumerically("~", 5000, 250))
+			/*
+			 * There are 150 unique entities in this dataset.
+			 * Each entity has an average of 333.3 events.
+			 * The total dataset size is 50,000 (150 * 333.3 = 49,995)
+			 * Assuming uniform distribution (not entirely true), then 10% of the entities = 15 entites
+			 * Since the 10% slice is based on a hashing function, there is some room for error.
+			 * Random Heuristic: Lower Bound -> 7% (10 entities) and Upper Bound -> 13% (20 entities)
+			 * Lower Bound: 3333 (10 * 333.3) and Upper Bound: 6666 (20 * 333.3)
+			 */
+			Expect(len(results)).Should(BeNumerically("~", 5000, 1666))
 		})
 	})
 
-	Describe("Run the query with a 0.1% slice", func() {
-		It("should return about 0.1% of the results", func() {
+	Describe("Run the query with a 0.3% slice", func() {
+		It("should return about 0.3% of the results", func() {
 			destination := &v1alpha.Destination{}
 			destination.Destination = &v1alpha.Destination_ObjectStore{
 				ObjectStore: &v1alpha.ObjectStoreDestination{
@@ -219,7 +228,7 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 					Slice: &v1alpha.SliceRequest{
 						Slice: &v1alpha.SliceRequest_Percent{
 							Percent: &v1alpha.SliceRequest_PercentSlice{
-								Percent: 0.1,
+								Percent: 0.3,
 							},
 						},
 					},
@@ -243,9 +252,113 @@ max_spent_in_single_transaction: max(transactions_slicing.price * transactions_s
 			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 			results := helpers.DownloadParquet(resultsUrl)
 
-			helpers.LogLn(fmt.Sprintf("Result set size, with 0.1%% slice: %d", len(results)))
+			helpers.LogLn(fmt.Sprintf("Result set size, with 0.3%% slice: %d", len(results)))
 
-			Expect(len(results)).Should(BeNumerically("~", 50, 25))
+			/*
+			 * There are 150 unique entities in this dataset.
+			 * Each entity has an average of 333.3 events.
+			 * The total dataset size is 50,000 (150 * 333.3 = 49,995)
+			 * Assuming uniform distribution (not entirely true), then 0.03% of the entities = ~1 entites (0.45 entities)
+			 * Since the 0.3% slice is based on a hashing function, there is some room for error.
+			 * Random Heuristic: Lower Bound -> 0% (0 entities) and Upper Bound -> 1% (1.5 entities)
+			 * Lower Bound: 0 (0 * 333.3) and Upper Bound: 499.95 (1.5 * 333.3)
+			 */
+			Expect(len(results)).Should(BeNumerically("~", 250, 125))
+		})
+	})
+
+	Describe("Run the query with entity key filter", func() {
+		It("should return 300 number of results for single", func() {
+			destination := &v1alpha.Destination{}
+			destination.Destination = &v1alpha.Destination_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
+			createQueryRequest := &v1alpha.CreateQueryRequest{
+				Query: &v1alpha.Query{
+					Expression:     expression,
+					Destination:    destination,
+					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
+					Slice: &v1alpha.SliceRequest{
+						Slice: &v1alpha.SliceRequest_EntityKeys{
+							EntityKeys: &v1alpha.SliceRequest_EntityKeysSlice{
+								EntityKeys: []string{
+									"2798e270c7cab8c9eeacc046a3100a57",
+								},
+							},
+						},
+					},
+				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
+			}
+			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
+			Expect(err).ShouldNot(HaveOccurredGrpc())
+			Expect(stream).ShouldNot(BeNil())
+
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(res).ShouldNot(BeNil())
+			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
+			Expect(res.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetDestination().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
+
+			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
+			results := helpers.DownloadParquet(resultsUrl)
+
+			helpers.LogLn(fmt.Sprintf("Result set size, with entity key filter: %d", len(results)))
+
+			// There are two rows in this dataset with the provided entity keys.
+			Expect(len(results)).Should(BeNumerically("~", 300))
+		})
+
+		It("should return 685 (300 + 385) number of results for multiple entity keys", func() {
+			destination := &v1alpha.Destination{}
+			destination.Destination = &v1alpha.Destination_ObjectStore{
+				ObjectStore: &v1alpha.ObjectStoreDestination{
+					FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				},
+			}
+			createQueryRequest := &v1alpha.CreateQueryRequest{
+				Query: &v1alpha.Query{
+					Expression:     expression,
+					Destination:    destination,
+					ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
+					Slice: &v1alpha.SliceRequest{
+						Slice: &v1alpha.SliceRequest_EntityKeys{
+							EntityKeys: &v1alpha.SliceRequest_EntityKeysSlice{
+								EntityKeys: []string{
+									"2798e270c7cab8c9eeacc046a3100a57",
+									"79b3ced09d3df7c98fbb04fdfda6ce80",
+								},
+							},
+						},
+					},
+				},
+				QueryOptions: &v1alpha.QueryOptions{
+					PresignResults: true,
+				},
+			}
+			stream, err := queryClient.CreateQuery(ctx, createQueryRequest)
+			Expect(err).ShouldNot(HaveOccurredGrpc())
+			Expect(stream).ShouldNot(BeNil())
+
+			res, err := helpers.GetMergedCreateQueryResponse(stream)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(res).ShouldNot(BeNil())
+			Expect(res.RequestDetails.RequestId).ShouldNot(BeEmpty())
+			Expect(res.GetDestination().GetObjectStore().GetOutputPaths().GetPaths()).ShouldNot(BeNil())
+			Expect(res.GetDestination().GetObjectStore().GetOutputPaths().Paths).Should(HaveLen(1))
+
+			resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
+			results := helpers.DownloadParquet(resultsUrl)
+
+			helpers.LogLn(fmt.Sprintf("Result set size, with entity key filter: %d", len(results)))
+
+			// There are two rows in this dataset with the provided entity keys.
+			Expect(len(results)).Should(BeNumerically("~", 685))
 		})
 	})
 })

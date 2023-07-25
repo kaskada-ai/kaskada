@@ -107,7 +107,7 @@ impl ParquetFile {
 
         batch_stream = batch_stream.with_batch_size(batch_size.unwrap_or(BATCH_SIZE_ROWS));
         if let Some(projection) = projection {
-            let mask = ProjectionMask::leaves(
+            let mask = ProjectionMask::roots(
                 self.parquet_metadata.file_metadata().schema_descr(),
                 projection,
             );

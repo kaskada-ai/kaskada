@@ -631,9 +631,13 @@ mod tests {
     use crate::execute::operation::testing::{batch_from_csv, run_operation};
     use crate::Batch;
 
-    #[tokio::test]
-    async fn test_merge() {
-        let plan = OperationPlan {
+    // The (hypothetical) producing operations this merge receives from are:
+    //
+    // - A scan that outputs a single column at (0.0) containing an i64
+    // - A scan that outputs two columns from (1.0) and (1.2). The latter contains
+    //   an i64 that is read by the merge and added to the 0.0.
+    fn default_plan() -> OperationPlan {
+        OperationPlan {
             expressions: vec![
                 ExpressionPlan {
                     arguments: vec![],
@@ -679,13 +683,12 @@ mod tests {
             operator: Some(operation_plan::Operator::Merge(
                 operation_plan::MergeOperation { left: 0, right: 1 },
             )),
-        };
+        }
+    }
 
-        // The (hypothetical) producing operations this merge receives from are:
-        //
-        // - A scan that outputs a single column at (0.0) containing an i64
-        // - A scan that outputs two columns from (1.0) and (1.2). The latter contains
-        //   an i64 that is read by the merge and added to the 0.0.
+    #[tokio::test]
+    async fn test_merge() {
+        let plan = default_plan();
 
         let operation_0 = batch_from_csv(
             "
@@ -714,6 +717,32 @@ mod tests {
         1970-01-01T00:00:00.000003000,0,1,
         1970-01-01T00:00:00.000003000,1,1,6
         1970-01-01T00:00:00.000004000,0,2,5
+        "###)
+    }
+
+    #[tokio::test]
+    #[ignore = "https://github.com/kaskada-ai/kaskada/issues/524"]
+    async fn test_merge_drops_duplicate_rows() {
+        let plan = default_plan();
+        let operation_0 = batch_from_csv(
+            "
+        _time,_subsort,_key_hash,e0
+        1970-01-01T00:00:00.000002000,0,1,1
+        1970-01-01T00:00:00.000003000,1,1,2
+        1970-01-01T00:00:00.000004000,0,2,3",
+            None,
+        )
+        .unwrap();
+        let operation_1 = batch_from_csv(
+            "
+        _time,_subsort,_key_hash,e0
+        1970-01-01T00:00:00.000002000,0,1,1",
+            None,
+        )
+        .unwrap();
+
+        insta::assert_snapshot!(run_operation(vec![operation_0, operation_1], plan).await.unwrap(), @r###"
+        _time,_subsort,_key_hash,e2
         "###)
     }
 
