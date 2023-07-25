@@ -4,8 +4,9 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::array::{
     new_null_array, Array, ArrayData, ArrayRef, BooleanArray, BooleanBufferBuilder,
-    Int32BufferBuilder, LargeStringArray, LargeStringBuilder, ListArray, MapArray, PrimitiveArray,
-    PrimitiveBuilder, StringArray, StringBuilder, StructArray,
+    GenericStringArray, GenericStringBuilder, Int32BufferBuilder, LargeStringArray,
+    LargeStringBuilder, ListArray, MapArray, OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder,
+    StringArray, StringBuilder, StructArray,
 };
 use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
@@ -163,10 +164,10 @@ enum SerializedSpread<'a> {
     ),
     LatchedIntervalYearMonth(Boo<'a, LatchedPrimitiveSpread<datatypes::IntervalYearMonthType>>),
     UnlatchedIntervalYearMonth(Boo<'a, UnlatchedPrimitiveSpread<datatypes::IntervalYearMonthType>>),
-    LatchedString(Boo<'a, LatchedStringSpread>),
-    UnlatchedString(Boo<'a, UnlatchedStringSpread>),
-    LatchedLargeString(Boo<'a, LatchedLargeStringSpread>),
-    UnlatchedLargeString(Boo<'a, UnlatchedLargeStringSpread>),
+    LatchedString(Boo<'a, LatchedStringSpread<i32>>),
+    UnlatchedString(Boo<'a, UnlatchedStringSpread<i32>>),
+    LatchedLargeString(Boo<'a, LatchedStringSpread<i64>>),
+    UnlatchedLargeString(Boo<'a, UnlatchedStringSpread<i64>>),
     UnlatchedUInt64List(Boo<'a, UnlatchedUInt64ListSpread>),
     UnlatchedMap(Boo<'a, UnlatchedMapSpread>),
     LatchedStruct(Boo<'a, StructSpread<LatchedStructSpreadState>>),
@@ -328,14 +329,14 @@ impl Spread {
             }
             DataType::Utf8 => {
                 if latched {
-                    Box::<operation::spread::LatchedStringSpread>::default()
+                    Box::<operation::spread::LatchedStringSpread<i32>>::default()
                 } else {
-                    Box::new(UnlatchedStringSpread)
+                    Box::new(UnlatchedStringSpread::<i32>::default())
                 }
             }
             DataType::LargeUtf8 => {
                 if latched {
-                    Box::<operation::spread::LatchedLargeStringSpread>::default()
+                    Box::<operation::spread::LatchedStringSpread<i64>>::default()
                 } else {
                     Box::new(UnlatchedLargeStringSpread)
                 }
@@ -1231,187 +1232,31 @@ impl StructSpreadState for LatchedStructSpreadState {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct UnlatchedLargeStringSpread;
-
-impl ToSerializedSpread for UnlatchedLargeStringSpread {
-    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
-        SerializedSpread::UnlatchedLargeString(Boo::Borrowed(self))
-    }
+#[derive(Default, serde::Serialize, serde::Deserialize, Debug)]
+struct UnlatchedStringSpread<O>
+where
+    O: OffsetSizeTrait,
+{
+    _phantom: PhantomData<O>,
 }
 
-impl SpreadImpl for UnlatchedLargeStringSpread {
-    fn spread_signaled(
-        &mut self,
-        grouping: &GroupingIndices,
-        values: &ArrayRef,
-        signal: &BooleanArray,
-    ) -> anyhow::Result<ArrayRef> {
-        let values: &LargeStringArray = downcast_string_array(values.as_ref())?;
-        let mut values = values.iter();
-
-        let mut builder = LargeStringBuilder::with_capacity(grouping.len(), 1024);
-        for signal in signal.iter() {
-            match signal {
-                Some(true) => builder.append_option(values.next().context("missing value")?),
-                _ => builder.append_null(),
-            };
-        }
-
-        Ok(Arc::new(builder.finish()))
-    }
-
-    fn spread_true(
-        &mut self,
-        grouping: &GroupingIndices,
-        values: &ArrayRef,
-    ) -> anyhow::Result<ArrayRef> {
-        anyhow::ensure!(grouping.len() == values.len());
-        Ok(values.clone())
-    }
-
-    fn spread_false(
-        &mut self,
-        grouping: &GroupingIndices,
-        _value_type: &DataType,
-    ) -> anyhow::Result<ArrayRef> {
-        Ok(new_null_array(&DataType::LargeUtf8, grouping.len()))
-    }
-}
-
-#[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
-struct LatchedLargeStringSpread {
-    values: Vec<String>,
-    valid: BitVec,
-}
-
-impl ToSerializedSpread for LatchedLargeStringSpread {
-    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
-        SerializedSpread::LatchedLargeString(Boo::Borrowed(self))
-    }
-}
-
-impl SpreadImpl for LatchedLargeStringSpread {
-    fn spread_signaled(
-        &mut self,
-        grouping: &GroupingIndices,
-        values: &ArrayRef,
-        signal: &BooleanArray,
-    ) -> anyhow::Result<ArrayRef> {
-        debug_assert_eq!(grouping.len(), signal.len());
-
-        // Resize the state if needed.
-        if grouping.num_groups() > self.values.len() {
-            self.values.resize_with(grouping.num_groups(), String::new);
-            self.valid.resize(grouping.num_groups(), false);
-        }
-
-        let values: &LargeStringArray = downcast_string_array(values.as_ref())?;
-        let mut values = values.iter();
-
-        let mut builder = LargeStringBuilder::with_capacity(grouping.len(), 1024);
-
-        // TODO: Could use "next set bit" operations to more quickly handle
-        // signal arrays.
-        for (signal, group) in signal.iter().zip(grouping.group_iter()) {
-            match signal {
-                Some(true) => {
-                    let value = values.next().context("ran out of values")?;
-
-                    // SAFETY: Resized to contain groups above.
-                    unsafe { self.valid.set_unchecked(group, value.is_some()) };
-
-                    if let Some(value) = value {
-                        self.values[group] = value.to_owned();
-                        builder.append_value(value);
-                    } else {
-                        builder.append_null();
-                    }
-                }
-                _ => {
-                    // SAFETY: Resized to contain groups above.
-                    let is_valid = *unsafe { self.valid.get_unchecked(group) };
-                    if is_valid {
-                        builder.append_value(&self.values[group]);
-                    } else {
-                        builder.append_null();
-                    }
-                }
-            }
-        }
-
-        Ok(Arc::new(builder.finish()))
-    }
-
-    fn spread_true(
-        &mut self,
-        grouping: &GroupingIndices,
-        values: &ArrayRef,
-    ) -> anyhow::Result<ArrayRef> {
-        debug_assert_eq!(grouping.len(), values.len());
-
-        // Resize the state if needed.
-        if grouping.num_groups() > self.values.len() {
-            self.values.resize_with(grouping.num_groups(), String::new);
-            self.valid.resize(grouping.num_groups(), false);
-        }
-
-        let values_array: &LargeStringArray = downcast_string_array(values.as_ref())?;
-
-        for (group, value) in grouping.group_iter().zip(values_array.iter()) {
-            // SAFETY: Resized to contain groups above.
-            unsafe { self.valid.set_unchecked(group, value.is_some()) };
-
-            if let Some(value) = value {
-                self.values[group] = value.to_owned();
-            }
-        }
-
-        // If the signal is always true, the result is the same as the values.
-        // We just needed to run the above code to "capture" any values for
-        // future iterations.
-        Ok(values.clone())
-    }
-
-    fn spread_false(
-        &mut self,
-        grouping: &GroupingIndices,
-        _value_type: &DataType,
-    ) -> anyhow::Result<ArrayRef> {
-        // Resize the state if needed.
-        if grouping.num_groups() > self.values.len() {
-            self.values.resize_with(grouping.num_groups(), String::new);
-            self.valid.resize(grouping.num_groups(), false);
-        }
-
-        let mut builder = LargeStringBuilder::with_capacity(grouping.len(), 1024);
-
-        // TODO: Could use "next set bit" operations to more quickly handle
-        // signal arrays.
-        for group in grouping.group_iter() {
-            // SAFETY: Resized to contain groups above.
-            let is_valid = *unsafe { self.valid.get_unchecked(group) };
-            if is_valid {
-                builder.append_value(&self.values[group]);
-            } else {
-                builder.append_null();
-            }
-        }
-
-        Ok(Arc::new(builder.finish()))
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct UnlatchedStringSpread;
-
-impl ToSerializedSpread for UnlatchedStringSpread {
+impl ToSerializedSpread for UnlatchedStringSpread<i32> {
     fn to_serialized_spread(&self) -> SerializedSpread<'_> {
         SerializedSpread::UnlatchedString(Boo::Borrowed(self))
     }
 }
 
-impl SpreadImpl for UnlatchedStringSpread {
+impl ToSerializedSpread for UnlatchedStringSpread<i64> {
+    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
+        SerializedSpread::UnlatchedLargeString(Boo::Borrowed(self))
+    }
+}
+
+impl<O> SpreadImpl for UnlatchedStringSpread<O>
+where
+    O: OffsetSizeTrait,
+    UnlatchedStringSpread<O>: ToSerializedSpread,
+{
     fn spread_signaled(
         &mut self,
         grouping: &GroupingIndices,
@@ -1451,18 +1296,29 @@ impl SpreadImpl for UnlatchedStringSpread {
 }
 
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
-struct LatchedStringSpread {
+struct LatchedStringSpread<O: OffsetSizeTrait> {
     values: Vec<String>,
     valid: BitVec,
+    _phantom: PhantomData<O>,
 }
 
-impl ToSerializedSpread for LatchedStringSpread {
+impl ToSerializedSpread for LatchedStringSpread<i32> {
     fn to_serialized_spread(&self) -> SerializedSpread<'_> {
         SerializedSpread::LatchedString(Boo::Borrowed(self))
     }
 }
 
-impl SpreadImpl for LatchedStringSpread {
+impl ToSerializedSpread for LatchedStringSpread<i64> {
+    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
+        SerializedSpread::LatchedLargeString(Boo::Borrowed(self))
+    }
+}
+
+impl<O> SpreadImpl for LatchedStringSpread<O>
+where
+    O: OffsetSizeTrait,
+    LatchedStringSpread<O>: ToSerializedSpread,
+{
     fn spread_signaled(
         &mut self,
         grouping: &GroupingIndices,
@@ -1477,10 +1333,10 @@ impl SpreadImpl for LatchedStringSpread {
             self.valid.resize(grouping.num_groups(), false);
         }
 
-        let values: &StringArray = downcast_string_array(values.as_ref())?;
+        let values: &GenericStringArray<O> = downcast_string_array(values.as_ref())?;
         let mut values = values.iter();
 
-        let mut builder = StringBuilder::with_capacity(grouping.len(), 1024);
+        let mut builder = GenericStringBuilder::<O>::with_capacity(grouping.len(), 1024);
 
         // TODO: Could use "next set bit" operations to more quickly handle
         // signal arrays.
@@ -1527,7 +1383,7 @@ impl SpreadImpl for LatchedStringSpread {
             self.valid.resize(grouping.num_groups(), false);
         }
 
-        let values_array: &StringArray = downcast_string_array(values.as_ref())?;
+        let values_array: &GenericStringArray<O> = downcast_string_array(values.as_ref())?;
 
         for (group, value) in grouping.group_iter().zip(values_array.iter()) {
             // SAFETY: Resized to contain groups above.
@@ -1555,7 +1411,7 @@ impl SpreadImpl for LatchedStringSpread {
             self.valid.resize(grouping.num_groups(), false);
         }
 
-        let mut builder = StringBuilder::with_capacity(grouping.len(), 1024);
+        let mut builder = GenericStringBuilder::<O>::with_capacity(grouping.len(), 1024);
 
         // TODO: Could use "next set bit" operations to more quickly handle
         // signal arrays.
