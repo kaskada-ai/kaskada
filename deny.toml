@@ -60,8 +60,19 @@ ignore = [
     # https://github.com/bheisler/criterion.rs/issues/629
     "RUSTSEC-2021-0145",
 
-    # Advisory: https://rustsec.org/advisories/RUSTSEC-2023-0034
-    "RUSTSEC-2023-0034",
+    # Potential data races if non-Send types used in generators.
+    #
+    # This is a transitive dependency from the `work-queue` crate,
+    # and is part of `loom`, which is only used in a specific cfg
+    # for testing permutations.
+    #
+    # It should not affect runtime code.
+    #
+    # We could create a patched (upgraded) version of the work-queue
+    # crate to fix.
+    #
+    # https://rustsec.org/advisories/RUSTSEC-2020-0151
+    "RUSTSEC-2020-0151",
 ]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
