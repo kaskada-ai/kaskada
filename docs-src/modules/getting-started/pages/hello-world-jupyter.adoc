@@ -114,7 +114,7 @@ session = LocalBuilder().keep_alive(False).build()
 
 ====
 
-Once we have a Kaskada `session` created we can start now interacting with the Kaskada components using the Kaskada client.
+Once we have a Kaskada `session` created we can start now interacting with the Kaskada components.
 
 Let's now create a small table and write a simple query to see that everything is working correctly with our setup.
 
