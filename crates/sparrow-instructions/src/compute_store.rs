@@ -2,6 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Context;
+
 use prost_wkt_types::Timestamp;
 use rocksdb::DBPinnableSlice;
 use sparrow_api::kaskada::v1alpha::PlanHash;
@@ -171,9 +172,6 @@ impl ComputeStore {
     }
 
     /// Retrieve the value stored at the given key.
-    ///
-    /// This expects the key to be stored if the database has been used,
-    /// and will return an error if it doesn't exist.
     pub fn get<T: serde::de::DeserializeOwned>(
         &self,
         key: &impl AsRef<[u8]>,
@@ -188,9 +186,6 @@ impl ComputeStore {
     }
 
     /// Retrieve the value stored at the given key.
-    ///
-    /// This expects the key to be stored if the database has been used,
-    /// and will return an error if it doesn't exist.
     pub fn get_proto<T: prost::Message + Default>(
         &self,
         key: &impl AsRef<[u8]>,
@@ -206,8 +201,7 @@ impl ComputeStore {
 
     /// Retrieve the vector value stored at the given key.
     ///
-    /// This expects the key to be stored if the database has been used,
-    /// and will return an error if it doesn't exist.
+    /// Clears the given vector if no state is found.
     pub fn get_to_vec<T>(&self, key: &impl AsRef<[u8]>, vec: &mut Vec<T>) -> anyhow::Result<()>
     where
         Vec<T>: serde::de::DeserializeOwned,
