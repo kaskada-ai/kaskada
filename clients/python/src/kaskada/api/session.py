@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+
 import kaskada.client
 from kaskada.api import release
 from kaskada.api.local_session.local_service import KaskadaLocalService
@@ -146,6 +147,8 @@ class LocalBuilder(Builder):
 
     manager_configs: Dict[str, Any]
     engine_configs: Dict[str, Any]
+    _engine_version: Optional[str]
+    _manager_version: Optional[str]
 
     def __init__(
         self,
@@ -162,6 +165,8 @@ class LocalBuilder(Builder):
         self.in_memory(False)
         self.engine_configs: Dict[str, Any] = {"--log-no-color": "1"}
         self.keep_alive(True)
+        self._engine_version = None
+        self._manager_version = None
 
     def path(self, path: str):
         self._path = path
@@ -221,6 +226,14 @@ class LocalBuilder(Builder):
         self.manager_configs["-grpc-port"] = port
         return self
 
+    def engine_version(self, version: str):
+        self._engine_version = version
+        return self
+
+    def manager_version(self, version: str):
+        self._manager_version = version
+        return self
+
     def __get_log_path(self, file_name: str) -> Path:
         if self._path is None:
             raise ValueError("no path provided and KASKADA_PATH was not set")
@@ -274,7 +287,7 @@ class LocalBuilder(Builder):
         )
         return (manager_service, engine_service)
 
-    def __download_latest_release(self):
+    def __download_latest_release(self, engine_version: Optional[str], manager_version: Optional[str]):
         """Downloads the latest release version to the binary path."""
         client = release.ReleaseClient()
         download_path = self.__get_binary_path()
@@ -288,11 +301,9 @@ class LocalBuilder(Builder):
         logger.debug(f"Manager Path: {local_release._manager_path}")
         logger.debug(f"Engine Path: {local_release._engine_path}")
         # Update the binary path to the path downloaded and saved to by the latest release downloader.
-        self.bin_path(
-            local_release._download_path.absolute().relative_to(
-                Path(self._path).expanduser().absolute()
-            )
-        )
+        full_path = local_release._download_path.absolute().relative_to(Path(self._path).expanduser().absolute())
+        self.bin_path(str(full_path))
+
         os.chmod(local_release._manager_path, 0o755)
         os.chmod(local_release._engine_path, 0o755)
 
@@ -322,7 +333,7 @@ class LocalBuilder(Builder):
                 )
 
         if self._download:
-            self.__download_latest_release()
+            self.__download_latest_release(self._engine_version, self._manager_version)
 
         manager_process, engine_process = self.__get_local_services()
         session = LocalSession(
