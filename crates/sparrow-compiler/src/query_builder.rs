@@ -14,7 +14,7 @@ use uuid::Uuid;
 /// Kaskada query builder.
 #[derive(Default)]
 pub struct QueryBuilder {
-    data_context: DataContext,
+    pub data_context: DataContext,
     dfg: Dfg,
 }
 
@@ -28,8 +28,8 @@ pub enum Error {
     Invalid,
     #[display(fmt = "no function named '{name}': nearest matches are {nearest:?}")]
     NoSuchFunction { name: String, nearest: Vec<String> },
-    #[display(fmt = "errors during construction")]
-    Errors,
+    #[display(fmt = "{}", "_0.iter().join(\"\n\")")]
+    Errors(Vec<String>),
 }
 
 impl error_stack::Context for Error {}
@@ -106,7 +106,13 @@ impl QueryBuilder {
         .change_context(Error::Invalid)?;
 
         if diagnostics.num_errors() > 0 {
-            Err(Error::Errors)?
+            let errors = diagnostics
+                .finish()
+                .into_iter()
+                .filter(|diagnostic| diagnostic.is_error())
+                .map(|diagnostic| diagnostic.message)
+                .collect();
+            Err(Error::Errors(errors))?
         } else {
             Ok(result)
         }
@@ -128,12 +134,12 @@ impl QueryBuilder {
     pub fn add_expr(
         &mut self,
         function: &str,
-        args: &[AstDfgRef],
+        args: Vec<AstDfgRef>,
     ) -> error_stack::Result<AstDfgRef, Error> {
         let (op, args) = match function {
             "fieldref" => {
                 assert_eq!(args.len(), 2);
-                let (base, name) = args.iter().cloned().collect_tuple().unwrap();
+                let (base, name) = args.into_iter().collect_tuple().unwrap();
 
                 let name = self.dfg.string_literal(name.value()).expect("literal name");
 
@@ -182,7 +188,7 @@ impl QueryBuilder {
                 let has_vararg = args.len() > function.signature().arg_names().len();
                 let args = Resolved::new(
                     function.signature().arg_names().into(),
-                    args.iter().cloned().map(Located::builder).collect(),
+                    args.into_iter().map(Located::builder).collect(),
                     has_vararg,
                 );
                 (op, args)
@@ -224,7 +230,7 @@ mod tests {
             .add_literal(Literal::StringLiteral("a".to_owned()))
             .unwrap();
         let field_ref = query_builder
-            .add_expr("fieldref", &[table, field_name])
+            .add_expr("fieldref", vec![table, field_name])
             .unwrap();
 
         assert_eq!(

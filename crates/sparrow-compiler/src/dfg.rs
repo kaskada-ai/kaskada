@@ -28,7 +28,7 @@ pub mod simplification;
 mod step_kind;
 mod useless_transforms;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub(crate) use analysis::*;
 use anyhow::Context;
@@ -80,7 +80,7 @@ impl Default for Dfg {
         // Preemptively create a single error node, allowing for shallow
         // clones of the reference.
         let error_id = graph.add(DfgLang::new(StepKind::Error, smallvec![]));
-        let error_node = Rc::new(AstDfg::new(
+        let error_node = Arc::new(AstDfg::new(
             error_id,
             error_id,
             FenlType::Error,
@@ -488,12 +488,12 @@ impl Dfg {
         });
         self.env.foreach_value(|node| {
             let old_value = old_graph.find(node.value());
-            node.value
-                .replace_with(|_| mapping.get(&old_value).copied().unwrap_or(new_error));
+            let new_value = mapping.get(&old_value).copied().unwrap_or(new_error);
+            *node.value.lock().unwrap() = new_value;
 
             let old_is_new = old_graph.find(node.is_new());
-            node.is_new
-                .replace_with(|_| mapping.get(&old_is_new).copied().unwrap_or(new_error));
+            let new_is_new = mapping.get(&old_is_new).copied().unwrap_or(new_error);
+            *node.is_new.lock().unwrap() = new_is_new;
         });
         self.graph = new_graph;
         Ok(new_output)

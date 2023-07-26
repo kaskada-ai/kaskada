@@ -1,5 +1,5 @@
-use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use egg::{Subst, Var};
 use itertools::{izip, Itertools};
@@ -224,7 +224,7 @@ impl Function {
             self.time_domain_check
                 .check_args(location, diagnostics, args, data_context)?;
 
-        Ok(Rc::new(AstDfg::new(
+        Ok(Arc::new(AstDfg::new(
             value,
             is_new,
             value_type,

@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -423,7 +422,7 @@ impl TableInfo {
         let value_type = DataType::Struct(self.schema().fields().clone());
         let value_type = FenlType::Concrete(value_type);
 
-        Ok(Rc::new(AstDfg::new(
+        Ok(Arc::new(AstDfg::new(
             value,
             is_new,
             value_type,

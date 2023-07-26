@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use egg::Id;
 use sparrow_plan::GroupId;
@@ -11,22 +10,22 @@ use crate::time_domain::TimeDomain;
 ///
 /// We may have multiple references to the same AstDfg node, so this allows us
 /// to clone shallow references rather than deeply copy.
-pub type AstDfgRef = Rc<AstDfg>;
+pub type AstDfgRef = Arc<AstDfg>;
 
 /// Various information produced for each AST node during the conversion to the
 /// DFG.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct AstDfg {
     /// Reference to the step containing the values of the AST node.
     ///
     /// Wrapped in a `RefCell` to allow mutability during
     /// pruning/simplification.
-    pub(crate) value: RefCell<Id>,
+    pub(crate) value: Mutex<Id>,
     /// Reference to the step containing the "is_new" bits of the AST node.
     ///
     /// Wrapped in a `RefCell` to allow mutability during
     /// pruning/simplification.
-    pub(crate) is_new: RefCell<Id>,
+    pub(crate) is_new: Mutex<Id>,
     /// Type of `value` produced.
     value_type: FenlType,
     /// Which entity grouping the node is associated with (if any).
@@ -77,8 +76,8 @@ impl AstDfg {
         };
 
         AstDfg {
-            value: RefCell::new(value),
-            is_new: RefCell::new(is_new),
+            value: Mutex::new(value),
+            is_new: Mutex::new(is_new),
             value_type,
             grouping,
             time_domain,
@@ -87,12 +86,23 @@ impl AstDfg {
         }
     }
 
-    pub(crate) fn value(&self) -> Id {
-        *self.value.borrow()
+    pub fn equivalent(&self, other: &AstDfg) -> bool {
+        // This is quite correct -- we should lock everything and then compare.
+        // But, this is a temporary hack for the Python builder.
+        self.value() == other.value()
+            && self.is_new() == other.is_new()
+            && self.value_type == other.value_type
+            && self.grouping == other.grouping
+            && self.time_domain == other.time_domain
+            && self.location == other.location
+    }
+
+    pub fn value(&self) -> Id {
+        *self.value.lock().unwrap()
     }
 
     pub(crate) fn is_new(&self) -> Id {
-        *self.is_new.borrow()
+        *self.is_new.lock().unwrap()
     }
 
     pub fn value_type(&self) -> &FenlType {

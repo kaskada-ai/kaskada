@@ -6,7 +6,7 @@ mod window_args;
 
 #[cfg(test)]
 mod tests;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, FieldRef};
@@ -135,7 +135,7 @@ pub(super) fn add_to_dfg(
 
             if CastEvaluator::is_supported_fenl(from_type, to_type) {
                 if let FenlType::Concrete(to_type) = to_type.inner() {
-                    return Ok(Rc::new(AstDfg::new(
+                    return Ok(Arc::new(AstDfg::new(
                         dfg.add_expression(
                             Expression::Inst(InstKind::Cast(to_type.clone())),
                             smallvec![input.value()],
@@ -237,7 +237,7 @@ pub(super) fn add_to_dfg(
             )?;
             let is_new = base.is_new();
             let value_type = field_type.clone().into();
-            Ok(Rc::new(AstDfg::new(
+            Ok(Arc::new(AstDfg::new(
                 value,
                 is_new,
                 value_type,
@@ -275,7 +275,7 @@ pub(super) fn add_to_dfg(
                     let agg_input_op = dfg.operation(agg_input.value());
                     let tick_input = smallvec![agg_input_op];
                     let tick_node = dfg.add_operation(Operation::Tick(behavior), tick_input)?;
-                    let tick_node = Rc::new(AstDfg::new(
+                    let tick_node = Arc::new(AstDfg::new(
                         tick_node,
                         tick_node,
                         FenlType::Concrete(DataType::Boolean),
@@ -508,7 +508,7 @@ pub(super) fn add_to_dfg(
             // Add cast operations as necessary
             let args: Vec<_> = izip!(arguments, instantiated_types)
                 .map(|(arg, expected_type)| -> anyhow::Result<_> {
-                    let ast_dfg = Rc::new(AstDfg::new(
+                    let ast_dfg = Arc::new(AstDfg::new(
                         cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
                         arg.is_new(),
                         expected_type,
@@ -751,7 +751,7 @@ fn add_literal(
     location: Location,
 ) -> anyhow::Result<AstDfgRef> {
     let is_new = dfg.add_literal(false)?;
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         is_new,
         value_type,
