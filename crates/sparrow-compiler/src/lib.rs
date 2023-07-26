@@ -42,6 +42,7 @@ mod functions;
 mod nearest_matches;
 mod options;
 mod plan;
+pub mod query_builder;
 mod time_domain;
 mod types;
 

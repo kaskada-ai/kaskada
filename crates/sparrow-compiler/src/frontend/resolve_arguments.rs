@@ -9,7 +9,7 @@ use static_init::dynamic;
 use crate::{DiagnosticBuilder, DiagnosticCode};
 
 #[dynamic]
-static FIELD_REF_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("record")];
+pub(crate) static FIELD_REF_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("record")];
 
 #[dynamic]
 static PIPE_ARGUMENTS: [Located<String>; 2] = [

@@ -13,6 +13,7 @@ Compiler from Fenl syntax to Sparrow execution plans.
 ahash.workspace = true
 anyhow.workspace = true
 arrow.workspace = true
+arrow-schema.workspace = true
 bit-set.workspace = true
 chrono.workspace = true
 const_format.workspace = true

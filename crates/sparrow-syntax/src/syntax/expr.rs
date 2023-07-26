@@ -25,6 +25,8 @@ pub enum FeatureSetPart {
     Formula(u32),
     /// The query.
     Query,
+    /// Code coming from python.
+    Builder,
 }
 
 /// The location of part of an expression in the original source.
@@ -44,6 +46,10 @@ pub struct Location {
 impl Location {
     pub fn new(part: FeatureSetPart, start: usize, end: usize) -> Self {
         Self { part, start, end }
+    }
+
+    pub fn builder() -> Self {
+        Location::new(FeatureSetPart::Builder, 0, "builder".len())
     }
 
     pub fn internal_str(value: &'static str) -> Self {
@@ -107,6 +113,13 @@ impl<T> Located<T> {
         Self { value, location }
     }
 
+    pub fn builder(value: T) -> Self {
+        Self {
+            value,
+            location: Location::builder(),
+        }
+    }
+
     pub fn inner(&self) -> &T {
         &self.value
     }
@@ -132,6 +145,13 @@ impl<T> Located<T> {
             value: f(self.value),
             location: self.location,
         }
+    }
+
+    pub fn try_map<T2, E>(self, f: impl FnOnce(T) -> Result<T2, E>) -> Result<Located<T2>, E> {
+        Ok(Located {
+            value: f(self.value)?,
+            location: self.location,
+        })
     }
 
     pub fn with_value<T2>(&self, value: T2) -> Located<T2> {

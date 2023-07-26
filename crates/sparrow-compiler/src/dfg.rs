@@ -504,6 +504,15 @@ impl Dfg {
         self.graph[id].data.literal_opt()
     }
 
+    /// Returns `Some(str)` if the ID is a string literal in the graph.
+    pub fn string_literal(&self, id: Id) -> Option<&str> {
+        self.literal(id).and_then(|s| match s {
+            ScalarValue::Utf8(s) => s.as_ref().map(|s| s.as_str()),
+            ScalarValue::LargeUtf8(s) => s.as_ref().map(|s| s.as_str()),
+            _ => None,
+        })
+    }
+
     /// Returns the ID of the operation node defining the domain of `id`.
     pub fn operation(&self, id: Id) -> Id {
         self.graph[id].data.operation(id)
