@@ -1,8 +1,8 @@
-name = 'logical_and'
-signature = 'logical_and(a: bool, b: bool) -> bool'
-operator = 'a and b'
-short_doc = 'Returns the logical conjunction (AND) of two booleans.'
-long_doc = '''
+name = "logical_and"
+signature = "logical_and(a: bool, b: bool) -> bool"
+operator = "a and b"
+short_doc = "Returns the logical conjunction (AND) of two booleans."
+long_doc = """
 This is the function used for the binary operation `a and b`.
 
 ### Parameters
@@ -13,13 +13,13 @@ This is the function used for the binary operation `a and b`.
 * Returns `true` if `a` and `b` are both `true`.
 * Returns `false` if `a` or `b` are `false`.
 * Returns `null` if `a` or `b` are `null`.
-'''
-tags = ['logical']
+"""
+tags = ["logical"]
 
 [[examples]]
-name = 'Logical And'
-expression = 'Input.a and Input.b'
-input_csv = '''
+name = "Logical And"
+expression = "Input.a and Input.b"
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,A,true,false
 2021-01-02T00:00:00.000000000Z,B,true,true
@@ -29,8 +29,8 @@ time,key,a,b
 2021-02-01T00:00:00.000000000Z,B,true,
 2021-02-02T00:00:00.000000000Z,A,,false
 2021-03-01T00:00:00.000000000Z,B,false,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b,result
 2021-01-01T00:00:00.000000000,A,true,false,false
 2021-01-02T00:00:00.000000000,B,true,true,true
@@ -40,4 +40,4 @@ time,key,a,b,result
 2021-02-01T00:00:00.000000000,B,true,,
 2021-02-02T00:00:00.000000000,A,,false,false
 2021-03-01T00:00:00.000000000,B,false,,false
-'''
+"""

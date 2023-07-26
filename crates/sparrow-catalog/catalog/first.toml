@@ -1,7 +1,7 @@
-name = 'first'
-signature = 'first(input: any, window: window = null) -> any'
-short_doc = 'Computes the first value present across the input.'
-long_doc = '''
+name = "first"
+signature = "first(input: any, window: window = null) -> any"
+short_doc = "Computes the first value present across the input."
+long_doc = """
 ### Parameters
 * input: The input to be considered.
 * window: The window to aggregate within, as described in
@@ -15,13 +15,13 @@ up to and including the current row. Returns `null` until there has been
 at least one such input.
 
 NOTE: The first value is inclusive of any values at the current time.
-'''
-tags = ['aggregation']
+"""
+tags = ["aggregation"]
 
 [[examples]]
-name = 'First'
-expression = 'first(Input.value)'
-input_csv = '''
+name = "First"
+expression = "first(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,50.7
 2021-01-02T00:00:00.000000000Z,Ryan,
@@ -29,8 +29,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,1.2
 2021-01-03T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,2.3
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,50.7,50.7
 2021-01-02T00:00:00.000000000,Ryan,,
@@ -38,4 +38,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,1.2,50.7
 2021-01-03T00:00:00.000000000,Ben,,50.7
 2021-01-04T00:00:00.000000000,Ryan,2.3,67.2
-'''
+"""

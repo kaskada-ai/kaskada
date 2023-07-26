@@ -104,7 +104,7 @@ impl WithKeyOperation {
 
         // Hash the new key column
         let new_keys = input.column(self.new_key_input_index);
-        let new_key_hashes = sparrow_arrow::hash::hash(new_keys)?;
+        let new_key_hashes = sparrow_arrow::hash::hash(new_keys).map_err(|e| e.into_error())?;
         let time = input.column(0);
         let subsort = input.column(1);
 
@@ -234,10 +234,10 @@ mod tests {
         .unwrap();
         insta::assert_snapshot!(run_operation(vec![input], plan).await.unwrap(), @r###"
         _time,_subsort,_key_hash,e2,e3
-        1970-01-01T00:00:00.000002000,0,16001504133914743519,0.2,1.2
-        1970-01-01T00:00:00.000003000,0,8744336087600879417,2.0,4.0
-        1970-01-01T00:00:00.000004000,0,16001504133914743519,3.2,6.2
-        1970-01-01T00:00:00.000005000,0,16001504133914743519,2.1,6.1
+        1970-01-01T00:00:00.000002000,0,11333881584776451256,0.2,1.2
+        1970-01-01T00:00:00.000003000,0,4285267486210181199,2.0,4.0
+        1970-01-01T00:00:00.000004000,0,11333881584776451256,3.2,6.2
+        1970-01-01T00:00:00.000005000,0,11333881584776451256,2.1,6.1
         "###);
     }
 }

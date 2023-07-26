@@ -1,7 +1,7 @@
-name = 'add_time'
-signature = 'add_time(delta: timedelta, time: timestamp_ns) -> timestamp_ns'
-short_doc = 'Adds a `timedelta` (duration or interval) to a time.'
-long_doc = '''
+name = "add_time"
+signature = "add_time(delta: timedelta, time: timestamp_ns) -> timestamp_ns"
+short_doc = "Adds a `timedelta` (duration or interval) to a time."
+long_doc = """
 ### Parameters
 * delta: The time delta to add to the timestamp. See other
   [time functions](#time-functions) for how to create `timedelta`s.
@@ -11,17 +11,17 @@ long_doc = '''
 Returns a time column with each row containing the value of `time` for
 that row plus the given `delta`. If either the `delta` or `time` are `null`
 then the result is `null` in that row.
-'''
-tags = ['time']
+"""
+tags = ["time"]
 
 [[examples]]
-name = 'Adding a fixed number of days'
-description = '''
+name = "Adding a fixed number of days"
+description = """
 This example uses [`days`](#days) to create a fixed `interval_days`
 to add to a given date.
-'''
-expression = 'Input.time | add_time(days(3))'
-input_csv = '''
+"""
+expression = "Input.time | add_time(days(3))"
+input_csv = """
 time,key
 1996-03-21T00:00:00-00:00,Ben
 1996-04-21T00:00:00-00:00,Ryan
@@ -29,8 +29,8 @@ time,key
 1996-06-21T00:00:00-00:00,Ryan
 1996-07-21T00:00:00-00:00,Ben
 1996-08-21T00:00:00-00:00,Ben
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,result
 1996-03-21T00:00:00.000000000,Ben,1996-03-24T00:00:00.000000000
 1996-04-21T00:00:00.000000000,Ryan,1996-04-24T00:00:00.000000000
@@ -38,4 +38,4 @@ time,key,result
 1996-06-21T00:00:00.000000000,Ryan,1996-06-24T00:00:00.000000000
 1996-07-21T00:00:00.000000000,Ben,1996-07-24T00:00:00.000000000
 1996-08-21T00:00:00.000000000,Ben,1996-08-24T00:00:00.000000000
-'''
+"""

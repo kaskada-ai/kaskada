@@ -1,7 +1,7 @@
-name = 'upper'
-signature = 'upper(s: string) -> string'
-short_doc = 'Converts the string to upper case.'
-long_doc = '''
+name = "upper"
+signature = "upper(s: string) -> string"
+short_doc = "Converts the string to upper case."
+long_doc = """
 ### Parameters
 * s: The string to convert to upper case.
 
@@ -9,13 +9,13 @@ long_doc = '''
 Returns a `string` column with each row containing the string `s`
 from that row converted to all upper case. The row contains `null`
 if `s` is `null` in that row.
-'''
-tags = ['string']
+"""
+tags = ["string"]
 
 [[examples]]
-name = 'Upper Case'
-expression = 'Input.value | upper()'
-input_csv = '''
+name = "Upper Case"
+expression = "Input.value | upper()"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,Hello World
 2021-01-02T00:00:00.000000000Z,Ryan,
@@ -23,8 +23,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,Hello
 2021-01-03T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,hi
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,Hello World,HELLO WORLD
 2021-01-02T00:00:00.000000000,Ryan,,
@@ -32,4 +32,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,Hello,HELLO
 2021-01-03T00:00:00.000000000,Ben,,
 2021-01-04T00:00:00.000000000,Ryan,hi,HI
-'''
+"""

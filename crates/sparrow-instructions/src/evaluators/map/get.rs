@@ -284,7 +284,6 @@ mod tests {
         map.append(true).unwrap();
 
         let map = map.finish();
-        println!("MAP: {:?}", map);
 
         let keys = StringArray::from(vec![
             Some("hello"),

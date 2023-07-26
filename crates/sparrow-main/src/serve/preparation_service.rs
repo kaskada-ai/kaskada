@@ -12,7 +12,7 @@ use tonic::Response;
 use crate::IntoStatus;
 
 // The current preparation ID of the data preparation service
-const CURRENT_PREP_ID: i32 = 6;
+const CURRENT_PREP_ID: i32 = 7;
 
 #[derive(Debug)]
 pub(super) struct PreparationServiceImpl {

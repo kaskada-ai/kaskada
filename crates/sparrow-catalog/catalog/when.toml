@@ -1,9 +1,9 @@
-name = 'when'
-signature = 'when(condition: bool, value: any) -> any'
-short_doc = 'Produces the current `value` when the `condition` evaluates to `true`.'
-long_doc = '''
+name = "when"
+signature = "when(condition: bool, value: any) -> any"
+short_doc = "Produces the current `value` when the `condition` evaluates to `true`."
+long_doc = """
 Performs filtering of rows.
-Unlike [`if`](#if) which just "nulls" out a value in the current row, this removes the row entirely.
+Unlike [`if`](#if) which just \"nulls\" out a value in the current row, this removes the row entirely.
 
 ### Parameters
 * condition: Determines whether to include a given row.
@@ -21,13 +21,13 @@ then this returns the latest result of the aggregation when `condition`
 is `true`. If the `value` is not continuous (eg., taken directly from
 events) then this returns the current `value` when the `condition` is
 `true`.
-'''
-tags = ['time']
+"""
+tags = ["time"]
 
 [[examples]]
-name = 'When'
-full_expression = 'Input | when(Input.condition)'
-input_csv = '''
+name = "When"
+full_expression = "Input | when(Input.condition)"
+input_csv = """
 time,key,condition
 1996-03-21T00:00:00-00:00,Ben,true
 1996-04-21T00:00:00-00:00,Ryan,true
@@ -35,11 +35,11 @@ time,key,condition
 1996-06-21T00:00:00-00:00,Ryan,true
 1996-07-21T00:00:00-00:00,Ben,false
 1996-08-21T00:00:00-00:00,Ben,true
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,condition
 1996-03-21T00:00:00.000000000,Ben,true
 1996-04-21T00:00:00.000000000,Ryan,true
 1996-06-21T00:00:00.000000000,Ryan,true
 1996-08-21T00:00:00.000000000,Ben,true
-'''
+"""

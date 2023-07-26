@@ -1,12 +1,12 @@
-name = 'with_key'
-signature = 'with_key(key: key, value: any, const grouping: string = null) -> any'
-short_doc = 'Changes the grouping of the input `value`.'
-experimental = '''
+name = "with_key"
+signature = "with_key(key: key, value: any, const grouping: string = null) -> any"
+short_doc = "Changes the grouping of the input `value`."
+experimental = """
 `with_key` is experimental functionality.
 You should expect the behavior to potentially change in the future.
 There may be issues when using this if multiple rows are assigned the same key.
-'''
-long_doc = '''
+"""
+long_doc = """
 ### Parameters
 * key: The new key to use for the grouping.
 * value: The value to be re-grouped.
@@ -18,12 +18,12 @@ long_doc = '''
 Returns a column containing the non-`null` rows of `value`.
 Each row occurs at the same time as in `value`.
 The results have been re-keyed based on the value of `key` to be part of the named `grouping`.
-'''
-tags = ['grouping']
+"""
+tags = ["grouping"]
 
 [[examples]]
-name = 'Changing Keys'
-description = '''
+name = "Changing Keys"
+description = """
 This example starts with input grouped by the `key` column.
 We wish to instead compute aggregates grouped by the `other_key` column.
 We do this by using the `with_key` function to change the grouping.
@@ -31,25 +31,25 @@ We use `other_key` as the name of the grouping so that this table is compatible 
 
 After we have regrouped we compute the `sum`, which we see is grouped by the `other_key`.
 The `extend` function is used so that we can add fields to the regrouped record.
-'''
-full_expression = '''
+"""
+full_expression = """
 Input
     | with_key($input.other_key, grouping = 'other_key')
     | extend($input, { sum_n_by_other_key: sum($input.n) })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,other_key,n
 2021-01-01T00:00:00.000000000Z,A,X,5
 2021-01-02T00:00:00.000000000Z,A,Y,8
 2021-03-01T00:00:00.000000000Z,B,X,9
 2021-04-10T00:00:00.000000000Z,A,X,
 2021-04-11T00:00:00.000000000Z,A,,9
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,other_key,n,sum_n_by_other_key
 2021-01-01T00:00:00.000000000,A,X,5,5
 2021-01-02T00:00:00.000000000,A,Y,8,8
 2021-03-01T00:00:00.000000000,B,X,9,14
 2021-04-10T00:00:00.000000000,A,X,,14
 2021-04-11T00:00:00.000000000,A,,9,9
-'''
+"""

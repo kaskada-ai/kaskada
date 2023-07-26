@@ -792,7 +792,7 @@ mod tests {
 
         let parquet_metadata = reader.metadata();
         let parquet_metadata = parquet_metadata.file_metadata();
-        assert_eq!(parquet_metadata.num_rows(), 54_068);
+        assert_eq!(parquet_metadata.num_rows(), 49_540);
         assert_eq!(parquet_metadata.schema_descr().num_columns(), 11);
 
         // Second, redact the output paths and check the response.

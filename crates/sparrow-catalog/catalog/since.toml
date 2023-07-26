@@ -1,7 +1,7 @@
-name = 'since'
-signature = 'since(condition: bool) -> window'
-short_doc = 'Configures a windowed aggregation.'
-long_doc = '''
+name = "since"
+signature = "since(condition: bool) -> window"
+short_doc = "Configures a windowed aggregation."
+long_doc = """
 Configures aggregations to window since the last time the
 `condition` was `true`.
 
@@ -11,23 +11,23 @@ Configures aggregations to window since the last time the
 ### Results
 Returns a window behavior that can be used with an [aggregation](#aggregation-functions)
 to configure windowed aggregations.
-'''
-tags = ['window']
+"""
+tags = ["window"]
 
 [[examples]]
-name = 'Hourly Count'
-description = '''
+name = "Hourly Count"
+description = """
 Produces the count since the start of the hour.
 
 NOTE: The time and key are not available on the rows created by the ticks.
 The expression here uses `extend`, `time_of` and `first` to compute the `time` and `key` columns for all rows.
-'''
-full_expression = '''
+"""
+full_expression = """
 { n: Input.n, result: count(Input, window = since(hourly())) }
 # Compute time and key for all rows, even the ticks.
 | extend({ time: time_of($input), key: first(Input.key) })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,n
 1996-12-19T16:00:57-00:00,Ben,2
 1996-12-19T16:00:58-00:00,Ryan,3
@@ -35,25 +35,25 @@ time,key,n
 1996-12-19T17:03:00-00:00,Ben,9
 1996-12-19T17:01:00-00:00,Ryan,8
 1996-12-19T18:01:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,result
 1996-12-19T16:00:57.000000000,Ben,2,1
 1996-12-19T16:00:58.000000000,Ryan,3,1
 1996-12-19T17:00:00.000000000,Ben,9,2
-1996-12-19T17:00:00.000000000,Ben,,2
 1996-12-19T17:00:00.000000000,Ryan,,1
+1996-12-19T17:00:00.000000000,Ben,,2
 1996-12-19T17:01:00.000000000,Ryan,8,1
 1996-12-19T17:03:00.000000000,Ben,9,1
-1996-12-19T18:00:00.000000000,Ben,,1
 1996-12-19T18:00:00.000000000,Ryan,,1
+1996-12-19T18:00:00.000000000,Ben,,1
 1996-12-19T18:01:00.000000000,Ben,1,1
-'''
+"""
 
 [[examples]]
-name = 'Count Since Predicate'
-expression = 'count(Input, window = since(Input.n > 5))'
-input_csv = '''
+name = "Count Since Predicate"
+expression = "count(Input, window = since(Input.n > 5))"
+input_csv = """
 time,key,n
 1996-12-19T16:00:57-00:00,Ben,2
 1996-12-19T16:00:58-00:00,Ryan,3
@@ -61,8 +61,8 @@ time,key,n
 1996-12-19T17:03:00-00:00,Ben,9
 1996-12-19T17:01:00-00:00,Ryan,8
 1996-12-19T18:01:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,result
 1996-12-19T16:00:57.000000000,Ben,2,1
 1996-12-19T16:00:58.000000000,Ryan,3,1
@@ -70,4 +70,4 @@ time,key,n,result
 1996-12-19T17:01:00.000000000,Ryan,8,2
 1996-12-19T17:03:00.000000000,Ben,9,1
 1996-12-19T18:01:00.000000000,Ben,1,1
-'''
+"""

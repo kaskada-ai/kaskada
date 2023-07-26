@@ -137,7 +137,8 @@ impl LookupRequestOperation {
 
         // Re-key to the foreign key and hash it.
         let foreign_key_hash = input.column(self.foreign_key_column).clone();
-        let foreign_key_hash = sparrow_arrow::hash::hash(&foreign_key_hash)?;
+        let foreign_key_hash =
+            sparrow_arrow::hash::hash(&foreign_key_hash).map_err(|e| e.into_error())?;
 
         // Now, we need to determine how many actual foreign rows there are and collect
         // the requesting primary keys.
@@ -289,9 +290,9 @@ mod tests {
             "#;
 
         insta::assert_snapshot!(run_test(input_json).await, @r###"
-        {"_key_hash":2359047937476779835,"_subsort":0,"_time":"1970-01-01T00:00:00.000002","e0":[1]}
-        {"_key_hash":10021492687541564645,"_subsort":1,"_time":"1970-01-01T00:00:00.000003","e0":[1]}
-        {"_key_hash":14956259290599888306,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[1,2]}
+        {"_key_hash":18433805721903975440,"_subsort":0,"_time":"1970-01-01T00:00:00.000002","e0":[1]}
+        {"_key_hash":16461383214845928621,"_subsort":1,"_time":"1970-01-01T00:00:00.000003","e0":[1]}
+        {"_key_hash":5496774745203840792,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[1,2]}
         "###)
     }
 
@@ -307,10 +308,10 @@ mod tests {
         // This tests that multiple rows at the same time subort (but different key
         // hash) map to unique foreign rows, but in the same order.
         insta::assert_snapshot!(run_test(input_json).await, @r###"
-        {"_key_hash":2359047937476779835,"_subsort":0,"_time":"1970-01-01T00:00:00.000002","e0":[1]}
-        {"_key_hash":10021492687541564645,"_subsort":1,"_time":"1970-01-01T00:00:00.000003","e0":[1]}
-        {"_key_hash":1575016611515860288,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[2]}
-        {"_key_hash":14956259290599888306,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[1]}
+        {"_key_hash":18433805721903975440,"_subsort":0,"_time":"1970-01-01T00:00:00.000002","e0":[1]}
+        {"_key_hash":16461383214845928621,"_subsort":1,"_time":"1970-01-01T00:00:00.000003","e0":[1]}
+        {"_key_hash":2694864431690786590,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[2]}
+        {"_key_hash":5496774745203840792,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[1]}
         "###)
     }
 
@@ -326,10 +327,10 @@ mod tests {
         // This tests that multiple rows at the same time subort (but different key
         // hash) map to unique foreign rows, but in a different order.
         insta::assert_snapshot!(run_test(input_json).await, @r###"
-        {"_key_hash":2359047937476779835,"_subsort":0,"_time":"1970-01-01T00:00:00.000002","e0":[1]}
-        {"_key_hash":10021492687541564645,"_subsort":1,"_time":"1970-01-01T00:00:00.000003","e0":[1]}
-        {"_key_hash":1575016611515860288,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[1]}
-        {"_key_hash":14956259290599888306,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[2]}
+        {"_key_hash":18433805721903975440,"_subsort":0,"_time":"1970-01-01T00:00:00.000002","e0":[1]}
+        {"_key_hash":16461383214845928621,"_subsort":1,"_time":"1970-01-01T00:00:00.000003","e0":[1]}
+        {"_key_hash":2694864431690786590,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[1]}
+        {"_key_hash":5496774745203840792,"_subsort":0,"_time":"1970-01-01T00:00:00.000004","e0":[2]}
         "###)
     }
 

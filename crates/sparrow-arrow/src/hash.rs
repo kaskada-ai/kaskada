@@ -1,96 +1,43 @@
 //! Provides a kernel for hashing an arbitrary Arrow array to a UInt64Array.
-use crate::downcast::{downcast_boolean_array, downcast_primitive_array, downcast_string_array};
-use anyhow::anyhow;
-use arrow::array::{Array, OffsetSizeTrait, UInt64Array};
-use arrow::datatypes::{
-    ArrowPrimitiveType, DataType, Int16Type, Int32Type, Int64Type, Int8Type, UInt16Type,
-    UInt32Type, UInt64Type,
-};
+use std::cell::RefCell;
+
+use crate::hasher::Hasher;
+use arrow::array::{Array, UInt64Array};
+use arrow::datatypes::DataType;
 
 pub fn can_hash(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
+    match data_type {
+        primitive if primitive.is_primitive() => true,
         DataType::Null
-            | DataType::Boolean
-            | DataType::Int8
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Int64
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-            | DataType::Utf8
-            | DataType::LargeUtf8
-    )
+        | DataType::Boolean
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Binary
+        | DataType::LargeBinary
+        | DataType::FixedSizeBinary(_)
+        | DataType::Decimal128(_, _)
+        | DataType::Decimal256(_, _) => true,
+        DataType::Dictionary(_, value) => can_hash(value),
+        DataType::Struct(fields) => fields.iter().all(|f| can_hash(f.data_type())),
+        _ => false,
+    }
+}
+
+thread_local! {
+    /// Thread-local hasher.
+    ///
+    /// TODO: Move this to the hasher and make it easy to automatically
+    /// use this instance.
+    static HASHER: RefCell<Hasher> = RefCell::new(Hasher::default());
 }
 
 /// Return an `ArrayRef` to a `UInt64Array` containing the hash of each row of
 /// the array.
-pub fn hash(array: &dyn Array) -> anyhow::Result<UInt64Array> {
-    match array.data_type() {
-        DataType::Null => {
-            // The null array contains only null values. Hash that to an array of 0.
-            Ok(UInt64Array::from(vec![0; array.len()]))
-        }
-        DataType::Boolean => hash_boolean(array),
-        DataType::Int8 => hash_primitive::<Int8Type>(array),
-        DataType::Int16 => hash_primitive::<Int16Type>(array),
-        DataType::Int32 => hash_primitive::<Int32Type>(array),
-        DataType::Int64 => hash_primitive::<Int64Type>(array),
-        DataType::UInt16 => hash_primitive::<UInt16Type>(array),
-        DataType::UInt32 => hash_primitive::<UInt32Type>(array),
-        DataType::UInt64 => hash_primitive::<UInt64Type>(array),
-        DataType::Utf8 => hash_string::<i32>(array),
-        DataType::LargeUtf8 => hash_string::<i64>(array),
-        todo => Err(anyhow!("Hashing of type {:?}", todo)),
-    }
-}
-
-fn fixed_seed_hasher() -> ahash::random_state::RandomState {
-    ahash::random_state::RandomState::with_seeds(1234, 5678, 9012, 3456)
-}
-
-fn hash_string<T>(array: &dyn Array) -> anyhow::Result<UInt64Array>
-where
-    T: OffsetSizeTrait,
-{
-    let string_array = downcast_string_array::<T>(array)?;
-
-    let mut builder = UInt64Array::builder(array.len());
-
-    for string in string_array {
-        builder.append_value(fixed_seed_hasher().hash_one(string));
-    }
-
-    Ok(builder.finish())
-}
-
-fn hash_primitive<T>(array: &dyn Array) -> anyhow::Result<UInt64Array>
-where
-    T: ArrowPrimitiveType,
-    T::Native: std::hash::Hash,
-{
-    let primitive_array = downcast_primitive_array::<T>(array)?;
-
-    let mut builder = UInt64Array::builder(array.len());
-
-    for primitive in primitive_array {
-        builder.append_value(fixed_seed_hasher().hash_one(primitive));
-    }
-
-    Ok(builder.finish())
-}
-
-fn hash_boolean(array: &dyn Array) -> anyhow::Result<UInt64Array> {
-    let boolean_array = downcast_boolean_array(array)?;
-
-    let mut builder = UInt64Array::builder(array.len());
-
-    for boolean in boolean_array {
-        builder.append_value(fixed_seed_hasher().hash_one(boolean));
-    }
-
-    Ok(builder.finish())
+pub fn hash(array: &dyn Array) -> error_stack::Result<UInt64Array, crate::hasher::Error> {
+    HASHER.with(|hasher| {
+        let mut hasher = hasher.borrow_mut();
+        hasher.hash_to_uint64(array)
+    })
 }
 
 #[cfg(test)]
@@ -134,11 +81,7 @@ mod tests {
         let hashes = hash(&array).unwrap();
         assert_eq!(
             hashes.values(),
-            &[
-                13572866306152653102,
-                11832085162654999889,
-                16979493163667785006
-            ]
+            &[1472103086483932002, 0, 8057155968893317866]
         );
     }
 }

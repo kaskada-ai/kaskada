@@ -1,8 +1,8 @@
-name = 'neg'
-signature = 'neg(n: signed) -> signed'
-operator = '-n'
-short_doc = 'Returns the negation of `n`.'
-long_doc = '''
+name = "neg"
+signature = "neg(n: signed) -> signed"
+operator = "-n"
+short_doc = "Returns the negation of `n`."
+long_doc = """
 This is the function used for the unary operation `-n`.
 
 ### Parameters
@@ -17,25 +17,25 @@ signed integer type. If it is `u64` it is promoted to `f64`.
 ### Results
 For each row in the input, returns `null` if `n` is `null`.
 Otherwise, returns the negation of `n`.
-'''
-tags = ['math']
+"""
+tags = ["math"]
 
 [[examples]]
-name = 'Negation'
-expression = '-Input.a'
-input_csv = '''
+name = "Negation"
+expression = "-Input.a"
+input_csv = """
 time,key,a
 2021-01-01T00:00:00.000000000Z,A,5.7
 2021-01-01T00:00:00.000000000Z,A,6.3
 2021-01-02T00:00:00.000000000Z,B,
 2021-01-02T00:00:00.000000000Z,B,-2.2
 2021-01-03T00:00:00.000000000Z,B,0
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,result
 2021-01-01T00:00:00.000000000,A,5.7,-5.7
 2021-01-01T00:00:00.000000000,A,6.3,-6.3
 2021-01-02T00:00:00.000000000,B,,
 2021-01-02T00:00:00.000000000,B,-2.2,2.2
 2021-01-03T00:00:00.000000000,B,0.0,0.0
-'''
+"""

@@ -1,7 +1,7 @@
-name = 'count_if'
-signature = 'count_if(input: any, window: window = null) -> u32'
-short_doc = 'Counts each `true` value across in input.'
-long_doc = '''
+name = "count_if"
+signature = "count_if(input: any, window: window = null) -> u32"
+short_doc = "Counts each `true` value across in input."
+long_doc = """
 ### Parameters
 * input: The input to be counted.
 * window: The window to aggregate within, as described in
@@ -13,13 +13,13 @@ See [window functions](#window-functions) for how to specify the aggregation win
 For each input row, return the count of new rows containing `true` in `input` up to and
 including the input row for the given entity. Returns `0` if there have been no such
 inputs.
-'''
-tags = ['aggregation']
+"""
+tags = ["aggregation"]
 
 [[examples]]
-name = 'Count If'
-expression = 'count_if(Input.value)'
-input_csv = '''
+name = "Count If"
+expression = "count_if(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,false
 2021-01-02T00:00:00.000000000Z,Ryan,true
@@ -27,8 +27,8 @@ time,key,value
 2021-01-04T00:00:00.000000000Z,Ben,true
 2021-01-04T00:00:00.000000000Z,Ben,
 2021-01-05T00:00:00.000000000Z,Ryan,false
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,false,0
 2021-01-02T00:00:00.000000000,Ryan,true,1
@@ -36,4 +36,4 @@ time,key,value,result
 2021-01-04T00:00:00.000000000,Ben,true,1
 2021-01-04T00:00:00.000000000,Ben,,1
 2021-01-05T00:00:00.000000000,Ryan,false,2
-'''
+"""
