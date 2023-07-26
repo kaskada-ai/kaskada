@@ -27,7 +27,7 @@ class Expr(object):
 
         Raises
         ------
-        TypeError # noqa: DAR402
+        TypeError
             If the argument types are invalid for the given function.
         """
         ffi_args = [arg.ffi for arg in args]
