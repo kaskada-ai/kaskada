@@ -33,6 +33,7 @@ pub enum PartName<'a> {
     Formula(&'a str),
     /// Return the part name for the query string.
     Query,
+    Builder,
 }
 
 impl<'a> std::fmt::Display for PartName<'a> {
@@ -44,6 +45,7 @@ impl<'a> std::fmt::Display for PartName<'a> {
             PartName::Label(name) => write!(f, "'{name}'"),
             PartName::Formula(name) => write!(f, "'Formula: {name}'"),
             PartName::Query => write!(f, "Query"),
+            PartName::Builder => write!(f, "Builder"),
         }
     }
 }
@@ -112,6 +114,7 @@ impl<'a> Files<'a> for FeatureSetParts<'a> {
                 }
             }
             FeatureSetPart::Query => Ok(PartName::Query),
+            FeatureSetPart::Builder => Ok(PartName::Builder),
         }
     }
 
@@ -127,6 +130,7 @@ impl<'a> Files<'a> for FeatureSetParts<'a> {
                 .ok_or(Error::FileMissing)?
                 .formula),
             FeatureSetPart::Query => Ok(&self.feature_set.query),
+            FeatureSetPart::Builder => Ok("builder"),
         }
     }
 
@@ -140,6 +144,7 @@ impl<'a> Files<'a> for FeatureSetParts<'a> {
                 .get(index as usize)
                 .ok_or(Error::FileMissing)?,
             FeatureSetPart::Query => &self.query_line_starts,
+            FeatureSetPart::Builder => return Ok(0),
         };
 
         Ok(line_starts
@@ -163,6 +168,7 @@ impl<'a> Files<'a> for FeatureSetParts<'a> {
                 .get(index as usize)
                 .ok_or(Error::FileMissing)?,
             FeatureSetPart::Query => &self.query_line_starts,
+            FeatureSetPart::Builder => return Ok(0.."builder".len()),
         };
 
         self.line_range_helper(id, line_starts, line_index)

@@ -48,7 +48,7 @@ pub(super) fn ast_to_dfg(
     // Create the DFG for each argument. This is usually straightforward, unless
     // the operator has bind values. In that case, we need to handle the environment
     // specially.
-    let mut arguments = match expr.op() {
+    let arguments = match expr.op() {
         ExprOp::Pipe(_) => {
             let lhs = ast_to_dfg(data_context, dfg, diagnostics, &arguments[0])?;
             dfg.enter_env();
@@ -82,9 +82,28 @@ pub(super) fn ast_to_dfg(
             Ok(e.with_value(ast_dfg))
         })?,
     };
+
+    add_to_dfg(
+        data_context,
+        dfg,
+        diagnostics,
+        expr.op(),
+        arguments,
+        Some(expr),
+    )
+}
+
+pub(super) fn add_to_dfg(
+    data_context: &mut DataContext,
+    dfg: &mut Dfg,
+    diagnostics: &mut DiagnosticCollector<'_>,
+    op: &ExprOp,
+    mut arguments: Resolved<Located<AstDfgRef>>,
+    expr: Option<&ResolvedExpr>,
+) -> anyhow::Result<AstDfgRef> {
     let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
 
-    match expr.op() {
+    match op {
         ExprOp::Literal(literal) => {
             let (value_id, value_type) = match literal.inner() {
                 LiteralValue::String(s) => {
@@ -199,8 +218,7 @@ pub(super) fn ast_to_dfg(
                         .builder()
                         .with_label(
                             // If the base is not a struct, that is the "primary" problem.
-                            expr.arg(0)
-                                .unwrap()
+                            arguments[0]
                                 .location()
                                 .primary_label()
                                 .with_message(format!(
@@ -508,7 +526,7 @@ pub(super) fn ast_to_dfg(
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[0].inner().clone());
 
-                let window = &expr.args()[1];
+                let window = &expr.unwrap().args()[1];
                 let (condition, duration) = match window.op() {
                     ExprOp::Call(window_name) => {
                         flatten_window_args(window_name, window, dfg, data_context, diagnostics)?
@@ -538,10 +556,13 @@ pub(super) fn ast_to_dfg(
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[1].inner().clone());
 
-                let condition = ast_to_dfg(data_context, dfg, diagnostics, &expr.args()[0])?;
+                let condition = expr.unwrap().args()[0]
+                    .as_ref()
+                    .try_map(|condition| ast_to_dfg(data_context, dfg, diagnostics, condition))?;
+
                 dfg.exit_env();
                 // [condition, value]
-                vec![expr.args()[0].with_value(condition), args[1].clone()]
+                vec![condition, args[1].clone()]
             } else {
                 args
             };
