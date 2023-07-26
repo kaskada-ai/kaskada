@@ -1,28 +1,28 @@
-name = 'monthly'
-signature = 'monthly() -> bool'
-short_doc = 'A periodic function that produces a `true` value at the start of each calendar month (UTC).'
-long_doc = '''
+name = "monthly"
+signature = "monthly() -> bool"
+short_doc = "A periodic function that produces a `true` value at the start of each calendar month (UTC)."
+long_doc = """
 This function is often used in aggregations to produce windows or
 as a predicate column.
 
 ### Results
 Returns a boolean column with each row containing a `true` value
 at the start of each calendar month, and `null` at all other times.
-'''
-tags = ['tick']
+"""
+tags = ["tick"]
 
 [[examples]]
-name = 'Monthly Aggregated Window'
-description = '''
+name = "Monthly Aggregated Window"
+description = """
 In this example, the `monthly()` function is used as an argument to
 the [`since](#since) function, which produces a window. The result
 is a windowed aggregation that resets at the start of each calendar month.
-'''
-full_expression = '''
+"""
+full_expression = """
 { n: Input.n, monthly_sum: sum(Input.n, window = since(monthly())) }
 | extend({time: time_of($input), key: first(Input.key) })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,n
 1996-02-19T16:00:00-00:00,Ben,2
 1996-02-19T16:00:00-00:00,Ryan,3
@@ -30,8 +30,8 @@ time,key,n
 1996-04-20T16:01:00-00:00,Ben,9
 1996-04-21T16:00:00-00:00,Ryan,8
 1996-05-21T16:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,monthly_sum
 1996-02-19T16:00:00.000000000,Ben,2,2
 1996-02-19T16:00:00.000000000,Ryan,3,3
@@ -45,18 +45,18 @@ time,key,n,monthly_sum
 1996-05-01T00:00:00.000000000,Ryan,,8
 1996-05-01T00:00:00.000000000,Ben,,15
 1996-05-21T16:00:00.000000000,Ben,1,1
-'''
+"""
 
 [[examples]]
-name = 'Filter Monthly'
-description = '''
+name = "Filter Monthly"
+description = """
 In this example, the `monthly()` function is used as an argument to
 the [`when`](#when) function, which filters input.
 
 The output includes the last input row before a [`tick`](#tick) occurs.
-'''
-full_expression = 'Input | last() | when(monthly())'
-input_csv = '''
+"""
+full_expression = "Input | last() | when(monthly())"
+input_csv = """
 time,key,n
 1996-02-19T16:00:00-00:00,Ben,2
 1996-02-19T16:00:00-00:00,Ryan,3
@@ -64,8 +64,8 @@ time,key,n
 1996-04-20T16:01:00-00:00,Ben,9
 1996-04-21T16:00:00-00:00,Ryan,8
 1996-05-21T16:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n
 1996-02-19T16:00:00.000000000,Ryan,3
 1996-02-19T16:00:00.000000000,Ben,2
@@ -73,4 +73,4 @@ time,key,n
 1996-02-19T16:00:00.000000000,Ben,2
 1996-04-21T16:00:00.000000000,Ryan,8
 1996-04-20T16:01:00.000000000,Ben,9
-'''
+"""

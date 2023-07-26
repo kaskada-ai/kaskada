@@ -1,7 +1,7 @@
-name = 'stddev'
-signature = 'stddev(input: number, window: window = null) -> f64'
-short_doc = 'Computes the sample standard deviation of values across the input.'
-long_doc = '''
+name = "stddev"
+signature = "stddev(input: number, window: window = null) -> f64"
+short_doc = "Computes the sample standard deviation of values across the input."
+long_doc = """
 Computes the sample standard deviation, which is the square root of the
 [sample variance](#variance).
 
@@ -16,16 +16,16 @@ See [window functions](#window-functions) for how to specify the aggregation win
 For each input row, return the mean of new, non-`null` rows in `input` up to and
 including the input row for the given entity. Returns `null` until there has been
 at least two such inputs.
-'''
+"""
 tags = [
-    'aggregation',
-    'math',
+    "aggregation",
+    "math",
 ]
 
 [[examples]]
-name = 'Standard Deviation'
-expression = 'stddev(Input.value)'
-input_csv = '''
+name = "Standard Deviation"
+expression = "stddev(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,50.7
 2021-01-01T00:00:00.000000000Z,Ryan,
@@ -33,8 +33,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,1.2
 2021-01-04T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,2.3
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,50.7,
 2021-01-01T00:00:00.000000000,Ryan,,
@@ -42,4 +42,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,1.2,24.750000000000004
 2021-01-04T00:00:00.000000000,Ben,,24.750000000000004
 2021-01-04T00:00:00.000000000,Ryan,2.3,32.45
-'''
+"""

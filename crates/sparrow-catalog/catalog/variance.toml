@@ -1,7 +1,7 @@
-name = 'variance'
-signature = 'variance(input: number, window: window = null) -> f64'
-short_doc = 'Computes the sample variance of values across the input.'
-long_doc = '''
+name = "variance"
+signature = "variance(input: number, window: window = null) -> f64"
+short_doc = "Computes the sample variance of values across the input."
+long_doc = """
 Computes the sample variance. This divides by the number of values minus 1, rather
 the number of values (which would be the population variance).
 
@@ -16,16 +16,16 @@ See [window functions](#window-functions) for how to specify the aggregation win
 For each input row, return the mean of new, non-`null` rows in `input` up to and
 including the input row for the given entity. Returns `null` until there has been
 at least two such inputs.
-'''
+"""
 tags = [
-    'aggregation',
-    'math',
+    "aggregation",
+    "math",
 ]
 
 [[examples]]
-name = 'Variance'
-expression = 'variance(Input.value)'
-input_csv = '''
+name = "Variance"
+expression = "variance(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,50.7
 2021-01-01T00:00:00.000000000Z,Ryan,
@@ -33,8 +33,8 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,1.2
 2021-01-04T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,2.3
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,50.7,
 2021-01-01T00:00:00.000000000,Ryan,,
@@ -42,4 +42,4 @@ time,key,value,result
 2021-01-03T00:00:00.000000000,Ben,1.2,612.5625000000001
 2021-01-04T00:00:00.000000000,Ben,,612.5625000000001
 2021-01-04T00:00:00.000000000,Ryan,2.3,1053.0025000000003
-'''
+"""

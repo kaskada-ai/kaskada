@@ -1,7 +1,7 @@
-name = 'day_of_month0'
-signature = 'day_of_month0(time: timestamp_ns) -> u32'
-short_doc = 'Return the day-of-month for the given time, starting with 0.'
-long_doc = '''
+name = "day_of_month0"
+signature = "day_of_month0(time: timestamp_ns) -> u32"
+short_doc = "Return the day-of-month for the given time, starting with 0."
+long_doc = """
 ### Parameters
 * time: The timestamp to return the day-of-month for.
 
@@ -9,13 +9,13 @@ long_doc = '''
 Returns a `u32` column containing the day-of-month for each input `time`.
 Returns `null` for rows where `time` is `null`. The first day of the month is
 `0`. The result will be in the range 0 to 30 (inclusive).
-'''
-tags = ['time']
+"""
+tags = ["time"]
 
 [[examples]]
-name = 'Day of Month (Zero Based)'
-expression = 'day_of_month0(Input.time)'
-input_csv = '''
+name = "Day of Month (Zero Based)"
+expression = "day_of_month0(Input.time)"
+input_csv = """
 time,key
 1996-03-21T00:00:00-00:00,Ben
 1996-04-21T00:00:00-00:00,Ryan
@@ -23,8 +23,8 @@ time,key
 1996-06-21T00:00:00-00:00,Ryan
 1996-07-21T00:00:00-00:00,Ben
 1996-08-21T00:00:00-00:00,Ben
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,result
 1996-03-21T00:00:00.000000000,Ben,20
 1996-04-21T00:00:00.000000000,Ryan,20
@@ -32,4 +32,4 @@ time,key,result
 1996-06-21T00:00:00.000000000,Ryan,20
 1996-07-21T00:00:00.000000000,Ben,20
 1996-08-21T00:00:00.000000000,Ben,20
-'''
+"""

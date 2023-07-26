@@ -1,7 +1,7 @@
-name = 'remove_fields'
-signature = 'remove_fields(record, fields: string+) -> record'
-short_doc = 'Remove fields from a record.'
-long_doc = '''
+name = "remove_fields"
+signature = "remove_fields(record, fields: string+) -> record"
+short_doc = "Remove fields from a record."
+long_doc = """
 Note: If more fields are being removed than retained, you can use
 [`select_fields`](#select_fields).
 
@@ -17,25 +17,25 @@ syntax you must be explicit, as in the example.
 Returns a column containing the fields in `record` not listed in `fields`,
 with the corresponding values from `record`. The result is `null` in rows
 where `record` is `null`.
-'''
-tags = ['record']
+"""
+tags = ["record"]
 
 [[examples]]
-name = 'Record Field Filtering'
-full_expression = '''
+name = "Record Field Filtering"
+full_expression = """
 Input | remove_fields($input, 'c')
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,a,b,c
 2021-01-01T00:00:00.000000000Z,A,5,1.2,true
 2021-01-02T00:00:00.000000000Z,A,6.3,0.4,false
 2021-03-01T00:00:00.000000000Z,B,,3.7,true
 2021-04-10T00:00:00.000000000Z,A,13,,true
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000,A,5.0,1.2
 2021-01-02T00:00:00.000000000,A,6.3,0.4
 2021-03-01T00:00:00.000000000,B,,3.7
 2021-04-10T00:00:00.000000000,A,13.0,
-'''
+"""

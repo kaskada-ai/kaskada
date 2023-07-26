@@ -1,28 +1,28 @@
-name = 'hourly'
-signature = 'hourly() -> bool'
-short_doc = 'A periodic function that produces a `true` value at the start of each hour.'
-long_doc = '''
+name = "hourly"
+signature = "hourly() -> bool"
+short_doc = "A periodic function that produces a `true` value at the start of each hour."
+long_doc = """
 This function is often used in aggregations to produce windows or
 as a predicate column.
 
 ### Results
 Returns a boolean column with each row containing a `true` value
 at the start of the hour, and `null` at all other times.
-'''
-tags = ['tick']
+"""
+tags = ["tick"]
 
 [[examples]]
-name = 'Hourly Aggregated Window'
-description = '''
+name = "Hourly Aggregated Window"
+description = """
 In this example, the `hourly()` function is used as an argument to
 the [`since](#since) function, which produces a window. The result
 is a windowed aggregation that resets hourly.
-'''
-full_expression = '''
+"""
+full_expression = """
 { n: Input.n, hourly_sum: sum(Input.n, window = since(hourly())) }
 | extend({time: time_of($input), key: first(Input.key) })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,n
 1996-12-19T16:00:57-00:00,Ben,2
 1996-12-19T16:00:58-00:00,Ryan,3
@@ -30,8 +30,8 @@ time,key,n
 1996-12-19T17:01:00-00:00,Ben,9
 1996-12-19T17:01:00-00:00,Ryan,8
 1996-12-19T18:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,hourly_sum
 1996-12-19T16:00:57.000000000,Ben,2,2
 1996-12-19T16:00:58.000000000,Ryan,3,3
@@ -43,18 +43,18 @@ time,key,n,hourly_sum
 1996-12-19T18:00:00.000000000,Ben,1,16
 1996-12-19T18:00:00.000000000,Ryan,,8
 1996-12-19T18:00:00.000000000,Ben,,16
-'''
+"""
 
 [[examples]]
-name = 'Filter Hourly'
-description = '''
+name = "Filter Hourly"
+description = """
 In this example, the `hourly()` function is used as an argument to
 the [`when`](#when) function, which filters input.
 
 The output includes the last input row before a [`tick`](#tick) occurs.
-'''
-full_expression = 'Input | last() | when(hourly())'
-input_csv = '''
+"""
+full_expression = "Input | last() | when(hourly())"
+input_csv = """
 time,key,n
 1996-12-19T16:00:57-00:00,Ben,2
 1996-12-19T16:00:58-00:00,Ryan,3
@@ -62,11 +62,11 @@ time,key,n
 1996-12-19T17:01:00-00:00,Ben,9
 1996-12-19T17:01:00-00:00,Ryan,8
 1996-12-19T18:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n
 1996-12-19T16:00:58.000000000,Ryan,3
 1996-12-19T16:00:57.000000000,Ben,2
 1996-12-19T17:01:00.000000000,Ryan,8
 1996-12-19T18:00:00.000000000,Ben,1
-'''
+"""

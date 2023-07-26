@@ -1,7 +1,7 @@
-name = 'daily'
-signature = 'daily() -> bool'
-short_doc = 'A periodic function that produces a `true` value at the start of each calendar day (UTC).'
-long_doc = '''
+name = "daily"
+signature = "daily() -> bool"
+short_doc = "A periodic function that produces a `true` value at the start of each calendar day (UTC)."
+long_doc = """
 This function is often used in aggregations to produce windows or
 as a predicate column.
 
@@ -9,21 +9,21 @@ as a predicate column.
 Returns a boolean column with each row containing a `true` value
 at the start of the day, corresponding to time 00:00:00Z, and
 `null` at all other times.
-'''
-tags = ['tick']
+"""
+tags = ["tick"]
 
 [[examples]]
-name = 'Daily Aggregated Window'
-description = '''
+name = "Daily Aggregated Window"
+description = """
 In this example, the `daily()` function is used as an argument to
 the [`since](#since) window function. The result is a windowed
 aggregation that resets daily.
-'''
-full_expression = '''
+"""
+full_expression = """
 { n: Input.n, daily_sum: sum(Input.n, window = since(daily())) }
 | extend({time: time_of($input), key: first(Input.key) })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,n
 1996-12-19T04:00:00-00:00,Ben,1
 1996-12-19T05:00:00-00:00,Ryan,2
@@ -31,8 +31,8 @@ time,key,n
 1996-12-20T22:00:00-00:00,Ben,4
 1996-12-21T03:00:00-00:00,Ryan,5
 1996-12-21T07:00:00-00:00,Ben,6
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,daily_sum
 1996-12-19T04:00:00.000000000,Ben,1,1
 1996-12-19T05:00:00.000000000,Ryan,2,2
@@ -44,18 +44,18 @@ time,key,n,daily_sum
 1996-12-21T00:00:00.000000000,Ben,,7
 1996-12-21T03:00:00.000000000,Ryan,5,5
 1996-12-21T07:00:00.000000000,Ben,6,6
-'''
+"""
 
 [[examples]]
-name = 'Filter Daily'
-description = '''
+name = "Filter Daily"
+description = """
 In this example, the `daily()` function is used as an argument to
 the [`when`](#when) function, which filters input.
 
 The output includes the last input row before a [`tick`](#tick) occurs.
-'''
-full_expression = 'Input | last() | when(daily())'
-input_csv = '''
+"""
+full_expression = "Input | last() | when(daily())"
+input_csv = """
 time,key,n
 1996-12-19T04:00:00-00:00,Ben,1
 1996-12-19T05:00:00-00:00,Ryan,2
@@ -63,11 +63,11 @@ time,key,n
 1996-12-20T22:00:00-00:00,Ben,4
 1996-12-21T03:00:00-00:00,Ryan,5
 1996-12-21T07:00:00-00:00,Ben,6
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n
 1996-12-19T05:00:00.000000000,Ryan,2
 1996-12-19T04:00:00.000000000,Ben,1
 1996-12-19T05:00:00.000000000,Ryan,2
 1996-12-20T22:00:00.000000000,Ben,4
-'''
+"""

@@ -1,7 +1,7 @@
-name = 'mean'
-signature = 'mean(input: number, window: window = null) -> f64'
-short_doc = 'Computes the arithmetic mean of values across the input.'
-long_doc = '''
+name = "mean"
+signature = "mean(input: number, window: window = null) -> f64"
+short_doc = "Computes the arithmetic mean of values across the input."
+long_doc = """
 ### Parameters
 * input: The input to compute the mean of.
 * window: The window to aggregate within, as described in
@@ -13,16 +13,16 @@ See [window functions](#window-functions) for how to specify the aggregation win
 For each input row, return the mean of new, non-`null` rows in `input` up to and
 including the input row for the given entity. Returns `null` until there has been
 at least one such input.
-'''
+"""
 tags = [
-    'aggregation',
-    'math',
+    "aggregation",
+    "math",
 ]
 
 [[examples]]
-name = 'Mean'
-expression = 'mean(Input.value)'
-input_csv = '''
+name = "Mean"
+expression = "mean(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,50.7
 2021-01-01T00:00:00.000000000Z,Ryan,
@@ -30,8 +30,8 @@ time,key,value
 2021-01-02T00:00:00.000000000Z,Ben,1.2
 2021-01-03T00:00:00.000000000Z,Ben,
 2021-01-03T00:00:00.000000000Z,Ryan,2.3
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
 2021-01-01T00:00:00.000000000,Ben,50.7,50.7
 2021-01-01T00:00:00.000000000,Ryan,,
@@ -39,4 +39,4 @@ time,key,value,result
 2021-01-02T00:00:00.000000000,Ben,1.2,25.950000000000003
 2021-01-03T00:00:00.000000000,Ben,,25.950000000000003
 2021-01-03T00:00:00.000000000,Ryan,2.3,34.75
-'''
+"""
