@@ -87,19 +87,40 @@ copy (
     join zones as DOZone on DOLocationID = DOZone.LocationID
 ) TO 'fhvhv_combined.parquet' (FORMAT PARQUET);
 
+copy (
+    select 
+        hvfhs_license_num,
+        dispatching_base_num,
+        originating_base_num,
+        request_datetime,
+        on_scene_datetime,
+        pickup_datetime,
+        -- dropoff_datetime, The date and time of the trip drop-off
+        PULocationID AS pu_location_id,
+        DOLocationID AS do_location_id,
+        trip_miles,
+        -- trip_time, total time in seconds for passenger trip
+        -- base_passenger_fare, base passenger fare before tolls, tips, taxes, and fees
+        -- tolls, total amount of all tolls paid in trip
+        -- bcf, total amount collected in trip for Black Car Fund
+        -- sales_tax, total amount collected in trip for NYS sales tax
+        -- congestion_surcharge, total amount collected in trip for NYS congestion surcharge
+        -- airport_fee, $2.50 for both drop off and pick up at LaGuardia, Newark, and John F. Kennedy airports
+        -- tips, total amount of tips received from passenger   
+        -- driver_pay, total driver pay (not including tolls or tips and net of commission, surcharges, or taxes)
+        shared_request_flag,
+        shared_match_flag,
+        access_a_ride_flag,
+        wav_request_flag,
+        wav_match_flag,
+        PUZone.zone AS pu_zone,
+        PUZone.borough AS pu_borough,
+        DOZone.zone AS do_zone,
+        DOZone.borough AS do_borough,
+        ST_Distance( ST_Centroid(PUZone.geom), ST_Centroid(DOZone.geom)) / 5280 AS distance_miles,
 
-
-CREATE TABLE cleaned_rides AS SELECT 
-    ST_Point(pickup_latitude, pickup_longitude) AS pickup_point,
-    ST_Point(dropoff_latitude, dropoff_longitude) AS dropoff_point,
-    dropoff_datetime::TIMESTAMP - pickup_datetime::TIMESTAMP AS time,
-    trip_distance,
-    ST_Distance(
-        ST_Transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), 
-        ST_Transform(dropoff_point, 'EPSG:4326', 'ESRI:102718')) / 5280 
-    AS aerial_distance, 
-    trip_distance - aerial_distance AS diff 
-FROM rides 
-WHERE diff > 0
-ORDER BY diff DESC;
+    from 'fhvhv_tripdata_2023-02.parquet' 
+    join zones as PUZone on PULocationID = PUZone.LocationID 
+    join zones as DOZone on DOLocationID = DOZone.LocationID
+) TO 'fhvhv_pickups.parquet' (FORMAT PARQUET);
 ```
