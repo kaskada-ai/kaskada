@@ -11,7 +11,8 @@ use sparrow_plan::{GroupId, TableId};
 use sparrow_syntax::Location;
 use uuid::Uuid;
 
-use crate::dfg::Operation;
+use crate::dfg::{Dfg, Operation};
+use crate::AstDfgRef;
 
 /// Represents the "data context" for a compilation.
 ///
@@ -99,7 +100,7 @@ impl DataContext {
     }
 
     /// Add a table to the data context.
-    pub fn add_table(&mut self, table: ComputeTable) -> anyhow::Result<TableId> {
+    pub fn add_table(&mut self, table: ComputeTable) -> anyhow::Result<&TableInfo> {
         let config = table
             .config
             .as_ref()
@@ -164,8 +165,8 @@ impl DataContext {
         let table_uuid = Uuid::parse_str(&config.uuid).context("parsing string to table uuid")?;
         let table_id = TableId::new(table_uuid.to_owned());
         let table_info = TableInfo::try_new(table_id, group_id, schema, table)?;
-        self.table_info.insert(table_id, table_info);
-        Ok(table_id)
+        let table_info = self.table_info.entry(table_id).or_insert(table_info);
+        Ok(table_info)
     }
 
     pub fn table_infos(&self) -> impl Iterator<Item = &'_ TableInfo> {
@@ -173,44 +174,12 @@ impl DataContext {
     }
 
     /// Creates a DFG with nodes for the corresponding tables.
-    pub(crate) fn create_dfg(&self) -> anyhow::Result<crate::dfg::Dfg> {
-        use smallvec::smallvec;
-        use sparrow_plan::InstOp;
-        use sparrow_syntax::FenlType;
-
-        use crate::ast_to_dfg::AstDfg;
-        use crate::dfg::Dfg;
-        use crate::time_domain::TimeDomain;
-
+    pub(crate) fn create_dfg(&self) -> anyhow::Result<Dfg> {
         let mut dfg = Dfg::default();
         // Add the tables from the context to the DFG.
-        for (table_id, table_info) in self.table_info.iter() {
-            // Add the table reference to the environment.
-            let value = dfg.add_operation(
-                Operation::Scan {
-                    table_id: *table_id,
-                    slice: None,
-                },
-                smallvec![],
-            )?;
-            let is_new = dfg.add_instruction(InstOp::IsValid, smallvec![value])?;
-
-            let value_type = DataType::Struct(table_info.schema().fields().clone());
-            let value_type = FenlType::Concrete(value_type);
-
-            dfg.bind(
-                table_info.name(),
-                Rc::new(AstDfg::new(
-                    value,
-                    is_new,
-                    value_type,
-                    Some(table_info.group_id()),
-                    TimeDomain::table(*table_id),
-                    // TODO: Include a [FeatureSetPart] for internal nodes.
-                    Location::internal_str("table_definition"),
-                    None,
-                )),
-            );
+        for table_info in self.table_info.values() {
+            let dfg_node = table_info.dfg_node(&mut dfg)?;
+            dfg.bind(table_info.name(), dfg_node);
         }
         Ok(dfg)
     }
@@ -431,6 +400,39 @@ impl TableInfo {
                     .map(|file| file.metadata_path.clone())
             })
             .collect()
+    }
+
+    pub(crate) fn dfg_node(&self, dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
+        use smallvec::smallvec;
+        use sparrow_plan::InstOp;
+        use sparrow_syntax::FenlType;
+
+        use crate::ast_to_dfg::AstDfg;
+        use crate::time_domain::TimeDomain;
+
+        // Add the table reference to the environment.
+        let value = dfg.add_operation(
+            Operation::Scan {
+                table_id: self.table_id,
+                slice: None,
+            },
+            smallvec![],
+        )?;
+        let is_new = dfg.add_instruction(InstOp::IsValid, smallvec![value])?;
+
+        let value_type = DataType::Struct(self.schema().fields().clone());
+        let value_type = FenlType::Concrete(value_type);
+
+        Ok(Rc::new(AstDfg::new(
+            value,
+            is_new,
+            value_type,
+            Some(self.group_id()),
+            TimeDomain::table(self.table_id),
+            // TODO: Include a [FeatureSetPart] for internal nodes.
+            Location::internal_str("table_definition"),
+            None,
+        )))
     }
 }
 

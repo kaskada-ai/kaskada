@@ -462,6 +462,16 @@ pub struct Resolved<T> {
     pub has_vararg: bool,
 }
 
+impl<T> Default for Resolved<T> {
+    fn default() -> Self {
+        Self {
+            names: Default::default(),
+            values: Default::default(),
+            has_vararg: Default::default(),
+        }
+    }
+}
+
 impl<T: std::fmt::Debug> Resolved<T> {
     pub fn empty() -> Self {
         Self {
