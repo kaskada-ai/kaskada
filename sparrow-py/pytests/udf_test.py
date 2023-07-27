@@ -1,11 +1,14 @@
-from sparrow_py.udf import Udf, fenl_udf
-from sparrow_py.ffi import call_udf
 import pandas as pd
 import pyarrow as pa
+from sparrow_py._ffi import call_udf
+from sparrow_py.udf import Udf
+from sparrow_py.udf import fenl_udf
+
 
 @fenl_udf("add", "add(x: number, y: number) -> number")
 def add(x: pd.Series, y: pd.Series) -> pd.Series:
     return x + y
+
 
 def test_numeric_udf_pure_python() -> None:
     """Test the python side of UDFs."""

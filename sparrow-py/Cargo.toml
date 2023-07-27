@@ -12,9 +12,12 @@ Python library for building and executing Kaskada queries.
 [workspace]
 
 [dependencies]
+arrow = { version = "43.0.0", features = ["pyarrow"] }
+error-stack = { version = "0.3.1", features = ["anyhow", "spantrace"] }
 itertools = "0.11.0"
-arrow = {version = "44.0.0", features = ["pyarrow"] }
-pyo3 = {version = "0.19.1", features = ["abi3-py37", "extension-module", "generate-import-lib"]}
+pyo3 = {version = "0.19.1", features = ["abi3-py38", "extension-module", "generate-import-lib"]}
+sparrow-compiler = { path = "../crates/sparrow-compiler" }
+sparrow-syntax = { path = "../crates/sparrow-syntax" }
 
 [lib]
 name = "sparrow_py"

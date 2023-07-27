@@ -10,7 +10,7 @@ pub(crate) mod resolve_arguments;
 mod slice_analysis;
 
 use std::collections::BTreeSet;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use arrow::datatypes::{DataType, TimeUnit};
@@ -352,7 +352,7 @@ fn create_changed_since_time_node(dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
     )?;
     let value_type = FenlType::Concrete(DataType::Timestamp(TimeUnit::Nanosecond, None));
     let is_new = dfg.add_literal(false)?;
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         is_new,
         value_type,
@@ -375,7 +375,7 @@ fn create_final_at_time_time_node(dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
     )?;
     let value_type = FenlType::Concrete(DataType::Timestamp(TimeUnit::Nanosecond, None));
     let is_new = dfg.add_literal(false)?;
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         is_new,
         value_type,

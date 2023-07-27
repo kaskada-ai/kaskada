@@ -20,6 +20,7 @@ flake8-rst-docstrings = ">=0.2.5"
 furo = ">=2021.11.12"
 isort = ">=5.10.1"
 mypy = ">=0.930"
+pandas-stubs = "^2.0.2"
 pep8-naming = ">=0.12.1"
 pyarrow = "^12.0.1"
 pytest = ">=6.2.5"
@@ -54,7 +55,7 @@ profile = "release"
 # Path to the python source directory
 python-source = "pysrc"
 # Name of the Rust module in Python
-module-name = "sparrow_py.ffi"
+module-name = "sparrow_py._ffi"
 
 [tool.coverage.paths]
 source = ["pysrc", "*/site-packages"]

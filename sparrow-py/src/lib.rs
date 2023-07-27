@@ -8,6 +8,7 @@ mod udf;
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
+#[pyo3(name = "_ffi")]
 fn ffi(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(udf::call_udf, m)?)?;
     m.add_class::<session::Session>()?;

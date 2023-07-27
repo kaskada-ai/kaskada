@@ -95,7 +95,7 @@ def safety(session: Session) -> None:
 def mypy(session: Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
-    session.install("mypy", "pytest")
+    session.install("mypy", "pytest", "pandas-stubs")
     install_self(session)
     session.run("mypy", *args)
     if not session.posargs:
@@ -105,7 +105,7 @@ def mypy(session: Session) -> None:
 @session(python=python_versions)
 def tests(session: Session) -> None:
     """Run the test suite."""
-    session.install("coverage[toml]", "pytest", "pygments")
+    session.install("coverage[toml]", "pytest", "pygments", "pandas", "pyarrow")
     install_self(session)
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
@@ -131,7 +131,7 @@ def coverage(session: Session) -> None:
 def typeguard(session: Session) -> None:
     """Runtime type checking using Typeguard."""
     install_self(session)
-    session.install("pytest", "typeguard", "pygments")
+    session.install("pytest", "typeguard", "pygments", "pandas", "pyarrow")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 
 
