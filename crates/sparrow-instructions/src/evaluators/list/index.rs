@@ -1,6 +1,5 @@
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, AsArray, Int32Array, Int64Array, ListArray};
-use arrow::buffer::OffsetBuffer;
 
 use arrow_schema::DataType;
 use itertools::Itertools;
