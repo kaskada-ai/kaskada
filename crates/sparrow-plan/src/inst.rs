@@ -334,9 +334,9 @@ fn parse_signature(op: InstOp, label: &'static str) -> Option<Arc<Signature>> {
                     panic!("Invalid {label} '{signature_str}' for instruction {op:?}: {e:?}")
                 });
 
-        // if signature.name() != op.to_string() {
-        //     panic!("Signature for op '{op:?}' has invalid name: '{signature_str}'")
-        // }
+        if signature.name() != op.to_string() {
+            panic!("Signature for op '{op:?}' has invalid name: '{signature_str}'")
+        }
         Arc::new(signature)
     })
 }
