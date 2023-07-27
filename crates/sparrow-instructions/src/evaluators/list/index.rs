@@ -1,11 +1,7 @@
 use anyhow::Context;
-use arrow::array::{
-    as_boolean_array, as_largestring_array, as_string_array, Array, ArrayAccessor, ArrayRef,
-    Int32Array, Int64Array, ListArray,
-};
+use arrow::array::{Array, ArrayRef, AsArray, Int32Array, Int64Array, ListArray};
 use arrow::buffer::OffsetBuffer;
 
-use arrow::downcast_primitive_array;
 use arrow_schema::DataType;
 use itertools::Itertools;
 use sparrow_plan::ValueRef;
@@ -37,7 +33,7 @@ impl EvaluatorFactory for IndexEvaluator {
 
 impl Evaluator for IndexEvaluator {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let list_input = info.value(&self.list)?.list_array()?;
+        let list_input = info.value(&self.list)?.array_ref()?;
         let index_input = info.value(&self.index)?.primitive_array()?;
 
         let result = list_get(&list_input, &index_input)?;
@@ -46,8 +42,10 @@ impl Evaluator for IndexEvaluator {
 }
 
 /// Given a `ListArray` and `index` array of the same length return an array of the values.
-fn list_get(list: &ListArray, indices: &Int64Array) -> anyhow::Result<ArrayRef> {
+fn list_get(list: &ArrayRef, indices: &Int64Array) -> anyhow::Result<ArrayRef> {
     anyhow::ensure!(list.len() == indices.len());
+
+    let list = list.as_list();
     let take_indices = list_indices(list, indices)?;
     arrow::compute::take(list.values(), &take_indices, None).context("take in get_map")
 }
@@ -55,51 +53,11 @@ fn list_get(list: &ListArray, indices: &Int64Array) -> anyhow::Result<ArrayRef> 
 /// Gets the indices in the list where the values are at the index within each list.
 fn list_indices(list: &ListArray, indices: &Int64Array) -> anyhow::Result<Int32Array> {
     let offsets = list.offsets();
-    let values = list.values();
-    downcast_primitive_array!(
-        values => {
-               Ok(accessible_array_list_indices(
-                offsets,
-                values,
-                indices
-            ))
-        }
-        DataType::Utf8 => {
-            let values = as_string_array(values);
-            Ok(accessible_array_list_indices(
-                offsets,
-                values,
-                indices
-            ))
-        }
-        DataType::LargeUtf8 => {
-            let values = as_largestring_array(values);
-            Ok(accessible_array_list_indices(
-                offsets,
-                values,
-                indices
-            ))
-        }
-        DataType::Boolean => {
-            let values = as_boolean_array(values);
-            Ok(accessible_array_list_indices(
-                offsets,
-                values,
-                indices
-            ))
-        }
-        unsupported => {
-            anyhow::bail!("unsupported list type: {:?}", unsupported)
-        }
-    )
+    Ok(accessible_array_list_indices(offsets, indices))
 }
 
 /// Generic implementation of `list_indices` for arrays implementing `ArrayAccessor`.
-fn accessible_array_list_indices<T: Send + Sync, A: ArrayAccessor<Item = T>>(
-    offsets: &OffsetBuffer<i32>,
-    values: A,
-    indices: &Int64Array,
-) -> Int32Array {
+fn accessible_array_list_indices(offsets: &OffsetBuffer<i32>, indices: &Int64Array) -> Int32Array {
     let mut result = Int32Array::builder(indices.len());
     let offsets = offsets.iter().map(|n| *n as usize).tuple_windows();
 
@@ -111,7 +69,7 @@ fn accessible_array_list_indices<T: Send + Sync, A: ArrayAccessor<Item = T>>(
             let inner_index = indices.value(index) as usize;
             // The outer index corresponds to the index with the flattened array.
             let outer_index = start + inner_index;
-            if inner_index >= list_start && inner_index < list_end && values.is_valid(outer_index) {
+            if inner_index >= list_start && inner_index < list_end {
                 result.append_value(outer_index as i32);
                 continue 'outer;
             }
