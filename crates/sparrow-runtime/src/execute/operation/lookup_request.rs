@@ -347,7 +347,7 @@ mod tests {
                 arguments: vec![],
                 result_type: Some(v1alpha::DataType {
                     kind: Some(data_type::Kind::List(Box::new(data_type::List {
-                        name: "list".to_owned(),
+                        name: "item".to_owned(),
                         item_type: Some(Box::new(v1alpha::DataType {
                             kind: Some(data_type::Kind::Primitive(
                                 data_type::PrimitiveType::U64 as i32,
