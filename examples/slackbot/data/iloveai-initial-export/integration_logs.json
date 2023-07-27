@@ -1,0 +1,6 @@
+[
+{"user_id":"U05JQJJDJ6P","user_name":"eric.pinzur","date":"1690443618","change_type":"removed","reason":"user_uninstalled_app","app_type":"OpenSourceAirbyteConnection","app_id":"A05JDF4JY7R"},
+{"user_id":"U05JQJJDJ6P","user_name":"eric.pinzur","date":"1690365230","change_type":"added","app_type":"OpenSourceAirbyteConnection","app_id":"A05JDF4JY7R"},
+{"user_id":0,"user_name":"slack","date":"1690365043","change_type":"app_collaborator_added","app_type":"OpenSourceAirbyteConnection","app_id":"A05JDF4JY7R"},
+{"user_id":"U05JQJJDJ6P","user_name":"eric.pinzur","date":"1690360092","change_type":"added","app_type":"Airbyte","app_id":"A02FQL8CHPH","scope":"read,identify"}
+]

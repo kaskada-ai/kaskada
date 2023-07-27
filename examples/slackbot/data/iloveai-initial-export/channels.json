@@ -1,0 +1,71 @@
+[
+{
+    "id": "C05JMQ6PJ2Z",
+    "name": "demo",
+    "created": 1690314266,
+    "creator": "U05JQJJDJ6P",
+    "is_archived": false,
+    "is_general": false,
+    "members": [
+        "U05JH8BCZST",
+        "U05JQJJDJ6P",
+        "U05JV3K9RB7"
+    ],
+    "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+    },
+    "purpose": {
+        "value": "This channel is for everything #demo. Hold meetings, share docs, and make decisions together with your team.",
+        "creator": "U05JQJJDJ6P",
+        "last_set": 1690314266
+    }
+},
+{
+    "id": "C05K3B1V717",
+    "name": "random",
+    "created": 1690314133,
+    "creator": "U05JQJJDJ6P",
+    "is_archived": false,
+    "is_general": false,
+    "members": [
+        "U05JH8BCZST",
+        "U05JQJJDJ6P",
+        "U05JV3K9RB7"
+    ],
+    "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+    },
+    "purpose": {
+        "value": "This channel is for... well, everything else. It’s a place for team jokes, spur-of-the-moment ideas, and funny GIFs. Go wild!",
+        "creator": "U05JQJJDJ6P",
+        "last_set": 1690314133
+    }
+},
+{
+    "id": "C05KED4JDNC",
+    "name": "general",
+    "created": 1690314132,
+    "creator": "U05JQJJDJ6P",
+    "is_archived": false,
+    "is_general": true,
+    "members": [
+        "U05JH8BCZST",
+        "U05JQJJDJ6P",
+        "U05JV3K9RB7"
+    ],
+    "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+    },
+    "purpose": {
+        "value": "This is the one channel that will always include everyone. It’s a great spot for announcements and team-wide conversations.",
+        "creator": "U05JQJJDJ6P",
+        "last_set": 1690314132
+    }
+}
+]
