@@ -83,8 +83,9 @@ fn accessible_array_list_indices(offsets: &OffsetBuffer<i32>, indices: &Int64Arr
 mod tests {
     use crate::evaluators::list::index::list_get;
     use arrow::array::{
-        as_boolean_array, as_primitive_array, as_string_array, BooleanArray, BooleanBuilder,
-        Int32Array, Int32Builder, Int64Array, ListBuilder, StringArray, StringBuilder,
+        as_boolean_array, as_primitive_array, as_string_array, ArrayRef, BooleanArray,
+        BooleanBuilder, Int32Array, Int32Builder, Int64Array, ListBuilder, StringArray,
+        StringBuilder,
     };
     use std::sync::Arc;
 
@@ -97,8 +98,7 @@ mod tests {
         builder.append_value([Some(10), Some(8), Some(4)]);
         builder.append_value([Some(10), Some(15), Some(19), Some(123)]);
 
-        let array = builder.finish();
-        let array = Arc::new(array);
+        let array: ArrayRef = Arc::new(builder.finish());
 
         let indices = Int64Array::from(vec![0, 1, 2, 0, 1]);
         let actual = list_get(&array, &indices).unwrap();
@@ -116,8 +116,7 @@ mod tests {
         builder.append_value([None, Some("dog"), Some("cat")]);
         builder.append_value([Some("bird"), Some("fish")]);
 
-        let array = builder.finish();
-        let array = Arc::new(array);
+        let array: ArrayRef = Arc::new(builder.finish());
 
         let indices = Int64Array::from(vec![0, 1, 2, 0, 1]);
         let actual = list_get(&array, &indices).unwrap();
@@ -135,8 +134,7 @@ mod tests {
         builder.append_value([None, Some(true), Some(false)]);
         builder.append_value([Some(true), Some(false)]);
 
-        let array = builder.finish();
-        let array = Arc::new(array);
+        let array: ArrayRef = Arc::new(builder.finish());
 
         let indices = Int64Array::from(vec![0, 1, 2, 0, 1]);
         let actual = list_get(&array, &indices).unwrap();
