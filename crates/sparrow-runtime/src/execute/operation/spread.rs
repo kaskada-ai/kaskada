@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::array::{
-    new_null_array, Array, ArrayData, ArrayRef, BooleanArray, BooleanBufferBuilder,
+    new_null_array, Array, ArrayData, ArrayRef, AsArray, BooleanArray, BooleanBufferBuilder,
     GenericStringArray, GenericStringBuilder, Int32BufferBuilder, ListArray, MapArray,
     OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder, StringArray, StringBuilder, StructArray,
 };
@@ -11,8 +11,8 @@ use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
 use itertools::{izip, Itertools};
 use sparrow_arrow::downcast::{
-    downcast_boolean_array, downcast_list_array, downcast_map_array, downcast_primitive_array,
-    downcast_string_array, downcast_struct_array,
+    downcast_boolean_array, downcast_map_array, downcast_primitive_array, downcast_string_array,
+    downcast_struct_array,
 };
 use sparrow_arrow::utils::make_null_array;
 use sparrow_instructions::GroupingIndices;
@@ -1696,7 +1696,7 @@ impl SpreadImpl for UnlatchedUInt64ListSpread {
         // referenced exactly once). Instead, we need to spread out the offset
         // array.
 
-        let values = downcast_list_array(values.as_ref())?;
+        let values = values.as_ref().as_list();
         let mut offset_builder = Int32BufferBuilder::new(grouping.len() + 1);
 
         let mut null_builder = BooleanBufferBuilder::new(grouping.len());

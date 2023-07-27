@@ -210,8 +210,30 @@ pub fn validate_instantiation(
                     }
                 }
             }
-            FenlType::Collection(Collection::List, _) => {
-                todo!("list unsupported")
+            FenlType::Collection(Collection::List, type_vars) => {
+                debug_assert!(type_vars.len() == 1);
+                let item_type = match argument_type {
+                    FenlType::Concrete(DataType::List(f)) => {
+                        FenlType::Concrete(f.data_type().clone())
+                    }
+                    other => anyhow::bail!("expected list, saw {:?}", other),
+                };
+
+                match types_for_variable.entry(type_vars[0].clone()) {
+                    Entry::Occupied(occupied) => {
+                        anyhow::ensure!(
+                            occupied.get() == &item_type
+                                || matches!(occupied.get(), FenlType::Error)
+                                || matches!(argument_type, FenlType::Error),
+                            "Failed type validation: expected {} but was {}",
+                            occupied.get(),
+                            item_type
+                        );
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(item_type.clone());
+                    }
+                }
             }
             FenlType::Error => {
                 // Assume the argument matches (since we already reported what
@@ -359,7 +381,20 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
             let s = Arc::new(Field::new("entries", DataType::Struct(fields), false));
             FenlType::Concrete(DataType::Map(s, false))
         }
-        FenlType::Collection(Collection::List, _) => todo!("unsupported"),
+        FenlType::Collection(Collection::List, type_vars) => {
+            debug_assert!(type_vars.len() == 1);
+            let concrete_type = solutions
+                .get(&type_vars[0])
+                .cloned()
+                .unwrap_or(FenlType::Concrete(DataType::Null));
+            let field = match concrete_type {
+                // TODO: Should the fields be nullable?
+                FenlType::Concrete(t) => Arc::new(Field::new("item", t, false)),
+                other => panic!("expected concrete type, got {:?}", other),
+            };
+
+            FenlType::Concrete(DataType::List(field))
+        }
         FenlType::Concrete(_) => fenl_type.clone(),
         FenlType::Window => fenl_type.clone(),
         FenlType::Json => fenl_type.clone(),

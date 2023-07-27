@@ -1,0 +1,62 @@
+[
+    {
+        "client_msg_id": "515ba80e-a0d5-482f-bb16-3eda5a0ef153",
+        "type": "message",
+        "text": "old message in demo channel",
+        "user": "U05JQJJDJ6P",
+        "ts": "1690360209.651159",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "Egod",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "old message in demo channel"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "g18ebd8787ba",
+            "image_72": "https:\/\/secure.gravatar.com\/avatar\/18ebd8787bac254cb250ef312cb79868.jpg?s=72&d=https%3A%2F%2Fa.slack-edge.com%2Fdf10d%2Fimg%2Favatars%2Fava_0012-72.png",
+            "first_name": "eric",
+            "real_name": "eric",
+            "display_name": "",
+            "team": "T05JA5XCR9D",
+            "name": "eric.pinzur",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        }
+    },
+    {
+        "type": "message",
+        "subtype": "channel_join",
+        "ts": "1690365352.090379",
+        "user": "U05K6LQRDKK",
+        "text": "<@U05K6LQRDKK> has joined the channel",
+        "inviter": "U05JQJJDJ6P"
+    },
+    {
+        "type": "message",
+        "subtype": "channel_join",
+        "ts": "1690400220.366319",
+        "user": "U05JH8BCZST",
+        "text": "<@U05JH8BCZST> has joined the channel"
+    },
+    {
+        "type": "message",
+        "subtype": "channel_join",
+        "ts": "1690402590.304289",
+        "user": "U05JV3K9RB7",
+        "text": "<@U05JV3K9RB7> has joined the channel"
+    }
+]

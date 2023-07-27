@@ -108,7 +108,6 @@ impl Default for Dfg {
 impl Dfg {
     pub(super) fn add_literal(&mut self, literal: impl Into<ScalarValue>) -> anyhow::Result<Id> {
         let literal = literal.into();
-        // TODO: FRAZ - do I need to support large string literal here?
         if let ScalarValue::Utf8(Some(literal)) = literal {
             self.add_string_literal(&literal)
         } else {
