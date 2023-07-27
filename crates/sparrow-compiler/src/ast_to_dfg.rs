@@ -653,6 +653,13 @@ fn cast_if_needed(
         {
             Ok(value)
         }
+        // Ensures that list types with the same inner types are compatible, regardless of the (arbitary) field naming.
+        (FenlType::Concrete(DataType::List(s)), FenlType::Concrete(DataType::List(s2)))
+            if list_types_are_equal(s, s2) =>
+        {
+            Ok(value)
+        }
+
         (FenlType::Concrete(DataType::Null), FenlType::Window) => Ok(value),
         (
             FenlType::Concrete(DataType::Struct(actual_fields)),
@@ -710,6 +717,14 @@ fn map_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
         }
         _ => panic!("expected struct in map"),
     }
+}
+
+// When constructing the concrete list during inference, we use arbitary names for the inner data
+// field since we don't have access to the user's naming patterns there.
+// By comparing the list types based on just the inner type, we can ensure that the types are
+// still treated as equal.
+fn list_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
+    a.data_type() == b.data_type()
 }
 
 pub(crate) fn is_any_new(dfg: &mut Dfg, arguments: &[Located<AstDfgRef>]) -> anyhow::Result<Id> {

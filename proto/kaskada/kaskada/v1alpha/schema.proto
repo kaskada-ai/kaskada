@@ -32,10 +32,16 @@ message DataType {
     google.protobuf.Empty window = 3;
 
     // A list of a different type.
-    DataType list = 4;
+    List list = 4;
 
     // A map<k, v> type.
     Map map = 5;
+  }
+
+  message List {
+    string name = 1;
+    DataType item_type = 2;
+    bool nullable = 3;
   }
 
   message Map {

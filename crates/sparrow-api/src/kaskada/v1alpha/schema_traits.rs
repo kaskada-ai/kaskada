@@ -24,7 +24,7 @@ impl DataType {
         let value = &fields[1];
         Self {
             kind: Some(data_type::Kind::Map(Box::new(data_type::Map {
-                name: name.to_string(),
+                name: name.to_owned(),
                 ordered,
                 key_name: key.name.clone(),
                 key_type: Some(Box::new(
@@ -40,6 +40,22 @@ impl DataType {
                         .clone(),
                 )),
                 value_is_nullable: value.nullable,
+            }))),
+        }
+    }
+
+    pub fn new_list(name: &str, field: schema::Field) -> Self {
+        Self {
+            kind: Some(data_type::Kind::List(Box::new(data_type::List {
+                name: name.to_owned(),
+                item_type: Some(Box::new(
+                    field
+                        .data_type
+                        .as_ref()
+                        .expect("data type to exist")
+                        .clone(),
+                )),
+                nullable: field.nullable,
             }))),
         }
     }
@@ -221,6 +237,21 @@ impl TryFrom<&arrow::datatypes::DataType> for DataType {
 
                 Ok(DataType::new_map(s.name(), *is_ordered, vec![key, value]))
             }
+            arrow::datatypes::DataType::List(field) => {
+                let name = field.name();
+                let field = schema::Field {
+                    name: name.to_owned(),
+                    data_type: Some(field.data_type().try_into().map_err(
+                        |err: ConversionError<arrow::datatypes::DataType>| {
+                            err.with_prepend_field("list item".to_owned())
+                        },
+                    )?),
+                    nullable: field.is_nullable(),
+                };
+
+                Ok(DataType::new_list(name, field))
+            }
+
             unsupported => Err(ConversionError::new_unsupported(unsupported.clone())),
         }
     }
@@ -337,12 +368,16 @@ impl TryFrom<&DataType> for arrow::datatypes::DataType {
             Some(data_type::Kind::Struct(schema)) => Ok(arrow::datatypes::DataType::Struct(
                 fields_to_arrow(&schema.fields)?.into(),
             )),
-            Some(data_type::Kind::List(item_type)) => {
-                let item_type = arrow::datatypes::DataType::try_from(item_type.as_ref())
-                    .map_err(|e| e.with_prepend_field("list item".to_owned()))?;
-                let item_type = arrow::datatypes::Field::new("item", item_type, true);
-                Ok(arrow::datatypes::DataType::List(Arc::new(item_type)))
-            }
+            Some(data_type::Kind::List(list)) => match list.item_type.as_ref() {
+                Some(item_type) => {
+                    let item_type = arrow::datatypes::DataType::try_from(item_type.as_ref())
+                        .map_err(|e| e.with_prepend_field("list item".to_owned()))?;
+                    let item_type =
+                        arrow::datatypes::Field::new(list.name.clone(), item_type, list.nullable);
+                    Ok(arrow::datatypes::DataType::List(Arc::new(item_type)))
+                }
+                None => Err(ConversionError::new_unsupported(value.clone())),
+            },
             Some(data_type::Kind::Map(map)) => {
                 match (map.key_type.as_ref(), map.value_type.as_ref()) {
                     (Some(key), Some(value)) => {

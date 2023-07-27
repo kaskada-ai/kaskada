@@ -24,13 +24,6 @@ pub fn downcast_primitive_array<T: ArrowPrimitiveType>(
         })
 }
 
-pub fn downcast_list_array(array: &dyn Array) -> anyhow::Result<&ListArray> {
-    array
-        .as_any()
-        .downcast_ref::<ListArray>()
-        .with_context(|| format!("Unable to downcast {:?} to ListArray", array.data_type()))
-}
-
 /// Downcast an array into a string array.
 pub fn downcast_string_array<T>(array: &dyn Array) -> anyhow::Result<&GenericStringArray<T>>
 where
@@ -54,6 +47,14 @@ pub fn downcast_struct_array(array: &dyn Array) -> anyhow::Result<&StructArray> 
         .as_any()
         .downcast_ref::<StructArray>()
         .with_context(|| format!("Unable to downcast {:?} to struct array", array.data_type()))
+}
+
+/// Downcast an `ArrayRef` to a `ListArray`.
+pub fn downcast_list_array(array: &dyn Array) -> anyhow::Result<&ListArray> {
+    array
+        .as_any()
+        .downcast_ref::<ListArray>()
+        .with_context(|| format!("Unable to downcast {:?} to list array", array.data_type()))
 }
 
 /// Downcast an `ArrayRef` to a `MapArray`.

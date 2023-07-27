@@ -243,8 +243,6 @@ impl FromStr for FenlType {
             "duration_ns" => Ok(DataType::Duration(TimeUnit::Nanosecond).into()),
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
-            // TODO(https://github.com/kaskada-ai/kaskada/issues/494): Support fenl types
-            // in collections
             s if s.starts_with("list<") && s.ends_with('>') => {
                 let type_var = &s[5..s.len() - 1]
                     .split(',')

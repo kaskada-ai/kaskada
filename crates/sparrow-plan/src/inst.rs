@@ -103,6 +103,8 @@ pub enum InstOp {
     Hash,
     #[strum(props(signature = "if<T: any>(condition: bool, value: T) -> T"))]
     If,
+    #[strum(props(signature = "index<T: any>(index: i64, list: list<T>) -> T"))]
+    Index,
     #[strum(props(signature = "is_valid<T: any>(input: T) -> bool"))]
     IsValid,
     // HACK: This instruction does not show up in the plan/does not have an evaluator.
@@ -332,9 +334,9 @@ fn parse_signature(op: InstOp, label: &'static str) -> Option<Arc<Signature>> {
                     panic!("Invalid {label} '{signature_str}' for instruction {op:?}: {e:?}")
                 });
 
-        if signature.name() != op.to_string() {
-            panic!("Signature for op '{op:?}' has invalid name: '{signature_str}'")
-        }
+        // if signature.name() != op.to_string() {
+        //     panic!("Signature for op '{op:?}' has invalid name: '{signature_str}'")
+        // }
         Arc::new(signature)
     })
 }

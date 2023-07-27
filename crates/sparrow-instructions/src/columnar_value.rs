@@ -1,13 +1,13 @@
 use anyhow::anyhow;
 use arrow::array::{
-    Array, ArrayRef, BooleanArray, GenericStringArray, MapArray, OffsetSizeTrait, PrimitiveArray,
-    StructArray,
+    Array, ArrayRef, BooleanArray, GenericStringArray, ListArray, MapArray, OffsetSizeTrait,
+    PrimitiveArray, StructArray,
 };
 use arrow::datatypes::*;
 use owning_ref::ArcRef;
 use sparrow_arrow::downcast::{
-    downcast_boolean_array, downcast_map_array, downcast_primitive_array, downcast_string_array,
-    downcast_struct_array,
+    downcast_boolean_array, downcast_list_array, downcast_map_array, downcast_primitive_array,
+    downcast_string_array, downcast_struct_array,
 };
 use sparrow_arrow::scalar_value::{NativeFromScalar, ScalarValue};
 
@@ -60,6 +60,13 @@ impl ColumnarValue {
     pub fn map_array(&self) -> anyhow::Result<ArcRef<dyn Array, MapArray>> {
         let array = self.array_ref()?;
         ArcRef::new(array).try_map(|a| downcast_map_array(a))
+    }
+
+    /// Specialized version of `array_ref` that downcasts the array to a
+    /// list array.
+    pub fn list_array(&self) -> anyhow::Result<ArcRef<dyn Array, ListArray>> {
+        let array = self.array_ref()?;
+        ArcRef::new(array).try_map(|a| downcast_list_array(a))
     }
 
     /// Specialized version of `array_ref` that downcasts the array to a
