@@ -9,7 +9,7 @@ pub(super) fn register(registry: &mut Registry) {
         .set_internal();
 
     registry
-        .register("index<T: any>(index: i64, list: list<T>) -> T")
+        .register("index<T: any>(i: i64, list: list<T>) -> T")
         .with_implementation(Implementation::Instruction(InstOp::Index))
         .set_internal();
 }

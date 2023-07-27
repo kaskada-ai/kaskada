@@ -111,6 +111,7 @@ impl Pushdown {
             | DataType::Interval(_)
             | DataType::Utf8
             | DataType::LargeUtf8
+            | DataType::List(..)
             | DataType::Map(..) => {
                 let mut subst = subst.clone();
                 subst.insert(

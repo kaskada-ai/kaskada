@@ -14,12 +14,12 @@ use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
 /// Evaluator for `get` on maps.
 #[derive(Debug)]
-pub(in crate::evaluators) struct MapGetEvaluator {
+pub(in crate::evaluators) struct GetEvaluator {
     map: ValueRef,
     key: ValueRef,
 }
 
-impl EvaluatorFactory for MapGetEvaluator {
+impl EvaluatorFactory for GetEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let key_type = info.args[0].data_type.clone();
         let map_type = &info.args[1].data_type;
@@ -49,7 +49,7 @@ impl EvaluatorFactory for MapGetEvaluator {
     }
 }
 
-impl Evaluator for MapGetEvaluator {
+impl Evaluator for GetEvaluator {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let map_input = info.value(&self.map)?.map_array()?;
         let key_input = info.value(&self.key)?.array_ref()?;

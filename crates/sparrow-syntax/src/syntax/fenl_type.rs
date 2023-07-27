@@ -82,6 +82,9 @@ impl<'a> std::fmt::Display for FormatDataType<'a> {
                 write!(fmt, "{}", FormatStruct(fields))
             }
             DataType::Date32 => fmt.write_str("date32"),
+            DataType::List(f) => {
+                write!(fmt, "list<{}>", FormatDataType(f.data_type()))
+            }
             DataType::Map(f, _) => match f.data_type() {
                 DataType::Struct(fields) => {
                     write!(

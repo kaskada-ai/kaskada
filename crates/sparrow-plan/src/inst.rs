@@ -103,7 +103,7 @@ pub enum InstOp {
     Hash,
     #[strum(props(signature = "if<T: any>(condition: bool, value: T) -> T"))]
     If,
-    #[strum(props(signature = "index<T: any>(index: i64, list: list<T>) -> T"))]
+    #[strum(props(signature = "index<T: any>(i: i64, list: list<T>) -> T"))]
     Index,
     #[strum(props(signature = "is_valid<T: any>(input: T) -> bool"))]
     IsValid,
