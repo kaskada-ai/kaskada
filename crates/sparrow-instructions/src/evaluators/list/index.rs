@@ -1,10 +1,10 @@
 use anyhow::Context;
 use arrow::array::{
-    as_boolean_array, as_largestring_array, as_primitive_array, as_string_array, Array,
-    ArrayAccessor, ArrayRef, Int32Array, Int64Array, ListArray, MapArray,
+    as_boolean_array, as_largestring_array, as_string_array, Array, ArrayAccessor, ArrayRef,
+    Int32Array, Int64Array, ListArray,
 };
 use arrow::buffer::OffsetBuffer;
-use arrow::datatypes::Int64Type;
+
 use arrow::downcast_primitive_array;
 use arrow_schema::DataType;
 use itertools::Itertools;
@@ -13,16 +13,16 @@ use std::sync::Arc;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 
-/// Evaluator for `get` on lists.
+/// Evaluator for `index` on lists.
 ///
 /// Retrieves the value at the given index.
 #[derive(Debug)]
-pub(in crate::evaluators) struct ListGetEvaluator {
+pub(in crate::evaluators) struct IndexEvaluator {
     index: ValueRef,
     list: ValueRef,
 }
 
-impl EvaluatorFactory for ListGetEvaluator {
+impl EvaluatorFactory for IndexEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let input_type = info.args[1].data_type.clone();
         match input_type {
@@ -35,7 +35,7 @@ impl EvaluatorFactory for ListGetEvaluator {
     }
 }
 
-impl Evaluator for ListGetEvaluator {
+impl Evaluator for IndexEvaluator {
     fn evaluate(&mut self, info: &dyn crate::RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let list_input = info.value(&self.list)?.list_array()?;
         let index_input = info.value(&self.index)?.primitive_array()?;
@@ -123,22 +123,12 @@ fn accessible_array_list_indices<T: Send + Sync, A: ArrayAccessor<Item = T>>(
 
 #[cfg(test)]
 mod tests {
-
-    use std::sync::Arc;
-
-    use arrow::{
-        array::{
-            as_boolean_array, as_primitive_array, as_string_array, as_struct_array, BooleanArray,
-            BooleanBuilder, Int32Array, Int32Builder, Int64Array, Int64Builder, ListBuilder,
-            MapBuilder, StringArray, StringBuilder, StructArray, StructBuilder,
-        },
-        buffer::{BooleanBuffer, NullBuffer, OffsetBuffer},
-        ipc::Bool,
+    use crate::evaluators::list::index::list_get;
+    use arrow::array::{
+        as_boolean_array, as_primitive_array, as_string_array, BooleanArray, BooleanBuilder,
+        Int32Array, Int32Builder, Int64Array, ListBuilder, StringArray, StringBuilder,
     };
-    use arrow_schema::{DataType, Field, Fields};
-    use itertools::Itertools;
-
-    use crate::evaluators::list::get::list_get;
+    use std::sync::Arc;
 
     #[test]
     fn test_index_primitive() {

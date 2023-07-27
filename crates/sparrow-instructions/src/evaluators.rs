@@ -206,7 +206,7 @@ fn create_simple_evaluator(
         }
         InstOp::Floor => FloorEvaluator::try_new(info),
         InstOp::Get => GetEvaluator::try_new(info),
-        InstOp::Index => ListGetEvaluator::try_new(info),
+        InstOp::Index => IndexEvaluator::try_new(info),
         InstOp::Gt => match (info.args[0].is_literal(), info.args[1].is_literal()) {
             (_, true) => {
                 create_ordered_evaluator!(&info.args[0].data_type, GtScalarEvaluator, info)

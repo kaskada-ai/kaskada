@@ -22,7 +22,9 @@ use crate::DataContext;
 #[static_init::dynamic]
 static LIST_U64_DATA_TYPE: DataType = DataType {
     kind: Some(data_type::Kind::List(Box::new(data_type::List {
-        name: "list_u64".to_owned(),
+        // Note: The fields here must match the default fields used when creating
+        // types during type inference, otherwise schema validation will fail.
+        name: "item".to_owned(),
         item_type: Some(Box::new(DataType {
             kind: Some(data_type::Kind::Primitive(
                 data_type::PrimitiveType::U64 as i32,
