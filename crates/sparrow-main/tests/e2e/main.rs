@@ -26,6 +26,7 @@ mod equality_tests;
 mod formula_tests;
 mod general_tests;
 mod json_tests;
+mod list_tests;
 mod logical_tests;
 mod lookup_tests;
 mod map_tests;

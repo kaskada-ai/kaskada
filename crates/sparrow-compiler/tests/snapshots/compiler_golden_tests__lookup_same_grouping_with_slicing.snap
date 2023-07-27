@@ -219,8 +219,11 @@ operations:
         result_type:
           kind:
             List:
-              kind:
-                Primitive: 10
+              name: item
+              item_type:
+                kind:
+                  Primitive: 10
+              nullable: true
         output: true
         operator:
           Input:
@@ -243,8 +246,11 @@ operations:
         result_type:
           kind:
             List:
-              kind:
-                Primitive: 10
+              name: item
+              item_type:
+                kind:
+                  Primitive: 10
+              nullable: true
         output: true
         operator:
           Input:

@@ -2,8 +2,7 @@
 
 use anyhow::Context;
 use arrow::array::{
-    Array, BooleanArray, GenericStringArray, ListArray, OffsetSizeTrait, PrimitiveArray,
-    StructArray,
+    Array, BooleanArray, GenericStringArray, OffsetSizeTrait, PrimitiveArray, StructArray,
 };
 use arrow::datatypes::ArrowPrimitiveType;
 use arrow_array::MapArray;
@@ -22,13 +21,6 @@ pub fn downcast_primitive_array<T: ArrowPrimitiveType>(
                 T::DATA_TYPE
             )
         })
-}
-
-pub fn downcast_list_array(array: &dyn Array) -> anyhow::Result<&ListArray> {
-    array
-        .as_any()
-        .downcast_ref::<ListArray>()
-        .with_context(|| format!("Unable to downcast {:?} to ListArray", array.data_type()))
 }
 
 /// Downcast an array into a string array.

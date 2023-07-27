@@ -16,6 +16,7 @@ mod equality;
 mod field_ref;
 mod general;
 mod json_field;
+mod list;
 mod logical;
 mod macros;
 mod map;
@@ -31,6 +32,7 @@ use equality::*;
 use field_ref::*;
 use general::*;
 use json_field::*;
+use list::*;
 use logical::*;
 use map::*;
 use math::*;
@@ -204,6 +206,7 @@ fn create_simple_evaluator(
         }
         InstOp::Floor => FloorEvaluator::try_new(info),
         InstOp::Get => GetEvaluator::try_new(info),
+        InstOp::Index => IndexEvaluator::try_new(info),
         InstOp::Gt => match (info.args[0].is_literal(), info.args[1].is_literal()) {
             (_, true) => {
                 create_ordered_evaluator!(&info.args[0].data_type, GtScalarEvaluator, info)
