@@ -61,6 +61,10 @@ pub enum InstOp {
     #[strum(props(signature = "coalesce<T: any>(values+: T) -> T"))]
     Coalesce,
     #[strum(props(
+        signature = "collect<T: any>(input: T, max: i64, window: window = null) -> list<T>"
+    ))]
+    Collect,
+    #[strum(props(
         dfg_signature = "count_if<T: any>(input: T, window: window = null) -> u32",
         plan_signature = "count_if<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> \
                           u32"
