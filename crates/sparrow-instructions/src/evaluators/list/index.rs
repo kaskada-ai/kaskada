@@ -53,11 +53,7 @@ fn list_get(list: &ArrayRef, indices: &Int64Array) -> anyhow::Result<ArrayRef> {
 /// Gets the indices in the list where the values are at the index within each list.
 fn list_indices(list: &ListArray, indices: &Int64Array) -> anyhow::Result<Int32Array> {
     let offsets = list.offsets();
-    Ok(accessible_array_list_indices(offsets, indices))
-}
 
-/// Generic implementation of `list_indices` for arrays implementing `ArrayAccessor`.
-fn accessible_array_list_indices(offsets: &OffsetBuffer<i32>, indices: &Int64Array) -> Int32Array {
     let mut result = Int32Array::builder(indices.len());
     let offsets = offsets.iter().map(|n| *n as usize).tuple_windows();
 
@@ -76,7 +72,8 @@ fn accessible_array_list_indices(offsets: &OffsetBuffer<i32>, indices: &Int64Arr
         }
         result.append_null();
     }
-    result.finish()
+
+    Ok(result.finish())
 }
 
 #[cfg(test)]
