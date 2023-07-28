@@ -136,16 +136,16 @@ pub(crate) async fn get_kafka_metadata(
 fn get_schema_from_metadata(metadata: RawMetadata) -> error_stack::Result<SourceMetadata, Error> {
     let schema = Schema::try_from(metadata.table_schema.as_ref())
         .into_report()
+        .change_context(Error::Schema(format!(
+            "Unable to encode schema {:?}",
+            metadata.table_schema
+        )))
         .attach_printable_lazy(|| {
             format!(
                 "Raw Schema: {:?} Table Schema: {:?}",
                 metadata.raw_schema, metadata.table_schema
             )
-        })
-        .change_context(Error::Schema(format!(
-            "Unable to encode schema {:?}",
-            metadata.table_schema
-        )))?;
+        })?;
     Ok(SourceMetadata {
         schema: Some(schema),
     })
