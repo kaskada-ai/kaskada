@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Optional
 
 import requests
 from github import Github
@@ -41,15 +42,20 @@ class ReleaseClient(object):
         access_token = os.getenv(self.GITHUB_ACCESS_TOKEN_ENV)
         self._github = Github(access_token)
 
-    def download_latest_release(
-        self, download_path: Path, manager_bin_name: str, engine_bin_name: str
+    def download_release(
+        self,
+        download_path: Path,
+        manager_bin_name: str,
+        engine_bin_name: str,
+        engine_version: Optional[str] = None,
     ) -> LocalRelease:
-        """Downloads the latest version of the kaskada-manager and kaskada-engine services.
+        """Downloads the appropriate version of the kaskada-manager and kaskada-engine services.
 
         Args:
             download_path (Path): The local download path
             manager_bin_name (str): The name of the manager binary to save in download path
             engine_bin_name (str): The name of the engine binary to save in download path
+            engine_version (Optional[str]): The engine version to download, e.g., engine@v<semantic-version>. Defaults to None for latest release.
 
         Raises:
             RuntimeError: unable to get release assets
@@ -68,12 +74,18 @@ class ReleaseClient(object):
             session.headers["Authorization"] = f"token {access_token}"
 
         repo = self._github.get_repo(f"{self.ORGANIZATION}/{self.REPO_NAME}")
-        latest_release = repo.get_latest_release()
-        logger.info(f"Using latest release version: {latest_release.tag_name}")
-        download_path = download_path / latest_release.tag_name
+
+        if engine_version is None:
+            downloaded_release = repo.get_latest_release()
+            logger.info(f"Using latest release version: {downloaded_release.tag_name}")
+        else:
+            downloaded_release = repo.get_release(engine_version)
+            logger.info(f"Using release version: {downloaded_release.tag_name}")
+
+        download_path = download_path / downloaded_release.tag_name
         download_path.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Download path: {download_path}")
-        assets = latest_release.get_assets()
+        assets = downloaded_release.get_assets()
 
         manager_path, engine_path = (None, None)
         for asset in assets:
@@ -113,7 +125,7 @@ class ReleaseClient(object):
 
         Args:
             r (requests.Session): The request session
-            url (str): The targget URL
+            url (str): The target URL
             download_path (Path): The local path to stream write the file
             description (str): The description to render during download
             file_size (int, optional): The file size if known ahead of time. Defaults to response content size or 0.
