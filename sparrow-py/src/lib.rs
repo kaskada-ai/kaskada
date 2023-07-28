@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod error;
 mod expr;
 mod session;
 mod table;

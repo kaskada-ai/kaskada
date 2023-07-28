@@ -42,7 +42,6 @@ mod functions;
 mod nearest_matches;
 mod options;
 mod plan;
-pub mod query_builder;
 mod time_domain;
 mod types;
 
@@ -50,8 +49,11 @@ mod types;
 pub use ast_to_dfg::*;
 pub use compile::*;
 pub use data_context::*;
+pub use dfg::Dfg;
 pub use diagnostics::*;
 pub use error::*;
 pub use frontend::*;
 pub use functions::*;
 pub use options::*;
+
+pub use nearest_matches::NearestMatches;

@@ -7,7 +7,7 @@ use crate::diagnostics::collector::DiagnosticCollector;
 /// Builder for creating and emitting a diagnostic.
 #[must_use]
 #[derive(Debug, PartialEq)]
-pub(crate) struct DiagnosticBuilder {
+pub struct DiagnosticBuilder {
     code: DiagnosticCode,
     diagnostic: Diagnostic<FeatureSetPart>,
 }

@@ -16,6 +16,7 @@ mod error;
 pub(crate) mod execute_input_stream;
 mod prepare_input_stream;
 mod prepare_metadata;
+pub mod preparer;
 mod slice_preparer;
 
 pub use error::*;

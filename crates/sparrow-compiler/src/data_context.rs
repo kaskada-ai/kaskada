@@ -401,7 +401,7 @@ impl TableInfo {
             .collect()
     }
 
-    pub(crate) fn dfg_node(&self, dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
+    pub fn dfg_node(&self, dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
         use smallvec::smallvec;
         use sparrow_plan::InstOp;
         use sparrow_syntax::FenlType;

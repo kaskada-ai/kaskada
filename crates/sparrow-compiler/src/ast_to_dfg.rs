@@ -93,7 +93,7 @@ pub(super) fn ast_to_dfg(
     )
 }
 
-pub(super) fn add_to_dfg(
+pub fn add_to_dfg(
     data_context: &mut DataContext,
     dfg: &mut Dfg,
     diagnostics: &mut DiagnosticCollector<'_>,
@@ -177,12 +177,7 @@ pub(super) fn add_to_dfg(
                     .with_note(if nearest.is_empty() {
                         "No formulas, tables, or let-bound names available".to_owned()
                     } else {
-                        format!(
-                            "Nearest matches: {}",
-                            nearest
-                                .iter()
-                                .format_with(", ", |e, f| f(&format_args!("'{e}'")))
-                        )
+                        format!("Nearest matches: {nearest}")
                     })
                     .emit(diagnostics);
                 Ok(dfg.error_node())
@@ -794,15 +789,10 @@ fn missing_field_diagnostic(
         .with_note(if fields.is_empty() {
             "No fields available on base record".to_owned()
         } else {
-            let candidates = crate::nearest_matches::nearest_matches(
+            let candidates = crate::nearest_matches::NearestMatches::new_nearest_strs(
                 field_name,
-                fields.iter().map(|f| f.name()),
+                fields.iter().map(|f| f.name().as_str()),
             );
-            format!(
-                "Nearest fields: {}",
-                candidates
-                    .iter()
-                    .format_with(", ", |name, f| f(&format_args!("'{name}'")))
-            )
+            format!("Nearest fields: {candidates}",)
         })
 }

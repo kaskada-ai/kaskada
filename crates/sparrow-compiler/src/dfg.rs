@@ -50,12 +50,13 @@ pub(crate) use useless_transforms::*;
 use crate::ast_to_dfg::AstDfg;
 use crate::dfg::language::DfgLang;
 use crate::env::Env;
+use crate::nearest_matches::NearestMatches;
 use crate::time_domain::TimeDomain;
 use crate::{AstDfgRef, CompilerOptions};
 
 #[derive(Debug)]
 /// A wrapper around the DFG construction / manipulation functions.
-pub(super) struct Dfg {
+pub struct Dfg {
     /// The DFG being built/manipulated.
     graph: DfgGraph,
     /// A mapping from identifiers to corresponding DFG nodes.
@@ -351,13 +352,13 @@ impl Dfg {
     ///
     /// # Error
     /// Returns an error containing the (up-to-5) nearest matches.
-    pub(super) fn get_binding(&self, name: &str) -> Result<AstDfgRef, Vec<&String>> {
+    pub(super) fn get_binding(&self, name: &str) -> Result<AstDfgRef, NearestMatches<&'_ str>> {
         if let Some(found) = self.env.get(name) {
             Ok(found.clone())
         } else {
-            Err(crate::nearest_matches::nearest_matches(
+            Err(crate::nearest_matches::NearestMatches::new_nearest_strs(
                 name,
-                self.env.keys(),
+                self.env.keys().map(|s| s.as_str()),
             ))
         }
     }
@@ -534,7 +535,7 @@ impl Dfg {
     }
 
     #[cfg(test)]
-    pub fn data(&self, id: Id) -> &DfgAnalysisData {
+    pub(crate) fn data(&self, id: Id) -> &DfgAnalysisData {
         &self.graph[id].data
     }
 }
