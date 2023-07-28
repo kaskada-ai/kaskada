@@ -12,7 +12,7 @@ const ENABLE_DIAGNOSTIC_PRINTS: bool = false;
 
 /// Kaskada expression node.
 #[derive(Clone)]
-#[pyclass]
+#[pyclass(subclass)]
 pub(crate) struct Expr {
     pub node: AstDfgRef,
     pub session: Session,
@@ -31,7 +31,7 @@ impl Expr {
         }
 
         // DO NOT SUBMIT: Error if they don't all use the same session.
-        let mut session_mut = session.session()?;
+        let mut session_mut = session.session_mut()?;
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| {
