@@ -1265,7 +1265,7 @@ where
         let values: &StringArray = downcast_string_array(values.as_ref())?;
         let mut values = values.iter();
 
-        let mut builder = StringBuilder::with_capacity(grouping.len(), 1024);
+        let mut builder = GenericStringBuilder::<O>::with_capacity(grouping.len(), 1024);
         for signal in signal.iter() {
             match signal {
                 Some(true) => builder.append_option(values.next().context("missing value")?),
@@ -1288,9 +1288,9 @@ where
     fn spread_false(
         &mut self,
         grouping: &GroupingIndices,
-        _value_type: &DataType,
+        value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
-        Ok(new_null_array(&DataType::Utf8, grouping.len()))
+        Ok(new_null_array(value_type, grouping.len()))
     }
 }
 
