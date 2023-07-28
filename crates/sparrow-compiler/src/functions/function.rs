@@ -98,6 +98,10 @@ impl Function {
         )
     }
 
+    pub fn contains_window(&self) -> bool {
+        self.name() == "collect" || self.is_aggregation()
+    }
+
     pub fn is_tick(&self) -> bool {
         matches!(self.implementation, Implementation::Tick(_))
     }

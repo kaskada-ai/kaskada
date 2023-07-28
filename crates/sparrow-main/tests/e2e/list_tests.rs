@@ -3,7 +3,7 @@
 use sparrow_api::kaskada::v1alpha::TableConfig;
 use uuid::Uuid;
 
-use crate::{fixture::DataFixture, QueryFixture};
+use crate::{fixture::DataFixture, fixtures::i64_data_fixture, QueryFixture};
 
 /// Create a simple table with a collection type (map).
 pub(crate) async fn list_data_fixture() -> DataFixture {
@@ -92,6 +92,13 @@ async fn test_index_list_bool_dynamic() {
     1996-12-19T16:40:59.000000000,0,18433805721903975440,1,false
     1996-12-19T16:41:57.000000000,0,18433805721903975440,1,true
     1996-12-19T16:42:57.000000000,0,18433805721903975440,1,true
+    "###);
+}
+
+#[tokio::test]
+async fn test_collect_to_list_i64() {
+    insta::assert_snapshot!(QueryFixture::new("{ f1: Numbers.m | collect(10) | index(0) }").with_dump_dot("asdf").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
     "###);
 }
 

@@ -522,31 +522,28 @@ pub fn add_to_dfg(
                 dfg.bind("$condition_input", args[0].inner().clone());
 
                 let window = &expr.unwrap().args()[1];
-                let (condition, duration) = match window.op() {
-                    ExprOp::Call(window_name) => {
-                        flatten_window_args(window_name, window, dfg, data_context, diagnostics)?
-                    }
-                    ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
-                        // Unwindowed aggregations just use nulls
-                        let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
-                        let null_arg = Located::new(
-                            add_literal(
-                                dfg,
-                                null_arg,
-                                FenlType::Concrete(DataType::Null),
-                                window.location().clone(),
-                            )?,
-                            window.location().clone(),
-                        );
-
-                        (null_arg.clone(), null_arg)
-                    }
-                    unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
-                };
+                let (condition, duration) =
+                    flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
 
                 dfg.exit_env();
                 // [agg_input, condition, duration]
                 vec![args[0].clone(), condition, duration]
+            } else if function.name() == "collect" {
+                // The collect function contains a window, but does not follow the same signature
+                // pattern as aggregations, so it requires a
+                //
+                // TODO: Flattening the window arguments is hacky and confusing. We should instead
+                // incorporate the tick directly into the function containing the window.
+                dfg.enter_env();
+                dfg.bind("$condition_input", args[1].inner().clone());
+
+                let window = &expr.unwrap().args()[2];
+                let (condition, duration) =
+                    flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+
+                dfg.exit_env();
+                // [max, input, condition, duration]
+                vec![args[0].clone(), args[1].clone(), condition, duration]
             } else if function.name() == "when" || function.name() == "if" {
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[1].inner().clone());
@@ -603,6 +600,36 @@ pub fn add_to_dfg(
             argument_types,
         ),
     }
+}
+
+fn flatten_window_args_if_needed(
+    window: &Located<Box<ResolvedExpr>>,
+    dfg: &mut Dfg,
+    data_context: &mut DataContext,
+    diagnostics: &mut DiagnosticCollector<'_>,
+) -> anyhow::Result<(Located<Arc<AstDfg>>, Located<Arc<AstDfg>>)> {
+    let (condition, duration) = match window.op() {
+        ExprOp::Call(window_name) => {
+            flatten_window_args(window_name, window, dfg, data_context, diagnostics)?
+        }
+        ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
+            // Unwindowed aggregations just use nulls
+            let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
+            let null_arg = Located::new(
+                add_literal(
+                    dfg,
+                    null_arg,
+                    FenlType::Concrete(DataType::Null),
+                    window.location().clone(),
+                )?,
+                window.location().clone(),
+            );
+
+            (null_arg.clone(), null_arg)
+        }
+        unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
+    };
+    Ok((condition, duration))
 }
 
 // Verify that the arguments are compatibly partitioned.

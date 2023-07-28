@@ -1,0 +1,16 @@
+name = "get"
+signature = "get<K: key, V: any>(key: K, map: map<K, V>) -> V"
+short_doc = "..."
+long_doc = """
+
+### Parameters
+ ...
+
+### Results
+...
+"""
+
+[[examples]]
+name = "..."
+expression = "..."
+input_csv = "..."

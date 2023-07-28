@@ -11,6 +11,7 @@ use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
 pub mod aggregation;
 mod cast;
+mod collect;
 mod comparison;
 mod equality;
 mod field_ref;
@@ -40,6 +41,8 @@ use record::*;
 use sparrow_plan::ValueRef;
 use string::*;
 use time::*;
+
+use self::collect::CollectEvaluator;
 
 /// Represents static information for an evaluator.
 #[derive(Debug)]
@@ -179,6 +182,7 @@ fn create_simple_evaluator(
             create_number_evaluator!(&info.args[0].data_type, ClampEvaluator, info)
         }
         InstOp::Coalesce => CoalesceEvaluator::try_new(info),
+        InstOp::Collect => CollectEvaluator::try_new(info),
         InstOp::CountIf => CountIfEvaluator::try_new(info),
         InstOp::DayOfMonth => DayOfMonthEvaluator::try_new(info),
         InstOp::DayOfMonth0 => DayOfMonth0Evaluator::try_new(info),
