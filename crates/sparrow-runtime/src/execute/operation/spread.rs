@@ -5,7 +5,7 @@ use anyhow::Context;
 use arrow::array::{
     new_null_array, Array, ArrayData, ArrayRef, AsArray, BooleanArray, BooleanBufferBuilder,
     GenericStringArray, GenericStringBuilder, Int32BufferBuilder, ListArray, MapArray,
-    OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder, StringArray, StringBuilder, StructArray,
+    OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder, StructArray,
 };
 use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
@@ -1262,10 +1262,10 @@ where
         values: &ArrayRef,
         signal: &BooleanArray,
     ) -> anyhow::Result<ArrayRef> {
-        let values: &StringArray = downcast_string_array(values.as_ref())?;
+        let values: &GenericStringArray<O> = downcast_string_array(values.as_ref())?;
         let mut values = values.iter();
 
-        let mut builder = StringBuilder::with_capacity(grouping.len(), 1024);
+        let mut builder = GenericStringBuilder::<O>::with_capacity(grouping.len(), 1024);
         for signal in signal.iter() {
             match signal {
                 Some(true) => builder.append_option(values.next().context("missing value")?),
@@ -1288,9 +1288,9 @@ where
     fn spread_false(
         &mut self,
         grouping: &GroupingIndices,
-        _value_type: &DataType,
+        value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
-        Ok(new_null_array(&DataType::Utf8, grouping.len()))
+        Ok(new_null_array(value_type, grouping.len()))
     }
 }
 
@@ -2201,6 +2201,44 @@ mod tests {
                 Some("5"), // signal false, remember last value for key 1=5
                 None,
                 Some("8"), // signal false, remember last value for key 0=8
+                Some("10"),
+                None,
+                None,
+                None
+            ])
+        );
+    }
+
+    #[test]
+    fn test_large_string_unlatched() {
+        let nums = LargeStringArray::from(vec![
+            Some("5"),
+            Some("8"),
+            None,
+            Some("10"),
+            None,
+            Some("12"),
+        ]);
+        let result = run_spread(
+            Arc::new(nums),
+            vec![0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 0],
+            vec![
+                false, true, false, true, false, true, false, true, false, true, false,
+            ],
+            false,
+        );
+        let result: &LargeStringArray = downcast_string_array(result.as_ref()).unwrap();
+
+        assert_eq!(
+            result,
+            &LargeStringArray::from(vec![
+                None,
+                Some("5"),
+                None,
+                Some("8"),
+                None,
+                None,
+                None,
                 Some("10"),
                 None,
                 None,
