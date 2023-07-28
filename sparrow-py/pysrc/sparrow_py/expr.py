@@ -4,11 +4,12 @@ import sys
 from typing import Callable
 from typing import Sequence
 from typing import Tuple
+from typing import Type
 from typing import Union
 from typing import final
 
 import pyarrow as pa
-from sparrow_py import _ffi
+import sparrow_py._ffi as _ffi
 
 
 Arg = Union["Expr", int, str, float]
@@ -21,7 +22,7 @@ def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
         # This works in Python >=3.11
         for n, arg in enumerate(args):
             if isinstance(arg, Expr):
-                e.add_note(f"Arg[{n}]: Expr of type {arg.data_type()}")
+                e.add_note(f"Arg[{n}]: Expr of type {arg.data_type}")
             else:
                 e.add_note(f"Arg[{n}]: Literal {arg} ({type(arg)})")
     return e
@@ -30,11 +31,16 @@ def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
 class Expr(object):
     """A Kaskada expression."""
 
-    _ffi: _ffi.Expr
+    _ffi_expr: _ffi.Expr
 
-    def __init__(self, name: str, *args: Arg) -> None:
+    def __init__(self, ffi: _ffi.Expr) -> None:
+        """Create a new expression."""
+        self._ffi_expr = ffi
+
+    @staticmethod
+    def call(name: str, *args: Arg) -> "Expr":
         """
-        Construct a new expression.
+        Construct a new expression calling the given name.
 
         Parameters
         ----------
@@ -48,23 +54,24 @@ class Expr(object):
         TypeError
             If the argument types are invalid for the given function.
         """
-        ffi_args = [arg._ffi if isinstance(arg, Expr) else arg for arg in args]
-        session = next(arg._ffi.session() for arg in args if isinstance(arg, Expr))
+        ffi_args = [arg._ffi_expr if isinstance(arg, Expr) else arg for arg in args]
+        session = next(arg._ffi_expr.session() for arg in args if isinstance(arg, Expr))
         try:
-            self._ffi = _ffi.Expr(session=session, operation=name, args=ffi_args)
+            return Expr(_ffi.Expr(session=session, operation=name, args=ffi_args))
         except TypeError as e:
             raise _augment_error(args, TypeError(str(e)))
         except ValueError as e:
             raise _augment_error(args, ValueError(str(e)))
 
+    @property
     def data_type(self) -> pa.DataType:
         """Return a the data type produced by this expression."""
-        return self._ffi.data_type()
+        return self._ffi_expr.data_type()
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Expr):
             return False
-        return self._ffi.equivalent(other._ffi)
+        return self._ffi_expr.equivalent(other._ffi_expr)
 
     @final
     def pipe(
@@ -151,63 +158,63 @@ class Expr(object):
         # It's easy for this method to cause infinite recursion, if anything
         # it references on `self` isn't defined. To try to avoid this, we only
         # do most of the logic if `self` is a struct type.
-        self_type = self.data_type()
-        if isinstance(self_type, pa.StructType):
-            if self.data_type().get_field_index(name) != -1:
-                return Expr("fieldref", self, name)
+        data_type = self.data_type
+        if isinstance(data_type, pa.StructType):
+            if data_type.get_field_index(name) != -1:
+                return Expr.call("fieldref", self, name)
             else:
                 fields = ", ".join(
-                    [f"'{self_type[i].name}'" for i in range(self_type.num_fields)]
+                    [f"'{data_type[i].name}'" for i in range(data_type.num_fields)]
                 )
                 raise AttributeError(f"Field '{name}' not found in {fields}")
         else:
             raise TypeError(
-                f"Cannot access field '{name}' on non-struct type {self_type.id}"
+                f"Cannot access field '{name}' on non-struct type {data_type.id}"
             )
 
     def __add__(self, rhs: Arg) -> "Expr":
         """Add two expressions."""
-        return Expr("add", self, rhs)
+        return Expr.call("add", self, rhs)
 
     def __radd__(self, lhs: Arg) -> "Expr":
         """Add two expressions."""
-        return Expr("add", lhs, self)
+        return Expr.call("add", lhs, self)
 
     def __sub__(self, rhs: Arg) -> "Expr":
         """Subtract two expressions."""
-        return Expr("sub", self, rhs)
+        return Expr.call("sub", self, rhs)
 
     def __mul__(self, rhs: Arg) -> "Expr":
         """Multiple two expressions."""
-        return Expr("mul", self, rhs)
+        return Expr.call("mul", self, rhs)
 
     def __truediv__(self, rhs: Arg) -> "Expr":
         """Divide two expressions."""
-        return Expr("div", self, rhs)
+        return Expr.call("div", self, rhs)
 
     def __lt__(self, rhs: Arg) -> "Expr":
         """Less than comparison."""
-        return Expr("lt", self, rhs)
+        return Expr.call("lt", self, rhs)
 
     def __le__(self, rhs: Arg) -> "Expr":
         """Less than or equal comparison."""
-        return Expr("le", self, rhs)
+        return Expr.call("le", self, rhs)
 
     def __gt__(self, rhs: Arg) -> "Expr":
         """Greater than comparison."""
-        return Expr("gt", self, rhs)
+        return Expr.call("gt", self, rhs)
 
     def __ge__(self, rhs: Arg) -> "Expr":
         """Greater than or equal comparison."""
-        return Expr("ge", self, rhs)
+        return Expr.call("ge", self, rhs)
 
     def __and__(self, rhs: Arg) -> "Expr":
         """Logical and."""
-        return Expr("and", self, rhs)
+        return Expr.call("and", self, rhs)
 
     def __or__(self, rhs: Arg) -> "Expr":
         """Logical or."""
-        return Expr("or", self, rhs)
+        return Expr.call("or", self, rhs)
 
     def __getitem__(self, key: Arg) -> "Expr":
         """
@@ -228,12 +235,12 @@ class Expr(object):
         -------
         Expression accessing the given index.
         """
-        data_type = self.data_type()
+        data_type = self.data_type
         if isinstance(data_type, pa.StructType):
-            return Expr("fieldref", self, key)
+            return Expr.call("fieldref", self, key)
         elif isinstance(data_type, pa.MapType):
-            return Expr("get_map", self, key)
+            return Expr.call("get_map", self, key)
         elif isinstance(data_type, pa.ListType):
-            return Expr("get_list", self, key)
+            return Expr.call("get_list", self, key)
         else:
             raise TypeError(f"Cannot index into {data_type}")

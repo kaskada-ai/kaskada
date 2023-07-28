@@ -20,23 +20,23 @@ def table1(session: Session) -> Table:
     """Add a table to the session for testing."""
     schema = pa.schema(
         [
-            ("time", pa.int32()),
-            ("key", pa.int64()),
-            ("x", pa.float64()),
-            ("y", pa.int32()),
+            pa.field("time", pa.int32(), nullable=False),
+            pa.field("key", pa.int64(), nullable=False),
+            pa.field("x", pa.float64()),
+            pa.field("y", pa.int32()),
         ]
     )
-    return session.add_table("table1", "time", "key", schema)
+    return Table(session, "table1", "time", "key", schema)
 
 
 def test_field_ref(session, table1) -> None:
     """Test for field references."""
     field_ref_short = table1.x
-    assert field_ref_short.data_type() == pa.float64()
+    assert field_ref_short.data_type == pa.float64()
     assert field_ref_short == table1.x
 
     field_ref_long = table1["x"]
-    assert field_ref_long.data_type() == pa.float64()
+    assert field_ref_long.data_type == pa.float64()
     assert field_ref_short == field_ref_long
 
 
@@ -87,9 +87,9 @@ def test_expr_pipe(session, table1) -> None:
 
 def test_expr_arithmetic_types(session, table1) -> None:
     """Test type inference and type errors of arithmetic expressions."""
-    assert math.eq(table1.x, 1).data_type() == pa.bool_()
-    assert math.add(table1.x, 1).data_type() == pa.float64()
-    assert (table1.x + table1.y).data_type() == pa.float64()
+    assert math.eq(table1.x, 1).data_type == pa.bool_()
+    assert math.add(table1.x, 1).data_type == pa.float64()
+    assert (table1.x + table1.y).data_type == pa.float64()
 
     # TODO: This should raise a TypeError, but currently the Rust
     # code always raises a ValueError, so everything comes out

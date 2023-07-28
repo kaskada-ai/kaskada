@@ -6,15 +6,6 @@ from sparrow_py.udf import Udf
 
 class Session:
     def __init__(self) -> None: ...
-    def add_table(
-        self,
-        name: str,
-        time_column_name: str,
-        key_column_name: str,
-        schema: pa.Schema,
-        subsort_column_name: Optional[str],
-        grouping_name: Optional[str],
-    ) -> Expr: ...
 
 class Expr:
     def __init__(
@@ -26,3 +17,20 @@ class Expr:
     def session(self) -> Session: ...
 
 def call_udf(udf: Udf, result_type: pa.DataType, *args: pa.Array) -> pa.Array: ...
+
+class Table(Expr):
+    def __init__(
+        self,
+        session: Session,
+        name: str,
+        time_column_name: str,
+        key_column_name: str,
+        schema: pa.Schema,
+        subsort_column_name: Optional[str],
+        grouping_name: Optional[str],
+    ) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def num_data(self) -> int: ...
+    def add_pyarrow(self, data: pa.RecordBatch) -> None: ...
