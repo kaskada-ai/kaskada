@@ -13,6 +13,7 @@ pub(super) fn register(registry: &mut Registry) {
         .with_implementation(Implementation::Instruction(InstOp::Index))
         .set_internal();
 
+    // TODO: Make MAX default to something?
     registry
         .register("collect<T: any>(max: i64, input: T, window: window = null) -> list<T>")
         .with_implementation(Implementation::Instruction(InstOp::Collect))

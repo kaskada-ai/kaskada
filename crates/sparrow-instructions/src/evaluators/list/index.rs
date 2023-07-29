@@ -42,6 +42,8 @@ impl Evaluator for IndexEvaluator {
 
 /// Given a `ListArray` and `index` array of the same length return an array of the values.
 fn list_get(list: &ArrayRef, indices: &Int64Array) -> anyhow::Result<ArrayRef> {
+    println!("List: {:?}", list);
+    println!("Indices: {:?}", indices);
     anyhow::ensure!(list.len() == indices.len());
 
     let list = list.as_list();
