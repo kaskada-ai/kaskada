@@ -12,6 +12,7 @@ use arrow::array::{
 };
 use arrow::datatypes::{ArrowPrimitiveType, DataType};
 use arrow::downcast_primitive_array;
+use itertools::izip;
 use sparrow_arrow::downcast::{downcast_boolean_array, downcast_primitive_array};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_kernels::time::i64_to_two_i32;
@@ -34,7 +35,8 @@ pub struct CollectBooleanEvaluator {
     input: ValueRef,
     tick: ValueRef,
     duration: ValueRef,
-    buffer: VecDeque<Option<bool>>,
+    /// Contains the buffer of values for each entity
+    buffers: Vec<VecDeque<Option<bool>>>,
 }
 
 impl EvaluatorFactory for CollectBooleanEvaluator {
@@ -58,15 +60,13 @@ impl EvaluatorFactory for CollectBooleanEvaluator {
             input,
             tick,
             duration,
-            buffer: vec![].into(),
+            buffers: vec![].into(),
         }))
     }
 }
 
 impl Evaluator for CollectBooleanEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let input = info.value(&self.input)?.array_ref()?;
-
         match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
             (true, true) => self.evaluate_non_windowed(info),
             (true, false) => unimplemented!("since window aggregation unsupported"),
@@ -77,21 +77,35 @@ impl Evaluator for CollectBooleanEvaluator {
 }
 
 impl CollectBooleanEvaluator {
+    fn ensure_entity_capacity(&mut self, len: usize) {
+        if len >= self.buffers.len() {
+            self.buffers.resize(len + 1, VecDeque::new());
+        }
+    }
+
     fn evaluate_non_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let input = info.value(&self.input)?.array_ref()?;
+        let key_capacity = info.grouping().num_groups();
+        let entity_indices = info.grouping().group_indices();
+        assert_eq!(entity_indices.len(), input.len());
+
+        self.ensure_entity_capacity(key_capacity);
+
         let input = input.as_boolean();
-        let mut builder = BooleanBuilder::new();
+        let builder = BooleanBuilder::new();
         let mut list_builder = ListBuilder::new(builder);
 
-        input.into_iter().for_each(|i| {
-            self.buffer.push_back(i);
-            if self.buffer.len() > self.max as usize {
-                self.buffer.pop_front();
+        izip!(entity_indices.values(), input).for_each(|(entity_index, input)| {
+            let entity_index = *entity_index as usize;
+
+            self.buffers[entity_index].push_back(input);
+            if self.buffers[entity_index].len() > self.max as usize {
+                self.buffers[entity_index].pop_front();
             }
 
             // TODO: Empty is null or empty?
-            list_builder.append_value(self.buffer.clone());
-            list_builder.append(true);
+            println!("Current Buffer: {:?}", self.buffers[entity_index]);
+            list_builder.append_value(self.buffers[entity_index].clone());
         });
 
         Ok(Arc::new(list_builder.finish()))

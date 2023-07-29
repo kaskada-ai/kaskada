@@ -13,6 +13,7 @@ use arrow::array::{
 };
 use arrow::datatypes::{ArrowPrimitiveType, DataType};
 use arrow::downcast_primitive_array;
+use itertools::izip;
 use sparrow_arrow::downcast::{downcast_primitive_array, downcast_string_array};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
@@ -34,7 +35,8 @@ pub struct CollectStringEvaluator {
     input: ValueRef,
     tick: ValueRef,
     duration: ValueRef,
-    buffer: VecDeque<Option<String>>,
+    /// Contains the buffer of values for each entity
+    buffers: Vec<VecDeque<Option<String>>>,
 }
 
 impl EvaluatorFactory for CollectStringEvaluator {
@@ -58,15 +60,13 @@ impl EvaluatorFactory for CollectStringEvaluator {
             input,
             tick,
             duration,
-            buffer: vec![].into(),
+            buffers: vec![].into(),
         }))
     }
 }
 
 impl Evaluator for CollectStringEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let input = info.value(&self.input)?.array_ref()?;
-
         match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
             (true, true) => self.evaluate_non_windowed(info),
             (true, false) => unimplemented!("since window aggregation unsupported"),
@@ -77,21 +77,35 @@ impl Evaluator for CollectStringEvaluator {
 }
 
 impl CollectStringEvaluator {
+    fn ensure_entity_capacity(&mut self, len: usize) {
+        if len >= self.buffers.len() {
+            self.buffers.resize(len + 1, VecDeque::new());
+        }
+    }
+
     fn evaluate_non_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let input = info.value(&self.input)?.array_ref()?;
+        let key_capacity = info.grouping().num_groups();
+        let entity_indices = info.grouping().group_indices();
+        assert_eq!(entity_indices.len(), input.len());
+
+        self.ensure_entity_capacity(key_capacity);
+
         let input = input.as_string::<i32>();
         let mut builder = StringBuilder::new();
         let mut list_builder = ListBuilder::new(builder);
 
-        input.into_iter().for_each(|i| {
-            self.buffer.push_back(i.map(|s| s.to_owned()));
-            if self.buffer.len() > self.max as usize {
-                self.buffer.pop_front();
+        izip!(entity_indices.values(), input).for_each(|(entity_index, input)| {
+            let entity_index = *entity_index as usize;
+
+            self.buffers[entity_index].push_back(input.map(|i| i.to_owned()));
+            if self.buffers[entity_index].len() > self.max as usize {
+                self.buffers[entity_index].pop_front();
             }
 
             // TODO: Empty is null or empty?
-            list_builder.append_value(self.buffer.clone());
-            list_builder.append(true);
+            println!("Current Buffer: {:?}", self.buffers[entity_index]);
+            list_builder.append_value(self.buffers[entity_index].clone());
         });
 
         Ok(Arc::new(list_builder.finish()))
