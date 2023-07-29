@@ -16,7 +16,6 @@ use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_kernels::time::i64_to_two_i32;
 use sparrow_plan::ValueRef;
-use sparrow_syntax::FenlType;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
@@ -30,52 +29,20 @@ pub struct CollectMapEvaluator {
     ///
     /// Once the max size is reached, the front will be popped and the new
     /// value pushed to the back.
-    max: i64,
-    input: ValueRef,
-    tick: ValueRef,
-    duration: ValueRef,
+    _max: i64,
+    _input: ValueRef,
+    _tick: ValueRef,
+    _duration: ValueRef,
 }
 
 impl EvaluatorFactory for CollectMapEvaluator {
-    fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
-        let input_type = info.args[1].data_type();
-        let result_type = info.result_type;
-        match result_type {
-            DataType::List(t) => anyhow::ensure!(t.data_type() == input_type),
-            other => anyhow::bail!("expected list result type, saw {:?}", other),
-        };
-
-        let max = match info.args[0].value_ref.literal_value() {
-            Some(ScalarValue::Int64(Some(v))) => *v,
-            Some(other) => anyhow::bail!("expected i64 for max parameter, saw {:?}", other),
-            None => anyhow::bail!("expected literal value for max parameter"),
-        };
-
-        let (_, input, tick, duration) = info.unpack_arguments()?;
-        Ok(Box::new(Self {
-            max,
-            input,
-            tick,
-            duration,
-        }))
+    fn try_new(_info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        unimplemented!("map collect evaluator is unsupported")
     }
 }
 
 impl Evaluator for CollectMapEvaluator {
-    fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let input = info.value(&self.input)?.array_ref()?;
-
-        match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
-            (true, true) => self.evaluate_non_windowed(info),
-            (true, false) => unimplemented!("since window aggregation unsupported"),
-            (false, false) => panic!("sliding window aggregation should use other evaluator"),
-            (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
-        }
-    }
-}
-
-impl CollectMapEvaluator {
-    fn evaluate_non_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        todo!()
+    fn evaluate(&mut self, _info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        unimplemented!("map collect evaluator is unsupported")
     }
 }

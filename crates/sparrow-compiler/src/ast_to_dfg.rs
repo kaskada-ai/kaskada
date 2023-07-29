@@ -530,7 +530,7 @@ pub fn add_to_dfg(
                 vec![args[0].clone(), condition, duration]
             } else if function.name() == "collect" {
                 // The collect function contains a window, but does not follow the same signature
-                // pattern as aggregations, so it requires a
+                // pattern as aggregations, so it requires a different flattening strategy.
                 //
                 // TODO: Flattening the window arguments is hacky and confusing. We should instead
                 // incorporate the tick directly into the function containing the window.

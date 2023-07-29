@@ -25,6 +25,8 @@ use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 ///
 /// Collect collects a stream of values into a List<O>. A list is produced
 /// for each input value received, growing up to a maximum size.
+///
+/// If the list is empty, an empty list is returned (rather than `null`).
 #[derive(Debug)]
 pub struct CollectStringEvaluator {
     /// The max size of the buffer.
@@ -92,7 +94,7 @@ impl CollectStringEvaluator {
         self.ensure_entity_capacity(key_capacity);
 
         let input = input.as_string::<i32>();
-        let mut builder = StringBuilder::new();
+        let builder = StringBuilder::new();
         let mut list_builder = ListBuilder::new(builder);
 
         izip!(entity_indices.values(), input).for_each(|(entity_index, input)| {
@@ -103,8 +105,6 @@ impl CollectStringEvaluator {
                 self.buffers[entity_index].pop_front();
             }
 
-            // TODO: Empty is null or empty?
-            println!("Current Buffer: {:?}", self.buffers[entity_index]);
             list_builder.append_value(self.buffers[entity_index].clone());
         });
 

@@ -25,6 +25,8 @@ use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 ///
 /// Collect collects a stream of values into a List<T>. A list is produced
 /// for each input value received, growing up to a maximum size.
+///
+/// If the list is empty, an empty list is returned (rather than `null`).
 #[derive(Debug)]
 pub struct CollectPrimitiveEvaluator<T>
 where
@@ -115,14 +117,9 @@ where
                 self.buffers[entity_index].pop_front();
             }
 
-            // TODO: Empty is null or empty?
-            println!("Current Buffer: {:?}", self.buffers[entity_index]);
             list_builder.append_value(self.buffers[entity_index].clone());
         });
 
-        let result = list_builder.finish();
-        println!("ListBuilder: {:?}", result);
-
-        Ok(Arc::new(result))
+        Ok(Arc::new(list_builder.finish()))
     }
 }
