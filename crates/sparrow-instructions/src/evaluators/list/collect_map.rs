@@ -2,19 +2,18 @@
 //! a single, fixed signature. Specifically, the input and output types depend
 //! on the input to the instruction and the requested output type.
 
-use std::collections::VecDeque;
-use std::sync::Arc;
 
-use anyhow::anyhow;
+
+
+
 use arrow::array::{
-    ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray, ListBuilder,
-    PrimitiveBuilder,
+    ArrayRef,
 };
-use arrow::datatypes::{ArrowPrimitiveType, DataType};
-use arrow::downcast_primitive_array;
-use sparrow_arrow::downcast::downcast_primitive_array;
-use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_kernels::time::i64_to_two_i32;
+
+
+
+
+
 use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};

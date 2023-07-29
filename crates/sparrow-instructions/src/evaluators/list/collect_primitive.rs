@@ -5,19 +5,14 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use anyhow::anyhow;
-use arrow::array::{
-    ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray, ListBuilder,
-    PrimitiveBuilder,
-};
+use arrow::array::{ArrayRef, ListBuilder, PrimitiveBuilder};
 use arrow::datatypes::{ArrowPrimitiveType, DataType};
-use arrow::downcast_primitive_array;
+
 use itertools::izip;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_kernels::time::i64_to_two_i32;
+
 use sparrow_plan::ValueRef;
-use sparrow_syntax::FenlType;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
@@ -68,7 +63,7 @@ where
             input,
             tick,
             duration,
-            buffers: vec![].into(),
+            buffers: vec![],
         }))
     }
 }

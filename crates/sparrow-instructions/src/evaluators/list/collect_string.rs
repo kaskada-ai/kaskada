@@ -5,19 +5,13 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use anyhow::anyhow;
-use arrow::array::{
-    ArrayRef, AsArray, GenericStringBuilder, Int32Array, IntervalDayTimeArray,
-    IntervalYearMonthArray, ListBuilder, OffsetSizeTrait, PrimitiveBuilder, StringArray,
-    StringBuilder,
-};
-use arrow::datatypes::{ArrowPrimitiveType, DataType};
-use arrow::downcast_primitive_array;
+use arrow::array::{ArrayRef, AsArray, ListBuilder, StringBuilder};
+use arrow::datatypes::DataType;
+
 use itertools::izip;
-use sparrow_arrow::downcast::{downcast_primitive_array, downcast_string_array};
+
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
-use sparrow_syntax::FenlType;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
@@ -62,7 +56,7 @@ impl EvaluatorFactory for CollectStringEvaluator {
             input,
             tick,
             duration,
-            buffers: vec![].into(),
+            buffers: vec![],
         }))
     }
 }
