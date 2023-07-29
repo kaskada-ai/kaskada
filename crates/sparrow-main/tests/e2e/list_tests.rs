@@ -99,13 +99,28 @@ async fn test_index_list_bool_dynamic() {
 async fn test_incorrect_index_type() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: Input.i64_list | index(\"s\") }")
         .run_to_csv(&list_data_fixture().await).await.unwrap_err(), @r###"
-    _time,_subsort,_key_hash,_key,f1
-    1996-12-20T00:39:57.000000000,9223372036854775808,12960666915911099378,A,5
-    1996-12-20T00:39:58.000000000,9223372036854775808,2867199309159137213,B,24
-    1996-12-20T00:39:59.000000000,9223372036854775808,12960666915911099378,A,22
-    1996-12-20T00:40:00.000000000,9223372036854775808,12960666915911099378,A,22
-    1996-12-20T00:40:01.000000000,9223372036854775808,12960666915911099378,A,34
-    1996-12-20T00:40:02.000000000,9223372036854775808,12960666915911099378,A,34
+    ---
+    code: Client specified an invalid argument
+    message: 1 errors in Fenl statements; see diagnostics
+    fenl_diagnostics:
+      - severity: error
+        code: E0010
+        message: Invalid argument type(s)
+        formatted:
+          - "error[E0010]: Invalid argument type(s)"
+          - "  --> Query:1:24"
+          - "  |"
+          - "1 | { f1: Input.i64_list | index(\"s\") }"
+          - "  |                        ^^^^^ --- Actual type: string"
+          - "  |                        |      "
+          - "  |                        Invalid types for parameter 'i' in call to 'index'"
+          - "  |"
+          - "  --> built-in signature 'index<T: any>(i: i64, list: list<T>) -> T':1:18"
+          - "  |"
+          - "1 | index<T: any>(i: i64, list: list<T>) -> T"
+          - "  |                  --- Expected type: i64"
+          - ""
+          - ""
     "###);
 }
 
