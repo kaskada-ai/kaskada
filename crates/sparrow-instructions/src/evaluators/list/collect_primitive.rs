@@ -29,7 +29,7 @@ where
     ///
     /// Once the max size is reached, the front will be popped and the new
     /// value pushed to the back.
-    max: i64,
+    max: usize,
     input: ValueRef,
     tick: ValueRef,
     duration: ValueRef,
@@ -51,7 +51,13 @@ where
         };
 
         let max = match info.args[0].value_ref.literal_value() {
-            Some(ScalarValue::Int64(Some(v))) => *v,
+            Some(ScalarValue::Int64(Some(v))) if *v <= 0 => {
+                anyhow::bail!("unexpected value of `max` -- must be > 0")
+            }
+            Some(ScalarValue::Int64(Some(v))) => *v as usize,
+            // If a user specifies `max = null`, we use usize::MAX value as a way
+            // to have an "unlimited" buffer.
+            Some(ScalarValue::Int64(None)) => usize::MAX,
             Some(other) => anyhow::bail!("expected i64 for max parameter, saw {:?}", other),
             None => anyhow::bail!("expected literal value for max parameter"),
         };
@@ -114,7 +120,7 @@ where
         izip!(entity_indices.values(), input).for_each(|(entity_index, input)| {
             let entity_index = *entity_index as usize;
 
-            self.token.add_value(self.max as usize, entity_index, input);
+            self.token.add_value(self.max, entity_index, input);
             let cur_list = self.token.state(entity_index);
 
             list_builder.append_value(cur_list.clone());
