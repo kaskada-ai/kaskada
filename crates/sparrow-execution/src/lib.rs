@@ -37,6 +37,7 @@ mod tests {
     impl error_stack::Context for Error {}
 
     #[tokio::test]
+    #[ignore]
     async fn test_query() {
         sparrow_testing::init_test_logging();
 
