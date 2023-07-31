@@ -20,6 +20,7 @@ use sparrow_instructions::ComputeStore;
 use sparrow_materialize::{Materialization, MaterializationControl};
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
 use sparrow_runtime::execute::error::Error;
+use sparrow_runtime::execute::output::Destination;
 use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use tempfile::NamedTempFile;
 
@@ -301,7 +302,8 @@ fn start_materialization_impl(
     let destination = request
         .destination
         .ok_or(Error::MissingField("destination"))?;
-
+    let destination =
+        Destination::try_from(destination).change_context(Error::InvalidDestination)?;
     let materialization = Materialization::new(id, plan, tables, destination);
     // TODO: Support lateness
     // Spawns the materialization thread and begin exeution

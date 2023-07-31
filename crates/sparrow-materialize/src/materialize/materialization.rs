@@ -1,5 +1,6 @@
 use error_stack::ResultExt;
-use sparrow_api::kaskada::v1alpha::{ComputePlan, ComputeTable, Destination, ExecuteResponse};
+use sparrow_api::kaskada::v1alpha::{ComputePlan, ComputeTable, ExecuteResponse};
+use sparrow_runtime::execute::output::Destination;
 use tokio_stream::Stream;
 
 use crate::Error;

@@ -8,7 +8,7 @@ use futures::{FutureExt, Stream, TryFutureExt};
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
-use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
+use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::ComputeStore;
 use sparrow_qfr::io::writer::FlightRecordWriter;
@@ -20,6 +20,7 @@ use tokio_stream::StreamExt;
 use tracing::{error, info, info_span, Instrument};
 
 use crate::execute::operation::{OperationContext, OperationExecutor};
+use crate::execute::output::Destination;
 use crate::execute::progress_reporter::{progress_stream, ProgressUpdate};
 use crate::execute::spawner::ComputeTaskSpawner;
 use crate::execute::Error;
@@ -55,7 +56,7 @@ impl ComputeExecutor {
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
-        destination: v1alpha::Destination,
+        destination: Destination,
         stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();

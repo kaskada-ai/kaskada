@@ -8,9 +8,8 @@ use error_stack::{FutureExt as ESFutureExt, IntoReport, Result, ResultExt};
 use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt};
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::destination::Destination;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
-use sparrow_api::kaskada::v1alpha::{self, data_type};
+use sparrow_api::kaskada::v1alpha::{data_type, ObjectStoreDestination, PulsarDestination};
 use sparrow_arrow::downcast::{downcast_primitive_array, downcast_struct_array};
 
 use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
@@ -19,7 +18,6 @@ use crate::execute::progress_reporter::ProgressUpdate;
 use crate::Batch;
 
 mod object_store;
-mod redis;
 
 pub mod pulsar;
 
@@ -28,11 +26,10 @@ pub enum Error {
     Schema {
         detail: String,
     },
-    WritingToDestination {
-        dest_name: String,
-    },
+    #[display(fmt = "writing to destination '{_0}'")]
+    WritingToDestination(&'static str),
     UnspecifiedDestination,
-    #[cfg(not(feature = "pulsar"))]
+    #[allow(dead_code)]
     FeatureNotEnabled {
         feature: String,
     },
@@ -40,13 +37,54 @@ pub enum Error {
 
 impl error_stack::Context for Error {}
 
+/// The output destination.
+///
+/// TODO: Replace the protobuf destinations with pure Rust structs.
+#[derive(Debug)]
+pub enum Destination {
+    ObjectStore(ObjectStoreDestination),
+    #[cfg(feature = "pulsar")]
+    Pulsar(PulsarDestination),
+    Channel(tokio::sync::mpsc::Sender<RecordBatch>),
+}
+
+impl TryFrom<sparrow_api::kaskada::v1alpha::Destination> for Destination {
+    type Error = error_stack::Report<Error>;
+
+    fn try_from(
+        value: sparrow_api::kaskada::v1alpha::Destination,
+    ) -> std::result::Result<Self, Self::Error> {
+        let destination = value.destination.ok_or(Error::UnspecifiedDestination)?;
+        match destination {
+            sparrow_api::kaskada::v1alpha::destination::Destination::ObjectStore(destination) => {
+                Ok(Destination::ObjectStore(destination))
+            }
+            sparrow_api::kaskada::v1alpha::destination::Destination::Redis(_) => {
+                error_stack::bail!(Error::FeatureNotEnabled {
+                    feature: "redis".to_owned()
+                })
+            }
+            #[cfg(not(feature = "pulsar"))]
+            sparrow_api::kaskada::v1alpha::destination::Destination::Pulsar(_) => {
+                error_stack::bail!(Error::FeatureNotEnabled {
+                    feature: "pulsar".to_owned()
+                })
+            }
+            #[cfg(feature = "pulsar")]
+            sparrow_api::kaskada::v1alpha::destination::Destination::Pulsar(pulsar) => {
+                Ok(Destination::Pulsar(pulsar))
+            }
+        }
+    }
+}
+
 /// Write the batches to the given output destination.
 pub(super) fn write(
     context: &OperationContext,
     limits: Limits,
     batches: BoxStream<'static, Batch>,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
-    destination: v1alpha::Destination,
+    destination: Destination,
 ) -> error_stack::Result<impl Future<Output = Result<(), Error>> + 'static, Error> {
     let sink_schema = determine_output_schema(context)?;
 
@@ -83,9 +121,6 @@ pub(super) fn write(
     }
     .boxed();
 
-    let destination = destination
-        .destination
-        .ok_or(Error::UnspecifiedDestination)?;
     match destination {
         Destination::ObjectStore(destination) => Ok(object_store::write(
             context.object_stores.clone(),
@@ -94,36 +129,37 @@ pub(super) fn write(
             progress_updates_tx,
             batches,
         )
-        .change_context(Error::WritingToDestination {
-            dest_name: "object_store".to_owned(),
-        })
+        .change_context(Error::WritingToDestination("object_store"))
         .boxed()),
-        Destination::Redis(redis) => {
-            Ok(
-                redis::write(redis, sink_schema, progress_updates_tx, batches)
-                    .change_context(Error::WritingToDestination {
-                        dest_name: "redis".to_owned(),
-                    })
-                    .boxed(),
-            )
-        }
-        #[cfg(not(feature = "pulsar"))]
-        Destination::Pulsar(_) => {
-            error_stack::bail!(Error::FeatureNotEnabled {
-                feature: "pulsar".to_owned()
-            })
+        Destination::Channel(channel) => {
+            Ok(write_to_channel(batches, channel, progress_updates_tx).boxed())
         }
         #[cfg(feature = "pulsar")]
         Destination::Pulsar(pulsar) => {
             Ok(
                 pulsar::write(pulsar, sink_schema, progress_updates_tx, batches)
-                    .change_context(Error::WritingToDestination {
-                        dest_name: "pulsar".to_owned(),
-                    })
+                    .change_context(Error::WritingToDestination("pulsar"))
                     .boxed(),
             )
         }
     }
+}
+
+async fn write_to_channel(
+    mut batches: BoxStream<'static, RecordBatch>,
+    channel: tokio::sync::mpsc::Sender<RecordBatch>,
+    _progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
+) -> error_stack::Result<(), Error> {
+    while let Some(next) = batches.next().await {
+        channel
+            .send(next)
+            .await
+            .map_err(|_e| error_stack::report!(Error::WritingToDestination("channel")))?;
+
+        // progress_updates_tx.send(ProgressUpdate::Output { num_rows })
+    }
+
+    Ok(())
 }
 
 /// Adds additional information to an output batch.
