@@ -37,6 +37,10 @@ where
     pub fn state(&self, index: usize) -> &VecDeque<Option<T>> {
         &self.state[index]
     }
+
+    pub fn reset(&mut self, index: usize) {
+        self.state[index].clear();
+    }
 }
 
 impl<T> StateToken for CollectToken<T>
