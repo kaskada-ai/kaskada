@@ -179,6 +179,16 @@ fn create_simple_evaluator(
             create_number_evaluator!(&info.args[0].data_type, ClampEvaluator, info)
         }
         InstOp::Coalesce => CoalesceEvaluator::try_new(info),
+        InstOp::Collect => {
+            create_typed_evaluator!(
+                &info.args[1].data_type,
+                CollectPrimitiveEvaluator,
+                CollectMapEvaluator,
+                CollectBooleanEvaluator,
+                CollectStringEvaluator,
+                info
+            )
+        }
         InstOp::CountIf => CountIfEvaluator::try_new(info),
         InstOp::DayOfMonth => DayOfMonthEvaluator::try_new(info),
         InstOp::DayOfMonth0 => DayOfMonth0Evaluator::try_new(info),
