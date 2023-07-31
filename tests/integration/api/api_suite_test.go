@@ -204,18 +204,17 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 	}
 }
 
-func listSchemaField(name string, primitiveType v1alpha.DataType_Primitive) *v1alpha.Schema_Field {
+func listSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveType) *v1alpha.Schema_Field {
 	return &v1alpha.Schema_Field{
 		Name: name,
 		DataType: &v1alpha.DataType{
-			Kind: &v1alpha.DataType_KIND_List{
+			Kind: &v1alpha.DataType_List_{
 				List: &v1alpha.DataType_List{
 					Name: name,
 					ItemType: &v1alpha.DataType{
-						Kind: primitiveType,
-						// &v1alpha.DataType_Primitive{
-						// 	Primitive: primitiveType,
-						// },
+						Kind: &v1alpha.DataType_Primitive{
+							Primitive: primitiveType,
+						},
 					},
 					Nullable: true,
 				},

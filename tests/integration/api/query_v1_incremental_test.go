@@ -157,7 +157,7 @@ var _ = FDescribe("Query V1 with incremental", Ordered, func() {
 					gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
 					gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 					gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
-					gproto.Equal(primitiveSchemaField("collect", v1alpha.DataType_PRIMITIVE_TYPE_)),
+					gproto.Equal(primitiveSchemaField("collect", v1alpha.DataType_PRIMITIVE_TYPE_BOOL)),
 				))
 				_, err = uuid.Parse(secondResponse.QueryId)
 				Expect(err).Should(BeNil())
