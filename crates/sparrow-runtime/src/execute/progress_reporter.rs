@@ -43,7 +43,7 @@ struct ProgressTracker {
 pub(crate) enum ProgressUpdate {
     /// Informs the progress tracker of the output destination.
     Destination {
-        destination: destination::Destination,
+        destination: Option<destination::Destination>,
     },
     /// Progress update reported for each table indicating total size.
     InputMetadata { total_num_rows: usize },
@@ -90,7 +90,7 @@ impl ProgressTracker {
     fn process_update(&mut self, stats: ProgressUpdate) {
         match stats {
             ProgressUpdate::Destination { destination } => {
-                self.destination = Some(destination);
+                self.destination = destination;
             }
             ProgressUpdate::InputMetadata { total_num_rows } => {
                 self.progress.total_input_rows += total_num_rows as i64;
@@ -180,9 +180,6 @@ impl ProgressTracker {
                         }),
                     })),
                 })
-            }
-            destination::Destination::Redis(_) => {
-                error_stack::bail!(Error::UnsupportedOutput { output: "redis" })
             }
         }
     }

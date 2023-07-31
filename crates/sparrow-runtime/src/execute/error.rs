@@ -12,6 +12,8 @@ pub enum Error {
     Internal(&'static str),
     #[display(fmt = "invalid operation: {_0}")]
     InvalidOperation(String),
+    #[display(fmt = "invalid destination")]
+    InvalidDestination,
     #[display(fmt = "failed to pre-process next input for operation")]
     PreprocessNextInput,
     #[display(fmt = "output '{output}' is not supported")]

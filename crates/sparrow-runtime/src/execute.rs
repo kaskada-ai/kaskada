@@ -6,8 +6,7 @@ use futures::Stream;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
-    ComputePlan, ComputeTable, Destination, ExecuteRequest, ExecuteResponse, LateBoundValue,
-    PerEntityBehavior,
+    ComputePlan, ComputeTable, ExecuteRequest, ExecuteResponse, LateBoundValue, PerEntityBehavior,
 };
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
@@ -18,6 +17,7 @@ use tracing::Instrument;
 use crate::execute::error::Error;
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::OperationContext;
+use crate::execute::output::Destination;
 use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
 
@@ -52,6 +52,8 @@ pub async fn execute(
     let destination = request
         .destination
         .ok_or(Error::MissingField("destination"))?;
+    let destination =
+        Destination::try_from(destination).change_context(Error::InvalidDestination)?;
 
     let changed_since_time = request.changed_since.unwrap_or(Timestamp {
         seconds: 0,

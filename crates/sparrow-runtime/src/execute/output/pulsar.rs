@@ -91,9 +91,9 @@ pub(super) async fn write(
     // Inform tracker of output type
     progress_updates_tx
         .send(ProgressUpdate::Destination {
-            destination: destination::Destination::Pulsar(PulsarDestination {
+            destination: Some(destination::Destination::Pulsar(PulsarDestination {
                 config: Some(pulsar.clone()),
-            }),
+            })),
         })
         .await
         .into_report()
