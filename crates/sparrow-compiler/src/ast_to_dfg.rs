@@ -602,6 +602,7 @@ pub fn add_to_dfg(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn flatten_window_args_if_needed(
     window: &Located<Box<ResolvedExpr>>,
     dfg: &mut Dfg,

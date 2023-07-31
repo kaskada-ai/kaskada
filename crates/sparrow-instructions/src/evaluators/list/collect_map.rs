@@ -1,22 +1,6 @@
-//! The cast instruction isn't a "normal" instruction since it doesn't have a
-//! a single, fixed signature. Specifically, the input and output types depend
-//! on the input to the instruction and the requested output type.
-
-
-
-
-
-use arrow::array::{
-    ArrayRef,
-};
-
-
-
-
-
-use sparrow_plan::ValueRef;
-
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
+use arrow::array::ArrayRef;
+use sparrow_plan::ValueRef;
 
 /// Evaluator for the `collect` instruction.
 ///

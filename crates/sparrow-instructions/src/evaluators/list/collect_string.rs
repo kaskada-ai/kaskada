@@ -1,19 +1,10 @@
-//! The cast instruction isn't a "normal" instruction since it doesn't have a
-//! a single, fixed signature. Specifically, the input and output types depend
-//! on the input to the instruction and the requested output type.
-
-use std::collections::VecDeque;
-use std::sync::Arc;
-
+use crate::{CollectToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{ArrayRef, AsArray, ListBuilder, StringBuilder};
 use arrow::datatypes::DataType;
-
 use itertools::izip;
-
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
-
-use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
+use std::sync::Arc;
 
 /// Evaluator for the `collect` instruction.
 ///
@@ -32,7 +23,7 @@ pub struct CollectStringEvaluator {
     tick: ValueRef,
     duration: ValueRef,
     /// Contains the buffer of values for each entity
-    buffers: Vec<VecDeque<Option<String>>>,
+    token: CollectToken<String>,
 }
 
 impl EvaluatorFactory for CollectStringEvaluator {
@@ -56,7 +47,7 @@ impl EvaluatorFactory for CollectStringEvaluator {
             input,
             tick,
             duration,
-            buffers: vec![],
+            token: CollectToken::default(),
         }))
     }
 }
@@ -70,13 +61,19 @@ impl Evaluator for CollectStringEvaluator {
             (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
     }
+
+    fn state_token(&self) -> Option<&dyn StateToken> {
+        Some(&self.token)
+    }
+
+    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
+        Some(&mut self.token)
+    }
 }
 
 impl CollectStringEvaluator {
     fn ensure_entity_capacity(&mut self, len: usize) {
-        if len >= self.buffers.len() {
-            self.buffers.resize(len + 1, VecDeque::new());
-        }
+        self.token.resize(len)
     }
 
     fn evaluate_non_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
@@ -94,12 +91,11 @@ impl CollectStringEvaluator {
         izip!(entity_indices.values(), input).for_each(|(entity_index, input)| {
             let entity_index = *entity_index as usize;
 
-            self.buffers[entity_index].push_back(input.map(|i| i.to_owned()));
-            if self.buffers[entity_index].len() > self.max as usize {
-                self.buffers[entity_index].pop_front();
-            }
+            self.token
+                .add_value(self.max as usize, entity_index, input.map(|s| s.to_owned()));
+            let cur_list = self.token.state(entity_index);
 
-            list_builder.append_value(self.buffers[entity_index].clone());
+            list_builder.append_value(cur_list.clone());
         });
 
         Ok(Arc::new(list_builder.finish()))
