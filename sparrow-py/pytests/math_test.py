@@ -54,6 +54,6 @@ def test_read_table(session, table_int64) -> None:
 
     #result = (table_int64.m + tableint64.n).execute()
     result = table_int64.execute()
-    assert (input['time'] == result['time']).all()
-    assert (input['m'] == result['m']).all()
-    assert (input['n'] == result['n']).all()
+    pd.testing.assert_series_equal(input['time'], result['time'], check_dtype=False)
+    pd.testing.assert_series_equal(input['m'], result['m'], check_dtype=False)
+    pd.testing.assert_series_equal(input['n'], result['n'], check_dtype=False)
