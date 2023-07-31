@@ -18,7 +18,7 @@ impl<T> Default for NearestMatches<T> {
 
 impl<T> NearestMatches<T> {
     pub fn map<T2>(self, f: impl Fn(T) -> T2) -> NearestMatches<T2> {
-        NearestMatches(self.0.into_iter().map(|v| f(v)).collect())
+        NearestMatches(self.0.into_iter().map(f).collect())
     }
 }
 
