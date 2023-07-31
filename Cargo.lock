@@ -4751,15 +4751,20 @@ version = "0.10.0"
 dependencies = [
  "arrow-array",
  "arrow-schema",
+ "arrow-select",
  "derive_more",
  "error-stack",
+ "futures",
  "itertools 0.11.0",
  "smallvec",
  "sparrow-api",
  "sparrow-compiler",
+ "sparrow-plan",
  "sparrow-runtime",
  "sparrow-syntax",
  "static_init",
+ "tokio",
+ "tokio-stream",
  "uuid 1.4.1",
 ]
 

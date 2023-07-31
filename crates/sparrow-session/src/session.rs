@@ -1,10 +1,17 @@
 use std::borrow::Cow;
 
+use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::{ComputeTable, FeatureSet, TableConfig, TableMetadata};
+use sparrow_api::kaskada::v1alpha::{
+    ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
+};
 use sparrow_compiler::{AstDfgRef, DataContext, Dfg, DiagnosticCollector};
+use sparrow_plan::TableId;
+use sparrow_runtime::execute::output::Destination;
+use sparrow_runtime::execute::ExecutionOptions;
 use sparrow_syntax::{ExprOp, LiteralValue, Located, Location, Resolved};
 use uuid::Uuid;
 
@@ -181,6 +188,87 @@ impl Session {
             Ok(result)
         }
     }
+
+    pub fn execute(&self, expr: &Expr) -> error_stack::Result<RecordBatch, Error> {
+        // TODO: Decorations?
+        let primary_group_info = self
+            .data_context
+            .group_info(
+                expr.0
+                    .grouping()
+                    .expect("query to be grouped (non-literal)"),
+            )
+            .expect("missing group info");
+        let primary_grouping = primary_group_info.name().to_owned();
+        let primary_grouping_key_type = primary_group_info.key_type();
+
+        // First, extract the necessary subset of the DFG as an expression.
+        // This will allow us to operate without mutating things.
+        let expr = self.dfg.extract_simplest(expr.0.value());
+
+        // TODO: Run the egraph simplifier.
+        // TODO: Incremental?
+        // TODO: Slicing?
+        let plan = sparrow_compiler::plan::extract_plan_proto(
+            &self.data_context,
+            expr,
+            // TODO: Configure per-entity behavior.
+            PerEntityBehavior::Final,
+            primary_grouping,
+            primary_grouping_key_type,
+        )
+        .into_report()
+        .change_context(Error::Compile)?;
+
+        // Switch to the Tokio async pool. This seems gross.
+        // Create the runtime.
+        //
+        // TODO: Figure out how to asynchronously pass results back to Python?
+        let rt = tokio::runtime::Runtime::new()
+            .into_report()
+            .change_context(Error::Execute)?;
+
+        // Spawn the root task
+        rt.block_on(async move {
+            let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
+
+            let destination = Destination::Channel(output_tx);
+            let data_context = self.data_context.clone();
+            let options = ExecutionOptions::default();
+
+            // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
+            let mut results =
+                sparrow_runtime::execute::execute_new(plan, destination, data_context, options)
+                    .await
+                    .change_context(Error::Execute)?
+                    .boxed();
+
+            // Hacky. Try to get the last response so we can see if there are any errors, etc.
+            let mut _last = None;
+            while let Some(response) = results.try_next().await.change_context(Error::Execute)? {
+                _last = Some(response);
+            }
+
+            let batches: Vec<_> = tokio_stream::wrappers::ReceiverStream::new(output_rx)
+                .collect()
+                .await;
+
+            // Hacky: Assume we produce at least one batch.
+            // New execution plans contain the schema ref which cleans this up.
+            let schema = batches[0].schema();
+            let batch = arrow_select::concat::concat_batches(&schema, &batches)
+                .into_report()
+                .change_context(Error::Execute)?;
+            Ok(batch)
+        })
+    }
+
+    pub(super) fn hacky_table_mut(
+        &mut self,
+        table_id: TableId,
+    ) -> &mut sparrow_compiler::TableInfo {
+        self.data_context.table_info_mut(table_id).unwrap()
+    }
 }
 
 #[static_init::dynamic]
@@ -195,7 +283,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn session_test() {
+    fn session_compilation_test() {
         let mut session = Session::default();
 
         let schema = Arc::new(Schema::new(vec![

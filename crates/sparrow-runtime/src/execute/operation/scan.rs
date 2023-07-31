@@ -156,6 +156,27 @@ impl ScanOperation {
                 ))?,
         );
 
+        if let Some(in_memory) = &table_info.in_memory {
+            // Hacky. When doing the Python-builder, use the in-memory batch.
+            // Ideally, this would be merged with the contents of the file.
+            // Bonus points if it deduplicates. That would allow us to use the
+            // in-memory batch as the "hot-store" for history+stream hybrid
+            // queries.
+            assert!(requested_slice.is_none());
+            let batch = in_memory.clone();
+            return Ok(Box::new(Self {
+                projected_schema,
+                input_stream: futures::stream::once(async move {
+                    Batch::try_new_from_batch(batch)
+                        .into_report()
+                        .change_context(Error::internal_msg("invalid input"))
+                })
+                .boxed(),
+                key_hash_index: KeyHashIndex::default(),
+                progress_updates_tx: context.progress_updates_tx.clone(),
+            }));
+        }
+
         // Figure out the projected columns from the table schema.
         //
         // TODO: Can we clean anything up by changing the table reader API
@@ -316,7 +337,7 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{self, data_type};
     use sparrow_api::kaskada::v1alpha::{
         expression_plan, literal, operation_plan, ComputePlan, ComputeTable, ExpressionPlan,
-        Literal, OperationInputRef, OperationPlan, PlanHash, PreparedFile, SlicePlan, TableConfig,
+        Literal, OperationInputRef, OperationPlan, PreparedFile, SlicePlan, TableConfig,
         TableMetadata,
     };
     use sparrow_arrow::downcast::downcast_primitive_array;
@@ -448,7 +469,6 @@ mod tests {
                 operations: vec![plan],
                 ..ComputePlan::default()
             },
-            plan_hash: PlanHash::default(),
             object_stores: Arc::new(ObjectStoreRegistry::default()),
             data_context,
             compute_store: None,

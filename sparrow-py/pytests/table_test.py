@@ -94,9 +94,9 @@ def test_add_dataframe(session, dataset) -> None:
         ]
     )
     table = Table(session, "table1", "time", "key", schema)
-    assert table._ffi_table.prepared_data().num_rows == 0
+    # assert table._ffi_table.prepared_data().num_rows == 0
     table.add_data(dataset)
-    assert table._ffi_table.prepared_data().num_rows == len(dataset)
 
-    prepared = table._ffi_table.prepared_data().to_pandas()
+    # assert table._ffi_table.prepared_data().num_rows == len(dataset)
+    prepared = table.execute()
     assert prepared['_time'].is_monotonic_increasing

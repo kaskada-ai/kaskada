@@ -1,9 +1,9 @@
+use std::ops::DerefMut;
 use std::sync::Arc;
 
 use arrow::datatypes::Schema;
-use arrow::pyarrow::{FromPyArrow, PyArrowType, ToPyArrow};
+use arrow::pyarrow::{FromPyArrow, PyArrowType};
 use arrow::record_batch::RecordBatch;
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use sparrow_session::Table as RustTable;
 
@@ -16,6 +16,7 @@ pub(crate) struct Table {
     #[pyo3(get)]
     name: String,
     rust_table: RustTable,
+    session: Session,
 }
 
 #[pymethods]
@@ -44,7 +45,11 @@ impl Table {
         )?;
 
         let rust_expr = rust_table.expr.clone();
-        let table = Table { name, rust_table };
+        let table = Table {
+            name,
+            rust_table,
+            session: session.clone(),
+        };
         let expr = Expr { rust_expr, session };
         Ok((table, expr))
     }
@@ -58,12 +63,9 @@ impl Table {
     /// - Python generators?
     /// TODO: Error handling
     fn add_pyarrow(&mut self, data: &PyAny) -> Result<()> {
+        let mut session = self.session.rust_session()?;
         let data = RecordBatch::from_pyarrow(data)?;
-        self.rust_table.add_data(data)?;
+        self.rust_table.add_data(session.deref_mut(), data)?;
         Ok(())
-    }
-
-    fn prepared_data(&self, py: Python) -> PyResult<PyObject> {
-        self.rust_table.data().to_pyarrow(py)
     }
 }

@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
+use arrow::record_batch::RecordBatch;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_api::kaskada::v1alpha::{compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
@@ -17,7 +18,7 @@ use crate::AstDfgRef;
 ///
 /// Specifically, this holds the information about the tables
 /// available to the compilation.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct DataContext {
     /// Information about the groupings in the context.
     group_info: Vec<GroupInfo>,
@@ -58,6 +59,10 @@ impl DataContext {
 
     pub fn table_info(&self, id: TableId) -> Option<&TableInfo> {
         self.table_info.get(&id)
+    }
+
+    pub fn table_info_mut(&mut self, id: TableId) -> Option<&mut TableInfo> {
+        self.table_info.get_mut(&id)
     }
 
     pub fn tables_for_grouping(&self, id: GroupId) -> impl Iterator<Item = &TableInfo> {
@@ -296,7 +301,7 @@ impl DataContext {
 }
 
 /// Information about groups.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GroupInfo {
     name: String,
     key_type: DataType,
@@ -314,6 +319,8 @@ pub struct TableInfo {
     /// Each file set corresponds to the files for the table with a specific
     /// slice configuration.
     file_sets: Vec<compute_table::FileSet>,
+    /// An in-memory record batch for the contents of the table.
+    pub in_memory: Option<RecordBatch>,
 }
 
 impl TableInfo {
@@ -335,6 +342,7 @@ impl TableInfo {
             schema,
             config,
             file_sets,
+            in_memory: None,
         })
     }
 

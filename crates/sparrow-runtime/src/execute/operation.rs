@@ -44,9 +44,7 @@ use error_stack::{IntoReport, IntoReportCompat, Report, Result, ResultExt};
 use futures::Future;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use sparrow_api::kaskada::v1alpha::{
-    operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
-};
+use sparrow_api::kaskada::v1alpha::{operation_plan, ComputePlan, LateBoundValue, OperationPlan};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::DataContext;
 use sparrow_instructions::ComputeStore;
@@ -80,7 +78,6 @@ use crate::Batch;
 /// the method to create a table reader on to it.
 pub(crate) struct OperationContext {
     pub plan: ComputePlan,
-    pub plan_hash: PlanHash,
     pub object_stores: Arc<ObjectStoreRegistry>,
     pub data_context: DataContext,
     pub compute_store: Option<Arc<ComputeStore>>,

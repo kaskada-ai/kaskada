@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::Context;
-use arrow::array::{Array, ArrayRef, PrimitiveArray, UInt64Array};
+use arrow::array::{Array, ArrayRef, AsArray, PrimitiveArray, UInt64Array};
 use arrow::datatypes::{DataType, UInt64Type};
 
 use error_stack::{IntoReportCompat, ResultExt};
@@ -112,6 +112,25 @@ impl KeyHashInverse {
             self.add(entity_key_col.to_owned(), hash_col)
                 .into_report()
                 .change_context(Error::ReadingMetadata)?;
+        }
+
+        // HACKY: Add the in-memory batches to the key hash inverse.
+        let in_memory = data_context
+            .tables_for_grouping(primary_grouping)
+            .flat_map(|table| {
+                table.in_memory.as_ref().map(|batch| {
+                    let keys = batch
+                        .column_by_name(&table.config().group_column_name)
+                        .unwrap();
+                    let key_hashes = batch.columns()[2].clone();
+                    (keys.clone(), key_hashes.clone())
+                })
+            });
+        for (keys, key_hashes) in in_memory {
+            self.add(keys, key_hashes.as_primitive())
+                .into_report()
+                .change_context(Error::ReadingMetadata)
+                .unwrap();
         }
 
         Ok(())

@@ -4,7 +4,7 @@ use anyhow::Context;
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use arrow::record_batch::RecordBatch;
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan, PlanHash};
+use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan};
 use sparrow_compiler::DataContext;
 
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
@@ -181,7 +181,6 @@ pub(super) async fn run_operation(
             operations: vec![plan],
             ..ComputePlan::default()
         },
-        plan_hash: PlanHash::default(),
         object_stores: Arc::new(ObjectStoreRegistry::default()),
         data_context: DataContext::default(),
         compute_store: None,
@@ -239,7 +238,6 @@ pub(super) async fn run_operation_json(
             operations: vec![plan],
             ..ComputePlan::default()
         },
-        plan_hash: PlanHash::default(),
         object_stores: Arc::new(ObjectStoreRegistry::default()),
         data_context: DataContext::default(),
         compute_store: None,

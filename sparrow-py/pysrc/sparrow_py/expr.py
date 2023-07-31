@@ -8,6 +8,7 @@ from typing import Type
 from typing import Union
 from typing import final
 
+import pandas as pd
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
 
@@ -244,3 +245,7 @@ class Expr(object):
             return Expr.call("get_list", self, key)
         else:
             raise TypeError(f"Cannot index into {data_type}")
+
+    def execute(self) -> pd.DataFrame:
+        """Execute the expression."""
+        return self._ffi_expr.execute().to_pandas()
