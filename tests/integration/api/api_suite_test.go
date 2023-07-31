@@ -204,27 +204,6 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 	}
 }
 
-func listSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveType) *v1alpha.Schema_Field {
-	return &v1alpha.Schema_Field{
-		Name: name,
-		DataType: &v1alpha.DataType{
-			Kind: &v1alpha.DataType_List_{
-				List: &v1alpha.DataType_List{
-					Name: name,
-					ItemType: &v1alpha.DataType{
-						Kind: &v1alpha.DataType_Primitive{
-							Primitive: primitiveType,
-						},
-					},
-					Nullable: true,
-				},
-			},
-		},
-		Nullable: true,
-	}
-
-}
-
 func getRemotePulsarHostname() string {
 	if os.Getenv("ENV") == "local-local" {
 		return "localhost"

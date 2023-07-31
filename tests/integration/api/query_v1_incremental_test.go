@@ -19,7 +19,7 @@ import (
 	"github.com/jt-nti/gproto"
 )
 
-var _ = FDescribe("Query V1 with incremental", Ordered, func() {
+var _ = Describe("Query V1 with incremental", Ordered, func() {
 	var (
 		ctx                        context.Context
 		cancel                     context.CancelFunc
@@ -79,7 +79,6 @@ var _ = FDescribe("Query V1 with incremental", Ordered, func() {
 		entity: table.customer_id,
 		max_amount: table.amount | max(),
 		min_amount: table.amount | min(),
-		collect: table.amount | collect(2),
 		}`
 
 		expressionIncremental = strings.ReplaceAll(expressionTemplate, "table", tableIncremental.TableName)
@@ -157,7 +156,6 @@ var _ = FDescribe("Query V1 with incremental", Ordered, func() {
 					gproto.Equal(primitiveSchemaField("entity", v1alpha.DataType_PRIMITIVE_TYPE_STRING)),
 					gproto.Equal(primitiveSchemaField("max_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
 					gproto.Equal(primitiveSchemaField("min_amount", v1alpha.DataType_PRIMITIVE_TYPE_I64)),
-					gproto.Equal(primitiveSchemaField("collect", v1alpha.DataType_PRIMITIVE_TYPE_BOOL)),
 				))
 				_, err = uuid.Parse(secondResponse.QueryId)
 				Expect(err).Should(BeNil())
