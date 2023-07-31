@@ -101,7 +101,7 @@ impl CollectStringEvaluator {
                 .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
             let cur_list = self.token.state(entity_index);
 
-            list_builder.append_value(cur_list.iter().copied());
+            list_builder.append_value(cur_list.clone());
         });
 
         Ok(Arc::new(list_builder.finish()))
