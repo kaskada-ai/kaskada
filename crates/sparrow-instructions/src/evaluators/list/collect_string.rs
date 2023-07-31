@@ -62,7 +62,7 @@ impl Evaluator for CollectStringEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
             (true, true) => self.evaluate_non_windowed(info),
-            (true, false) => unimplemented!("since window aggregation unsupported"),
+            (false, true) => self.evaluate_since_windowed(info),
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
             (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
@@ -102,6 +102,48 @@ impl CollectStringEvaluator {
             let cur_list = self.token.state(entity_index);
 
             list_builder.append_value(cur_list.clone());
+        });
+
+        Ok(Arc::new(list_builder.finish()))
+    }
+
+    /// Since windows follow the pattern "update -> emit -> reset".
+    ///
+    /// i.e. if an input appears in the same row as a tick, then that value will
+    /// be included in the output before the tick causes the state to be cleared.
+    /// However, note that ticks are generated with a maximum subsort value, so it is
+    /// unlikely an input naturally appears in the same row as a tick. It is more likely
+    /// that an input may appear at the same time, but an earlier subsort value.
+    fn evaluate_since_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        let input = info.value(&self.input)?.array_ref()?;
+        let key_capacity = info.grouping().num_groups();
+        let entity_indices = info.grouping().group_indices();
+        assert_eq!(entity_indices.len(), input.len());
+
+        self.ensure_entity_capacity(key_capacity);
+
+        let input = input.as_string::<i32>();
+        let ticks = info.value(&self.tick)?.array_ref()?;
+        let ticks = ticks.as_boolean();
+
+        let builder = StringBuilder::new();
+        let mut list_builder = ListBuilder::new(builder);
+
+        izip!(entity_indices.values(), ticks, input).for_each(|(entity_index, tick, input)| {
+            let entity_index = *entity_index as usize;
+
+            self.token
+                .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
+            let cur_list = self.token.state(entity_index);
+
+            list_builder.append_value(cur_list.clone());
+
+            match tick {
+                Some(t) if t => {
+                    self.token.reset(entity_index);
+                }
+                _ => (), // Tick is false or null, so do nothing.
+            }
         });
 
         Ok(Arc::new(list_builder.finish()))

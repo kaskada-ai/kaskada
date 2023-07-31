@@ -453,8 +453,10 @@ async fn send_tick_batch(
         // The subsort value is set to `u64::MAX` in order to ensure ticks are
         // processed after all other rows at the same time.
         let subsort_column =
-    // SAFETY: We create the iterator with a known / fixed length.
+
+        // SAFETY: We create the iterator with a known / fixed length.
         unsafe { UInt64Array::from_trusted_len_iter(std::iter::repeat(Some(u64::MAX)).take(len)) };
+
         let subsort_column: ArrayRef = Arc::new(subsort_column);
 
         // Create a tick column consisting of booleans set to `true`.

@@ -153,12 +153,11 @@ operations:
       - arguments: []
         result_type:
           kind:
-            Primitive: 6
+            Primitive: 1
         output: false
         operator:
           Literal:
-            literal:
-              Int64: 1
+            literal: ~
       - arguments: []
         result_type:
           kind:
@@ -289,12 +288,11 @@ operations:
       - arguments: []
         result_type:
           kind:
-            Primitive: 6
+            Primitive: 1
         output: false
         operator:
           Literal:
-            literal:
-              Int64: 1
+            literal: ~
       - arguments: []
         result_type:
           kind:
