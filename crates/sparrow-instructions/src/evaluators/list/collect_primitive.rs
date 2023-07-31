@@ -123,7 +123,7 @@ where
             self.token.add_value(self.max, entity_index, input);
             let cur_list = self.token.state(entity_index);
 
-            list_builder.append_value(cur_list.clone());
+            list_builder.append_value(cur_list.iter().copied());
         });
 
         Ok(Arc::new(list_builder.finish()))

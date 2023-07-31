@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 /// Evaluator for the `collect` instruction.
 ///
-/// Collect collects a stream of values into a List<O>. A list is produced
+/// Collects a stream of values into a List. A list is produced
 /// for each input value received, growing up to a maximum size.
 ///
 /// If the list is empty, an empty list is returned (rather than `null`).
@@ -101,7 +101,7 @@ impl CollectStringEvaluator {
                 .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
             let cur_list = self.token.state(entity_index);
 
-            list_builder.append_value(cur_list.clone());
+            list_builder.append_value(cur_list.iter().copied());
         });
 
         Ok(Arc::new(list_builder.finish()))
