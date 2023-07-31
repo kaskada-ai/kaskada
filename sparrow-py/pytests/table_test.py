@@ -89,11 +89,14 @@ def test_add_dataframe(session, dataset) -> None:
     """Test adding a dataframe to a table."""
     schema = pa.schema(
         [
-            pa.field("time", pa.int32(), nullable=False),
+            pa.field("time", pa.int64(), nullable=False),
             pa.field("key", pa.int64(), nullable=False),
         ]
     )
     table = Table(session, "table1", "time", "key", schema)
-    assert table._ffi_table.num_data == 0
+    assert table._ffi_table.prepared_data().num_rows == 0
     table.add_data(dataset)
-    assert table._ffi_table.num_data == 1
+    assert table._ffi_table.prepared_data().num_rows == len(dataset)
+
+    prepared = table._ffi_table.prepared_data().to_pandas()
+    assert prepared['_time'].is_monotonic_increasing

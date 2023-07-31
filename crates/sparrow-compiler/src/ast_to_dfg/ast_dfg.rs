@@ -86,22 +86,11 @@ impl AstDfg {
         }
     }
 
-    pub fn equivalent(&self, other: &AstDfg) -> bool {
-        // This is quite correct -- we should lock everything and then compare.
-        // But, this is a temporary hack for the Python builder.
-        self.value() == other.value()
-            && self.is_new() == other.is_new()
-            && self.value_type == other.value_type
-            && self.grouping == other.grouping
-            && self.time_domain == other.time_domain
-            && self.location == other.location
-    }
-
     pub fn value(&self) -> Id {
         *self.value.lock().unwrap()
     }
 
-    pub(crate) fn is_new(&self) -> Id {
+    pub fn is_new(&self) -> Id {
         *self.is_new.lock().unwrap()
     }
 
@@ -113,7 +102,7 @@ impl AstDfg {
         self.grouping
     }
 
-    pub(crate) fn time_domain(&self) -> &TimeDomain {
+    pub fn time_domain(&self) -> &TimeDomain {
         &self.time_domain
     }
 

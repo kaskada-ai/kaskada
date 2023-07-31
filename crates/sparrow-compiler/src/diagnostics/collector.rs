@@ -10,7 +10,7 @@ use crate::diagnostics::DiagnosticCode;
 use crate::DiagnosticBuilder;
 
 /// Collects the diagnostic messages being reported.
-pub(crate) struct DiagnosticCollector<'a> {
+pub struct DiagnosticCollector<'a> {
     feature_set: FeatureSetParts<'a>,
     /// Collect the diagnostic messages.
     collected: Vec<CollectedDiagnostic>,

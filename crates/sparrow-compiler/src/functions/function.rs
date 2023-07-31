@@ -124,7 +124,7 @@ impl Function {
     /// This is used for certain functions like aggregations, where the
     /// arguments are flattened in the DFG, requiring us to check parameters
     /// against an internal signature representing the flattened arguments.
-    pub(crate) fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &Signature {
         if let Some(signature) = &self.internal_signature {
             signature
         } else {

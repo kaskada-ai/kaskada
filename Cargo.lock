@@ -4746,6 +4746,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-session"
+version = "0.10.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "itertools 0.11.0",
+ "smallvec",
+ "sparrow-api",
+ "sparrow-compiler",
+ "sparrow-runtime",
+ "sparrow-syntax",
+ "static_init",
+ "uuid 1.4.1",
+]
+
+[[package]]
 name = "sparrow-syntax"
 version = "0.10.0"
 dependencies = [

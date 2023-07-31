@@ -731,7 +731,7 @@ async fn test_invalid_named_arguments_duplicates() {
           - "1 | { n: ceil(x = Numbers.n, x = 5) } "
           - "  |      ^^^^"
           - "  |"
-          - "  = Nearest matches: n"
+          - "  = Nearest matches: 'n'"
           - ""
           - ""
     "###);

@@ -11,7 +11,7 @@ use crate::{AstDfgRef, DataContext, DiagnosticBuilder, DiagnosticCode};
 /// It is used to report warnings about operations between incompatible
 /// domains.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub(super) enum TimeDomain {
+pub enum TimeDomain {
     /// The TimeDomain represents an error.
     Error,
     /// The TimeDomain represents a continuous value, such as a literal or

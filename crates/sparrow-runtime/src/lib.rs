@@ -38,6 +38,7 @@ use std::path::PathBuf;
 
 pub use batch::*;
 pub use metadata::*;
+pub use prepare::preparer;
 use read::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 

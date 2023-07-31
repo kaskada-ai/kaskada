@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
 use arrow::datatypes::Schema;
-use arrow::pyarrow::PyArrowType;
+use arrow::pyarrow::{FromPyArrow, PyArrowType, ToPyArrow};
 use arrow::record_batch::RecordBatch;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+use sparrow_session::Table as RustTable;
 
+use crate::error::Result;
 use crate::expr::Expr;
 use crate::session::Session;
 
-#[derive(Clone)]
 #[pyclass(extends=Expr, subclass)]
 pub(crate) struct Table {
     #[pyo3(get)]
     name: String,
-    #[pyo3(get)]
-    num_data: usize,
+    rust_table: RustTable,
 }
 
 #[pymethods]
@@ -31,30 +31,39 @@ impl Table {
         schema: PyArrowType<Schema>,
         subsort_column_name: Option<&str>,
         grouping_name: Option<&str>,
-    ) -> PyResult<(Self, Expr)> {
-        let schema = Arc::new(schema.0);
+    ) -> Result<(Self, Expr)> {
+        let raw_schema = Arc::new(schema.0);
 
-        let node = session
-            .session_mut()?
-            .query_builder
-            .add_table(
-                &name,
-                schema,
-                time_column_name,
-                subsort_column_name,
-                key_column_name,
-                grouping_name,
-            )
-            .map_err(|_| PyRuntimeError::new_err("failed to create table"))?;
+        let rust_table = session.rust_session()?.add_table(
+            &name,
+            raw_schema,
+            time_column_name,
+            subsort_column_name,
+            key_column_name,
+            grouping_name,
+        )?;
 
-        let table = Table { name, num_data: 0 };
-        let expr = Expr { node, session };
+        let rust_expr = rust_table.expr.clone();
+        let table = Table { name, rust_table };
+        let expr = Expr { rust_expr, session };
         Ok((table, expr))
     }
 
     /// Add PyArrow data to the given table.
-    fn add_pyarrow(&mut self, _data: PyArrowType<RecordBatch>) -> PyResult<()> {
-        self.num_data += 1;
+
+    ///
+    /// TODO: Support other kinds of data:
+    /// - pyarrow RecordBatchReader
+    /// - Parquet file URLs
+    /// - Python generators?
+    /// TODO: Error handling
+    fn add_pyarrow(&mut self, data: &PyAny) -> Result<()> {
+        let data = RecordBatch::from_pyarrow(data)?;
+        self.rust_table.add_data(data)?;
         Ok(())
+    }
+
+    fn prepared_data(&self, py: Python) -> PyResult<PyObject> {
+        self.rust_table.data().to_pyarrow(py)
     }
 }
