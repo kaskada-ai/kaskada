@@ -29,7 +29,7 @@ pub enum Error {
     #[display(fmt = "writing to destination '{_0}'")]
     WritingToDestination(&'static str),
     UnspecifiedDestination,
-    #[cfg(not(feature = "pulsar"))]
+    #[allow(dead_code)]
     FeatureNotEnabled {
         feature: String,
     },
@@ -59,8 +59,13 @@ impl TryFrom<sparrow_api::kaskada::v1alpha::Destination> for Destination {
             sparrow_api::kaskada::v1alpha::destination::Destination::ObjectStore(destination) => {
                 Ok(Destination::ObjectStore(destination))
             }
+            sparrow_api::kaskada::v1alpha::destination::Destination::Redis(_) => {
+                error_stack::bail!(Error::FeatureNotEnabled {
+                    feature: "redis".to_owned()
+                })
+            }
             #[cfg(not(feature = "pulsar"))]
-            Destination::Pulsar(_) => {
+            sparrow_api::kaskada::v1alpha::destination::Destination::Pulsar(_) => {
                 error_stack::bail!(Error::FeatureNotEnabled {
                     feature: "pulsar".to_owned()
                 })

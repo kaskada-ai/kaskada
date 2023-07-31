@@ -8,12 +8,9 @@ import "kaskada/kaskada/v1alpha/pulsar.proto";
 
 // Describes the destination results are materialized to.
 message Destination {
-  // Used by the old (unsupported / unimplemented) redis destination.
-  reserved 2;
-
   oneof destination {
     ObjectStoreDestination object_store = 1;
-
+    RedisDestination redis = 2;
     PulsarDestination pulsar = 3;
   }
 }
@@ -40,6 +37,54 @@ message ObjectStoreDestination {
   message ResultPaths {
     repeated string paths = 1;
   }
+}
+
+// Writes the results directly to a RedisAI instance.
+//
+// Uses a series of AI.TENSORSET operations
+//
+// The query expression's type must be a record.
+// The record type must include a field named 'key'.
+// The value of the 'key' field is used as the AI.TENSORSET key.
+// All other fields must be numeric.
+//
+// See https://redis.io/topics/protocol
+message RedisDestination {
+  // The hostname of the Redis instance.
+  string host_name = 1;
+
+  // The port of the Redis instance.
+  int32 port = 2;
+
+  // When `true`, TLS will be used to connect to Redis.
+  bool use_tls = 3;
+
+  // The Redis database number 0 to 15.
+  int32 database_number = 4;
+
+  // The password to connect to the Redis instance
+  string password = 5;
+
+  // An X.509 certificate to use for authenticating the server
+  // to connected clients, masters or cluster peers.
+  // The string should be PEM formatted.
+  string tls_cert = 6;
+
+  // An X.509 private key to use for authenticating the server
+  // to connected clients, masters or cluster peers.
+  // The string should be PEM formatted.
+  string tls_key = 7;
+
+  // A PEM encoded CA's certificate.
+  string tls_ca_cert = 8;
+
+  // InsecureSkipVerify controls whether a client verifies the
+  // server's certificate chain and host name.
+  // If this field is true, TLS accepts any certificate
+  // presented by the server and any host name in that certificate.
+  // In this mode, TLS is susceptible to man-in-the-middle attacks.
+  // This should be used only for testing.
+  bool insecure_skip_verify = 9;
 }
 
 message PulsarDestination {
