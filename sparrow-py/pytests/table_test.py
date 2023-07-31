@@ -99,4 +99,4 @@ def test_add_dataframe(session, dataset) -> None:
 
     # assert table._ffi_table.prepared_data().num_rows == len(dataset)
     prepared = table.execute()
-    assert prepared['_time'].is_monotonic_increasing
+    assert prepared["_time"].is_monotonic_increasing
