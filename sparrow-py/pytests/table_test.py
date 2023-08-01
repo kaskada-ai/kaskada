@@ -5,16 +5,8 @@ import sys
 import pandas as pd
 import pyarrow as pa
 import pytest
-from sparrow_py import Session
 from sparrow_py import Table
 from sparrow_py import math
-
-
-@pytest.fixture
-def session() -> Session:
-    """Create a session for testing."""
-    session = Session()
-    return session
 
 
 @pytest.fixture
@@ -37,7 +29,7 @@ def dataset(
     return df
 
 
-def test_table_valid(session) -> None:
+def test_table_valid() -> None:
     """Create a table referencing valid fields."""
     schema = pa.schema(
         [
@@ -46,11 +38,10 @@ def test_table_valid(session) -> None:
         ]
     )
 
-    table = Table(session, "table1", "time", "key", schema)
-    assert table.name == "table1"
+    Table("time", "key", schema)
 
 
-def test_table_invalid_names(session) -> None:
+def test_table_invalid_names() -> None:
     """Create a table with invalid column names."""
     schema = pa.schema(
         [
@@ -63,21 +54,19 @@ def test_table_invalid_names(session) -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Table(session, "table1", "non_existant_time", "key", schema)
+        Table("non_existant_time", "key", schema)
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Table(session, "table1", "time", "non_existant_key", schema)
+        Table("time", "non_existant_key", schema)
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
         Table(
-            session,
-            "table1",
             "time",
             "key",
             subsort_column_name="non_existant_subsort",
@@ -85,7 +74,7 @@ def test_table_invalid_names(session) -> None:
         )
 
 
-def test_add_dataframe(session, dataset) -> None:
+def test_add_dataframe(dataset) -> None:
     """Test adding a dataframe to a table."""
     schema = pa.schema(
         [
@@ -93,7 +82,7 @@ def test_add_dataframe(session, dataset) -> None:
             pa.field("key", pa.int64(), nullable=False),
         ]
     )
-    table = Table(session, "table1", "time", "key", schema)
+    table = Table("time", "key", schema)
     # assert table._ffi_table.prepared_data().num_rows == 0
     table.add_data(dataset)
 
