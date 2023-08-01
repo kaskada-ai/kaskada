@@ -15,7 +15,7 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = FDescribe("Graceful Shutdown test", Ordered, Label("docker"), func() {
+var _ = Describe("Graceful Shutdown test", Ordered, Label("docker"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
@@ -119,9 +119,14 @@ max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_sh
 	})
 
 	AfterAll(func() {
+		if helpers.TestsAreRunningLocally() {
+			Skip("tests running locally, skipping gracefull shutdown test")
+		}
+
 		// clean up items created
 		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 		Expect(err).ShouldNot(HaveOccurred())
+
 
 		cancel()
 		conn.Close()
