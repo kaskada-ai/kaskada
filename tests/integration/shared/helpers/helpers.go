@@ -137,10 +137,10 @@ func downloadFile(url string) (localPath string, cleanup func()) {
 		}
 		return
 	}
-	localPath = strings.TrimPrefix(url, "file:///")
+	localPath = strings.TrimPrefix(url, "file://")
 	cleanup = func() {}
-	if TestsAreRunningLocally() || TestsAreRunningLocallyInDocker() {
-		localPath = fmt.Sprintf("../%s", localPath)
+	if TestsAreRunningLocallyInDocker() {
+		localPath = fmt.Sprintf("..%s", localPath)
 	}
 	return
 }
