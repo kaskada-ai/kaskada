@@ -1,3 +1,5 @@
+"""Tests for using Python UDFs in Kaskada queries."""
+
 import pandas as pd
 import pyarrow as pa
 from sparrow_py._ffi import call_udf
@@ -7,6 +9,7 @@ from sparrow_py.udf import fenl_udf
 
 @fenl_udf("add", "add(x: number, y: number) -> number")
 def add(x: pd.Series, y: pd.Series) -> pd.Series:
+    """Add two numeric values together."""
     return x + y
 
 

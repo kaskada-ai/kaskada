@@ -1,16 +1,19 @@
+"""Provide the base-class for Kaskada sources."""
 from typing import Optional
 
-import pandas as pd
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
 from sparrow_py.expr import Expr
 from sparrow_py.session import _get_session
 
+
 _TABLE_NUM: int = 0
 
-class Table(Expr):
-    """ "A table expression."""
 
+class Source(Expr):
+    """A source expression."""
+
+    # TODO: Clean-up naming on the FFI side.
     _ffi_table: _ffi.Table
 
     def __init__(
@@ -21,10 +24,10 @@ class Table(Expr):
         subsort_column_name: Optional[str] = None,
         grouping_name: Optional[str] = None,
     ):
-        """Create a new table expression."""
-        Table._validate_column(time_column_name, schema)
-        Table._validate_column(key_column_name, schema)
-        Table._validate_column(subsort_column_name, schema)
+        """Create a new source."""
+        Source._validate_column(time_column_name, schema)
+        Source._validate_column(key_column_name, schema)
+        Source._validate_column(subsort_column_name, schema)
 
         # Hack -- Sparrow currently requires tables be named.
         global _TABLE_NUM
@@ -44,13 +47,8 @@ class Table(Expr):
 
     @property
     def name(self) -> str:
-        """Get the current voltage."""
+        """Get the current table name."""
         return self._ffi_table.name
-
-    def add_data(self, df: pd.DataFrame) -> None:
-        """Add a dataframe to a table."""
-        pa_table = pa.RecordBatch.from_pandas(df)
-        self._ffi_table.add_pyarrow(pa_table)
 
     # TODO: Most of these checks exist in Sparrow. We should just surface
     # those errors more cleanly.
@@ -59,6 +57,6 @@ class Table(Expr):
         if field_name is not None:
             field = schema.field(field_name)
             if field is None:
-                raise KeyError(f"Column '{field_name}' does not exist")
+                raise KeyError(f"Column {field_name!r} does not exist")
             if field.nullable:
-                raise ValueError(f"Column: '{field_name}' must be non-nullable")
+                raise ValueError(f"Column: {field_name!r} must be non-nullable")

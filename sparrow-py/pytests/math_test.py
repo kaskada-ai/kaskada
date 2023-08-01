@@ -1,59 +1,43 @@
 """Tests for the Kaskada query builder."""
-import random
-import sys
-from io import StringIO
-
-import pandas as pd
-import pyarrow as pa
 import pytest
-from sparrow_py import Table
-from sparrow_py import math
+from sparrow_py.sources import CsvSource
 
 
 @pytest.fixture
-def table_int64() -> Table:
+def source_int64() -> CsvSource:
     """Create an empty table for testing."""
-    schema = pa.schema(
+    content = "\n".join(
         [
-            pa.field("time", pa.string(), nullable=False),
-            pa.field("key", pa.string(), nullable=False),
-            pa.field("m", pa.int64()),
-            pa.field("n", pa.int64()),
+            "time,key,m,n",
+            "1996-12-19T16:39:57-08:00,A,5,10",
+            "1996-12-19T16:39:58-08:00,B,24,3",
+            "1996-12-19T16:39:59-08:00,A,17,6",
+            "1996-12-19T16:40:00-08:00,A,,9",
+            "1996-12-19T16:40:01-08:00,A,12,",
+            "1996-12-19T16:40:02-08:00,A,,",
         ]
     )
-    return Table("time", "key", schema)
+    return CsvSource("time", "key", content)
 
 
-def read_csv(csv_string: str, **kwargs) -> pd.DataFrame:
-    """Read CSV from a string."""
-    return pd.read_csv(StringIO(csv_string), dtype_backend="pyarrow", **kwargs)
-
-
-def test_read_table(table_int64) -> None:
-    input = read_csv(
-        "\n".join(
-            [
-                "time,subsort,key,m,n",
-                "1996-12-19T16:39:57-08:00,0,A,5,10",
-                "1996-12-19T16:39:58-08:00,0,B,24,3",
-                "1996-12-19T16:39:59-08:00,0,A,17,6",
-                "1996-12-19T16:40:00-08:00,0,A,,9",
-                "1996-12-19T16:40:01-08:00,0,A,12,",
-                "1996-12-19T16:40:02-08:00,0,A,,",
-            ]
-        ),
-        dtype={
-            "m": "Int64",
-            "n": "Int64",
-        },
-    )
-    table_int64.add_data(input)
-
+def test_read_table(source_int64) -> None:
+    """Test we can read a table and do basic math."""
     # TODO: Options for outputting to different destinations (eg., to CSV).
     # TODO: Allow running a single expression (eg., without field names)
 
-    # result = (table_int64.m + tableint64.n).execute()
-    result = table_int64.execute()
-    pd.testing.assert_series_equal(input["time"], result["time"], check_dtype=False)
-    pd.testing.assert_series_equal(input["m"], result["m"], check_dtype=False)
-    pd.testing.assert_series_equal(input["n"], result["n"], check_dtype=False)
+    # result = (source_int64.m + source_int64.n).run()
+    result = source_int64.run_to_csv_string()
+    print(result)
+
+    assert result == "\n".join(
+        [
+            "_time,_subsort,_key_hash,_key,time,key,m,n",
+            "1996-12-20 00:39:57,0,12960666915911099378,A,1996-12-19T16:39:57-08:00,A,5.0,10.0",
+            "1996-12-20 00:39:58,1,2867199309159137213,B,1996-12-19T16:39:58-08:00,B,24.0,3.0",
+            "1996-12-20 00:39:59,2,12960666915911099378,A,1996-12-19T16:39:59-08:00,A,17.0,6.0",
+            "1996-12-20 00:40:00,3,12960666915911099378,A,1996-12-19T16:40:00-08:00,A,,9.0",
+            "1996-12-20 00:40:01,4,12960666915911099378,A,1996-12-19T16:40:01-08:00,A,12.0,",
+            "1996-12-20 00:40:02,5,12960666915911099378,A,1996-12-19T16:40:02-08:00,A,,",
+            "",
+        ]
+    )
