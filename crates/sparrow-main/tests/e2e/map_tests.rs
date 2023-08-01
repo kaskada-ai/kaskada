@@ -230,3 +230,35 @@ async fn test_incompatible_key_types() {
           - ""
     "###);
 }
+
+#[tokio::test]
+async fn test_using_map_in_index_fails() {
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: Input.i64_to_i64 | index(0) }")
+        .run_to_csv(&map_data_fixture().await).await.unwrap_err(), @r###"
+    ---
+    code: Client specified an invalid argument
+    message: 1 errors in Fenl statements; see diagnostics
+    fenl_diagnostics:
+      - severity: error
+        code: E0010
+        message: Invalid argument type(s)
+        formatted:
+          - "error[E0010]: Invalid argument type(s)"
+          - "  --> Query:1:26"
+          - "  |"
+          - "1 | { f1: Input.i64_to_i64 | index(0) }"
+          - "  |                          ^^^^^ Invalid types for parameter 'list' in call to 'index'"
+          - "  |"
+          - "  --> internal:1:1"
+          - "  |"
+          - 1 | $input
+          - "  | ------ Actual type: map<i64, i64>"
+          - "  |"
+          - "  --> built-in signature 'index<T: any>(i: i64, list: list<T>) -> T':1:29"
+          - "  |"
+          - "1 | index<T: any>(i: i64, list: list<T>) -> T"
+          - "  |                             ------- Expected type: list<T>"
+          - ""
+          - ""
+    "###);
+}
