@@ -6,20 +6,12 @@ from io import StringIO
 import pandas as pd
 import pyarrow as pa
 import pytest
-from sparrow_py import Session
 from sparrow_py import Table
 from sparrow_py import math
 
 
 @pytest.fixture
-def session() -> Session:
-    """Create a session for testing."""
-    session = Session()
-    return session
-
-
-@pytest.fixture
-def table_int64(session: Session) -> Table:
+def table_int64() -> Table:
     """Create an empty table for testing."""
     schema = pa.schema(
         [
@@ -29,7 +21,7 @@ def table_int64(session: Session) -> Table:
             pa.field("n", pa.int64()),
         ]
     )
-    return Table(session, "table1", "time", "key", schema)
+    return Table("time", "key", schema)
 
 
 def read_csv(csv_string: str, **kwargs) -> pd.DataFrame:
@@ -37,7 +29,7 @@ def read_csv(csv_string: str, **kwargs) -> pd.DataFrame:
     return pd.read_csv(StringIO(csv_string), dtype_backend="pyarrow", **kwargs)
 
 
-def test_read_table(session, table_int64) -> None:
+def test_read_table(table_int64) -> None:
     input = read_csv(
         "\n".join(
             [

@@ -4,8 +4,9 @@ import pandas as pd
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
 from sparrow_py.expr import Expr
-from sparrow_py.session import Session
+from sparrow_py.session import _get_session
 
+_TABLE_NUM: int = 0
 
 class Table(Expr):
     """ "A table expression."""
@@ -14,8 +15,6 @@ class Table(Expr):
 
     def __init__(
         self,
-        session: Session,
-        name: str,
         time_column_name: str,
         key_column_name: str,
         schema: pa.Schema,
@@ -26,8 +25,14 @@ class Table(Expr):
         Table._validate_column(time_column_name, schema)
         Table._validate_column(key_column_name, schema)
         Table._validate_column(subsort_column_name, schema)
+
+        # Hack -- Sparrow currently requires tables be named.
+        global _TABLE_NUM
+        name = f"table{_TABLE_NUM}"
+        _TABLE_NUM += 1
+
         self._ffi_table = _ffi.Table(
-            session._ffi,
+            _get_session(),
             name,
             time_column_name,
             key_column_name,
