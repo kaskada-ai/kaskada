@@ -60,14 +60,14 @@ impl Expr {
         self.session.clone()
     }
 
-    fn execute(&self, py: Python) -> Result<PyObject, Error> {
+    fn execute(&self, py: Python<'_>) -> Result<PyObject, Error> {
         let session = self.session.rust_session()?;
         let batches = session.execute(&self.rust_expr)?;
         Ok(batches.to_pyarrow(py)?)
     }
 
     /// Return the `pyarrow` type of the resulting expression.
-    fn data_type(&self, py: Python) -> PyResult<Option<PyObject>> {
+    fn data_type(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
         match self.rust_expr.data_type() {
             Some(t) => Ok(Some(t.to_pyarrow(py)?)),
             _ => Ok(None),
