@@ -426,7 +426,7 @@ func (q *queryV1Service) validateOutputTo(ctx context.Context, query *v1alpha.Qu
 			default:
 				subLogger.Warn().Interface("kind", kind).Interface("type", kind.ObjectStore.FileType).Msg("unknown output_to file_type, defaulting to 'ObjectStore->Parquet'")
 			}
-		case *v1alpha.Destination_Pulsar, *v1alpha.Destination_Redis:
+		case *v1alpha.Destination_Pulsar:
 			return fmt.Errorf("query output type: %s is only valid for materializations", kind)
 		default:
 			subLogger.Warn().Interface("kind", kind).Msg("unknown output_to, defaulting to 'ObjectStore->Parquet'")

@@ -59,11 +59,6 @@ impl TryFrom<sparrow_api::kaskada::v1alpha::Destination> for Destination {
             sparrow_api::kaskada::v1alpha::destination::Destination::ObjectStore(destination) => {
                 Ok(Destination::ObjectStore(destination))
             }
-            sparrow_api::kaskada::v1alpha::destination::Destination::Redis(_) => {
-                error_stack::bail!(Error::FeatureNotEnabled {
-                    feature: "redis".to_owned()
-                })
-            }
             #[cfg(not(feature = "pulsar"))]
             sparrow_api::kaskada::v1alpha::destination::Destination::Pulsar(_) => {
                 error_stack::bail!(Error::FeatureNotEnabled {

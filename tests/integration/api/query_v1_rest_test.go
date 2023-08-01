@@ -61,7 +61,7 @@ var _ = PDescribe("Query V1 REST", Ordered, func() {
 
 		loadReq := loadRequestJson{
 			TableName:      table.TableName,
-			ParquetFileUri: helpers.GetFileURI("purchases_part1.parquet"),
+			ParquetFileUri: helpers.GetTestFileURI("purchases_part1.parquet"),
 		}
 
 		jsonBody, err = json.Marshal(loadReq)

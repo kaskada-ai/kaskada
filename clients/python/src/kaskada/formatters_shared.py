@@ -123,20 +123,6 @@ def get_materialization_html_and_schema_df(obj):
     if hasattr(obj, "destination") and obj.HasField("destination"):
         destination = table(_class="kda_table")
         details.appendChild(html_table_row("destination", destination))
-        if hasattr(obj.destination, "redis_a_i") and obj.destination.HasField(
-            "redis_a_i"
-        ):
-            redis_a_i = table(_class="kda_table")
-            appendHtmlObjTableRowIfAttrExists(
-                redis_a_i, obj.destination.redis_a_i, "host"
-            )
-            appendHtmlObjTableRowIfAttrExists(
-                redis_a_i, obj.destination.redis_a_i, "port"
-            )
-            appendHtmlObjTableRowIfAttrExists(
-                redis_a_i, obj.destination.redis_a_i, "db"
-            )
-            destination.appendChild(html_table_row("redis_a_i", redis_a_i))
 
     if hasattr(obj, "slice"):
         details.appendChild(html_table_row("slice", get_slice_request_html(obj.slice)))

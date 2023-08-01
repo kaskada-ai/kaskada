@@ -23,44 +23,6 @@ class Destination(ABC):
         pass
 
 
-class RedisDestination(Destination):
-    def __init__(
-        self,
-        host_name: str,
-        port: int,
-        use_tls: bool,
-        database_number: int,
-        password: str,
-        tls_cert: str,
-        tls_key: str,
-        tls_ca_cert: str,
-        insecure_skip_verify: bool,
-    ) -> None:
-        super().__init__()
-        self._host_name = host_name
-        self._port = port
-        self._use_tls = use_tls
-        self._database_number = database_number
-        self._password = password
-        self._tls_cert = tls_cert
-        self._tls_key = tls_key
-        self._tls_ca_cert = tls_ca_cert
-        self._insecure_skip_verify = insecure_skip_verify
-
-    def to_request(self) -> Dict[str, Any]:
-        return {
-            "host_name": self._host_name,
-            "port": self._port,
-            "use_tls": self._use_tls,
-            "database_number": self._database_number,
-            "password": self._password,
-            "tls_cert": self._tls_cert,
-            "tls_key": self._tls_key,
-            "tls_ca_cert": self._tls_ca_cert,
-            "insecure_skip_verify": self._insecure_skip_verify,
-        }
-
-
 class FileType(Enum):
     FILE_TYPE_UNSPECIFIED = 0
     FILE_TYPE_PARQUET = 1
@@ -160,8 +122,6 @@ def create_materialization(
         }
         if isinstance(destination, ObjectStoreDestination):
             materialization["destination"] = {"object_store": destination.to_request()}
-        elif isinstance(destination, RedisDestination):
-            materialization["destination"] = {"redis": destination.to_request()}
         elif isinstance(destination, PulsarDestination):
             materialization["destination"] = {
                 "pulsar": {"config": destination.to_request()}

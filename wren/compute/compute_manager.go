@@ -284,9 +284,6 @@ func (m *computeManager) processMaterializations(requestCtx context.Context, own
 		case *v1alpha.Destination_Pulsar:
 			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializating to pulsar")
 			destination.Destination = kind
-		case *v1alpha.Destination_Redis:
-			matLogger.Info().Interface("type", kind).Str("when", "pre-compute").Msg("materializing to redis")
-			destination.Destination = kind
 		default:
 			matLogger.Error().Interface("type", kind).Str("when", "pre-compute").Msg("materialization output type not implemented")
 			return fmt.Errorf("materialization output type %s is not implemented", kind)
