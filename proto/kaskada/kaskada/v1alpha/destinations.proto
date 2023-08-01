@@ -9,7 +9,7 @@ import "kaskada/kaskada/v1alpha/pulsar.proto";
 // Describes the destination results are materialized to.
 message Destination {
   reserved 2; // old redis oneof destination
-  
+
   oneof destination {
     ObjectStoreDestination object_store = 1;
     PulsarDestination pulsar = 3;

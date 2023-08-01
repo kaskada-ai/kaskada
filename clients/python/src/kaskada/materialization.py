@@ -22,6 +22,7 @@ class Destination(ABC):
     def to_request(self) -> Dict[str, Any]:
         pass
 
+
 class FileType(Enum):
     FILE_TYPE_UNSPECIFIED = 0
     FILE_TYPE_PARQUET = 1
