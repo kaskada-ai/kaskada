@@ -62,6 +62,7 @@ pub async fn execute(
         changed_since_time: request.changed_since.unwrap_or_default(),
         final_at_time: request.final_result_time,
         compute_snapshot_config: request.compute_snapshot_config,
+        limits: request.limits,
         ..ExecutionOptions::default()
     };
 

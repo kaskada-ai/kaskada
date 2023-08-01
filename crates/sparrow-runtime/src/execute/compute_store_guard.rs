@@ -49,11 +49,24 @@ impl ComputeStoreGuard {
         Ok(Self { dir, store, config })
     }
 
-    pub async fn upload(
+    pub async fn finish(
         self,
         object_stores: &ObjectStoreRegistry,
         compute_result: ComputeResult,
     ) -> error_stack::Result<ComputeSnapshot, Error> {
+        // Write the max input time to the store.
+        self.store
+            .put_max_event_time(&compute_result.max_input_timestamp)
+            .into_report()
+            .change_context(Error::Internal("failed to report max event time"))?;
+
+        // Now that everything has completed, we attempt to get the compute store out.
+        // This lets us explicitly drop the store here.
+        match Arc::try_unwrap(self.store) {
+            Ok(owned_compute_store) => std::mem::drop(owned_compute_store),
+            Err(_) => panic!("unable to reclaim compute store"),
+        };
+
         super::checkpoints::upload(object_stores, self.dir, self.config, compute_result)
             .await
             .change_context(Error::Internal("uploading snapshot"))

@@ -30,7 +30,6 @@ use crate::{Batch, RuntimeOptions};
 
 pub(crate) struct ComputeExecutor {
     object_stores: Arc<ObjectStoreRegistry>,
-    compute_store: Option<Arc<ComputeStore>>,
     plan_hash: PlanHash,
     futures: FuturesUnordered<JoinTask<()>>,
     progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
@@ -155,7 +154,6 @@ impl ComputeExecutor {
 
         Ok(Self {
             object_stores: context.object_stores,
-            compute_store: context.compute_store,
             plan_hash,
             futures: spawner.finish(),
             progress_updates_rx,
@@ -173,7 +171,6 @@ impl ComputeExecutor {
     ) -> impl Stream<Item = error_stack::Result<ExecuteResponse, Error>> {
         let Self {
             object_stores,
-            compute_store,
             plan_hash,
             futures,
             progress_updates_rx,
@@ -199,26 +196,6 @@ impl ComputeExecutor {
                     return compute_result;
                 };
                 let compute_result = compute_result.expect("ok");
-
-                if let Some(compute_store) = compute_store {
-                    // Write the max input time to the store.
-                    if let Err(e) = compute_store
-                        .put_max_event_time(&compute_result.max_input_timestamp)
-                        .into_report()
-                    {
-                        return ProgressUpdate::ExecutionFailed {
-                            error: e
-                                .change_context(Error::Internal("failed to report max event time")),
-                        };
-                    }
-
-                    // Now that everything has completed, we attempt to get the compute store out.
-                    // This lets us explicitly drop the store here.
-                    match Arc::try_unwrap(compute_store) {
-                        Ok(owned_compute_store) => std::mem::drop(owned_compute_store),
-                        Err(_) => panic!("unable to reclaim compute store"),
-                    };
-                }
 
                 let compute_snapshots =
                     upload_compute_snapshots(object_stores.as_ref(), store, compute_result)
@@ -272,7 +249,7 @@ async fn upload_compute_snapshots(
     let mut snapshots = Vec::new();
 
     if let Some(store) = store {
-        snapshots.push(store.upload(object_stores, compute_result).await?);
+        snapshots.push(store.finish(object_stores, compute_result).await?);
     } else {
         tracing::info!("No snapshot config; not uploading compute store.")
     }
