@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"time"
 
@@ -23,16 +24,14 @@ var _ = Describe("Graceful Shutdown test", Ordered, Label("docker"), func() {
 		materializationClient v1alpha.MaterializationServiceClient
 		tableClient           v1alpha.TableServiceClient
 		queryClient           v1alpha.QueryServiceClient
-		outputSubPath         string
+		outputURI             string
 		table                 *v1alpha.Table
 		tableName             string
-		matName               string
+		materializationName   string
 	)
 
-	outputSubPath = "graceful_shutdown"
-
 	tableName = "graceful_shutdown_table"
-	matName = "graceful_shutdown_mat"
+	materializationName = "graceful_shutdown_mat"
 
 	query := `
 {
@@ -93,6 +92,9 @@ max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_sh
 			Skip("tests running locally, skipping gracefull shutdown test")
 		}
 
+		// define the output path and make sure it is empty
+		outputURI = fmt.Sprintf("file:///data/output/%s", materializationName)
+
 		//get connection to wren
 		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
 		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
@@ -103,7 +105,7 @@ max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_sh
 
 		// delete the table and materialization if not cleaned up in the previous run
 		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
-		materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: matName})
+		materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: materializationName})
 
 		// create a table
 		table = &v1alpha.Table{
@@ -177,22 +179,20 @@ max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_sh
 
 		Describe("Add a materialization, and then send a termination signal to Kaskada", func() {
 			It("create the materialzation without error", func() {
-				helpers.EmptyOutputPath(outputSubPath)
-
 				go terminateKaskada()
 
 				destination := &v1alpha.Destination{
 					Destination: &v1alpha.Destination_ObjectStore{
 						ObjectStore: &v1alpha.ObjectStoreDestination{
 							FileType:        v1alpha.FileType_FILE_TYPE_PARQUET,
-							OutputPrefixUri: helpers.GetOutputPathURI(outputSubPath),
+							OutputPrefixUri: outputURI,
 						},
 					},
 				}
 
 				res, err := materializationClient.CreateMaterialization(ctx, &v1alpha.CreateMaterializationRequest{
 					Materialization: &v1alpha.Materialization{
-						MaterializationName: "transaction_details",
+						MaterializationName: materializationName,
 						Expression:          query,
 						Destination:         destination,
 					},
@@ -203,19 +203,16 @@ max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_sh
 
 			It("Should output results to a file before terminating", func() {
 				Eventually(func(g Gomega) {
-					files := helpers.EventuallyListOutputFiles(outputSubPath, g)
-					g.Expect(files).Should(HaveLen(1))
+					filePaths := helpers.EventuallyListOutputFiles(materializationName + "/0", g)
 
-					results := helpers.DownloadParquet(files[0])
-					g.Expect(len(results)).Should(Equal(100000))
+					results := helpers.DownloadParquet(filePaths[0])
+					g.Expect(len(results)).Should(Equal(50000))
 				}, "30s", "1s").Should(Succeed())
 			})
 		})
 
 		Describe("Load the second file into the table, and then send a termination signal to Kaskada", func() {
 			It("Should work without error", func() {
-				helpers.EmptyOutputPath(outputSubPath)
-
 				go terminateKaskada()
 
 				helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part2.parquet")
@@ -223,18 +220,17 @@ max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_sh
 
 			It("Should output results to a file before terminating", func() {
 				Eventually(func(g Gomega) {
-					files := helpers.EventuallyListOutputFiles(outputSubPath, g)
-					g.Expect(files).Should(HaveLen(1))
+					filePaths := helpers.EventuallyListOutputFiles(materializationName + "/1", g)
 
-					results := helpers.DownloadParquet(files[0])
-					g.Expect(len(results)).Should(Equal(100000))
+					results := helpers.DownloadParquet(filePaths[0])
+					g.Expect(len(results)).Should(Equal(10000))
 				}, "30s", "1s").Should(Succeed())
 			})
 		})
 
 		Describe("Cleeanup the materialization used in the test", func() {
 			It("Should work without error", func() {
-				_, err := materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: matName})
+				_, err := materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: materializationName})
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 		})

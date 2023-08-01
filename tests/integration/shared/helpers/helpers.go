@@ -139,7 +139,7 @@ func downloadFile(url string) (localPath string, cleanup func()) {
 	}
 	localPath = strings.TrimPrefix(url, "file://")
 	cleanup = func() {}
-	if TestsAreRunningLocallyInDocker() {
+	if TestsAreRunningLocallyInDocker() && !strings.HasPrefix(localPath, "..") {
 		localPath = fmt.Sprintf("..%s", localPath)
 	}
 	return
@@ -199,9 +199,10 @@ func EventuallyListOutputFiles(subPath string, g types.Gomega) []string {
 	paths := []string{}
 	for _, dirEntry := range dirEntries {
 		if !dirEntry.IsDir() {
-			paths = append(paths, filepath.Join(path, dirEntry.Name()))
+			paths = append(paths, filepath.Join(localOutputPath, subPath, dirEntry.Name()))
 		}
 	}
+	g.Expect(len(paths)).Should(BeNumerically(">", 0))
 	return paths
 }
 
