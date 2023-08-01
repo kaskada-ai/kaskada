@@ -96,6 +96,60 @@ async fn test_index_list_bool_dynamic() {
 }
 
 #[tokio::test]
+async fn test_list_schemas_are_compatible() {
+    // This query puts a collect() into a record, which
+    // does schema validation when constructing the struct array.
+    let hash = QueryFixture::new(
+        "
+    let s_list = Input.string_list
+    let first_elem = s_list | index(0)
+    let list_with_first_elems = first_elem | collect(max = null)
+    in { l: Input.string_list, list_with_first_elems }
+    ",
+    )
+    .run_to_parquet_hash(&list_data_fixture().await)
+    .await
+    .unwrap();
+
+    assert_eq!(
+        "5F9880AD6B3285D2FA244C508645A98807B38EE51FAF53C86505D12E",
+        hash
+    );
+}
+
+#[tokio::test]
+async fn test_using_list_in_get_fails() {
+    insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: Input.i64_list | get(\"s\") }")
+        .run_to_csv(&list_data_fixture().await).await.unwrap_err(), @r###"
+    ---
+    code: Client specified an invalid argument
+    message: 1 errors in Fenl statements; see diagnostics
+    fenl_diagnostics:
+      - severity: error
+        code: E0010
+        message: Invalid argument type(s)
+        formatted:
+          - "error[E0010]: Invalid argument type(s)"
+          - "  --> Query:1:24"
+          - "  |"
+          - "1 | { f1: Input.i64_list | get(\"s\") }"
+          - "  |                        ^^^ Invalid types for parameter 'map' in call to 'get'"
+          - "  |"
+          - "  --> internal:1:1"
+          - "  |"
+          - 1 | $input
+          - "  | ------ Actual type: list<i64>"
+          - "  |"
+          - "  --> built-in signature 'get<K: key, V: any>(key: K, map: map<K, V>) -> V':1:34"
+          - "  |"
+          - "1 | get<K: key, V: any>(key: K, map: map<K, V>) -> V"
+          - "  |                                  --------- Expected type: map<K, V>"
+          - ""
+          - ""
+    "###);
+}
+
+#[tokio::test]
 async fn test_incorrect_index_type() {
     insta::assert_yaml_snapshot!(QueryFixture::new("{ f1: Input.i64_list | index(\"s\") }")
         .run_to_csv(&list_data_fixture().await).await.unwrap_err(), @r###"

@@ -104,6 +104,7 @@ pub(crate) fn instantiate(
         .iter()
         .map(|parameter_type| instantiate_type(parameter_type, &solutions))
         .collect();
+
     let instantiated_arguments = arguments.with_values(instantiated_arguments);
     let instantiated_return = if instantiated_arguments.iter().any(|t| t.is_error()) {
         FenlType::Error
@@ -368,12 +369,18 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
                 .unwrap_or(FenlType::Concrete(DataType::Null));
 
             // `solutions` map should contain concrete types for all type variables.
+
+            // Note that the `name` and `nullability` are the standard, and cannot be changed,
+            // or we may have schema mismatches later during execution.
+            //
+            // That said, there's no reason why a later arrow version can't change this behavior.
+            // TODO: Figure out how to pass user naming and nullability through inference.
             let key_field = match concrete_key_type {
-                FenlType::Concrete(t) => Field::new("key", t, false),
+                FenlType::Concrete(t) => Field::new("keys", t, false),
                 other => panic!("expected concrete type, got {:?}", other),
             };
             let value_field = match concrete_value_type {
-                FenlType::Concrete(t) => Field::new("value", t, false),
+                FenlType::Concrete(t) => Field::new("values", t, true),
                 other => panic!("expected concrete type, got {:?}", other),
             };
 
@@ -388,8 +395,12 @@ fn instantiate_type(fenl_type: &FenlType, solutions: &HashMap<TypeVariable, Fenl
                 .cloned()
                 .unwrap_or(FenlType::Concrete(DataType::Null));
             let field = match concrete_type {
-                // TODO: Should the fields be nullable?
-                FenlType::Concrete(t) => Arc::new(Field::new("item", t, false)),
+                // Note: the `name` and `nullability` here are the standard, and cannot be changed,
+                // or we will have schema mismatches later during execution.
+                //
+                // That said, there's no reason why a later arrow version can't change this behavior.
+                // TODO: Figure out how to pass user naming and nullability through inference.
+                FenlType::Concrete(t) => Arc::new(Field::new("item", t, true)),
                 other => panic!("expected concrete type, got {:?}", other),
             };
 
@@ -779,6 +790,10 @@ impl TypeConstraints {
             (FenlType::TypeRef(variable), _) => self.constrain(variable, argument),
             (FenlType::Collection(p_collection, p_type_vars), arg_type) => match arg_type {
                 FenlType::Concrete(DataType::List(field)) => {
+                    if p_collection != &Collection::List {
+                        return Err(());
+                    }
+
                     debug_assert_eq!(
                         p_type_vars.len(),
                         1,
@@ -790,6 +805,10 @@ impl TypeConstraints {
                     )?;
                 }
                 FenlType::Concrete(DataType::Map(s, _)) => {
+                    if p_collection != &Collection::Map {
+                        return Err(());
+                    }
+
                     debug_assert_eq!(
                         p_type_vars.len(),
                         2,
