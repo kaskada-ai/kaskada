@@ -5,14 +5,15 @@ use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::ResultExt;
 use sparrow_compiler::TableInfo;
+use sparrow_plan::TableId;
 use sparrow_runtime::preparer::Preparer;
 
-use crate::{Error, Expr};
+use crate::{Error, Expr, Session};
 
 pub struct Table {
+    table_id: TableId,
     pub expr: Expr,
     preparer: Preparer,
-    data: RecordBatch,
 }
 
 impl Table {
@@ -29,14 +30,14 @@ impl Table {
             table_info.config().time_column_name.clone(),
             table_info.config().subsort_column_name.clone(),
             table_info.config().group_column_name.clone(),
-            prepared_schema.clone(),
+            prepared_schema,
             prepare_hash,
         );
 
         Self {
+            table_id: table_info.table_id(),
             expr,
             preparer,
-            data: RecordBatch::new_empty(prepared_schema),
         }
     }
 
@@ -44,20 +45,22 @@ impl Table {
         self.preparer.schema()
     }
 
-    pub fn add_data(&mut self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+    pub fn add_data(
+        &mut self,
+        session: &mut Session,
+        batch: RecordBatch,
+    ) -> error_stack::Result<(), Error> {
         let prepared = self
             .preparer
             .prepare_batch(batch)
             .change_context(Error::Prepare)?;
 
         // TODO: Merge the data in.
-        assert_eq!(self.data.num_rows(), 0);
-        self.data = prepared;
-        Ok(())
-    }
+        let table_info = session.hacky_table_mut(self.table_id);
 
-    pub fn data(&self) -> &RecordBatch {
-        &self.data
+        assert!(table_info.in_memory.is_none());
+        table_info.in_memory = Some(prepared);
+        Ok(())
     }
 }
 

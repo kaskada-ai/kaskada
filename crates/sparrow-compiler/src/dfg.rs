@@ -364,7 +364,7 @@ impl Dfg {
     }
 
     /// Runs simplifications on the graph.
-    pub(crate) fn run_simplifications(&mut self, options: &CompilerOptions) -> anyhow::Result<()> {
+    pub fn run_simplifications(&mut self, options: &CompilerOptions) -> anyhow::Result<()> {
         let span = info_span!("Running simplifications");
         let _enter = span.enter();
 
@@ -375,7 +375,7 @@ impl Dfg {
     }
 
     /// Extract the simplest representation of the node `id` from the graph.
-    pub(crate) fn extract_simplest(&self, id: Id) -> DfgExpr {
+    pub fn extract_simplest(&self, id: Id) -> DfgExpr {
         let span = info_span!("Extracting simplest DFG");
         let _enter = span.enter();
 
@@ -447,7 +447,7 @@ impl Dfg {
     /// Remove nodes that aren't needed for the `output` from the graph.
     ///
     /// Returns the new ID of the `output`.
-    pub(crate) fn prune(&mut self, output: Id) -> anyhow::Result<Id> {
+    pub fn prune(&mut self, output: Id) -> anyhow::Result<Id> {
         // The implementation is somewhat painful -- we extract a `RecExpr`, and then
         // recreate the EGraph. This has the desired property -- only referenced nodes
         // are extracted. But, it may cause the IDs to change.

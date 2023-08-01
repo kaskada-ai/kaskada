@@ -270,7 +270,6 @@ impl QueryFixture {
             plan: Some(plan),
             destination: Some(output_to),
             tables: data.tables(),
-
             ..self.execute_request.clone()
         };
 

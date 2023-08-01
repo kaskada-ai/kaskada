@@ -20,6 +20,10 @@ pub enum Error {
     Prepare,
     #[display(fmt = "internal error")]
     Internal,
+    #[display(fmt = "compile query")]
+    Compile,
+    #[display(fmt = "execute query")]
+    Execute,
 }
 
 impl error_stack::Context for Error {}

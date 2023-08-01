@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
 use chrono::NaiveDateTime;
+use enum_map::EnumMap;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::Stream;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
-    ComputePlan, ComputeTable, ExecuteRequest, ExecuteResponse, LateBoundValue, PerEntityBehavior,
+    ComputePlan, ComputeSnapshotConfig, ComputeTable, ExecuteRequest, ExecuteResponse,
+    LateBoundValue, PerEntityBehavior, PlanHash,
 };
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
-use sparrow_instructions::ComputeStore;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
-use tracing::Instrument;
 
 use crate::execute::error::Error;
 use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
@@ -23,6 +23,7 @@ use crate::RuntimeOptions;
 
 mod checkpoints;
 mod compute_executor;
+mod compute_store_guard;
 pub mod error;
 pub(crate) mod key_hash_inverse;
 pub(crate) mod operation;
@@ -30,9 +31,6 @@ pub mod output;
 mod progress_reporter;
 mod spawner;
 pub use compute_executor::*;
-
-// The path prefix to the local compute store db.
-const STORE_PATH_PREFIX: &str = "compute_snapshot_";
 
 /// The main method for executing a Fenl query.
 ///
@@ -55,112 +53,136 @@ pub async fn execute(
     let destination =
         Destination::try_from(destination).change_context(Error::InvalidDestination)?;
 
-    let changed_since_time = request.changed_since.unwrap_or(Timestamp {
-        seconds: 0,
-        nanos: 0,
-    });
-
-    // Create and populate the late bindings.
-    // We don't use the `enum_map::enum_map!(...)` initialization because it would
-    // require looping over (and cloning) the scalar value unnecessarily.
-    let mut late_bindings = enum_map::enum_map! {
-        _ => None
-    };
-    late_bindings[LateBoundValue::ChangedSinceTime] = Some(ScalarValue::timestamp(
-        changed_since_time.seconds,
-        changed_since_time.nanos,
-        None,
-    ));
-
-    let output_at_time = if let Some(output_at_time) = request.final_result_time {
-        late_bindings[LateBoundValue::FinalAtTime] = Some(ScalarValue::timestamp(
-            output_at_time.seconds,
-            output_at_time.nanos,
-            None,
-        ));
-        Some(output_at_time)
-    } else {
-        late_bindings[LateBoundValue::FinalAtTime] = None;
-        None
-    };
-
-    let mut data_context = DataContext::try_from_tables(request.tables.to_vec())
+    let data_context = DataContext::try_from_tables(request.tables.to_vec())
         .into_report()
         .change_context(Error::internal_msg("create data context"))?;
 
-    let object_stores = Arc::new(ObjectStoreRegistry::default());
-
-    // If the snapshot config exists, sparrow should attempt to resume from state,
-    // and store new state. Create a new storage path for the local store to
-    // exist.
-    let storage_dir = if let Some(config) = &request.compute_snapshot_config {
-        let dir = tempfile::Builder::new()
-            .prefix(&STORE_PATH_PREFIX)
-            .tempdir()
-            .into_report()
-            .change_context(Error::internal_msg("create snapshot dir"))?;
-
-        // If a `resume_from` path is specified, download the existing state from s3.
-        if let Some(resume_from) = &config.resume_from {
-            checkpoints::download(resume_from, object_stores.as_ref(), dir.path(), config)
-                .instrument(tracing::info_span!("Downloading checkpoint files"))
-                .await
-                .change_context(Error::internal_msg("download snapshot"))?;
-        } else {
-            tracing::info!("No snapshot set to resume from. Using empty compute store.");
-        }
-
-        Some(dir)
-    } else {
-        tracing::info!("No snapshot config; not creating compute store.");
-        None
+    let options = ExecutionOptions {
+        bounded_lateness_ns,
+        changed_since_time: request.changed_since.unwrap_or_default(),
+        final_at_time: request.final_result_time,
+        compute_snapshot_config: request.compute_snapshot_config,
+        limits: request.limits,
+        ..ExecutionOptions::default()
     };
+
+    // let output_at_time = request.final_result_time;
+
+    execute_new(plan, destination, data_context, options).await
+}
+
+#[derive(Default, Debug)]
+pub struct ExecutionOptions {
+    changed_since_time: Timestamp,
+    final_at_time: Option<Timestamp>,
+    bounded_lateness_ns: Option<i64>,
+    compute_snapshot_config: Option<ComputeSnapshotConfig>,
+    limits: Option<Limits>,
+    stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
+}
+
+impl ExecutionOptions {
+    pub fn late_bindings(&self) -> EnumMap<LateBoundValue, Option<ScalarValue>> {
+        enum_map::enum_map! {
+            LateBoundValue::ChangedSinceTime => Some(ScalarValue::timestamp(
+                self.changed_since_time.seconds,
+                self.changed_since_time.nanos,
+                None,
+            )),
+            LateBoundValue::FinalAtTime => self.final_at_time.as_ref().map(|t| ScalarValue::timestamp(
+                t.seconds,
+                t.nanos,
+                None,
+            )),
+            _ => None
+        }
+    }
+
+    pub fn set_changed_since(&mut self, changed_since: Timestamp) {
+        self.changed_since_time = changed_since;
+    }
+
+    pub fn set_final_at_time(&mut self, final_at_time: Timestamp) {
+        self.final_at_time = Some(final_at_time);
+    }
+
+    async fn compute_store(
+        &self,
+        object_stores: &ObjectStoreRegistry,
+        per_entity_behavior: PerEntityBehavior,
+        plan_hash: &PlanHash,
+    ) -> error_stack::Result<Option<compute_store_guard::ComputeStoreGuard>, Error> {
+        // If the snapshot config exists, sparrow should attempt to resume from state,
+        // and store new state. Create a new storage path for the local store to
+        // exist.
+        if let Some(config) = self.compute_snapshot_config.clone() {
+            let max_allowed_max_event_time = match per_entity_behavior {
+                PerEntityBehavior::Unspecified => {
+                    error_stack::bail!(Error::UnspecifiedPerEntityBehavior)
+                }
+                PerEntityBehavior::All => {
+                    // For all results, we need a snapshot with a maximum event time
+                    // no larger than the changed_since time, since we need to replay
+                    // (and recompute the results for) all events after the changed
+                    // since time.
+                    self.changed_since_time.clone()
+                }
+                PerEntityBehavior::Final => {
+                    // This is a bit confusing. Right now, the manager is responsible for
+                    // choosing a valid snapshot to resume from. Thus, the work of choosing
+                    // a valid snapshot with regard to any new input data is already done.
+                    // However, the engine does a sanity check here to ensure the snapshot's
+                    // max event time is before the allowed max event time the engine supports,
+                    // dependent on the entity behavior of the query.
+                    //
+                    // For FinalResults, the snapshot can have a max event time of "any time",
+                    // so we set this to Timestamp::MAX. This is because we just need to be able
+                    // to produce results once after all new events have been processed, and
+                    // we can already assume a valid snapshot is chosen and the correct input
+                    // files are being processed.
+                    Timestamp {
+                        seconds: i64::MAX,
+                        nanos: i32::MAX,
+                    }
+                }
+                PerEntityBehavior::FinalAtTime => {
+                    self.final_at_time.clone().expect("final at time")
+                }
+            };
+
+            let guard = compute_store_guard::ComputeStoreGuard::try_new(
+                config,
+                object_stores,
+                max_allowed_max_event_time,
+                plan_hash,
+            )
+            .await?;
+
+            Ok(Some(guard))
+        } else {
+            tracing::info!("No snapshot config; not creating compute store.");
+            Ok(None)
+        }
+    }
+}
+
+pub async fn execute_new(
+    plan: ComputePlan,
+    destination: Destination,
+    mut data_context: DataContext,
+    options: ExecutionOptions,
+) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
 
     let plan_hash = hash_compute_plan_proto(&plan);
 
-    let compute_store = if let Some(dir) = &storage_dir {
-        let max_allowed_max_event_time = match plan.per_entity_behavior() {
-            PerEntityBehavior::Unspecified => {
-                error_stack::bail!(Error::UnspecifiedPerEntityBehavior)
-            }
-            PerEntityBehavior::All => {
-                // For all results, we need a snapshot with a maximum event time
-                // no larger than the changed_since time, since we need to replay
-                // (and recompute the results for) all events after the changed
-                // since time.
-                changed_since_time.clone()
-            }
-            PerEntityBehavior::Final => {
-                // This is a bit confusing. Right now, the manager is responsible for
-                // choosing a valid snapshot to resume from. Thus, the work of choosing
-                // a valid snapshot with regard to any new input data is already done.
-                // However, the engine does a sanity check here to ensure the snapshot's
-                // max event time is before the allowed max event time the engine supports,
-                // dependent on the entity behavior of the query.
-                //
-                // For FinalResults, the snapshot can have a max event time of "any time",
-                // so we set this to Timestamp::MAX. This is because we just need to be able
-                // to produce results once after all new events have been processed, and
-                // we can already assume a valid snapshot is chosen and the correct input
-                // files are being processed.
-                Timestamp {
-                    seconds: i64::MAX,
-                    nanos: i32::MAX,
-                }
-            }
-            PerEntityBehavior::FinalAtTime => {
-                output_at_time.as_ref().expect("final at time").clone()
-            }
-        };
-
-        Some(
-            ComputeStore::try_new(dir.path(), &max_allowed_max_event_time, &plan_hash)
-                .into_report()
-                .change_context(Error::internal_msg("loading compute store"))?,
+    let compute_store = options
+        .compute_store(
+            object_stores.as_ref(),
+            plan.per_entity_behavior(),
+            &plan_hash,
         )
-    } else {
-        None
-    };
+        .await?;
 
     let primary_grouping_key_type = plan
         .primary_grouping_key_type
@@ -170,13 +192,14 @@ pub async fn execute(
         arrow::datatypes::DataType::try_from(&primary_grouping_key_type)
             .into_report()
             .change_context(Error::internal_msg("decode primary_grouping_key_type"))?;
-    let mut key_hash_inverse = KeyHashInverse::from_data_type(primary_grouping_key_type.clone());
 
-    if let Some(compute_store) = compute_store.to_owned() {
-        if let Ok(restored) = KeyHashInverse::restore_from(&compute_store) {
+    let mut key_hash_inverse = KeyHashInverse::from_data_type(primary_grouping_key_type.clone());
+    if let Some(compute_store) = &compute_store {
+        if let Ok(restored) = KeyHashInverse::restore_from(compute_store.store_ref()) {
             key_hash_inverse = restored
         }
     }
+
     let primary_group_id = data_context
         .get_or_create_group_id(&plan.primary_grouping, &primary_grouping_key_type)
         .into_report()
@@ -192,52 +215,50 @@ pub async fn execute(
     let (progress_updates_tx, progress_updates_rx) =
         tokio::sync::mpsc::channel(29.max(plan.operations.len() * 2));
 
-    let output_datetime = if let Some(t) = output_at_time {
-        Some(
+    let output_at_time = options
+        .final_at_time
+        .as_ref()
+        .map(|t| {
             NaiveDateTime::from_timestamp_opt(t.seconds, t.nanos as u32)
-                .ok_or_else(|| Error::internal_msg("expected valid timestamp"))?,
-        )
-    } else {
-        None
-    };
+                .ok_or_else(|| Error::internal_msg("expected valid timestamp"))
+        })
+        .transpose()?;
 
-    // We use the plan hash for validating the snapshot is as expected.
-    // Rather than accepting it as input (which could lead to us getting
-    // a correct hash but an incorrect plan) we re-hash the plan.
     let context = OperationContext {
         plan,
-        plan_hash,
         object_stores,
         data_context,
-        compute_store,
+        compute_store: compute_store.as_ref().map(|g| g.store()),
         key_hash_inverse,
         max_event_in_snapshot: None,
         progress_updates_tx,
-        output_at_time: output_datetime,
-        bounded_lateness_ns,
+        output_at_time,
+        bounded_lateness_ns: options.bounded_lateness_ns,
     };
 
     // Start executing the query. We pass the response channel to the
     // execution layer so it can periodically report progress.
     tracing::debug!("Starting query execution");
 
+    let late_bindings = options.late_bindings();
     let runtime_options = RuntimeOptions {
-        limits: request.limits.unwrap_or_default(),
+        limits: options.limits.unwrap_or_default(),
         flight_record_path: None,
     };
 
     let compute_executor = ComputeExecutor::try_spawn(
         context,
+        plan_hash,
         &late_bindings,
         &runtime_options,
         progress_updates_rx,
         destination,
-        None,
+        options.stop_signal_rx,
     )
     .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
 
-    Ok(compute_executor.execute_with_progress(storage_dir, request.compute_snapshot_config))
+    Ok(compute_executor.execute_with_progress(compute_store))
 }
 
 /// The main method for starting a materialization process.
@@ -251,102 +272,27 @@ pub async fn materialize(
     bounded_lateness_ns: Option<i64>,
     stop_signal_rx: tokio::sync::watch::Receiver<bool>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
-    // TODO: Unimplemented feature - changed_since_time
-    let changed_since_time = Timestamp {
-        seconds: 0,
-        nanos: 0,
+    let options = ExecutionOptions {
+        bounded_lateness_ns,
+        // TODO: Unimplemented feature - changed_since_time
+        changed_since_time: Timestamp {
+            seconds: 0,
+            nanos: 0,
+        },
+        // Unsupported: not allowed to materialize at a specific time
+        final_at_time: None,
+        // TODO: Resuming from state is unimplemented
+        compute_snapshot_config: None,
+        stop_signal_rx: Some(stop_signal_rx),
+        ..ExecutionOptions::default()
     };
 
-    // Create and populate the late bindings.
-    // We don't use the `enum_map::enum_map!(...)` initialization because it would
-    // require looping over (and cloning) the scalar value unnecessarily.
-    let mut late_bindings = enum_map::enum_map! {
-        _ => None
-    };
-    late_bindings[LateBoundValue::ChangedSinceTime] = Some(ScalarValue::timestamp(
-        changed_since_time.seconds,
-        changed_since_time.nanos,
-        None,
-    ));
-
-    // Unsupported: not allowed to materialize at a specific time
-    late_bindings[LateBoundValue::FinalAtTime] = None;
-    let output_at_time = None;
-
-    let mut data_context = DataContext::try_from_tables(tables)
+    let data_context = DataContext::try_from_tables(tables)
         .into_report()
         .change_context(Error::internal_msg("create data context"))?;
-
-    // TODO: Resuming from state is unimplemented
-    let storage_dir = None;
-    let snapshot_compute_store = None;
-
-    let plan_hash = hash_compute_plan_proto(&plan);
-
-    let primary_grouping_key_type = plan
-        .primary_grouping_key_type
-        .to_owned()
-        .ok_or(Error::MissingField("primary_grouping_key_type"))?;
-    let primary_grouping_key_type =
-        arrow::datatypes::DataType::try_from(&primary_grouping_key_type)
-            .into_report()
-            .change_context(Error::internal_msg("decode primary_grouping_key_type"))?;
-    let mut key_hash_inverse = KeyHashInverse::from_data_type(primary_grouping_key_type.clone());
-
-    let primary_group_id = data_context
-        .get_or_create_group_id(&plan.primary_grouping, &primary_grouping_key_type)
-        .into_report()
-        .change_context(Error::internal_msg("get primary grouping ID"))?;
-
-    let object_stores = Arc::new(ObjectStoreRegistry::default());
-    key_hash_inverse
-        .add_from_data_context(&data_context, primary_group_id, &object_stores)
-        .await
-        .change_context(Error::internal_msg("initialize key hash inverse"))?;
-    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
-
-    // Channel for the output stats.
-    let (progress_updates_tx, progress_updates_rx) =
-        tokio::sync::mpsc::channel(29.max(plan.operations.len() * 2));
-
-    // We use the plan hash for validating the snapshot is as expected.
-    // Rather than accepting it as input (which could lead to us getting
-    // a correct hash but an incorrect plan) we re-hash the plan.
-    let context = OperationContext {
-        plan,
-        plan_hash,
-        object_stores,
-        data_context,
-        compute_store: snapshot_compute_store,
-        key_hash_inverse,
-        max_event_in_snapshot: None,
-        progress_updates_tx,
-        output_at_time,
-        bounded_lateness_ns,
-    };
-
-    // Start executing the query. We pass the response channel to the
-    // execution layer so it can periodically report progress.
-    tracing::debug!("Starting query execution");
-
-    let runtime_options = RuntimeOptions {
-        limits: Limits::default(),
-        flight_record_path: None,
-    };
-
-    let compute_executor = ComputeExecutor::try_spawn(
-        context,
-        &late_bindings,
-        &runtime_options,
-        progress_updates_rx,
-        destination,
-        Some(stop_signal_rx),
-    )
-    .await
-    .change_context(Error::internal_msg("spawn compute executor"))?;
 
     // TODO: the `execute_with_progress` method contains a lot of additional logic that is theoretically not needed,
     // as the materialization does not exit, and should not need to handle cleanup tasks that regular
     // queries do. We should likely refactor this to use a separate `materialize_with_progress` method.
-    Ok(compute_executor.execute_with_progress(storage_dir, None))
+    execute_new(plan, destination, data_context, options).await
 }

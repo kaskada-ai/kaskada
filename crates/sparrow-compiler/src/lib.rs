@@ -41,7 +41,7 @@ mod frontend;
 mod functions;
 mod nearest_matches;
 mod options;
-mod plan;
+pub mod plan;
 mod time_domain;
 mod types;
 

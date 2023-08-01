@@ -8,6 +8,7 @@ from typing import Type
 from typing import Union
 from typing import final
 
+import pandas as pd
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
 
@@ -49,16 +50,24 @@ class Expr(object):
         args : list[Expr]
             List of arguments to the expression.
 
+        Returns
+        -------
+        Expression representing the given operation applied to the arguments.
+
         Raises
         ------
+        # noqa: DAR401 _augment_error
         TypeError
             If the argument types are invalid for the given function.
+        ValueError
+            If the argument values are invalid for the given function.
         """
         ffi_args = [arg._ffi_expr if isinstance(arg, Expr) else arg for arg in args]
         session = next(arg._ffi_expr.session() for arg in args if isinstance(arg, Expr))
         try:
             return Expr(_ffi.Expr(session=session, operation=name, args=ffi_args))
         except TypeError as e:
+            # noqa: DAR401
             raise _augment_error(args, TypeError(str(e)))
         except ValueError as e:
             raise _augment_error(args, ValueError(str(e)))
@@ -154,6 +163,13 @@ class Expr(object):
         -------
         Expr
             Expression referencing the given field.
+
+        Raises
+        ------
+        AttributeError
+            When the base is a struct but the field is not found.
+        TypeError
+            When the base is not a struct.
         """
         # It's easy for this method to cause infinite recursion, if anything
         # it references on `self` isn't defined. To try to avoid this, we only
@@ -228,12 +244,17 @@ class Expr(object):
 
         Parameters
         ----------
-        key : Expr
+        key : Arg
             The key to index into the expression.
 
         Returns
         -------
         Expression accessing the given index.
+
+        Raises
+        ------
+        TypeError
+            When the expression is not a struct, list, or map.
         """
         data_type = self.data_type
         if isinstance(data_type, pa.StructType):
@@ -244,3 +265,7 @@ class Expr(object):
             return Expr.call("get_list", self, key)
         else:
             raise TypeError(f"Cannot index into {data_type}")
+
+    def execute(self) -> pd.DataFrame:
+        """Execute the expression."""
+        return self._ffi_expr.execute().to_pandas()

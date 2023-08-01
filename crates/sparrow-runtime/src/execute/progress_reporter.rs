@@ -135,18 +135,15 @@ impl ProgressTracker {
             flight_record_path: None,
             plan_yaml_path: None,
             compute_snapshots: Vec::new(),
-            destination: Some(destination),
+            destination,
         })
     }
 
-    fn destination_to_output(&mut self) -> error_stack::Result<Destination, Error> {
+    fn destination_to_output(&mut self) -> error_stack::Result<Option<Destination>, Error> {
         // Clone the output paths in for object store destinations
-        let destination = self
-            .destination
-            .as_ref()
-            .ok_or(Error::Internal("expected destination"))?;
-        match destination {
-            destination::Destination::ObjectStore(store) => Ok(Destination {
+        match self.destination.as_ref() {
+            None => Ok(None),
+            Some(destination::Destination::ObjectStore(store)) => Ok(Some(Destination {
                 destination: Some(destination::Destination::ObjectStore(
                     ObjectStoreDestination {
                         file_type: store.file_type,
@@ -156,18 +153,18 @@ impl ProgressTracker {
                         }),
                     },
                 )),
-            }),
+            })),
             #[cfg(not(feature = "pulsar"))]
-            output_to::Destination::Pulsar(pulsar) => {
+            Some(destination::Destination::Pulsar(pulsar)) => {
                 error_stack::bail!(Error::FeatureNotEnabled { feature: "pulsar" })
             }
             #[cfg(feature = "pulsar")]
-            destination::Destination::Pulsar(pulsar) => {
+            Some(destination::Destination::Pulsar(pulsar)) => {
                 let config = pulsar
                     .config
                     .as_ref()
                     .ok_or(Error::internal_msg("missing config"))?;
-                Ok(Destination {
+                Ok(Some(Destination {
                     destination: Some(destination::Destination::Pulsar(PulsarDestination {
                         config: Some(PulsarConfig {
                             broker_service_url: config.broker_service_url.clone(),
@@ -179,7 +176,7 @@ impl ProgressTracker {
                             admin_service_url: config.admin_service_url.clone(),
                         }),
                     })),
-                })
+                }))
             }
         }
     }
@@ -234,7 +231,7 @@ pub(super) fn progress_stream(
                                     }
                                 }
 
-                                let output = match tracker.destination_to_output() {
+                                let destination = match tracker.destination_to_output() {
                                     Ok(output) => output,
                                     Err(e) => {
                                         yield Err(e);
@@ -249,7 +246,7 @@ pub(super) fn progress_stream(
                                     flight_record_path: None,
                                     plan_yaml_path: None,
                                     compute_snapshots,
-                                    destination: Some(output),
+                                    destination,
                                 });
                                 yield final_result;
                                 break
