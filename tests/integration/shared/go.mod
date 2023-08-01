@@ -72,7 +72,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.22.9 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect

@@ -40,7 +40,7 @@ var (
 	grpcConfig helpers.HostConfig
 )
 
-// Before starting tests, delete all tables associated with the Integration clientID.  Also completely wipes connected RedisAI instance.
+// Before starting tests, delete all tables associated with the Integration clientID.
 var _ = BeforeSuite(func() {
 	flag.Parse()
 

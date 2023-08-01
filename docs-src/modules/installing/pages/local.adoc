@@ -141,8 +141,7 @@ optional arguments:
                         repeatable queries.
   --debug DEBUG         Shows debugging information
   --output OUTPUT       Output format for the query results. One of "df"
-                        (default), "json", "parquet" or "redis-bulk". "redis-
-                        bulk" implies --result-behavior "final-results"
+                        (default), "json", or "parquet".
   --preview-rows PREVIEW_ROWS
                         Produces a preview of the data with at least this many
                         rows.

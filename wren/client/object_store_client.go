@@ -242,7 +242,7 @@ func (c objectStoreClient) GetPresignedDownloadURL(ctx context.Context, URI stri
 
 	switch c.objectStoreType {
 	case object_store_type_local:
-		presignedURL = file.Path()
+		presignedURL = fmt.Sprintf("file://%s", file.Path())
 		return
 
 	case object_store_type_s3:

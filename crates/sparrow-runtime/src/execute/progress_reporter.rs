@@ -181,9 +181,6 @@ impl ProgressTracker {
                     })),
                 })
             }
-            destination::Destination::Redis(_) => {
-                error_stack::bail!(Error::UnsupportedOutput { output: "redis" })
-            }
         }
     }
 }

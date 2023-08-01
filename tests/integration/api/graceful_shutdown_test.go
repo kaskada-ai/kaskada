@@ -2,49 +2,51 @@ package api_test
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"time"
 
-	"github.com/RedisAI/redisai-go/redisai"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	v1alpha "github.com/kaskada-ai/kaskada/gen/proto/go/kaskada/kaskada/v1alpha"
 	helpers "github.com/kaskada-ai/kaskada/tests/integration/shared/helpers"
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = PDescribe("Graceful Shutdown test", Ordered, Label("redis"), Label("redis-ai"), func() {
+var _ = Describe("Graceful Shutdown test", Ordered, Label("docker"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
 		conn                  *grpc.ClientConn
-		key1                  string
-		key2                  string
-		redisAIClient         *redisai.Client
 		materializationClient v1alpha.MaterializationServiceClient
 		tableClient           v1alpha.TableServiceClient
 		queryClient           v1alpha.QueryServiceClient
+		outputURI             string
 		table                 *v1alpha.Table
+		tableName             string
+		materializationName   string
 	)
+
+	tableName = "graceful_shutdown_table"
+	materializationName = "graceful_shutdown_mat"
 
 	query := `
 {
-time: transactions.transaction_time,
-key: transactions.id,
-max_price: transactions.price | max(),
-min_spent_in_single_transaction: min(transactions.price * transactions.quantity)
-max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
+time: graceful_shutdown_table.transaction_time,
+key: graceful_shutdown_table.id,
+max_price: graceful_shutdown_table.price | max(),
+min_spent_in_single_transaction: min(graceful_shutdown_table.price * graceful_shutdown_table.quantity),
+max_spent_in_single_transaction: max(graceful_shutdown_table.price * graceful_shutdown_table.quantity)
 }`
 
-	redisDb := 4
 	kaskadaIsDown := false
 
 	terminateKaskada := func() {
+		defer GinkgoRecover()
+
 		cmd := exec.Command("docker", "kill", "-s", "SIGTERM", "kaskada")
 		err := cmd.Run()
 		Expect(err).ShouldNot(HaveOccurred(), "Unable to terminate kaskada")
@@ -77,37 +79,39 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 
 			_, err := tableClient.ListTables(ctx, &v1alpha.ListTablesRequest{})
 			g.Expect(err).ShouldNot(HaveOccurred())
+
+			materializationClient = v1alpha.NewMaterializationServiceClient(conn)
+			queryClient = v1alpha.NewQueryServiceClient(conn)
 		}, "30s", "1s").Should(Succeed())
 
 		kaskadaIsDown = false
-
-		// get a grpc client for the materialization & compute services
-		materializationClient = v1alpha.NewMaterializationServiceClient(conn)
-		queryClient = v1alpha.NewQueryServiceClient(conn)
 	}
 
 	BeforeAll(func() {
-		// get a redis connections for verifying results
-		redisAIClient = getRedisAIClient(redisDb)
+		if helpers.TestsAreRunningLocally() {
+			Skip("tests running locally, skipping gracefull shutdown test")
+		}
 
-		wipeRedisDatabase(redisDb)
+		// define the output path and make sure it is empty
+		outputURI = fmt.Sprintf("file:///data/output/%s", materializationName)
 
-		// declare the keys we are testing for
-		key1 = "Symdt3HKIYEFyzRCgdQl2/OKVBzjl7aO1XcKd7o70wM="
-		key2 = "c5obkiyX5gof2EdzWlYbXZ98xfu+cpjxxvANgTfRNzM="
+		//get connection to wren
+		ctx, cancel, conn = grpcConfig.GetContextCancelConnection(20)
+		ctx = metadata.AppendToOutgoingContext(ctx, "client-id", *integrationClientID)
+
+		tableClient = v1alpha.NewTableServiceClient(conn)
+		materializationClient = v1alpha.NewMaterializationServiceClient(conn)
+		queryClient = v1alpha.NewQueryServiceClient(conn)
 
 		// delete the table and materialization if not cleaned up in the previous run
-		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: "transactions"})
-		materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: "transaction_details"})
+		tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
+		materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: materializationName})
 
 		// create a table
 		table = &v1alpha.Table{
-			TableName:           "transactions",
+			TableName:           tableName,
 			TimeColumnName:      "transaction_time",
 			EntityKeyColumnName: "id",
-			SubsortColumnName: &wrapperspb.StringValue{
-				Value: "idx",
-			},
 		}
 		_, err := tableClient.CreateTable(ctx, &v1alpha.CreateTableRequest{Table: table})
 		Expect(err).ShouldNot(HaveOccurredGrpc())
@@ -117,11 +121,14 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 	})
 
 	AfterAll(func() {
+		if helpers.TestsAreRunningLocally() {
+			Skip("tests running locally, skipping gracefull shutdown test")
+		}
+
 		// clean up items created
-		materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: "transaction_details"})
-		// this materialization might not have been created if test had an issue, so we don't check error here
-		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: "transactions"})
+		_, err := tableClient.DeleteTable(ctx, &v1alpha.DeleteTableRequest{TableName: tableName})
 		Expect(err).ShouldNot(HaveOccurred())
+
 
 		cancel()
 		conn.Close()
@@ -134,17 +141,19 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 	Context("When the table schema is created correctly", func() {
 		Describe("Start a query, and then send a termination signal to Kaskada", func() {
 			It("should return query results before exiting", func() {
-				go terminateKaskada()
-				destination := &v1alpha.Destination_ObjectStore{
-					ObjectStore: &v1alpha.ObjectStoreDestination{
-						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+				destination := &v1alpha.Destination{
+					Destination: &v1alpha.Destination_ObjectStore{
+						ObjectStore: &v1alpha.ObjectStoreDestination{
+							FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
+						},
 					},
 				}
 
+				go terminateKaskada()
 				stream, err := queryClient.CreateQuery(ctx, &v1alpha.CreateQueryRequest{
 					Query: &v1alpha.Query{
 						Expression:     query,
-						Destination:    &v1alpha.Destination{Destination: destination},
+						Destination:    destination,
 						ResultBehavior: v1alpha.Query_RESULT_BEHAVIOR_ALL_RESULTS,
 					},
 					QueryOptions: &v1alpha.QueryOptions{
@@ -164,20 +173,7 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				resultsUrl := res.GetDestination().GetObjectStore().GetOutputPaths().Paths[0]
 				results := helpers.DownloadParquet(resultsUrl)
 
-				Expect(len(results)).Should(Equal(100000))
-				Expect(results).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-					"Time":           PointTo(BeEquivalentTo(20150106)),
-					"Key":            PointTo(Equal(key1)),
-					"Max_list_price": PointTo(BeEquivalentTo(149)),
-					"Min_paid":       PointTo(BeEquivalentTo(149)),
-				})))
-
-				Expect(results).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-					"Time":           PointTo(BeEquivalentTo(20150104)),
-					"Key":            PointTo(Equal(key2)),
-					"Max_list_price": PointTo(BeEquivalentTo(149)),
-					"Min_paid":       PointTo(BeEquivalentTo(149)),
-				})))
+				Expect(len(results)).Should(Equal(50000))
 			})
 		})
 
@@ -185,40 +181,32 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 			It("create the materialzation without error", func() {
 				go terminateKaskada()
 
+				destination := &v1alpha.Destination{
+					Destination: &v1alpha.Destination_ObjectStore{
+						ObjectStore: &v1alpha.ObjectStoreDestination{
+							FileType:        v1alpha.FileType_FILE_TYPE_PARQUET,
+							OutputPrefixUri: outputURI,
+						},
+					},
+				}
+
 				res, err := materializationClient.CreateMaterialization(ctx, &v1alpha.CreateMaterializationRequest{
 					Materialization: &v1alpha.Materialization{
-						MaterializationName: "transaction_details",
+						MaterializationName: materializationName,
 						Expression:          query,
-						Destination: &v1alpha.Destination{
-							Destination: &v1alpha.Destination_Redis{
-								Redis: &v1alpha.RedisDestination{
-									HostName:       "redis",
-									Port:           6379,
-									DatabaseNumber: int32(redisDb),
-								},
-							},
-						},
+						Destination:         destination,
 					},
 				})
 				Expect(err).ShouldNot(HaveOccurredGrpc())
 				Expect(res).ShouldNot(BeNil())
 			})
 
-			It("Should upload results to redis before terminating", func() {
+			It("Should output results to a file before terminating", func() {
 				Eventually(func(g Gomega) {
-					dataType, shape, values, err := redisAIClient.TensorGetValues(key1)
-					g.Expect(err).ShouldNot(HaveOccurred())
-					g.Expect(dataType).Should(Equal("INT64"))
-					g.Expect(shape).Should(Equal([]int64{1, 3}))
-					g.Expect(values).Should(Equal([]int64{20150106, 149, 149}))
-				}, "30s", "1s").Should(Succeed())
+					filePaths := helpers.EventuallyListOutputFiles(materializationName + "/0", g)
 
-				Eventually(func(g Gomega) {
-					dataType, shape, values, err := redisAIClient.TensorGetValues(key2)
-					g.Expect(err).ShouldNot(HaveOccurred())
-					g.Expect(dataType).Should(Equal("INT64"))
-					g.Expect(shape).Should(Equal([]int64{1, 3}))
-					g.Expect(values).Should(Equal([]int64{20150104, 149, 149}))
+					results := helpers.DownloadParquet(filePaths[0])
+					g.Expect(len(results)).Should(Equal(50000))
 				}, "30s", "1s").Should(Succeed())
 			})
 		})
@@ -230,22 +218,20 @@ max_spent_in_single_transaction: max(transactions.price * transactions.quantity)
 				helpers.LoadTestFileIntoTable(ctx, conn, table, "transactions/transactions_part2.parquet")
 			})
 
-			It("Should upload new results to redis before terminating", func() {
+			It("Should output results to a file before terminating", func() {
 				Eventually(func(g Gomega) {
-					dataType, shape, values, err := redisAIClient.TensorGetValues(key1)
-					g.Expect(err).ShouldNot(HaveOccurred())
-					g.Expect(dataType).Should(Equal("INT64"))
-					g.Expect(shape).Should(Equal([]int64{1, 3}))
-					g.Expect(values).Should(Equal([]int64{20150109, 149, 100}))
-				}, "30s", "1s").Should(Succeed())
+					filePaths := helpers.EventuallyListOutputFiles(materializationName + "/1", g)
 
-				Eventually(func(g Gomega) {
-					dataType, shape, values, err := redisAIClient.TensorGetValues(key2)
-					g.Expect(err).ShouldNot(HaveOccurred())
-					g.Expect(dataType).Should(Equal("INT64"))
-					g.Expect(shape).Should(Equal([]int64{1, 3}))
-					g.Expect(values).Should(Equal([]int64{20150111, 149, 149}))
+					results := helpers.DownloadParquet(filePaths[0])
+					g.Expect(len(results)).Should(Equal(10000))
 				}, "30s", "1s").Should(Succeed())
+			})
+		})
+
+		Describe("Cleeanup the materialization used in the test", func() {
+			It("Should work without error", func() {
+				_, err := materializationClient.DeleteMaterialization(ctx, &v1alpha.DeleteMaterializationRequest{MaterializationName: materializationName})
+				Expect(err).ShouldNot(HaveOccurred())
 			})
 		})
 	})
