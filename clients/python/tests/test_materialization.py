@@ -283,54 +283,6 @@ def test_create_materialization_object_store_parquet_destination(mockClient):
 
 
 @patch("kaskada.client.Client")
-def test_create_materialization_pulsar_destination(mockClient):
-    params = {
-        "host_name": "my_host_name",
-        "port": 1234,
-        "use_tls": False,
-        "database_number": 4321,
-        "password": "my_password",
-        "tls_cert": "my_tls_cert",
-        "tls_key": "my_tls_key",
-        "tls_ca_cert": "my_tls_ca_cert",
-        "insecure_skip_verify": True,
-    }
-
-    pulsar_destination = PulsarDestination(**params)
-
-    name = "my_awkward_tacos"
-    expression = "last(tacos)"
-    destination = pulsar_destination
-    views = [MaterializationView("my_second_view", "last(awkward)")]
-    slice_filter = EntityFilter(["my_entity_a", "my_entity_b"])
-
-    expected_request = material_pb.CreateMaterializationRequest(
-        **{
-            "materialization": {
-                "materialization_name": name,
-                "expression": expression,
-                "with_views": [
-                    {"name": "my_second_view", "expression": "last(awkward)"}
-                ],
-                "destination": {"pulsar": pulsar_destination.to_request()},
-                "slice": slice_filter.to_request(),
-            }
-        }
-    )
-    create_materialization(
-        name,
-        expression,
-        destination,
-        views,
-        slice_filter=slice_filter,
-        client=mockClient,
-    )
-    mockClient.materialization_stub.CreateMaterialization.assert_called_with(
-        expected_request, metadata=mockClient.get_metadata()
-    )
-
-
-@patch("kaskada.client.Client")
 def test_create_materialization_astra_streaming_destination(mockClient):
     params = {
         "tenant": "tenant",
