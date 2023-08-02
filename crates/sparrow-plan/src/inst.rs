@@ -61,13 +61,11 @@ pub enum InstOp {
     #[strum(props(signature = "coalesce<T: any>(values+: T) -> T"))]
     Coalesce,
     #[strum(props(
-        dfg_signature = "collect<T: any>(max: i64, input: T, window: window = null) -> list<T>",
-        plan_signature = "collect<T: any>(max: i64, input: T, ticks: bool = null, slide_duration: i64 = null) -> list<T>"
+        signature = "collect<T: any>(max: i64, input: T, ticks: bool = null, slide_duration: i64 = null) -> list<T>"
     ))]
     Collect,
     #[strum(props(
-        dfg_signature = "count_if<T: any>(input: T, window: window = null) -> u32",
-        plan_signature = "count_if<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> \
+        signature = "count_if<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> \
                           u32"
     ))]
     CountIf,
@@ -92,8 +90,7 @@ pub enum InstOp {
     #[strum(props(signature = "exp(power: f64) -> f64"))]
     Exp,
     #[strum(props(
-        dfg_signature = "first<T: any>(input: T, window: window = null) -> T",
-        plan_signature = "first<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
+        signature = "first<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
     ))]
     First,
     #[strum(props(signature = "floor<N: number>(n: N) -> N"))]
@@ -121,8 +118,7 @@ pub enum InstOp {
     #[strum(props(signature = "lag<O: ordered>(n: i64, input: O) -> O"))]
     Lag,
     #[strum(props(
-        dfg_signature = "last<T: any>(input: T, window: window = null) -> T",
-        plan_signature = "last<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
+        signature = "last<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
     ))]
     Last,
     #[strum(props(signature = "len(s: string) -> i32"))]
@@ -138,19 +134,16 @@ pub enum InstOp {
     #[strum(props(signature = "lte<O: ordered>(a: O, b: O) -> bool"))]
     Lte,
     #[strum(props(
-        dfg_signature = "max<O: ordered>(input: O, window: window = null) -> O",
-        plan_signature = "max<O: ordered>(input: O, ticks: bool = null, slide_duration: i64 = null) -> O"
+        signature = "max<O: ordered>(input: O, ticks: bool = null, slide_duration: i64 = null) -> O"
     ))]
     Max,
     #[strum(props(
-        dfg_signature = "mean<N: number>(input: N, window: window = null) -> f64",
-        plan_signature = "mean<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) -> \
+        signature = "mean<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) -> \
                           f64"
     ))]
     Mean,
     #[strum(props(
-        dfg_signature = "min<O: ordered>(input: O, window: window = null) -> O",
-        plan_signature = "min<O: ordered>(input: O, ticks: bool = null, slide_duration: i64 = null) -> O"
+        signature = "min<O: ordered>(input: O, ticks: bool = null, slide_duration: i64 = null) -> O"
     ))]
     Min,
     #[strum(props(signature = "month_of_year(time: timestamp_ns) -> u32"))]
@@ -190,8 +183,7 @@ pub enum InstOp {
     ))]
     Substring,
     #[strum(props(
-        dfg_signature = "sum<N: number>(input: N, window: window = null) -> N",
-        plan_signature = "sum<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) -> \
+        signature = "sum<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) -> \
                           N"
     ))]
     Sum,
@@ -200,8 +192,7 @@ pub enum InstOp {
     #[strum(props(signature = "upper(s: string) -> string"))]
     Upper,
     #[strum(props(
-        dfg_signature = "variance<N: number>(input: N, window: window = null) -> f64",
-        plan_signature = "variance<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) \
+        signature = "variance<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) \
                           -> f64"
     ))]
     Variance,

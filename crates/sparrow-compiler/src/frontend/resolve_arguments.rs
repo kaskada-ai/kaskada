@@ -316,9 +316,9 @@ mod tests {
             _ => panic!("expected call"),
         };
 
-        // Sum should have three args: [input, tick, duration].
+        // Sum should have two args: [input, window].
         let sum_arg = args[1].inner().args();
-        assert_eq!(sum_arg.len(), 3);
+        assert_eq!(sum_arg.len(), 2);
         let input = sum_arg[0].inner();
         match input.op() {
             ExprOp::Reference(str) => assert_eq!(str.inner(), "$input"),
