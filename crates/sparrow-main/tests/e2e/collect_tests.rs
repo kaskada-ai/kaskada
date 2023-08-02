@@ -262,7 +262,7 @@ async fn test_collect_to_small_list_boolean() {
 
 #[tokio::test]
 async fn test_collect_primitive_since_minutely() {
-    insta::assert_snapshot!(QueryFixture::new("{ f1: Collect.n | collect(10, window=since(minutely())) | index(0) | when(is_valid($input)) }").with_dump_dot("asdf").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
+    insta::assert_snapshot!(QueryFixture::new("{ f1: Collect.n | collect(10, window=since(minutely())) | index(0) | when(is_valid($input)) }").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
     1996-12-20T00:39:57.000000000,9223372036854775808,12960666915911099378,A,0
     1996-12-20T00:40:00.000000000,18446744073709551615,12960666915911099378,A,0
