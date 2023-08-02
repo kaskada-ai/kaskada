@@ -10,6 +10,7 @@ from typing import final
 import pandas as pd
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
+import sparrow_py
 
 
 Arg = Union["Expr", int, str, float]
@@ -150,44 +151,6 @@ class Expr(object):
         else:
             return func(self, *args, **kwargs)
 
-    def __getattr__(self, name: str) -> "Expr":
-        """
-        Create an expression referencing the given field.
-
-        Parameters
-        ----------
-        name : str
-            Name of the field to access.
-
-        Returns
-        -------
-        Expr
-            Expression referencing the given field.
-
-        Raises
-        ------
-        AttributeError
-            When the base is a struct but the field is not found.
-        TypeError
-            When the base is not a struct.
-        """
-        # It's easy for this method to cause infinite recursion, if anything
-        # it references on `self` isn't defined. To try to avoid this, we only
-        # do most of the logic if `self` is a struct type.
-        data_type = self.data_type
-        if isinstance(data_type, pa.StructType):
-            if data_type.get_field_index(name) != -1:
-                return Expr.call("fieldref", self, name)
-            else:
-                fields = ", ".join(
-                    [f"{data_type[i].name!r}" for i in range(data_type.num_fields)]
-                )
-                raise AttributeError(f"Field {name!r} not found in {fields}")
-        else:
-            raise TypeError(
-                f"Cannot access field {name!r} on non-struct type {data_type.id}"
-            )
-
     def __add__(self, rhs: Arg) -> "Expr":
         """Add two expressions."""
         return Expr.call("add", self, rhs)
@@ -265,6 +228,54 @@ class Expr(object):
             return Expr.call("get_list", self, key)
         else:
             raise TypeError(f"Cannot index into {data_type}")
+
+    def eq(self, other: "Expr") -> "Expr":
+        """Expression evaluating to true if self and other are equal."""
+        return Expr.call("eq", self, other)
+
+    def ne(self, other: "Expr") -> "Expr":
+        """Expression evaluating to true if self and other are not equal."""
+        return Expr.call("ne", self, other)
+
+    def select(self, invert: bool = False, *args: str) -> "Expr":
+        """
+        Select the given fields from a struct.
+
+        Parameters
+        ----------
+        invert : bool
+            If false (default), select only the fields given.
+            If true, select all fields except those given.
+        args : list[str]
+            List of field names to select (or remove).
+        """
+        if invert:
+            return Expr.call("remove_fields", self, *args)
+        else:
+            return Expr.call("select_fields", self, *args)
+
+    def extend(self, fields: dict[str, "Expr"]) -> "Expr":
+        """Extend this record with the additoonal fields."""
+        # This argument order is weird, and we shouldn't need to make a record
+        # in order to do the extension.
+        extension = sparrow_py.record(fields)
+        return Expr.call("extend_record", extension, self)
+
+    def neg(self) -> "Expr":
+        """Apply logical or numerical negation, depending on the type."""
+        data_type = self.data_type
+        if data_type == pa.bool_():
+            return Expr.call("not", self)
+        else:
+            return Expr.call("neg", self)
+
+    def is_null(self) -> "Expr":
+        """Return a boolean expression indicating if the expression is null."""
+        return self.is_not_null().neg()
+
+    def is_not_null(self) -> "Expr":
+        """Return a boolean expression indicating if the expression is not null."""
+        return Expr.call("is_valid", self)
 
     def run(self) -> pd.DataFrame:
         """Run the expression."""

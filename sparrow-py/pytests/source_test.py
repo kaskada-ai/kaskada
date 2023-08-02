@@ -68,7 +68,6 @@ def test_add_dataframe() -> None:
             )
 
     dataset = pd.DataFrame(records)
-    print(dataset.dtypes)
     table = ArrowSource("time", "key", dataset)
     prepared = table.run()
     assert prepared["_time"].is_monotonic_increasing
