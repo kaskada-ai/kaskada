@@ -14,7 +14,7 @@ use std::sync::Arc;
 ///
 /// If the list is empty, an empty list is returned (rather than `null`).
 #[derive(Debug)]
-pub struct CollectStringEvaluator {
+pub struct SlidingCollectStringEvaluator {
     /// The max size of the buffer.
     ///
     /// Once the max size is reached, the front will be popped and the new
@@ -24,10 +24,10 @@ pub struct CollectStringEvaluator {
     tick: ValueRef,
     duration: ValueRef,
     /// Contains the buffer of values for each entity
-    token: CollectToken<String>,
+    token: SlidingCollectToken<String>,
 }
 
-impl EvaluatorFactory for CollectStringEvaluator {
+impl EvaluatorFactory for SlidingCollectStringEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let input_type = info.args[1].data_type();
         let result_type = info.result_type;
@@ -54,17 +54,17 @@ impl EvaluatorFactory for CollectStringEvaluator {
             input,
             tick,
             duration,
-            token: CollectToken::default(),
+            token: SlidingCollectToken::default(),
         }))
     }
 }
 
-impl Evaluator for CollectStringEvaluator {
+impl Evaluator for SlidingCollectStringEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
-            (true, true) => self.evaluate_non_windowed(info),
-            (false, true) => self.evaluate_since_windowed(info),
-            (false, false) => panic!("sliding window aggregation should use other evaluator"),
+            (true, true) => panic!("non-windowed aggregation should use other evaluator"),
+            (false, true) => panic!("since-window aggregation should use other evaluator"),
+            (false, false) => self.evaluate(info),
             (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
     }
@@ -78,44 +78,12 @@ impl Evaluator for CollectStringEvaluator {
     }
 }
 
-impl CollectStringEvaluator {
+impl SlidingCollectStringEvaluator {
     fn ensure_entity_capacity(&mut self, len: usize) {
         self.token.resize(len)
     }
 
-    fn evaluate_non_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let input = info.value(&self.input)?.array_ref()?;
-        let key_capacity = info.grouping().num_groups();
-        let entity_indices = info.grouping().group_indices();
-        assert_eq!(entity_indices.len(), input.len());
-
-        self.ensure_entity_capacity(key_capacity);
-
-        let input = input.as_string::<i32>();
-        let builder = StringBuilder::new();
-        let mut list_builder = ListBuilder::new(builder);
-
-        izip!(entity_indices.values(), input).for_each(|(entity_index, input)| {
-            let entity_index = *entity_index as usize;
-
-            self.token
-                .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
-            let cur_list = self.token.state(entity_index);
-
-            list_builder.append_value(cur_list.clone());
-        });
-
-        Ok(Arc::new(list_builder.finish()))
-    }
-
-    /// Since windows follow the pattern "update -> emit -> reset".
-    ///
-    /// i.e. if an input appears in the same row as a tick, then that value will
-    /// be included in the output before the tick causes the state to be cleared.
-    /// However, note that ticks are generated with a maximum subsort value, so it is
-    /// unlikely an input naturally appears in the same row as a tick. It is more likely
-    /// that an input may appear at the same time, but an earlier subsort value.
-    fn evaluate_since_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+    fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let input = info.value(&self.input)?.array_ref()?;
         let key_capacity = info.grouping().num_groups();
         let entity_indices = info.grouping().group_indices();
@@ -126,6 +94,18 @@ impl CollectStringEvaluator {
         let input = input.as_string::<i32>();
         let ticks = info.value(&self.tick)?.array_ref()?;
         let ticks = ticks.as_boolean();
+
+        // The number of overlapping windows at any given time
+        let num_windows = info
+            .value(&self.duration)?
+            .try_primitive_literal::<Int64Type>()?
+            .ok_or_else(|| anyhow!("Expected non-null literal duration"))?;
+        if num_windows <= 0 {
+            anyhow::bail!(
+                "Expected positive duration for sliding window, saw {:?}",
+                num_windows
+            );
+        }
 
         let builder = StringBuilder::new();
         let mut list_builder = ListBuilder::new(builder);

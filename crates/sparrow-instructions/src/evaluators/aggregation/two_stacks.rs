@@ -10,7 +10,7 @@ use crate::aggregation::function::AggFn;
 /// updates. There are optimizations we can make by deferring the cumulative
 /// update until it is needed.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct WindowPart<AccT> {
+struct WindowPart<AccT> {
     accum: AccT,
     cumulative: AccT,
 }
