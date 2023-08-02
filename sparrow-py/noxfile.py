@@ -42,7 +42,7 @@ def install_self(session: Session) -> None:
 
 @session(python=python_versions[0])
 def check_lint(session: Session) -> None:
-    """Lint using pre-commit."""
+    """Lint."""
     args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
     session.install(
         "black",
@@ -53,8 +53,6 @@ def check_lint(session: Session) -> None:
         "flake8-rst-docstrings",
         "isort",
         "pep8-naming",
-        "pre-commit",
-        "pre-commit-hooks",
         "pyupgrade",
     )
     session.run
@@ -73,8 +71,6 @@ def fix_lint(session: Session) -> None:
         "black",
         "isort",
         "pep8-naming",
-        "pre-commit",
-        "pre-commit-hooks",
         "pyupgrade",
     )
     session.run

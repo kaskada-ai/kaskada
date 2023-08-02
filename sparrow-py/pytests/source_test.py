@@ -1,32 +1,11 @@
 """Tests for the Kaskada query builder."""
 import random
-import sys
 
 import pandas as pd
 import pyarrow as pa
 import pytest
-from sparrow_py import Table
-from sparrow_py import math
-
-
-@pytest.fixture
-def dataset(
-    num_members: int = 10, num_records_per_member: int = 100000
-) -> pd.DataFrame:
-    member_ids = list(range(0, num_members))
-    records = []
-    for member_id in member_ids:
-        for i in range(0, num_records_per_member):
-            records.append(
-                {
-                    "time": random.randint(
-                        1000000000000000, 9000000000000000
-                    ),  # number of seconds from epoch
-                    "key": member_id,
-                }
-            )
-    df = pd.DataFrame(records)
-    return df
+from sparrow_py.sources import ArrowSource
+from sparrow_py.sources import Source
 
 
 def test_table_valid() -> None:
@@ -38,7 +17,7 @@ def test_table_valid() -> None:
         ]
     )
 
-    Table("time", "key", schema)
+    Source("time", "key", schema)
 
 
 def test_table_invalid_names() -> None:
@@ -54,19 +33,19 @@ def test_table_invalid_names() -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Table("non_existant_time", "key", schema)
+        Source("non_existant_time", "key", schema)
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Table("time", "non_existant_key", schema)
+        Source("time", "non_existant_key", schema)
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Table(
+        Source(
             "time",
             "key",
             subsort_column_name="non_existant_subsort",
@@ -74,18 +53,22 @@ def test_table_invalid_names() -> None:
         )
 
 
-def test_add_dataframe(dataset) -> None:
+def test_add_dataframe() -> None:
     """Test adding a dataframe to a table."""
-    schema = pa.schema(
-        [
-            pa.field("time", pa.int64(), nullable=False),
-            pa.field("key", pa.int64(), nullable=False),
-        ]
-    )
-    table = Table("time", "key", schema)
-    # assert table._ffi_table.prepared_data().num_rows == 0
-    table.add_data(dataset)
+    member_ids = list(range(0, 10))
+    records = []
+    for member_id in member_ids:
+        for _i in range(0, 100):
+            records.append(
+                {
+                    # number of seconds from epoch
+                    "time": random.randint(1000, 9000) * 1000000000000,
+                    "key": member_id,
+                }
+            )
 
-    # assert table._ffi_table.prepared_data().num_rows == len(dataset)
-    prepared = table.execute()
+    dataset = pd.DataFrame(records)
+    print(dataset.dtypes)
+    table = ArrowSource("time", "key", dataset)
+    prepared = table.run()
     assert prepared["_time"].is_monotonic_increasing

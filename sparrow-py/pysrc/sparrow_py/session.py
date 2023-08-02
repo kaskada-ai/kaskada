@@ -1,7 +1,12 @@
-from sparrow_py import _ffi
+"""Defines methods for initializing the Kaskada session."""
+
 from typing import Optional
 
+from sparrow_py import _ffi
+
+
 _SESSION: Optional[_ffi.Session] = None
+
 
 def init_session() -> None:
     """
@@ -9,9 +14,6 @@ def init_session() -> None:
 
     This must only be called once per session. It must be called before
     any other Kaskada functions are called.
-
-    Parameters
-    ----------
 
     Raises
     ------
@@ -23,9 +25,14 @@ def init_session() -> None:
         raise RuntimeError("Session has already been initialized")
     _SESSION = _ffi.Session()
 
+
 def _get_session() -> _ffi.Session:
     """
     Assert that the session has been initialized.
+
+    Returns
+    -------
+    The FFI session handle.
 
     Raises
     ------

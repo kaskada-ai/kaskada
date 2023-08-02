@@ -1,3 +1,4 @@
 [darglint]
 strictness = short
 docstring_style=numpy
+ignore_regex=^(test)?_(.*),

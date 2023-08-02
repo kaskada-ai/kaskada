@@ -4,7 +4,6 @@ import sys
 from typing import Callable
 from typing import Sequence
 from typing import Tuple
-from typing import Type
 from typing import Union
 from typing import final
 
@@ -68,16 +67,17 @@ class Expr(object):
             return Expr(_ffi.Expr(session=session, operation=name, args=ffi_args))
         except TypeError as e:
             # noqa: DAR401
-            raise _augment_error(args, TypeError(str(e)))
+            raise _augment_error(args, TypeError(str(e))) from e
         except ValueError as e:
-            raise _augment_error(args, ValueError(str(e)))
+            raise _augment_error(args, ValueError(str(e))) from e
 
     @property
     def data_type(self) -> pa.DataType:
-        """Return a the data type produced by this expression."""
+        """Return the data type produced by this expression."""
         return self._ffi_expr.data_type()
 
     def __eq__(self, other: object) -> bool:
+        """Return true if the expressions are equivalent."""
         if not isinstance(other, Expr):
             return False
         return self._ffi_expr.equivalent(other._ffi_expr)
@@ -180,12 +180,12 @@ class Expr(object):
                 return Expr.call("fieldref", self, name)
             else:
                 fields = ", ".join(
-                    [f"'{data_type[i].name}'" for i in range(data_type.num_fields)]
+                    [f"{data_type[i].name!r}" for i in range(data_type.num_fields)]
                 )
-                raise AttributeError(f"Field '{name}' not found in {fields}")
+                raise AttributeError(f"Field {name!r} not found in {fields}")
         else:
             raise TypeError(
-                f"Cannot access field '{name}' on non-struct type {data_type.id}"
+                f"Cannot access field {name!r} on non-struct type {data_type.id}"
             )
 
     def __add__(self, rhs: Arg) -> "Expr":
@@ -266,6 +266,11 @@ class Expr(object):
         else:
             raise TypeError(f"Cannot index into {data_type}")
 
-    def execute(self) -> pd.DataFrame:
-        """Execute the expression."""
+    def run(self) -> pd.DataFrame:
+        """Run the expression."""
         return self._ffi_expr.execute().to_pandas()
+
+    def run_to_csv_string(self) -> str:
+        """Execute the expression and return the CSV as a string."""
+        # Convert PyArrow -> Pandas -> CSV, omitting the index (row).
+        return self.run().to_csv(index=False)
