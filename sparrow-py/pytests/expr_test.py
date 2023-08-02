@@ -28,7 +28,7 @@ def test_field_ref(source1) -> None:
 
 def test_field_ref_no_such_field(source1) -> None:
     """Test error when there is no such field."""
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError, match="Illegal field reference"):
         # This raises a "NoSuchAttribute" error.
         # We currently catch this in Python and don't do anything to
         # suggest possible alternatives.
@@ -36,14 +36,12 @@ def test_field_ref_no_such_field(source1) -> None:
         # TODO: We should either surface the Sparrow error which suggests
         # possible field names, or improve the Python error.
         source1["foo"]
-    assert "Illegal field reference" == str(e.value)
 
 
 def test_field_ref_not_a_struct(source1) -> None:
     """Test error when there the base is not a struct."""
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TypeError, match="Cannot index into double"):
         source1["x"]["x"]
-    assert "Cannot index into double" == str(e.value)
 
 
 def test_expr(source1) -> None:

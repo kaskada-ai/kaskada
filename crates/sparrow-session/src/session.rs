@@ -181,12 +181,13 @@ impl Session {
                 };
 
                 // TODO: Make this a proper error (not an assertion).
+                let signature = function.internal_signature();
+                signature.assert_valid_argument_count(args.len());
 
-                function.signature().assert_valid_argument_count(args.len());
-
-                let has_vararg = args.len() > function.signature().arg_names().len();
+                let has_vararg =
+                    signature.parameters().has_vararg && args.len() > signature.arg_names().len();
                 let args = Resolved::new(
-                    function.signature().arg_names().into(),
+                    signature.arg_names().into(),
                     args.into_iter()
                         .map(|arg| Located::builder(arg.0))
                         .collect(),

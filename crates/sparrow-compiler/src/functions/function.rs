@@ -123,6 +123,10 @@ impl Function {
         &self.signature
     }
 
+    pub fn internal_signature(&self) -> &Signature {
+        self.internal_signature.as_ref().unwrap_or(&self.signature)
+    }
+
     pub fn signature_str(&self) -> &'static str {
         self.signature_str
     }
