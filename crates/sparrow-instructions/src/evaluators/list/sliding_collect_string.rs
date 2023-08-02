@@ -1,4 +1,7 @@
-use crate::{CollectToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
+use crate::{
+    CollectToken, Evaluator, EvaluatorFactory, RuntimeInfo, SlidingCollectToken, StateToken,
+    StaticInfo,
+};
 use anyhow::anyhow;
 use arrow::array::{ArrayRef, AsArray, ListBuilder, StringBuilder};
 use arrow::datatypes::{DataType, Int64Type};

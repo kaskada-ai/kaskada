@@ -6,7 +6,7 @@ use crate::{ComputeStore, StateToken, StoreKey};
 
 /// State token used for the lag operator.
 #[derive(Default, Debug)]
-pub struct CollectToken<T>
+pub struct SlidingCollectToken<T>
 where
     T: Clone,
     T: Serialize + DeserializeOwned,
@@ -186,7 +186,7 @@ where
     offsets: VecDeque<usize>,
 }
 
-impl<T> CollectToken<T>
+impl<T> SlidingCollectToken<T>
 where
     T: Clone,
     T: Serialize + DeserializeOwned,
@@ -214,7 +214,7 @@ where
     }
 }
 
-impl<T> StateToken for CollectToken<T>
+impl<T> StateToken for SlidingCollectToken<T>
 where
     T: Clone,
     T: Serialize + DeserializeOwned,
