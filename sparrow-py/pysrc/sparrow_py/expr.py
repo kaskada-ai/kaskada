@@ -6,14 +6,16 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 from typing import final
+from typing import Optional
 
 import pandas as pd
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
 import sparrow_py
+from ._windows import SinceWindow, SlidingWindow, Window
 
 
-Arg = Union["Expr", int, str, float]
+Arg = Union["Expr", int, str, float, None]
 
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
@@ -277,6 +279,18 @@ class Expr(object):
         """Return a boolean expression indicating if the expression is not null."""
         return Expr.call("is_valid", self)
 
+    def sum(self, window: Optional[Window] = None) -> "Expr":
+        """Return the sum aggregation of the expression."""
+        return _aggregation("sum", self, window)
+
+    def first(self, window: Optional[Window] = None) -> "Expr":
+        """Return the first aggregation of the expression."""
+        return _aggregation("first", self, window)
+
+    def last(self, window: Optional[Window] = None) -> "Expr":
+        """Return the last aggregation of the expression."""
+        return _aggregation("last", self, window)
+
     def run(self) -> pd.DataFrame:
         """Run the expression."""
         return self._ffi_expr.execute().to_pandas()
@@ -285,3 +299,12 @@ class Expr(object):
         """Execute the expression and return the CSV as a string."""
         # Convert PyArrow -> Pandas -> CSV, omitting the index (row).
         return self.run().to_csv(index=False)
+
+def _aggregation(op: str, input: Expr, window: Optional[Window]) -> Expr:
+    """Helper for creating an aggregation."""
+    if window is None:
+       return Expr.call(op, input, None, None)
+    elif isinstance(window, SinceWindow):
+       return Expr.call(op, input, window._predicate, 1)
+    elif isinstance(window, SlidingWindow):
+       return Expr.call(op, input, window._predicate, window._duration)

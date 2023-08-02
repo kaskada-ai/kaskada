@@ -3,6 +3,7 @@ from typing import Union
 
 from .expr import Expr
 from .session import init_session
+from ._windows import SinceWindow, SlidingWindow
 
 
 def record(fields: dict[str, Expr]) -> Expr:
@@ -13,4 +14,4 @@ def record(fields: dict[str, Expr]) -> Expr:
     return Expr.call("record", *args)
 
 
-__all__ = ["Expr", "init_session", "record"]
+__all__ = ["Expr", "init_session", "record", "SinceWindow", "SlidingWindow"]

@@ -29,7 +29,7 @@ impl<'a> std::fmt::Debug for DiagnosticCollector<'a> {
 #[derive(Clone, Debug)]
 pub struct CollectedDiagnostic {
     code: DiagnosticCode,
-    formatted: String,
+    pub formatted: String,
     pub message: String,
 }
 

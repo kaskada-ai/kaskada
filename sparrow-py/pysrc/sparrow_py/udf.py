@@ -52,7 +52,6 @@ def fenl_udf(name: str, signature: str):
     """Decorate a function for use as a Kaskada UDF."""
 
     def decorator(func: FuncType):
-        print(type(func))
         return Udf(name, func, signature)
 
     return decorator

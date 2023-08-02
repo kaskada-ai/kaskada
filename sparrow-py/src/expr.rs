@@ -20,8 +20,13 @@ impl Expr {
     /// This creates a new expression based on the `operation` and `args` provided.
     #[new]
     #[pyo3(signature = (session, operation, args))]
-    fn new(session: Session, operation: String, args: Vec<Arg>) -> PyResult<Self> {
-        if !args.iter().filter_map(Arg::session).all(|s| s == session) {
+    fn new(session: Session, operation: String, args: Vec<Option<Arg>>) -> PyResult<Self> {
+        if !args
+            .iter()
+            .flatten()
+            .filter_map(Arg::session)
+            .all(|s| s == session)
+        {
             return Err(PyValueError::new_err(
                 "all arguments must be in the same session",
             ));
@@ -31,9 +36,16 @@ impl Expr {
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| {
-                arg.into_ast_dfg_ref(&mut rust_session)
-                    // DO NOT SUBMIT: Better error handling.
-                    .map_err(|_| PyRuntimeError::new_err("unable to create literal"))
+                match arg {
+                    None => rust_session
+                        .add_literal(Literal::Null)
+                        .map_err(|_| PyRuntimeError::new_err("unable to create null literal")),
+                    Some(arg) => {
+                        arg.into_ast_dfg_ref(&mut rust_session)
+                            // DO NOT SUBMIT: Better error handling.
+                            .map_err(|_| PyRuntimeError::new_err("unable to create argument"))
+                    }
+                }
             })
             .collect::<PyResult<_>>()?;
         let rust_expr = match rust_session.add_expr(&operation, args) {
@@ -98,10 +110,10 @@ impl Arg {
     ) -> error_stack::Result<RustExpr, sparrow_session::Error> {
         match self {
             Self::Expr(e) => Ok(e.rust_expr.clone()),
-            Self::LiteralUInt(n) => session.add_literal(Literal::UInt64Literal(n)),
-            Self::LiteralInt(n) => session.add_literal(Literal::Int64Literal(n)),
-            Self::LiteralFloat(n) => session.add_literal(Literal::Float64Literal(n)),
-            Self::LiteralString(s) => session.add_literal(Literal::StringLiteral(s)),
+            Self::LiteralUInt(n) => session.add_literal(Literal::UInt64(n)),
+            Self::LiteralInt(n) => session.add_literal(Literal::Int64(n)),
+            Self::LiteralFloat(n) => session.add_literal(Literal::Float64(n)),
+            Self::LiteralString(s) => session.add_literal(Literal::String(s)),
         }
     }
 }
