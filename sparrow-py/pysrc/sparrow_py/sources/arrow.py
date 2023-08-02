@@ -36,8 +36,9 @@ class ArrowSource(Source):
 
             fields = [fix_nullable(f) for f in schema]
             schema = pa.schema(fields)
-            data = pa.RecordBatch.from_pandas(data, schema)
+            data = pa.RecordBatch.from_pandas(data, schema, preserve_index=False)
 
+        self._schema = data.schema
         super().__init__(
             time_column_name,
             key_column_name,
@@ -46,6 +47,12 @@ class ArrowSource(Source):
             grouping_name,
         )
 
+        self._ffi_table.add_pyarrow(data)
+
+    def add(self, data: Union[pd.DataFrame, pa.RecordBatch]) -> None:
+        """Add data to the source."""
+        if isinstance(data, pd.DataFrame):
+            data = pa.RecordBatch.from_pandas(data, self._schema, preserve_index=False)
         self._ffi_table.add_pyarrow(data)
 
 
