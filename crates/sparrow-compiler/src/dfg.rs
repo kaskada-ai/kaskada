@@ -45,7 +45,7 @@ pub(super) use expr::DfgExpr;
 pub(crate) use pattern::*;
 use smallvec::smallvec;
 use tracing::{info, info_span};
-pub(crate) use useless_transforms::*;
+pub use useless_transforms::*;
 
 use crate::ast_to_dfg::AstDfg;
 use crate::dfg::language::DfgLang;
@@ -107,7 +107,7 @@ impl Default for Dfg {
 }
 
 impl Dfg {
-    pub(super) fn add_literal(&mut self, literal: impl Into<ScalarValue>) -> anyhow::Result<Id> {
+    pub fn add_literal(&mut self, literal: impl Into<ScalarValue>) -> anyhow::Result<Id> {
         let literal = literal.into();
         if let ScalarValue::Utf8(Some(literal)) = literal {
             self.add_string_literal(&literal)
@@ -253,7 +253,7 @@ impl Dfg {
                     );
                 }
 
-                // 2. The number of arguments should be correct.
+                // 2. The number of argflatten_uments should be correct.
                 match expr {
                     Expression::Literal(_) | Expression::LateBound(_) => {
                         anyhow::ensure!(

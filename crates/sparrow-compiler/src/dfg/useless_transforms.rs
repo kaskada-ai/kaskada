@@ -13,7 +13,7 @@ use crate::dfg::{DfgExpr, StepKind};
 /// guaranteed that all such nodes are removed. This pass ensures
 /// that any later analysis of the DFG does not have to deal with
 /// useless transforms.
-pub(crate) fn remove_useless_transforms(expr: DfgExpr) -> anyhow::Result<DfgExpr> {
+pub fn remove_useless_transforms(expr: DfgExpr) -> anyhow::Result<DfgExpr> {
     let mut rewritten = DfgExpr::with_capacity(expr.len());
     let mut rewritten_ids = Vec::with_capacity(expr.len());
 

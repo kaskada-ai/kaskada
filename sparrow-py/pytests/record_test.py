@@ -51,7 +51,6 @@ def test_extend_record(source) -> None:
     m = source["m"]
     n = source["n"]
     result = source.extend({"add": m + n}).run_to_csv_string()
-    print(result)
 
     assert result == "\n".join(
         [
@@ -70,7 +69,6 @@ def test_extend_record(source) -> None:
 def test_select_record(source) -> None:
     """Test we can select some fields from a record."""
     result = source.select("m", "n").run_to_csv_string()
-    print(result)
     assert result == "\n".join(
         [
             "_time,_subsort,_key_hash,_key,time,key,m",

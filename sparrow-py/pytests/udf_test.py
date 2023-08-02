@@ -20,7 +20,6 @@ def test_numeric_udf_pure_python() -> None:
     x = pa.array([1, 12, 17, 23, 28], type=pa.int8())
     y = pa.array([1, 13, 18, 20, 4], type=pa.int8())
     result = add.run_pyarrow(pa.int8(), x, y)
-    print(result)
     assert result == pa.array([2, 25, 35, 43, 32], type=pa.int8())
 
 
@@ -29,5 +28,4 @@ def test_numeric_udf_rust() -> None:
     x = pa.array([1, 12, 17, 23, 28], type=pa.int8())
     y = pa.array([1, 13, 18, 20, 4], type=pa.int8())
     result = call_udf(add, pa.int8(), x, y)
-    print(result)
     assert result == pa.array([2, 25, 35, 43, 32], type=pa.int8())

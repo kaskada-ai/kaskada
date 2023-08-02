@@ -27,10 +27,11 @@ pub struct Session {
 impl Session {
     pub fn add_literal(&mut self, literal: Literal) -> error_stack::Result<Expr, Error> {
         let literal_value = match literal {
-            Literal::StringLiteral(s) => LiteralValue::String(s),
-            Literal::Int64Literal(n) => LiteralValue::Number(n.to_string()),
-            Literal::UInt64Literal(n) => LiteralValue::Number(n.to_string()),
-            Literal::Float64Literal(n) => LiteralValue::Number(n.to_string()),
+            Literal::Null => LiteralValue::Null,
+            Literal::String(s) => LiteralValue::String(s),
+            Literal::Int64(n) => LiteralValue::Number(n.to_string()),
+            Literal::UInt64(n) => LiteralValue::Number(n.to_string()),
+            Literal::Float64(n) => LiteralValue::Number(n.to_string()),
         };
         self.add_to_dfg(
             ExprOp::Literal(Located::builder(literal_value)),
@@ -180,6 +181,7 @@ impl Session {
                 };
 
                 // TODO: Make this a proper error (not an assertion).
+
                 function.signature().assert_valid_argument_count(args.len());
 
                 let has_vararg = args.len() > function.signature().arg_names().len();
@@ -220,7 +222,7 @@ impl Session {
                 .finish()
                 .into_iter()
                 .filter(|diagnostic| diagnostic.is_error())
-                .map(|diagnostic| diagnostic.message)
+                .map(|diagnostic| diagnostic.formatted)
                 .collect();
             Err(Error::Errors(errors))?
         } else {
@@ -244,6 +246,9 @@ impl Session {
         // First, extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
         let expr = self.dfg.extract_simplest(expr.0.value());
+        let expr = sparrow_compiler::remove_useless_transforms(expr)
+            .into_report()
+            .change_context(Error::Compile)?;
 
         // TODO: Run the egraph simplifier.
         // TODO: Incremental?
@@ -352,7 +357,7 @@ mod tests {
             .unwrap();
 
         let field_name = session
-            .add_literal(Literal::StringLiteral("a".to_owned()))
+            .add_literal(Literal::String("a".to_owned()))
             .unwrap();
         let field_ref = session
             .add_expr("fieldref", vec![table.expr.clone(), field_name])

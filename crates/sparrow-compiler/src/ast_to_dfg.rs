@@ -99,7 +99,7 @@ pub fn add_to_dfg(
     diagnostics: &mut DiagnosticCollector<'_>,
     op: &ExprOp,
     mut arguments: Resolved<Located<AstDfgRef>>,
-    expr: Option<&ResolvedExpr>,
+    original_ast: Option<&ResolvedExpr>,
 ) -> anyhow::Result<AstDfgRef> {
     let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
 
@@ -517,15 +517,28 @@ pub fn add_to_dfg(
                 .try_collect()?;
 
             let args: Vec<_> = if function.is_aggregation() {
-                // If the function is an aggregation, we may need to flatten the window.
-                dfg.enter_env();
-                dfg.bind("$condition_input", args[0].inner().clone());
+                let window_arg = original_ast.map(|e| &e.args()[1]);
+                let (condition, duration) = match window_arg {
+                    Some(window) => {
+                        // If the function is an aggregation, we may need to flatten the window.
+                        dfg.enter_env();
+                        dfg.bind("$condition_input", args[0].inner().clone());
 
-                let window = &expr.unwrap().args()[1];
-                let (condition, duration) =
-                    flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+                        let result =
+                            flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+                        dfg.exit_env();
+                        result
+                    }
+                    None => {
+                        // If `expr` is None, we're running the Python builder code,
+                        // which already flattened things.
+                        //
+                        // Note that this won't define the `condition_input` for the
+                        // purposes of ticks.
+                        (args[1].clone(), args[2].clone())
+                    }
+                };
 
-                dfg.exit_env();
                 // [agg_input, condition, duration]
                 vec![args[0].clone(), condition, duration]
             } else if function.name() == "collect" {
@@ -537,7 +550,7 @@ pub fn add_to_dfg(
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[1].inner().clone());
 
-                let window = &expr.unwrap().args()[2];
+                let window = &original_ast.unwrap().args()[2];
                 let (condition, duration) =
                     flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
 
@@ -548,7 +561,7 @@ pub fn add_to_dfg(
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[1].inner().clone());
 
-                let condition = expr.unwrap().args()[0]
+                let condition = original_ast.unwrap().args()[0]
                     .as_ref()
                     .try_map(|condition| ast_to_dfg(data_context, dfg, diagnostics, condition))?;
 

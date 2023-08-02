@@ -160,7 +160,7 @@ impl Signature {
         } else {
             assert!(
                 num_args == self.parameters.names().len(),
-                "Expected operator '{:?}' to have exactly {:?} arguments, but was {:?}",
+                "Expected operator '{:?}' to have exactly {:?} arguments, but was {:?} ({self:?})",
                 self.name,
                 self.parameters.names().len(),
                 num_args,

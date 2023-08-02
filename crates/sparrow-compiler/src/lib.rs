@@ -49,7 +49,7 @@ mod types;
 pub use ast_to_dfg::*;
 pub use compile::*;
 pub use data_context::*;
-pub use dfg::Dfg;
+pub use dfg::{remove_useless_transforms, Dfg};
 pub use diagnostics::*;
 pub use error::*;
 pub use frontend::*;

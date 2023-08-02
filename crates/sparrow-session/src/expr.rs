@@ -25,8 +25,9 @@ impl Expr {
 }
 
 pub enum Literal {
-    StringLiteral(String),
-    Int64Literal(i64),
-    UInt64Literal(u64),
-    Float64Literal(f64),
+    Null,
+    String(String),
+    Int64(i64),
+    UInt64(u64),
+    Float64(f64),
 }
