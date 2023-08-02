@@ -10,7 +10,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("count_if<T: any>(input: T, window: window = null) -> u32")
         .with_dfg_signature(
-            "count_if<T: any>(input: T, window: window = null, duration: i64 = null) -> u32",
+            "count_if<T: any>(input: T, window: bool = null, duration: i64 = null) -> u32",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(count_if ({}) ({}) ({}))",
@@ -24,7 +24,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("count<T: any>(input: T, window: window = null) -> u32")
         .with_dfg_signature(
-            "count_if<T: any>(input: T, window: window = null, duration: i64 = null) -> u32",
+            "count_if<T: any>(input: T, window: bool = null, duration: i64 = null) -> u32",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(count_if ({}) ({}) ({}))",
@@ -39,7 +39,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("sum<N: number>(input: N, window: window = null) -> N ")
         .with_dfg_signature(
-            "sum<N: number>(input: N, window: window = null, duration: i64 = null) -> N",
+            "sum<N: number>(input: N, window: bool = null, duration: i64 = null) -> N",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(sum ({}) ({}) ({}))",
@@ -53,7 +53,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("min<O: ordered>(input: O, window: window = null) -> O")
         .with_dfg_signature(
-            "min<O: ordered>(input: O, window: window = null, duration: i64 = null) -> O",
+            "min<O: ordered>(input: O, window: bool = null, duration: i64 = null) -> O",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(min ({}) ({}) ({}))",
@@ -67,7 +67,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("max<O: ordered>(input: O, window: window = null) -> O")
         .with_dfg_signature(
-            "max<O: ordered>(input: O, window: window = null, duration: i64 = null) -> O",
+            "max<O: ordered>(input: O, window: bool = null, duration: i64 = null) -> O",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(max ({}) ({}) ({}))",
@@ -81,7 +81,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("mean<N: number>(input: N, window: window = null) -> f64")
         .with_dfg_signature(
-            "mean<N: number>(input: N, window: window = null, duration: i64 = null) -> f64",
+            "mean<N: number>(input: N, window: bool = null, duration: i64 = null) -> f64",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(mean ({}) ({}) ({}))",
@@ -95,7 +95,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("variance<N: number>(input: N, window: window = null) -> f64")
         .with_dfg_signature(
-            "variance<N: number>(input: N, window: window = null, duration: i64 = null) -> f64",
+            "variance<N: number>(input: N, window: bool = null, duration: i64 = null) -> f64",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(variance ({}) ({}) ({}))",
@@ -109,7 +109,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("stddev<N: number>(input: N, window: window = null) -> f64")
         .with_dfg_signature(
-            "stddev<N: number>(input: N, window: window = null, duration: i64 = null) -> f64",
+            "stddev<N: number>(input: N, window: bool = null, duration: i64 = null) -> f64",
         )
         .with_implementation(Implementation::new_pattern(&format!(
             "(powf (variance ({}) ({}) ({})) 0.5f64)",
@@ -122,7 +122,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("last<T: any>(input: T, window: window = null) -> T")
         .with_dfg_signature(
-            "last<T: any>(input: T, window: window = null, duration: i64 = null) -> T",
+            "last<T: any>(input: T, window: bool = null, duration: i64 = null) -> T",
         )
         .with_implementation(Implementation::Pushdown(Box::new(
             Pushdown::try_new(
@@ -164,7 +164,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("first<T: any>(input: T, window: window = null) -> T")
         .with_dfg_signature(
-            "first<T: any>(input: T, window: window = null, duration: i64 = null) -> T",
+            "first<T: any>(input: T, window: bool = null, duration: i64 = null) -> T",
         )
         .with_implementation(Implementation::Pushdown(Box::new(
             Pushdown::try_new(

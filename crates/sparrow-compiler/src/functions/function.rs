@@ -118,18 +118,9 @@ impl Function {
         self.internal
     }
 
-    /// Returns the internal signature, if one exists. Else, returns the
-    /// user-facing signature.
-    ///
-    /// This is used for certain functions like aggregations, where the
-    /// arguments are flattened in the DFG, requiring us to check parameters
-    /// against an internal signature representing the flattened arguments.
+    /// Returns the user-facing signature.
     pub fn signature(&self) -> &Signature {
-        if let Some(signature) = &self.internal_signature {
-            signature
-        } else {
-            &self.signature
-        }
+        &self.signature
     }
 
     pub fn signature_str(&self) -> &'static str {
