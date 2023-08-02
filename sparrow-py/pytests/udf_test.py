@@ -15,7 +15,7 @@ def add(x: pd.Series, y: pd.Series) -> pd.Series:
 
 def test_numeric_udf_pure_python() -> None:
     """Test the python side of UDFs."""
-    assert type(add) == Udf
+    assert isinstance(add, Udf)
 
     x = pa.array([1, 12, 17, 23, 28], type=pa.int8())
     y = pa.array([1, 13, 18, 20, 4], type=pa.int8())

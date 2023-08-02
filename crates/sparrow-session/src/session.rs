@@ -112,17 +112,56 @@ impl Session {
                 );
                 (op, args)
             }
-            "make_record" => {
-                todo!()
+            "record" => {
+                assert!(args.len() % 2 == 0);
+                let (names, values): (Vec<_>, _) = args
+                    .into_iter()
+                    .map(|e| Located::builder(e.0))
+                    .tuples()
+                    .unzip();
+
+                let names: smallvec::SmallVec<_> = names
+                    .into_iter()
+                    .map(|name| {
+                        name.transform(|name| {
+                            self.dfg
+                                .string_literal(name.value())
+                                .expect("literal name")
+                                .to_owned()
+                        })
+                    })
+                    .collect();
+
+                let args = Resolved::new(Cow::Owned(names.to_vec()), values, false);
+                let op = ExprOp::Record(names, Location::builder());
+                (op, args)
             }
             "remove_fields" => {
-                todo!()
+                let values = args.into_iter().map(|e| Located::builder(e.0)).collect();
+                let op = ExprOp::RemoveFields(Location::builder());
+                let args = Resolved::new(
+                    Cow::Borrowed(&*SELECT_REMOVE_FIELDS_ARGUMENTS),
+                    values,
+                    true,
+                );
+                (op, args)
             }
             "select_fields" => {
-                todo!()
+                let values = args.into_iter().map(|e| Located::builder(e.0)).collect();
+                let op = ExprOp::SelectFields(Location::builder());
+                let args = Resolved::new(
+                    Cow::Borrowed(&*SELECT_REMOVE_FIELDS_ARGUMENTS),
+                    values,
+                    true,
+                );
+                (op, args)
             }
             "extend_record" => {
-                todo!()
+                let values = args.into_iter().map(|e| Located::builder(e.0)).collect();
+                let op = ExprOp::ExtendRecord(Location::builder());
+                let args =
+                    Resolved::new(Cow::Borrowed(&*RECORD_EXTENSION_ARGUMENTS), values, false);
+                (op, args)
             }
             "cast" => {
                 todo!()
@@ -273,6 +312,18 @@ impl Session {
 
 #[static_init::dynamic]
 pub(crate) static FIELD_REF_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("record")];
+
+#[static_init::dynamic]
+static SELECT_REMOVE_FIELDS_ARGUMENTS: [Located<String>; 2] = [
+    Located::internal_string("record"),
+    Located::internal_string("fields"),
+];
+
+#[static_init::dynamic]
+static RECORD_EXTENSION_ARGUMENTS: [Located<String>; 2] = [
+    Located::internal_string("extension"),
+    Located::internal_string("base"),
+];
 
 #[cfg(test)]
 mod tests {

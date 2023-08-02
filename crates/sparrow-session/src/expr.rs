@@ -2,7 +2,7 @@ use arrow_schema::DataType;
 use sparrow_compiler::AstDfgRef;
 use sparrow_syntax::FenlType;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Expr(pub(crate) AstDfgRef);
 
 impl Expr {
