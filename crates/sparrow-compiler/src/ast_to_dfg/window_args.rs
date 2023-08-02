@@ -25,20 +25,20 @@ pub(crate) fn flatten_window_args(
             window.args().len()
         );
 
-        // Since aggregations have a single active window
-        let duration_id = dfg.add_literal(LiteralValue::Number(String::from("1")).to_scalar()?)?;
-        let duration = Located::new(
+        // Since aggregations use a null duration
+        let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
+        let null_arg = Located::new(
             add_literal(
                 dfg,
-                duration_id,
-                FenlType::Concrete(DataType::Int64),
-                name.location().clone(),
+                null_arg,
+                FenlType::Concrete(DataType::Null),
+                window.location().clone(),
             )?,
-            name.location().clone(),
+            window.location().clone(),
         );
 
         let condition = crate::ast_to_dfg(data_context, dfg, diagnostics, &window.args()[0])?;
-        Ok((window.with_value(condition), duration))
+        Ok((window.with_value(condition), null_arg))
     } else if name.inner() == "sliding" {
         debug_assert!(
             window.args().len() == 2,
