@@ -283,13 +283,23 @@ pub fn add_to_dfg(
                 }
             }
 
+            let signature = if original_ast.is_some() {
+                // If we have an original AST, then we're running from a Fenl file.
+                // In that case, we use the AST signature.
+                function.signature()
+            } else {
+                // If not, we're running from the builder, and can use the internal
+                // DFG signature.
+                function.internal_signature()
+            };
+
             let mut invalid = false;
-            for constant_index in function.signature().parameters().constant_indices() {
+            for constant_index in signature.parameters().constant_indices() {
                 let argument = &arguments.values()[constant_index];
                 if dfg.literal(argument.value()).is_none() {
                     invalid = true;
 
-                    let argument_name = &function.signature().arg_names()[constant_index];
+                    let argument_name = &signature.arg_names()[constant_index];
                     DiagnosticCode::InvalidNonConstArgument
                         .builder()
                         .with_label(argument.location().primary_label().with_message(format!(
@@ -304,7 +314,7 @@ pub fn add_to_dfg(
             }
 
             let (instantiated_types, instantiated_result_type) =
-                match instantiate(function_name, &argument_types, function.signature()) {
+                match instantiate(function_name, &argument_types, signature) {
                     Ok(result) => result,
                     Err(diagnostic) => {
                         diagnostic.emit(diagnostics);
