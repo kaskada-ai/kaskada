@@ -18,7 +18,6 @@ pub(super) fn register(registry: &mut Registry) {
         .with_dfg_signature(
             "collect<T: any>(const max: i64, input: T, window: bool = null, duration: i64 = null) -> list<T>",
         )
- 
         .with_implementation(Implementation::Instruction(InstOp::Collect))
         .set_internal();
 }
