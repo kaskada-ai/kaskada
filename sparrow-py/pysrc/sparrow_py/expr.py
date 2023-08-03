@@ -2,17 +2,21 @@
 
 import sys
 from typing import Callable
+from typing import Dict
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Union
 from typing import final
-from typing import Optional
 
 import pandas as pd
 import pyarrow as pa
-import sparrow_py._ffi as _ffi
 import sparrow_py
-from ._windows import SinceWindow, SlidingWindow, Window
+import sparrow_py._ffi as _ffi
+
+from ._windows import SinceWindow
+from ._windows import SlidingWindow
+from ._windows import Window
 
 
 Arg = Union["Expr", int, str, float, None]
@@ -250,13 +254,17 @@ class Expr(object):
             If true, select all fields except those given.
         args : list[str]
             List of field names to select (or remove).
+
+        Returns
+        -------
+        Expression selecting (or excluding) the given fields.
         """
         if invert:
             return Expr.call("remove_fields", self, *args)
         else:
             return Expr.call("select_fields", self, *args)
 
-    def extend(self, fields: dict[str, "Expr"]) -> "Expr":
+    def extend(self, fields: Dict[str, "Expr"]) -> "Expr":
         """Extend this record with the additoonal fields."""
         # This argument order is weird, and we shouldn't need to make a record
         # in order to do the extension.
@@ -300,11 +308,14 @@ class Expr(object):
         # Convert PyArrow -> Pandas -> CSV, omitting the index (row).
         return self.run().to_csv(index=False)
 
+
 def _aggregation(op: str, input: Expr, window: Optional[Window]) -> Expr:
-    """Helper for creating an aggregation."""
+    """Create an aggregation with the given operation and input."""
     if window is None:
-       return Expr.call(op, input, None, None)
+        return Expr.call(op, input, None, None)
     elif isinstance(window, SinceWindow):
-       return Expr.call(op, input, window._predicate, 1)
+        return Expr.call(op, input, window._predicate, 1)
     elif isinstance(window, SlidingWindow):
-       return Expr.call(op, input, window._predicate, window._duration)
+        return Expr.call(op, input, window._predicate, window._duration)
+    else:
+        raise ValueError(f"Unknown window type {window!r}")

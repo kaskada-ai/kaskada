@@ -1,10 +1,12 @@
 """Tests for the Kaskada query builder."""
 import pytest
-import sparrow_py as s
+from sparrow_py import SinceWindow
+from sparrow_py import SlidingWindow
+from sparrow_py import record
 from sparrow_py.sources import CsvSource
-from sparrow_py import SlidingWindow, SinceWindow
 
-@pytest.fixture(scope = "module")
+
+@pytest.fixture(scope="module")
 def source() -> CsvSource:
     """Create an empty table for testing."""
     content = "\n".join(
@@ -21,55 +23,24 @@ def source() -> CsvSource:
     return CsvSource("time", "key", content)
 
 
-def test_sum_unwindowed(source) -> None:
+def test_sum_unwindowed(source, golden) -> None:
     """Test we can create a record."""
     m = source["m"]
     n = source["n"]
-    result = s.record(
-        {
-            "m": m,
-            "sum_m": m.sum(),
-            "n": n,
-            "sum_n": n.sum()
-        }
-    ).run_to_csv_string()
+    golden(record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
 
-    assert result == "\n".join(
-        [
-            "_time,_subsort,_key_hash,_key,m,sum_m,n,sum_n",
-            "1996-12-20 00:39:57,0,12960666915911099378,A,5.0,5,10.0,10",
-            "1996-12-20 00:39:58,1,2867199309159137213,B,24.0,24,3.0,3",
-            "1996-12-20 00:39:59,2,12960666915911099378,A,17.0,22,6.0,16",
-            "1996-12-20 00:40:00,3,12960666915911099378,A,,22,9.0,25",
-            "1996-12-20 00:40:01,4,12960666915911099378,A,12.0,34,,25",
-            "1996-12-20 00:40:02,5,12960666915911099378,A,,34,,25",
-            "",
-        ]
-    )
 
-def test_sum_windowed(source) -> None:
+def test_sum_windowed(source, golden) -> None:
     """Test we can create a record."""
     m = source["m"]
     n = source["n"]
-    result = s.record(
-        {
-            "m": m,
-            "sum_m": m.sum(window = SinceWindow(m > 20)),
-            "n": n,
-            "sum_n": n.sum(window = SlidingWindow(2, m > 10))
-        }
-    ).run_to_csv_string()
-    print(result)
-
-    assert result == "\n".join(
-        [
-            "_time,_subsort,_key_hash,_key,m,sum_m,n,sum_n",
-            "1996-12-20 00:39:57,0,12960666915911099378,A,5.0,5,10.0,10",
-            "1996-12-20 00:39:58,1,2867199309159137213,B,24.0,24,3.0,3",
-            "1996-12-20 00:39:59,2,12960666915911099378,A,17.0,22,6.0,16",
-            "1996-12-20 00:40:00,3,12960666915911099378,A,,22,9.0,25",
-            "1996-12-20 00:40:01,4,12960666915911099378,A,12.0,34,,25",
-            "1996-12-20 00:40:02,5,12960666915911099378,A,,34,,9",
-            "",
-        ]
+    golden(
+        record(
+            {
+                "m": m,
+                "sum_m": m.sum(window=SinceWindow(m > 20)),
+                "n": n,
+                "sum_n": n.sum(window=SlidingWindow(2, m > 10)),
+            }
+        )
     )

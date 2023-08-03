@@ -80,3 +80,10 @@ warn_unreachable = true
 pretty = true
 show_column_numbers = true
 show_error_context = true
+
+# pyproject.toml
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+testpaths = [
+    "pytests",
+]
