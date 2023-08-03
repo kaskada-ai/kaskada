@@ -1,7 +1,10 @@
-from . import _ffi
-import pandas as pd
 from typing import Iterator
+
+import pandas as pd
 import pyarrow as pa
+
+from . import _ffi
+
 
 class Result(object):
     """Result of running a timestream query."""
@@ -14,14 +17,15 @@ class Result(object):
         """
         Convert the result to a Pandas DataFrame.
 
-        ```{note}
-        This method will block on the complete results of the query and collect
-        all results into memory. If this is not desired, use `iter_pandas` instead.
-        ```
-
         Returns
         -------
-        The result as a Pandas DataFrame.
+        pd.DataFrame
+            The result as a Pandas DataFrame.
+
+        Warnings
+        --------
+        This method will block on the complete results of the query and collect
+        all results into memory. If this is not desired, use `iter_pandas` instead.
         """
         batches = self._ffi_execution.collect_pyarrow()
         if len(batches) == 0:
@@ -35,9 +39,10 @@ class Result(object):
         """
         Iterate over the results as Pandas DataFrames.
 
-        Returns
-        -------
-        The result as a sequence of Pandas DataFrames.
+        Yields
+        ------
+        pd.DataFrame
+            The next Pandas DataFrame.
         """
         next_batch = self._ffi_execution.next_pyarrow()
         while next_batch is not None:
@@ -46,11 +51,12 @@ class Result(object):
 
     def iter_rows(self) -> Iterator[dict]:
         """
-        Iterate over the results as dictionaries.
+        Iterate over the results as row dictionaries.
 
-        Returns
-        -------
-        The result as a sequence of dictionaries.
+        Yields
+        ------
+        dict
+            The next row as a dictionary.
         """
         next_batch = self._ffi_execution.next_pyarrow()
         while next_batch is not None:

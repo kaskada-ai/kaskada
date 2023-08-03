@@ -4,15 +4,15 @@ from typing import Optional
 import pyarrow as pa
 import sparrow_py._ffi as _ffi
 
-from .._expr import Expr
 from .._session import _get_session
+from .._timestream import Timestream
 
 
 _TABLE_NUM: int = 0
 
 
-class Source(Expr):
-    """A source expression."""
+class Source(Timestream):
+    """A source (input) Timestream."""
 
     # TODO: Clean-up naming on the FFI side.
     _ffi_table: _ffi.Table

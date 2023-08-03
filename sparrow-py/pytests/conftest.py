@@ -4,7 +4,7 @@ from typing import Union
 
 import pandas as pd
 import pytest
-import sparrow_py
+import sparrow_py as kt
 from sparrow_py import init_session
 
 
@@ -23,7 +23,7 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa
     output = 0
 
     def handler(
-        query: Union[sparrow_py.Expr, pd.DataFrame],
+        query: Union[kt.Timestream, pd.DataFrame],
         format: Union[Literal["csv"], Literal["parquet"], Literal["json"]] = "json",
     ):
         """
@@ -31,7 +31,7 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa
 
         Parameters
         ----------
-        query : sparrow_py.Expr to execute or pd.DataFrame
+        query : kt.Timestream to execute or pd.DataFrame
             The query to run (or a result to use).
         format : str, optional
             The format to store the golden file in.
@@ -46,10 +46,12 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa
 
         if isinstance(query, pd.DataFrame):
             df = query
-        elif isinstance(query, sparrow_py.Expr):
+        elif isinstance(query, kt.Timestream):
             df = query.run().to_pandas()
         else:
-            raise ValueError(f"query must be an Expr or a DataFrame, was {type(query)}")
+            raise ValueError(
+                f"query must be a Timestream or a DataFrame, was {type(query)}"
+            )
 
         test_name = request.node.name
         module_name = request.node.module.__name__

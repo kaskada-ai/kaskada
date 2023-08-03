@@ -39,4 +39,8 @@ def test_extend_record(source, golden) -> None:
 
 
 def test_select_record(source, golden) -> None:
-    golden(source.select("m", "n"))
+    golden(source.select("n"))
+
+
+def test_remove_record(source, golden) -> None:
+    golden(source.remove("n"))

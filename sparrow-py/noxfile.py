@@ -49,17 +49,20 @@ def check_lint(session: Session) -> None:
         "darglint",
         "flake8",
         "flake8-bugbear",
-        "flake8-docstrings",
         "flake8-rst-docstrings",
         "isort",
         "pep8-naming",
+        "pydocstyle",
         "pyupgrade",
     )
     session.run
     session.run("black", "--check", *args)
-    session.run("darglint", "pysrc")
     session.run("flake8", *args)
     session.run("isort", "--filter-files", "--check-only", *args)
+
+    # Only do darglint and pydocstyle on pysrc (source)
+    session.run("darglint", "pysrc")
+    session.run("pydocstyle", "--convention=numpy", "pysrc")
     # No way to run this as a check.
     # session.run("pyupgrade", "--py38-plus")
 
@@ -97,7 +100,7 @@ def mypy(session: Session) -> None:
     # However, there is a possibility it slows things down, by making mypy
     # run twice -- once to determine what types need to be installed, then once
     # to check things with those stubs.
-    session.run("mypy", "--install-types", *args)
+    session.run("mypy", "--install-types", "--non-interactive", *args)
     if not session.posargs:
         session.run("mypy", f"--python-executable={sys.executable}", "noxfile.py")
 
@@ -172,7 +175,7 @@ def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
     install_self(session)
-    session.install("sphinx", "sphinx-autobuild", "furo", "myst-parser")
+    session.install("sphinx", "sphinx-autobuild", "furo", "myst-parser", "pandas", "pyarrow", "sphinx-autodoc-typehints")
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():

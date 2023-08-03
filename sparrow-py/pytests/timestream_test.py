@@ -39,33 +39,40 @@ def test_field_ref_not_a_struct(source1) -> None:
         source1["x"]["x"]
 
 
-def test_expr(source1) -> None:
+def test_timestream_math(source1) -> None:
     x = source1["x"]
-    assert x + 1 == x + 1
+    assert (x + 1).data_type == x.data_type
+    assert (1 + x).data_type == x.data_type
+    assert (x - 1).data_type == x.data_type
+    assert (1 - x).data_type == x.data_type
+    assert (x * 1).data_type == x.data_type
+    assert (1 * x).data_type == x.data_type
+    assert (1 / x).data_type == x.data_type
+    assert (1 + x).data_type == x.data_type
 
 
-def test_expr_comparison(source1) -> None:
+def test_timestream_comparison(source1) -> None:
     x = source1["x"]
-    assert (x > 1) == (x > 1)
 
-    # Python doesn't have a `__rgt__` (reverse gt) dunder method.
-    # Instead, if the LHS doesn't support `gt` with the RHS, it tries
-    # rhs `lt` lhs.
-    assert (1 < x) == (x > 1)
+    # Tests the various comparison operators. Even though Python doesn't have a
+    # `__rgt__` (reverse gt) dunder method, if the LHS doesn't support `gt` with
+    # the RHS it seems to try `rhs lt lhs`.
+    assert (x > 1).data_type == pa.bool_()
+    assert (1 > x).data_type == pa.bool_()
+    assert (x < 1).data_type == pa.bool_()
+    assert (1 < x).data_type == pa.bool_()
+    assert (x >= 1).data_type == pa.bool_()
+    assert (1 >= x).data_type == pa.bool_()
+    assert (x <= 1).data_type == pa.bool_()
+    assert (1 <= x).data_type == pa.bool_()
 
-    # We can't overload `__eq__` to do this, so we have to use a method.
-    x.eq(1)
+    # For `eq` and `ne` we only support timestream on the LHS since it is a method.
+    # We can't overload `__eq__` since that must take any RHS and must return `bool`.
+    assert x.eq(1).data_type == pa.bool_()
+    assert x.ne(1).data_type == pa.bool_()
 
 
-# def test_expr_pipe(source1) -> None:
-#     assert source1.x.pipe(math.add, 1) == math.add(source1.x, 1)
-#     assert source1.x.pipe((math.add, "rhs"), 1) == math.add(1, rhs=source1.x)
-
-#     assert source1.x.pipe(math.gt, 1) == math.gt(source1.x, 1)
-#     assert source1.x.pipe((math.gt, "rhs"), 1) == math.gt(1, rhs=source1.x)
-
-
-def test_expr_arithmetic_types(source1) -> None:
+def test_timestream_arithmetic_types(source1) -> None:
     x = source1["x"]
     assert (x.eq(1)).data_type == pa.bool_()
     assert (x + 1).data_type == pa.float64()
@@ -78,11 +85,11 @@ def test_expr_arithmetic_types(source1) -> None:
         x.eq(1) + source1["y"]
     assert "Incompatible argument types" in str(e)
     if sys.version_info >= (3, 11):
-        assert "Arg[0]: Expr of type bool" in e.value.__notes__
-        assert "Arg[1]: Expr of type int32" in e.value.__notes__
+        assert "Arg[0]: Timestream[bool]" in e.value.__notes__
+        assert "Arg[1]: Timestream[int32]" in e.value.__notes__
 
 
-def test_expr_preview(source1, golden) -> None:
+def test_timestream_preview(source1, golden) -> None:
     content = "\n".join(
         [
             "time,key,m,n",
