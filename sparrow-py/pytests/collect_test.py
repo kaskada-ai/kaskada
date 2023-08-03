@@ -1,7 +1,7 @@
 """Tests for the collect function."""
 import pytest
-import sparrow_py as s
 from sparrow_py.sources import CsvSource
+from sparrow_py import record
 from sparrow_py import SlidingWindow, SinceWindow
 
 @pytest.fixture(scope = "module")
@@ -21,32 +21,34 @@ def source() -> CsvSource:
     return CsvSource("time", "key", content)
 
 
-def test_move_me(source) -> None:
+def test_collect_basic(source, golden) -> None:
     """Test we can collect values to a list"""
     m = source["m"]
     n = source["n"]
-    result = s.record(
+    golden(record(
         {
             "m": m,
             "collect_m": m.collect(),
-            "collect_m_max_2": m.collect(max = 2),
             "n": n,
             "collect_n": n.collect(),
+        }
+    ))
+
+def test_collect_with_max(source, golden) -> None:
+    """Test we can collect values to a list"""
+    m = source["m"]
+    n = source["n"]
+    golden(record(
+        {
+            "m": m,
+            "collect_m_max_2": m.collect(max = 2),
+            "n": n,
             "collect_n_max_2": n.collect(max = 2),
         }
-    ).run_to_csv_string()
+    ))
 
-    assert result == "\n".join(
-        [
-            "_time,_subsort,_key_hash,_key,m,sum_m,n,sum_n",
-            "1996-12-20 00:39:57,0,12960666915911099378,A,5.0,5,10.0,10",
-            "1996-12-20 00:39:58,1,2867199309159137213,B,24.0,24,3.0,3",
-            "1996-12-20 00:39:59,2,12960666915911099378,A,17.0,22,6.0,16",
-            "1996-12-20 00:40:00,3,12960666915911099378,A,,22,9.0,25",
-            "1996-12-20 00:40:01,4,12960666915911099378,A,12.0,34,,25",
-            "1996-12-20 00:40:02,5,12960666915911099378,A,,34,,25",
-            "",
-        ]
-    )
+
+
+
 
 
