@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 
 mod error;
+mod execution;
 mod expr;
 mod session;
 mod table;
@@ -16,6 +17,7 @@ fn ffi(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<session::Session>()?;
     m.add_class::<expr::Expr>()?;
     m.add_class::<table::Table>()?;
+    m.add_class::<execution::Execution>()?;
 
     Ok(())
 }
