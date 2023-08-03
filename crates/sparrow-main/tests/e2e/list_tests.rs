@@ -96,6 +96,38 @@ async fn test_index_list_bool_dynamic() {
 }
 
 #[tokio::test]
+#[ignore = "https://docs.rs/arrow-ord/44.0.0/src/arrow_ord/comparison.rs.html#1746"]
+async fn test_list_equality() {
+    insta::assert_snapshot!(QueryFixture::new("{ f1: Input.bool_list | first() == Input.bool_list }").run_to_csv(&list_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
+    "###);
+}
+
+#[tokio::test]
+async fn test_first_list() {
+    insta::assert_snapshot!(QueryFixture::new("{ f1: Input.string_list | first() | index(0) }").run_to_csv(&list_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
+    1996-12-19T16:39:57.000000000,0,18433805721903975440,1,dog
+    1996-12-19T16:40:57.000000000,0,18433805721903975440,1,dog
+    1996-12-19T16:40:59.000000000,0,18433805721903975440,1,dog
+    1996-12-19T16:41:57.000000000,0,18433805721903975440,1,dog
+    1996-12-19T16:42:57.000000000,0,18433805721903975440,1,dog
+    "###);
+}
+
+#[tokio::test]
+async fn test_last_list() {
+    insta::assert_snapshot!(QueryFixture::new("{ f1: Input.string_list | last() | index(0) }").run_to_csv(&list_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,f1
+    1996-12-19T16:39:57.000000000,0,18433805721903975440,1,dog
+    1996-12-19T16:40:57.000000000,0,18433805721903975440,1,cat
+    1996-12-19T16:40:59.000000000,0,18433805721903975440,1,
+    1996-12-19T16:41:57.000000000,0,18433805721903975440,1,dog
+    1996-12-19T16:42:57.000000000,0,18433805721903975440,1,dog
+    "###);
+}
+
+#[tokio::test]
 async fn test_list_schemas_are_compatible() {
     // This query puts a collect() into a record, which
     // does schema validation when constructing the struct array.
