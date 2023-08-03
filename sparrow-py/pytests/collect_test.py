@@ -35,7 +35,7 @@ def test_collect_basic(source, golden) -> None:
     ))
 
 def test_collect_with_max(source, golden) -> None:
-    """Test we can collect values to a list"""
+    """Test we can collect values to a list with a max"""
     m = source["m"]
     n = source["n"]
     golden(record(
@@ -46,6 +46,18 @@ def test_collect_with_max(source, golden) -> None:
             "collect_n_max_2": n.collect(max = 2),
         }
     ))
+
+def test_collect_since_window(source, golden) -> None:
+    """Test we can collect values to a list in a since window"""
+    m = source["m"]
+    golden(record(
+        {
+            "m": m,
+            "since_m": m.sum(window=SinceWindow(m > 10))
+        }
+    ))
+
+
 
 
 
