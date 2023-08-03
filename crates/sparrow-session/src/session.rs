@@ -4,13 +4,13 @@ use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
+use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, DataContext, Dfg, DiagnosticCollector};
 use sparrow_plan::TableId;
 use sparrow_runtime::execute::output::Destination;
-use sparrow_runtime::execute::ExecutionOptions;
 use sparrow_syntax::{ExprOp, LiteralValue, Located, Location, Resolved};
 use uuid::Uuid;
 
@@ -21,6 +21,12 @@ use crate::{Error, Expr, Literal, Table};
 pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
+}
+
+#[derive(Default)]
+pub struct ExecutionOptions {
+    /// The maximum number of rows to return.
+    pub row_limit: Option<usize>,
 }
 
 /// Adds a table to the session.
@@ -231,7 +237,11 @@ impl Session {
         }
     }
 
-    pub fn execute(&self, expr: &Expr) -> error_stack::Result<Execution, Error> {
+    pub fn execute(
+        &self,
+        expr: &Expr,
+        options: ExecutionOptions,
+    ) -> error_stack::Result<Execution, Error> {
         // TODO: Decorations?
         let primary_group_info = self
             .data_context
@@ -276,7 +286,8 @@ impl Session {
 
         let destination = Destination::Channel(output_tx);
         let data_context = self.data_context.clone();
-        let options = ExecutionOptions::default();
+
+        let options = options.to_sparrow_options();
 
         // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
         let result = rt
@@ -291,39 +302,6 @@ impl Session {
             .boxed();
 
         Ok(Execution::new(rt, output_rx, result))
-
-        // // Spawn the root task
-        // rt.block_on(async move {
-        //     let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
-
-        //     let destination = Destination::Channel(output_tx);
-        //     let data_context = self.data_context.clone();
-        //     let options = ExecutionOptions::default();
-
-        //     // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
-        //     let mut results =
-        //         sparrow_runtime::execute::execute_new(plan, destination, data_context, options)
-        //             .await
-        //             .change_context(Error::Execute)?
-        //             .boxed();
-
-        //     // Hacky. Try to get the last response so we can see if there are any errors, etc.
-        //     let mut _last = None;
-        //     while let Some(response) = results.try_next().await.change_context(Error::Execute)? {
-        //         _last = Some(response);
-        //     }
-
-        //     let batches: Vec<_> = tokio_stream::wrappers::ReceiverStream::new(output_rx)
-        //         .collect()
-        //         .await;
-
-        //     // Hacky: Assume we produce at least one batch.
-        //     // New execution plans contain the schema ref which cleans this up.
-        //     let schema = batches[0].schema();
-        //     let batch = arrow_select::concat::concat_batches(&schema, &batches)
-        //         .into_report()
-        //         .change_context(Error::Execute)?;
-        //     Ok(batch)
     }
 
     pub(super) fn hacky_table_mut(
@@ -348,6 +326,20 @@ static RECORD_EXTENSION_ARGUMENTS: [Located<String>; 2] = [
     Located::internal_string("extension"),
     Located::internal_string("base"),
 ];
+
+impl ExecutionOptions {
+    fn to_sparrow_options(&self) -> sparrow_runtime::execute::ExecutionOptions {
+        let mut options = sparrow_runtime::execute::ExecutionOptions::default();
+
+        if let Some(row_limit) = self.row_limit {
+            options.limits = Some(Limits {
+                preview_rows: row_limit as i64,
+            });
+        }
+
+        options
+    }
+}
 
 #[cfg(test)]
 mod tests {

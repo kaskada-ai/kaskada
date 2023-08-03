@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::execution::Execution;
+use crate::execution::{Execution, ExecutionOptions};
 use crate::session::Session;
 use arrow::pyarrow::ToPyArrow;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -73,9 +73,12 @@ impl Expr {
         self.session.clone()
     }
 
-    fn execute(&self) -> Result<Execution, Error> {
+    fn execute(&self, options: Option<&ExecutionOptions>) -> Result<Execution, Error> {
         let session = self.session.rust_session()?;
-        let execution = session.execute(&self.rust_expr)?;
+        let options = options
+            .map(ExecutionOptions::to_rust_options)
+            .unwrap_or_default();
+        let execution = session.execute(&self.rust_expr, options)?;
         Ok(Execution::new(execution))
     }
 

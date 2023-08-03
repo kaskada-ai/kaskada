@@ -3,11 +3,12 @@ from typing import Dict
 from typing import List
 from typing import Union
 
+from ._result import Result
 from ._windows import SinceWindow
 from ._windows import SlidingWindow
-from .expr import Expr
-from .session import init_session
-
+from ._expr import Expr
+from ._session import init_session
+from . import sources
 
 def record(fields: Dict[str, Expr]) -> Expr:
     """Create a record from the given keyword arguments."""
@@ -17,4 +18,4 @@ def record(fields: Dict[str, Expr]) -> Expr:
     return Expr.call("record", *args)
 
 
-__all__ = ["Expr", "init_session", "record", "SinceWindow", "SlidingWindow"]
+__all__ = ["Expr", "init_session", "record", "SinceWindow", "SlidingWindow", "sources", "Result"]

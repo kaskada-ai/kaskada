@@ -11,14 +11,16 @@ from typing import final
 
 import pandas as pd
 import pyarrow as pa
-import sparrow_py
+import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
 from ._windows import SinceWindow
 from ._windows import SlidingWindow
 from ._windows import Window
+from ._result import Result
 
 
+#: The type of arguments to expressions.
 Arg = Union["Expr", int, str, float, None]
 
 
@@ -268,7 +270,7 @@ class Expr(object):
         """Extend this record with the additoonal fields."""
         # This argument order is weird, and we shouldn't need to make a record
         # in order to do the extension.
-        extension = sparrow_py.record(fields)
+        extension = kt.record(fields)
         return Expr.call("extend_record", extension, self)
 
     def neg(self) -> "Expr":
@@ -288,8 +290,9 @@ class Expr(object):
         return Expr.call("is_valid", self)
 
     def collect(
-        self, max: Optional[int] = None, window: Optional[Window] = None
+        self, max: Optional[int], window: Optional[Window] = None
     ) -> "Expr":
+        """Return an expression collecting the last `max` values in the `window`."""
         return _aggregation("collect", self, window, max)
 
     def sum(self, window: Optional[Window] = None) -> "Expr":
@@ -304,9 +307,28 @@ class Expr(object):
         """Return the last aggregation of the expression."""
         return _aggregation("last", self, window)
 
-    def run(self) -> pd.DataFrame:
+    def show(self, limit: int = 100) -> None:
+        """
+        Print the first N rows of the result.
+
+        This is intended for debugging purposes.
+
+        Parameters
+        ----------
+        limit : int
+            Maximum number of rows to print.
+        """
+        df = self.run(row_limit = limit)
+        try:
+            import ipython # type: ignore
+            ipython.display(df)
+        except ImportError:
+            print(df)
+
+    def run(self, row_limit: Optional[int] = None) -> pd.DataFrame:
         """Run the expression."""
-        batches = self._ffi_expr.execute().collect_pyarrow()
+        options = _ffi.ExecutionOptions(row_limit=row_limit)
+        batches = self._ffi_expr.execute(options).collect_pyarrow()
         schema = batches[0].schema
         table = pa.Table.from_batches(batches, schema=schema)
         return table.to_pandas()
@@ -345,7 +367,7 @@ def _aggregation(
     # us to add the *args like so.
     if window is None:
         return Expr.call(op, *args, input, None, None)
-    elif isinstance(window, SinceWindow):
+    elif isinstance(window, kt.SinceWindow):
         return Expr.call(op, *args, input, window._predicate, None)
     elif isinstance(window, SlidingWindow):
         return Expr.call(op, *args, input, window._predicate, window._duration)

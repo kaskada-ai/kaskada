@@ -4,6 +4,13 @@ use sparrow_session::Execution as RustExecution;
 
 use crate::error::{Error, ErrorContext};
 
+#[pyclass]
+#[derive(Default)]
+pub(crate) struct ExecutionOptions {
+    #[pyo3(get, set)]
+    pub(crate) row_limit: Option<usize>,
+}
+
 /// Kaskada execution object.
 #[pyclass]
 pub(crate) struct Execution(Option<RustExecution>);
@@ -27,5 +34,21 @@ impl Execution {
             .map(|batch| batch.to_pyarrow(py))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(results)
+    }
+}
+
+#[pymethods]
+impl ExecutionOptions {
+    #[new]
+    fn new(row_limit: Option<usize>) -> Self {
+        Self { row_limit }
+    }
+}
+
+impl ExecutionOptions {
+    pub(crate) fn to_rust_options(&self) -> sparrow_session::ExecutionOptions {
+        sparrow_session::ExecutionOptions {
+            row_limit: self.row_limit,
+        }
     }
 }
