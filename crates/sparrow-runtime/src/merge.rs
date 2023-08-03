@@ -1,5 +1,5 @@
 pub(crate) use gatherer::*;
-pub(crate) use homogeneous_merge::*;
+pub use homogeneous_merge::*;
 
 mod binary_merge;
 mod gatherer;
