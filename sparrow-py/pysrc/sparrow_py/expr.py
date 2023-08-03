@@ -287,6 +287,9 @@ class Expr(object):
         """Return a boolean expression indicating if the expression is not null."""
         return Expr.call("is_valid", self)
 
+    def collect(self, max: Optional[int] = None, window: Optional[Window] = None) -> "Expr":
+        return _collect(self, max, window)
+
     def sum(self, window: Optional[Window] = None) -> "Expr":
         """Return the sum aggregation of the expression."""
         return _aggregation("sum", self, window)
@@ -314,8 +317,19 @@ def _aggregation(op: str, input: Expr, window: Optional[Window]) -> Expr:
     if window is None:
         return Expr.call(op, input, None, None)
     elif isinstance(window, SinceWindow):
-        return Expr.call(op, input, window._predicate, 1)
+        return Expr.call(op, input, window._predicate, None)
     elif isinstance(window, SlidingWindow):
         return Expr.call(op, input, window._predicate, window._duration)
+    else:
+        raise ValueError(f"Unknown window type {window!r}")
+
+def _collect(input: Expr, max: Optional[int], window: Optional[Window]) -> Expr:
+    """Helper for creating collect expr"""
+    if window is None:
+       return Expr.call("collect", max, input, None, None)
+    elif isinstance(window, SinceWindow):
+       return Expr.call("collect", max, input, window._predicate, None)
+    elif isinstance(window, SlidingWindow):
+       return Expr.call("collect", max, input, window._predicate, window._duration)
     else:
         raise ValueError(f"Unknown window type {window!r}")

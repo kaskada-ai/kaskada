@@ -253,7 +253,7 @@ impl Dfg {
                     );
                 }
 
-                // 2. The number of argflatten_uments should be correct.
+                // 2. The number of args should be correct.
                 match expr {
                     Expression::Literal(_) | Expression::LateBound(_) => {
                         anyhow::ensure!(

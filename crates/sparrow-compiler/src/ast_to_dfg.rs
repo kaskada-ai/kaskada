@@ -557,14 +557,27 @@ pub fn add_to_dfg(
                 //
                 // TODO: Flattening the window arguments is hacky and confusing. We should instead
                 // incorporate the tick directly into the function containing the window.
-                dfg.enter_env();
-                dfg.bind("$condition_input", args[1].inner().clone());
+                let window_arg = original_ast.map(|e| &e.args()[2]);
+                let (condition, duration) = match window_arg {
+                    Some(window) => {
+                        dfg.enter_env();
+                        dfg.bind("$condition_input", args[1].inner().clone());
 
-                let window = &original_ast.unwrap().args()[2];
-                let (condition, duration) =
-                    flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+                        let result =
+                            flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+                        dfg.exit_env();
+                        result
+                    }
+                    None => {
+                        // If `expr` is None, we're running the Python builder code,
+                        // which already flattened things.
+                        //
+                        // Note that this won't define the `condition_input` for the
+                        // purposes of ticks.
+                        (args[2].clone(), args[3].clone())
+                    }
+                };
 
-                dfg.exit_env();
                 // [max, input, condition, duration]
                 vec![args[0].clone(), args[1].clone(), condition, duration]
             } else if function.name() == "when" || function.name() == "if" {

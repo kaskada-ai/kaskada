@@ -22,7 +22,6 @@ def source() -> CsvSource:
     )
     return CsvSource("time", "key", content)
 
-
 def test_sum_unwindowed(source, golden) -> None:
     """Test we can create a record."""
     m = source["m"]
