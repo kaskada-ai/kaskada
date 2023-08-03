@@ -5,6 +5,7 @@ import pyarrow as pa
 import pytest
 import sparrow_py as kt
 
+
 @pytest.fixture(scope="module")
 def source1() -> kt.sources.Source:
     """Create a table for testing."""
@@ -89,6 +90,7 @@ def test_expr_arithmetic_types(source1) -> None:
         assert "Arg[0]: Expr of type bool" in e.value.__notes__
         assert "Arg[1]: Expr of type int32" in e.value.__notes__
 
+
 def test_expr_show(source1, capsys) -> None:
     """Test the output of showing a dataframe."""
     content = "\n".join(
@@ -107,13 +109,15 @@ def test_expr_show(source1, capsys) -> None:
     source.show(limit=4)
 
     output = capsys.readouterr().out
-    assert output == "\n".join([
-        "                _time  _subsort             _key_hash  ... key     m   n",
-        "0 1996-12-20 00:39:57         0  12960666915911099378  ...   A   5.0  10",
-        "1 1996-12-20 00:39:58         1   2867199309159137213  ...   B  24.0   3",
-        "2 1996-12-20 00:39:59         2  12960666915911099378  ...   A  17.0   6",
-        "3 1996-12-20 00:40:00         3  12960666915911099378  ...   A   NaN   9",
-        "",
-        "[4 rows x 8 columns]",
-        "",
-    ])
+    assert output == "\n".join(
+        [
+            "                _time  _subsort             _key_hash  ... key     m   n",
+            "0 1996-12-20 00:39:57         0  12960666915911099378  ...   A   5.0  10",
+            "1 1996-12-20 00:39:58         1   2867199309159137213  ...   B  24.0   3",
+            "2 1996-12-20 00:39:59         2  12960666915911099378  ...   A  17.0   6",
+            "3 1996-12-20 00:40:00         3  12960666915911099378  ...   A   NaN   9",
+            "",
+            "[4 rows x 8 columns]",
+            "",
+        ]
+    )

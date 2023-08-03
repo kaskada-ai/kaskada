@@ -2,3 +2,4 @@
 strictness = short
 docstring_style=numpy
 ignore_regex=^(test)?_(.*),
+message_template={path}:{line} in {obj}: {msg_id} {msg}

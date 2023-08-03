@@ -2,6 +2,7 @@
 import pytest
 import sparrow_py as kt
 
+
 @pytest.fixture(scope="module")
 def source() -> kt.sources.CsvSource:
     """Create an empty table for testing."""

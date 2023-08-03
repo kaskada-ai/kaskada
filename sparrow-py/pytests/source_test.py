@@ -6,6 +6,7 @@ import pyarrow as pa
 import pytest
 import sparrow_py as kt
 
+
 def test_table_valid() -> None:
     """Create a table referencing valid fields."""
     schema = pa.schema(

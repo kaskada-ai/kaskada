@@ -14,10 +14,10 @@ import pyarrow as pa
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
+from ._result import Result
 from ._windows import SinceWindow
 from ._windows import SlidingWindow
 from ._windows import Window
-from ._result import Result
 
 
 #: The type of arguments to expressions.
@@ -289,9 +289,7 @@ class Expr(object):
         """Return a boolean expression indicating if the expression is not null."""
         return Expr.call("is_valid", self)
 
-    def collect(
-        self, max: Optional[int], window: Optional[Window] = None
-    ) -> "Expr":
+    def collect(self, max: Optional[int], window: Optional[Window] = None) -> "Expr":
         """Return an expression collecting the last `max` values in the `window`."""
         return _aggregation("collect", self, window, max)
 
@@ -318,9 +316,10 @@ class Expr(object):
         limit : int
             Maximum number of rows to print.
         """
-        df = self.run(row_limit = limit)
+        df = self.run(row_limit=limit)
         try:
-            import ipython # type: ignore
+            import ipython  # type: ignore
+
             ipython.display(df)
         except ImportError:
             print(df)
@@ -352,13 +351,18 @@ def _aggregation(
     input : Expr
         The input to the expression.
     window : Optional[Window]
-      The window to use for the aggregation.
+        The window to use for the aggregation.
     *args : Optional[Arg]
         Additional arguments to provide before `input` and the flattened window.
 
     Returns
     -------
     The resulting expression.
+
+    Raises
+    ------
+    UnimplementedError
+        If the window is not a known type.
     """
 
     # Note: things would be easier if we had a more normal order, which
@@ -372,4 +376,4 @@ def _aggregation(
     elif isinstance(window, SlidingWindow):
         return Expr.call(op, *args, input, window._predicate, window._duration)
     else:
-        raise ValueError(f"Unknown window type {window!r}")
+        raise UnimplementedError(f"Unknown window type {window!r}")

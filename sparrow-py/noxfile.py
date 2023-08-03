@@ -93,7 +93,11 @@ def mypy(session: Session) -> None:
     args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
     session.install("mypy", "pytest", "pandas-stubs")
     install_self(session)
-    session.run("mypy", *args)
+    # Using `--install-types` should make this less picky about missing stubs.
+    # However, there is a possibility it slows things down, by making mypy
+    # run twice -- once to determine what types need to be installed, then once
+    # to check things with those stubs.
+    session.run("mypy", "--install-types", *args)
     if not session.posargs:
         session.run("mypy", f"--python-executable={sys.executable}", "noxfile.py")
 
