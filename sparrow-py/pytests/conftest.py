@@ -32,8 +32,6 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
         """
         Check query results against a golden file.
 
-
-
         Parameters
         ----------
         query : sparrow_py.Expr
@@ -84,7 +82,9 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
         elif format == "parquet":
             correct = pd.read_parquet(filename)
         elif format == "json":
-            correct = pd.read_json(filename, orient="records", lines=True, dtype=df.dtypes.to_dict())
+            correct = pd.read_json(
+                filename, orient="records", lines=True, dtype=df.dtypes.to_dict()
+            )
         else:
             raise ValueError(f"Unknown format {format}")
         pd.testing.assert_frame_equal(df, correct)

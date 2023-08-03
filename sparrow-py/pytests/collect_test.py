@@ -1,10 +1,12 @@
 """Tests for the collect function."""
 import pytest
-from sparrow_py.sources import CsvSource
+from sparrow_py import SinceWindow
+from sparrow_py import SlidingWindow
 from sparrow_py import record
-from sparrow_py import SlidingWindow, SinceWindow
+from sparrow_py.sources import CsvSource
 
-@pytest.fixture(scope = "module")
+
+@pytest.fixture(scope="module")
 def source() -> CsvSource:
     """Create an empty table for testing."""
     content = "\n".join(
@@ -25,42 +27,35 @@ def test_collect_basic(source, golden) -> None:
     """Test we can collect values to a list"""
     m = source["m"]
     n = source["n"]
-    golden(record(
-        {
-            "m": m,
-            "collect_m": m.collect(),
-            "n": n,
-            "collect_n": n.collect(),
-        }
-    ))
+    golden(
+        record(
+            {
+                "m": m,
+                "collect_m": m.collect(max=None),
+                "n": n,
+                "collect_n": n.collect(max=None),
+            }
+        )
+    )
+
 
 def test_collect_with_max(source, golden) -> None:
     """Test we can collect values to a list with a max"""
     m = source["m"]
     n = source["n"]
-    golden(record(
-        {
-            "m": m,
-            "collect_m_max_2": m.collect(max = 2),
-            "n": n,
-            "collect_n_max_2": n.collect(max = 2),
-        }
-    ))
+    golden(
+        record(
+            {
+                "m": m,
+                "collect_m_max_2": m.collect(max=2),
+                "n": n,
+                "collect_n_max_2": n.collect(max=2),
+            }
+        )
+    )
+
 
 def test_collect_since_window(source, golden) -> None:
     """Test we can collect values to a list in a since window"""
     m = source["m"]
-    golden(record(
-        {
-            "m": m,
-            "since_m": m.sum(window=SinceWindow(m > 10))
-        }
-    ))
-
-
-
-
-
-
-
-
+    golden(record({"m": m, "since_m": m.sum(window=SinceWindow(m > 10))}))

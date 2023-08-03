@@ -287,8 +287,10 @@ class Expr(object):
         """Return a boolean expression indicating if the expression is not null."""
         return Expr.call("is_valid", self)
 
-    def collect(self, max: Optional[int] = None, window: Optional[Window] = None) -> "Expr":
-        return _collect(self, max, window)
+    def collect(
+        self, max: Optional[int] = None, window: Optional[Window] = None
+    ) -> "Expr":
+        return _aggregation("collect", self, window, max)
 
     def sum(self, window: Optional[Window] = None) -> "Expr":
         """Return the sum aggregation of the expression."""
@@ -311,25 +313,37 @@ class Expr(object):
         # Convert PyArrow -> Pandas -> CSV, omitting the index (row).
         return self.run().to_csv(index=False)
 
+def _aggregation(
+    op: str, input: Expr, window: Optional[Window], *args: Optional[Arg]
+) -> Expr:
+    """
+    Creates an aggregation.
 
-def _aggregation(op: str, input: Expr, window: Optional[Window]) -> Expr:
-    """Create an aggregation with the given operation and input."""
-    if window is None:
-        return Expr.call(op, input, None, None)
-    elif isinstance(window, SinceWindow):
-        return Expr.call(op, input, window._predicate, None)
-    elif isinstance(window, SlidingWindow):
-        return Expr.call(op, input, window._predicate, window._duration)
-    else:
-        raise ValueError(f"Unknown window type {window!r}")
+    Parameters
+    ----------
+    op : str
+        The operation to create.
+    input : Expr
+        The input to the expression.
+    window : Optional[Window]
+      The window to use for the aggregation.
+    *args : Optional[Arg]
+        Additional arguments to provide before `input` and the flattened window.
 
-def _collect(input: Expr, max: Optional[int], window: Optional[Window]) -> Expr:
-    """Helper for creating collect expr"""
+    Returns
+    -------
+    The resulting expression.
+    """
+
+    # Note: things would be easier if we had a more normal order, which
+    # we could do as part of "aligning" Sparrow signatures to the new direction.
+    # However, `collect` currently has `collect(max, input, window)`, requiring
+    # us to add the *args like so.
     if window is None:
-       return Expr.call("collect", max, input, None, None)
+        return Expr.call(op, *args, input, None, None)
     elif isinstance(window, SinceWindow):
-       return Expr.call("collect", max, input, window._predicate, None)
+        return Expr.call(op, *args, input, window._predicate, None)
     elif isinstance(window, SlidingWindow):
-       return Expr.call("collect", max, input, window._predicate, window._duration)
+        return Expr.call(op, *args, input, window._predicate, window._duration)
     else:
         raise ValueError(f"Unknown window type {window!r}")
