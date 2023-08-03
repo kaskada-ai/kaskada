@@ -24,6 +24,8 @@ pub enum Error {
     Compile,
     #[display(fmt = "execute query")]
     Execute,
+    #[display(fmt = "execution failed")]
+    ExecutionFailed,
 }
 
 impl error_stack::Context for Error {}

@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
@@ -15,6 +14,7 @@ use sparrow_runtime::execute::ExecutionOptions;
 use sparrow_syntax::{ExprOp, LiteralValue, Located, Location, Resolved};
 use uuid::Uuid;
 
+use crate::execution::Execution;
 use crate::{Error, Expr, Literal, Table};
 
 #[derive(Default)]
@@ -231,7 +231,7 @@ impl Session {
         }
     }
 
-    pub fn execute(&self, expr: &Expr) -> error_stack::Result<RecordBatch, Error> {
+    pub fn execute(&self, expr: &Expr) -> error_stack::Result<Execution, Error> {
         // TODO: Decorations?
         let primary_group_info = self
             .data_context
@@ -272,40 +272,58 @@ impl Session {
         let rt = tokio::runtime::Runtime::new()
             .into_report()
             .change_context(Error::Execute)?;
+        let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
 
-        // Spawn the root task
-        rt.block_on(async move {
-            let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
+        let destination = Destination::Channel(output_tx);
+        let data_context = self.data_context.clone();
+        let options = ExecutionOptions::default();
 
-            let destination = Destination::Channel(output_tx);
-            let data_context = self.data_context.clone();
-            let options = ExecutionOptions::default();
+        // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
+        let result = rt
+            .block_on(sparrow_runtime::execute::execute_new(
+                plan,
+                destination,
+                data_context,
+                options,
+            ))
+            .change_context(Error::Execute)?
+            .map_err(|e| e.change_context(Error::Execute))
+            .boxed();
 
-            // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
-            let mut results =
-                sparrow_runtime::execute::execute_new(plan, destination, data_context, options)
-                    .await
-                    .change_context(Error::Execute)?
-                    .boxed();
+        Ok(Execution::new(rt, output_rx, result))
 
-            // Hacky. Try to get the last response so we can see if there are any errors, etc.
-            let mut _last = None;
-            while let Some(response) = results.try_next().await.change_context(Error::Execute)? {
-                _last = Some(response);
-            }
+        // // Spawn the root task
+        // rt.block_on(async move {
+        //     let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
 
-            let batches: Vec<_> = tokio_stream::wrappers::ReceiverStream::new(output_rx)
-                .collect()
-                .await;
+        //     let destination = Destination::Channel(output_tx);
+        //     let data_context = self.data_context.clone();
+        //     let options = ExecutionOptions::default();
 
-            // Hacky: Assume we produce at least one batch.
-            // New execution plans contain the schema ref which cleans this up.
-            let schema = batches[0].schema();
-            let batch = arrow_select::concat::concat_batches(&schema, &batches)
-                .into_report()
-                .change_context(Error::Execute)?;
-            Ok(batch)
-        })
+        //     // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
+        //     let mut results =
+        //         sparrow_runtime::execute::execute_new(plan, destination, data_context, options)
+        //             .await
+        //             .change_context(Error::Execute)?
+        //             .boxed();
+
+        //     // Hacky. Try to get the last response so we can see if there are any errors, etc.
+        //     let mut _last = None;
+        //     while let Some(response) = results.try_next().await.change_context(Error::Execute)? {
+        //         _last = Some(response);
+        //     }
+
+        //     let batches: Vec<_> = tokio_stream::wrappers::ReceiverStream::new(output_rx)
+        //         .collect()
+        //         .await;
+
+        //     // Hacky: Assume we produce at least one batch.
+        //     // New execution plans contain the schema ref which cleans this up.
+        //     let schema = batches[0].schema();
+        //     let batch = arrow_select::concat::concat_batches(&schema, &batches)
+        //         .into_report()
+        //         .change_context(Error::Execute)?;
+        //     Ok(batch)
     }
 
     pub(super) fn hacky_table_mut(
