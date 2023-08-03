@@ -313,6 +313,7 @@ class Expr(object):
         # Convert PyArrow -> Pandas -> CSV, omitting the index (row).
         return self.run().to_csv(index=False)
 
+
 def _aggregation(
     op: str, input: Expr, window: Optional[Window], *args: Optional[Arg]
 ) -> Expr:
