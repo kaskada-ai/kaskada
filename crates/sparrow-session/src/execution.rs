@@ -75,7 +75,7 @@ impl Execution {
         Ok(self.output.next().await)
     }
 
-    pub async fn next_blocking(&mut self) -> error_stack::Result<Option<RecordBatch>, Error> {
+    pub fn next_blocking(&mut self) -> error_stack::Result<Option<RecordBatch>, Error> {
         self.is_done()?;
         Ok(self.rt.block_on(self.output.next()))
     }
