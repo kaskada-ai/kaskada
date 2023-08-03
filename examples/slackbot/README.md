@@ -5,7 +5,7 @@
 ```sql
 copy(
     select
-      type
+      type              ,
       subtype           ,
       to_timestamp(cast(ts as bigint)) as ts,
       user              ,
