@@ -3,11 +3,13 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::PyErr;
 
 #[derive(derive_more::Display, Debug)]
-enum ErrorContext {
+pub enum ErrorContext {
     #[display(fmt = "error in sparrow-py Rust code")]
     Ffi,
     #[display(fmt = "error in sparrow-py Pyo3 or Python code")]
     Python,
+    #[display(fmt = "result already collected")]
+    ResultAlreadyCollected,
 }
 
 impl error_stack::Context for ErrorContext {}

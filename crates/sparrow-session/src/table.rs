@@ -3,9 +3,10 @@ use std::sync::Arc;
 use arrow_array::types::ArrowPrimitiveType;
 use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
-use error_stack::ResultExt;
+use error_stack::{IntoReportCompat, ResultExt};
 use sparrow_compiler::TableInfo;
 use sparrow_plan::TableId;
+use sparrow_runtime::merge::homogeneous_merge;
 use sparrow_runtime::preparer::Preparer;
 
 use crate::{Error, Expr, Session};
@@ -55,11 +56,19 @@ impl Table {
             .prepare_batch(batch)
             .change_context(Error::Prepare)?;
 
-        // TODO: Merge the data in.
         let table_info = session.hacky_table_mut(self.table_id);
 
-        assert!(table_info.in_memory.is_none());
-        table_info.in_memory = Some(prepared);
+        if prepared.num_rows() == 0 {
+            return Ok(());
+        }
+
+        table_info.in_memory = Some(if let Some(previous) = table_info.in_memory.take() {
+            homogeneous_merge(&prepared.schema(), vec![previous, prepared])
+                .into_report()
+                .change_context(Error::Prepare)?
+        } else {
+            prepared
+        });
         Ok(())
     }
 }

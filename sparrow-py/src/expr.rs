@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution::Execution;
 use crate::session::Session;
 use arrow::pyarrow::ToPyArrow;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -72,10 +73,10 @@ impl Expr {
         self.session.clone()
     }
 
-    fn execute(&self, py: Python<'_>) -> Result<PyObject, Error> {
+    fn execute(&self) -> Result<Execution, Error> {
         let session = self.session.rust_session()?;
-        let batches = session.execute(&self.rust_expr)?;
-        Ok(batches.to_pyarrow(py)?)
+        let execution = session.execute(&self.rust_expr)?;
+        Ok(Execution::new(execution))
     }
 
     /// Return the `pyarrow` type of the resulting expression.

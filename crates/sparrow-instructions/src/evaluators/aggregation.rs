@@ -1,6 +1,7 @@
 mod boolean;
 mod function;
 mod generic;
+mod list;
 mod map;
 mod numeric_properties;
 mod primitive;
@@ -11,6 +12,7 @@ mod two_stacks;
 pub use boolean::*;
 pub use function::*;
 pub use generic::*;
+pub use list::*;
 pub use map::*;
 pub use numeric_properties::*;
 pub use primitive::*;

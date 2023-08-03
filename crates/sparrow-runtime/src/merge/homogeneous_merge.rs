@@ -15,8 +15,7 @@ use crate::min_heap::{HasPriority, MinHeap};
 ///
 /// This applies an iterative 2-way merge strategy, concatenating the
 /// batches in increasing order of size.
-#[allow(dead_code)]
-pub(crate) fn homogeneous_merge(
+pub fn homogeneous_merge(
     schema: &SchemaRef,
     batches: impl IntoIterator<Item = RecordBatch>,
 ) -> anyhow::Result<RecordBatch> {

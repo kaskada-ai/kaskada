@@ -18,7 +18,8 @@ impl EvaluatorFactory for EqEvaluatorFactory {
         create_typed_evaluator!(
             &info.args[0].data_type,
             NumericEqEvaluator,
-            MapEqEvaluator,
+            DynEqEvaluator,
+            DynEqEvaluator,
             BoolEqEvaluator,
             StringEqEvaluator,
             info
@@ -31,7 +32,8 @@ impl EvaluatorFactory for NeqEvaluatorFactory {
         create_typed_evaluator!(
             &info.args[0].data_type,
             NumericNeqEvaluator,
-            MapNeqEvaluator,
+            DynNeqEvaluator,
+            DynNeqEvaluator,
             BoolNeqEvaluator,
             StringNeqEvaluator,
             info
@@ -39,44 +41,44 @@ impl EvaluatorFactory for NeqEvaluatorFactory {
     }
 }
 
-/// Evaluator for `eq` on maps.
-struct MapEqEvaluator {
+/// Evaluator for `eq` on using `eq_dyn`
+struct DynEqEvaluator {
     lhs: ValueRef,
     rhs: ValueRef,
 }
 
-impl Evaluator for MapEqEvaluator {
+impl Evaluator for DynEqEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let lhs = info.value(&self.lhs)?.map_array()?;
-        let rhs = info.value(&self.rhs)?.map_array()?;
+        let lhs = info.value(&self.lhs)?.array_ref()?;
+        let rhs = info.value(&self.rhs)?.array_ref()?;
         let result = arrow::compute::eq_dyn(lhs.as_ref(), rhs.as_ref())?;
         Ok(Arc::new(result))
     }
 }
 
-impl EvaluatorFactory for MapEqEvaluator {
+impl EvaluatorFactory for DynEqEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let (lhs, rhs) = info.unpack_arguments()?;
         Ok(Box::new(Self { lhs, rhs }))
     }
 }
 
-/// Evaluator for `neq` on maps.
-struct MapNeqEvaluator {
+/// Evaluator for `neq` using `neq_dyn`
+struct DynNeqEvaluator {
     lhs: ValueRef,
     rhs: ValueRef,
 }
 
-impl Evaluator for MapNeqEvaluator {
+impl Evaluator for DynNeqEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let lhs = info.value(&self.lhs)?.map_array()?;
-        let rhs = info.value(&self.rhs)?.map_array()?;
+        let lhs = info.value(&self.lhs)?.array_ref()?;
+        let rhs = info.value(&self.rhs)?.array_ref()?;
         let result = arrow::compute::neq_dyn(lhs.as_ref(), rhs.as_ref())?;
         Ok(Arc::new(result))
     }
 }
 
-impl EvaluatorFactory for MapNeqEvaluator {
+impl EvaluatorFactory for DynNeqEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let (lhs, rhs) = info.unpack_arguments()?;
         Ok(Box::new(Self { lhs, rhs }))

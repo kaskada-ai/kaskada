@@ -53,21 +53,35 @@ def test_table_invalid_names() -> None:
         )
 
 
-def test_add_dataframe() -> None:
+def test_add_dataframe(golden) -> None:
     """Test adding a dataframe to a table."""
+    random.seed(1000)
     member_ids = list(range(0, 10))
     records = []
     for member_id in member_ids:
-        for _i in range(0, 100):
+        for _i in range(0, 10):
             records.append(
                 {
                     # number of seconds from epoch
-                    "time": random.randint(1000, 9000) * 1000000000000,
+                    "time": random.randint(1000, 4000) * 1000000000000,
                     "key": member_id,
                 }
             )
+    dataset1 = pd.DataFrame(records)
 
-    dataset = pd.DataFrame(records)
-    table = ArrowSource("time", "key", dataset)
-    prepared = table.run()
-    assert prepared["_time"].is_monotonic_increasing
+    table = ArrowSource("time", "key", dataset1)
+    golden(table)
+
+    records.clear()
+    for member_id in member_ids:
+        for _i in range(0, 10):
+            records.append(
+                {
+                    # number of seconds from epoch
+                    "time": random.randint(3000, 7000) * 1000000000000,
+                    "key": member_id,
+                }
+            )
+    dataset2 = pd.DataFrame(records)
+    table.add(dataset2)
+    golden(table)

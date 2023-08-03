@@ -306,7 +306,10 @@ class Expr(object):
 
     def run(self) -> pd.DataFrame:
         """Run the expression."""
-        return self._ffi_expr.execute().to_pandas()
+        batches = self._ffi_expr.execute().collect_pyarrow()
+        schema = batches[0].schema
+        table = pa.Table.from_batches(batches, schema=schema)
+        return table.to_pandas()
 
     def run_to_csv_string(self) -> str:
         """Execute the expression and return the CSV as a string."""
