@@ -292,6 +292,7 @@ macro_rules! create_typed_evaluator {
             Utf8 => $string_evaluator::try_new($info),
             Map(..) => $map_evaluator::try_new($info),
             List(..) => $list_evaluator::try_new($info),
+            // Struct(..) => $struct_evaluator::try_new($info),
             unsupported => {
                 Err(anyhow::anyhow!(format!(
                     "Unsupported type {:?} for {}",
