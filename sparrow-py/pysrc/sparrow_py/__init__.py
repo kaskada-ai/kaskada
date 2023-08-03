@@ -1,7 +1,7 @@
 """Kaskada query builder and local executon engine."""
 from typing import Dict
-from typing import Union
 from typing import List
+from typing import Union
 
 from ._windows import SinceWindow
 from ._windows import SlidingWindow

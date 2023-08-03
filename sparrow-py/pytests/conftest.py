@@ -27,9 +27,19 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
 
     def handler(
         query: sparrow_py.Expr,
-        format: Union[Literal["csv"], Literal["parquet"]] = "csv",
+        format: Union[Literal["csv"], Literal["parquet"], Literal["json"]] = "json",
     ):
-        """Check query results against a golden file."""
+        """
+        Check query results against a golden file.
+
+        Parameters
+        ----------
+        query : sparrow_py.Expr
+            The query to run.
+        format : str, optional
+            The format to store the golden file in.
+            Defaults to "json".
+        """
         nonlocal output
 
         df = query.run()
@@ -51,6 +61,8 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
                 df.to_csv(filename, index=False)
             elif format == "parquet":
                 df.to_parquet(filename)
+            elif format == "json":
+                df.to_json(filename, orient="records", lines=True)
             else:
                 raise ValueError(f"Unknown format {format}")
         else:
@@ -69,6 +81,10 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
             correct = pd.read_csv(filename, dtype=dtypes, parse_dates=parse_dates)
         elif format == "parquet":
             correct = pd.read_parquet(filename)
+        elif format == "json":
+            correct = pd.read_json(
+                filename, orient="records", lines=True, dtype=df.dtypes.to_dict()
+            )
         else:
             raise ValueError(f"Unknown format {format}")
         pd.testing.assert_frame_equal(df, correct)
