@@ -9,7 +9,10 @@ class Session:
 
 class Expr:
     def __init__(
-        self, session: Session, operation: str, args: Sequence[Expr | int | float | str]
+        self,
+        session: Session,
+        operation: str,
+        args: Sequence[Expr | int | float | str | None],
     ) -> None: ...
     def data_type(self) -> pa.DataType: ...
     def data_type_string(self) -> str: ...

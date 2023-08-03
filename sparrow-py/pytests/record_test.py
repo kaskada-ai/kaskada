@@ -26,12 +26,14 @@ def test_record(source, golden) -> None:
     m = source["m"]
     n = source["n"]
 
-    golden(record(
-        {
-            "m": m,
-            "n": n,
-        }
-    ))
+    golden(
+        record(
+            {
+                "m": m,
+                "n": n,
+            }
+        )
+    )
 
 
 def test_extend_record(source, golden) -> None:

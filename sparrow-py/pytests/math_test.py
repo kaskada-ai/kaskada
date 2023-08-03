@@ -2,7 +2,7 @@
 import pytest
 import sparrow_py as s
 from sparrow_py.sources import CsvSource
-import pandas as pd
+
 
 @pytest.fixture
 def source_int64() -> CsvSource:
@@ -25,11 +25,13 @@ def test_math_int64(golden, source_int64) -> None:
     """Test we can read a table and do basic math."""
     m = source_int64["m"]
     n = source_int64["n"]
-    golden(s.record(
-        {
-            "m": m,
-            "n": n,
-            "add": m + n,
-            "sub": m - n,
-        }
-    ))
+    golden(
+        s.record(
+            {
+                "m": m,
+                "n": n,
+                "add": m + n,
+                "sub": m - n,
+            }
+        )
+    )
