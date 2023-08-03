@@ -36,3 +36,13 @@ services:
         poetry run poe test
     volumes:
       - ./python:/src
+
+  push-timestreams:
+    build:
+      dockerfile: Dockerfile.poetry
+    container_name: push-python
+    command: ["poetry", "publish", "--build"]
+    environment:
+      - POETRY_PYPI_TOKEN_PYPI=$POETRY_PYPI_TOKEN_PYPI
+    volumes:
+      - ./timestreams:/src
