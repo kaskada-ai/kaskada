@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 /// Evaluator for the `collect` instruction.
 ///
-/// Collects a stream of values into a List. A list is produced
+/// Collects a stream of struct values into a List. A list is produced
 /// for each input value received, growing up to a maximum size.
 ///
 /// If the list is empty, an empty list is returned (rather than `null`).
@@ -79,7 +79,7 @@ impl Evaluator for CollectStructEvaluator {
                 let entity_indices = info.grouping().group_indices();
                 Self::evaluate_non_windowed(token, key_capacity, entity_indices, input, self.max)
             }
-            (false, true) => panic!("sdf"),
+            (false, true) => unimplemented!("since window aggregation unsupported"),
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
             (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
@@ -112,6 +112,68 @@ impl CollectStructEvaluator {
         entity_take_indices
     }
 
+    /// Evaluate the collect instruction for non-windowed aggregation.
+    ///
+    /// This algorithm takes advantage of the fact that [ListArray]s are
+    /// represented as a single flattened list of values and a list of offsets.
+    /// By constructing the take indices for each entity, we can then use
+    /// [sparrow_arrow::concat_take] to efficiently take the values at the indices
+    /// we need to construct the output list.
+    ///
+    /// See the following example:
+    ///
+    /// Current state: [Ben = [A, B], Jordan = [C, D]]
+    /// state.flattened: [A, B, C, D]
+    /// state.offsets: [0, 2, 4]
+    ///
+    /// New Input: [E, F, G]
+    /// Entity Indices: [Ben, Jordan, Ben]
+    ///
+    /// Concat the flattened state with the new input:
+    /// concat_state_input: [A, B, C, D, E, F, G]
+    ///
+    /// Create the current entity take indices:
+    /// { Ben: [0, 1], Jordan: [2, 3] }
+    ///
+    /// For each entity, we need to take the values at the indices
+    /// from the new input, append all indices for that entity to the
+    /// Output Take Indices, then append the number of indices to the
+    /// Output Offset builder:
+    ///
+    /// Entity: Ben, Input: [E]
+    /// Entity Take Indices: { Ben: [0, 1, 4], Jordan: [2, 3] }
+    /// Output Take Indices: [0, 1, 4]
+    /// Output Offset: [0, 3]
+    ///
+    /// Entity: Jordan, Input: [F]
+    /// Entity Take Indices: { Ben: [0, 1, 4], Jordan: [2, 3, 5] }
+    /// Output Take Indices: [0, 1, 4, 2, 3, 5]
+    /// Output Offset: [0, 3, 6]
+    ///
+    /// Entity: Ben, Input: [G]
+    /// Entity Take Indices: { Ben: [0, 1, 4, 6], Jordan: [2, 3, 5] }
+    /// Output Take Indices: [0, 1, 4, 2, 3, 5, 0, 1, 4, 6]
+    /// Output Offset: [0, 3, 6, 10]
+    ///
+    /// Then, we use [sparrow_arrow::concat_take] to concat the old flattened state
+    /// and the input together, then take the Output Take Indices. This constructs an
+    /// output:
+    ///
+    /// concat_state_input: [A, B, C, D, E, F, G]
+    /// Output Take Indices: [0, 1, 4, 2, 3, 5, 0, 1, 4, 6]
+    /// Output Values: [A, B, E, C, D, F, A, B, E, G]
+    ///
+    /// Then, with the offsets, we can construct the output lists:
+    /// [[A, B, E], [C, D, F], [A, B, E, G]]
+    ///
+    /// Lastly, the new state must be set.
+    /// The Entity Take Indices are flattened and the offsets are constructed.
+    ///
+    /// Entity Take Indices: { Ben: [0, 1, 4, 6], Jordan: [2, 3, 5] }
+    /// Flattened: [0, 1, 4, 6, 2, 3, 5]
+    /// Offsets: [0, 4, 7]
+    ///
+    /// New State: [Ben = [A, B, E, G], Jordan = [C, D, F]]
     fn evaluate_non_windowed(
         token: &mut CollectStructToken,
         key_capacity: usize,
@@ -135,6 +197,9 @@ impl CollectStructEvaluator {
 
         let mut cur_offset = 0;
         output_offset_builder.append(0);
+
+        // For each entity, append the take indices for the new input to the existing
+        // entity take indices
         for (index, entity_index) in entity_indices.values().iter().enumerate() {
             let take_index = (old_state_flat.len() + index) as u32;
             entity_take_indices
@@ -172,16 +237,12 @@ impl CollectStructEvaluator {
             None,
         );
 
+        // Construct the new state offset and values using the current entity take indices
         let mut new_state_offset_builder = BufferBuilder::new(entity_take_indices.len());
         new_state_offset_builder.append(0);
         let mut cur_state_offset = 0;
 
-        // TODO: These are referencing indices in the `input`
-        // They need to be only referencing items in "new_state"
-        // Recreate entity state each time
         let take_new_state = entity_take_indices.values().flat_map(|v| {
-            // TODO: suspect non-deterministic mapping here
-            // when I was using hashmap vs btree
             cur_state_offset += v.len() as u32;
             new_state_offset_builder.append(cur_state_offset);
             v.iter().copied().map(Some)
@@ -189,7 +250,6 @@ impl CollectStructEvaluator {
         let take_new_state = UInt32Array::from_iter(take_new_state);
 
         let new_state_values = sparrow_arrow::concat_take(old_state_flat, &input, &take_new_state)?;
-
         let new_state = ListArray::new(
             Arc::new(Field::new("item", DataType::Struct(fields), true)),
             OffsetBuffer::new(new_state_offset_builder.finish().into()),
