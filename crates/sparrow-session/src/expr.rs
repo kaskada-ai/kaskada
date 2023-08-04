@@ -12,16 +12,6 @@ impl Expr {
             _ => None,
         }
     }
-
-    pub fn equivalent(&self, other: &Expr) -> bool {
-        // This isn't quite correct -- we should lock everything and then compare.
-        // But, this is a temporary hack for the Python builder.
-        self.0.value() == other.0.value()
-            && self.0.is_new() == other.0.is_new()
-            && self.0.value_type() == other.0.value_type()
-            && self.0.grouping() == other.0.grouping()
-            && self.0.time_domain() == other.0.time_domain()
-    }
 }
 
 pub enum Literal {
