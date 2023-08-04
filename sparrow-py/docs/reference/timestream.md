@@ -10,3 +10,8 @@
     :members:
     :special-members:
 ```
+
+```{eval-rst}
+.. autoclass::  sparrow_py.Arg
+    :members:
+```

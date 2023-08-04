@@ -1,5 +1,7 @@
 """Defines classes representing Kaskada expressions."""
 
+from __future__ import annotations
+
 import sys
 from typing import Callable
 from typing import Dict
@@ -20,7 +22,10 @@ from ._result import Result
 
 
 Arg = Union["Timestream", int, str, float, bool, None]
-
+"""
+The type of arguments to most Timestream functions.
+May be a Timestream, a literal (int, str, float, bool), or null (`None`).
+"""
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
@@ -47,7 +52,7 @@ class Timestream(object):
         self._ffi_expr = ffi
 
     @staticmethod
-    def _call(func: str, *args: Arg) -> "Timestream":
+    def _call(func: str, *args: Arg) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
 
@@ -55,12 +60,13 @@ class Timestream(object):
         ----------
         func : str
             Name of the function to apply.
-        *args : Arg
+        *args : Timestream | int | str | float | bool | None
             List of arguments to the expression.
 
         Returns
         -------
-        Timestream representing the result of the function applied to the arguments.
+        Timestream
+            Timestream representing the result of the function applied to the arguments.
 
         Raises
         ------
@@ -93,22 +99,20 @@ class Timestream(object):
     def pipe(
         self,
         func: Union[
-            Callable[..., "Timestream"], Tuple[Callable[..., "Timestream"], str]
+            Callable[..., Timestream], Tuple[Callable[..., Timestream], str]
         ],
         *args: Arg,
         **kwargs: Arg,
-    ) -> "Timestream":
+    ) -> Timestream:
         """
         Apply chainable functions that produce Timestreams.
 
         Parameters
         ----------
-        func : function
-            Function to apply to this Timestream.
-            ``args``, and ``kwargs`` are passed into ``func``.
-            Alternatively a ``(callable, keyword)`` tuple where
-            ``keyword`` is a string indicating the keyword of
-            ``callable`` that expects the Timestream.
+        func : Callable[..., Timestream] | Tuple[Callable[..., Timestream], str]
+            Function to apply to this Timestream.  Alternatively a `(func,
+            keyword)` tuple where `keyword` is a string indicating the keyword
+            of `func` that expects the Timestream.
         args : iterable, optional
             Positional arguments passed into ``func``.
         kwargs : mapping, optional
@@ -161,7 +165,7 @@ class Timestream(object):
         else:
             return func(self, *args, **kwargs)
 
-    def __add__(self, rhs: Arg) -> "Timestream":
+    def __add__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream adding this and `rhs`.
 
@@ -172,11 +176,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `self + rhs`.
         """
         return Timestream._call("add", self, rhs)
 
-    def __radd__(self, lhs: Arg) -> "Timestream":
+    def __radd__(self, lhs: Arg) -> Timestream:
         """
         Create a Timestream adding `lhs` and this.
 
@@ -187,11 +192,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `lhs + self`.
         """
         return Timestream._call("add", lhs, self)
 
-    def __sub__(self, rhs: Arg) -> "Timestream":
+    def __sub__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream substracting `rhs` from this.
 
@@ -202,11 +208,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `self - rhs`.
         """
         return Timestream._call("sub", self, rhs)
 
-    def __rsub__(self, lhs: Arg) -> "Timestream":
+    def __rsub__(self, lhs: Arg) -> Timestream:
         """
         Create a Timestream substracting this from the `lhs`.
 
@@ -217,11 +224,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `lhs - self`.
         """
         return Timestream._call("sub", lhs, self)
 
-    def __mul__(self, rhs: Arg) -> "Timestream":
+    def __mul__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream multiplying this and `rhs`.
 
@@ -232,11 +240,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `self * rhs`.
         """
         return Timestream._call("mul", self, rhs)
 
-    def __rmul__(self, lhs: Arg) -> "Timestream":
+    def __rmul__(self, lhs: Arg) -> Timestream:
         """
         Create a Timestream multiplying `lhs` and this.
 
@@ -247,11 +256,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `lhs * self`.
         """
         return Timestream._call("mul", lhs, self)
 
-    def __truediv__(self, divisor: Arg) -> "Timestream":
+    def __truediv__(self, divisor: Arg) -> Timestream:
         """
         Create a Timestream by dividing this and `divisor`.
 
@@ -262,11 +272,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `self / divisor`.
         """
         return Timestream._call("div", self, divisor)
 
-    def __rtruediv__(self, dividend: Arg) -> "Timestream":
+    def __rtruediv__(self, dividend: Arg) -> Timestream:
         """
         Create a Timestream by dividing this and `dividend`.
 
@@ -277,11 +288,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting Timestream.
+        Timestream
+            The Timestream resulting from `dividend / self`.
         """
         return Timestream._call("div", dividend, self)
 
-    def __lt__(self, rhs: Arg) -> "Timestream":
+    def __lt__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream that is true if this is less than `rhs`.
 
@@ -292,11 +304,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream resulting from `self < rhs`.
         """
         return Timestream._call("lt", self, rhs)
 
-    def __le__(self, rhs: Arg) -> "Timestream":
+    def __le__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream that is true if this is less than or equal to `rhs`.
 
@@ -307,11 +320,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream resulting from `self <= rhs`.
         """
         return Timestream._call("lte", self, rhs)
 
-    def __gt__(self, rhs: Arg) -> "Timestream":
+    def __gt__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream that is true if this is greater than `rhs`.
 
@@ -322,11 +336,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream resulting from `self > rhs`.
         """
         return Timestream._call("gt", self, rhs)
 
-    def __ge__(self, rhs: Arg) -> "Timestream":
+    def __ge__(self, rhs: Arg) -> Timestream:
         """
         Create a Timestream that is true if this is greater than or equal to `rhs`.
 
@@ -337,11 +352,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream resulting from `self >= rhs`.
         """
         return Timestream._call("gte", self, rhs)
 
-    def __and__(self, rhs: Arg) -> "Timestream":
+    def __and__(self, rhs: Arg) -> Timestream:
         """
         Create the logical conjunction of this Timestream and `rhs`.
 
@@ -352,11 +368,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream resulting from `self & rhs`.
         """
         return Timestream._call("and", self, rhs)
 
-    def __or__(self, rhs: Arg) -> "Timestream":
+    def __or__(self, rhs: Arg) -> Timestream:
         """
         Create the logical disjunction of this Timestream nad `rhs`.
 
@@ -367,11 +384,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream resulting from `self | rhs`.
         """
         return Timestream._call("or", self, rhs)
 
-    def eq(self, other: Arg) -> "Timestream":
+    def eq(self, other: Arg) -> Timestream:
         """
         Create a Timestream that is true if this is equal to `other`.
 
@@ -382,11 +400,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream indicating whether the `self` and `other` are equal.
         """
         return Timestream._call("eq", self, other)
 
-    def ne(self, other: Arg) -> "Timestream":
+    def ne(self, other: Arg) -> Timestream:
         """
         Create a Timestream that is true if this is not equal to `other`.
 
@@ -397,11 +416,12 @@ class Timestream(object):
 
         Returns
         -------
-        The resulting boolean Timestream.
+        Timestream
+            The Timestream indicating whether `self` and `other` are not equal.
         """
         return Timestream._call("neq", self, other)
 
-    def __getitem__(self, key: Arg) -> "Timestream":
+    def __getitem__(self, key: Arg) -> Timestream:
         """
         Index into the elements of a Timestream.
 
@@ -419,7 +439,8 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream corresponding to the resulting item in each value.
+        Timestream
+            Timestream with the resulting value (or `null` if absent) at each point.
 
         Raises
         ------
@@ -436,7 +457,7 @@ class Timestream(object):
         else:
             raise TypeError(f"Cannot index into {data_type}")
 
-    def select(self, *args: str) -> "Timestream":
+    def select(self, *args: str) -> Timestream:
         """
         Select the given fields from a Timestream of records.
 
@@ -447,11 +468,12 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream with the same records limited to the specified fields.
+        Timestream
+            Timestream with the same records limited to the specified fields.
         """
         return Timestream._call("select_fields", self, *args)
 
-    def remove(self, *args: str) -> "Timestream":
+    def remove(self, *args: str) -> Timestream:
         """
         Remove the given fileds from a Timestream of records.
 
@@ -462,11 +484,12 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream with the same records and the given fields excluded.
+        Timestream
+            Timestream with the same records and the given fields excluded.
         """
         return Timestream._call("remove_fields", self, *args)
 
-    def extend(self, fields: Dict[str, "Timestream"]) -> "Timestream":
+    def extend(self, fields: Dict[str, Timestream]) -> Timestream:
         """
         Extend this Timestream of records with additional fields.
 
@@ -480,20 +503,22 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream with the given fields added.
+        Timestream
+            Timestream with the given fields added.
         """
         # This argument order is weird, and we shouldn't need to make a record
         # in order to do the extension.
         extension = record(fields)
         return Timestream._call("extend_record", extension, self)
 
-    def neg(self) -> "Timestream":
+    def neg(self) -> Timestream:
         """
         Create a Timestream from the logical or numeric negation of self.
 
         Returns
         -------
-        Timestream with the logical or numeric negation of self.
+        Timestream
+            Timestream with the logical or numeric negation of self.
         """
         data_type = self.data_type
         if data_type == pa.bool_():
@@ -501,29 +526,31 @@ class Timestream(object):
         else:
             return Timestream._call("neg", self)
 
-    def is_null(self) -> "Timestream":
+    def is_null(self) -> Timestream:
         """
         Create a boolean Timestream containing `true` when self is `null`.
 
         Returns
         -------
-        Timestream with `true` when self is `null` and `false` when it isn't.
+        Timestream
+            Timestream with `true` when self is `null` and `false` when it isn't.
         """
         return self.is_not_null().neg()
 
-    def is_not_null(self) -> "Timestream":
+    def is_not_null(self) -> Timestream:
         """
         Create a boolean Timestream containing `true` when self is not `null`.
 
         Returns
         -------
-        Timestream with `true` when self is not `null` and `false` when it is.
+        Timestream
+            Timestream with `true` when self is not `null` and `false` when it is.
         """
         return Timestream._call("is_valid", self)
 
     def collect(
         self, max: Optional[int], window: Optional["kt.Window"] = None
-    ) -> "Timestream":
+    ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
 
@@ -540,11 +567,12 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream containing the collected list at each point.
+        Timestream
+            Timestream containing the collected list at each point.
         """
         return _aggregation("collect", self, window, max)
 
-    def sum(self, window: Optional["kt.Window"] = None) -> "Timestream":
+    def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
 
@@ -558,11 +586,12 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream containing the sum up to and including each point.
+        Timestream
+            Timestream containing the sum up to and including each point.
         """
         return _aggregation("sum", self, window)
 
-    def first(self, window: Optional["kt.Window"] = None) -> "Timestream":
+    def first(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
         Create a Timestream containing the first value in the `window`.
 
@@ -576,12 +605,13 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream containing the first value for the key in the window for each
-        point.
+        Timestream
+            Timestream containing the first value for the key in the window for
+            each point.
         """
         return _aggregation("first", self, window)
 
-    def last(self, window: Optional["kt.Window"] = None) -> "Timestream":
+    def last(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
         Create a Timestream containing the last value in the `window`.
 
@@ -595,8 +625,9 @@ class Timestream(object):
 
         Returns
         -------
-        Timestream containing the last value for the key in the window for each
-        point.
+        Timestream
+            Timestream containing the last value for the key in the window for
+            each point.
         """
         return _aggregation("last", self, window)
 
@@ -613,7 +644,8 @@ class Timestream(object):
 
         Returns
         -------
-        The Pandas DataFrame containing the first `limit` points.
+        pd.DataFrame
+            The Pandas DataFrame containing the first `limit` points.
         """
         return self.run(row_limit=limit).to_pandas()
 
@@ -662,7 +694,8 @@ def _aggregation(
 
     Returns
     -------
-    The resulting Timestream.
+    Timestream
+        The resulting Timestream.
 
     Raises
     ------
@@ -694,9 +727,10 @@ def record(fields: Dict[str, Timestream]) -> Timestream:
 
     Returns
     -------
-    Timestream containing records with the given fields.
+    Timestream
+        Timestream containing records with the given fields.
     """
     import itertools
 
-    args: List[Union[str, "Timestream"]] = list(itertools.chain(*fields.items()))
+    args: List[Union[str, Timestream]] = list(itertools.chain(*fields.items()))
     return Timestream._call("record", *args)

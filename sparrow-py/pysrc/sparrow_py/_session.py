@@ -32,7 +32,8 @@ def _get_session() -> _ffi.Session:
 
     Returns
     -------
-    The FFI session handle.
+    _ffi.Session
+        The FFI session handle.
 
     Raises
     ------

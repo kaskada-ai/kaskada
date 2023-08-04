@@ -11,7 +11,7 @@ hide-toc: true
 
 ## Getting Started with Timestreams
 
-Getting started with Timestreams is as simple as `pip` installing the Python library and
+Getting started with Timestreams is as simple as `pip` installing the Python library, loading some data and running a query.
 
 ```python
 import timestreams as t
