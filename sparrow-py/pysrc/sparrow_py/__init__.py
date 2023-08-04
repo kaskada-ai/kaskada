@@ -9,6 +9,7 @@ from ._result import Result
 from ._session import init_session
 from ._windows import SinceWindow
 from ._windows import SlidingWindow
+from ._windows import Window
 
 
 def record(fields: Dict[str, Expr]) -> Expr:
@@ -23,6 +24,7 @@ __all__ = [
     "Expr",
     "init_session",
     "record",
+    "Window",
     "SinceWindow",
     "SlidingWindow",
     "sources",
