@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ._expr import Expr
+from ._timestream import Timestream
 
 
 @dataclass(frozen=True)
@@ -18,12 +18,12 @@ class SinceWindow(Window):
 
     Parameters
     ----------
-    predicate : Expr
-        The predicate to use for the window.
+    predicate : Timestream
+        The boolean Timestream to use as predicate for the window.
         Each time the predicate evaluates to true the window will be cleared.
     """
 
-    predicate: Expr
+    predicate: Timestream
 
 
 @dataclass(frozen=True)
@@ -36,10 +36,10 @@ class SlidingWindow(Window):
     duration : int
         The number of sliding intervals to use in the window.
 
-    predicate : Expr
-        The predicate to use for the window.
+    predicate : Timestream
+        The boolean Timestream to use as predicate for the window
         Each time the predicate evaluates to true the window starts a new interval.
     """
 
     duration: int
-    predicate: Expr
+    predicate: Timestream

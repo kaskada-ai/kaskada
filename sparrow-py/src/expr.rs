@@ -60,14 +60,6 @@ impl Expr {
         Ok(Self { rust_expr, session })
     }
 
-    /// Return true if the two expressions are equivalent.
-    ///
-    /// Pyo3 doesn't currently support `__eq__` and we don't want to do `__richcmp__`.
-    /// This is mostly only used for testing, so it seems ok.
-    fn equivalent(&self, other: &Expr) -> PyResult<bool> {
-        Ok(self.rust_expr.equivalent(&other.rust_expr) && self.session == other.session)
-    }
-
     /// Return the session this expression is in.
     fn session(&self) -> Session {
         self.session.clone()

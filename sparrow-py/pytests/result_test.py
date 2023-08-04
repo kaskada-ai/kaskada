@@ -27,6 +27,7 @@ def test_iterate_pandas(golden, source_int64) -> None:
     with pytest.raises(StopIteration):
         next(results)
 
+
 def test_iterate_rows(golden, source_int64) -> None:
     results = source_int64.run(row_limit=2).iter_rows()
     assert next(results)["m"] == 5
