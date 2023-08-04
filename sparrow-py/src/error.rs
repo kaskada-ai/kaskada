@@ -74,3 +74,22 @@ impl From<Error> for PyErr {
             .unwrap_or_else(|| PyRuntimeError::new_err(format!("{value:#}")))
     }
 }
+
+pub(crate) trait IntoError {
+    type Result;
+    fn into_error(self) -> Self::Result;
+}
+
+impl<E: Into<Error>> IntoError for E {
+    type Result = Error;
+    fn into_error(self) -> Self::Result {
+        self.into()
+    }
+}
+
+impl<T, E: Into<Error>> IntoError for std::result::Result<T, E> {
+    type Result = Result<T>;
+    fn into_error(self) -> Self::Result {
+        self.map_err(|e| e.into())
+    }
+}

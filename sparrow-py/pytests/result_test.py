@@ -18,19 +18,29 @@ def source_int64() -> kt.sources.CsvSource:
     return kt.sources.CsvSource("time", "key", content)
 
 
-def test_iterate_pandas(golden, source_int64) -> None:
-    results = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
+def test_iter_pandas(golden, source_int64) -> None:
+    batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
 
     # 4 rows, max 2 per batch = 2 batches
-    golden(next(results))
-    golden(next(results))
+    golden(next(batches))
+    golden(next(batches))
     with pytest.raises(StopIteration):
-        next(results)
+        next(batches)
 
 
-def test_iterate_rows(golden, source_int64) -> None:
+def test_iter_rows(golden, source_int64) -> None:
     results = source_int64.run(row_limit=2).iter_rows()
     assert next(results)["m"] == 5
     assert next(results)["m"] == 24
     with pytest.raises(StopIteration):
         next(results)
+
+@pytest.mark.asyncio
+async def test_iter_pandas_async(golden, source_int64) -> None:
+    batches = source_int64.run(row_limit = 4, max_batch_size=2).iter_pandas_async()
+
+    # 4 rows, max 2 per batch = 2 batches
+    golden(await anext(batches))
+    golden(await anext(batches))
+    with pytest.raises(StopAsyncIteration):
+        await anext(batches)
