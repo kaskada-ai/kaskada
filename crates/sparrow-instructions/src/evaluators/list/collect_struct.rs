@@ -4,16 +4,16 @@ use crate::{
 };
 use arrow::array::{
     new_empty_array, Array, ArrayRef, AsArray, BufferBuilder, ListArray, ListBuilder,
-    PrimitiveArray, StringBuilder, StructBuilder, UInt32Array, UInt32Builder,
+    PrimitiveArray, StringBuilder, StructArray, StructBuilder, UInt32Array, UInt32Builder,
 };
 use arrow::buffer::{OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::{DataType, UInt32Type};
 use arrow_schema::Field;
 use hashbrown::HashMap;
-use itertools::izip;
+use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 
 /// Evaluator for the `collect` instruction.
@@ -104,6 +104,19 @@ impl CollectStructEvaluator {
         token.resize(len)
     }
 
+    /// Construct the entity take indices for the current state.
+    fn construct_entity_take_indices(
+        token: &mut CollectStructToken,
+    ) -> BTreeMap<u32, VecDeque<u32>> {
+        let mut entity_take_indices = BTreeMap::<u32, VecDeque<u32>>::new();
+        let state = token.state.as_list::<i32>();
+        for (index, (start, end)) in state.offsets().iter().tuple_windows().enumerate() {
+            // The index of enumeration is the entity index
+            entity_take_indices.insert(index as u32, (*start as u32..*end as u32).collect());
+        }
+        entity_take_indices
+    }
+
     fn evaluate_non_windowed(
         token: &mut CollectStructToken,
         key_capacity: usize,
@@ -116,6 +129,11 @@ impl CollectStructEvaluator {
 
         Self::ensure_entity_capacity(token, key_capacity)?;
 
+        // Recreate the take indices for the current state
+        let mut entity_take_indices = Self::construct_entity_take_indices(token);
+        println!("entity_take_indices: {:?}", entity_take_indices);
+        println!("State: {:?}", token.state.as_list::<i32>().values());
+
         let old_state = token.state.as_list::<i32>();
         let old_state_flat = old_state.values();
 
@@ -127,8 +145,7 @@ impl CollectStructEvaluator {
         output_offset_builder.append(0);
         for (index, entity_index) in entity_indices.values().iter().enumerate() {
             let take_index = (old_state_flat.len() + index) as u32;
-            token
-                .entity_take_indices
+            entity_take_indices
                 .entry(*entity_index)
                 .and_modify(|v| {
                     v.push_back(take_index);
@@ -139,7 +156,7 @@ impl CollectStructEvaluator {
                 .or_insert(vec![take_index].into());
 
             // already verified key exists, or created entry if not, in previous step
-            let entity_take = token.entity_take_indices.get(entity_index).unwrap();
+            let entity_take = entity_take_indices.get(entity_index).unwrap();
             println!("Entity: {}, take: {:?}", entity_index, entity_take);
 
             // Append this entity's take indices to the take output builder
@@ -167,14 +184,14 @@ impl CollectStructEvaluator {
 
         println!("Output: {:?}", result);
 
-        let mut new_state_offset_builder = BufferBuilder::new(token.entity_take_indices.len());
+        let mut new_state_offset_builder = BufferBuilder::new(entity_take_indices.len());
         new_state_offset_builder.append(0);
         let mut cur_state_offset = 0;
 
         // TODO: These are referencing indices in the `input`
         // They need to be only referencing items in "new_state"
         // Recreate entity state each time
-        let take_new_state = token.entity_take_indices.values().flat_map(|v| {
+        let take_new_state = entity_take_indices.values().flat_map(|v| {
             // TODO: suspect non-deterministic mapping here
             // when I was using hashmap vs btree
             cur_state_offset += v.len() as u32;

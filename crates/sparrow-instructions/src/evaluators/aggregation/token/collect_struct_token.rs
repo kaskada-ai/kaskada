@@ -1,7 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
-
 use arrow::array::{new_null_array, Array, ArrayRef, AsArray};
-use hashbrown::HashMap;
 
 use crate::{ComputeStore, StateToken, StoreKey};
 
@@ -13,9 +10,6 @@ pub struct CollectStructToken {
     /// A [ListArray] comprised of lists of structs for each entity.
     #[serde(with = "sparrow_arrow::serde::array_ref")]
     pub state: ArrayRef,
-    /// TODO: does this make sense
-    /// This is internally mutated, is that okay?
-    pub entity_take_indices: BTreeMap<u32, VecDeque<u32>>,
 }
 
 impl StateToken for CollectStructToken {
@@ -34,11 +28,7 @@ impl StateToken for CollectStructToken {
 
 impl CollectStructToken {
     pub fn new(state: ArrayRef) -> Self {
-        Self {
-            state,
-            // entity_take_indices: HashMap::new(),
-            entity_take_indices: BTreeMap::new(),
-        }
+        Self { state }
     }
 
     pub fn resize(&mut self, len: usize) -> anyhow::Result<()> {
