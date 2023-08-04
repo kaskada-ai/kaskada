@@ -15,6 +15,7 @@ import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
 from ._execution import ExecutionOptions
+from ._result import Result
 
 
 #: The type of arguments to expressions.
@@ -126,6 +127,7 @@ class Expr(object):
         -----
         Use ``.pipe`` when chaining together functions that expect
         expressions.
+
         Instead of writing
 
         >>> func(g(h(df), arg1=a), arg2=b, arg3=c)  # doctest: +SKIP
@@ -304,37 +306,33 @@ class Expr(object):
         """Return the last aggregation of the expression."""
         return _aggregation("last", self, window)
 
-    def show(self, limit: int = 100) -> None:
+    def preview(self, limit: int = 100) -> pd.DataFrame:
         """
-        Print the first N rows of the result.
+        Return the first N rows of the result as a Pandas DataFrame.
 
-        This is intended for debugging purposes.
+        This makes it easy to preview the results of the expression while
+        developing queries.
 
         Parameters
         ----------
-        limit : int
+        limit : int, default 100
             Maximum number of rows to print.
         """
-        df = self.run(row_limit=limit)
-        try:
-            import ipython  # type: ignore
+        return self.run(row_limit=limit).to_pandas()
 
-            ipython.display(df)
-        except ImportError:
-            print(df)
+    def run(self, row_limit: Optional[int] = None, max_batch_size: Optional[int] = None) -> Result:
+        """
+        Run the expression once, until completed.
 
-    def run(self, row_limit: Optional[int] = None) -> pd.DataFrame:
-        """Run the expression."""
-        options = ExecutionOptions(row_limit=row_limit)
-        batches = self._ffi_expr.execute(options).collect_pyarrow()
-        schema = batches[0].schema
-        table = pa.Table.from_batches(batches, schema=schema)
-        return table.to_pandas()
-
-    def run_to_csv_string(self) -> str:
-        """Execute the expression and return the CSV as a string."""
-        # Convert PyArrow -> Pandas -> CSV, omitting the index (row).
-        return self.run().to_csv(index=False)
+        Parameters
+        ----------
+        row_limit : Optional[int]
+            The maximum number of rows to return.
+            If not specified (the default), all rows are returned.
+        """
+        options = ExecutionOptions(row_limit=row_limit, max_batch_size=max_batch_size)
+        execution = self._ffi_expr.execute(options)
+        return Result(execution)
 
 
 def _aggregation(

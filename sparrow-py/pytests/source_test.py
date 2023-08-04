@@ -1,4 +1,3 @@
-"""Tests for the Kaskada query builder."""
 import random
 
 import pandas as pd
@@ -8,7 +7,6 @@ import sparrow_py as kt
 
 
 def test_table_valid() -> None:
-    """Create a table referencing valid fields."""
     schema = pa.schema(
         [
             pa.field("time", pa.int32(), nullable=False),
@@ -20,7 +18,6 @@ def test_table_valid() -> None:
 
 
 def test_table_invalid_names() -> None:
-    """Create a table with invalid column names."""
     schema = pa.schema(
         [
             pa.field("time", pa.int32(), nullable=False),
@@ -53,7 +50,6 @@ def test_table_invalid_names() -> None:
 
 
 def test_add_dataframe(golden) -> None:
-    """Test adding a dataframe to a table."""
     random.seed(1000)
     member_ids = list(range(0, 10))
     records = []
@@ -69,7 +65,6 @@ def test_add_dataframe(golden) -> None:
     dataset1 = pd.DataFrame(records)
 
     table = kt.sources.ArrowSource("time", "key", dataset1)
-    table.show()
     golden(table)
 
     records.clear()

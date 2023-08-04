@@ -1,11 +1,9 @@
-"""Tests for the collect function."""
 import pytest
 import sparrow_py as kt
 
 
 @pytest.fixture(scope="module")
 def source() -> kt.sources.CsvSource:
-    """Create an empty table for testing."""
     content = "\n".join(
         [
             "time,key,m,n",
@@ -21,7 +19,6 @@ def source() -> kt.sources.CsvSource:
 
 
 def test_collect_basic(source, golden) -> None:
-    """Test we can collect values to a list."""
     m = source["m"]
     n = source["n"]
     golden(
@@ -37,7 +34,6 @@ def test_collect_basic(source, golden) -> None:
 
 
 def test_collect_with_max(source, golden) -> None:
-    """Test we can collect values to a list with a max."""
     m = source["m"]
     n = source["n"]
     golden(
@@ -53,6 +49,5 @@ def test_collect_with_max(source, golden) -> None:
 
 
 def test_collect_since_window(source, golden) -> None:
-    """Test we can collect values to a list in a since window."""
     m = source["m"]
     golden(kt.record({"m": m, "since_m": m.sum(window=kt.SinceWindow(m > 10))}))

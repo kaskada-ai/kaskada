@@ -57,7 +57,7 @@ def check_lint(session: Session) -> None:
     )
     session.run
     session.run("black", "--check", *args)
-    session.run("darglint", *args)
+    session.run("darglint", "pysrc")
     session.run("flake8", *args)
     session.run("isort", "--filter-files", "--check-only", *args)
     # No way to run this as a check.

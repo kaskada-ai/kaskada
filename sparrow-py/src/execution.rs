@@ -28,4 +28,17 @@ impl Execution {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(results)
     }
+
+    fn next_pyarrow(&mut self, py: Python<'_>) -> Result<Option<PyObject>, Error> {
+        let execution = self
+            .0
+            .as_mut()
+            .ok_or_else(|| error_stack::report!(ErrorContext::ResultAlreadyCollected))?;
+        let batch = execution.next_blocking()?;
+        let result = match batch {
+            Some(batch) => Some(batch.to_pyarrow(py)?),
+            None => None,
+        };
+        Ok(result)
+    }
 }

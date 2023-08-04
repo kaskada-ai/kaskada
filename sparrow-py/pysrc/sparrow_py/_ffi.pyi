@@ -12,6 +12,7 @@ class Session:
 
 class Execution(object):
     def collect_pyarrow(self) -> List[pa.RecordBatch]: ...
+    def next_pyarrow(self) -> Optional[pa.RecordBatch]: ...
 
 class Expr:
     def __init__(
