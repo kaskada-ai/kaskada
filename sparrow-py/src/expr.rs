@@ -127,6 +127,9 @@ fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::Execution
             let py = options.py();
             Ok(sparrow_session::ExecutionOptions {
                 row_limit: options.getattr(pyo3::intern!(py, "row_limit"))?.extract()?,
+                max_batch_size: options
+                    .getattr(pyo3::intern!(py, "max_batch_size"))?
+                    .extract()?,
             })
         }
     }

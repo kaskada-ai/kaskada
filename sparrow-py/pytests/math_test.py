@@ -1,11 +1,9 @@
-"""Tests for the Kaskada query builder."""
 import pytest
 import sparrow_py as kt
 
 
 @pytest.fixture
 def source_int64() -> kt.sources.CsvSource:
-    """Create an empty table for testing."""
     content = "\n".join(
         [
             "time,key,m,n",
@@ -21,7 +19,6 @@ def source_int64() -> kt.sources.CsvSource:
 
 
 def test_math_int64(golden, source_int64) -> None:
-    """Test we can read a table and do basic math."""
     m = source_int64["m"]
     n = source_int64["n"]
     golden(

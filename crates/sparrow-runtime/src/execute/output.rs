@@ -80,10 +80,12 @@ pub(super) fn write(
     batches: BoxStream<'static, Batch>,
     progress_updates_tx: tokio::sync::mpsc::Sender<ProgressUpdate>,
     destination: Destination,
+    max_batch_size: Option<usize>,
 ) -> error_stack::Result<impl Future<Output = Result<(), Error>> + 'static, Error> {
     let sink_schema = determine_output_schema(context)?;
 
     // Clone things that need to move into the async stream.
+    let max_batch_size = max_batch_size.unwrap_or(usize::MAX);
     let sink_schema_clone = sink_schema.clone();
     let key_hash_inverse = context.key_hash_inverse.clone();
     let batches = async_stream::stream! {
@@ -107,7 +109,18 @@ pub(super) fn write(
                 batch
             };
 
-            yield post_process_batch(&sink_schema, batch, &key_hash_inverse).await;
+
+            if batch.num_rows() > max_batch_size {
+                for start in (0..batch.num_rows()).step_by(max_batch_size) {
+                    let end = (start + max_batch_size).min(batch.num_rows());
+                    let length = end - start;
+                    let batch = batch.slice(start, length);
+                    yield post_process_batch(&sink_schema, batch, &key_hash_inverse).await;
+                }
+            } else {
+                yield post_process_batch(&sink_schema, batch, &key_hash_inverse).await;
+            }
+
 
             if limit_rows && remaining == 0 {
                 break;

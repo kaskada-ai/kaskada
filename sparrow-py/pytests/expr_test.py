@@ -1,4 +1,3 @@
-"""Tests for the Kaskada query builder."""
 import sys
 
 import pyarrow as pa
@@ -8,7 +7,6 @@ import sparrow_py as kt
 
 @pytest.fixture(scope="module")
 def source1() -> kt.sources.Source:
-    """Create a table for testing."""
     schema = pa.schema(
         [
             pa.field("time", pa.int32(), nullable=False),
@@ -21,13 +19,11 @@ def source1() -> kt.sources.Source:
 
 
 def test_field_ref(source1) -> None:
-    """Test for field references."""
     field_ref_long = source1["x"]
     assert field_ref_long.data_type == pa.float64()
 
 
 def test_field_ref_no_such_field(source1) -> None:
-    """Test error when there is no such field."""
     with pytest.raises(ValueError, match="Illegal field reference"):
         # This raises a "NoSuchAttribute" error.
         # We currently catch this in Python and don't do anything to
@@ -39,19 +35,16 @@ def test_field_ref_no_such_field(source1) -> None:
 
 
 def test_field_ref_not_a_struct(source1) -> None:
-    """Test error when there the base is not a struct."""
     with pytest.raises(TypeError, match="Cannot index into double"):
         source1["x"]["x"]
 
 
 def test_expr(source1) -> None:
-    """Test creating an expression node."""
     x = source1["x"]
     assert x + 1 == x + 1
 
 
 def test_expr_comparison(source1) -> None:
-    """Test basic comparisons."""
     x = source1["x"]
     assert (x > 1) == (x > 1)
 
@@ -65,7 +58,6 @@ def test_expr_comparison(source1) -> None:
 
 
 # def test_expr_pipe(source1) -> None:
-#     """Test using `pipe` to create expressions."""
 #     assert source1.x.pipe(math.add, 1) == math.add(source1.x, 1)
 #     assert source1.x.pipe((math.add, "rhs"), 1) == math.add(1, rhs=source1.x)
 
@@ -74,7 +66,6 @@ def test_expr_comparison(source1) -> None:
 
 
 def test_expr_arithmetic_types(source1) -> None:
-    """Test type inference and type errors of arithmetic expressions."""
     x = source1["x"]
     assert (x.eq(1)).data_type == pa.bool_()
     assert (x + 1).data_type == pa.float64()
@@ -91,8 +82,7 @@ def test_expr_arithmetic_types(source1) -> None:
         assert "Arg[1]: Expr of type int32" in e.value.__notes__
 
 
-def test_expr_show(source1, capsys) -> None:
-    """Test the output of showing a dataframe."""
+def test_expr_preview(source1, golden) -> None:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -106,18 +96,4 @@ def test_expr_show(source1, capsys) -> None:
     )
     source = kt.sources.CsvSource("time", "key", content)
 
-    source.show(limit=4)
-
-    output = capsys.readouterr().out
-    assert output == "\n".join(
-        [
-            "                _time  _subsort             _key_hash  ... key     m   n",
-            "0 1996-12-20 00:39:57         0  12960666915911099378  ...   A   5.0  10",
-            "1 1996-12-20 00:39:58         1   2867199309159137213  ...   B  24.0   3",
-            "2 1996-12-20 00:39:59         2  12960666915911099378  ...   A  17.0   6",
-            "3 1996-12-20 00:40:00         3  12960666915911099378  ...   A   NaN   9",
-            "",
-            "[4 rows x 8 columns]",
-            "",
-        ]
-    )
+    golden(source.preview(limit=4))

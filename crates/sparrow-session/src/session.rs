@@ -27,6 +27,8 @@ pub struct Session {
 pub struct ExecutionOptions {
     /// The maximum number of rows to return.
     pub row_limit: Option<usize>,
+    /// The maximum number of rows to return in a single batch.
+    pub max_batch_size: Option<usize>,
 }
 
 /// Adds a table to the session.
@@ -329,7 +331,10 @@ static RECORD_EXTENSION_ARGUMENTS: [Located<String>; 2] = [
 
 impl ExecutionOptions {
     fn to_sparrow_options(&self) -> sparrow_runtime::execute::ExecutionOptions {
-        let mut options = sparrow_runtime::execute::ExecutionOptions::default();
+        let mut options = sparrow_runtime::execute::ExecutionOptions {
+            max_batch_size: self.max_batch_size,
+            ..Default::default()
+        };
 
         if let Some(row_limit) = self.row_limit {
             options.limits = Some(Limits {

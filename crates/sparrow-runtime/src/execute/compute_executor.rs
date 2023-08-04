@@ -87,6 +87,7 @@ impl ComputeExecutor {
                 futures::StreamExt::boxed(tokio_stream::wrappers::ReceiverStream::new(output_rx)),
                 context.progress_updates_tx.clone(),
                 destination,
+                runtime_options.max_batch_size,
             )
             .change_context(Internal("error writing output"))?
             .map_err(|e| e.change_context(Internal("error writing output"))),

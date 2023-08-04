@@ -79,6 +79,8 @@ pub struct ExecutionOptions {
     pub compute_snapshot_config: Option<ComputeSnapshotConfig>,
     pub limits: Option<Limits>,
     pub stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
+    /// Maximum rows to emit in a single batch.
+    pub max_batch_size: Option<usize>,
 }
 
 impl ExecutionOptions {
@@ -244,6 +246,7 @@ pub async fn execute_new(
     let runtime_options = RuntimeOptions {
         limits: options.limits.unwrap_or_default(),
         flight_record_path: None,
+        max_batch_size: options.max_batch_size,
     };
 
     let compute_executor = ComputeExecutor::try_spawn(

@@ -1,11 +1,9 @@
-"""Tests for the Kaskada query builder."""
 import pytest
 import sparrow_py as kt
 
 
 @pytest.fixture
 def source() -> kt.sources.CsvSource:
-    """Create an empty table for testing."""
     content = "\n".join(
         [
             "time,key,m,n",
@@ -21,7 +19,6 @@ def source() -> kt.sources.CsvSource:
 
 
 def test_record(source, golden) -> None:
-    """Test we can create a record."""
     m = source["m"]
     n = source["n"]
 
@@ -36,12 +33,10 @@ def test_record(source, golden) -> None:
 
 
 def test_extend_record(source, golden) -> None:
-    """Test we can create a record."""
     m = source["m"]
     n = source["n"]
     golden(source.extend({"add": m + n}))
 
 
 def test_select_record(source, golden) -> None:
-    """Test we can select some fields from a record."""
     golden(source.select("m", "n"))

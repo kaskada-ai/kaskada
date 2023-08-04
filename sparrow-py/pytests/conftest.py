@@ -1,4 +1,3 @@
-"""PyTest configuration for Sparrow tests."""
 import os
 from typing import Literal
 from typing import Union
@@ -11,12 +10,10 @@ from sparrow_py import init_session
 
 @pytest.fixture(autouse=True, scope="session")
 def session() -> None:
-    """Automatically initialize the session for this PyTest session."""
     init_session()
 
 
 def pytest_addoption(parser: pytest.Parser):
-    """Add options to pytest."""
     parser.addoption("--save-golden", action="store_true", help="update golden files")
 
 
@@ -26,7 +23,7 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa
     output = 0
 
     def handler(
-        query: sparrow_py.Expr,
+        query: Union[sparrow_py.Expr, pd.DataFrame],
         format: Union[Literal["csv"], Literal["parquet"], Literal["json"]] = "json",
     ):
         """
@@ -34,8 +31,8 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa
 
         Parameters
         ----------
-        query : sparrow_py.Expr
-            The query to run.
+        query : sparrow_py.Expr to execute or pd.DataFrame
+            The query to run (or a result to use).
         format : str, optional
             The format to store the golden file in.
             Defaults to "json".
@@ -47,7 +44,12 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa
         """
         nonlocal output
 
-        df = query.run()
+        if isinstance(query, pd.DataFrame):
+            df = query
+        elif isinstance(query, sparrow_py.Expr):
+            df = query.run().to_pandas()
+        else:
+            raise ValueError(f"query must be an Expr or a DataFrame, was {type(query)}")
 
         test_name = request.node.name
         module_name = request.node.module.__name__

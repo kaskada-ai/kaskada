@@ -48,6 +48,7 @@ static DETERMINISTIC_RUNTIME_HASHER: ahash::RandomState =
 #[derive(Debug, Default, Clone)]
 pub(crate) struct RuntimeOptions {
     pub limits: Limits,
+    pub max_batch_size: Option<usize>,
 
     /// Path to store the Query Flight Record to.
     /// Defaults to not storing anything.
