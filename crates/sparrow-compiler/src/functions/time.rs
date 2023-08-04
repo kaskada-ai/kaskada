@@ -133,7 +133,5 @@ pub(super) fn register(registry: &mut Registry) {
     // Note: Lag is specifically *not* an aggregation function.
     registry
         .register("lag<O: ordered>(const n: i64, input: O) -> O")
-        .with_implementation(Implementation::new_fenl_rewrite(
-            "collect(// TODO: ADD MIN n, input) | index(0)",
-        ));
+        .with_implementation(Implementation::Instruction(InstOp::Lag));
 }

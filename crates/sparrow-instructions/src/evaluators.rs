@@ -183,6 +183,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[1].data_type,
                 CollectPrimitiveEvaluator,
+                CollectStructEvaluator,
                 CollectListEvaluator,
                 CollectMapEvaluator,
                 CollectBooleanEvaluator,
@@ -208,6 +209,8 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                // TODO: STRUCT EVALUTOR
+                FirstListEvaluator,
                 FirstListEvaluator,
                 FirstMapEvaluator,
                 FirstBooleanEvaluator,
@@ -261,6 +264,8 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                // TODO: STRUCT EVALUTOR
+                LastListEvaluator,
                 LastListEvaluator,
                 LastMapEvaluator,
                 LastBooleanEvaluator,

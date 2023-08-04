@@ -34,6 +34,7 @@ impl MapAccumToken {
 
     /// Concat nulls to the end of the current accumulator to grow the size.
     pub fn resize(&mut self, len: usize) -> anyhow::Result<()> {
+        // TODO: FRAZ???
         let diff = len - self.accum.len();
 
         let null_array = new_null_array(self.accum.data_type(), diff);

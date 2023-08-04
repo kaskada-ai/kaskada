@@ -1,16 +1,21 @@
+use std::collections::VecDeque;
+
 use arrow::array::{new_null_array, Array, ArrayRef, AsArray};
+use hashbrown::HashMap;
 
 use crate::{ComputeStore, StateToken, StoreKey};
 
 /// Token used for collecting structs
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct CollectStructToken {
     /// Stores the state for in-memory usage.
     ///
-    /// Stores a vec of `ListArrays`, where the index of each list corresponds to the
-    /// entity index. Each list should contain struct types.
+    /// A [ListArray] comprised of lists of structs for each entity.
     #[serde(with = "sparrow_arrow::serde::array_ref")]
-    pub state: Vec<Option<ArrayRef>>,
+    pub state: ArrayRef,
+    /// TODO: does this make sense
+    /// This is internally mutated, is that okay?
+    pub entity_take_indices: HashMap<u32, VecDeque<u32>>,
 }
 
 impl StateToken for CollectStructToken {
@@ -28,17 +33,24 @@ impl StateToken for CollectStructToken {
 }
 
 impl CollectStructToken {
-    pub fn new(state: Vec<Option<ArrayRef>>) -> Self {
-        Self { state }
-    }
-
-    pub fn resize(&mut self, len: usize) {
-        if len >= self.state.len() {
-            self.state.resize(len + 1, None);
+    pub fn new(state: ArrayRef) -> Self {
+        Self {
+            state,
+            entity_take_indices: HashMap::new(),
         }
     }
 
-    pub fn set_state(&mut self, index: usize, new_state: Option<ArrayRef>) {
-        self.state[index] = new_state
+    pub fn resize(&mut self, len: usize) -> anyhow::Result<()> {
+        let diff = len - self.state.len();
+
+        let null_array = new_null_array(self.state.data_type(), diff);
+        let null_array = null_array.as_ref().as_list::<i32>();
+        let new_state = arrow::compute::concat(&[&self.state, null_array])?;
+        self.state = new_state.clone();
+        Ok(())
+    }
+
+    pub fn set_state(&mut self, new_state: ArrayRef) {
+        self.state = new_state;
     }
 }

@@ -20,6 +20,7 @@ impl EvaluatorFactory for EqEvaluatorFactory {
             NumericEqEvaluator,
             DynEqEvaluator,
             DynEqEvaluator,
+            DynEqEvaluator,
             BoolEqEvaluator,
             StringEqEvaluator,
             info
@@ -32,6 +33,7 @@ impl EvaluatorFactory for NeqEvaluatorFactory {
         create_typed_evaluator!(
             &info.args[0].data_type,
             NumericNeqEvaluator,
+            DynNeqEvaluator,
             DynNeqEvaluator,
             DynNeqEvaluator,
             BoolNeqEvaluator,
