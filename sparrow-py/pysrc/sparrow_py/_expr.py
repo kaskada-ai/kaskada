@@ -369,8 +369,8 @@ def _aggregation(
     if window is None:
         return Expr.call(op, *args, input, None, None)
     elif isinstance(window, kt.SinceWindow):
-        return Expr.call(op, *args, input, window._predicate, None)
+        return Expr.call(op, *args, input, window.predicate, None)
     elif isinstance(window, kt.SlidingWindow):
-        return Expr.call(op, *args, input, window._predicate, window._duration)
+        return Expr.call(op, *args, input, window.predicate, window.duration)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
