@@ -21,7 +21,7 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 @pytest.fixture
-def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
+def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):  # noqa: C901
     """Test fixture for checking results against a golden file."""
     output = 0
 
@@ -96,9 +96,6 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
             )
         else:
             raise ValueError(f"Unknown format {format}")
-        print(df.iloc[:, 0])
-        print(df.dtypes)
-        print(correct.iloc[:, 0])
         pd.testing.assert_frame_equal(df, correct)
 
     return handler

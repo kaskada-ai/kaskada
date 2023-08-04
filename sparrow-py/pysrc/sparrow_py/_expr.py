@@ -14,11 +14,6 @@ import pyarrow as pa
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
-from ._result import Result
-from ._windows import SinceWindow
-from ._windows import SlidingWindow
-from ._windows import Window
-
 
 #: The type of arguments to expressions.
 Arg = Union["Expr", int, str, float, None]
@@ -289,19 +284,21 @@ class Expr(object):
         """Return a boolean expression indicating if the expression is not null."""
         return Expr.call("is_valid", self)
 
-    def collect(self, max: Optional[int], window: Optional[Window] = None) -> "Expr":
+    def collect(
+        self, max: Optional[int], window: Optional["kt.Window"] = None
+    ) -> "Expr":
         """Return an expression collecting the last `max` values in the `window`."""
         return _aggregation("collect", self, window, max)
 
-    def sum(self, window: Optional[Window] = None) -> "Expr":
+    def sum(self, window: Optional["kt.Window"] = None) -> "Expr":
         """Return the sum aggregation of the expression."""
         return _aggregation("sum", self, window)
 
-    def first(self, window: Optional[Window] = None) -> "Expr":
+    def first(self, window: Optional["kt.Window"] = None) -> "Expr":
         """Return the first aggregation of the expression."""
         return _aggregation("first", self, window)
 
-    def last(self, window: Optional[Window] = None) -> "Expr":
+    def last(self, window: Optional["kt.Window"] = None) -> "Expr":
         """Return the last aggregation of the expression."""
         return _aggregation("last", self, window)
 
@@ -339,10 +336,10 @@ class Expr(object):
 
 
 def _aggregation(
-    op: str, input: Expr, window: Optional[Window], *args: Optional[Arg]
+    op: str, input: Expr, window: Optional["kt.Window"], *args: Optional[Arg]
 ) -> Expr:
     """
-    Creates an aggregation.
+    Create the aggregation `op` with the given `input`, `window` and `args`.
 
     Parameters
     ----------
@@ -361,10 +358,9 @@ def _aggregation(
 
     Raises
     ------
-    UnimplementedError
+    NotImplementedError
         If the window is not a known type.
     """
-
     # Note: things would be easier if we had a more normal order, which
     # we could do as part of "aligning" Sparrow signatures to the new direction.
     # However, `collect` currently has `collect(max, input, window)`, requiring
@@ -373,7 +369,7 @@ def _aggregation(
         return Expr.call(op, *args, input, None, None)
     elif isinstance(window, kt.SinceWindow):
         return Expr.call(op, *args, input, window._predicate, None)
-    elif isinstance(window, SlidingWindow):
+    elif isinstance(window, kt.SlidingWindow):
         return Expr.call(op, *args, input, window._predicate, window._duration)
     else:
-        raise UnimplementedError(f"Unknown window type {window!r}")
+        raise NotImplementedError(f"Unknown window type {window!r}")
