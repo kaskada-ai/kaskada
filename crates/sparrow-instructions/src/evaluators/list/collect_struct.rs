@@ -1,16 +1,11 @@
-use crate::{
-    CollectStructToken, CollectToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken,
-    StaticInfo,
-};
+use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{
-    new_empty_array, Array, ArrayRef, AsArray, BufferBuilder, ListArray, ListBuilder,
-    PrimitiveArray, StringBuilder, StructArray, StructBuilder, UInt32Array, UInt32Builder,
+    new_empty_array, Array, ArrayRef, AsArray, BufferBuilder, ListArray, UInt32Array, UInt32Builder,
 };
-use arrow::buffer::{OffsetBuffer, ScalarBuffer};
-use arrow::datatypes::{DataType, UInt32Type};
+use arrow::buffer::OffsetBuffer;
+use arrow::datatypes::DataType;
 use arrow_schema::Field;
-use hashbrown::HashMap;
-use itertools::{izip, Itertools};
+use itertools::Itertools;
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
 use std::collections::{BTreeMap, VecDeque};
@@ -131,13 +126,10 @@ impl CollectStructEvaluator {
 
         // Recreate the take indices for the current state
         let mut entity_take_indices = Self::construct_entity_take_indices(token);
-        println!("entity_take_indices: {:?}", entity_take_indices);
-        println!("State: {:?}", token.state.as_list::<i32>().values());
 
         let old_state = token.state.as_list::<i32>();
         let old_state_flat = old_state.values();
 
-        // TODO: size hint?
         let mut take_output_builder = UInt32Builder::new();
         let mut output_offset_builder = BufferBuilder::new(input.len());
 
@@ -157,32 +149,28 @@ impl CollectStructEvaluator {
 
             // already verified key exists, or created entry if not, in previous step
             let entity_take = entity_take_indices.get(entity_index).unwrap();
-            println!("Entity: {}, take: {:?}", entity_index, entity_take);
 
             // Append this entity's take indices to the take output builder
             entity_take.iter().for_each(|i| {
-                take_output_builder.append_value(*i as u32);
+                take_output_builder.append_value(*i);
             });
 
             // Append this entity's current number of take indices to the output offset builder
             cur_offset += entity_take.len();
             output_offset_builder.append(cur_offset as u32);
-            println!("Appended offset: {:}", cur_offset);
         }
         let output_values =
-            sparrow_arrow::concat_take(&old_state_flat, &input, &take_output_builder.finish())?;
+            sparrow_arrow::concat_take(old_state_flat, &input, &take_output_builder.finish())?;
 
         let fields = input_structs.fields().clone();
         let field = Arc::new(Field::new("item", DataType::Struct(fields.clone()), true));
 
         let result = ListArray::new(
-            field.clone(),
+            field,
             OffsetBuffer::new(output_offset_builder.finish().into()),
             output_values,
             None,
         );
-
-        println!("Output: {:?}", result);
 
         let mut new_state_offset_builder = BufferBuilder::new(entity_take_indices.len());
         new_state_offset_builder.append(0);
@@ -200,8 +188,7 @@ impl CollectStructEvaluator {
         });
         let take_new_state = UInt32Array::from_iter(take_new_state);
 
-        let new_state_values =
-            sparrow_arrow::concat_take(&old_state_flat, &input, &take_new_state)?;
+        let new_state_values = sparrow_arrow::concat_take(old_state_flat, &input, &take_new_state)?;
 
         let new_state = ListArray::new(
             Arc::new(Field::new("item", DataType::Struct(fields), true)),
@@ -210,21 +197,18 @@ impl CollectStructEvaluator {
             None,
         );
 
-        println!("New state: {:?}", new_state);
         token.set_state(Arc::new(new_state));
-
         Ok(Arc::new(result))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::StaticArg;
-
     use super::*;
-    use arrow::array::{ArrayBuilder, AsArray, Int64Builder, MapBuilder};
+    use arrow::array::{
+        ArrayBuilder, AsArray, Int64Builder, ListBuilder, StringBuilder, StructBuilder,
+    };
     use arrow_schema::{DataType, Field, Fields};
-    use sparrow_plan::{InstKind, InstOp};
     use std::sync::Arc;
 
     fn fields() -> Fields {
