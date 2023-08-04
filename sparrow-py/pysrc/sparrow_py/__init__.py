@@ -4,6 +4,7 @@ from typing import List
 from typing import Union
 
 from . import sources
+from ._execution import ExecutionOptions
 from ._expr import Expr
 from ._result import Result
 from ._session import init_session
@@ -21,12 +22,13 @@ def record(fields: Dict[str, Expr]) -> Expr:
 
 
 __all__ = [
+    "ExecutionOptions",
     "Expr",
     "init_session",
     "record",
-    "Window",
+    "Result",
     "SinceWindow",
     "SlidingWindow",
     "sources",
-    "Result",
+    "Window",
 ]

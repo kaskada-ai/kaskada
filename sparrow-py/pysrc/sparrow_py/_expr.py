@@ -11,6 +11,7 @@ from typing import final
 
 import pandas as pd
 import pyarrow as pa
+from ._execution import ExecutionOptions
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
@@ -323,7 +324,7 @@ class Expr(object):
 
     def run(self, row_limit: Optional[int] = None) -> pd.DataFrame:
         """Run the expression."""
-        options = _ffi.ExecutionOptions(row_limit=row_limit)
+        options = ExecutionOptions(row_limit=row_limit)
         batches = self._ffi_expr.execute(options).collect_pyarrow()
         schema = batches[0].schema
         table = pa.Table.from_batches(batches, schema=schema)
