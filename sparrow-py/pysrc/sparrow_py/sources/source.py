@@ -2,15 +2,16 @@
 from typing import Optional
 
 import pyarrow as pa
+import sparrow_py as kt
 import sparrow_py._ffi as _ffi
-from sparrow_py.expr import Expr
-from sparrow_py.session import _get_session
+
+from .._session import _get_session
 
 
 _TABLE_NUM: int = 0
 
 
-class Source(Expr):
+class Source(kt.Expr):
     """A source expression."""
 
     # TODO: Clean-up naming on the FFI side.

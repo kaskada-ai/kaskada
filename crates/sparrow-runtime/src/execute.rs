@@ -73,12 +73,12 @@ pub async fn execute(
 
 #[derive(Default, Debug)]
 pub struct ExecutionOptions {
-    changed_since_time: Timestamp,
-    final_at_time: Option<Timestamp>,
-    bounded_lateness_ns: Option<i64>,
-    compute_snapshot_config: Option<ComputeSnapshotConfig>,
-    limits: Option<Limits>,
-    stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
+    pub changed_since_time: Timestamp,
+    pub final_at_time: Option<Timestamp>,
+    pub bounded_lateness_ns: Option<i64>,
+    pub compute_snapshot_config: Option<ComputeSnapshotConfig>,
+    pub limits: Option<Limits>,
+    pub stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
 }
 
 impl ExecutionOptions {

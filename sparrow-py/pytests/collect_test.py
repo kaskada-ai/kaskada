@@ -1,13 +1,10 @@
 """Tests for the collect function."""
 import pytest
-from sparrow_py import SinceWindow
-from sparrow_py import SlidingWindow
-from sparrow_py import record
-from sparrow_py.sources import CsvSource
+import sparrow_py as kt
 
 
 @pytest.fixture(scope="module")
-def source() -> CsvSource:
+def source() -> kt.sources.CsvSource:
     """Create an empty table for testing."""
     content = "\n".join(
         [
@@ -20,7 +17,7 @@ def source() -> CsvSource:
             "1996-12-19T16:40:02-08:00,A,,",
         ]
     )
-    return CsvSource("time", "key", content)
+    return kt.sources.CsvSource("time", "key", content)
 
 
 def test_collect_basic(source, golden) -> None:
@@ -28,7 +25,7 @@ def test_collect_basic(source, golden) -> None:
     m = source["m"]
     n = source["n"]
     golden(
-        record(
+        kt.record(
             {
                 "m": m,
                 "collect_m": m.collect(max=None),
@@ -44,7 +41,7 @@ def test_collect_with_max(source, golden) -> None:
     m = source["m"]
     n = source["n"]
     golden(
-        record(
+        kt.record(
             {
                 "m": m,
                 "collect_m_max_2": m.collect(max=2),
@@ -58,4 +55,4 @@ def test_collect_with_max(source, golden) -> None:
 def test_collect_since_window(source, golden) -> None:
     """Test we can collect values to a list in a since window"""
     m = source["m"]
-    golden(record({"m": m, "since_m": m.sum(window=SinceWindow(m > 10))}))
+    golden(kt.record({"m": m, "since_m": m.sum(window=kt.SinceWindow(m > 10))}))

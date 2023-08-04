@@ -39,6 +39,11 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
         format : str, optional
             The format to store the golden file in.
             Defaults to "json".
+
+        Raises
+        ------
+        ValueError
+            If the `format` is not recognized.
         """
         nonlocal output
 
@@ -62,7 +67,7 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
             elif format == "parquet":
                 df.to_parquet(filename)
             elif format == "json":
-                df.to_json(filename, orient="records", lines=True)
+                df.to_json(filename, orient="records", lines=True, date_unit="ns")
             else:
                 raise ValueError(f"Unknown format {format}")
         else:
@@ -83,10 +88,17 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
             correct = pd.read_parquet(filename)
         elif format == "json":
             correct = pd.read_json(
-                filename, orient="records", lines=True, dtype=df.dtypes.to_dict()
+                filename,
+                orient="records",
+                lines=True,
+                dtype=df.dtypes.to_dict(),
+                date_unit="ns",
             )
         else:
             raise ValueError(f"Unknown format {format}")
+        print(df.iloc[:, 0])
+        print(df.dtypes)
+        print(correct.iloc[:, 0])
         pd.testing.assert_frame_equal(df, correct)
 
     return handler

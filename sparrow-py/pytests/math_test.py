@@ -1,11 +1,10 @@
 """Tests for the Kaskada query builder."""
 import pytest
-import sparrow_py as s
-from sparrow_py.sources import CsvSource
+import sparrow_py as kt
 
 
 @pytest.fixture
-def source_int64() -> CsvSource:
+def source_int64() -> kt.sources.CsvSource:
     """Create an empty table for testing."""
     content = "\n".join(
         [
@@ -18,7 +17,7 @@ def source_int64() -> CsvSource:
             "1996-12-19T16:40:02-08:00,A,,",
         ]
     )
-    return CsvSource("time", "key", content)
+    return kt.sources.CsvSource("time", "key", content)
 
 
 def test_math_int64(golden, source_int64) -> None:
@@ -26,7 +25,7 @@ def test_math_int64(golden, source_int64) -> None:
     m = source_int64["m"]
     n = source_int64["n"]
     golden(
-        s.record(
+        kt.record(
             {
                 "m": m,
                 "n": n,

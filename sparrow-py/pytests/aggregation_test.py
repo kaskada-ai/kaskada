@@ -1,13 +1,10 @@
 """Tests for the Kaskada query builder."""
 import pytest
-from sparrow_py import SinceWindow
-from sparrow_py import SlidingWindow
-from sparrow_py import record
-from sparrow_py.sources import CsvSource
+import sparrow_py as kt
 
 
 @pytest.fixture(scope="module")
-def source() -> CsvSource:
+def source() -> kt.sources.CsvSource:
     """Create an empty table for testing."""
     content = "\n".join(
         [
@@ -20,14 +17,14 @@ def source() -> CsvSource:
             "1996-12-19T16:40:02-08:00,A,,",
         ]
     )
-    return CsvSource("time", "key", content)
+    return kt.sources.CsvSource("time", "key", content)
 
 
 def test_sum_unwindowed(source, golden) -> None:
     """Test we can create a record."""
     m = source["m"]
     n = source["n"]
-    golden(record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
+    golden(kt.record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
 
 
 def test_sum_windowed(source, golden) -> None:
@@ -35,12 +32,12 @@ def test_sum_windowed(source, golden) -> None:
     m = source["m"]
     n = source["n"]
     golden(
-        record(
+        kt.record(
             {
                 "m": m,
-                "sum_m": m.sum(window=SinceWindow(m > 20)),
+                "sum_m": m.sum(window=kt.SinceWindow(m > 20)),
                 "n": n,
-                "sum_n": n.sum(window=SlidingWindow(2, m > 10)),
+                "sum_n": n.sum(window=kt.SlidingWindow(2, m > 10)),
             }
         )
     )

@@ -4,8 +4,7 @@ import random
 import pandas as pd
 import pyarrow as pa
 import pytest
-from sparrow_py.sources import ArrowSource
-from sparrow_py.sources import Source
+import sparrow_py as kt
 
 
 def test_table_valid() -> None:
@@ -17,7 +16,7 @@ def test_table_valid() -> None:
         ]
     )
 
-    Source("time", "key", schema)
+    kt.sources.Source("time", "key", schema)
 
 
 def test_table_invalid_names() -> None:
@@ -33,19 +32,19 @@ def test_table_invalid_names() -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Source("non_existant_time", "key", schema)
+        kt.sources.Source("non_existant_time", "key", schema)
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Source("time", "non_existant_key", schema)
+        kt.sources.Source("time", "non_existant_key", schema)
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        Source(
+        kt.sources.Source(
             "time",
             "key",
             subsort_column_name="non_existant_subsort",
@@ -69,7 +68,8 @@ def test_add_dataframe(golden) -> None:
             )
     dataset1 = pd.DataFrame(records)
 
-    table = ArrowSource("time", "key", dataset1)
+    table = kt.sources.ArrowSource("time", "key", dataset1)
+    table.show()
     golden(table)
 
     records.clear()
