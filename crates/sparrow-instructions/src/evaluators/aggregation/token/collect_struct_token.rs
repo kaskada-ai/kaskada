@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 use arrow::array::{new_null_array, Array, ArrayRef, AsArray};
 use hashbrown::HashMap;
@@ -15,7 +15,7 @@ pub struct CollectStructToken {
     pub state: ArrayRef,
     /// TODO: does this make sense
     /// This is internally mutated, is that okay?
-    pub entity_take_indices: HashMap<u32, VecDeque<u32>>,
+    pub entity_take_indices: BTreeMap<u32, VecDeque<u32>>,
 }
 
 impl StateToken for CollectStructToken {
@@ -36,7 +36,8 @@ impl CollectStructToken {
     pub fn new(state: ArrayRef) -> Self {
         Self {
             state,
-            entity_take_indices: HashMap::new(),
+            // entity_take_indices: HashMap::new(),
+            entity_take_indices: BTreeMap::new(),
         }
     }
 

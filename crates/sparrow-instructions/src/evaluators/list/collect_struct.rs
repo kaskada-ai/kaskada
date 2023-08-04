@@ -77,7 +77,13 @@ impl EvaluatorFactory for CollectStructEvaluator {
 impl Evaluator for CollectStructEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
-            (true, true) => self.evaluate_non_windowed(info),
+            (true, true) => {
+                let token = &mut self.token;
+                let input = info.value(&self.input)?.array_ref()?;
+                let key_capacity = info.grouping().num_groups();
+                let entity_indices = info.grouping().group_indices();
+                Self::evaluate_non_windowed(token, key_capacity, entity_indices, input, self.max)
+            }
             (false, true) => panic!("sdf"),
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
             (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
@@ -94,34 +100,24 @@ impl Evaluator for CollectStructEvaluator {
 }
 
 impl CollectStructEvaluator {
-    fn ensure_entity_capacity(&mut self, len: usize) -> anyhow::Result<()> {
-        self.token.resize(len)
+    fn ensure_entity_capacity(token: &mut CollectStructToken, len: usize) -> anyhow::Result<()> {
+        token.resize(len)
     }
 
-    fn evaluate_non_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let input = info.value(&self.input)?.array_ref()?;
+    fn evaluate_non_windowed(
+        token: &mut CollectStructToken,
+        key_capacity: usize,
+        entity_indices: &UInt32Array,
+        input: ArrayRef,
+        max: usize,
+    ) -> anyhow::Result<ArrayRef> {
         let input_structs = input.as_struct();
-        let key_capacity = info.grouping().num_groups();
-        let entity_indices = info.grouping().group_indices();
         assert_eq!(entity_indices.len(), input_structs.len());
 
-        self.ensure_entity_capacity(key_capacity)?;
+        Self::ensure_entity_capacity(token, key_capacity)?;
 
-        let old_state = self.token.state.as_list::<i32>();
-        // This is a bunch of structs
+        let old_state = token.state.as_list::<i32>();
         let old_state_flat = old_state.values();
-        // These offsets indicate the entity index boundaries.
-        // let old_state_offsets = old_state.offsets();
-
-        // let mut entity_take_indices: &HashMap<u32, VecDeque<u32>> = &self.token.entity_take_indices;
-
-        // I want each "input" iteration to correspond to multiple indices, because
-        // we want to grab multiple structs to make that single list (they're flat).
-        // hence the index -> Vec<take index>
-
-        // 1. Initialize the old take indices (or keep them stored, whatever)
-        // 2. For each input (which is a struct), add the current index + the length of
-        // old state (flattened) to that entities vecdeque. (if we exceed max vecdeque, pop).
 
         // TODO: size hint?
         let mut take_output_builder = UInt32Builder::new();
@@ -131,16 +127,19 @@ impl CollectStructEvaluator {
         output_offset_builder.append(0);
         for (index, entity_index) in entity_indices.values().iter().enumerate() {
             let take_index = (old_state_flat.len() + index) as u32;
-            println!("Take index: {:?}", take_index);
-            // TODO: Pop?
-            self.token
+            token
                 .entity_take_indices
                 .entry(*entity_index)
-                .and_modify(|v| v.push_back(take_index))
+                .and_modify(|v| {
+                    v.push_back(take_index);
+                    if v.len() > max {
+                        v.pop_front();
+                    }
+                })
                 .or_insert(vec![take_index].into());
 
             // already verified key exists, or created entry if not, in previous step
-            let entity_take = self.token.entity_take_indices.get(entity_index).unwrap();
+            let entity_take = token.entity_take_indices.get(entity_index).unwrap();
             println!("Entity: {}, take: {:?}", entity_index, entity_take);
 
             // Append this entity's take indices to the take output builder
@@ -168,10 +167,16 @@ impl CollectStructEvaluator {
 
         println!("Output: {:?}", result);
 
-        let mut new_state_offset_builder = BufferBuilder::new(self.token.entity_take_indices.len());
+        let mut new_state_offset_builder = BufferBuilder::new(token.entity_take_indices.len());
         new_state_offset_builder.append(0);
         let mut cur_state_offset = 0;
-        let take_new_state = self.token.entity_take_indices.values().flat_map(|v| {
+
+        // TODO: These are referencing indices in the `input`
+        // They need to be only referencing items in "new_state"
+        // Recreate entity state each time
+        let take_new_state = token.entity_take_indices.values().flat_map(|v| {
+            // TODO: suspect non-deterministic mapping here
+            // when I was using hashmap vs btree
             cur_state_offset += v.len() as u32;
             new_state_offset_builder.append(cur_state_offset);
             v.iter().copied().map(Some)
@@ -189,79 +194,543 @@ impl CollectStructEvaluator {
         );
 
         println!("New state: {:?}", new_state);
-        self.token.set_state(Arc::new(new_state));
+        token.set_state(Arc::new(new_state));
 
         Ok(Arc::new(result))
     }
-
-    // /// Since windows follow the pattern "update -> emit -> reset".
-    // ///
-    // /// i.e. if an input appears in the same row as a tick, then that value will
-    // /// be included in the output before the tick causes the state to be cleared.
-    // /// However, note that ticks are generated with a maximum subsort value, so it is
-    // /// unlikely an input naturally appears in the same row as a tick. It is more likely
-    // /// that an input may appear at the same time, but an earlier subsort value.
-    // fn evaluate_since_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-    //     let input = info.value(&self.input)?.array_ref()?;
-    //     let key_capacity = info.grouping().num_groups();
-    //     let entity_indices = info.grouping().group_indices();
-    //     assert_eq!(entity_indices.len(), input.len());
-
-    //     self.ensure_entity_capacity(key_capacity);
-
-    //     let input = input.as_string::<i32>();
-    //     let ticks = info.value(&self.tick)?.array_ref()?;
-    //     let ticks = ticks.as_boolean();
-
-    //     let builder = StringBuilder::new();
-    //     let mut list_builder = ListBuilder::new(builder);
-
-    //     izip!(entity_indices.values(), ticks, input).for_each(|(entity_index, tick, input)| {
-    //         let entity_index = *entity_index as usize;
-
-    //         self.token
-    //             .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
-    //         let cur_list = self.token.state(entity_index);
-
-    //         list_builder.append_value(cur_list.clone());
-
-    //         match tick {
-    //             Some(t) if t => {
-    //                 self.token.reset(entity_index);
-    //             }
-    //             _ => (), // Tick is false or null, so do nothing.
-    //         }
-    //     });
-
-    //     Ok(Arc::new(list_builder.finish()))
-    // }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::StaticArg;
+
     use super::*;
-    use arrow::array::{AsArray, Int64Builder, MapBuilder};
+    use arrow::array::{ArrayBuilder, AsArray, Int64Builder, MapBuilder};
     use arrow_schema::{DataType, Field, Fields};
+    use sparrow_plan::{InstKind, InstOp};
     use std::sync::Arc;
 
+    fn fields() -> Fields {
+        Fields::from(vec![
+            Field::new("a", DataType::Int64, true),
+            Field::new("b", DataType::Utf8, true),
+        ])
+    }
+
+    fn field_builders() -> Vec<Box<dyn ArrayBuilder>> {
+        let field_builders: Vec<Box<dyn ArrayBuilder>> = vec![
+            Box::new(Int64Builder::new()),
+            Box::new(StringBuilder::new()),
+        ];
+        field_builders
+    }
+
     fn default_token() -> CollectStructToken {
-        //
-        todo!()
+        let f = Arc::new(Field::new("item", DataType::Struct(fields()), true));
+        let result_type = DataType::List(f);
+        let accum = new_empty_array(&result_type).as_list::<i32>().to_owned();
+        CollectStructToken::new(Arc::new(accum))
     }
 
     #[test]
-    fn test_() {
+    fn test_basic_collect_multiple_batches() {
+        let mut token = default_token();
         // Batch 1
-        let mut builder = ListBuilder::new(Int64Builder::new());
-        builder.append_value([Some(1), Some(2), Some(3)]);
-        builder.append_value([Some(4), None, Some(5)]);
-        builder.append_value([None, None]);
-        builder.append(false);
-        builder.append_value([]);
-        builder.append_value([Some(7), Some(8), Some(9)]);
+        let mut builder = StructBuilder::new(fields(), field_builders());
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.append(true);
 
-        let array = builder.finish();
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.append(true);
 
-        println!("Lenght: {:?}", array.len());
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.append(true);
+        let input = builder.finish();
+        let input = Arc::new(input);
+
+        let key_indices = UInt32Array::from(vec![0, 0, 0]);
+        let key_capacity = 1;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            usize::MAX,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 1
+        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.values().append(true);
+        builder.append(true);
+        let expected = builder.finish();
+        let expected = Arc::new(expected);
+
+        assert_eq!(expected.as_ref(), result);
+
+        // Batch 2
+        let mut builder = StructBuilder::new(fields(), field_builders());
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(3);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("d");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(4);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("e");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(5);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("f");
+        builder.append(true);
+        let input = builder.finish();
+        let input = Arc::new(input);
+
+        // New entity!
+        let key_indices = UInt32Array::from(vec![1, 0, 1]);
+        let key_capacity = 2;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            usize::MAX,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 2
+        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(3);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("d");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(4);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("e");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(3);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("d");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(5);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("f");
+        builder.values().append(true);
+        builder.append(true);
+
+        let expected = builder.finish();
+        let expected = Arc::new(expected);
+
+        assert_eq!(expected.as_ref(), result);
+    }
+
+    #[test]
+    fn test_basic_collect_multiple_batches_with_max() {
+        let max = 2;
+        let mut token = default_token();
+        // Batch 1
+        let mut builder = StructBuilder::new(fields(), field_builders());
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.append(true);
+        let input = builder.finish();
+        let input = Arc::new(input);
+
+        let key_indices = UInt32Array::from(vec![0, 0, 0]);
+        let key_capacity = 1;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            max,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 1
+        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.values().append(true);
+        builder.append(true);
+        let expected = builder.finish();
+        let expected = Arc::new(expected);
+
+        assert_eq!(expected.as_ref(), result);
+
+        // Batch 2
+        let mut builder = StructBuilder::new(fields(), field_builders());
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(3);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("d");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(4);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("e");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(5);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("f");
+        builder.append(true);
+        let input = builder.finish();
+        let input = Arc::new(input);
+
+        // New entity!
+        let key_indices = UInt32Array::from(vec![1, 0, 1]);
+        let key_capacity = 2;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            max,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 2
+        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(3);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("d");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(4);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("e");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(3);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("d");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(5);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("f");
+        builder.values().append(true);
+        builder.append(true);
+
+        let expected = builder.finish();
+        let expected = Arc::new(expected);
+
+        assert_eq!(expected.as_ref(), result);
     }
 }
