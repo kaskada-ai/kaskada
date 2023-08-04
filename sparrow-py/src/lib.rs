@@ -18,7 +18,6 @@ fn ffi(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<expr::Expr>()?;
     m.add_class::<table::Table>()?;
     m.add_class::<execution::Execution>()?;
-    m.add_class::<execution::ExecutionOptions>()?;
 
     Ok(())
 }

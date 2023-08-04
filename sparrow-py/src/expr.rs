@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::execution::{Execution, ExecutionOptions};
+use crate::execution::Execution;
 use crate::session::Session;
 use arrow::pyarrow::ToPyArrow;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -73,11 +73,9 @@ impl Expr {
         self.session.clone()
     }
 
-    fn execute(&self, options: Option<&ExecutionOptions>) -> Result<Execution, Error> {
+    fn execute(&self, options: Option<&PyAny>) -> Result<Execution, Error> {
         let session = self.session.rust_session()?;
-        let options = options
-            .map(ExecutionOptions::to_rust_options)
-            .unwrap_or_default();
+        let options = extract_options(options)?;
         let execution = session.execute(&self.rust_expr, options)?;
         Ok(Execution::new(execution))
     }
@@ -118,6 +116,18 @@ impl Arg {
             Self::LiteralInt(n) => session.add_literal(Literal::Int64(n)),
             Self::LiteralFloat(n) => session.add_literal(Literal::Float64(n)),
             Self::LiteralString(s) => session.add_literal(Literal::String(s)),
+        }
+    }
+}
+
+fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::ExecutionOptions, Error> {
+    match options {
+        None => Ok(sparrow_session::ExecutionOptions::default()),
+        Some(options) => {
+            let py = options.py();
+            Ok(sparrow_session::ExecutionOptions {
+                row_limit: options.getattr(pyo3::intern!(py, "row_limit"))?.extract()?,
+            })
         }
     }
 }

@@ -14,6 +14,8 @@ import pyarrow as pa
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
+from ._execution import ExecutionOptions
+
 
 #: The type of arguments to expressions.
 Arg = Union["Expr", int, str, float, None]
@@ -323,7 +325,7 @@ class Expr(object):
 
     def run(self, row_limit: Optional[int] = None) -> pd.DataFrame:
         """Run the expression."""
-        options = _ffi.ExecutionOptions(row_limit=row_limit)
+        options = ExecutionOptions(row_limit=row_limit)
         batches = self._ffi_expr.execute(options).collect_pyarrow()
         schema = batches[0].schema
         table = pa.Table.from_batches(batches, schema=schema)
@@ -368,8 +370,8 @@ def _aggregation(
     if window is None:
         return Expr.call(op, *args, input, None, None)
     elif isinstance(window, kt.SinceWindow):
-        return Expr.call(op, *args, input, window._predicate, None)
+        return Expr.call(op, *args, input, window.predicate, None)
     elif isinstance(window, kt.SlidingWindow):
-        return Expr.call(op, *args, input, window._predicate, window._duration)
+        return Expr.call(op, *args, input, window.predicate, window.duration)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")

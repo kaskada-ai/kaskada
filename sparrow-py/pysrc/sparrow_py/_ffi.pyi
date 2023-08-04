@@ -3,14 +3,12 @@ from typing import Optional
 from typing import Sequence
 
 import pyarrow as pa
-from sparrow_py.udf import Udf
+
+from ._execution import ExecutionOptions
+from .udf import Udf
 
 class Session:
     def __init__(self) -> None: ...
-
-class ExecutionOptions(object):
-    def __init__(self, row_limit: Optional[int] = None) -> None: ...
-    row_limit: Optional[int]
 
 class Execution(object):
     def collect_pyarrow(self) -> List[pa.RecordBatch]: ...
