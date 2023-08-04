@@ -1,11 +1,14 @@
 from dataclasses import dataclass
+
 from ._expr import Expr
 
-@dataclass(frozen = True)
+
+@dataclass(frozen=True)
 class Window(object):
     """Base class for window functions."""
 
-@dataclass(frozen = True)
+
+@dataclass(frozen=True)
 class SinceWindow(Window):
     """
     Window since the last time a predicate was true.
@@ -19,13 +22,14 @@ class SinceWindow(Window):
         The predicate to use for the window.
         Each time the predicate evaluates to true the window will be cleared.
     """
+
     predicate: Expr
 
-@dataclass(frozen = True)
+
+@dataclass(frozen=True)
 class SlidingWindow(Window):
     """
-    Sliding windows where the width of the window is determined by the
-    number of times (`duration`) the `predicate` is `true`.
+    Window for the last `duration` intervals of some `predicate`.
 
     Parameters
     ----------

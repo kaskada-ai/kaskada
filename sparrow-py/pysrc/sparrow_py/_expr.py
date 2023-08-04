@@ -11,9 +11,10 @@ from typing import final
 
 import pandas as pd
 import pyarrow as pa
-from ._execution import ExecutionOptions
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
+
+from ._execution import ExecutionOptions
 
 
 #: The type of arguments to expressions.
