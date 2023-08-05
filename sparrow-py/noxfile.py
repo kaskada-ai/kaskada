@@ -173,9 +173,18 @@ def docs_build(session: Session) -> None:
 @session(python=python_versions[0])
 def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
-    args = session.posargs or ["--open-browser", "docs", "docs/_build"]
+    args = session.posargs or ["--open-browser", "docs/source", "docs/_build", "-j", "auto"]
     install_self(session)
-    session.install("sphinx", "sphinx-autobuild", "furo", "myst-parser", "pandas", "pyarrow", "sphinx-autodoc-typehints")
+    session.install(
+        "sphinx",
+        "sphinx-autobuild",
+        "sphinx-book-theme",
+        "sphinx-copybutton",
+        "myst-parser",
+        "myst-nb",
+        "pandas",
+        "pyarrow"
+    )
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
