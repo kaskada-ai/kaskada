@@ -398,7 +398,7 @@ class Timestream(object):
         Timestream
             The Timestream resulting from `not self`.
         """
-        return Timestream._call("not", self, rhs)
+        return Timestream._call("not", self)
 
     def eq(self, other: Arg) -> Timestream:
         """
