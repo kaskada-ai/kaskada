@@ -65,7 +65,7 @@ def process(client: SocketModeClient, req: SocketModeRequest):
             return
 
         # don't do this.  Just load the data and you are done. do the tricky stuff in kaskada.
-        print(list(json_normalize(e, drop_nodes=["ts", "blocks", "client_msg_id"])))
+        print(list(json_normalize(e, drop_nodes=["blocks", "client_msg_id", "channel_type", "item_user"])))
 
         if e["type"] == "reaction_added" and e["reaction"] == "eyes":
             sendMessageReminder(e["user"], e["item"]["channel"], e["item"]["ts"])
