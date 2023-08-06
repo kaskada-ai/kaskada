@@ -1,8 +1,8 @@
 use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{
-    new_empty_array, Array, ArrayRef, AsArray, BufferBuilder, ListArray, UInt32Array, UInt32Builder,
+    new_empty_array, Array, ArrayRef, AsArray, ListArray, UInt32Array, UInt32Builder,
 };
-use arrow::buffer::OffsetBuffer;
+use arrow::buffer::{OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::DataType;
 use arrow_schema::Field;
 use itertools::Itertools;
@@ -193,11 +193,9 @@ impl CollectStructEvaluator {
         let old_state_flat = old_state.values();
 
         let mut take_output_builder = UInt32Builder::new();
-        let mut output_offset_builder = BufferBuilder::new(input.len());
+        let mut output_offset_builder = vec![0];
 
         let mut cur_offset = 0;
-        output_offset_builder.append(0);
-
         // For each entity, append the take indices for the new input to the existing
         // entity take indices
         for (index, entity_index) in entity_indices.values().iter().enumerate() {
@@ -222,7 +220,7 @@ impl CollectStructEvaluator {
 
             // Append this entity's current number of take indices to the output offset builder
             cur_offset += entity_take.len();
-            output_offset_builder.append(cur_offset as u32);
+            output_offset_builder.push(cur_offset as i32);
         }
         let output_values =
             sparrow_arrow::concat_take(old_state_flat, &input, &take_output_builder.finish())?;
@@ -232,19 +230,19 @@ impl CollectStructEvaluator {
 
         let result = ListArray::new(
             field,
-            OffsetBuffer::new(output_offset_builder.finish().into()),
+            OffsetBuffer::new(ScalarBuffer::from(output_offset_builder)),
             output_values,
             None,
         );
 
         // Construct the new state offset and values using the current entity take indices
-        let mut new_state_offset_builder = BufferBuilder::new(entity_take_indices.len());
-        new_state_offset_builder.append(0);
+        let mut new_state_offset_builder = Vec::with_capacity(entity_take_indices.len());
+        new_state_offset_builder.push(0);
         let mut cur_state_offset = 0;
 
         let take_new_state = entity_take_indices.values().flat_map(|v| {
-            cur_state_offset += v.len() as u32;
-            new_state_offset_builder.append(cur_state_offset);
+            cur_state_offset += v.len() as i32;
+            new_state_offset_builder.push(cur_state_offset);
             v.iter().copied().map(Some)
         });
         let take_new_state = UInt32Array::from_iter(take_new_state);
@@ -252,7 +250,7 @@ impl CollectStructEvaluator {
         let new_state_values = sparrow_arrow::concat_take(old_state_flat, &input, &take_new_state)?;
         let new_state = ListArray::new(
             Arc::new(Field::new("item", DataType::Struct(fields), true)),
-            OffsetBuffer::new(new_state_offset_builder.finish().into()),
+            OffsetBuffer::new(ScalarBuffer::from(new_state_offset_builder)),
             new_state_values,
             None,
         );
@@ -265,29 +263,22 @@ impl CollectStructEvaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arrow::array::{
-        ArrayBuilder, AsArray, Int64Builder, ListBuilder, StringBuilder, StructBuilder,
+    use arrow::{
+        array::{AsArray, Int64Array, StringArray, StructArray},
+        buffer::ScalarBuffer,
     };
     use arrow_schema::{DataType, Field, Fields};
     use std::sync::Arc;
 
-    fn fields() -> Fields {
-        Fields::from(vec![
-            Field::new("a", DataType::Int64, true),
-            Field::new("b", DataType::Utf8, true),
-        ])
-    }
-
-    fn field_builders() -> Vec<Box<dyn ArrayBuilder>> {
-        let field_builders: Vec<Box<dyn ArrayBuilder>> = vec![
-            Box::new(Int64Builder::new()),
-            Box::new(StringBuilder::new()),
-        ];
-        field_builders
-    }
-
     fn default_token() -> CollectStructToken {
-        let f = Arc::new(Field::new("item", DataType::Struct(fields()), true));
+        let f = Arc::new(Field::new(
+            "item",
+            DataType::Struct(Fields::from(vec![
+                Field::new("n", DataType::Int64, true),
+                Field::new("s", DataType::Utf8, true),
+            ])),
+            true,
+        ));
         let result_type = DataType::List(f);
         let accum = new_empty_array(&result_type).as_list::<i32>().to_owned();
         CollectStructToken::new(Arc::new(accum))
@@ -297,37 +288,16 @@ mod tests {
     fn test_basic_collect_multiple_batches() {
         let mut token = default_token();
         // Batch 1
-        let mut builder = StructBuilder::new(fields(), field_builders());
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(2);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("c");
-        builder.append(true);
-        let input = builder.finish();
+        let n_array = Int64Array::from(vec![Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![Some("a"), Some("b"), Some("c")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
         let input = Arc::new(input);
 
         let key_indices = UInt32Array::from(vec![0, 0, 0]);
@@ -344,115 +314,44 @@ mod tests {
         let result = result.as_list::<i32>();
 
         // build expected result 1
-        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(2);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("c");
-        builder.values().append(true);
-        builder.append(true);
-        let expected = builder.finish();
+        let n_array = Int64Array::from(vec![Some(0), Some(0), Some(1), Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![
+            Some("a"),
+            Some("a"),
+            Some("b"),
+            Some("a"),
+            Some("b"),
+            Some("c"),
+        ]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 6]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
         let expected = Arc::new(expected);
-
         assert_eq!(expected.as_ref(), result);
 
         // Batch 2
-        let mut builder = StructBuilder::new(fields(), field_builders());
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(3);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("d");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(4);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("e");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(5);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("f");
-        builder.append(true);
-        let input = builder.finish();
+        let n_array = Int64Array::from(vec![Some(3), Some(4), Some(5)]);
+        let s_array = StringArray::from(vec![Some("d"), Some("e"), Some("f")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
         let input = Arc::new(input);
 
         // New entity!
@@ -470,93 +369,40 @@ mod tests {
         let result = result.as_list::<i32>();
 
         // build expected result 2
-        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(3);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("d");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(2);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("c");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(4);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("e");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(3);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("d");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(5);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("f");
-        builder.values().append(true);
-        builder.append(true);
-
-        let expected = builder.finish();
+        let n_array = Int64Array::from(vec![
+            Some(3),
+            Some(0),
+            Some(1),
+            Some(2),
+            Some(4),
+            Some(3),
+            Some(5),
+        ]);
+        let s_array = StringArray::from(vec![
+            Some("d"),
+            Some("a"),
+            Some("b"),
+            Some("c"),
+            Some("e"),
+            Some("d"),
+            Some("f"),
+        ]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 5, 7]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
         let expected = Arc::new(expected);
-
         assert_eq!(expected.as_ref(), result);
     }
 
@@ -565,37 +411,16 @@ mod tests {
         let max = 2;
         let mut token = default_token();
         // Batch 1
-        let mut builder = StructBuilder::new(fields(), field_builders());
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(2);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("c");
-        builder.append(true);
-        let input = builder.finish();
+        let n_array = Int64Array::from(vec![Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![Some("a"), Some("b"), Some("c")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
         let input = Arc::new(input);
 
         let key_indices = UInt32Array::from(vec![0, 0, 0]);
@@ -612,104 +437,38 @@ mod tests {
         let result = result.as_list::<i32>();
 
         // build expected result 1
-        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(0);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("a");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(1);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("b");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(2);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("c");
-        builder.values().append(true);
-        builder.append(true);
-        let expected = builder.finish();
+        let n_array = Int64Array::from(vec![Some(0), Some(0), Some(1), Some(1), Some(2)]);
+        let s_array =
+            StringArray::from(vec![Some("a"), Some("a"), Some("b"), Some("b"), Some("c")]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 5]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
         let expected = Arc::new(expected);
-
         assert_eq!(expected.as_ref(), result);
 
         // Batch 2
-        let mut builder = StructBuilder::new(fields(), field_builders());
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(3);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("d");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(4);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("e");
-        builder.append(true);
-
-        builder
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(5);
-        builder
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("f");
-        builder.append(true);
-        let input = builder.finish();
+        let n_array = Int64Array::from(vec![Some(3), Some(4), Some(5)]);
+        let s_array = StringArray::from(vec![Some("d"), Some("e"), Some("f")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
         let input = Arc::new(input);
 
         // New entity!
@@ -727,69 +486,24 @@ mod tests {
         let result = result.as_list::<i32>();
 
         // build expected result 2
-        let mut builder = ListBuilder::new(StructBuilder::new(fields(), field_builders()));
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(3);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("d");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(2);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("c");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(4);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("e");
-        builder.values().append(true);
-        builder.append(true);
-
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(3);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("d");
-        builder.values().append(true);
-        builder
-            .values()
-            .field_builder::<Int64Builder>(0)
-            .unwrap()
-            .append_value(5);
-        builder
-            .values()
-            .field_builder::<StringBuilder>(1)
-            .unwrap()
-            .append_value("f");
-        builder.values().append(true);
-        builder.append(true);
-
-        let expected = builder.finish();
+        let n_array = Int64Array::from(vec![Some(3), Some(2), Some(4), Some(3), Some(5)]);
+        let s_array =
+            StringArray::from(vec![Some("d"), Some("c"), Some("e"), Some("d"), Some("f")]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 5]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
         let expected = Arc::new(expected);
 
         assert_eq!(expected.as_ref(), result);
