@@ -152,6 +152,15 @@ def xdoctest(session: Session) -> None:
     session.install("xdoctest[colors]")
     session.run("python", "-m", "xdoctest", *args)
 
+DOCS_DEPS = [
+    "sphinx",
+    "sphinx-autobuild",
+    "furo",
+    "myst-parser",
+    "pandas",
+    "pyarrow",
+    "sphinx-autodoc-typehints"
+]
 
 @session(name="docs-build", python=python_versions[0])
 def docs_build(session: Session) -> None:
@@ -161,7 +170,7 @@ def docs_build(session: Session) -> None:
         args.insert(0, "--color")
 
     install_self(session)
-    session.install("sphinx", "furo", "myst-parser")
+    session.install(*DOCS_DEPS)
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
@@ -175,7 +184,7 @@ def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
     install_self(session)
-    session.install("sphinx", "sphinx-autobuild", "furo", "myst-parser", "pandas", "pyarrow", "sphinx-autodoc-typehints")
+    session.install(*DOCS_DEPS)
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
