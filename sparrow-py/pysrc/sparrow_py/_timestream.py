@@ -556,6 +556,11 @@ class Timestream(object):
         """
         Create a Timestream containing only the points where `condition` is `true`.
 
+        Parameters
+        ----------
+        condition : Timestream
+            The condition to filter on.
+
         Returns
         -------
         Timestream
@@ -602,6 +607,11 @@ class Timestream(object):
         """
         Create a Timestream containing the value `n` points before each point.
 
+        Parameters
+        ----------
+        n : int
+            The number of points to lag by.
+
         Returns
         -------
         Timestream
@@ -613,6 +623,11 @@ class Timestream(object):
         """
         Create a Timestream containing the value of `self` where `condition` is `true`,
         or `null` otherwise.
+
+        Parameters
+        ----------
+        condition : Union[Timestream, Literal]
+            The condition to check.
         
         Returns
         -------
@@ -625,6 +640,11 @@ class Timestream(object):
     def null_if(self, condition: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream containing `self` where `condition` is `false`, or `null` otherwise.
+
+        Parameters
+        ----------
+        condition : Union[Timestream, Literal]
+            The condition to check.
         
         Returns
         -------
@@ -648,7 +668,7 @@ class Timestream(object):
         elif isinstance(self.data_type, pa.ListType):
             return Timestream._call("list_len", self)
         else:
-            raise NotImplementedError(f"length not implemented for {self.data_type}")
+            raise TypeError(f"length not supported for {self.data_type}")
 
     def with_key(self, key: Timestream, grouping: Optional[str] = None) -> Timestream:
         """
