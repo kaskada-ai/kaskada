@@ -21,13 +21,13 @@ def source() -> kt.sources.CsvSource:
 def test_sum_unwindowed(source, golden) -> None:
     m = source["m"]
     n = source["n"]
-    golden(kt.record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
+    golden.jsonl(kt.record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
 
 
 def test_sum_windowed(source, golden) -> None:
     m = source["m"]
     n = source["n"]
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "m": m,

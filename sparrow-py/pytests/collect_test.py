@@ -21,7 +21,7 @@ def source() -> kt.sources.CsvSource:
 def test_collect_basic(source, golden) -> None:
     m = source["m"]
     n = source["n"]
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "m": m,
@@ -36,7 +36,7 @@ def test_collect_basic(source, golden) -> None:
 def test_collect_with_max(source, golden) -> None:
     m = source["m"]
     n = source["n"]
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "m": m,
@@ -50,4 +50,4 @@ def test_collect_with_max(source, golden) -> None:
 
 def test_collect_since_window(source, golden) -> None:
     m = source["m"]
-    golden(kt.record({"m": m, "since_m": m.sum(window=kt.SinceWindow(m > 10))}))
+    golden.jsonl(kt.record({"m": m, "since_m": m.sum(window=kt.SinceWindow(m > 10))}))

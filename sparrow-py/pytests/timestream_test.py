@@ -111,7 +111,7 @@ def test_timestream_preview(golden) -> None:
     )
     source = kt.sources.CsvSource("time", "key", content)
 
-    golden(source.preview(limit=4))
+    golden.jsonl(source.preview(limit=4))
 
 def test_timestream_run_non_record(golden) -> None:
     content = "\n".join(
@@ -126,4 +126,4 @@ def test_timestream_run_non_record(golden) -> None:
         ]
     )
     source = kt.sources.CsvSource("time", "key", content)
-    golden(source["m"])
+    golden.jsonl(source["m"])

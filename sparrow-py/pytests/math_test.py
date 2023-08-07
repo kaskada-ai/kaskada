@@ -21,7 +21,7 @@ def source_int64() -> kt.sources.CsvSource:
 def test_math_int64(golden, source_int64) -> None:
     m = source_int64["m"]
     n = source_int64["n"]
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "m": m,
