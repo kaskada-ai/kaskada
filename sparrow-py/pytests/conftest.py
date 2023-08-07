@@ -51,7 +51,7 @@ class GoldenFixture(object):
         pd.testing.assert_frame_equal(df, golden)
 
     def jsonl(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
-        """Golden test against JSON file."""
+        """Golden test against newline-delimited JSON file (json-lines)."""
         df = _data_to_dataframe(data)
         filename = self._filename("jsonl")
 
