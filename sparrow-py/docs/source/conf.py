@@ -2,6 +2,13 @@
 from typing import Any
 from typing import Dict
 
+import os
+import sys
+sys.path[0] = os.path.abspath(os.path.join("..", "..", "pysrc", "sparrow_py"))
+print(sys.path)
+
+import sparrow_py
+
 project = "sparrow-py"
 author = "Kaskada Contributors"
 copyright = "2023, Kaskada Contributors"
@@ -30,7 +37,7 @@ html_theme_options: Dict[str, Any] = {
     "use_edit_page_button": True,
     "use_issues_button": True,
     "repository_branch": "main",
-    "path_to_docs": "sparrow-py/docs/",
+    "path_to_docs": "sparrow-py/docs/source",
     "icon_links": [
         {
             "name": "GitHub",
@@ -55,7 +62,7 @@ html_context = {
     "github_user": "kaskada-ai",
     "github_repo": "kaskada",
     "github_version": "main",
-    "doc_path": "sparrow-py/docs/",
+    "doc_path": "sparrow-py/docs/source",
 }
 
 intersphinx_mapping: Dict[str, Any] = {
@@ -92,6 +99,6 @@ autodoc_typehints = "description"
 # Don't show class signature with the class' name.
 autodoc_class_signature = "separated"
 
-autodoc_type_aliases = { 'Arg': 'sparrow_py.Arg' }
-
 autosummary_generate = True
+
+napoleon_preprocess_types = True

@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 from typing import final
+from typing_extensions import TypeAlias
 
 import pandas as pd
 import pyarrow as pa
@@ -21,13 +22,9 @@ from ._execution import ExecutionOptions
 from ._result import Result
 
 
-Arg = Union["Timestream", int, str, float, bool, None]
-"""
-The type of arguments to most Timestream functions.
-May be a Timestream, a literal (int, str, float, bool), or null (`None`).
-"""
+Literal = Union[int, str, float, bool, None]
 
-def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
+def _augment_error(args: Sequence[Union[Timestream, Literal]], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
     if sys.version_info >= (3, 11):
         # If we can add notes to the exception, indicate the types.
@@ -52,7 +49,7 @@ class Timestream(object):
         self._ffi_expr = ffi
 
     @staticmethod
-    def _call(func: str, *args: Arg) -> Timestream:
+    def _call(func: str, *args: Union[Timestream, Literal]) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
 
@@ -101,8 +98,8 @@ class Timestream(object):
         func: Union[
             Callable[..., Timestream], Tuple[Callable[..., Timestream], str]
         ],
-        *args: Arg,
-        **kwargs: Arg,
+        *args: Union[Timestream, Literal],
+        **kwargs: Union[Timestream, Literal],
     ) -> Timestream:
         """
         Apply chainable functions that produce Timestreams.
@@ -165,13 +162,13 @@ class Timestream(object):
         else:
             return func(self, *args, **kwargs)
 
-    def __add__(self, rhs: Arg) -> Timestream:
+    def __add__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream adding this and `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to add to this.
 
         Returns
@@ -181,13 +178,13 @@ class Timestream(object):
         """
         return Timestream._call("add", self, rhs)
 
-    def __radd__(self, lhs: Arg) -> Timestream:
+    def __radd__(self, lhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream adding `lhs` and this.
 
         Parameters
         ----------
-        lhs : Arg
+        lhs : Union[Timestream, Literal]
             The Timestream or literal value to add to this.
 
         Returns
@@ -197,13 +194,13 @@ class Timestream(object):
         """
         return Timestream._call("add", lhs, self)
 
-    def __sub__(self, rhs: Arg) -> Timestream:
+    def __sub__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream substracting `rhs` from this.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to subtract from this.
 
         Returns
@@ -213,13 +210,13 @@ class Timestream(object):
         """
         return Timestream._call("sub", self, rhs)
 
-    def __rsub__(self, lhs: Arg) -> Timestream:
+    def __rsub__(self, lhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream substracting this from the `lhs`.
 
         Parameters
         ----------
-        lhs : Arg
+        lhs : Union[Timestream, Literal]
             The Timestream or literal value to subtract this from.
 
         Returns
@@ -229,13 +226,13 @@ class Timestream(object):
         """
         return Timestream._call("sub", lhs, self)
 
-    def __mul__(self, rhs: Arg) -> Timestream:
+    def __mul__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream multiplying this and `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to multiply with this.
 
         Returns
@@ -245,13 +242,13 @@ class Timestream(object):
         """
         return Timestream._call("mul", self, rhs)
 
-    def __rmul__(self, lhs: Arg) -> Timestream:
+    def __rmul__(self, lhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream multiplying `lhs` and this.
 
         Parameters
         ----------
-        lhs : Arg
+        lhs : Union[Timestream, Literal]
             The Timestream or literal value to multiply with this.
 
         Returns
@@ -261,13 +258,13 @@ class Timestream(object):
         """
         return Timestream._call("mul", lhs, self)
 
-    def __truediv__(self, divisor: Arg) -> Timestream:
+    def __truediv__(self, divisor: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream by dividing this and `divisor`.
 
         Parameters
         ----------
-        divisor : Arg
+        divisor : Union[Timestream, Literal]
             The Timestream or literal value to divide this by.
 
         Returns
@@ -277,13 +274,13 @@ class Timestream(object):
         """
         return Timestream._call("div", self, divisor)
 
-    def __rtruediv__(self, dividend: Arg) -> Timestream:
+    def __rtruediv__(self, dividend: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream by dividing this and `dividend`.
 
         Parameters
         ----------
-        dividend : Arg
+        dividend : Union[Timestream, Literal]
             The Timestream or literal value to divide by this.
 
         Returns
@@ -293,13 +290,13 @@ class Timestream(object):
         """
         return Timestream._call("div", dividend, self)
 
-    def __lt__(self, rhs: Arg) -> Timestream:
+    def __lt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is less than `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to compare to.
 
         Returns
@@ -309,13 +306,13 @@ class Timestream(object):
         """
         return Timestream._call("lt", self, rhs)
 
-    def __le__(self, rhs: Arg) -> Timestream:
+    def __le__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is less than or equal to `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to compare to.
 
         Returns
@@ -325,13 +322,13 @@ class Timestream(object):
         """
         return Timestream._call("lte", self, rhs)
 
-    def __gt__(self, rhs: Arg) -> Timestream:
+    def __gt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is greater than `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to compare to.
 
         Returns
@@ -341,13 +338,13 @@ class Timestream(object):
         """
         return Timestream._call("gt", self, rhs)
 
-    def __ge__(self, rhs: Arg) -> Timestream:
+    def __ge__(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is greater than or equal to `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to compare to.
 
         Returns
@@ -357,13 +354,13 @@ class Timestream(object):
         """
         return Timestream._call("gte", self, rhs)
 
-    def and_(self, rhs: Arg) -> Timestream:
+    def and_(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create the logical conjunction of this Timestream and `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to conjoin with.
 
         Returns
@@ -373,13 +370,13 @@ class Timestream(object):
         """
         return Timestream._call("logical_and", self, rhs)
 
-    def or_(self, rhs: Arg) -> Timestream:
+    def or_(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create the logical disjunction of this Timestream and `rhs`.
 
         Parameters
         ----------
-        rhs : Arg
+        rhs : Union[Timestream, Literal]
             The Timestream or literal value to disjoin with.
 
         Returns
@@ -400,13 +397,13 @@ class Timestream(object):
         """
         return Timestream._call("not", self)
 
-    def eq(self, other: Arg) -> Timestream:
+    def eq(self, other: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is equal to `other`.
 
         Parameters
         ----------
-        other : Arg
+        other : Union[Timestream, Literal]
             The Timestream or literal value to compare to.
 
         Returns
@@ -416,13 +413,13 @@ class Timestream(object):
         """
         return Timestream._call("eq", self, other)
 
-    def ne(self, other: Arg) -> Timestream:
+    def ne(self, other: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is not equal to `other`.
 
         Parameters
         ----------
-        other : Arg
+        other : Union[Timestream, Literal]
             The Timestream or literal value to compare to.
 
         Returns
@@ -432,7 +429,7 @@ class Timestream(object):
         """
         return Timestream._call("neq", self, other)
 
-    def __getitem__(self, key: Arg) -> Timestream:
+    def __getitem__(self, key: Union[Timestream, Literal]) -> Timestream:
         """
         Index into the elements of a Timestream.
 
@@ -445,7 +442,7 @@ class Timestream(object):
 
         Parameters
         ----------
-        key : Arg
+        key : Union[Timestream, Literal]
             The key to index into the expression.
 
         Returns
@@ -687,7 +684,7 @@ class Timestream(object):
 
 
 def _aggregation(
-    op: str, input: Timestream, window: Optional["kt.Window"], *args: Optional[Arg]
+    op: str, input: Timestream, window: Optional["kt.Window"], *args: Union[Timestream, Literal]
 ) -> Timestream:
     """
     Create the aggregation `op` with the given `input`, `window` and `args`.
@@ -700,7 +697,7 @@ def _aggregation(
         The input to the aggregation.
     window : Optional[Window]
         The window to use for the aggregation.
-    *args : Optional[Arg]
+    *args : Union[Timestream, Literal]
         Additional arguments to provide before `input` and the flattened window.
 
     Returns
