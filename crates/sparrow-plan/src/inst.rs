@@ -61,7 +61,7 @@ pub enum InstOp {
     #[strum(props(signature = "coalesce<T: any>(values+: T) -> T"))]
     Coalesce,
     #[strum(props(
-        signature = "collect<T: any>(max: i64, input: T, ticks: bool = null, slide_duration: i64 = null) -> list<T>"
+        signature = "collect<T: any>(input: T, const max: i64, const min: i64 = 0, ticks: bool = null, slide_duration: i64 = null) -> list<T>"
     ))]
     Collect,
     #[strum(props(

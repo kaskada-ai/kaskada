@@ -14,6 +14,11 @@ use std::sync::Arc;
 /// If the list is empty, an empty list is returned (rather than `null`).
 #[derive(Debug)]
 pub struct CollectStringEvaluator {
+    /// The min size of the buffer.
+    ///
+    /// If the buffer is smaller than this, a null value
+    /// will be produced.
+    min: usize,
     /// The max size of the buffer.
     ///
     /// Once the max size is reached, the front will be popped and the new
@@ -28,14 +33,14 @@ pub struct CollectStringEvaluator {
 
 impl EvaluatorFactory for CollectStringEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
-        let input_type = info.args[1].data_type();
+        let input_type = info.args[0].data_type();
         let result_type = info.result_type;
         match result_type {
             DataType::List(t) => anyhow::ensure!(t.data_type() == input_type),
             other => anyhow::bail!("expected list result type, saw {:?}", other),
         };
 
-        let max = match info.args[0].value_ref.literal_value() {
+        let max = match info.args[1].value_ref.literal_value() {
             Some(ScalarValue::Int64(Some(v))) if *v <= 0 => {
                 anyhow::bail!("unexpected value of `max` -- must be > 0")
             }
@@ -47,8 +52,21 @@ impl EvaluatorFactory for CollectStringEvaluator {
             None => anyhow::bail!("expected literal value for max parameter"),
         };
 
-        let (_, input, tick, duration) = info.unpack_arguments()?;
+        let min = match info.args[2].value_ref.literal_value() {
+            Some(ScalarValue::Int64(Some(v))) if *v < 0 => {
+                anyhow::bail!("unexpected value of `min` -- must be >= 0")
+            }
+            Some(ScalarValue::Int64(Some(v))) => *v as usize,
+            // If a user specifies `min = null`, default to 0.
+            Some(ScalarValue::Int64(None)) => 0,
+            Some(other) => anyhow::bail!("expected i64 for min parameter, saw {:?}", other),
+            None => anyhow::bail!("expected literal value for min parameter"),
+        };
+        assert!(min < max, "min must be less than max");
+
+        let (input, _, _, tick, duration) = info.unpack_arguments()?;
         Ok(Box::new(Self {
+            min,
             max,
             input,
             tick,
@@ -101,7 +119,11 @@ impl CollectStringEvaluator {
                 .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
             let cur_list = self.token.state(entity_index);
 
-            list_builder.append_value(cur_list.clone());
+            if cur_list.len() >= self.min {
+                list_builder.append_value(cur_list.clone());
+            } else {
+                list_builder.append_null();
+            }
         });
 
         Ok(Arc::new(list_builder.finish()))
