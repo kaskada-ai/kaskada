@@ -552,6 +552,17 @@ class Timestream(object):
         """
         return Timestream._call("is_valid", self)
 
+    def filter(self, condition: Timestream) -> Timestream:
+        """
+        Create a Timestream containing only the points where `condition` is `true`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `self` where `condition` is `true`.
+        """
+        return Timestream._call("when", condition, self)
+
     def collect(
         self, max: Optional[int], window: Optional["kt.Window"] = None
     ) -> Timestream:
@@ -575,6 +586,107 @@ class Timestream(object):
             Timestream containing the collected list at each point.
         """
         return _aggregation("collect", self, window, max)
+
+    def time_of(self) -> Timestream:
+        """
+        Create a Timestream containing the time of each point.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the time of each point.
+        """
+        return Timestream._call("time_of", self)
+
+    def lag(self, n: int) -> Timestream:
+        """
+        Create a Timestream containing the value `n` points before each point.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the value `n` points before each point.
+        """
+        return Timestream._call("lag", n, self)
+
+    def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing the value of `self` where `condition` is `true`,
+        or `null` otherwise.
+        
+        Returns
+        -------
+        Timestream
+            Timestream containing the value of `self` where `condition` is `true`, or
+            `null` otherwise.
+        """
+        return Timestream._call("if", condition, self)
+
+    def null_if(self, condition: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing `self` where `condition` is `false`, or `null` otherwise.
+        
+        Returns
+        -------
+        Timestream
+            Timestream containing the value of `self` where `condition` is `false`, or
+            `null` otherwise.
+        """
+        return Timestream._call("null_if", condition, self)
+
+    def length(self) -> Timestream:
+        """
+        Create a Timestream containing the length of `self`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the length of `self`.
+        """
+        if self.data_type.equals(pa.string()):
+            return Timestream._call("len", self)
+        elif isinstance(self.data_type, pa.ListType):
+            return Timestream._call("list_len", self)
+        else:
+            raise NotImplementedError(f"length not implemented for {self.data_type}")
+
+    def with_key(self, key: Timestream, grouping: str = None) -> Timestream:
+        """
+        Create a Timestream with a new grouping by `key`. 
+
+        Parameters
+        ----------
+        key : Timestream
+            The new key to use for the grouping.
+        grouping : str, optional
+            A string literal naming the new grouping. If no `grouping` is specified,
+            one will be computed from the type of the `key`.
+
+        Returns
+        -------
+        Timestream
+            Timestream with a new grouping by `key`.
+        """
+        return Timestream._call("with_key", key, self, grouping)
+
+    def lookup(self, key: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing the lookup join between the `key` and
+        `self`.
+
+        Parameters
+        ----------
+        key : Union[Timestream, Literal]
+            The foreign key to lookup. 
+            This must match the type of the keys in `self`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the lookup join between the `key` and `self`.
+        """
+        return Timestream._call("lookup", key, self)
+
 
     def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
