@@ -289,6 +289,7 @@ async fn test_collect_structs() {
     "###);
 }
 
+
 #[tokio::test]
 async fn test_collect_primitive_since_minutely() {
     insta::assert_snapshot!(QueryFixture::new("{ f1: Collect.n | collect(10, window=since(minutely())) | index(0) | when(is_valid($input)) }").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
