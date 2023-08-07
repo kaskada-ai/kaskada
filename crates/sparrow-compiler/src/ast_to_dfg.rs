@@ -581,7 +581,7 @@ pub fn add_to_dfg(
                 let min = dfg.literal(args[2].value());
                 let max = dfg.literal(args[1].value());
                 match (min, max) {
-                    (Some(min), Some(max)) => {
+                    (Some(ScalarValue::Int64(Some(min))), Some(ScalarValue::Int64(Some(max)))) => {
                         if min > max {
                             DiagnosticCode::IllegalCast
                                 .builder()
@@ -593,9 +593,8 @@ pub fn add_to_dfg(
                                 .emit(diagnostics);
                         }
                     }
-                    (_, _) => {
-                        panic!("min and max literal types should have been validated")
-                    }
+                    (Some(_), Some(_)) => (),
+                    (_, _) => panic!("previously verified min and max are scalar types"),
                 }
 
                 // [input, max, min, condition, duration]
