@@ -46,16 +46,18 @@ impl TableContent {
     pub fn stream(&self) -> BoxStream<RecordBatch> {
         async_stream::stream! {
             let mut version = self.version;
-            let mut recv = self.updates.subscribe();
+            let mut batches = self.updates.subscribe();
 
             tracing::info!("Starting subscriber with version {version}");
             yield self.merged;
-            while let Ok((recv_version, batch)) = recevier.recv().await {
+            while let Ok((recv_version, batch)) = batches.recv().await {
                 tracing::
                 if version < recv_version {
-                    tracing::info!("Recevied version {recv_version}");
+                    tracing::info!("Received version {recv_version} (prev: {version}");
                     yield batch;
                     version = recv_version;
+                } else {
+                    tracing::warn!("Ignoring version {recv_version} (already up to {version})")
                 }
             }
         }
