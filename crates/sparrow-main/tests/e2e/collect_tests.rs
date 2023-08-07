@@ -521,7 +521,7 @@ async fn test_min_must_be_lte_max() {
           - "  --> Query:1:31"
           - "  |"
           - "1 | { f1: Collect.s | collect(min=10, max=0) | index(1) }"
-          - "  |                               ^^ min '10i64' must be less than or equal to max '0i64'"
+          - "  |                               ^^ min '10' must be less than or equal to max '0'"
           - ""
           - ""
     "###);
