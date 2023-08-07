@@ -12,11 +12,11 @@ use anyhow::Context;
 use bit_set::BitSet;
 use itertools::Itertools;
 
-use crate::merge::input::{InputItem, OrderedInputs};
+use crate::old::input::{InputItem, OrderedInputs};
 
 /// Gathered batches to be merged.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct GatheredBatches<T: InputItem> {
+pub struct GatheredBatches<T: InputItem> {
     /// For each participating stream, the sequence of gathered input batches.
     ///
     /// This may be multiple batches for each input stream -- for instance, the
@@ -30,17 +30,17 @@ pub(crate) struct GatheredBatches<T: InputItem> {
     /// This uses a small vector to minimize indirections. We generally
     /// anticipate this being small, so 4 slots seems reasonable (although
     /// somewhat arbitrary).
-    pub(crate) batches: Vec<OrderedInputs<T>>,
+    pub batches: Vec<OrderedInputs<T>>,
 
     /// The minimum time (possibly) included in the gathered batches.
-    pub(crate) min_time_inclusive: i64,
+    pub min_time_inclusive: i64,
 
     /// The maximum time (possibly) included in the gathered batches.
-    pub(crate) max_time_inclusive: i64,
+    pub max_time_inclusive: i64,
 }
 
 #[derive(Debug)]
-pub(crate) struct Gatherer<T: InputItem> {
+pub struct Gatherer<T: InputItem> {
     remaining_sources: usize,
     /// The last input was emitted up to (but excluding) the given time.
     pub last_output_time: Option<i64>,

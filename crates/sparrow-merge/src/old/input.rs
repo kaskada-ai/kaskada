@@ -1,12 +1,10 @@
 use smallvec::SmallVec;
 
-use crate::Batch;
-
 /// An `InputItem` is is a splittable container of time-ordered data.
 ///
 /// The typical implementation used is `MergeInput` which implements this
 /// for an ordered `RecordBatch`.
-pub(crate) trait InputItem: Sized {
+pub trait InputItem: Sized {
     /// Return the minimum time in `self`.
     fn min_time(&self) -> i64;
 
@@ -23,7 +21,7 @@ pub(crate) trait InputItem: Sized {
 
 /// A collection of zero or more `InputItems` ordered by time.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct OrderedInputs<T: InputItem> {
+pub struct OrderedInputs<T> {
     /// The input items.
     ///
     /// We use a `SmallVec` because in most cases we're dealing with a
@@ -54,13 +52,19 @@ pub(crate) struct OrderedInputs<T: InputItem> {
     pub(super) max_time: i64,
 }
 
-impl<T: InputItem> OrderedInputs<T> {
-    pub fn new() -> Self {
+impl<T> Default for OrderedInputs<T> {
+    fn default() -> Self {
         Self {
             items: SmallVec::new(),
             min_time: i64::MIN,
             max_time: i64::MIN,
         }
+    }
+}
+
+impl<T> OrderedInputs<T> {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -87,7 +91,9 @@ impl<T: InputItem> OrderedInputs<T> {
 
         Ok(())
     }
+}
 
+impl<T: InputItem> OrderedInputs<T> {
     /// Add an item to this `OrderedInputs`.
     ///
     /// This will panic if the item's times are not monotonically increasing
@@ -232,111 +238,10 @@ impl<T: InputItem> std::ops::Index<usize> for OrderedInputs<T> {
     }
 }
 
-impl InputItem for Batch {
-    fn min_time(&self) -> i64 {
-        self.lower_bound.time
-    }
-
-    fn max_time(&self) -> i64 {
-        self.upper_bound.time
-    }
-
-    fn split_at(self, split_time: i64) -> anyhow::Result<(Option<Self>, Option<Self>)> {
-        if self.is_empty() {
-            return Ok((None, None));
-        } else if split_time <= self.min_time() {
-            return Ok((None, Some(self)));
-        } else if split_time > self.max_time() {
-            return Ok((Some(self), None));
-        }
-
-        let times = self.times()?;
-        let split_point = match times.binary_search(&split_time) {
-            Ok(mut found_index) => {
-                // Just do a linear search for the first value less than split time.
-                while found_index > 0 && times[found_index - 1] == split_time {
-                    found_index -= 1
-                }
-                found_index
-            }
-            Err(not_found_index) => not_found_index,
-        };
-
-        let lt = if split_point > 0 {
-            let lt = self.data.slice(0, split_point);
-            Some(Batch::try_new_from_batch(lt)?)
-        } else {
-            None
-        };
-
-        let gte = if split_point < self.num_rows() {
-            let gte = self.data.slice(split_point, self.num_rows() - split_point);
-            Some(Batch::try_new_from_batch(gte)?)
-        } else {
-            None
-        };
-        Ok((lt, gte))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::ops::RangeInclusive;
-    use std::sync::Arc;
-
-    use arrow::datatypes::{DataType, Field};
-    use arrow::record_batch::RecordBatch;
-    use itertools::Itertools;
-    use proptest::prelude::*;
-    use sparrow_core::TableSchema;
-
     use super::*;
-    use crate::merge::testing::{arb_i64_array, arb_key_triples};
-
-    fn arb_batch(max_len: usize) -> impl Strategy<Value = RecordBatch> {
-        (1..max_len)
-            .prop_flat_map(|len| (arb_key_triples(len), arb_i64_array(len)))
-            .prop_map(|((time, subsort, key_hash), values)| {
-                let schema = TableSchema::from_data_fields([Arc::new(Field::new(
-                    "data",
-                    DataType::Int64,
-                    true,
-                ))])
-                .unwrap();
-                let schema = schema.schema_ref();
-                RecordBatch::try_new(
-                    schema.clone(),
-                    vec![
-                        Arc::new(time),
-                        Arc::new(subsort),
-                        Arc::new(key_hash),
-                        Arc::new(values),
-                    ],
-                )
-                .unwrap()
-            })
-    }
-
-    proptest! {
-        #[test]
-        fn test_splitting(batch in arb_batch(1000)) {
-            // For every time value in the batch, try splitting there and make sure
-            // the ordering constraints are satisfied.
-            let input = Batch::try_new_from_batch(batch).unwrap();
-            let times = input.times().unwrap();
-
-            for split_time in times.iter().dedup() {
-                let (lt, gte) = input.clone().split_at(*split_time).unwrap();
-
-                if let Some(lt) = lt {
-                    lt.times().unwrap().iter().all(|t| *t < *split_time);
-                }
-                if let Some(gte) = gte {
-                    gte.times().unwrap().iter().all(|t| *t >= *split_time);
-                }
-            }
-        }
-    }
+    use std::ops::RangeInclusive;
 
     fn ranges(
         ranges: impl IntoIterator<Item = RangeInclusive<i64>>,

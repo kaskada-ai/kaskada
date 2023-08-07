@@ -17,12 +17,12 @@ use sparrow_qfr::{
 use tokio_stream::StreamExt;
 use tracing::info;
 
-use crate::merge::{homogeneous_merge, GatheredBatches, Gatherer};
 use crate::min_heap::{HasPriority, MinHeap};
 use crate::read::error::Error;
 use crate::read::parquet_stream::{self, new_parquet_stream};
 use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
+use sparrow_merge::old::{homogeneous_merge, GatheredBatches, Gatherer};
 
 const READ_TABLE: Activity = activity!("scan.read_file");
 const GATHER_TABLE_BATCHES: Activity = activity!("scan.gather");

@@ -9,7 +9,6 @@ use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, DataContext, Dfg, DiagnosticCollector};
-use sparrow_plan::TableId;
 use sparrow_runtime::execute::output::Destination;
 use sparrow_syntax::{ExprOp, LiteralValue, Located, Location, Resolved};
 use uuid::Uuid;
@@ -95,7 +94,7 @@ impl Session {
 
         let expr = Expr(dfg_node);
 
-        Ok(Table::new(expr, table_info))
+        Ok(Table::new(table_info, expr))
     }
 
     pub fn add_expr(
@@ -304,13 +303,6 @@ impl Session {
             .boxed();
 
         Ok(Execution::new(rt, output_rx, result))
-    }
-
-    pub(super) fn hacky_table_mut(
-        &mut self,
-        table_id: TableId,
-    ) -> &mut sparrow_compiler::TableInfo {
-        self.data_context.table_info_mut(table_id).unwrap()
     }
 }
 

@@ -61,6 +61,7 @@ sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }
+sparrow-merge = { path = "../sparrow-merge", features = ["testing"] }
 sparrow-plan = { path = "../sparrow-plan" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-syntax = { path = "../sparrow-syntax" }
@@ -87,7 +88,3 @@ tempfile.workspace = true
 [lib]
 bench = false
 doctest = false
-
-[[bench]]
-name = "main"
-harness = false
