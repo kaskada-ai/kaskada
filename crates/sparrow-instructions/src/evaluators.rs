@@ -196,7 +196,7 @@ fn create_simple_evaluator(
         InstOp::Coalesce => CoalesceEvaluator::try_new(info),
         InstOp::Collect => {
             create_typed_evaluator!(
-                &info.args[1].data_type,
+                &info.args[0].data_type,
                 CollectPrimitiveEvaluator,
                 CollectStructEvaluator,
                 CollectListEvaluator,

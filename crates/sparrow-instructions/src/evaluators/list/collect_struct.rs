@@ -2,7 +2,7 @@ use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateT
 use arrow::array::{
     new_empty_array, Array, ArrayRef, AsArray, ListArray, UInt32Array, UInt32Builder,
 };
-use arrow::buffer::{OffsetBuffer, ScalarBuffer};
+use arrow::buffer::{BooleanBuffer, NullBuffer, OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::DataType;
 use arrow_schema::Field;
 use itertools::Itertools;
@@ -19,6 +19,11 @@ use std::sync::Arc;
 /// If the list is empty, an empty list is returned (rather than `null`).
 #[derive(Debug)]
 pub struct CollectStructEvaluator {
+    /// The min size of the buffer.
+    ///
+    /// If the buffer is smaller than this, a null value
+    /// will be produced.
+    min: usize,
     /// The max size of the buffer.
     ///
     /// Once the max size is reached, the front will be popped and the new
@@ -33,7 +38,7 @@ pub struct CollectStructEvaluator {
 
 impl EvaluatorFactory for CollectStructEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
-        let input_type = info.args[1].data_type();
+        let input_type = info.args[0].data_type();
         let result_type = info.result_type;
         match result_type {
             DataType::List(t) => {
@@ -43,7 +48,7 @@ impl EvaluatorFactory for CollectStructEvaluator {
             other => anyhow::bail!("expected list result type, saw {:?}", other),
         };
 
-        let max = match info.args[0].value_ref.literal_value() {
+        let max = match info.args[1].value_ref.literal_value() {
             Some(ScalarValue::Int64(Some(v))) if *v <= 0 => {
                 anyhow::bail!("unexpected value of `max` -- must be > 0")
             }
@@ -54,12 +59,23 @@ impl EvaluatorFactory for CollectStructEvaluator {
             Some(other) => anyhow::bail!("expected i64 for max parameter, saw {:?}", other),
             None => anyhow::bail!("expected literal value for max parameter"),
         };
+        let min = match info.args[2].value_ref.literal_value() {
+            Some(ScalarValue::Int64(Some(v))) if *v < 0 => {
+                anyhow::bail!("unexpected value of `min` -- must be >= 0")
+            }
+            Some(ScalarValue::Int64(Some(v))) => *v as usize,
+            // If a user specifies `min = null`, default to 0.
+            Some(ScalarValue::Int64(None)) => 0,
+            Some(other) => anyhow::bail!("expected i64 for min parameter, saw {:?}", other),
+            None => anyhow::bail!("expected literal value for min parameter"),
+        };
+        debug_assert!(min <= max, "min must be less than max");
 
         let accum = new_empty_array(result_type).as_list::<i32>().to_owned();
         let token = CollectStructToken::new(Arc::new(accum));
-
-        let (_, input, tick, duration) = info.unpack_arguments()?;
+        let (input, _, _, tick, duration) = info.unpack_arguments()?;
         Ok(Box::new(Self {
+            min,
             max,
             input,
             tick,
@@ -77,7 +93,14 @@ impl Evaluator for CollectStructEvaluator {
                 let input = info.value(&self.input)?.array_ref()?;
                 let key_capacity = info.grouping().num_groups();
                 let entity_indices = info.grouping().group_indices();
-                Self::evaluate_non_windowed(token, key_capacity, entity_indices, input, self.max)
+                Self::evaluate_non_windowed(
+                    token,
+                    key_capacity,
+                    entity_indices,
+                    input,
+                    self.min,
+                    self.max,
+                )
             }
             (false, true) => unimplemented!("since window aggregation unsupported"),
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
@@ -179,6 +202,7 @@ impl CollectStructEvaluator {
         key_capacity: usize,
         entity_indices: &UInt32Array,
         input: ArrayRef,
+        min: usize,
         max: usize,
     ) -> anyhow::Result<ArrayRef> {
         let input_structs = input.as_struct();
@@ -194,6 +218,9 @@ impl CollectStructEvaluator {
 
         let mut take_output_builder = UInt32Builder::new();
         let mut output_offset_builder = vec![0];
+
+        // Tracks the result's null values
+        let mut null_buffer = vec![];
 
         let mut cur_offset = 0;
         // For each entity, append the take indices for the new input to the existing
@@ -213,14 +240,26 @@ impl CollectStructEvaluator {
             // already verified key exists, or created entry if not, in previous step
             let entity_take = entity_take_indices.get(entity_index).unwrap();
 
-            // Append this entity's take indices to the take output builder
-            entity_take.iter().for_each(|i| {
-                take_output_builder.append_value(*i);
-            });
+            if entity_take.len() >= min {
+                // Append this entity's take indices to the take output builder
+                entity_take.iter().for_each(|i| {
+                    take_output_builder.append_value(*i);
+                });
 
-            // Append this entity's current number of take indices to the output offset builder
-            cur_offset += entity_take.len();
-            output_offset_builder.push(cur_offset as i32);
+                // Append this entity's current number of take indices to the output offset builder
+                cur_offset += entity_take.len();
+
+                output_offset_builder.push(cur_offset as i32);
+                null_buffer.push(true);
+            } else {
+                // Append null if there are not enough values
+                take_output_builder.append_null();
+                null_buffer.push(false);
+
+                // Cur offset increases by 1 to account for the null value
+                cur_offset += 1;
+                output_offset_builder.push(cur_offset as i32);
+            }
         }
         let output_values =
             sparrow_arrow::concat_take(old_state_flat, &input, &take_output_builder.finish())?;
@@ -232,7 +271,7 @@ impl CollectStructEvaluator {
             field,
             OffsetBuffer::new(ScalarBuffer::from(output_offset_builder)),
             output_values,
-            None,
+            Some(NullBuffer::from(BooleanBuffer::from(null_buffer))),
         );
 
         // Construct the new state offset and values using the current entity take indices
@@ -264,7 +303,10 @@ impl CollectStructEvaluator {
 mod tests {
     use super::*;
     use arrow::{
-        array::{AsArray, Int64Array, StringArray, StructArray},
+        array::{
+            ArrayBuilder, AsArray, Int64Array, Int64Builder, ListBuilder, StringArray,
+            StringBuilder, StructArray, StructBuilder,
+        },
         buffer::ScalarBuffer,
     };
     use arrow_schema::{DataType, Field, Fields};
@@ -308,6 +350,7 @@ mod tests {
             key_capacity,
             &key_indices,
             input,
+            0,
             usize::MAX,
         )
         .unwrap();
@@ -363,6 +406,7 @@ mod tests {
             key_capacity,
             &key_indices,
             input,
+            0,
             usize::MAX,
         )
         .unwrap();
@@ -431,6 +475,7 @@ mod tests {
             key_capacity,
             &key_indices,
             input,
+            0,
             max,
         )
         .unwrap();
@@ -480,6 +525,7 @@ mod tests {
             key_capacity,
             &key_indices,
             input,
+            0,
             max,
         )
         .unwrap();
@@ -504,6 +550,197 @@ mod tests {
             Arc::new(expected),
             None,
         );
+        let expected = Arc::new(expected);
+
+        assert_eq!(expected.as_ref(), result);
+    }
+
+    #[test]
+    fn test_min() {
+        let min = 3;
+        let mut token = default_token();
+        let fields = Fields::from(vec![
+            Field::new("n", DataType::Int64, true),
+            Field::new("s", DataType::Utf8, true),
+        ]);
+        let field_builders: Vec<Box<dyn ArrayBuilder>> = vec![
+            Box::new(Int64Builder::new()),
+            Box::new(StringBuilder::new()),
+        ];
+
+        // Batch 1
+        let mut builder = StructBuilder::new(fields.clone(), field_builders);
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_null();
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_null();
+        builder.append(false);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.append(true);
+
+        builder
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.append(true);
+
+        let input = builder.finish();
+        let input = Arc::new(input);
+
+        let key_indices = UInt32Array::from(vec![0, 0, 0, 0]);
+        let key_capacity = 1;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            min,
+            usize::MAX,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 1
+        let field_builders: Vec<Box<dyn ArrayBuilder>> = vec![
+            Box::new(Int64Builder::new()),
+            Box::new(StringBuilder::new()),
+        ];
+
+        let mut builder = ListBuilder::new(StructBuilder::new(fields, field_builders));
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_null();
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_null();
+        builder.values().append(false);
+        builder.append(false);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_null();
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_null();
+        builder.values().append(false);
+        builder.append(false);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_null();
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_null();
+        builder.values().append(false);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder.append(true);
+
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(0);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("a");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_null();
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_null();
+        builder.values().append(false);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(1);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("b");
+        builder.values().append(true);
+        builder
+            .values()
+            .field_builder::<Int64Builder>(0)
+            .unwrap()
+            .append_value(2);
+        builder
+            .values()
+            .field_builder::<StringBuilder>(1)
+            .unwrap()
+            .append_value("c");
+        builder.values().append(true);
+        builder.append(true);
+        let expected = builder.finish();
         let expected = Arc::new(expected);
 
         assert_eq!(expected.as_ref(), result);
