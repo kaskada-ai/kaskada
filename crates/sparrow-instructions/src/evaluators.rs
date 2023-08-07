@@ -288,6 +288,7 @@ fn create_simple_evaluator(
             )
         }
         InstOp::Len => LenEvaluator::try_new(info),
+        InstOp::ListLen => ListLenEvaluator::try_new(info),
         InstOp::LogicalAnd => LogicalAndKleeneEvaluator::try_new(info),
         InstOp::LogicalOr => LogicalOrKleeneEvaluator::try_new(info),
         InstOp::Lower => LowerEvaluator::try_new(info),
