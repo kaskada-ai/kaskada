@@ -553,7 +553,7 @@ class Timestream(object):
         return Timestream._call("is_valid", self)
 
     def collect(
-        self, max: Optional[int], window: Optional["kt.Window"] = None
+        self, max: Optional[int], min: Optional[int] = 0, window: Optional["kt.Window"] = None
     ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
@@ -565,6 +565,9 @@ class Timestream(object):
         max : Optional[int]
             The maximum number of values to collect.
             If `None` all values are collected.
+        min: Optional[int]
+            The minimum number of values to collect before
+            producing a value. Defaults to 0. 
         window : Optional[Window]
             The window to use for the aggregation.
             If not specified, the entire Timestream is used.
@@ -574,7 +577,7 @@ class Timestream(object):
         Timestream
             Timestream containing the collected list at each point.
         """
-        return _aggregation("collect", self, window, max)
+        return _aggregation("collect", self, window, max, min)
 
     def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
@@ -698,7 +701,7 @@ def _aggregation(
     window : Optional[Window]
         The window to use for the aggregation.
     *args : Union[Timestream, Literal]
-        Additional arguments to provide before `input` and the flattened window.
+        Additional arguments to provide after `input` and before the flattened window.
 
     Returns
     -------
@@ -710,16 +713,12 @@ def _aggregation(
     NotImplementedError
         If the window is not a known type.
     """
-    # Note: things would be easier if we had a more normal order, which
-    # we could do as part of "aligning" Sparrow signatures to the new direction.
-    # However, `collect` currently has `collect(max, input, window)`, requiring
-    # us to add the *args like so.
     if window is None:
-        return Timestream._call(op, *args, input, None, None)
+        return Timestream._call(op, input, *args, None, None)
     elif isinstance(window, kt.SinceWindow):
-        return Timestream._call(op, *args, input, window.predicate, None)
+        return Timestream._call(op, input, *args, window.predicate, None)
     elif isinstance(window, kt.SlidingWindow):
-        return Timestream._call(op, *args, input, window.predicate, window.duration)
+        return Timestream._call(op, input, *args, window.predicate, window.duration)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

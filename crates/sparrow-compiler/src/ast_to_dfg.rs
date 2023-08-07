@@ -557,11 +557,11 @@ pub fn add_to_dfg(
                 //
                 // TODO: Flattening the window arguments is hacky and confusing. We should instead
                 // incorporate the tick directly into the function containing the window.
-                let window_arg = original_ast.map(|e| &e.args()[2]);
+                let window_arg = original_ast.map(|e| &e.args()[3]);
                 let (condition, duration) = match window_arg {
                     Some(window) => {
                         dfg.enter_env();
-                        dfg.bind("$condition_input", args[1].inner().clone());
+                        dfg.bind("$condition_input", args[0].inner().clone());
 
                         let result =
                             flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
@@ -574,12 +574,38 @@ pub fn add_to_dfg(
                         //
                         // Note that this won't define the `condition_input` for the
                         // purposes of ticks.
-                        (args[2].clone(), args[3].clone())
+                        (args[3].clone(), args[4].clone())
                     }
                 };
 
-                // [max, input, condition, duration]
-                vec![args[0].clone(), args[1].clone(), condition, duration]
+                let min = dfg.literal(args[2].value());
+                let max = dfg.literal(args[1].value());
+                match (min, max) {
+                    (Some(min), Some(max)) => {
+                        if min > max {
+                            DiagnosticCode::IllegalCast
+                                .builder()
+                                .with_label(args[2].location().primary_label().with_message(
+                                    format!(
+                                        "min '{min}' must be less than or equal to max '{max}'"
+                                    ),
+                                ))
+                                .emit(diagnostics);
+                        }
+                    }
+                    (_, _) => {
+                        panic!("min and max literal types should have been validated")
+                    }
+                }
+
+                // [input, max, min, condition, duration]
+                vec![
+                    args[0].clone(),
+                    args[1].clone(),
+                    args[2].clone(),
+                    condition,
+                    duration,
+                ]
             } else if function.name() == "when" || function.name() == "if" {
                 dfg.enter_env();
                 dfg.bind("$condition_input", args[1].inner().clone());
