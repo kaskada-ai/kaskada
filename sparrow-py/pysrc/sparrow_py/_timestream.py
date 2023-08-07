@@ -707,7 +707,6 @@ class Timestream(object):
         """
         return Timestream._call("lookup", key, self)
 
-
     def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
