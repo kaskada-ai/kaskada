@@ -16,7 +16,6 @@ darglint = ">=1.8.1"
 flake8 = ">=4.0.1"
 flake8-bugbear = ">=21.9.2"
 flake8-rst-docstrings = ">=0.2.5"
-furo = ">=2021.11.12"
 isort = ">=5.10.1"
 mypy = ">=0.930"
 pandas-stubs = "^2.0.2"
@@ -29,9 +28,12 @@ pyupgrade = ">=2.29.1"
 safety = ">=1.10.3"
 sphinx = ">=4.3.2"
 sphinx-autobuild = ">=2021.3.14"
+sphinx-book-theme = "^1.0.1"
+sphinx-copybutton = "^0.5.2"
 typeguard = ">=2.13.3"
 xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 myst-parser = {version = ">=0.16.1"}
+myst-nb = "^0.17.2"
 
 [tool.poetry.group.constraints]
 optional = true

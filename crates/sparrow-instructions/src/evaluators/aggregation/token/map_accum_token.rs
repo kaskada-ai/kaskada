@@ -1,4 +1,4 @@
-use arrow::array::{new_null_array, Array, ArrayRef, AsArray, MapArray};
+use arrow::array::{new_null_array, Array, ArrayRef, AsArray};
 
 use crate::{ComputeStore, StateToken, StoreKey};
 
@@ -30,10 +30,6 @@ impl StateToken for MapAccumToken {
 impl MapAccumToken {
     pub fn new(accum: ArrayRef) -> Self {
         Self { accum }
-    }
-
-    pub fn array(&self) -> &MapArray {
-        self.accum.as_map()
     }
 
     /// Concat nulls to the end of the current accumulator to grow the size.

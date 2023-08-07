@@ -155,11 +155,12 @@ def xdoctest(session: Session) -> None:
 DOCS_DEPS = [
     "sphinx",
     "sphinx-autobuild",
-    "furo",
+    "sphinx-book-theme",
+    "sphinx-copybutton",
     "myst-parser",
+    "myst-nb",
     "pandas",
-    "pyarrow",
-    "sphinx-autodoc-typehints"
+    "pyarrow"
 ]
 
 @session(name="docs-build", python=python_versions[0])
@@ -182,7 +183,7 @@ def docs_build(session: Session) -> None:
 @session(python=python_versions[0])
 def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
-    args = session.posargs or ["--open-browser", "docs", "docs/_build"]
+    args = session.posargs or ["--open-browser", "docs/source", "docs/_build", "-j", "auto"]
     install_self(session)
     session.install(*DOCS_DEPS)
 

@@ -60,7 +60,8 @@ class CsvSource(ArrowSource):
     """Source reading data from CSV via Pandas."""
 
     def __init__(
-        self, time_column_name: str, key_column_name: str, csv_string: str, **kwargs
+        self, time_column_name: str, key_column_name: str, csv_string: str,
+        **kwargs
     ) -> None:
         content = pd.read_csv(StringIO(csv_string), dtype_backend="pyarrow", **kwargs)
         super().__init__(time_column_name, key_column_name, content)
