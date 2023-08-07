@@ -670,8 +670,12 @@ class Timestream(object):
         Result
             The `Result` object to use for accessing the results.
         """
+        expr = self
+        if not pa.types.is_struct(self.data_type):
+            # The execution engine requires a struct, so wrap this in a record.
+            expr = record({"result": self})
         options = ExecutionOptions(row_limit=row_limit, max_batch_size=max_batch_size)
-        execution = self._ffi_expr.execute(options)
+        execution = expr._ffi_expr.execute(options)
         return Result(execution)
 
 
