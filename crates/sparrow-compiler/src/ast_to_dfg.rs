@@ -606,16 +606,27 @@ pub fn add_to_dfg(
                     duration,
                 ]
             } else if function.name() == "when" || function.name() == "if" {
-                dfg.enter_env();
-                dfg.bind("$condition_input", args[1].inner().clone());
+                match original_ast {
+                    Some(original_ast) => {
+                        dfg.enter_env();
+                        dfg.bind("$condition_input", args[1].inner().clone());
 
-                let condition = original_ast.unwrap().args()[0]
-                    .as_ref()
-                    .try_map(|condition| ast_to_dfg(data_context, dfg, diagnostics, condition))?;
+                        let condition = original_ast.args()[0].as_ref().try_map(|condition| {
+                            ast_to_dfg(data_context, dfg, diagnostics, condition)
+                        })?;
 
-                dfg.exit_env();
-                // [condition, value]
-                vec![condition, args[1].clone()]
+                        dfg.exit_env();
+                        vec![condition, args[1].clone()]
+                    }
+                    None => {
+                        // If `expr` is None, we're running the Python builder code,
+                        // which already flattened things.
+                        //
+                        // Note that this won't define the `condition_input` for the
+                        // purposes of ticks.
+                        vec![args[0].clone(), args[1].clone()]
+                    }
+                }
             } else {
                 args
             };
