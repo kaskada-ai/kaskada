@@ -65,7 +65,7 @@ def test_add_dataframe(golden) -> None:
     dataset1 = pd.DataFrame(records)
 
     table = kt.sources.ArrowSource("time", "key", dataset1)
-    golden(table)
+    golden.jsonl(table)
 
     records.clear()
     for member_id in member_ids:
@@ -79,4 +79,4 @@ def test_add_dataframe(golden) -> None:
             )
     dataset2 = pd.DataFrame(records)
     table.add(dataset2)
-    golden(table)
+    golden.jsonl(table)

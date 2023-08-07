@@ -22,8 +22,8 @@ def test_iterate_pandas(golden, source_int64) -> None:
     results = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
 
     # 4 rows, max 2 per batch = 2 batches
-    golden(next(results))
-    golden(next(results))
+    golden.jsonl(next(results))
+    golden.jsonl(next(results))
     with pytest.raises(StopIteration):
         next(results)
 
