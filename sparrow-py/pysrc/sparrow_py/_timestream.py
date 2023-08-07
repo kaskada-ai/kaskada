@@ -27,6 +27,7 @@ The type of arguments to most Timestream functions.
 May be a Timestream, a literal (int, str, float, bool), or null (`None`).
 """
 
+
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
     if sys.version_info >= (3, 11):
@@ -98,9 +99,7 @@ class Timestream(object):
     @final
     def pipe(
         self,
-        func: Union[
-            Callable[..., Timestream], Tuple[Callable[..., Timestream], str]
-        ],
+        func: Union[Callable[..., Timestream], Tuple[Callable[..., Timestream], str]],
         *args: Arg,
         **kwargs: Arg,
     ) -> Timestream:

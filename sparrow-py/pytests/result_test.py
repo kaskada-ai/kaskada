@@ -35,9 +35,10 @@ def test_iter_rows(golden, source_int64) -> None:
     with pytest.raises(StopIteration):
         next(results)
 
+
 @pytest.mark.asyncio
 async def test_iter_pandas_async(golden, source_int64) -> None:
-    batches = source_int64.run(row_limit = 4, max_batch_size=2).iter_pandas_async()
+    batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas_async()
 
     # 4 rows, max 2 per batch = 2 batches.
 

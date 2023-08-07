@@ -2,6 +2,7 @@
 from typing import Any
 from typing import Dict
 
+
 project = "sparrow-py"
 author = "Kaskada Contributors"
 copyright = "2023, Kaskada Contributors"
@@ -18,9 +19,9 @@ html_title = "Kaskada"
 language = "en"
 
 intersphinx_mapping: Dict[str, Any] = {
-    'python': ('http://docs.python.org/3', None),
-    'pandas': ('http://pandas.pydata.org/docs', None),
-    'pyarrow': ('https://arrow.apache.org/docs', None),
+    "python": ("http://docs.python.org/3", None),
+    "pandas": ("http://pandas.pydata.org/docs", None),
+    "pyarrow": ("https://arrow.apache.org/docs", None),
 }
 
 html_theme_options: Dict[str, Any] = {
@@ -65,4 +66,4 @@ autodoc_typehints = "description"
 # Don't show class signature with the class' name.
 autodoc_class_signature = "separated"
 
-autodoc_type_aliases = { 'Arg': 'sparrow_py.Arg' }
+autodoc_type_aliases = {"Arg": "sparrow_py.Arg"}
