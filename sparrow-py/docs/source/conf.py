@@ -2,6 +2,10 @@
 from typing import Any
 from typing import Dict
 
+from pathlib import Path
+import sys
+sys.path.append(str(Path(".").resolve()))
+
 project = "sparrow-py"
 author = "Kaskada Contributors"
 copyright = "2023, Kaskada Contributors"
@@ -11,9 +15,11 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
+    "sphinx_design",
     # "myst_parser",
     "myst_nb",
     "sphinx_copybutton",
+    "_extensions.gallery_directive",
 ]
 autodoc_typehints = "description"
 language = "en"
@@ -28,6 +34,7 @@ html_theme_options: Dict[str, Any] = {
     "use_repository_button": True,
     "use_source_button": True,
     "use_edit_page_button": True,
+    "home_page_in_toc": True,
     "use_issues_button": True,
     "repository_branch": "main",
     "path_to_docs": "sparrow-py/docs/source",
@@ -44,8 +51,7 @@ html_theme_options: Dict[str, Any] = {
             "icon": "fa-brands fa-slack",
         },
     ],
-    "show_nav_level": 3,
-    "show_toc_level": 2,
+    "primary_sidebar_end": ["indices.html"],
 }
 
 templates_path = ["_templates"]

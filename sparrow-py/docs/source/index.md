@@ -1,39 +1,88 @@
 ---
 hide-toc: true
+html_theme.sidebar_secondary.remove: true
+title: Kaskada Timestreams
 ---
 
-# Kaskada Timestreams
+<div class="px-4 py-5 my-5 text-center">
+    <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
+    <h1 class="display-5 fw-bold">Event-processing without the fuss.</h1>
+    <div class="col-lg-6 mx-auto">
+      <p class="lead mb-4">Real-time and historic event processing in Python.
+      </p>
+    </div>
+</div>
 
-```{include} ../../README.md
-:start-after: <!-- start elevator-pitch -->
-:end-before: <!-- end elevator-pitch -->
+```{gallery-grid}
+:grid-columns: 1 2 2 3
+
+- header: "{fas}`timeline;pst-color-primary` Real-time processing for all events"
+  content: "Quickly process structured events so you can respond in real-time."
+  link: ".#stream"
+- header: "{fab}`python;pst-color-primary` Python-native"
+  content: "Use Python so you can load data, process it, and train and serve models from one place."
+  link: ".#python"
+- header: "{fas}`gauge-high;pst-color-primary` Get started immediately"
+  content: "No infrastructure to deploy let's you jump right in."
+  link: ".#get-started"
+
+- header: "{fas}`rocket;pst-color-primary` Local, Remote and Distributed"
+  content: "Develop and test locally. Deploy to Docker, K8s or a service for production."
+  link: ".#local-and-distributed"
+- header: "{fas}`fast-forward;pst-color-primary` Real-time, Batch and Streaming"
+  content: "Execute large-historic queries or materialize in real-time. Or both."
+  link: ".#real-time-and-historic"
+- header: "{fas}`backward;pst-color-primary` Time-travel"
+  content: "Generate training examples from the past to predict the future."
+  link: ".#time-travel"
 ```
 
-## What are "Timestreams"?
-A [Timestream](reference/timestream/index) describes how a value changes over time. In the same way that SQL
-queries transform tables and graph queries transform nodes and edges,
-Kaskada queries transform Timestreams.
+* * *
 
-In comparison to a timeseries which often contains simple values (e.g., numeric
-observations) defined at fixed, periodic times (i.e., every minute), a Timestream
-contains any kind of data (records or collections as well as primitives) and may
-be defined at arbitrary times corresponding to when the events occur.
+(stream)=
+# Real-time event-processing
 
-## Getting Started with Timestreams
+Kaskada is built on Apache Arrow, providing an efficient, columnar representation of data.
+The same approach is at the core of many analytic databases as well as Pandas and Polars.
 
-Getting started with Timestreams is as simple as `pip` installing the Python library, loading some data and running a query.
+Kaskada goes beyond the columnar representation, by introduce a Timestream -- a columnar representation of events, ordered by time and grouped by key.
+This representation is a perfect fit for all kinds of events, modern event streams as well as events stored in a database.
+Specializing for Timestreams allows Kaskada to optimize temporal queries and execute them much faster.
 
-```python
-import timestreams as t
+(python)=
+# Python-native
 
-# Read data from a Parquet file.
-data = t.sources.Parquet.from_file(
-    "path_to_file.parquet",
-    time = "time",
-    key = "user")
-# Get the count of events associated with each user over time, as a dataframe.
-data.count().run().to_pandas()
-```
+Connect to existing data in streams or databases, or load data using Python.
+Wherever your events are stored, Kaskada can help you process them.
+
+Build temporal queries and process the results using Python.
+Connect straight to your visualizations, dashboards or machine learning systems.
+
+Kaskada lets you do it all in one place.
+
+(get_started)=
+# Get Started
+
+With no infrastructure to deploy, get started processing events immediately.
+Check out the [Quick Start](quickstart) now!
+
+(local-and-distributed)=
+# Local, Remote and Distributed
+
+Fast enough to run locally, Kaskada makes it easy to build and test your real-time queries.
+
+Built for the cloud and supporting partitioned and distributed execution, Kaskada scales to the volume and throughput you need.
+
+
+(real_time_and_historic)=
+# Real-time and Historic
+
+Process events in real-time as they arrive.
+Backfill materializations by starting with history and switching to the stream.
+
+(time-travel)=
+# Time Travel
+Compute temporal joins at the correct times, without risk of leakage.
 
 ```{toctree}
 :hidden:
@@ -41,6 +90,14 @@ data.count().run().to_pandas()
 quickstart
 concepts
 examples/index
+```
+
+```{toctree}
+:caption: User Guide
+:hidden:
+:maxdepth: 1
+
+guide/introduction
 ```
 
 ```{toctree}
