@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import sys
 from typing import Callable
 from typing import Dict
@@ -22,7 +23,7 @@ from ._execution import ExecutionOptions
 from ._result import Result
 
 
-Literal = Union[int, str, float, bool, None]
+Literal = Union[int, str, float, bool, None, timedelta]
 
 def _augment_error(args: Sequence[Union[Timestream, Literal]], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
@@ -49,7 +50,7 @@ class Timestream(object):
         self._ffi_expr = ffi
 
     @staticmethod
-    def _call(func: str, *args: Union[Timestream, Literal]) -> Timestream:
+    def _call(func: str, *args: Union[Timestream, Literal], session: Optional[_ffi.Session] = None) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
 
@@ -59,6 +60,10 @@ class Timestream(object):
             Name of the function to apply.
         *args : Timestream | int | str | float | bool | None
             List of arguments to the expression.
+        session : FFI Session
+            FFI Session to create the expression in.
+            If unspecified, will infer from the arguments.
+            Will fail if all arguments are literals and the session is not provided.
 
         Returns
         -------
@@ -76,9 +81,10 @@ class Timestream(object):
         ffi_args = [
             arg._ffi_expr if isinstance(arg, Timestream) else arg for arg in args
         ]
-        session = next(
-            arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
-        )
+        if session is None:
+            session = next(
+                arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
+            )
         try:
             return Timestream(_ffi.Expr(session=session, operation=func, args=ffi_args))
         except TypeError as e:
@@ -175,8 +181,28 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self + rhs`.
+
+        Raises
+        ------
+        ValueError
+            If attempting to perform an addition that is not possible.
         """
-        return Timestream._call("add", self, rhs)
+        if isinstance(rhs, timedelta):
+            # Right now, we can't convert a time delta directly to a scalar value, because
+            # it potentially has multiple components (days, seconds, microseconds).
+            result = self
+            session = self._ffi_expr.session()
+            if rhs.days != 0:
+                days = Timestream._call("days", rhs.days, session = session)
+                result = Timestream._call("add_time", days, result)
+            if rhs.seconds != 0:
+                seconds = Timestream._call("seconds", rhs.seconds, session = session)
+                result = Timestream._call("add_time", seconds, result)
+            if rhs.microseconds != 0:
+                raise ValueError("Cannot add microseconds to a Timestream")
+            return result
+        else:
+            return Timestream._call("add", self, rhs)
 
     def __radd__(self, lhs: Union[Timestream, Literal]) -> Timestream:
         """
@@ -583,7 +609,7 @@ class Timestream(object):
             If `None` all values are collected.
         min: Optional[int]
             The minimum number of values to collect before
-            producing a value. Defaults to 0. 
+            producing a value. Defaults to 0.
         window : Optional[Window]
             The window to use for the aggregation.
             If not specified, the entire Timestream is used.
@@ -631,7 +657,7 @@ class Timestream(object):
         ----------
         condition : Union[Timestream, Literal]
             The condition to check.
-        
+
         Returns
         -------
         Timestream
@@ -648,7 +674,7 @@ class Timestream(object):
         ----------
         condition : Union[Timestream, Literal]
             The condition to check.
-        
+
         Returns
         -------
         Timestream
@@ -675,7 +701,7 @@ class Timestream(object):
 
     def with_key(self, key: Timestream, grouping: Optional[str] = None) -> Timestream:
         """
-        Create a Timestream with a new grouping by `key`. 
+        Create a Timestream with a new grouping by `key`.
 
         Parameters
         ----------
@@ -700,7 +726,7 @@ class Timestream(object):
         Parameters
         ----------
         key : Union[Timestream, Literal]
-            The foreign key to lookup. 
+            The foreign key to lookup.
             This must match the type of the keys in `self`.
 
         Returns
