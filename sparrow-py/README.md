@@ -23,7 +23,7 @@ To build this package, first install `maturin`:
 
 ```shell
 poetry shell
-poetry install
+poetry install --no-root
 maturin develop
 pytest
 ```

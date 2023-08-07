@@ -102,3 +102,14 @@ impl Execution {
         Ok(self.rt.block_on(self.output.collect()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::Execution;
+
+    #[test]
+    fn test_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Execution>();
+    }
+}
