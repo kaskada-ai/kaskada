@@ -128,6 +128,24 @@ async fn test_last_list() {
 }
 
 #[tokio::test]
+async fn test_list_len() {
+    insta::assert_snapshot!(QueryFixture::new("{
+        len_struct: { s: Input.string_list } | collect(max=null) | list_len(),
+        len_num: Input.i64_list | list_len(),
+        len_str: Input.string_list | list_len(),
+        len_bool: Input.bool_list | list_len(),
+    }
+     ").run_to_csv(&list_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,len_struct,len_num,len_str,len_bool
+    1996-12-19T16:39:57.000000000,0,18433805721903975440,1,1,3,2,2
+    1996-12-19T16:40:57.000000000,0,18433805721903975440,1,2,3,3,2
+    1996-12-19T16:40:59.000000000,0,18433805721903975440,1,3,3,0,3
+    1996-12-19T16:41:57.000000000,0,18433805721903975440,1,4,3,2,3
+    1996-12-19T16:42:57.000000000,0,18433805721903975440,1,5,3,1,1
+    "###);
+}
+
+#[tokio::test]
 async fn test_list_schemas_are_compatible() {
     // This query puts a collect() into a record, which
     // does schema validation when constructing the struct array.

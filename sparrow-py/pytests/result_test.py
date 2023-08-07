@@ -22,8 +22,8 @@ def test_iter_pandas(golden, source_int64) -> None:
     batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
 
     # 4 rows, max 2 per batch = 2 batches
-    golden(next(batches))
-    golden(next(batches))
+    golden.jsonl(next(batches))
+    golden.jsonl(next(batches))
     with pytest.raises(StopIteration):
         next(batches)
 
@@ -45,7 +45,7 @@ async def test_iter_pandas_async(golden, source_int64) -> None:
     # We could test using `await anext(batches)`, but that wasn't introduced
     # until Python 3.10. Since everything else works in 3.8 and 3.9, we just
     # call `__anext__` directly.
-    golden(await batches.__anext__())
-    golden(await batches.__anext__())
+    golden.jsonl(await batches.__anext__())
+    golden.jsonl(await batches.__anext__())
     with pytest.raises(StopAsyncIteration):
         await batches.__anext__()

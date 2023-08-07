@@ -20,4 +20,9 @@ pub(super) fn register(registry: &mut Registry) {
         )
         .with_implementation(Implementation::Instruction(InstOp::Collect))
         .set_internal();
+
+    registry
+        .register("list_len<T: any>(input: list<T>) -> i32")
+        .with_implementation(Implementation::Instruction(InstOp::ListLen))
+        .set_internal();
 }

@@ -22,7 +22,7 @@ def test_record(source, golden) -> None:
     m = source["m"]
     n = source["n"]
 
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "m": m,
@@ -35,12 +35,12 @@ def test_record(source, golden) -> None:
 def test_extend_record(source, golden) -> None:
     m = source["m"]
     n = source["n"]
-    golden(source.extend({"add": m + n}))
+    golden.jsonl(source.extend({"add": m + n}))
 
 
 def test_select_record(source, golden) -> None:
-    golden(source.select("n"))
+    golden.jsonl(source.select("n"))
 
 
 def test_remove_record(source, golden) -> None:
-    golden(source.remove("n"))
+    golden.jsonl(source.remove("n"))

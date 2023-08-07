@@ -123,6 +123,8 @@ pub enum InstOp {
     Last,
     #[strum(props(signature = "len(s: string) -> i32"))]
     Len,
+    #[strum(props(signature = "list_len<T: any>(input: list<T>) -> i32"))]
+    ListLen,
     #[strum(props(signature = "logical_and(a: bool, b: bool) -> bool"))]
     LogicalAnd,
     #[strum(props(signature = "logical_or(a: bool, b: bool) -> bool"))]
