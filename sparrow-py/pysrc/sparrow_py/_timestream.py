@@ -357,7 +357,7 @@ class Timestream(object):
         """
         return Timestream._call("gte", self, rhs)
 
-    def __and__(self, rhs: Arg) -> Timestream:
+    def and_(self, rhs: Arg) -> Timestream:
         """
         Create the logical conjunction of this Timestream and `rhs`.
 
@@ -369,13 +369,13 @@ class Timestream(object):
         Returns
         -------
         Timestream
-            The Timestream resulting from `self & rhs`.
+            The Timestream resulting from `self and rhs`.
         """
-        return Timestream._call("and", self, rhs)
+        return Timestream._call("logical_and", self, rhs)
 
-    def __or__(self, rhs: Arg) -> Timestream:
+    def or_(self, rhs: Arg) -> Timestream:
         """
-        Create the logical disjunction of this Timestream nad `rhs`.
+        Create the logical disjunction of this Timestream and `rhs`.
 
         Parameters
         ----------
@@ -385,9 +385,20 @@ class Timestream(object):
         Returns
         -------
         Timestream
-            The Timestream resulting from `self | rhs`.
+            The Timestream resulting from `self or rhs`.
         """
-        return Timestream._call("or", self, rhs)
+        return Timestream._call("logical_or", self, rhs)
+
+    def not_(self) -> Timestream:
+        """
+        Create the logical negation of this Timestream.
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from `not self`.
+        """
+        return Timestream._call("not", self)
 
     def eq(self, other: Arg) -> Timestream:
         """
@@ -513,18 +524,14 @@ class Timestream(object):
 
     def neg(self) -> Timestream:
         """
-        Create a Timestream from the logical or numeric negation of self.
+        Create a Timestream from the numeric negation of self.
 
         Returns
         -------
         Timestream
-            Timestream with the logical or numeric negation of self.
+            Timestream of the numeric negation of self.
         """
-        data_type = self.data_type
-        if data_type == pa.bool_():
-            return Timestream._call("not", self)
-        else:
-            return Timestream._call("neg", self)
+        return Timestream._call("neg", self)
 
     def is_null(self) -> Timestream:
         """

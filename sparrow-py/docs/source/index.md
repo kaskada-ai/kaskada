@@ -26,7 +26,7 @@ data.count().run().to_pandas()
 ```
 
 ## What are "Timestreams"?
-A [Timestream](reference/timestream) describes how a value changes over time. In the same way that SQL
+A [Timestream](reference/timestream/index) describes how a value changes over time. In the same way that SQL
 queries transform tables and graph queries transform nodes and edges,
 Kaskada queries transform Timestreams.
 
@@ -39,13 +39,17 @@ be defined at arbitrary times corresponding to when the events occur.
 :hidden:
 
 quickstart
+concepts
+examples/index
 ```
 
 ```{toctree}
 :caption: Reference
 :hidden:
+:maxdepth: 3
 
-reference/timestream
+reference/timestream/index
+reference/windows
 reference/sources
-reference/execution
+reference/results
 ```

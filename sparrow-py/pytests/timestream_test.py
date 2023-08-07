@@ -50,6 +50,8 @@ def test_timestream_math(source1) -> None:
     assert (1 / x).data_type == x.data_type
     assert (1 + x).data_type == x.data_type
 
+    assert (1 + x).neg().data_type == x.data_type
+
 
 def test_timestream_comparison(source1) -> None:
     x = source1["x"]
@@ -70,6 +72,12 @@ def test_timestream_comparison(source1) -> None:
     # We can't overload `__eq__` since that must take any RHS and must return `bool`.
     assert x.eq(1).data_type == pa.bool_()
     assert x.ne(1).data_type == pa.bool_()
+
+    a = x > 1
+    b = x.eq(1)
+    assert a.not_().data_type == pa.bool_()
+    assert a.and_(b).data_type == pa.bool_()
+    assert a.or_(b).data_type == pa.bool_()
 
 
 def test_timestream_arithmetic_types(source1) -> None:

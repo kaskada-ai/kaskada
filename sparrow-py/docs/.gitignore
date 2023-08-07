@@ -1,1 +1,4 @@
 _build
+.jupyter_cache
+jupyter_execute
+source/reference/**/api
