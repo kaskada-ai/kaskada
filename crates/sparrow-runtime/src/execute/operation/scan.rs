@@ -163,15 +163,46 @@ impl ScanOperation {
             // in-memory batch as the "hot-store" for history+stream hybrid
             // queries.
             assert!(requested_slice.is_none());
-            let batch = in_memory.clone();
-            return Ok(Box::new(Self {
-                projected_schema,
-                input_stream: futures::stream::once(async move {
-                    Batch::try_new_from_batch(batch.current().clone())
+            // TODO: Consider stoppable batch scans (and queries).
+            let input_stream = if context.materialize {
+                in_memory
+                    .subscribe()
+                    .map_err(|e| e.change_context(Error::internal_msg("invalid input")))
+                    .and_then(|batch| async move {
+                        Batch::try_new_from_batch(batch)
+                            .into_report()
+                            .change_context(Error::internal_msg("invalid input"))
+                    })
+                    // TODO: Share this code / unify it with other scans.
+                    .take_until(async move {
+                        let mut stop_signal_rx =
+                            stop_signal_rx.expect("stop signal for use with materialization");
+                        while !*stop_signal_rx.borrow() {
+                            match stop_signal_rx.changed().await {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    tracing::error!(
+                                        "stop signal receiver dropped unexpectedly: {:?}",
+                                        e
+                                    );
+                                    break;
+                                }
+                            }
+                        }
+                    })
+                    .boxed()
+            } else {
+                let batch = in_memory.current().clone();
+                futures::stream::once(async move {
+                    Batch::try_new_from_batch(batch)
                         .into_report()
                         .change_context(Error::internal_msg("invalid input"))
                 })
-                .boxed(),
+                .boxed()
+            };
+            return Ok(Box::new(Self {
+                projected_schema,
+                input_stream,
                 key_hash_index: KeyHashIndex::default(),
                 progress_updates_tx: context.progress_updates_tx.clone(),
             }));
@@ -477,6 +508,7 @@ mod tests {
             progress_updates_tx,
             output_at_time: None,
             bounded_lateness_ns: None,
+            materialize: false,
         };
 
         executor

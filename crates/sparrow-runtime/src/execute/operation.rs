@@ -96,6 +96,13 @@ pub(crate) struct OperationContext {
     ///
     /// If not set, defaults to the [BOUNDED_LATENESS_NS] const.
     pub bounded_lateness_ns: Option<i64>,
+    /// If true, the execution is a materialization.
+    ///
+    /// It will subscribe to the input stream and continue running as new data
+    /// arrives. It won't send final ticks.
+    ///
+    /// Derived from the ExecutionOptions,
+    pub materialize: bool,
 }
 
 impl OperationContext {

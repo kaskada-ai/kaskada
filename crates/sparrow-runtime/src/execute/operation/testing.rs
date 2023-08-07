@@ -189,6 +189,7 @@ pub(super) async fn run_operation(
         progress_updates_tx,
         output_at_time: None,
         bounded_lateness_ns: None,
+        materialize: false,
     };
     executor
         .execute(
@@ -246,6 +247,7 @@ pub(super) async fn run_operation_json(
         progress_updates_tx,
         output_at_time: None,
         bounded_lateness_ns: None,
+        materialize: false,
     };
     executor
         .execute(

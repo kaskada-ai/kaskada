@@ -13,6 +13,8 @@ pub struct Execution {
     output: tokio_stream::wrappers::ReceiverStream<RecordBatch>,
     /// Future which resolves to the first error or  None.
     status: Status,
+    /// Stop signal. Send `true` to stop execution.
+    stop_signal_rx: tokio::sync::watch::Sender<bool>,
 }
 
 enum Status {
@@ -26,6 +28,7 @@ impl Execution {
         rt: tokio::runtime::Runtime,
         output_rx: tokio::sync::mpsc::Receiver<RecordBatch>,
         progress: BoxStream<'static, error_stack::Result<ExecuteResponse, Error>>,
+        stop_signal_rx: tokio::sync::watch::Sender<bool>,
     ) -> Self {
         let output = tokio_stream::wrappers::ReceiverStream::new(output_rx);
         let status = Status::Running(Box::pin(async move {
@@ -34,7 +37,12 @@ impl Execution {
             Ok(())
         }));
 
-        Self { rt, output, status }
+        Self {
+            rt,
+            output,
+            status,
+            stop_signal_rx,
+        }
     }
 
     /// Check the status future.
@@ -68,6 +76,16 @@ impl Execution {
                 Err(e)
             }
         }
+    }
+
+    /// Send the stop signal.
+    ///
+    /// This method does *not* wait for all batches to be processed.
+    pub fn stop(&mut self) {
+        self.stop_signal_rx.send_if_modified(|stop| {
+            *stop = true;
+            true
+        });
     }
 
     pub async fn next(&mut self) -> error_stack::Result<Option<RecordBatch>, Error> {
