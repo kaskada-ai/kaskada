@@ -24,3 +24,9 @@ def test_with_key_literal(source, golden) -> None:
 def test_with_key_column(source, golden) -> None:
     new_key = source["new_key"]
     golden(source.with_key(new_key))
+
+def test_with_key_grouping(source, golden) -> None:
+    new_key = source["new_key"]
+    grouping = "user"
+    golden(source.with_key(new_key, grouping))
+

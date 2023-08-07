@@ -650,7 +650,7 @@ class Timestream(object):
         else:
             raise NotImplementedError(f"length not implemented for {self.data_type}")
 
-    def with_key(self, key: Timestream, grouping: str = None) -> Timestream:
+    def with_key(self, key: Timestream, grouping: Optional[str] = None) -> Timestream:
         """
         Create a Timestream with a new grouping by `key`. 
 
@@ -658,7 +658,7 @@ class Timestream(object):
         ----------
         key : Timestream
             The new key to use for the grouping.
-        grouping : str, optional
+        grouping : Optional[str]
             A string literal naming the new grouping. If no `grouping` is specified,
             one will be computed from the type of the `key`.
 
