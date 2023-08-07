@@ -1,0 +1,511 @@
+use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
+use arrow::array::{
+    new_empty_array, Array, ArrayRef, AsArray, ListArray, UInt32Array, UInt32Builder,
+};
+use arrow::buffer::{OffsetBuffer, ScalarBuffer};
+use arrow::datatypes::DataType;
+use arrow_schema::Field;
+use itertools::Itertools;
+use sparrow_arrow::scalar_value::ScalarValue;
+use sparrow_plan::ValueRef;
+use std::collections::{BTreeMap, VecDeque};
+use std::sync::Arc;
+
+/// Evaluator for the `collect` instruction.
+///
+/// Collects a stream of struct values into a List. A list is produced
+/// for each input value received, growing up to a maximum size.
+///
+/// If the list is empty, an empty list is returned (rather than `null`).
+#[derive(Debug)]
+pub struct CollectStructEvaluator {
+    /// The max size of the buffer.
+    ///
+    /// Once the max size is reached, the front will be popped and the new
+    /// value pushed to the back.
+    max: usize,
+    input: ValueRef,
+    tick: ValueRef,
+    duration: ValueRef,
+    /// Contains the buffer of values for each entity
+    token: CollectStructToken,
+}
+
+impl EvaluatorFactory for CollectStructEvaluator {
+    fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        let input_type = info.args[1].data_type();
+        let result_type = info.result_type;
+        match result_type {
+            DataType::List(t) => {
+                anyhow::ensure!(matches!(input_type, DataType::Struct(..)));
+                anyhow::ensure!(t.data_type() == input_type);
+            }
+            other => anyhow::bail!("expected list result type, saw {:?}", other),
+        };
+
+        let max = match info.args[0].value_ref.literal_value() {
+            Some(ScalarValue::Int64(Some(v))) if *v <= 0 => {
+                anyhow::bail!("unexpected value of `max` -- must be > 0")
+            }
+            Some(ScalarValue::Int64(Some(v))) => *v as usize,
+            // If a user specifies `max = null`, we use usize::MAX value as a way
+            // to have an "unlimited" buffer.
+            Some(ScalarValue::Int64(None)) => usize::MAX,
+            Some(other) => anyhow::bail!("expected i64 for max parameter, saw {:?}", other),
+            None => anyhow::bail!("expected literal value for max parameter"),
+        };
+
+        let accum = new_empty_array(result_type).as_list::<i32>().to_owned();
+        let token = CollectStructToken::new(Arc::new(accum));
+
+        let (_, input, tick, duration) = info.unpack_arguments()?;
+        Ok(Box::new(Self {
+            max,
+            input,
+            tick,
+            duration,
+            token,
+        }))
+    }
+}
+
+impl Evaluator for CollectStructEvaluator {
+    fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
+            (true, true) => {
+                let token = &mut self.token;
+                let input = info.value(&self.input)?.array_ref()?;
+                let key_capacity = info.grouping().num_groups();
+                let entity_indices = info.grouping().group_indices();
+                Self::evaluate_non_windowed(token, key_capacity, entity_indices, input, self.max)
+            }
+            (false, true) => unimplemented!("since window aggregation unsupported"),
+            (false, false) => panic!("sliding window aggregation should use other evaluator"),
+            (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
+        }
+    }
+
+    fn state_token(&self) -> Option<&dyn StateToken> {
+        Some(&self.token)
+    }
+
+    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
+        Some(&mut self.token)
+    }
+}
+
+impl CollectStructEvaluator {
+    fn ensure_entity_capacity(token: &mut CollectStructToken, len: usize) -> anyhow::Result<()> {
+        token.resize(len)
+    }
+
+    /// Construct the entity take indices for the current state.
+    fn construct_entity_take_indices(
+        token: &mut CollectStructToken,
+    ) -> BTreeMap<u32, VecDeque<u32>> {
+        let mut entity_take_indices = BTreeMap::<u32, VecDeque<u32>>::new();
+        let state = token.state.as_list::<i32>();
+        for (index, (start, end)) in state.offsets().iter().tuple_windows().enumerate() {
+            // The index of enumeration is the entity index
+            entity_take_indices.insert(index as u32, (*start as u32..*end as u32).collect());
+        }
+        entity_take_indices
+    }
+
+    /// Evaluate the collect instruction for non-windowed aggregation.
+    ///
+    /// This algorithm takes advantage of the fact that [ListArray]s are
+    /// represented as a single flattened list of values and a list of offsets.
+    /// By constructing the take indices for each entity, we can then use
+    /// [sparrow_arrow::concat_take] to efficiently take the values at the indices
+    /// we need to construct the output list.
+    ///
+    /// See the following example:
+    ///
+    /// Current state: [Ben = [A, B], Jordan = [C, D]]
+    /// state.flattened: [A, B, C, D]
+    /// state.offsets: [0, 2, 4]
+    ///
+    /// New Input: [E, F, G]
+    /// Entity Indices: [Ben, Jordan, Ben]
+    ///
+    /// Concat the flattened state with the new input:
+    /// concat_state_input: [A, B, C, D, E, F, G]
+    ///
+    /// Create the current entity take indices:
+    /// { Ben: [0, 1], Jordan: [2, 3] }
+    ///
+    /// For each entity, we need to take the values at the indices
+    /// from the new input, append all indices for that entity to the
+    /// Output Take Indices, then append the number of indices to the
+    /// Output Offset builder:
+    ///
+    /// Entity: Ben, Input: [E]
+    /// Entity Take Indices: { Ben: [0, 1, 4], Jordan: [2, 3] }
+    /// Output Take Indices: [0, 1, 4]
+    /// Output Offset: [0, 3]
+    ///
+    /// Entity: Jordan, Input: [F]
+    /// Entity Take Indices: { Ben: [0, 1, 4], Jordan: [2, 3, 5] }
+    /// Output Take Indices: [0, 1, 4, 2, 3, 5]
+    /// Output Offset: [0, 3, 6]
+    ///
+    /// Entity: Ben, Input: [G]
+    /// Entity Take Indices: { Ben: [0, 1, 4, 6], Jordan: [2, 3, 5] }
+    /// Output Take Indices: [0, 1, 4, 2, 3, 5, 0, 1, 4, 6]
+    /// Output Offset: [0, 3, 6, 10]
+    ///
+    /// Then, we use [sparrow_arrow::concat_take] to concat the old flattened state
+    /// and the input together, then take the Output Take Indices. This constructs an
+    /// output:
+    ///
+    /// concat_state_input: [A, B, C, D, E, F, G]
+    /// Output Take Indices: [0, 1, 4, 2, 3, 5, 0, 1, 4, 6]
+    /// Output Values: [A, B, E, C, D, F, A, B, E, G]
+    ///
+    /// Then, with the offsets, we can construct the output lists:
+    /// [[A, B, E], [C, D, F], [A, B, E, G]]
+    ///
+    /// Lastly, the new state must be set.
+    /// The Entity Take Indices are flattened and the offsets are constructed.
+    ///
+    /// Entity Take Indices: { Ben: [0, 1, 4, 6], Jordan: [2, 3, 5] }
+    /// Flattened: [0, 1, 4, 6, 2, 3, 5]
+    /// Offsets: [0, 4, 7]
+    ///
+    /// New State: [Ben = [A, B, E, G], Jordan = [C, D, F]]
+    fn evaluate_non_windowed(
+        token: &mut CollectStructToken,
+        key_capacity: usize,
+        entity_indices: &UInt32Array,
+        input: ArrayRef,
+        max: usize,
+    ) -> anyhow::Result<ArrayRef> {
+        let input_structs = input.as_struct();
+        assert_eq!(entity_indices.len(), input_structs.len());
+
+        Self::ensure_entity_capacity(token, key_capacity)?;
+
+        // Recreate the take indices for the current state
+        let mut entity_take_indices = Self::construct_entity_take_indices(token);
+
+        let old_state = token.state.as_list::<i32>();
+        let old_state_flat = old_state.values();
+
+        let mut take_output_builder = UInt32Builder::new();
+        let mut output_offset_builder = vec![0];
+
+        let mut cur_offset = 0;
+        // For each entity, append the take indices for the new input to the existing
+        // entity take indices
+        for (index, entity_index) in entity_indices.values().iter().enumerate() {
+            let take_index = (old_state_flat.len() + index) as u32;
+            entity_take_indices
+                .entry(*entity_index)
+                .and_modify(|v| {
+                    v.push_back(take_index);
+                    if v.len() > max {
+                        v.pop_front();
+                    }
+                })
+                .or_insert(vec![take_index].into());
+
+            // already verified key exists, or created entry if not, in previous step
+            let entity_take = entity_take_indices.get(entity_index).unwrap();
+
+            // Append this entity's take indices to the take output builder
+            entity_take.iter().for_each(|i| {
+                take_output_builder.append_value(*i);
+            });
+
+            // Append this entity's current number of take indices to the output offset builder
+            cur_offset += entity_take.len();
+            output_offset_builder.push(cur_offset as i32);
+        }
+        let output_values =
+            sparrow_arrow::concat_take(old_state_flat, &input, &take_output_builder.finish())?;
+
+        let fields = input_structs.fields().clone();
+        let field = Arc::new(Field::new("item", DataType::Struct(fields.clone()), true));
+
+        let result = ListArray::new(
+            field,
+            OffsetBuffer::new(ScalarBuffer::from(output_offset_builder)),
+            output_values,
+            None,
+        );
+
+        // Construct the new state offset and values using the current entity take indices
+        let mut new_state_offset_builder = Vec::with_capacity(entity_take_indices.len());
+        new_state_offset_builder.push(0);
+        let mut cur_state_offset = 0;
+
+        let take_new_state = entity_take_indices.values().flat_map(|v| {
+            cur_state_offset += v.len() as i32;
+            new_state_offset_builder.push(cur_state_offset);
+            v.iter().copied().map(Some)
+        });
+        let take_new_state = UInt32Array::from_iter(take_new_state);
+
+        let new_state_values = sparrow_arrow::concat_take(old_state_flat, &input, &take_new_state)?;
+        let new_state = ListArray::new(
+            Arc::new(Field::new("item", DataType::Struct(fields), true)),
+            OffsetBuffer::new(ScalarBuffer::from(new_state_offset_builder)),
+            new_state_values,
+            None,
+        );
+
+        token.set_state(Arc::new(new_state));
+        Ok(Arc::new(result))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use arrow::{
+        array::{AsArray, Int64Array, StringArray, StructArray},
+        buffer::ScalarBuffer,
+    };
+    use arrow_schema::{DataType, Field, Fields};
+    use std::sync::Arc;
+
+    fn default_token() -> CollectStructToken {
+        let f = Arc::new(Field::new(
+            "item",
+            DataType::Struct(Fields::from(vec![
+                Field::new("n", DataType::Int64, true),
+                Field::new("s", DataType::Utf8, true),
+            ])),
+            true,
+        ));
+        let result_type = DataType::List(f);
+        let accum = new_empty_array(&result_type).as_list::<i32>().to_owned();
+        CollectStructToken::new(Arc::new(accum))
+    }
+
+    #[test]
+    fn test_basic_collect_multiple_batches() {
+        let mut token = default_token();
+        // Batch 1
+        let n_array = Int64Array::from(vec![Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![Some("a"), Some("b"), Some("c")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let input = Arc::new(input);
+
+        let key_indices = UInt32Array::from(vec![0, 0, 0]);
+        let key_capacity = 1;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            usize::MAX,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 1
+        let n_array = Int64Array::from(vec![Some(0), Some(0), Some(1), Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![
+            Some("a"),
+            Some("a"),
+            Some("b"),
+            Some("a"),
+            Some("b"),
+            Some("c"),
+        ]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 6]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
+        let expected = Arc::new(expected);
+        assert_eq!(expected.as_ref(), result);
+
+        // Batch 2
+        let n_array = Int64Array::from(vec![Some(3), Some(4), Some(5)]);
+        let s_array = StringArray::from(vec![Some("d"), Some("e"), Some("f")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let input = Arc::new(input);
+
+        // New entity!
+        let key_indices = UInt32Array::from(vec![1, 0, 1]);
+        let key_capacity = 2;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            usize::MAX,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 2
+        let n_array = Int64Array::from(vec![
+            Some(3),
+            Some(0),
+            Some(1),
+            Some(2),
+            Some(4),
+            Some(3),
+            Some(5),
+        ]);
+        let s_array = StringArray::from(vec![
+            Some("d"),
+            Some("a"),
+            Some("b"),
+            Some("c"),
+            Some("e"),
+            Some("d"),
+            Some("f"),
+        ]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 5, 7]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
+        let expected = Arc::new(expected);
+        assert_eq!(expected.as_ref(), result);
+    }
+
+    #[test]
+    fn test_basic_collect_multiple_batches_with_max() {
+        let max = 2;
+        let mut token = default_token();
+        // Batch 1
+        let n_array = Int64Array::from(vec![Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![Some("a"), Some("b"), Some("c")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let input = Arc::new(input);
+
+        let key_indices = UInt32Array::from(vec![0, 0, 0]);
+        let key_capacity = 1;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            max,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 1
+        let n_array = Int64Array::from(vec![Some(0), Some(0), Some(1), Some(1), Some(2)]);
+        let s_array =
+            StringArray::from(vec![Some("a"), Some("a"), Some("b"), Some("b"), Some("c")]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 5]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
+        let expected = Arc::new(expected);
+        assert_eq!(expected.as_ref(), result);
+
+        // Batch 2
+        let n_array = Int64Array::from(vec![Some(3), Some(4), Some(5)]);
+        let s_array = StringArray::from(vec![Some("d"), Some("e"), Some("f")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let input = Arc::new(input);
+
+        // New entity!
+        let key_indices = UInt32Array::from(vec![1, 0, 1]);
+        let key_capacity = 2;
+
+        let result = CollectStructEvaluator::evaluate_non_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            max,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 2
+        let n_array = Int64Array::from(vec![Some(3), Some(2), Some(4), Some(3), Some(5)]);
+        let s_array =
+            StringArray::from(vec![Some("d"), Some("c"), Some("e"), Some("d"), Some("f")]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 5]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
+        let expected = Arc::new(expected);
+
+        assert_eq!(expected.as_ref(), result);
+    }
+}

@@ -164,6 +164,21 @@ pub fn create_evaluator(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluato
     }
 }
 
+/// Placeholder struct for unsupported evaluators.
+struct UnsupportedEvaluator;
+
+impl Evaluator for UnsupportedEvaluator {
+    fn evaluate(&mut self, _info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        anyhow::bail!("Unsupported evaluator")
+    }
+}
+
+impl EvaluatorFactory for UnsupportedEvaluator {
+    fn try_new(_info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        anyhow::bail!("Unsupported evaluator")
+    }
+}
+
 /// Create the evaluator for a given instruction and arguments.
 fn create_simple_evaluator(
     op: InstOp,
@@ -183,6 +198,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[1].data_type,
                 CollectPrimitiveEvaluator,
+                CollectStructEvaluator,
                 CollectListEvaluator,
                 CollectMapEvaluator,
                 CollectBooleanEvaluator,
@@ -208,6 +224,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                UnsupportedEvaluator,
                 FirstListEvaluator,
                 FirstMapEvaluator,
                 FirstBooleanEvaluator,
@@ -261,6 +278,7 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                UnsupportedEvaluator,
                 LastListEvaluator,
                 LastMapEvaluator,
                 LastBooleanEvaluator,

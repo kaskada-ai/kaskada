@@ -261,6 +261,35 @@ async fn test_collect_to_small_list_boolean() {
 }
 
 #[tokio::test]
+async fn test_collect_structs() {
+    insta::assert_snapshot!(QueryFixture::new("{
+        s0: { s: Collect.s, n: Collect.n, b: Collect.b } | collect(max = null) | index(0) | $input.s,
+        s1: { s: Collect.s, n: Collect.n, b: Collect.b } | collect(max = null) | index(1) | $input.s,
+        s2: { s: Collect.s, n: Collect.n, b: Collect.b } | collect(max = null) | index(2) | $input.s,
+        s3: { s: Collect.s, n: Collect.n, b: Collect.b } | collect(max = null) | index(3) | $input.s,
+        s4: { s: Collect.s, n: Collect.n, b: Collect.b } | collect(max = null) | index(4) | $input.s
+    }
+     ").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,s0,s1,s2,s3,s4
+    1996-12-20T00:39:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,,,,
+    1996-12-20T00:40:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi,,,
+    1996-12-20T00:41:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi,hey,,
+    1996-12-20T00:42:00.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi,hey,heylo,
+    1996-12-20T00:42:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi,hey,heylo,ay
+    1996-12-20T00:43:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi,hey,heylo,ay
+    1996-12-21T00:40:57.000000000,9223372036854775808,2867199309159137213,B,h,,,,
+    1996-12-21T00:41:57.000000000,9223372036854775808,2867199309159137213,B,h,he,,,
+    1996-12-21T00:42:57.000000000,9223372036854775808,2867199309159137213,B,h,he,,,
+    1996-12-21T00:43:57.000000000,9223372036854775808,2867199309159137213,B,h,he,,hel,
+    1996-12-21T00:44:57.000000000,9223372036854775808,2867199309159137213,B,h,he,,hel,
+    1996-12-22T00:44:57.000000000,9223372036854775808,2521269998124177631,C,g,,,,
+    1996-12-22T00:45:57.000000000,9223372036854775808,2521269998124177631,C,g,go,,,
+    1996-12-22T00:46:57.000000000,9223372036854775808,2521269998124177631,C,g,go,goo,,
+    1996-12-22T00:47:57.000000000,9223372036854775808,2521269998124177631,C,g,go,goo,good,
+    "###);
+}
+
+#[tokio::test]
 async fn test_collect_primitive_since_minutely() {
     insta::assert_snapshot!(QueryFixture::new("{ f1: Collect.n | collect(10, window=since(minutely())) | index(0) | when(is_valid($input)) }").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,f1
