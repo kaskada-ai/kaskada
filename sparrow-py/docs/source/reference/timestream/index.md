@@ -1,17 +1,11 @@
 # Timestream
 
-```{todo}
-- [ ] Expand the `Arg` type alias in timestreams accordingly.
-```
-
 ```{eval-rst}
 .. currentmodule:: sparrow_py
 
-.. autoclass:: Timestream
-    :members:
-    :noindex:
-    :autosummary:
-    :autosummary-nosignatures:
+.. autoclass:: sparrow_py.Literal
+.. autoclass:: sparrow_py.Timestream
+    :exclude-members: __init__
 ```
 
 ```{toctree}

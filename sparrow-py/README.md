@@ -14,7 +14,7 @@ It is built on Apache Arrow, using the same columnar execution strategy that mak
 
 ## Install Python
 
-Use `pyenv` and install at least `3.7` or `3.8`.
+Use `pyenv` and install at least `3.8` (most development occurs under `3.11`).
 If multiple versions are installed, `nox` will test against each of them.
 
 ## Building and Testing
