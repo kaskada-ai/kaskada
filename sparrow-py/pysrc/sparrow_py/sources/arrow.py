@@ -14,9 +14,10 @@ class ArrowSource(Source):
 
     def __init__(
         self,
+        data: Union[pd.DataFrame, pa.RecordBatch],
+        *,
         time_column_name: str,
         key_column_name: str,
-        data: Union[pd.DataFrame, pa.RecordBatch],
         subsort_column_name: Optional[str] = None,
         grouping_name: Optional[str] = None,
     ):
@@ -49,11 +50,23 @@ class ArrowSource(Source):
 
         self._ffi_table.add_pyarrow(data)
 
-    def add_data(self, data: Union[pd.DataFrame, pa.RecordBatch]) -> None:
+    def add_data(self, data: Union[pd.DataFrame, pa.RecordBatch, pa.Table]) -> None:
         """Add data to the source."""
         if isinstance(data, pd.DataFrame):
             data = pa.RecordBatch.from_pandas(data, self._schema, preserve_index=False)
-        self._ffi_table.add_pyarrow(data)
+
+        if isinstance(data, pa.RecordBatch):
+            self._ffi_table.add_pyarrow(data)
+        elif isinstance(data, pa.Table):
+            for batch in data.to_batches():
+                self._ffi_table.add_pyarrow(batch)
+        else:
+            raise TypeError(f"Unexpected type {type(data)}")
+
+    def add_parquet(self, path: str) -> None:
+        """Add a parquet file to the source."""
+        data = pa.parquet.read_table(path, schema = self._schema)
+        self.add_data(data)
 
 
 class CsvSource(ArrowSource):
