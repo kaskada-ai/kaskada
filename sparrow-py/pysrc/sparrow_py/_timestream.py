@@ -50,6 +50,13 @@ class Timestream(object):
         self._ffi_expr = ffi
 
     @staticmethod
+    def _literal(value: Literal, session: _ffi.Session) -> Timestream:
+        """Construct a Timestream for a literal value."""
+        if isinstance(value, timedelta):
+            raise TypeError("Cannot create a literal Timestream from a timedelta")
+        return Timestream(_ffi.Expr.literal(session, value))
+
+    @staticmethod
     def _call(func: str, *args: Union[Timestream, Literal], session: Optional[_ffi.Session] = None) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
@@ -78,15 +85,20 @@ class Timestream(object):
         ValueError
             If the argument values are invalid for the given function.
         """
-        ffi_args = [
-            arg._ffi_expr if isinstance(arg, Timestream) else arg for arg in args
-        ]
         if session is None:
             session = next(
                 arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
             )
+
+        def make_arg(arg: Union[Timestream, Literal]) -> _ffi.Expr:
+            if isinstance(arg, Timestream):
+                return arg._ffi_expr
+            else:
+                return Timestream._literal(arg, session)._ffi_expr
+
+        ffi_args = [make_arg(arg) for arg in args]
         try:
-            return Timestream(_ffi.Expr(session=session, operation=func, args=ffi_args))
+            return Timestream(_ffi.Expr.call(session=session, operation=func, args=ffi_args))
         except TypeError as e:
             # noqa: DAR401
             raise _augment_error(args, TypeError(str(e))) from e
@@ -788,6 +800,22 @@ class Timestream(object):
             each point.
         """
         return _aggregation("last", self, window)
+
+    def cast(self, data_type: pa.DataType) -> Timestream:
+        """
+        Cast the type of this Timestream to the given data type.
+
+        Parameters
+        ----------
+        data_type : pa.DataType
+            The data type to cast to.
+
+        Returns
+        -------
+        Timestream
+            Timestream with the given data type.
+        """
+        return Timestream(self._ffi_expr.cast(data_type))
 
     def preview(self, limit: int = 100) -> pd.DataFrame:
         """
