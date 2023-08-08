@@ -1,6 +1,6 @@
 {"_time":851042397000000000,"_subsort":0,"_key_hash":12960666915911099378,"_key":"A","m":5.0,"collect_m_min_2":null,"n":10.0,"collect_n_min_2":null}
 {"_time":851042398000000000,"_subsort":1,"_key_hash":2867199309159137213,"_key":"B","m":24.0,"collect_m_min_2":null,"n":3.0,"collect_n_min_2":null}
-{"_time":851042399000000000,"_subsort":2,"_key_hash":12960666915911099378,"_key":"A","m":17.0,"collect_m_min_2":[5.0,17.0],"n":6.0,"collect_n_min_2":[10.0,6.0]}
-{"_time":851042400000000000,"_subsort":3,"_key_hash":12960666915911099378,"_key":"A","m":null,"collect_m_min_2":[5.0,17.0,null],"n":9.0,"collect_n_min_2":[10.0,6.0,9.0]}
-{"_time":851042401000000000,"_subsort":4,"_key_hash":12960666915911099378,"_key":"A","m":12.0,"collect_m_min_2":[5.0,17.0,null,12.0],"n":null,"collect_n_min_2":[10.0,6.0,9.0,null]}
-{"_time":851042402000000000,"_subsort":5,"_key_hash":12960666915911099378,"_key":"A","m":null,"collect_m_min_2":[5.0,17.0,null,12.0,null],"n":null,"collect_n_min_2":[10.0,6.0,9.0,null,null]}
+{"_time":851042399000000000,"_subsort":2,"_key_hash":12960666915911099378,"_key":"A","m":17.0,"collect_m_min_2":[5,17],"n":6.0,"collect_n_min_2":[10,6]}
+{"_time":851042400000000000,"_subsort":3,"_key_hash":12960666915911099378,"_key":"A","m":null,"collect_m_min_2":[5,17],"n":9.0,"collect_n_min_2":[10,6,9]}
+{"_time":851042401000000000,"_subsort":4,"_key_hash":12960666915911099378,"_key":"A","m":12.0,"collect_m_min_2":[5,17,12],"n":null,"collect_n_min_2":[10,6,9]}
+{"_time":851042402000000000,"_subsort":5,"_key_hash":12960666915911099378,"_key":"A","m":null,"collect_m_min_2":[5,17,12],"n":null,"collect_n_min_2":[10,6,9]}
