@@ -163,6 +163,7 @@ impl ScanOperation {
             // in-memory batch as the "hot-store" for history+stream hybrid
             // queries.
             assert!(requested_slice.is_none());
+
             // TODO: Consider stoppable batch scans (and queries).
             let input_stream = if context.materialize {
                 in_memory
