@@ -107,7 +107,7 @@ fn check_signature(
         );
     }
 
-    visit_type(&mut type_vars, &result);
+    visit_type(&mut type_vars, result);
 
     // check that all referenced type variables are defined
     for type_var in type_vars {
