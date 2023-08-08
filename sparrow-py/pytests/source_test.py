@@ -78,5 +78,5 @@ def test_add_dataframe(golden) -> None:
                 }
             )
     dataset2 = pd.DataFrame(records)
-    table.add(dataset2)
+    table.add_data(dataset2)
     golden.jsonl(table)
