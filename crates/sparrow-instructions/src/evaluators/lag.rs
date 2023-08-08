@@ -2,25 +2,21 @@ use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 
 use crate::{
-    CollectStructToken, Evaluator, EvaluatorFactory, LagStructToken, RuntimeInfo, StateToken,
+    Evaluator, EvaluatorFactory, LagStructToken, RuntimeInfo, StateToken,
     StaticInfo,
 };
 use anyhow::anyhow;
 use arrow::array::{
     new_empty_array, Array, ArrayRef, AsArray, ListArray, UInt32Array, UInt32Builder,
 };
-use arrow::array::{
-    Int32Array, IntervalDayTimeArray, IntervalYearMonthArray, TimestampNanosecondArray,
-};
-use arrow::buffer::{BooleanBuffer, NullBuffer, OffsetBuffer, ScalarBuffer};
+
+use arrow::buffer::{OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::{
-    ArrowPrimitiveType, DataType, DurationMicrosecondType, DurationMillisecondType,
-    DurationNanosecondType, DurationSecondType, Int64Type, IntervalDayTimeType, IntervalUnit,
-    IntervalYearMonthType, TimeUnit, TimestampNanosecondType,
+    ArrowPrimitiveType, DataType,
 };
-use arrow::temporal_conversions::timestamp_ns_to_datetime;
+
 use arrow_schema::Field;
-use chrono::Datelike;
+
 use itertools::Itertools;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -38,7 +34,7 @@ pub(super) struct StructLagEvaluator {
 impl Evaluator for StructLagEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let token = &mut self.token;
-        let grouping = info.grouping();
+        let _grouping = info.grouping();
         let input = info.value(&self.input)?.array_ref()?;
         let key_capacity = info.grouping().num_groups();
         let entity_indices = info.grouping().group_indices();
