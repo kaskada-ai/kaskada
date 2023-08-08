@@ -153,14 +153,15 @@ def xdoctest(session: Session) -> None:
     session.run("python", "-m", "xdoctest", *args)
 
 DOCS_DEPS = [
-    "sphinx",
+    "myst-nb",
+    "myst-parser",
+    "pandas",
+    "pyarrow",
     "sphinx-autobuild",
     "sphinx-book-theme",
     "sphinx-copybutton",
-    "myst-parser",
-    "myst-nb",
-    "pandas",
-    "pyarrow"
+    "sphinx-design",
+    "sphinx",
 ]
 
 @session(name="docs-build", python=python_versions[0])

@@ -29,9 +29,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.load(
   table_name = "Purchase",
@@ -88,9 +86,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.load(
   table_name = "Purchase",
@@ -138,9 +134,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.load(
   table_name = "Purchase",
