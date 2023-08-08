@@ -57,6 +57,8 @@ class Timestream(object):
         """Construct a Timestream for a literal value."""
         if isinstance(value, timedelta):
             raise TypeError("Cannot create a literal Timestream from a timedelta")
+        elif isinstance(value, datetime):
+            raise TypeError("Cannot create a literal Timestream from a datetime")
         return Timestream(_ffi.Expr.literal(session, value))
 
     @staticmethod
