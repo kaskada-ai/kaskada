@@ -188,19 +188,13 @@ class Timestream(object):
             If attempting to perform an addition that is not possible.
         """
         if isinstance(rhs, timedelta):
-            # Right now, we can't convert a time delta directly to a scalar value, because
-            # it potentially has multiple components (days, seconds, microseconds).
-            result = self
+            # Right now, we can't convert a time delta directly to a scalar value (literal).
+            # So we convert it to seconds and then add it.
+            # Note that this loses precision if the timedelta has a fractional number of seconds,
+            # and fail if the number of seconds exceeds an integer.
             session = self._ffi_expr.session()
-            if rhs.days != 0:
-                days = Timestream._call("days", rhs.days, session = session)
-                result = Timestream._call("add_time", days, result)
-            if rhs.seconds != 0:
-                seconds = Timestream._call("seconds", rhs.seconds, session = session)
-                result = Timestream._call("add_time", seconds, result)
-            if rhs.microseconds != 0:
-                raise ValueError("Cannot add microseconds to a Timestream")
-            return result
+            seconds = Timestream._call("seconds", int(rhs.total_seconds()), session = session)
+            return Timestream._call("add_time", seconds, self)
         else:
             return Timestream._call("add", self, rhs)
 
