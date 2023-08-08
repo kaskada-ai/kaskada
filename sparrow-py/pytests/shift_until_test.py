@@ -19,7 +19,7 @@ def source() -> kt.sources.CsvSource:
 
 
 def test_shift_until_predicate(source, golden) -> None:
-    m = source["m"]
+    m = source.col("m")
     predicate = m.sum() > 30
     golden.jsonl(
         kt.record(

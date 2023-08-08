@@ -809,8 +809,12 @@ class Timestream(object):
             Timestream containing the shifted points.
         """
         if isinstance(time, datetime):
-            time_ns = time.timestamp() * 1e9
-            return Timestream._call("shift_to", time_ns, self)
+            # session = self._ffi_expr.session()
+            # time_ns = time.timestamp() * 1e9
+            # time_ns = Timestream._literal(time_ns, session=session)
+            # time_ns = Timestream.cast(time_ns, pa.timestamp('ns'))
+            # return Timestream._call("shift_to", time_ns, self)
+            raise NotImplementedError("shift_to with datetime literal unsupported")
         else:
             return Timestream._call("shift_to", time, self)
 
