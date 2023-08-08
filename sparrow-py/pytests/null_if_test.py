@@ -19,8 +19,8 @@ def source() -> kt.sources.CsvSource:
 
 
 def test_null_if(source, golden) -> None:
-    m = source["m"]
-    n = source["n"]
+    m = source.col("m")
+    n = source.col("n")
     condition_m = m > 15
     condition_n= n > 5
     golden.jsonl(

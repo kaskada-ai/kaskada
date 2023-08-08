@@ -19,8 +19,8 @@ def source() -> kt.sources.CsvSource:
 
 
 def test_record(source, golden) -> None:
-    m = source["m"]
-    n = source["n"]
+    m = source.col("m")
+    n = source.col("n")
 
     golden.jsonl(
         kt.record(
@@ -33,8 +33,8 @@ def test_record(source, golden) -> None:
 
 
 def test_extend_record(source, golden) -> None:
-    m = source["m"]
-    n = source["n"]
+    m = source.col("m")
+    n = source.col("n")
     golden.jsonl(source.extend({"add": m + n}))
 
 

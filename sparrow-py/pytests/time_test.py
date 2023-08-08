@@ -16,7 +16,7 @@ def source() -> kt.sources.CsvSource:
     return kt.sources.CsvSource("time", "key", content)
 
 def test_time_add_days(source, golden) -> None:
-    time = source["time"]
+    time = source.col("time")
     golden.jsonl(
         kt.record(
             {
@@ -27,7 +27,7 @@ def test_time_add_days(source, golden) -> None:
     )
 
 def test_time_add_hours(source, golden) -> None:
-    time = source["time"]
+    time = source.col("time")
     golden.jsonl(
         kt.record(
             {
@@ -38,7 +38,7 @@ def test_time_add_hours(source, golden) -> None:
     )
 
 def test_time_add_minutes(source, golden) -> None:
-    time = source["time"]
+    time = source.col("time")
     golden.jsonl(
         kt.record(
             {
@@ -49,7 +49,7 @@ def test_time_add_minutes(source, golden) -> None:
     )
 
 def test_time_add_days_and_minutes(source, golden) -> None:
-    time = source["time"]
+    time = source.col("time")
     golden.jsonl(
         kt.record(
             {
@@ -60,7 +60,7 @@ def test_time_add_days_and_minutes(source, golden) -> None:
     )
 
 def test_time_add_seconds(source, golden) -> None:
-    time = source["time"]
+    time = source.col("time")
     golden.jsonl(
         kt.record(
             {
