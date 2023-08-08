@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use arrow::array::{
     ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray, TimestampNanosecondArray,
     UInt32Array,
@@ -12,14 +11,10 @@ use arrow::datatypes::{
 };
 use arrow::temporal_conversions::timestamp_ns_to_datetime;
 use chrono::Datelike;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_kernels::lag::LagPrimitive;
 use sparrow_plan::ValueRef;
 
 use crate::evaluators::{Evaluator, RuntimeInfo};
-use crate::{EvaluatorFactory, StateToken, StaticInfo};
+use crate::{EvaluatorFactory, StaticInfo};
 
 /// Evaluator for the `TimeOf` instruction.
 pub(super) struct TimeOfEvaluator {}

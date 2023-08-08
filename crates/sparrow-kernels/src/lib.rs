@@ -9,7 +9,6 @@
     clippy::print_stderr,
     clippy::undocumented_unsafe_blocks
 )]
-pub mod lag;
 mod ordered_cast;
 pub mod string;
 pub mod time;
