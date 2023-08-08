@@ -21,7 +21,7 @@ def source() -> kt.sources.CsvSource:
 def test_length(source, golden) -> None:
     my_str = source["str"]
     list = my_str.collect(max=None)
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "str": my_str,

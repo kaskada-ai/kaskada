@@ -39,7 +39,7 @@ def test_lookup(key_source, foreign_source, golden) -> None:
     state = key_source["state"]
     foreign_value = foreign_source["m"]
     last_foreign_value = foreign_source["m"].last()
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "state": state,

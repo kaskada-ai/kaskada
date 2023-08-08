@@ -21,7 +21,7 @@ def source() -> kt.sources.CsvSource:
 def test_time_of(source, golden) -> None:
     m = source["m"]
     n = source["n"]
-    golden(
+    golden.jsonl(
         kt.record(
             {
                 "m": m,
