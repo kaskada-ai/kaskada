@@ -73,11 +73,13 @@ def fix_lint(session: Session) -> None:
     session.install(
         "black",
         "isort",
+        "autoflake",
         "pep8-naming",
         "pyupgrade",
     )
     session.run
     session.run("black", *args)
+    session.run("autoflake", "--in-place", "--remove-all-unused-imports", "--recursive", *args)
     session.run("isort", "--filter-files", *args)
     session.run("pyupgrade", "--py38-plus")
 

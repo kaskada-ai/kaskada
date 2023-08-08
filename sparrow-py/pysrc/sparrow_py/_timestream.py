@@ -18,7 +18,6 @@ import pandas as pd
 import pyarrow as pa
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
-from typing_extensions import TypeAlias
 
 from ._execution import ExecutionOptions
 from ._result import Result

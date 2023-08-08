@@ -1,6 +1,4 @@
-from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 
 import pytest
 import sparrow_py as kt
