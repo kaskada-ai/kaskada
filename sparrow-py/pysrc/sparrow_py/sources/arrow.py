@@ -65,3 +65,8 @@ class CsvSource(ArrowSource):
     ) -> None:
         content = pd.read_csv(StringIO(csv_string), dtype_backend="pyarrow", **kwargs)
         super().__init__(time_column_name, key_column_name, content)
+
+    def add_csv_string(self, csv_string: str, **kwargs) -> None:
+        """Add data to the source."""
+        content = pd.read_csv(StringIO(csv_string), dtype_backend="pyarrow", **kwargs)
+        self.add(content)

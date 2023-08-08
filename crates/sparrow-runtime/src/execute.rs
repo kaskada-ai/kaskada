@@ -81,6 +81,11 @@ pub struct ExecutionOptions {
     pub stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
     /// Maximum rows to emit in a single batch.
     pub max_batch_size: Option<usize>,
+    /// If true, the execution is a materialization.
+    ///
+    /// It will subscribe to the input stream and continue running as new data
+    /// arrives. It won't send final ticks.
+    pub materialize: bool,
 }
 
 impl ExecutionOptions {
@@ -236,6 +241,7 @@ pub async fn execute_new(
         progress_updates_tx,
         output_at_time,
         bounded_lateness_ns: options.bounded_lateness_ns,
+        materialize: options.materialize,
     };
 
     // Start executing the query. We pass the response channel to the

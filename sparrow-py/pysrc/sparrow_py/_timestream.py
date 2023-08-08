@@ -836,7 +836,10 @@ class Timestream(object):
         return self.run(row_limit=limit).to_pandas()
 
     def run(
-        self, row_limit: Optional[int] = None, max_batch_size: Optional[int] = None
+        self,
+        row_limit: Optional[int] = None,
+        max_batch_size: Optional[int] = None,
+        materialize: bool = False,
     ) -> Result:
         """
         Run the Timestream once.
@@ -851,6 +854,9 @@ class Timestream(object):
             The maximum number of rows to return in each batch.
             If not specified the default is used.
 
+        materialize : bool
+            If true, the execution will be a continuous materialization.
+
         Returns
         -------
         Result
@@ -860,7 +866,7 @@ class Timestream(object):
         if not pa.types.is_struct(self.data_type):
             # The execution engine requires a struct, so wrap this in a record.
             expr = record({"result": self})
-        options = ExecutionOptions(row_limit=row_limit, max_batch_size=max_batch_size)
+        options = ExecutionOptions(row_limit=row_limit, max_batch_size=max_batch_size, materialize=materialize)
         execution = expr._ffi_expr.execute(options)
         return Result(execution)
 

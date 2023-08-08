@@ -28,6 +28,8 @@ pub struct ExecutionOptions {
     pub row_limit: Option<usize>,
     /// The maximum number of rows to return in a single batch.
     pub max_batch_size: Option<usize>,
+    /// Whether to run execute as a materialization or not.
+    pub materialize: bool,
 }
 
 /// Adds a table to the session.
@@ -302,10 +304,12 @@ impl Session {
         let destination = Destination::Channel(output_tx);
         let data_context = self.data_context.clone();
 
-        let options = options.to_sparrow_options();
+        let (stop_signal_tx, stop_signal_rx) = tokio::sync::watch::channel(false);
+        let mut options = options.to_sparrow_options();
+        options.stop_signal_rx = Some(stop_signal_rx);
 
         // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
-        let result = rt
+        let progress = rt
             .block_on(sparrow_runtime::execute::execute_new(
                 plan,
                 destination,
@@ -316,7 +320,7 @@ impl Session {
             .map_err(|e| e.change_context(Error::Execute))
             .boxed();
 
-        Ok(Execution::new(rt, output_rx, result))
+        Ok(Execution::new(rt, output_rx, progress, stop_signal_tx))
     }
 }
 
@@ -342,6 +346,7 @@ impl ExecutionOptions {
     fn to_sparrow_options(&self) -> sparrow_runtime::execute::ExecutionOptions {
         let mut options = sparrow_runtime::execute::ExecutionOptions {
             max_batch_size: self.max_batch_size,
+            materialize: self.materialize,
             ..Default::default()
         };
 

@@ -94,4 +94,9 @@ impl Execution {
             })
         })
     }
+
+    fn stop(&mut self) -> Result<()> {
+        self.execution()?.as_mut().unwrap().stop();
+        Ok(())
+    }
 }

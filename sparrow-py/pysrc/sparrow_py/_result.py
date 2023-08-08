@@ -94,3 +94,7 @@ class Result(object):
             for row in next_batch.to_pylist():
                 yield row
             next_batch = await self._ffi_execution.next_pyarrow_async()
+
+    def stop(self) -> None:
+        """Stop the underlying execution."""
+        self._ffi_execution.stop()

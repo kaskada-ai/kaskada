@@ -15,7 +15,11 @@ class ExecutionOptions:
     max_batch_size : Optional[int]
         The maximum batch size to use when returning results.
         If not specified, the default batch size will be used.
+
+    materialize : bool
+        If true, the query will be a continuous materialization.
     """
 
     row_limit: Optional[int] = None
     max_batch_size: Optional[int] = None
+    materialize: bool = None
