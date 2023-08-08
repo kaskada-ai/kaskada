@@ -25,7 +25,6 @@
 mod batch;
 pub mod execute;
 mod key_hash_index;
-pub mod merge;
 mod metadata;
 mod min_heap;
 pub mod prepare;

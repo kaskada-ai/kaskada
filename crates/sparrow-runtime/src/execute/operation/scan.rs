@@ -167,7 +167,7 @@ impl ScanOperation {
             return Ok(Box::new(Self {
                 projected_schema,
                 input_stream: futures::stream::once(async move {
-                    Batch::try_new_from_batch(batch)
+                    Batch::try_new_from_batch(batch.current().clone())
                         .into_report()
                         .change_context(Error::internal_msg("invalid input"))
                 })
