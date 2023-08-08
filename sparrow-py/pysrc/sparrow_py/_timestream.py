@@ -818,6 +818,32 @@ class Timestream(object):
         else:
             return Timestream._call("shift_to", time, self)
 
+    def shift_by(self, time: Union[Timestream, timedelta]) -> Timestream:
+        """
+        Create a Timestream shifting the time of each point by the delta `time`.
+
+        If multiple values are shifted to the same time, they will be emitted in
+        the order in which they originally occurred.
+
+        Parameters
+        ----------
+        time : Union[Timestream, datetime]
+            The time to shift the point forward by.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the shifted points.
+        """
+        if isinstance(time, timedelta):
+            session = self._ffi_expr.session()
+            seconds = Timestream._call(
+                "seconds", int(time.total_seconds()), session=session
+            )
+            return Timestream._call("shift_by", seconds, self)
+        else:
+            return Timestream._call("shift_by", time, self)
+
     def shift_until(self, predicate: Timestream) -> Timestream:
         """
         Create a Timestream shifting `self` forward to the time the `predicate`
