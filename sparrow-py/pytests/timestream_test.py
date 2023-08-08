@@ -19,7 +19,7 @@ def source1() -> kt.sources.Source:
 
 
 def test_field_ref(source1) -> None:
-    field_ref_long = source1["x"]
+    field_ref_long = source1.col("x")
     assert field_ref_long.data_type == pa.float64()
 
 
@@ -31,16 +31,16 @@ def test_field_ref_no_such_field(source1) -> None:
         #
         # TODO: We should either surface the Sparrow error which suggests
         # possible field names, or improve the Python error.
-        source1["foo"]
+        source1.col("foo")
 
 
 def test_field_ref_not_a_struct(source1) -> None:
-    with pytest.raises(TypeError, match="Cannot index into double"):
-        source1["x"]["x"]
+    with pytest.raises(TypeError, match="Cannot access column 'x' of non-record type 'double'"):
+        source1.col("x").col("x")
 
 
 def test_timestream_math(source1) -> None:
-    x = source1["x"]
+    x = source1.col("x")
     assert (x + 1).data_type == x.data_type
     assert (1 + x).data_type == x.data_type
     assert (x - 1).data_type == x.data_type
@@ -54,7 +54,7 @@ def test_timestream_math(source1) -> None:
 
 
 def test_timestream_comparison(source1) -> None:
-    x = source1["x"]
+    x = source1.col("x")
 
     # Tests the various comparison operators. Even though Python doesn't have a
     # `__rgt__` (reverse gt) dunder method, if the LHS doesn't support `gt` with
@@ -81,16 +81,16 @@ def test_timestream_comparison(source1) -> None:
 
 
 def test_timestream_arithmetic_types(source1) -> None:
-    x = source1["x"]
+    x = source1.col("x")
     assert (x.eq(1)).data_type == pa.bool_()
     assert (x + 1).data_type == pa.float64()
-    assert (x + source1["y"]).data_type == pa.float64()
+    assert (x + source1.col("y")).data_type == pa.float64()
 
     # TODO: This should raise a TypeError, but currently the Rust
     # code always raises a ValueError, so everything comes out
     # looking the same.
     with pytest.raises(ValueError) as e:
-        x.eq(1) + source1["y"]
+        x.eq(1) + source1.col("y")
     assert "Incompatible argument types" in str(e)
     if sys.version_info >= (3, 11):
         assert "Arg[0]: Timestream[bool]" in e.value.__notes__
@@ -126,7 +126,7 @@ def test_timestream_run_non_record(golden) -> None:
         ]
     )
     source = kt.sources.CsvSource("time", "key", content)
-    golden.jsonl(source["m"])
+    golden.jsonl(source.col("m"))
 
 def test_timestream_cast(golden) -> None:
     content = "\n".join(
@@ -141,4 +141,4 @@ def test_timestream_cast(golden) -> None:
         ]
     )
     source = kt.sources.CsvSource("time", "key", content)
-    golden.jsonl(source["time"].cast(pa.timestamp('ns')))
+    golden.jsonl(source.col("time").cast(pa.timestamp('ns')))

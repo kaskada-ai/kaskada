@@ -36,9 +36,9 @@ def foreign_source() -> kt.sources.CsvSource:
 
 
 def test_lookup(key_source, foreign_source, golden) -> None:
-    state = key_source["state"]
-    foreign_value = foreign_source["m"]
-    last_foreign_value = foreign_source["m"].last()
+    state = key_source.col("state")
+    foreign_value = foreign_source.col("m")
+    last_foreign_value = foreign_source.col("m").last()
     golden.jsonl(
         kt.record(
             {

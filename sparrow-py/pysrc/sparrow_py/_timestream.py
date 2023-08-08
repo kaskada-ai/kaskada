@@ -465,9 +465,6 @@ class Timestream(object):
         """
         Index into the elements of a Timestream.
 
-        If the Timestream contains records, the key should be a string corresponding
-        to a field.
-
         If the Timestream contains lists, the key should be an integer index.
 
         If the Timestream contains maps, the key should be the same type as the map keys.
@@ -488,14 +485,38 @@ class Timestream(object):
             When the Timestream is not a record, list, or map.
         """
         data_type = self.data_type
-        if isinstance(data_type, pa.StructType):
-            return Timestream._call("fieldref", self, key)
-        elif isinstance(data_type, pa.MapType):
-            return Timestream._call("get_map", self, key)
+        if isinstance(data_type, pa.MapType):
+            return Timestream._call("get", self, key)
         elif isinstance(data_type, pa.ListType):
-            return Timestream._call("get_list", self, key)
+            return Timestream._call("index", self, key)
         else:
             raise TypeError(f"Cannot index into {data_type}")
+
+    def col(self, name: str) -> Timestream:
+        """
+        Access a named column or field of a Timestream.
+
+        Parameters
+        ----------
+        name : str
+            The name of the column or field to access.
+
+        Returns
+        -------
+        Timestream
+            Timestream with the resulting value (or `null` if absent) at each point.
+
+        Raises
+        ------
+        TypeError
+            When the Timestream is not a record.
+        """
+
+        data_type = self.data_type
+        if isinstance(data_type, pa.StructType):
+            return Timestream._call("fieldref", self, name)
+        else:
+            raise TypeError(f"Cannot access column '{name}' of non-record type '{data_type}'")
 
     def select(self, *args: str) -> Timestream:
         """
