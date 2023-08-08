@@ -100,7 +100,7 @@ def _data_to_dataframe(data: Union[kt.Timestream, pd.DataFrame]) -> pd.DataFrame
         return data.run().to_pandas()
     else:
         raise ValueError(
-            f"query must be a Timestream or a DataFrame, was {type(query)}")
+            f"data must be a Timestream or a DataFrame, was {type(data)}")
 
 @pytest.fixture
 def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config) -> GoldenFixture:

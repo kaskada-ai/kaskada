@@ -10,7 +10,7 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_compiler::{AstDfgRef, DataContext, Dfg, DiagnosticCollector};
 use sparrow_runtime::execute::output::Destination;
-use sparrow_syntax::{ExprOp, LiteralValue, Located, Location, Resolved};
+use sparrow_syntax::{ExprOp, FenlType, LiteralValue, Located, Location, Resolved};
 use uuid::Uuid;
 
 use crate::execution::Execution;
@@ -97,6 +97,23 @@ impl Session {
         Ok(Table::new(table_info, expr))
     }
 
+    pub fn add_cast(
+        &mut self,
+        arg: Expr,
+        data_type: arrow_schema::DataType,
+    ) -> error_stack::Result<Expr, Error> {
+        let op = ExprOp::Cast(
+            Located::builder(FenlType::Concrete(data_type)),
+            Location::builder(),
+        );
+        let args = Resolved::new(
+            Cow::Borrowed(&*CAST_ARGUMENTS),
+            smallvec::smallvec![Located::builder(arg.0)],
+            false,
+        );
+        self.add_to_dfg(op, args).map(Expr)
+    }
+
     pub fn add_expr(
         &mut self,
         function: &str,
@@ -170,9 +187,6 @@ impl Session {
                 let args =
                     Resolved::new(Cow::Borrowed(&*RECORD_EXTENSION_ARGUMENTS), values, false);
                 (op, args)
-            }
-            "cast" => {
-                todo!()
             }
             function => {
                 let op = ExprOp::Call(Located::builder(function.to_owned()));
@@ -320,6 +334,9 @@ static RECORD_EXTENSION_ARGUMENTS: [Located<String>; 2] = [
     Located::internal_string("extension"),
     Located::internal_string("base"),
 ];
+
+#[static_init::dynamic]
+static CAST_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("input")];
 
 impl ExecutionOptions {
     fn to_sparrow_options(&self) -> sparrow_runtime::execute::ExecutionOptions {

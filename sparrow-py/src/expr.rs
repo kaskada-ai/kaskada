@@ -1,7 +1,8 @@
-use crate::error::Error;
+use crate::error::Result;
 use crate::execution::Execution;
 use crate::session::Session;
-use arrow::pyarrow::ToPyArrow;
+use arrow::datatypes::DataType;
+use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use sparrow_session::{Expr as RustExpr, Literal, Session as RustSession};
@@ -19,36 +20,17 @@ impl Expr {
     /// Create a new expression.
     ///
     /// This creates a new expression based on the `operation` and `args` provided.
-    #[new]
+    #[staticmethod]
     #[pyo3(signature = (session, operation, args))]
-    fn new(session: Session, operation: String, args: Vec<Option<Arg>>) -> PyResult<Self> {
-        if !args
-            .iter()
-            .flatten()
-            .filter_map(Arg::session)
-            .all(|s| s == session)
-        {
+    fn call(session: Session, operation: String, args: Vec<Expr>) -> PyResult<Self> {
+        if !args.iter().all(|e| e.session() == session) {
             return Err(PyValueError::new_err(
                 "all arguments must be in the same session",
             ));
         }
 
         let mut rust_session = session.rust_session()?;
-        let args: Vec<_> = args
-            .into_iter()
-            .map(|arg| {
-                match arg {
-                    None => rust_session
-                        .add_literal(Literal::Null)
-                        .map_err(|_| PyRuntimeError::new_err("unable to create null literal")),
-                    Some(arg) => {
-                        arg.into_ast_dfg_ref(&mut rust_session)
-                            // DO NOT SUBMIT: Better error handling.
-                            .map_err(|_| PyRuntimeError::new_err("unable to create argument"))
-                    }
-                }
-            })
-            .collect::<PyResult<_>>()?;
+        let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
         let rust_expr = match rust_session.add_expr(&operation, args) {
             Ok(node) => node,
             Err(e) => {
@@ -57,6 +39,38 @@ impl Expr {
             }
         };
         std::mem::drop(rust_session);
+
+        Ok(Self { rust_expr, session })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (session, value))]
+    fn literal(session: Session, value: Option<Arg>) -> PyResult<Self> {
+        let mut rust_session = session.rust_session()?;
+
+        let rust_expr = match value {
+            None => rust_session
+                .add_literal(Literal::Null)
+                .map_err(|_| PyRuntimeError::new_err("unable to create null literal"))?,
+            Some(arg) => {
+                arg.into_ast_dfg_ref(&mut rust_session)
+                    // DO NOT SUBMIT: Better error handling.
+                    .map_err(|_| PyRuntimeError::new_err("unable to create argument"))?
+            }
+        };
+        std::mem::drop(rust_session);
+        Ok(Self { rust_expr, session })
+    }
+
+    #[pyo3(signature = (data_type))]
+    fn cast(&self, data_type: &PyAny) -> Result<Self> {
+        let data_type = DataType::from_pyarrow(data_type)?;
+
+        let mut rust_session = self.session.rust_session()?;
+        let rust_expr = rust_session.add_cast(self.rust_expr.clone(), data_type)?;
+        std::mem::drop(rust_session);
+
+        let session = self.session.clone();
         Ok(Self { rust_expr, session })
     }
 
@@ -65,7 +79,7 @@ impl Expr {
         self.session.clone()
     }
 
-    fn execute(&self, options: Option<&PyAny>) -> Result<Execution, Error> {
+    fn execute(&self, options: Option<&PyAny>) -> Result<Execution> {
         let session = self.session.rust_session()?;
         let options = extract_options(options)?;
         let execution = session.execute(&self.rust_expr, options)?;
@@ -73,7 +87,7 @@ impl Expr {
     }
 
     /// Return the `pyarrow` type of the resulting expression.
-    fn data_type(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    fn data_type(&self, py: Python<'_>) -> Result<Option<PyObject>> {
         match self.rust_expr.data_type() {
             Some(t) => Ok(Some(t.to_pyarrow(py)?)),
             _ => Ok(None),
@@ -91,13 +105,6 @@ enum Arg {
 }
 
 impl Arg {
-    fn session(&self) -> Option<Session> {
-        match self {
-            Self::Expr(e) => Some(e.session.clone()),
-            _ => None,
-        }
-    }
-
     fn into_ast_dfg_ref(
         self,
         session: &mut RustSession,
@@ -112,7 +119,7 @@ impl Arg {
     }
 }
 
-fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::ExecutionOptions, Error> {
+fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::ExecutionOptions> {
     match options {
         None => Ok(sparrow_session::ExecutionOptions::default()),
         Some(options) => {
