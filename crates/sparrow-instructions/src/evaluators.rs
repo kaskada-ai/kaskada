@@ -16,6 +16,7 @@ mod equality;
 mod field_ref;
 mod general;
 mod json_field;
+mod lag;
 mod list;
 mod logical;
 mod macros;
@@ -32,6 +33,7 @@ use equality::*;
 use field_ref::*;
 use general::*;
 use json_field::*;
+use lag::*;
 use list::*;
 use logical::*;
 use map::*;
@@ -272,7 +274,16 @@ fn create_simple_evaluator(
         InstOp::Json => anyhow::bail!("No evaluator defined for json function"),
         InstOp::JsonField => JsonFieldEvaluator::try_new(info),
         InstOp::Lag => {
-            create_ordered_evaluator!(&info.args[1].data_type, PrimitiveLagEvaluator, info)
+            create_typed_evaluator!(
+                &info.args[1].data_type,
+                PrimitiveLagEvaluator,
+                StructLagEvaluator,
+                UnsupportedEvaluator,
+                UnsupportedEvaluator,
+                UnsupportedEvaluator,
+                UnsupportedEvaluator,
+                info
+            )
         }
         InstOp::Last => {
             create_typed_evaluator!(

@@ -115,7 +115,7 @@ pub enum InstOp {
     Json,
     #[strum(props(signature = "json_field(s: string, field: string) -> string"))]
     JsonField,
-    #[strum(props(signature = "lag<O: ordered>(n: i64, input: O) -> O"))]
+    #[strum(props(signature = "lag<T: any>(n: i64, input: T) -> T"))]
     Lag,
     #[strum(props(
         signature = "last<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"

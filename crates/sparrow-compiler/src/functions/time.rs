@@ -132,6 +132,6 @@ pub(super) fn register(registry: &mut Registry) {
 
     // Note: Lag is specifically *not* an aggregation function.
     registry
-        .register("lag<O: ordered>(const n: i64, input: O) -> O")
+        .register("lag<T: any>(const n: i64, input: T) -> T")
         .with_implementation(Implementation::Instruction(InstOp::Lag));
 }
