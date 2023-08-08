@@ -526,7 +526,7 @@ class Timestream(object):
         """
 
         data_type = self.data_type
-        if isinstance(data_type, pa.StructType):
+        if isinstance(data_type, pa.StructType) or isinstance(data_type, pa.ListType):
             return Timestream._call("fieldref", self, name)
         else:
             raise TypeError(f"Cannot access column '{name}' of non-record type '{data_type}'")

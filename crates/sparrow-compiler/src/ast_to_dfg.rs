@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, FieldRef};
+use arrow_schema::Field;
 pub use ast_dfg::*;
 use egg::Id;
 use itertools::{izip, Itertools};
@@ -19,7 +20,8 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
 use sparrow_plan::{GroupId, InstKind, InstOp};
 use sparrow_syntax::{
-    ExprOp, FenlType, FormatDataType, LiteralValue, Located, Location, Resolved, ResolvedExpr,
+    Collection, ExprOp, FenlType, FormatDataType, LiteralValue, Located, Location, Resolved,
+    ResolvedExpr,
 };
 
 use self::window_args::flatten_window_args;
@@ -187,40 +189,14 @@ pub fn add_to_dfg(
             let base = &arguments[0];
             let base_type = &argument_types[0];
 
-            let field_type = match base_type.inner() {
-                FenlType::Concrete(DataType::Struct(fields)) => {
-                    if let Some(field) = fields.iter().find(|f| f.name() == field.inner()) {
-                        field.data_type()
-                    } else {
-                        missing_field_diagnostic(fields, field.inner(), field.location())
-                            .emit(diagnostics);
-                        return Ok(dfg.error_node());
-                    }
-                }
-                FenlType::Json => {
-                    // This is a pseudo-hack that allows us to support json datatypes without
-                    // a specific arrow-representable json type. All `json` functions are converted
-                    // to `json_field` instructions that take a `string` and output a `string`,
-                    // hence the `utf8` return type here.
-                    &DataType::Utf8
-                }
-                FenlType::Error => {
-                    // The original error is already reported.
+            let field_type = match field_type(field, base_type.inner(), arguments[0].location()) {
+                Ok(Some(field_type)) => field_type,
+                Ok(None) => {
+                    // alreday reported error.
                     return Ok(dfg.error_node());
                 }
-                _ => {
-                    DiagnosticCode::IllegalFieldRef
-                        .builder()
-                        .with_label(
-                            // If the base is not a struct, that is the "primary" problem.
-                            arguments[0]
-                                .location()
-                                .primary_label()
-                                .with_message(format!(
-                                    "No fields for non-record base type {base_type}"
-                                )),
-                        )
-                        .emit(diagnostics);
+                Err(diagnostic) => {
+                    diagnostic.emit(diagnostics);
                     return Ok(dfg.error_node());
                 }
             };
@@ -895,4 +871,49 @@ fn missing_field_diagnostic(
             );
             format!("Nearest fields: {candidates}",)
         })
+}
+
+fn field_type(
+    field: &Located<String>,
+    base_type: &FenlType,
+    base_location: &Location,
+) -> Result<Option<DataType>, DiagnosticBuilder> {
+    match base_type {
+        FenlType::Concrete(DataType::Struct(fields)) => {
+            if let Some(field) = fields.iter().find(|f| f.name() == field.inner()) {
+                Ok(Some(field.data_type().clone()))
+            } else {
+                Err(missing_field_diagnostic(
+                    fields,
+                    field.inner(),
+                    field.location(),
+                ))
+            }
+        }
+        FenlType::Json => {
+            // This is a pseudo-hack that allows us to support json datatypes without
+            // a specific arrow-representable json type. All `json` functions are converted
+            // to `json_field` instructions that take a `string` and output a `string`,
+            // hence the `utf8` return type here.
+            Ok(Some(DataType::Utf8))
+        }
+        FenlType::Error => {
+            // The original error is already reported.
+            Ok(None)
+        }
+        _ => {
+            if let Some(args) = base_type.collection_args(&Collection::List) {
+                let item_type = field_type(field, &args[0], base_location)?;
+                Ok(item_type
+                    .map(|item_type| DataType::List(Arc::new(Field::new("item", item_type, true)))))
+            } else {
+                Err(DiagnosticCode::IllegalFieldRef.builder().with_label(
+                    // If the base is not a struct, that is the "primary" problem.
+                    base_location
+                        .primary_label()
+                        .with_message(format!("No fields for non-record base type {base_type}")),
+                ))
+            }
+        }
+    }
 }

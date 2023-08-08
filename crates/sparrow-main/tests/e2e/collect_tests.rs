@@ -291,10 +291,10 @@ async fn test_collect_structs() {
 
 #[tokio::test]
 async fn test_collect_with_minimum() {
-    insta::assert_snapshot!(QueryFixture::new("{ 
+    insta::assert_snapshot!(QueryFixture::new("{
         min0: Collect.s | collect(max=10) | index(0),
         min1: Collect.s | collect(min=2, max=10) | index(0),
-        min2: Collect.s | collect(min=3, max=10) | index(0) 
+        min2: Collect.s | collect(min=3, max=10) | index(0)
     }").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,min0,min1,min2
     1996-12-20T00:39:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,,
@@ -316,9 +316,34 @@ async fn test_collect_with_minimum() {
 }
 
 #[tokio::test]
+async fn test_collect_structs_map() {
+    insta::assert_snapshot!(QueryFixture::new("
+        let x = Collect | collect(max=10) | $input.s
+        in { x: x | index(0), y: x | index(1) }
+        ").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,x,y
+    1996-12-20T00:39:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,
+    1996-12-20T00:40:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi
+    1996-12-20T00:41:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi
+    1996-12-20T00:42:00.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi
+    1996-12-20T00:42:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi
+    1996-12-20T00:43:57.000000000,9223372036854775808,12960666915911099378,A,hEllo,hi
+    1996-12-21T00:40:57.000000000,9223372036854775808,2867199309159137213,B,h,
+    1996-12-21T00:41:57.000000000,9223372036854775808,2867199309159137213,B,h,he
+    1996-12-21T00:42:57.000000000,9223372036854775808,2867199309159137213,B,h,he
+    1996-12-21T00:43:57.000000000,9223372036854775808,2867199309159137213,B,h,he
+    1996-12-21T00:44:57.000000000,9223372036854775808,2867199309159137213,B,h,he
+    1996-12-22T00:44:57.000000000,9223372036854775808,2521269998124177631,C,g,
+    1996-12-22T00:45:57.000000000,9223372036854775808,2521269998124177631,C,g,go
+    1996-12-22T00:46:57.000000000,9223372036854775808,2521269998124177631,C,g,go
+    1996-12-22T00:47:57.000000000,9223372036854775808,2521269998124177631,C,g,go
+    "###);
+}
+
+#[tokio::test]
 async fn test_collect_lag_equality() {
     // Lag is implemented with collect now, so these _better_ be the same.
-    insta::assert_snapshot!(QueryFixture::new("{ 
+    insta::assert_snapshot!(QueryFixture::new("{
         collect: Collect.n | collect(min=3, max=3) | index(0),
         lag: Collect.n | lag(2)
     }").with_dump_dot("asdf").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
@@ -376,7 +401,7 @@ async fn test_collect_primitive_since_minutely() {
 async fn test_collect_primitive_since_minutely_1() {
     // Only two rows in this set exist within the same minute, hence these results when
     // getting the second item.
-    insta::assert_snapshot!(QueryFixture::new("{ 
+    insta::assert_snapshot!(QueryFixture::new("{
         f1: Collect.n | collect(max=10, window=since(minutely())) | index(1) | when(is_valid($input)),
         f1_with_min: Collect.n | collect(min=3, max=10, window=since(minutely())) | index(1) | when(is_valid($input))
     }").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
