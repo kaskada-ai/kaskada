@@ -162,7 +162,7 @@ async fn test_list_schemas_are_compatible() {
     .unwrap();
 
     assert_eq!(
-        "5F9880AD6B3285D2FA244C508645A98807B38EE51FAF53C86505D12E",
+        "C08A8D8F24F79BFAD10822D39F5734B1BCD35B73EC5C4A7AF3A90A5F",
         hash
     );
 }
