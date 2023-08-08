@@ -157,7 +157,6 @@ fn validate_type(
     parameter: &FenlType,
     argument: &FenlType,
 ) -> anyhow::Result<()> {
-    println!("Validating argument '{argument}' parameter '{parameter}");
     match (parameter, argument) {
         (FenlType::Error, _) | (_, FenlType::Error) => {
             // Assume the argument matches (since we already reported what
