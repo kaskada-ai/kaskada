@@ -17,7 +17,6 @@ def source() -> kt.sources.CsvSource:
     )
     return kt.sources.CsvSource("time", "key", content)
 
-
 def test_collect_basic(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
@@ -31,7 +30,6 @@ def test_collect_basic(source, golden) -> None:
             }
         )
     )
-
 
 def test_collect_with_max(source, golden) -> None:
     m = source.col("m")

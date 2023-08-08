@@ -93,6 +93,8 @@ pub enum InstOp {
         signature = "first<T: any>(input: T, ticks: bool = null, slide_duration: i64 = null) -> T"
     ))]
     First,
+    #[strum(props(signature = "flatten<T: any>(input: list<list<T>>) -> list<T>"))]
+    Flatten,
     #[strum(props(signature = "floor<N: number>(n: N) -> N"))]
     Floor,
     #[strum(props(signature = "get<K: key, V: any>(key: K, map: map<K, V>) -> V"))]

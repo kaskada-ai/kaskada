@@ -1,12 +1,13 @@
+use std::fmt::Display;
 use std::str::FromStr;
-use std::{fmt::Display, sync::Arc};
+use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, FieldRef, Fields, IntervalUnit, TimeUnit};
 use itertools::Itertools;
 use serde::Serialize;
 use sparrow_arrow::scalar_value::timeunit_suffix;
 
-use crate::TypeVariable;
+use crate::{try_parse_type, FeatureSetPart, ParseErrors, TypeVariable};
 
 /// A wrapper around an Arrow `DataType`.
 ///
@@ -25,7 +26,7 @@ pub enum FenlType {
     /// e.g. (Collection::Map, [TypeVariable("K"), TypeVariable("V")])
     ///
     /// TODO(https://github.com/kaskada-ai/kaskada/issues/494): Support FenlType
-    Collection(Collection, Vec<TypeVariable>),
+    Collection(Collection, Vec<FenlType>),
     /// A type for describing a windowing behavior.
     Window,
     /// A type for describing a string that will be interpreted
@@ -38,7 +39,7 @@ pub enum FenlType {
     Error,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub enum Collection {
     List,
@@ -246,55 +247,6 @@ impl FromStr for FenlType {
             "duration_ns" => Ok(DataType::Duration(TimeUnit::Nanosecond).into()),
             "window" => Ok(FenlType::Window),
             "json" => Ok(FenlType::Json),
-            s if s.starts_with("list<") && s.ends_with('>') => {
-                let type_var = &s[5..s.len() - 1]
-                    .split(',')
-                    .map(|s| s.trim())
-                    .collect::<Vec<_>>();
-
-                // One type var for a list
-                if type_var.len() != 1 {
-                    return Err(FenlType::Error);
-                }
-
-                match FenlType::from_str(type_var[0])? {
-                    FenlType::Concrete(dt) => {
-                        let f = Field::new("item", dt, true);
-                        Ok(DataType::List(Arc::new(f)).into())
-                    }
-                    FenlType::TypeRef(type_var) => {
-                        Ok(FenlType::Collection(Collection::List, vec![type_var]))
-                    }
-                    other => panic!("unexpected type: {:?}", other),
-                }
-            }
-            s if s.starts_with("map<") && s.ends_with('>') => {
-                let type_var = &s[4..s.len() - 1]
-                    .split(',')
-                    .map(|s| s.trim())
-                    .collect::<Vec<_>>();
-
-                // Two type vars for a map
-                if type_var.len() != 2 {
-                    return Err(FenlType::Error);
-                }
-                let key_type = FenlType::from_str(type_var[0])?;
-                let value_type = FenlType::from_str(type_var[1])?;
-
-                match (key_type, value_type) {
-                    (FenlType::Concrete(kt), FenlType::Concrete(vt)) => {
-                        let f1 = Field::new("key", kt, true);
-                        let f2 = Field::new("value", vt, true);
-                        let s = DataType::Struct(Fields::from(vec![f1, f2]));
-                        let f = Field::new("entries", s, true);
-                        Ok(DataType::Map(Arc::new(f), false).into())
-                    }
-                    (FenlType::TypeRef(ktv), FenlType::TypeRef(vtv)) => {
-                        Ok(FenlType::Collection(Collection::Map, vec![ktv, vtv]))
-                    }
-                    (_, _) => unimplemented!("map with concrete and type variable mix"),
-                }
-            }
             s => Ok(FenlType::TypeRef(TypeVariable(s.to_owned()))),
         }
     }
@@ -313,6 +265,80 @@ impl From<&Field> for FenlType {
 }
 
 impl FenlType {
+    /// Normalize concrete collection types.
+    pub fn normalize(self) -> Self {
+        match self {
+            FenlType::Collection(c, args) if args.iter().all(|t| t.is_concrete()) => {
+                match c {
+                    Collection::List => {
+                        // Note: the `name` and `nullability` here are the standard, and cannot be changed,
+                        // or we will have schema mismatches later during execution.
+                        //
+                        // That said, there's no reason why a later arrow version can't change this behavior.
+                        // TODO: Figure out how to pass user naming and nullability through inference.
+                        let item = args.into_iter().exactly_one().unwrap();
+                        let item = item.take_arrow_type().unwrap();
+                        let field = Arc::new(Field::new("item", item, true));
+                        FenlType::Concrete(DataType::List(field))
+                    }
+                    Collection::Map => {
+                        assert!(
+                            args.len() == 2,
+                            "map must have two type arguments, was {args:?}"
+                        );
+                        let (key, value) = args.into_iter().collect_tuple().unwrap();
+                        let key = key.take_arrow_type().unwrap();
+                        let value = value.take_arrow_type().unwrap();
+
+                        // Note that the `name` and `nullability` are the standard, and cannot be changed,
+                        // or we may have schema mismatches later during execution.
+                        //
+                        // That said, there's no reason why a later arrow version can't change this behavior.
+                        // TODO: Figure out how to pass user naming and nullability through inference.
+                        let key_field = Field::new("keys", key, false);
+                        let value_field = Field::new("values", value, true);
+
+                        let fields = Fields::from(vec![key_field, value_field]);
+                        let entries = DataType::Struct(fields);
+                        let entries = Arc::new(Field::new("entries", entries, false));
+                        FenlType::Concrete(DataType::Map(entries, false))
+                    }
+                }
+            }
+            other => other,
+        }
+    }
+
+    pub fn collection_args(&self, collection: &Collection) -> Option<Vec<FenlType>> {
+        match self {
+            FenlType::Collection(c, args) if c == collection => Some(args.clone()),
+            FenlType::Concrete(data_type) => match (collection, data_type) {
+                (Collection::List, DataType::List(field)) => {
+                    Some(vec![FenlType::Concrete(field.data_type().clone())])
+                }
+                (Collection::Map, DataType::Map(field, _)) => {
+                    let DataType::Struct(fields) = field.data_type() else {
+                        panic!("Map type has a struct type with key/value")
+                    };
+                    Some(vec![
+                        FenlType::Concrete(fields[0].data_type().clone()),
+                        FenlType::Concrete(fields[1].data_type().clone()),
+                    ])
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn is_concrete(&self) -> bool {
+        matches!(self, FenlType::Concrete(_))
+    }
+
+    pub fn try_from_str(part_id: FeatureSetPart, input: &str) -> Result<Self, ParseErrors<'_>> {
+        try_parse_type(part_id, input)
+    }
+
     pub fn is_error(&self) -> bool {
         matches!(self, FenlType::Error)
     }
@@ -344,5 +370,48 @@ impl FenlType {
             FenlType::Json => None,
             FenlType::Error => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Collection, FeatureSetPart, FenlType};
+    use arrow::datatypes::DataType;
+
+    #[test]
+    fn test_parse() {
+        let parse = |input| {
+            let part_id = FeatureSetPart::Internal(input);
+            crate::parser::try_parse_type(part_id, input).unwrap()
+        };
+
+        let i32 = FenlType::Concrete(DataType::Int32);
+        let i64 = FenlType::Concrete(DataType::Int64);
+        let t = FenlType::TypeRef(crate::TypeVariable("T".to_owned()));
+        assert_eq!(parse("i32"), i32);
+        assert_eq!(parse("i64"), i64);
+        assert_eq!(
+            parse("map<i32, i64>"),
+            FenlType::Collection(Collection::Map, vec![i32.clone(), i64.clone()]).normalize()
+        );
+        assert_eq!(
+            parse("map<T, i64>"),
+            FenlType::Collection(Collection::Map, vec![t.clone(), i64.clone()])
+        );
+        assert_eq!(
+            parse("list<list<i32>>"),
+            FenlType::Collection(
+                Collection::List,
+                vec![FenlType::Collection(Collection::List, vec![i32]).normalize()]
+            )
+            .normalize()
+        );
+        assert_eq!(
+            parse("list<list<T>>"),
+            FenlType::Collection(
+                Collection::List,
+                vec![FenlType::Collection(Collection::List, vec![t])]
+            )
+        );
     }
 }
