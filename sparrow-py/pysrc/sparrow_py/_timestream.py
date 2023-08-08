@@ -180,7 +180,7 @@ class Timestream(object):
         else:
             return func(self, *args, **kwargs)
 
-    def __add__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def add(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream adding this and `rhs`.
 
@@ -198,6 +198,10 @@ class Timestream(object):
         ------
         ValueError
             If attempting to perform an addition that is not possible.
+
+        Notes
+        -----
+        You can also write `a.add(b)` as `a + b`.
         """
         if isinstance(rhs, timedelta):
             # Right now, we can't convert a time delta directly to a scalar value (literal).
@@ -210,23 +214,15 @@ class Timestream(object):
         else:
             return Timestream._call("add", self, rhs)
 
+    def __add__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.add(rhs)
+
     def __radd__(self, lhs: Union[Timestream, Literal]) -> Timestream:
-        """
-        Create a Timestream adding `lhs` and this.
+        if not isinstance(lhs, Timestream):
+            lhs = Timestream._literal(lhs, self._ffi_expr.session())
+        return lhs.add(self)
 
-        Parameters
-        ----------
-        lhs : Union[Timestream, Literal]
-            The Timestream or literal value to add to this.
-
-        Returns
-        -------
-        Timestream
-            The Timestream resulting from `lhs + self`.
-        """
-        return Timestream._call("add", lhs, self)
-
-    def __sub__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def sub(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream substracting `rhs` from this.
 
@@ -239,26 +235,22 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self - rhs`.
+
+        Notes
+        -----
+        You can also write `a.sub(b)` as `a - b`.
         """
         return Timestream._call("sub", self, rhs)
 
+    def __sub__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.sub(rhs)
+
     def __rsub__(self, lhs: Union[Timestream, Literal]) -> Timestream:
-        """
-        Create a Timestream substracting this from the `lhs`.
+        if not isinstance(lhs, Timestream):
+            lhs = Timestream._literal(lhs, self._ffi_expr.session())
+        return lhs.sub(self)
 
-        Parameters
-        ----------
-        lhs : Union[Timestream, Literal]
-            The Timestream or literal value to subtract this from.
-
-        Returns
-        -------
-        Timestream
-            The Timestream resulting from `lhs - self`.
-        """
-        return Timestream._call("sub", lhs, self)
-
-    def __mul__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def mul(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream multiplying this and `rhs`.
 
@@ -271,26 +263,22 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self * rhs`.
+
+        Notes
+        -----
+        You can also write `a.mul(b)` as `a * b`.
         """
         return Timestream._call("mul", self, rhs)
 
+    def __mul__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.mul(rhs)
+
     def __rmul__(self, lhs: Union[Timestream, Literal]) -> Timestream:
-        """
-        Create a Timestream multiplying `lhs` and this.
+        if not isinstance(lhs, Timestream):
+            lhs = Timestream._literal(lhs, self._ffi_expr.session())
+        return lhs.mul(self)
 
-        Parameters
-        ----------
-        lhs : Union[Timestream, Literal]
-            The Timestream or literal value to multiply with this.
-
-        Returns
-        -------
-        Timestream
-            The Timestream resulting from `lhs * self`.
-        """
-        return Timestream._call("mul", lhs, self)
-
-    def __truediv__(self, divisor: Union[Timestream, Literal]) -> Timestream:
+    def div(self, divisor: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream by dividing this and `divisor`.
 
@@ -303,26 +291,23 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self / divisor`.
+
+        Notes
+        -----
+        You can also write `a.div(b)` as `a / b`.
         """
         return Timestream._call("div", self, divisor)
 
+    def __truediv__(self, divisor: Union[Timestream, Literal]) -> Timestream:
+        return self.div(divisor)
+
     def __rtruediv__(self, dividend: Union[Timestream, Literal]) -> Timestream:
-        """
-        Create a Timestream by dividing this and `dividend`.
+        if not isinstance(dividend, Timestream):
+            dividend = Timestream._literal(dividend, self._ffi_expr.session())
+        return dividend.div(self)
 
-        Parameters
-        ----------
-        dividend : Union[Timestream, Literal]
-            The Timestream or literal value to divide by this.
 
-        Returns
-        -------
-        Timestream
-            The Timestream resulting from `dividend / self`.
-        """
-        return Timestream._call("div", dividend, self)
-
-    def __lt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def lt(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is less than `rhs`.
 
@@ -335,10 +320,17 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self < rhs`.
+
+        Notes
+        -----
+        You can also write `a.lt(b)` as `a < b`.
         """
         return Timestream._call("lt", self, rhs)
 
-    def __le__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __lt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.lt(rhs)
+
+    def le(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is less than or equal to `rhs`.
 
@@ -351,10 +343,17 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self <= rhs`.
+
+        Notes
+        -----
+        You can also write `a.le(b)` as `a <= b`.
         """
         return Timestream._call("lte", self, rhs)
 
-    def __gt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __le__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.le(rhs)
+
+    def gt(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is greater than `rhs`.
 
@@ -367,10 +366,17 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self > rhs`.
+
+        Notes
+        -----
+        You can also write `a.gt(b)` as `a > b`.
         """
         return Timestream._call("gt", self, rhs)
 
-    def __ge__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __gt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.gt(rhs)
+
+    def ge(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is greater than or equal to `rhs`.
 
@@ -383,8 +389,15 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self >= rhs`.
+
+        Notes
+        -----
+        You can also write `a.ge(b)` as `a >= b`.
         """
         return Timestream._call("gte", self, rhs)
+
+    def __ge__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        return self.ge(rhs)
 
     def and_(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """

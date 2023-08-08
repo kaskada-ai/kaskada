@@ -22,4 +22,4 @@ class ExecutionOptions:
 
     row_limit: Optional[int] = None
     max_batch_size: Optional[int] = None
-    materialize: bool = None
+    materialize: bool = False

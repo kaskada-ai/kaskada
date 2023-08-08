@@ -49,7 +49,7 @@ class ArrowSource(Source):
 
         self._ffi_table.add_pyarrow(data)
 
-    def add(self, data: Union[pd.DataFrame, pa.RecordBatch]) -> None:
+    def add_data(self, data: Union[pd.DataFrame, pa.RecordBatch]) -> None:
         """Add data to the source."""
         if isinstance(data, pd.DataFrame):
             data = pa.RecordBatch.from_pandas(data, self._schema, preserve_index=False)
@@ -69,4 +69,4 @@ class CsvSource(ArrowSource):
     def add_csv_string(self, csv_string: str, **kwargs) -> None:
         """Add data to the source."""
         content = pd.read_csv(StringIO(csv_string), dtype_backend="pyarrow", **kwargs)
-        self.add(content)
+        self.add_data(content)

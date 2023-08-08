@@ -4,7 +4,6 @@ mod boolean_accum_token;
 mod collect_struct_token;
 mod collect_token;
 mod count_accum_token;
-pub mod lag_token;
 mod list_accum_token;
 mod map_accum_token;
 mod primitive_accum_token;

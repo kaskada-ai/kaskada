@@ -34,7 +34,6 @@ pub(super) fn evaluate_constant(
             // now to fix various panics caused by not having *some* behavior defined.
             InstOp::CountIf => return Ok(ScalarValue::UInt32(Some(0))),
             InstOp::First => return Ok(inputs[0].null()),
-            InstOp::Lag => return Ok(inputs[0].null()),
             InstOp::Last => return Ok(inputs[0].null()),
             InstOp::Max => return Ok(inputs[0].null()),
             InstOp::Mean => return Ok(ScalarValue::Float64(None)),
