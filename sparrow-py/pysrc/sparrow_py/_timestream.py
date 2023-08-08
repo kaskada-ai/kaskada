@@ -838,6 +838,10 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
+    def flatten(self) -> pd.DataFrame:
+        """Flatten a list of lists to a list of values."""
+        return Timestream._call("flatten", self)
+
     def preview(self, limit: int = 100) -> pd.DataFrame:
         """
         Return the first N rows of the result as a Pandas DataFrame.

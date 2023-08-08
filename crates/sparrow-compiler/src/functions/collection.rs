@@ -25,4 +25,9 @@ pub(super) fn register(registry: &mut Registry) {
         .register("list_len<T: any>(input: list<T>) -> i32")
         .with_implementation(Implementation::Instruction(InstOp::ListLen))
         .set_internal();
+
+    registry
+        .register("flatten<T: any>(input: list<list<T>>) -> list<T>")
+        .with_implementation(Implementation::Instruction(InstOp::Flatten))
+        .set_internal();
 }

@@ -233,6 +233,7 @@ fn create_simple_evaluator(
                 info
             )
         }
+        InstOp::Flatten => FlattenEvaluator::try_new(info),
         InstOp::Floor => FloorEvaluator::try_new(info),
         InstOp::Get => GetEvaluator::try_new(info),
         InstOp::Index => IndexEvaluator::try_new(info),

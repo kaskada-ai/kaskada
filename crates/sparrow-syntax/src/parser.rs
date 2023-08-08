@@ -5,7 +5,7 @@
 
 use lalrpop_util::lalrpop_mod;
 
-use crate::{ExprRef, FeatureSetPart, Signature};
+use crate::{ExprRef, FeatureSetPart, FenlType, Signature};
 
 lalrpop_mod!(
     #[allow(clippy::all)]
@@ -63,6 +63,14 @@ pub(crate) fn try_parse_arguments(
     })
 }
 
+pub(crate) fn try_parse_type(
+    part_id: FeatureSetPart,
+    input: &str,
+) -> Result<FenlType, ParseErrors<'_>> {
+    try_parse(input, |errors, lexer| {
+        grammar::TypeParser::new().parse(part_id, errors, lexer)
+    })
+}
 #[inline]
 fn try_parse<T>(
     input: &str,
