@@ -271,9 +271,6 @@ fn create_simple_evaluator(
         // rely on simplification for conversion.
         InstOp::Json => anyhow::bail!("No evaluator defined for json function"),
         InstOp::JsonField => JsonFieldEvaluator::try_new(info),
-        InstOp::Lag => {
-            create_ordered_evaluator!(&info.args[1].data_type, PrimitiveLagEvaluator, info)
-        }
         InstOp::Last => {
             create_typed_evaluator!(
                 &info.args[0].data_type,
