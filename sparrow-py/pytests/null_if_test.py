@@ -22,7 +22,7 @@ def test_null_if(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     condition_m = m > 15
-    condition_n= n > 5
+    condition_n = n > 5
     golden.jsonl(
         kt.record(
             {

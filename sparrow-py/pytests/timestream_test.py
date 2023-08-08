@@ -113,6 +113,7 @@ def test_timestream_preview(golden) -> None:
 
     golden.jsonl(source.preview(limit=4))
 
+
 def test_timestream_run_non_record(golden) -> None:
     content = "\n".join(
         [

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import sys
+from datetime import datetime
+from datetime import timedelta
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -12,20 +13,23 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 from typing import final
-from typing_extensions import TypeAlias
 
 import pandas as pd
 import pyarrow as pa
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
+from typing_extensions import TypeAlias
 
 from ._execution import ExecutionOptions
 from ._result import Result
 
 
-Literal = Union[int, str, float, bool, None, timedelta]
+Literal = Union[int, str, float, bool, None, timedelta, datetime]
 
-def _augment_error(args: Sequence[Union[Timestream, Literal]], e: Exception) -> Exception:
+
+def _augment_error(
+    args: Sequence[Union[Timestream, Literal]], e: Exception
+) -> Exception:
     """Augment an error with information about the arguments."""
     if sys.version_info >= (3, 11):
         # If we can add notes to the exception, indicate the types.
@@ -65,7 +69,7 @@ class Timestream(object):
         ----------
         func : str
             Name of the function to apply.
-        *args : Timestream | int | str | float | bool | None
+        *args : Timestream | int | str | float | None
             List of arguments to the expression.
         session : FFI Session
             FFI Session to create the expression in.
@@ -113,9 +117,7 @@ class Timestream(object):
     @final
     def pipe(
         self,
-        func: Union[
-            Callable[..., Timestream], Tuple[Callable[..., Timestream], str]
-        ],
+        func: Union[Callable[..., Timestream], Tuple[Callable[..., Timestream], str]],
         *args: Union[Timestream, Literal],
         **kwargs: Union[Timestream, Literal],
     ) -> Timestream:
@@ -209,7 +211,9 @@ class Timestream(object):
             # Note that this loses precision if the timedelta has a fractional number of seconds,
             # and fail if the number of seconds exceeds an integer.
             session = self._ffi_expr.session()
-            seconds = Timestream._call("seconds", int(rhs.total_seconds()), session = session)
+            seconds = Timestream._call(
+                "seconds", int(rhs.total_seconds()), session=session
+            )
             return Timestream._call("add_time", seconds, self)
         else:
             return Timestream._call("add", self, rhs)
@@ -635,7 +639,10 @@ class Timestream(object):
         return Timestream._call("when", condition, self)
 
     def collect(
-        self, max: Optional[int], min: Optional[int] = 0, window: Optional["kt.Window"] = None
+        self,
+        max: Optional[int],
+        min: Optional[int] = 0,
+        window: Optional["kt.Window"] = None,
     ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
@@ -776,6 +783,53 @@ class Timestream(object):
         """
         return Timestream._call("lookup", key, self)
 
+    def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
+        """
+        Create a Timestream shifting the time of each point to `time`.
+
+        If multiple values are shifted to the same time, they will be emitted in
+        the order in which they originally occurred.
+
+        Parameters
+        ----------
+        time : Union[Timestream, datetime]
+            The time to shift to.
+            This must be a datetime or a Timestream of timestamp_ns.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the shifted points.
+        """
+        if isinstance(time, datetime):
+            time_ns = time.timestamp() * 1e9
+            return Timestream._call("shift_to", time_ns, self)
+        else:
+            return Timestream._call("shift_to", time, self)
+
+    def shift_until(self, predicate: Timestream) -> Timestream:
+        """
+        Create a Timestream shifting `self` forward to the time the `predicate`
+        is true.
+
+        Note that if the `predicate` evaluates to true at the same time as `self`,
+        the point will be emitted at that time.
+
+        If multiple values are shifted to the same time, they will be emitted in
+        the order in which they originally occurred.
+
+        Parameters
+        ----------
+        predicate : Timestream
+            The predicate to determine whether to emit shifted rows.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the shifted points.
+        """
+        return Timestream._call("shift_until", predicate, self)
+
     def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
@@ -906,7 +960,10 @@ class Timestream(object):
 
 
 def _aggregation(
-    op: str, input: Timestream, window: Optional["kt.Window"], *args: Union[Timestream, Literal]
+    op: str,
+    input: Timestream,
+    window: Optional["kt.Window"],
+    *args: Union[Timestream, Literal],
 ) -> Timestream:
     """
     Create the aggregation `op` with the given `input`, `window` and `args`.

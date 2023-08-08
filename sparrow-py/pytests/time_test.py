@@ -1,6 +1,8 @@
+from datetime import timedelta
+
 import pytest
 import sparrow_py as kt
-from datetime import timedelta
+
 
 @pytest.fixture(scope="module")
 def source() -> kt.sources.CsvSource:
@@ -14,6 +16,7 @@ def source() -> kt.sources.CsvSource:
         ]
     )
     return kt.sources.CsvSource("time", "key", content)
+
 
 def test_time_add_days(source, golden) -> None:
     time = source.col("time")
@@ -29,43 +32,26 @@ def test_time_add_days(source, golden) -> None:
 def test_time_add_hours(source, golden) -> None:
     time = source.col("time")
     golden.jsonl(
-        kt.record(
-            {
-                "time": time,
-                "time_plus_hours": time + timedelta(hours = 1)
-            }
-        )
+        kt.record({"time": time, "time_plus_hours": time + timedelta(hours=1)})
     )
+
 
 def test_time_add_minutes(source, golden) -> None:
     time = source.col("time")
     golden.jsonl(
-        kt.record(
-            {
-                "time": time,
-                "time_plus_minutes": time + timedelta(minutes = 1)
-            }
-        )
+        kt.record({"time": time, "time_plus_minutes": time + timedelta(minutes=1)})
     )
+
 
 def test_time_add_days_and_minutes(source, golden) -> None:
     time = source.col("time")
     golden.jsonl(
-        kt.record(
-            {
-                "time": time,
-                "time_plus_day": time + timedelta(days = 3, minutes = 1)
-            }
-        )
+        kt.record({"time": time, "time_plus_day": time + timedelta(days=3, minutes=1)})
     )
+
 
 def test_time_add_seconds(source, golden) -> None:
     time = source.col("time")
     golden.jsonl(
-        kt.record(
-            {
-                "time": time,
-                "time_plus_seconds": time + timedelta(seconds = 5)
-            }
-        )
+        kt.record({"time": time, "time_plus_seconds": time + timedelta(seconds=5)})
     )

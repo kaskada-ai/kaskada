@@ -43,7 +43,7 @@ def install_self(session: Session) -> None:
 @session(name="check-lint", python=python_versions[0])
 def check_lint(session: Session) -> None:
     """Lint."""
-    args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
+    args = session.posargs or ["pysrc", "pytests", "docs/source"]
     session.install(
         "black",
         "darglint",
@@ -69,7 +69,7 @@ def check_lint(session: Session) -> None:
 @session(name="fix-lint", python=python_versions[0])
 def fix_lint(session: Session) -> None:
     """Automatically fix lint issues."""
-    args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
+    args = session.posargs or ["pysrc", "pytests", "docs/source"]
     session.install(
         "black",
         "isort",
