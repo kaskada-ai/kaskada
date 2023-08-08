@@ -35,7 +35,9 @@ def test_field_ref_no_such_field(source1) -> None:
 
 
 def test_field_ref_not_a_struct(source1) -> None:
-    with pytest.raises(TypeError, match="Cannot access column 'x' of non-record type 'double'"):
+    with pytest.raises(
+        TypeError, match="Cannot access column 'x' of non-record type 'double'"
+    ):
         source1.col("x").col("x")
 
 
@@ -129,6 +131,7 @@ def test_timestream_run_non_record(golden) -> None:
     source = kt.sources.CsvSource("time", "key", content)
     golden.jsonl(source.col("m"))
 
+
 def test_timestream_cast(golden) -> None:
     content = "\n".join(
         [
@@ -142,4 +145,4 @@ def test_timestream_cast(golden) -> None:
         ]
     )
     source = kt.sources.CsvSource("time", "key", content)
-    golden.jsonl(source.col("time").cast(pa.timestamp('ns')))
+    golden.jsonl(source.col("time").cast(pa.timestamp("ns")))

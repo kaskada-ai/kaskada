@@ -50,6 +50,7 @@ async def test_iter_pandas_async(golden, source_int64) -> None:
     with pytest.raises(StopAsyncIteration):
         await batches.__anext__()
 
+
 @pytest.mark.asyncio
 async def test_iter_pandas_async_materialize(golden, source_int64) -> None:
     data2 = "\n".join(

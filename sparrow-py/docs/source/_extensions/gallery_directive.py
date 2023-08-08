@@ -9,7 +9,9 @@ It currently exists for maintainers of the pydata-sphinx-theme,
 but might be abstracted into a standalone package if it proves useful.
 """
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
+from typing import Dict
+from typing import List
 
 from docutils import nodes
 from docutils.parsers.rst import directives
@@ -17,6 +19,7 @@ from sphinx.application import Sphinx
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxDirective
 from yaml import safe_load
+
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +89,6 @@ class GalleryGridDirective(SphinxDirective):
         # and generate a card item for each of them
         grid_items = []
         for item in safe_load(yaml_string):
-
             # remove parameters that are not needed for the card options
             title = item.pop("title", "")
 

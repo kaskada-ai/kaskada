@@ -101,8 +101,8 @@ def _data_to_dataframe(data: Union[kt.Timestream, pd.DataFrame]) -> pd.DataFrame
     elif isinstance(data, kt.Timestream):
         return data.run().to_pandas()
     else:
-        raise ValueError(
-            f"data must be a Timestream or a DataFrame, was {type(data)}")
+        raise ValueError(f"data must be a Timestream or a DataFrame, was {type(data)}")
+
 
 @pytest.fixture
 def golden(

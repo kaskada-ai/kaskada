@@ -20,14 +20,8 @@ def source() -> kt.sources.CsvSource:
 
 def test_time_add_days(source, golden) -> None:
     time = source.col("time")
-    golden.jsonl(
-        kt.record(
-            {
-                "time": time,
-                "time_plus_day": time + timedelta(days = 1)
-            }
-        )
-    )
+    golden.jsonl(kt.record({"time": time, "time_plus_day": time + timedelta(days=1)}))
+
 
 def test_time_add_hours(source, golden) -> None:
     time = source.col("time")

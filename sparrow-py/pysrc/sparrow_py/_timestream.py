@@ -60,7 +60,11 @@ class Timestream(object):
         return Timestream(_ffi.Expr.literal(session, value))
 
     @staticmethod
-    def _call(func: str, *args: Union[Timestream, Literal], session: Optional[_ffi.Session] = None) -> Timestream:
+    def _call(
+        func: str,
+        *args: Union[Timestream, Literal],
+        session: Optional[_ffi.Session] = None,
+    ) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
 
@@ -68,7 +72,7 @@ class Timestream(object):
         ----------
         func : str
             Name of the function to apply.
-        *args : Timestream | int | str | float | None
+        *args : Timestream | int | str | float | bool | None
             List of arguments to the expression.
         session : FFI Session
             FFI Session to create the expression in.
@@ -101,7 +105,9 @@ class Timestream(object):
 
         ffi_args = [make_arg(arg) for arg in args]
         try:
-            return Timestream(_ffi.Expr.call(session=session, operation=func, args=ffi_args))
+            return Timestream(
+                _ffi.Expr.call(session=session, operation=func, args=ffi_args)
+            )
         except TypeError as e:
             # noqa: DAR401
             raise _augment_error(args, TypeError(str(e))) from e
@@ -532,7 +538,9 @@ class Timestream(object):
         if isinstance(data_type, pa.StructType):
             return Timestream._call("fieldref", self, name)
         else:
-            raise TypeError(f"Cannot access column '{name}' of non-record type '{data_type}'")
+            raise TypeError(
+                f"Cannot access column '{name}' of non-record type '{data_type}'"
+            )
 
     def select(self, *args: str) -> Timestream:
         """
@@ -953,7 +961,9 @@ class Timestream(object):
         if not pa.types.is_struct(self.data_type):
             # The execution engine requires a struct, so wrap this in a record.
             expr = record({"result": self})
-        options = ExecutionOptions(row_limit=row_limit, max_batch_size=max_batch_size, materialize=materialize)
+        options = ExecutionOptions(
+            row_limit=row_limit, max_batch_size=max_batch_size, materialize=materialize
+        )
         execution = expr._ffi_expr.execute(options)
         return Result(execution)
 
