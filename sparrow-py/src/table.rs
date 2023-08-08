@@ -1,4 +1,3 @@
-use std::ops::DerefMut;
 use std::sync::Arc;
 
 use arrow::datatypes::Schema;
@@ -16,7 +15,6 @@ pub(crate) struct Table {
     #[pyo3(get)]
     name: String,
     rust_table: RustTable,
-    session: Session,
 }
 
 #[pymethods]
@@ -45,11 +43,7 @@ impl Table {
         )?;
 
         let rust_expr = rust_table.expr.clone();
-        let table = Table {
-            name,
-            rust_table,
-            session: session.clone(),
-        };
+        let table = Table { name, rust_table };
         let expr = Expr { rust_expr, session };
         Ok((table, expr))
     }
@@ -63,9 +57,8 @@ impl Table {
     /// - Python generators?
     /// TODO: Error handling
     fn add_pyarrow(&mut self, data: &PyAny) -> Result<()> {
-        let mut session = self.session.rust_session()?;
         let data = RecordBatch::from_pyarrow(data)?;
-        self.rust_table.add_data(session.deref_mut(), data)?;
+        self.rust_table.add_data(data)?;
         Ok(())
     }
 }

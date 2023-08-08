@@ -4361,6 +4361,7 @@ dependencies = [
  "sparrow-core",
  "sparrow-instructions",
  "sparrow-kernels",
+ "sparrow-merge",
  "sparrow-plan",
  "sparrow-syntax",
  "static_init",
@@ -4573,6 +4574,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-merge"
+version = "0.11.0"
+dependencies = [
+ "anyhow",
+ "arrow-arith",
+ "arrow-array",
+ "arrow-csv",
+ "arrow-ord",
+ "arrow-schema",
+ "arrow-select",
+ "async-stream",
+ "bit-set",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "itertools 0.11.0",
+ "proptest",
+ "smallvec",
+ "sparrow-arrow",
+ "sparrow-core",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "sparrow-physical"
 version = "0.11.0"
 dependencies = [
@@ -4714,6 +4740,7 @@ dependencies = [
  "sparrow-core",
  "sparrow-instructions",
  "sparrow-kernels",
+ "sparrow-merge",
  "sparrow-plan",
  "sparrow-qfr",
  "sparrow-syntax",
@@ -4759,6 +4786,7 @@ dependencies = [
  "smallvec",
  "sparrow-api",
  "sparrow-compiler",
+ "sparrow-merge",
  "sparrow-plan",
  "sparrow-runtime",
  "sparrow-syntax",

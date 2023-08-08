@@ -1,15 +1,14 @@
+use std::collections::BinaryHeap;
 use std::sync::Arc;
 
 use anyhow::Context;
-use arrow::array::ArrayRef;
-use arrow::datatypes::SchemaRef;
-use arrow::record_batch::RecordBatch;
+use arrow_array::{ArrayRef, RecordBatch};
+use arrow_schema::SchemaRef;
 use itertools::izip;
 use sparrow_arrow::downcast::downcast_primitive_array;
 
-use crate::merge::binary_merge::BinaryMergeResult;
-use crate::merge::{binary_merge, BinaryMergeInput};
-use crate::min_heap::{HasPriority, MinHeap};
+use crate::old::binary_merge::BinaryMergeResult;
+use crate::old::{binary_merge, BinaryMergeInput};
 
 /// Merges 0 or more batches with the same schema into a single result.
 ///
@@ -33,7 +32,7 @@ pub fn homogeneous_merge(
             to_merge.push(PendingMerge(batch))
         }
     }
-    let mut to_merge: MinHeap<_> = MinHeap::from(to_merge);
+    let mut to_merge: BinaryHeap<_> = BinaryHeap::from(to_merge);
     // Do the actual merge -- if there are no non-empty batches we're done.
     if to_merge.is_empty() {
         return Ok(RecordBatch::new_empty(schema.clone()));
@@ -78,16 +77,16 @@ fn do_merge(schema: &SchemaRef, a: PendingMerge, b: PendingMerge) -> anyhow::Res
         // We could go further -- we could build up a vector of which input each
         // row should be taken from, and then use that. This would allow us to
         // defer the intermediate merges (and thus intermediate allocations).
-        let a = arrow::compute::take(a.as_ref(), &take_a, None)?;
-        let b = arrow::compute::take(b.as_ref(), &take_b, None)?;
+        let a = arrow_select::take::take(a.as_ref(), &take_a, None)?;
+        let b = arrow_select::take::take(b.as_ref(), &take_b, None)?;
 
         // TODO: As implemented, this will prefer items from `a`. Since we merge ordered
         // by size, this is potentially non-deterministic if two files have
         // duplicate rows and the same length. We should figure out if we should
         // (a) fail (and do so) or (b) allow indicating which side to prefer.
         // The simplest would be for one file to be "newer".
-        let a_is_valid = arrow::compute::is_not_null(a.as_ref())?;
-        let merged = arrow::compute::kernels::zip::zip(&a_is_valid, a.as_ref(), b.as_ref())?;
+        let a_is_valid = arrow_arith::boolean::is_not_null(a.as_ref())?;
+        let merged = arrow_select::zip::zip(&a_is_valid, a.as_ref(), b.as_ref())?;
         columns.push(merged);
     }
 
@@ -109,24 +108,36 @@ impl PendingMerge {
     }
 }
 
-impl HasPriority for PendingMerge {
-    type Priority = usize;
+impl std::cmp::PartialEq for PendingMerge {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
-    fn priority(&self) -> Self::Priority {
-        self.0.num_rows()
+impl std::cmp::Eq for PendingMerge {}
+
+impl std::cmp::PartialOrd for PendingMerge {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::Ord for PendingMerge {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.num_rows().cmp(&other.0.num_rows())
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use arrow::array::UInt8Array;
-    use arrow::record_batch::RecordBatch;
+    use arrow_array::RecordBatch;
+    use arrow_array::UInt8Array;
     use proptest::prelude::*;
     use sparrow_core::TableSchema;
 
     use super::*;
-    use crate::merge::testing::arb_key_triples;
+    use crate::old::testing::arb_key_triples;
 
     proptest! {
         #[test]
@@ -185,8 +196,8 @@ mod tests {
         let split_array = UInt8Array::from(split);
         let inputs: Vec<_> = (0..inputs)
             .map(|n| {
-                let filter = arrow::compute::eq_scalar(&split_array, n).unwrap();
-                arrow::compute::filter_record_batch(&merged, &filter).unwrap()
+                let filter = arrow_ord::comparison::eq_scalar(&split_array, n).unwrap();
+                arrow_select::filter::filter_record_batch(&merged, &filter).unwrap()
             })
             .collect();
 

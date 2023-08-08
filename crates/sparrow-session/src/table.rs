@@ -3,22 +3,21 @@ use std::sync::Arc;
 use arrow_array::types::ArrowPrimitiveType;
 use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
-use error_stack::{IntoReportCompat, ResultExt};
+use error_stack::ResultExt;
 use sparrow_compiler::TableInfo;
-use sparrow_plan::TableId;
-use sparrow_runtime::merge::homogeneous_merge;
+use sparrow_merge::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
 
-use crate::{Error, Expr, Session};
+use crate::{Error, Expr};
 
 pub struct Table {
-    table_id: TableId,
     pub expr: Expr,
     preparer: Preparer,
+    in_memory_batches: Arc<InMemoryBatches>,
 }
 
 impl Table {
-    pub(crate) fn new(expr: Expr, table_info: &TableInfo) -> Self {
+    pub(crate) fn new(table_info: &mut TableInfo, expr: Expr) -> Self {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
             .chain(table_info.schema().fields.iter())
@@ -26,6 +25,10 @@ impl Table {
             .collect();
         let prepared_schema = Arc::new(Schema::new(prepared_fields));
         let prepare_hash = 0;
+
+        assert!(table_info.in_memory.is_none());
+        let in_memory_batches = Arc::new(InMemoryBatches::new(prepared_schema.clone()));
+        table_info.in_memory = Some(in_memory_batches.clone());
 
         let preparer = Preparer::new(
             table_info.config().time_column_name.clone(),
@@ -36,9 +39,9 @@ impl Table {
         );
 
         Self {
-            table_id: table_info.table_id(),
             expr,
             preparer,
+            in_memory_batches,
         }
     }
 
@@ -46,29 +49,14 @@ impl Table {
         self.preparer.schema()
     }
 
-    pub fn add_data(
-        &mut self,
-        session: &mut Session,
-        batch: RecordBatch,
-    ) -> error_stack::Result<(), Error> {
+    pub fn add_data(&mut self, batch: RecordBatch) -> error_stack::Result<(), Error> {
         let prepared = self
             .preparer
             .prepare_batch(batch)
             .change_context(Error::Prepare)?;
-
-        let table_info = session.hacky_table_mut(self.table_id);
-
-        if prepared.num_rows() == 0 {
-            return Ok(());
-        }
-
-        table_info.in_memory = Some(if let Some(previous) = table_info.in_memory.take() {
-            homogeneous_merge(&prepared.schema(), vec![previous, prepared])
-                .into_report()
-                .change_context(Error::Prepare)?
-        } else {
-            prepared
-        });
+        self.in_memory_batches
+            .add_batch(prepared)
+            .change_context(Error::Prepare)?;
         Ok(())
     }
 }

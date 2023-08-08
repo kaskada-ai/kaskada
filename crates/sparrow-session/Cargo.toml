@@ -20,6 +20,7 @@ itertools.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-compiler = { path = "../sparrow-compiler" }
+sparrow-merge = { path = "../sparrow-merge" }
 sparrow-plan = { path = "../sparrow-plan" }
 sparrow-runtime = { path = "../sparrow-runtime" }
 sparrow-syntax = { path = "../sparrow-syntax" }

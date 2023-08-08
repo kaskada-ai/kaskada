@@ -7,10 +7,9 @@
 
 use std::cmp::Ordering;
 
-use arrow::array::{
-    ArrayRef, TimestampNanosecondArray, TimestampNanosecondBuilder, UInt64Array, UInt64Builder,
-};
-use arrow::error::ArrowError;
+use arrow_array::builder::{TimestampNanosecondBuilder, UInt64Builder};
+use arrow_array::{ArrayRef, TimestampNanosecondArray, UInt64Array};
+use arrow_schema::ArrowError;
 
 /// Struct describing one of the two inputs to the [binary_merge]
 /// function.
@@ -58,7 +57,7 @@ impl<'a> BinaryMergeInput<'a> {
     /// Creates a [MergeInput] from the record batch.
     ///
     /// This assumes the key columns are present as the first 3 columns.
-    pub fn from_batch(batch: &'a arrow::record_batch::RecordBatch) -> anyhow::Result<Self> {
+    pub fn from_batch(batch: &'a arrow_array::RecordBatch) -> anyhow::Result<Self> {
         use sparrow_core::TableSchema;
 
         anyhow::ensure!(
@@ -256,19 +255,19 @@ impl<'a> BinaryMergeInput<'a> {
 #[derive(Debug, PartialEq)]
 pub struct BinaryMergeResult {
     /// The merged time column.
-    pub(crate) time: TimestampNanosecondArray,
+    pub time: TimestampNanosecondArray,
     /// The merged subsort column.
-    pub(crate) subsort: UInt64Array,
+    pub subsort: UInt64Array,
     /// The merged key_hash column.
-    pub(crate) key_hash: UInt64Array,
+    pub key_hash: UInt64Array,
     /// A column of (nullable) integers which may be used with
     /// [arrow::compute::take] to convert from an array of values associated
     /// with the keys of `a` to the merged result.
-    pub(crate) take_a: UInt64Array,
+    pub take_a: UInt64Array,
     /// A column of (nullable) integers which may be used with
     /// [arrow::compute::take] to convert from an array of values associated
     /// with the keys of `b` to the merged result.
-    pub(crate) take_b: UInt64Array,
+    pub take_b: UInt64Array,
 }
 
 /// A key to be merged. Ordering is lexicographic on `(time, subsort,
@@ -536,12 +535,12 @@ fn append_values(
 #[cfg(test)]
 mod tests {
 
-    use arrow::array::{Array, TimestampNanosecondArray, UInt64Array};
-    use arrow::compute::FilterBuilder;
+    use arrow_array::{Array, TimestampNanosecondArray, UInt64Array};
+    use arrow_select::filter::FilterBuilder;
     use proptest::prelude::*;
 
     use super::*;
-    use crate::merge::testing::arb_key_triples;
+    use crate::old::testing::arb_key_triples;
 
     #[test]
     fn run_length_lt_test() {
@@ -617,7 +616,7 @@ mod tests {
         result: &'a BinaryMergeResult,
         take_indices: &'a UInt64Array,
     ) -> (ArrayRef, ArrayRef, ArrayRef) {
-        use arrow::compute::is_not_null;
+        use arrow_arith::boolean::is_not_null;
 
         let is_valid = is_not_null(take_indices).unwrap();
         let filter = FilterBuilder::new(&is_valid).optimize().build();
