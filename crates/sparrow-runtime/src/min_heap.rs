@@ -46,10 +46,6 @@ impl<T: HasPriority> Ord for PriorityElement<T> {
 pub(crate) struct MinHeap<T: HasPriority>(BinaryHeap<PriorityElement<T>>);
 
 impl<T: HasPriority> MinHeap<T> {
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
     pub fn len(&self) -> usize {
         self.0.len()
     }

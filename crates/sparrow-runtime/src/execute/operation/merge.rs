@@ -1,5 +1,12 @@
 use std::sync::Arc;
 
+use super::BoxedOperation;
+use crate::execute::operation::expression_executor::InputColumn;
+use crate::execute::operation::spread::Spread;
+use crate::execute::operation::{InputBatch, Operation};
+use crate::execute::Error;
+use crate::key_hash_index::KeyHashIndex;
+use crate::Batch;
 use anyhow::Context;
 use arrow::array::{ArrayRef, BooleanArray};
 use arrow::datatypes::DataType;
@@ -13,16 +20,8 @@ use sparrow_api::kaskada::v1alpha::operation_plan;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::{KeyTriple, KeyTriples};
 use sparrow_instructions::{ComputeStore, GroupingIndices, StoreKey};
+use sparrow_merge::old::{binary_merge, BinaryMergeInput};
 use tokio_stream::wrappers::ReceiverStream;
-
-use super::BoxedOperation;
-use crate::execute::operation::expression_executor::InputColumn;
-use crate::execute::operation::spread::Spread;
-use crate::execute::operation::{InputBatch, Operation};
-use crate::execute::Error;
-use crate::key_hash_index::KeyHashIndex;
-use crate::merge::{binary_merge, BinaryMergeInput};
-use crate::Batch;
 
 #[derive(Debug)]
 pub(super) struct MergeOperation {

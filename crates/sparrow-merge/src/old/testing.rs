@@ -1,7 +1,6 @@
 use std::fmt::Write;
 
-use arrow::array::{Int64Array, TimestampNanosecondArray, UInt64Array};
-use arrow::record_batch::RecordBatch;
+use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
 use proptest::prelude::*;
 
 prop_compose! {
@@ -9,7 +8,7 @@ prop_compose! {
     ///
     /// We do this by generating a random sequence of steps (between 1 and 1000),
     /// and adding this to the previous key. We round keys to 0..19 and subsorts to 0..49.
-    pub(crate) fn arb_key_triples(len: impl Into<prop::collection::SizeRange>)(steps in prop::collection::vec(1..1000u64, len)) ->
+    pub fn arb_key_triples(len: impl Into<prop::collection::SizeRange>)(steps in prop::collection::vec(1..1000u64, len)) ->
       (TimestampNanosecondArray, UInt64Array, UInt64Array) {
         let key_triples: Vec<_> = steps.iter().scan((0i64, 0u64, 0u64), |s, step| {
             s.2 += step;
@@ -29,7 +28,7 @@ prop_compose! {
 }
 
 /// Create an arbitrary i64 arary.
-pub(crate) fn arb_i64_array(len: usize) -> impl Strategy<Value = Int64Array> {
+pub fn arb_i64_array(len: usize) -> impl Strategy<Value = Int64Array> {
     prop::collection::vec(prop::option::weighted(0.9, prop::num::i64::ANY), len)
         .prop_map(Int64Array::from)
 }
@@ -39,7 +38,7 @@ pub(crate) fn arb_i64_array(len: usize) -> impl Strategy<Value = Int64Array> {
 /// The `Debug` format of record batches is extremely verbose, which
 /// makes it impossible to read the generated test cases. This allows
 /// us to create a custom debug format.
-pub(crate) struct TestBatches(pub Vec<RecordBatch>);
+pub struct TestBatches(pub Vec<RecordBatch>);
 
 /// Adapt a `std::fmt::Formatter` to `std::io::Write`.
 struct DisplayWriter<'a, 'b>(&'a mut std::fmt::Formatter<'b>);
@@ -66,7 +65,7 @@ impl std::fmt::Debug for TestBatches {
 
         for batch in &self.0 {
             {
-                let mut writer = arrow::csv::Writer::new(DisplayWriter(f));
+                let mut writer = arrow_csv::Writer::new(DisplayWriter(f));
                 writer.write(batch).map_err(|_| std::fmt::Error)?;
             }
 

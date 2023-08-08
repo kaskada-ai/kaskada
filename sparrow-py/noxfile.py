@@ -40,7 +40,7 @@ def install_self(session: Session) -> None:
     session.run_always("maturin", "develop")
 
 
-@session(python=python_versions[0])
+@session(name="check-lint", python=python_versions[0])
 def check_lint(session: Session) -> None:
     """Lint."""
     args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
@@ -66,7 +66,7 @@ def check_lint(session: Session) -> None:
     # No way to run this as a check.
     # session.run("pyupgrade", "--py38-plus")
 
-@session(python=python_versions[0])
+@session(name="fix-lint", python=python_versions[0])
 def fix_lint(session: Session) -> None:
     """Automatically fix lint issues."""
     args = session.posargs or ["pysrc", "pytests", "docs/conf.py"]
@@ -108,7 +108,7 @@ def mypy(session: Session) -> None:
 @session(python=python_versions)
 def tests(session: Session) -> None:
     """Run the test suite."""
-    session.install("coverage[toml]", "pytest", "pygments", "pandas", "pyarrow")
+    session.install("coverage[toml]", "pytest", "pygments", "pandas", "pyarrow", "pytest-asyncio")
     install_self(session)
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
@@ -152,16 +152,26 @@ def xdoctest(session: Session) -> None:
     session.install("xdoctest[colors]")
     session.run("python", "-m", "xdoctest", *args)
 
+DOCS_DEPS = [
+    "sphinx",
+    "sphinx-autobuild",
+    "sphinx-book-theme",
+    "sphinx-copybutton",
+    "myst-parser",
+    "myst-nb",
+    "pandas",
+    "pyarrow"
+]
 
 @session(name="docs-build", python=python_versions[0])
 def docs_build(session: Session) -> None:
     """Build the documentation."""
-    args = session.posargs or ["docs", "docs/_build"]
+    args = session.posargs or ["docs/source", "docs/_build", "-j", "auto"]
     if not session.posargs and "FORCE_COLOR" in os.environ:
         args.insert(0, "--color")
 
     install_self(session)
-    session.install("sphinx", "furo", "myst-parser")
+    session.install(*DOCS_DEPS)
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
@@ -175,16 +185,7 @@ def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs/source", "docs/_build", "-j", "auto"]
     install_self(session)
-    session.install(
-        "sphinx",
-        "sphinx-autobuild",
-        "sphinx-book-theme",
-        "sphinx-copybutton",
-        "myst-parser",
-        "myst-nb",
-        "pandas",
-        "pyarrow"
-    )
+    session.install(*DOCS_DEPS)
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():

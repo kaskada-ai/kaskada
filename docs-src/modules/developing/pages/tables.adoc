@@ -43,9 +43,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.create_table(
   # The table's name
@@ -91,9 +89,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.list_tables()
 ----
@@ -117,9 +113,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.get_table("Purchase")
 ----
@@ -148,9 +142,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.delete_table("Purchase")
 ----
@@ -182,9 +174,7 @@ Python::
 [source,python]
 ----
 from kaskada import table
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 table.delete_table("Purchase", force = True)
 ----

@@ -119,6 +119,7 @@ impl KeyHashInverse {
             .tables_for_grouping(primary_grouping)
             .flat_map(|table| {
                 table.in_memory.as_ref().map(|batch| {
+                    let batch = batch.current();
                     let keys = batch
                         .column_by_name(&table.config().group_column_name)
                         .unwrap();

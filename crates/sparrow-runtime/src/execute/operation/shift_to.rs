@@ -430,7 +430,7 @@ impl ShiftToColumnOperation {
         self.pending = Some(if let Some(right) = self.pending.take() {
             let left = input;
             let merge_result =
-                crate::merge::binary_merge(left.as_merge_input()?, right.as_merge_input()?)?;
+                sparrow_merge::old::binary_merge(left.as_merge_input()?, right.as_merge_input()?)?;
 
             // TODO: Binary merge optimization opportunity.
             // HACK: We'd like the binary merge to return a boolean array `BooleanArray`

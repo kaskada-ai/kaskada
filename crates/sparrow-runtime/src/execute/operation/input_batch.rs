@@ -7,7 +7,7 @@ use arrow::record_batch::RecordBatch;
 use sparrow_core::{KeyTriple, KeyTriples};
 use sparrow_instructions::GroupingIndices;
 
-use crate::merge::BinaryMergeInput;
+use sparrow_merge::old::BinaryMergeInput;
 
 /// The input information an operation is running on.
 ///

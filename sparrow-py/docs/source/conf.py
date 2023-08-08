@@ -2,13 +2,6 @@
 from typing import Any
 from typing import Dict
 
-import os
-import sys
-sys.path[0] = os.path.abspath(os.path.join("..", "..", "pysrc", "sparrow_py"))
-print(sys.path)
-
-import sparrow_py
-
 project = "sparrow-py"
 author = "Kaskada Contributors"
 copyright = "2023, Kaskada Contributors"
@@ -66,9 +59,9 @@ html_context = {
 }
 
 intersphinx_mapping: Dict[str, Any] = {
-    'python': ('http://docs.python.org/3', None),
-    'pandas': ('http://pandas.pydata.org/docs', None),
-    'pyarrow': ('https://arrow.apache.org/docs', None),
+    "python": ("http://docs.python.org/3", None),
+    "pandas": ("http://pandas.pydata.org/docs", None),
+    "pyarrow": ("https://arrow.apache.org/docs", None),
 }
 
 # adds useful copy functionality to all the examples; also

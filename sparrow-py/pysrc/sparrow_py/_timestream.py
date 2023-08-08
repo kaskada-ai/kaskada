@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import sys
 from typing import Callable
 from typing import Dict
@@ -22,7 +23,7 @@ from ._execution import ExecutionOptions
 from ._result import Result
 
 
-Literal = Union[int, str, float, bool, None]
+Literal = Union[int, str, float, bool, None, timedelta]
 
 def _augment_error(args: Sequence[Union[Timestream, Literal]], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
@@ -49,7 +50,7 @@ class Timestream(object):
         self._ffi_expr = ffi
 
     @staticmethod
-    def _call(func: str, *args: Union[Timestream, Literal]) -> Timestream:
+    def _call(func: str, *args: Union[Timestream, Literal], session: Optional[_ffi.Session] = None) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
 
@@ -59,6 +60,10 @@ class Timestream(object):
             Name of the function to apply.
         *args : Timestream | int | str | float | bool | None
             List of arguments to the expression.
+        session : FFI Session
+            FFI Session to create the expression in.
+            If unspecified, will infer from the arguments.
+            Will fail if all arguments are literals and the session is not provided.
 
         Returns
         -------
@@ -76,9 +81,10 @@ class Timestream(object):
         ffi_args = [
             arg._ffi_expr if isinstance(arg, Timestream) else arg for arg in args
         ]
-        session = next(
-            arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
-        )
+        if session is None:
+            session = next(
+                arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
+            )
         try:
             return Timestream(_ffi.Expr(session=session, operation=func, args=ffi_args))
         except TypeError as e:
@@ -175,8 +181,22 @@ class Timestream(object):
         -------
         Timestream
             The Timestream resulting from `self + rhs`.
+
+        Raises
+        ------
+        ValueError
+            If attempting to perform an addition that is not possible.
         """
-        return Timestream._call("add", self, rhs)
+        if isinstance(rhs, timedelta):
+            # Right now, we can't convert a time delta directly to a scalar value (literal).
+            # So we convert it to seconds and then add it.
+            # Note that this loses precision if the timedelta has a fractional number of seconds,
+            # and fail if the number of seconds exceeds an integer.
+            session = self._ffi_expr.session()
+            seconds = Timestream._call("seconds", int(rhs.total_seconds()), session = session)
+            return Timestream._call("add_time", seconds, self)
+        else:
+            return Timestream._call("add", self, rhs)
 
     def __radd__(self, lhs: Union[Timestream, Literal]) -> Timestream:
         """
@@ -552,8 +572,24 @@ class Timestream(object):
         """
         return Timestream._call("is_valid", self)
 
+    def filter(self, condition: Timestream) -> Timestream:
+        """
+        Create a Timestream containing only the points where `condition` is `true`.
+
+        Parameters
+        ----------
+        condition : Timestream
+            The condition to filter on.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `self` where `condition` is `true`.
+        """
+        return Timestream._call("when", condition, self)
+
     def collect(
-        self, max: Optional[int], window: Optional["kt.Window"] = None
+        self, max: Optional[int], min: Optional[int] = 0, window: Optional["kt.Window"] = None
     ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
@@ -565,6 +601,9 @@ class Timestream(object):
         max : Optional[int]
             The maximum number of values to collect.
             If `None` all values are collected.
+        min: Optional[int]
+            The minimum number of values to collect before
+            producing a value. Defaults to 0.
         window : Optional[Window]
             The window to use for the aggregation.
             If not specified, the entire Timestream is used.
@@ -574,7 +613,122 @@ class Timestream(object):
         Timestream
             Timestream containing the collected list at each point.
         """
-        return _aggregation("collect", self, window, max)
+        return _aggregation("collect", self, window, max, min)
+
+    def time_of(self) -> Timestream:
+        """
+        Create a Timestream containing the time of each point.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the time of each point.
+        """
+        return Timestream._call("time_of", self)
+
+    def lag(self, n: int) -> Timestream:
+        """
+        Create a Timestream containing the value `n` points before each point.
+
+        Parameters
+        ----------
+        n : int
+            The number of points to lag by.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the value `n` points before each point.
+        """
+        return Timestream._call("lag", n, self)
+
+    def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing the value of `self` where `condition` is `true`,
+        or `null` otherwise.
+
+        Parameters
+        ----------
+        condition : Union[Timestream, Literal]
+            The condition to check.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the value of `self` where `condition` is `true`, or
+            `null` otherwise.
+        """
+        return Timestream._call("if", condition, self)
+
+    def null_if(self, condition: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing `self` where `condition` is `false`, or `null` otherwise.
+
+        Parameters
+        ----------
+        condition : Union[Timestream, Literal]
+            The condition to check.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the value of `self` where `condition` is `false`, or
+            `null` otherwise.
+        """
+        return Timestream._call("null_if", condition, self)
+
+    def length(self) -> Timestream:
+        """
+        Create a Timestream containing the length of `self`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the length of `self`.
+        """
+        if self.data_type.equals(pa.string()):
+            return Timestream._call("len", self)
+        elif isinstance(self.data_type, pa.ListType):
+            return Timestream._call("list_len", self)
+        else:
+            raise TypeError(f"length not supported for {self.data_type}")
+
+    def with_key(self, key: Timestream, grouping: Optional[str] = None) -> Timestream:
+        """
+        Create a Timestream with a new grouping by `key`.
+
+        Parameters
+        ----------
+        key : Timestream
+            The new key to use for the grouping.
+        grouping : Optional[str]
+            A string literal naming the new grouping. If no `grouping` is specified,
+            one will be computed from the type of the `key`.
+
+        Returns
+        -------
+        Timestream
+            Timestream with a new grouping by `key`.
+        """
+        return Timestream._call("with_key", key, self, grouping)
+
+    def lookup(self, key: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing the lookup join between the `key` and
+        `self`.
+
+        Parameters
+        ----------
+        key : Union[Timestream, Literal]
+            The foreign key to lookup.
+            This must match the type of the keys in `self`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the lookup join between the `key` and `self`.
+        """
+        return Timestream._call("lookup", key, self)
 
     def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
@@ -698,7 +852,7 @@ def _aggregation(
     window : Optional[Window]
         The window to use for the aggregation.
     *args : Union[Timestream, Literal]
-        Additional arguments to provide before `input` and the flattened window.
+        Additional arguments to provide after `input` and before the flattened window.
 
     Returns
     -------
@@ -710,16 +864,12 @@ def _aggregation(
     NotImplementedError
         If the window is not a known type.
     """
-    # Note: things would be easier if we had a more normal order, which
-    # we could do as part of "aligning" Sparrow signatures to the new direction.
-    # However, `collect` currently has `collect(max, input, window)`, requiring
-    # us to add the *args like so.
     if window is None:
-        return Timestream._call(op, *args, input, None, None)
+        return Timestream._call(op, input, *args, None, None)
     elif isinstance(window, kt.SinceWindow):
-        return Timestream._call(op, *args, input, window.predicate, None)
+        return Timestream._call(op, input, *args, window.predicate, None)
     elif isinstance(window, kt.SlidingWindow):
-        return Timestream._call(op, *args, input, window.predicate, window.duration)
+        return Timestream._call(op, input, *args, window.predicate, window.duration)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

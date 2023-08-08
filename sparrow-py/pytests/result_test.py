@@ -18,19 +18,34 @@ def source_int64() -> kt.sources.CsvSource:
     return kt.sources.CsvSource("time", "key", content)
 
 
-def test_iterate_pandas(golden, source_int64) -> None:
-    results = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
+def test_iter_pandas(golden, source_int64) -> None:
+    batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
 
     # 4 rows, max 2 per batch = 2 batches
-    golden.jsonl(next(results))
-    golden.jsonl(next(results))
+    golden.jsonl(next(batches))
+    golden.jsonl(next(batches))
     with pytest.raises(StopIteration):
-        next(results)
+        next(batches)
 
 
-def test_iterate_rows(golden, source_int64) -> None:
+def test_iter_rows(golden, source_int64) -> None:
     results = source_int64.run(row_limit=2).iter_rows()
     assert next(results)["m"] == 5
     assert next(results)["m"] == 24
     with pytest.raises(StopIteration):
         next(results)
+
+
+@pytest.mark.asyncio
+async def test_iter_pandas_async(golden, source_int64) -> None:
+    batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas_async()
+
+    # 4 rows, max 2 per batch = 2 batches.
+
+    # We could test using `await anext(batches)`, but that wasn't introduced
+    # until Python 3.10. Since everything else works in 3.8 and 3.9, we just
+    # call `__anext__` directly.
+    golden.jsonl(await batches.__anext__())
+    golden.jsonl(await batches.__anext__())
+    with pytest.raises(StopAsyncIteration):
+        await batches.__anext__()

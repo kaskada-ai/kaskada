@@ -47,6 +47,34 @@ def test_collect_with_max(source, golden) -> None:
         )
     )
 
+def test_collect_with_min(source, golden) -> None:
+    m = source["m"]
+    n = source["n"]
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "collect_m_min_2": m.collect(min=2, max=None),
+                "n": n,
+                "collect_n_min_2": n.collect(min=2, max=None),
+            }
+        )
+    )
+
+def test_collect_with_min_and_max(source, golden) -> None:
+    m = source["m"]
+    n = source["n"]
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "collect_m_min_2_max_2": m.collect(min=2, max=2),
+                "n": n,
+                "collect_n_min_2_max_2": n.collect(min=2, max=2),
+            }
+        )
+    )
+
 
 def test_collect_since_window(source, golden) -> None:
     m = source["m"]
