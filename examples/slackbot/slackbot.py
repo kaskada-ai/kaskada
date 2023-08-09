@@ -1,63 +1,36 @@
-import json, math, openai, os, pyarrow
-from slack_sdk.web import WebClient
-from slack_sdk.socket_mode import SocketModeClient
+import json, math, datetime, openai, os, pyarrow, pandas, asyncio
+#from slack_sdk.web import WebClient
+from slack_sdk.web.async_client import AsyncWebClient
+#from slack_sdk.socket_mode import SocketModeClient
+from slack_sdk.socket_mode.aiohttp import SocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
-import sparrow_pi as kt
+import sparrow_py as kt
 
-def build_conversation(messages):
-    message_time = messages.col("ts")
-    last_message_time = message_time.lag(1) # !!!
-    is_new_conversation = message_time.seconds_since(last_message_time) > 10 * 60
-
-    return messages \
-        .select("user", "ts", "text", "reactions") \
-        .collect(window=kt.windows.Since(is_new_conversation), max=100)
-
-def build_examples(messages):
-    duration = kt.minutes(5)  # !!!
-
-    coverstation = build_conversation(messages)
-    shifted_coversation = coverstation.shift_by(duration)  # !!!
-
-    reaction_users = coverstation.col("reactions").col("name").collect(kt.windows.Trailing(duration)).flatten()  # !!!
-    participating_users = coverstation.col("user").collect(kt.windows.Trailing(duration))  # !!!
-    engaged_users = kt.union(reaction_users, participating_users)  # !!!
-
-    return kt.record({ "prompt": shifted_coversation, "completion": engaged_users}) \
-        .filter(shifted_coversation.is_not_null())
-
-def format_prompt(prompt):
-    return "start -> " + "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in prompt]) + "\n\n###\n\n"
-
-def main():
+async def main():
+    # Load user label map
     output_map = {}
-
     with open('./user_output_map.json', 'r') as file:
         output_map = json.load(file)
 
-    print(f'Loaded output map: {output_map}')
-
-    # Initialize Kaskada with a local execution context.
+    # Initialize clients
     kt.init_session()
-
-    # Initialize OpenAI
     openai.api_key = os.environ.get("OPEN_AI_KEY")
-
-    # Initialize Slack
     slack = SocketModeClient(
         app_token=os.environ.get("SLACK_APP_TOKEN"),
-        web_client=WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+        web_client=AsyncWebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
     )
 
-    min_prob_for_response = 0.50
+    # Backfill state with historical data
+    messages = kt.sources.ArrowSource(
+        data = pandas.read_parquet("./messages.parquet")[:1],
+        time_column_name = "ts", 
+        key_column_name = "channel",
+    )
 
     # Receive Slack messages in real-time
-    live_messages = kt.sources.read_stream(entity_column="channel", time_column="ts")
-
-    # Receive messages from Slack
-    def handle_message(client, req):
+    async def handle_message(client, req):
         # Acknowledge the message back to Slack
-        client.send_socket_mode_response(SocketModeResponse(envelope_id=req.envelope_id))
+        await client.send_socket_mode_response(SocketModeResponse(envelope_id=req.envelope_id))
 
         if req.type == "events_api" and "event" in req.payload:
             e = req.payload["event"]
@@ -68,25 +41,42 @@ def main():
             if "previous_message" in e or  e["type"] == "reaction_added":
                 return
 
+            data = pyarrow.json.read_json(e)
+            
             print(f'Sending message event to kaskada: {e}')
 
             # Deliver the message to Kaskada
-            live_messages.add_event(pyarrow.json.read_json(e))
+            messages.add_data(data)
+            print("Done sending message")
 
     slack.socket_mode_request_listeners.append(handle_message)
-    slack.connect()
+    await slack.connect()
 
-    # Handle messages in realtime
+    # Handle messages
+    message_time = messages.time_of()
+    #last_message_time = message_time.lag(1) # !!!
+    #is_new_conversation = True #message_time.seconds_since(last_message_time) > 10 * 60
+
+    conversations = messages \
+        .select("user", "ts", "text") \
+        .collect(max=100) #.collect(window=kt.SinceWindow(predicate=is_new_conversation), max=100)
+
     # A "conversation" is a list of messages
-    for conversation in build_conversation(live_messages).start().to_generator():
-        if len(conversation) == 0:
-            continue
+    start = now = datetime.datetime.now()
+    print("Listening for new messages...")
+    async for conversation in conversations.run(materialize=True).iter_rows_async():
+        #if len(conversation) == 0 or conversation["_time"] < start:
+        #    continue
 
-        print(f'Starting completion on conversation with first message text: {conversation[0]["text"]}')
+        print(f'Conversation: {conversation}')
+        print(f'Starting completion on conversation with first message text: {conversation["result"][0]["text"]}')
 
-        prompt = format_prompt(conversation)
+        prompt = "start -> " + "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in conversation["result"]]) + "\n\n###\n\n"
 
         print(f'Using prompt: {prompt}')
+
+        # Credentials don't work yet...
+        continue
 
         # Ask the model who should be notified
         res = openai.Completion.create(
@@ -105,7 +95,7 @@ def main():
 
         print(f'Found logprobs: {logprobs}')
         for user in logprobs:
-            if math.exp(logprobs[user]) > min_prob_for_response:
+            if math.exp(logprobs[user]) > 0.50:
                 user = users.strip()
                 # if users include `nil`, stop processing
                 if user == "nil":
@@ -153,5 +143,7 @@ def main():
 
             print(f'Posted alert message')
 
+    print("Done")
+
 if __name__ == "__main__":
-   main()
+   asyncio.run(main())
