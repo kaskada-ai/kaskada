@@ -31,9 +31,9 @@ def test_sum_windowed(source, golden) -> None:
         kt.record(
             {
                 "m": m,
-                "sum_m": m.sum(window=kt.SinceWindow(m > 20)),
+                "sum_m": m.sum(window=kt.windows.Since(m > 20)),
                 "n": n,
-                "sum_n": n.sum(window=kt.SlidingWindow(2, m > 10)),
+                "sum_n": n.sum(window=kt.windows.Sliding(2, m > 10)),
             }
         )
     )
