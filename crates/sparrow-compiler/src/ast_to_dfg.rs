@@ -192,7 +192,7 @@ pub fn add_to_dfg(
             let field_type = match field_type(field, base_type.inner(), arguments[0].location()) {
                 Ok(Some(field_type)) => field_type,
                 Ok(None) => {
-                    // alreday reported error.
+                    // already reported error.
                     return Ok(dfg.error_node());
                 }
                 Err(diagnostic) => {
@@ -207,7 +207,7 @@ pub fn add_to_dfg(
                 smallvec![base.value(), field_name],
             )?;
             let is_new = base.is_new();
-            let value_type = field_type.clone().into();
+            let value_type = field_type.into();
             Ok(Arc::new(AstDfg::new(
                 value,
                 is_new,
