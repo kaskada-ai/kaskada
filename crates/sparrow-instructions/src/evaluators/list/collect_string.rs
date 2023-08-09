@@ -157,12 +157,14 @@ impl CollectStringEvaluator {
         izip!(entity_indices.values(), ticks, input).for_each(|(entity_index, tick, input)| {
             let entity_index = *entity_index as usize;
 
+            // Update state
             // Do not collect null values
             if input.is_some() {
                 self.token
                     .add_value(self.max, entity_index, input.map(|s| s.to_owned()));
             }
 
+            // Emit state
             let cur_list = self.token.state(entity_index);
             if cur_list.len() >= self.min {
                 list_builder.append_value(cur_list.clone());
@@ -170,11 +172,9 @@ impl CollectStringEvaluator {
                 list_builder.append_null();
             }
 
-            match tick {
-                Some(t) if t => {
-                    self.token.reset(entity_index);
-                }
-                _ => (), // Tick is false or null, so do nothing.
+            // Reset state
+            if let Some(true) = tick {
+                self.token.reset(entity_index);
             }
         });
 
