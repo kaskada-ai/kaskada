@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, FieldRef};
-use arrow_schema::Field;
+use arrow_schema::{Field, Fields};
 pub use ast_dfg::*;
 use egg::Id;
 use itertools::{izip, Itertools};
@@ -25,7 +25,7 @@ use sparrow_syntax::{
 };
 
 use self::window_args::flatten_window_args;
-use crate::dfg::{Dfg, Expression, Operation};
+use crate::dfg::{Dfg, Expression, Operation, StepKind};
 use crate::diagnostics::DiagnosticCode;
 use crate::time_domain::TimeDomain;
 use crate::types::inference::instantiate;
@@ -573,9 +573,46 @@ pub fn add_to_dfg(
                     (_, _) => panic!("previously verified min and max are scalar types"),
                 }
 
+                let input_arg: Located<Arc<AstDfg>> = match args[0].value_type() {
+                    FenlType::Concrete(DataType::List(f)) => {
+                        // ({ x: input } | collect()).x
+                        let field_name = dfg.add_string_literal("x")?;
+                        let wrap_in_struct = dfg.add_node(
+                            StepKind::Expression(Expression::Inst(InstKind::Record)),
+                            smallvec![field_name, args[0].value()],
+                        )?;
+
+                        let arg = &args[0];
+                        let fields = Fields::from(vec![Arc::new(Field::new(
+                            "x",
+                            DataType::List(f.clone()),
+                            true,
+                        ))]);
+                        let ast_dfg = Arc::new(AstDfg::new(
+                            wrap_in_struct,
+                            wrap_in_struct,
+                            FenlType::Concrete(DataType::Struct(fields)),
+                            arg.grouping(),
+                            arg.time_domain().clone(),
+                            arg.location().clone(),
+                            None,
+                        ));
+                        Ok::<Located<Arc<ast_dfg::AstDfg>>, anyhow::Error>(
+                            args[0].with_value(ast_dfg),
+                        )
+                    }
+                    FenlType::Collection(Collection::List, _) => {
+                        panic!("expected concrete types");
+                    }
+                    _ => {
+                        //nothing, use regular input
+                        Ok(args[0].clone())
+                    }
+                }?;
+
                 // [input, max, min, condition, duration]
                 vec![
-                    args[0].clone(),
+                    input_arg,
                     args[1].clone(),
                     args[2].clone(),
                     condition,
