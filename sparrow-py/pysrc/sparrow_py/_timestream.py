@@ -708,7 +708,8 @@ class Timestream(object):
         Timestream
             Timestream containing the value `n` points before each point.
         """
-        return Timestream._call("lag", n, self)
+        # hack to support structs/lists (as collect supports lists)
+        return self.collect(n + 1, n + 1, None).__getitem__(key=0)
 
     def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
         """
