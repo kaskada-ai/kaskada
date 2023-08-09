@@ -77,3 +77,13 @@ def test_collect_with_min_and_max(source, golden) -> None:
 def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(kt.record({"m": m, "since_m": m.sum(window=kt.SinceWindow(m > 10))}))
+
+def test_collect_records(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(kt.record({ "m": m, "n": n }).collect(max=None))
+
+def test_collect_records_field_ref(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(kt.record({ "m": m, "n": n }).collect(max=None).col("m"))

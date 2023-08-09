@@ -193,7 +193,7 @@ impl ScanOperation {
                     })
                     .boxed()
             } else {
-                let batch = in_memory.current().clone();
+                let batch = in_memory.current();
                 futures::stream::once(async move {
                     Batch::try_new_from_batch(batch)
                         .into_report()
