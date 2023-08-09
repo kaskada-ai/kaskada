@@ -45,6 +45,7 @@ def test_collect_with_max(source, golden) -> None:
         )
     )
 
+
 def test_collect_with_min(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
@@ -58,6 +59,7 @@ def test_collect_with_min(source, golden) -> None:
             }
         )
     )
+
 
 def test_collect_with_min_and_max(source, golden) -> None:
     m = source.col("m")

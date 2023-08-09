@@ -1,9 +1,10 @@
 """Sphinx configuration."""
+import sys
+from pathlib import Path
 from typing import Any
 from typing import Dict
 
-from pathlib import Path
-import sys
+
 sys.path.append(str(Path(".").resolve()))
 
 project = "sparrow-py"

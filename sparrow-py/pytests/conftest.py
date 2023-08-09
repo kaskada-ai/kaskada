@@ -1,5 +1,4 @@
 import os
-from typing import Literal
 from typing import Union
 
 import pandas as pd
@@ -82,7 +81,9 @@ class GoldenFixture(object):
 
     def _filename(self, suffix: str) -> str:
         filename = (
-            f"{self._test_name}.{suffix}" if self._output == 0 else f"{self._test_name}_{self._output}.{suffix}"
+            f"{self._test_name}.{suffix}"
+            if self._output == 0
+            else f"{self._test_name}_{self._output}.{suffix}"
         )
         filename = os.path.join(self._dirname, filename)
         self._output += 1
@@ -93,17 +94,20 @@ class GoldenFixture(object):
             ), f"Golden file {filename} does not exist. Run with `--save-golden` to create it."
         return filename
 
+
 def _data_to_dataframe(data: Union[kt.Timestream, pd.DataFrame]) -> pd.DataFrame:
     if isinstance(data, pd.DataFrame):
         return data
     elif isinstance(data, kt.Timestream):
         return data.run().to_pandas()
     else:
-        raise ValueError(
-            f"data must be a Timestream or a DataFrame, was {type(data)}")
+        raise ValueError(f"data must be a Timestream or a DataFrame, was {type(data)}")
+
 
 @pytest.fixture
-def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config) -> GoldenFixture:
+def golden(
+    request: pytest.FixtureRequest, pytestconfig: pytest.Config
+) -> GoldenFixture:
     """Test fixture for checking results against a golden file."""
     test_name = request.node.name
     module_name = request.node.module.__name__
@@ -113,6 +117,8 @@ def golden(request: pytest.FixtureRequest, pytestconfig: pytest.Config) -> Golde
     if save:
         os.makedirs(dirname, exist_ok=True)
     else:
-        assert os.path.isdir(dirname), f"golden directory {dirname} does not exist. run with `--save-golden` to create it."
+        assert os.path.isdir(
+            dirname
+        ), f"golden directory {dirname} does not exist. run with `--save-golden` to create it."
 
     return GoldenFixture(dirname, test_name, save)

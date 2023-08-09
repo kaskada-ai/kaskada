@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import sys
+from datetime import datetime
+from datetime import timedelta
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -12,7 +13,6 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 from typing import final
-from typing_extensions import TypeAlias
 
 import pandas as pd
 import pyarrow as pa
@@ -23,9 +23,12 @@ from ._execution import ExecutionOptions
 from ._result import Result
 
 
-Literal = Union[int, str, float, bool, None, timedelta]
+Literal = Union[int, str, float, bool, None, timedelta, datetime]
 
-def _augment_error(args: Sequence[Union[Timestream, Literal]], e: Exception) -> Exception:
+
+def _augment_error(
+    args: Sequence[Union[Timestream, Literal]], e: Exception
+) -> Exception:
     """Augment an error with information about the arguments."""
     if sys.version_info >= (3, 11):
         # If we can add notes to the exception, indicate the types.
@@ -54,10 +57,16 @@ class Timestream(object):
         """Construct a Timestream for a literal value."""
         if isinstance(value, timedelta):
             raise TypeError("Cannot create a literal Timestream from a timedelta")
+        elif isinstance(value, datetime):
+            raise TypeError("Cannot create a literal Timestream from a datetime")
         return Timestream(_ffi.Expr.literal(session, value))
 
     @staticmethod
-    def _call(func: str, *args: Union[Timestream, Literal], session: Optional[_ffi.Session] = None) -> Timestream:
+    def _call(
+        func: str,
+        *args: Union[Timestream, Literal],
+        session: Optional[_ffi.Session] = None,
+    ) -> Timestream:
         """
         Construct a new Timestream by calling the given function.
 
@@ -98,7 +107,9 @@ class Timestream(object):
 
         ffi_args = [make_arg(arg) for arg in args]
         try:
-            return Timestream(_ffi.Expr.call(session=session, operation=func, args=ffi_args))
+            return Timestream(
+                _ffi.Expr.call(session=session, operation=func, args=ffi_args)
+            )
         except TypeError as e:
             # noqa: DAR401
             raise _augment_error(args, TypeError(str(e))) from e
@@ -113,9 +124,7 @@ class Timestream(object):
     @final
     def pipe(
         self,
-        func: Union[
-            Callable[..., Timestream], Tuple[Callable[..., Timestream], str]
-        ],
+        func: Union[Callable[..., Timestream], Tuple[Callable[..., Timestream], str]],
         *args: Union[Timestream, Literal],
         **kwargs: Union[Timestream, Literal],
     ) -> Timestream:
@@ -209,7 +218,9 @@ class Timestream(object):
             # Note that this loses precision if the timedelta has a fractional number of seconds,
             # and fail if the number of seconds exceeds an integer.
             session = self._ffi_expr.session()
-            seconds = Timestream._call("seconds", int(rhs.total_seconds()), session = session)
+            seconds = Timestream._call(
+                "seconds", int(rhs.total_seconds()), session=session
+            )
             return Timestream._call("add_time", seconds, self)
         else:
             return Timestream._call("add", self, rhs)
@@ -529,7 +540,9 @@ class Timestream(object):
         if isinstance(data_type, pa.StructType) or isinstance(data_type, pa.ListType):
             return Timestream._call("fieldref", self, name)
         else:
-            raise TypeError(f"Cannot access column '{name}' of non-record type '{data_type}'")
+            raise TypeError(
+                f"Cannot access column '{name}' of non-record type '{data_type}'"
+            )
 
     def select(self, *args: str) -> Timestream:
         """
@@ -635,7 +648,10 @@ class Timestream(object):
         return Timestream._call("when", condition, self)
 
     def collect(
-        self, max: Optional[int], min: Optional[int] = 0, window: Optional["kt.Window"] = None
+        self,
+        max: Optional[int],
+        min: Optional[int] = 0,
+        window: Optional["kt.Window"] = None,
     ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
@@ -776,6 +792,83 @@ class Timestream(object):
         """
         return Timestream._call("lookup", key, self)
 
+    def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
+        """
+        Create a Timestream shifting each point forward to `time`.
+
+        If multiple values are shifted to the same time, they will be emitted in
+        the order in which they originally occurred.
+
+        Parameters
+        ----------
+        time : Union[Timestream, datetime]
+            The time to shift to.
+            This must be a datetime or a Timestream of timestamp_ns.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the shifted points.
+        """
+        if isinstance(time, datetime):
+            # session = self._ffi_expr.session()
+            # time_ns = time.timestamp() * 1e9
+            # time_ns = Timestream._literal(time_ns, session=session)
+            # time_ns = Timestream.cast(time_ns, pa.timestamp('ns'))
+            # return Timestream._call("shift_to", time_ns, self)
+            raise NotImplementedError("shift_to with datetime literal unsupported")
+        else:
+            return Timestream._call("shift_to", time, self)
+
+    def shift_by(self, delta: Union[Timestream, timedelta]) -> Timestream:
+        """
+        Create a Timestream shifting each point forward by the `delta`.
+
+        If multiple values are shifted to the same time, they will be emitted in
+        the order in which they originally occurred.
+
+        Parameters
+        ----------
+        time : Union[Timestream, timedelta]
+            The delta to shift the point forward by.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the shifted points.
+        """
+        if isinstance(delta, timedelta):
+            session = self._ffi_expr.session()
+            seconds = Timestream._call(
+                "seconds", int(delta.total_seconds()), session=session
+            )
+            return Timestream._call("shift_by", seconds, self)
+        else:
+            return Timestream._call("shift_by", delta, self)
+
+    def shift_until(self, predicate: Timestream) -> Timestream:
+        """
+        Create a Timestream shifting each point forward to the time the `predicate`
+        is true.
+
+        Note that if the `predicate` evaluates to true at the same time as `self`,
+        the point will be emitted at that time.
+
+        If multiple values are shifted to the same time, they will be emitted in
+        the order in which they originally occurred.
+
+        Parameters
+        ----------
+        predicate : Timestream
+            The predicate to determine whether to emit shifted rows.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the shifted points.
+        """
+        return Timestream._call("shift_until", predicate, self)
+
     def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
@@ -904,13 +997,18 @@ class Timestream(object):
         if not pa.types.is_struct(self.data_type):
             # The execution engine requires a struct, so wrap this in a record.
             expr = record({"result": self})
-        options = ExecutionOptions(row_limit=row_limit, max_batch_size=max_batch_size, materialize=materialize)
+        options = ExecutionOptions(
+            row_limit=row_limit, max_batch_size=max_batch_size, materialize=materialize
+        )
         execution = expr._ffi_expr.execute(options)
         return Result(execution)
 
 
 def _aggregation(
-    op: str, input: Timestream, window: Optional["kt.Window"], *args: Union[Timestream, Literal]
+    op: str,
+    input: Timestream,
+    window: Optional["kt.Window"],
+    *args: Union[Timestream, Literal],
 ) -> Timestream:
     """
     Create the aggregation `op` with the given `input`, `window` and `args`.

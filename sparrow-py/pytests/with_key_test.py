@@ -17,6 +17,7 @@ def source() -> kt.sources.CsvSource:
     )
     return kt.sources.CsvSource("time", "key", content)
 
+
 def test_with_key_literal(source, golden) -> None:
     golden.jsonl(source.with_key("literal_key"))
 
@@ -25,8 +26,8 @@ def test_with_key_column(source, golden) -> None:
     new_key = source.col("new_key")
     golden.jsonl(source.with_key(new_key))
 
+
 def test_with_key_grouping(source, golden) -> None:
     new_key = source.col("new_key")
     grouping = "user"
     golden.jsonl(source.with_key(new_key, grouping))
-

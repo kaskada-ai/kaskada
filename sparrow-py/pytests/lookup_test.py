@@ -17,6 +17,7 @@ def key_source() -> kt.sources.CsvSource:
     )
     return kt.sources.CsvSource("time", "key", content)
 
+
 @pytest.fixture(scope="module")
 def foreign_source() -> kt.sources.CsvSource:
     content = "\n".join(
@@ -31,8 +32,6 @@ def foreign_source() -> kt.sources.CsvSource:
         ]
     )
     return kt.sources.CsvSource("time", "key", content)
-
-
 
 
 def test_lookup(key_source, foreign_source, golden) -> None:
