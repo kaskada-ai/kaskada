@@ -38,14 +38,4 @@ copy(
     )
 ) to 'messages.parquet' (FORMAT PARQUET)
 ;
-
-    select
-    from (
-        select * from read_json_auto('data/iloveai-initial-export/*/*.json', 
-            format='array', 
-            filename=true, 
-            union_by_name=true)
-    )
-    limit 10
-;
 ```
