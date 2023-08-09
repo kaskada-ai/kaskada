@@ -651,7 +651,7 @@ class Timestream(object):
         self,
         max: Optional[int],
         min: Optional[int] = 0,
-        window: Optional["kt.Window"] = None,
+        window: Optional[kt.windows.Window] = None,
     ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
@@ -869,7 +869,7 @@ class Timestream(object):
         """
         return Timestream._call("shift_until", predicate, self)
 
-    def sum(self, window: Optional["kt.Window"] = None) -> Timestream:
+    def sum(self, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
 
@@ -888,7 +888,7 @@ class Timestream(object):
         """
         return _aggregation("sum", self, window)
 
-    def first(self, window: Optional["kt.Window"] = None) -> Timestream:
+    def first(self, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream containing the first value in the `window`.
 
@@ -908,7 +908,7 @@ class Timestream(object):
         """
         return _aggregation("first", self, window)
 
-    def last(self, window: Optional["kt.Window"] = None) -> Timestream:
+    def last(self, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream containing the last value in the `window`.
 
@@ -944,7 +944,7 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
-    def flatten(self) -> pd.DataFrame:
+    def flatten(self) -> Timestream:
         """Flatten a list of lists to a list of values."""
         return Timestream._call("flatten", self)
 
@@ -1007,7 +1007,7 @@ class Timestream(object):
 def _aggregation(
     op: str,
     input: Timestream,
-    window: Optional["kt.Window"],
+    window: Optional[kt.windows.Window],
     *args: Union[Timestream, Literal],
 ) -> Timestream:
     """
@@ -1036,10 +1036,16 @@ def _aggregation(
     """
     if window is None:
         return Timestream._call(op, input, *args, None, None)
-    elif isinstance(window, kt.SinceWindow):
+    elif isinstance(window, kt.windows.Since):
         return Timestream._call(op, input, *args, window.predicate, None)
-    elif isinstance(window, kt.SlidingWindow):
+    elif isinstance(window, kt.windows.Sliding):
         return Timestream._call(op, input, *args, window.predicate, window.duration)
+    elif isinstance(window, kt.windows.Trailing):
+        if op != 'collect':
+            raise NotImplementedError(f"Aggregation '{op} does not support trailing windows")
+        trailing_seconds = int(window.duration.total_seconds())
+        # HACK: Use null predicate and number of seconds to encode trailing windows.
+        return Timestream._call(op, input, *args, None, trailing_seconds)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 
