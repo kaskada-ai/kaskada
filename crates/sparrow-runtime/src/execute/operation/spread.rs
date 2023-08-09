@@ -5,7 +5,7 @@ use anyhow::Context;
 use arrow::array::{
     new_null_array, Array, ArrayData, ArrayRef, BooleanArray, BooleanBufferBuilder,
     GenericStringArray, GenericStringBuilder, Int32Builder, OffsetSizeTrait, PrimitiveArray,
-    PrimitiveBuilder, StructArray,
+    PrimitiveBuilder, StructArray, UInt32Array, UInt32Builder,
 };
 use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
@@ -168,6 +168,7 @@ enum SerializedSpread<'a> {
     UnlatchedLargeString(Boo<'a, UnlatchedStringSpread<i64>>),
     LatchedStruct(Boo<'a, StructSpread<LatchedStructSpreadState>>),
     UnlatchedStruct(Boo<'a, StructSpread<UnlatchedStructSpreadState>>),
+    LatchedFallback(Boo<'a, LatchedFallbackSpread>),
     UnlatchedFallback(Boo<'a, UnlatchedFallbackSpread>),
 }
 
@@ -246,6 +247,7 @@ impl<'a> SerializedSpread<'a> {
             SerializedSpread::UnlatchedLargeString(spread) => into_spread_impl(spread),
             SerializedSpread::LatchedStruct(spread) => into_spread_impl(spread),
             SerializedSpread::UnlatchedStruct(spread) => into_spread_impl(spread),
+            SerializedSpread::LatchedFallback(spread) => into_spread_impl(spread),
             SerializedSpread::UnlatchedFallback(spread) => into_spread_impl(spread),
         }
     }
@@ -344,11 +346,13 @@ impl Spread {
                     Box::new(StructSpread::try_new_unlatched(fields)?)
                 }
             }
-            _ if !latched => Box::new(UnlatchedFallbackSpread),
-            unsupported => anyhow::bail!(
-                "Unsupported type for spread: {:?} (latched = {latched})",
-                unsupported
-            ),
+            fallback => {
+                if latched {
+                    Box::new(LatchedFallbackSpread::new(fallback))
+                } else {
+                    Box::new(UnlatchedFallbackSpread)
+                }
+            }
         };
 
         Ok(Self { spread_impl })
@@ -1705,6 +1709,113 @@ impl SpreadImpl for UnlatchedFallbackSpread {
         value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
         Ok(new_null_array(value_type, grouping.len()))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct LatchedFallbackSpread {
+    // The index of the group is used as the index in the data.
+    #[serde(with = "sparrow_arrow::serde::array_ref")]
+    data: ArrayRef,
+}
+
+impl LatchedFallbackSpread {
+    fn new(data_type: &DataType) -> Self {
+        // TODO: Upgrade to arrow>=45 and this can be `make_empty(data_type)`
+        let data = ArrayData::new_empty(data_type);
+        let data = arrow::array::make_array(data);
+
+        Self { data }
+    }
+}
+
+impl ToSerializedSpread for LatchedFallbackSpread {
+    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
+        SerializedSpread::LatchedFallback(Boo::Borrowed(self))
+    }
+}
+
+impl SpreadImpl for LatchedFallbackSpread {
+    fn spread_signaled(
+        &mut self,
+        grouping: &GroupingIndices,
+        values: &ArrayRef,
+        signal: &BooleanArray,
+    ) -> anyhow::Result<ArrayRef> {
+        debug_assert_eq!(grouping.len(), signal.len());
+        anyhow::ensure!(self.data.len() <= grouping.num_groups());
+
+        // TODO: We could do this using a separate null buffer and value buffer.
+        // This would allow us to avoid copying the data from this vector to the
+        // data buffers for `take`.
+        let mut state_take_indices: Vec<Option<u32>> = (0..grouping.num_groups())
+            .map(|index| {
+                if index < self.data.len() {
+                    Some(index as u32)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let mut indices = UInt32Builder::with_capacity(grouping.len());
+        let mut next_index = self.data.len() as u32;
+        for (signal, group) in signal.iter().zip(grouping.group_iter()) {
+            if signal.unwrap_or(false) {
+                indices.append_value(next_index);
+                state_take_indices[group] = Some(next_index);
+                next_index += 1;
+            } else {
+                indices.append_option(state_take_indices[group]);
+            }
+        }
+        let indices = indices.finish();
+
+        let state_take_indices = UInt32Array::from(state_take_indices);
+        self.data = sparrow_arrow::concat_take(&self.data, values, &state_take_indices)?;
+        sparrow_arrow::concat_take(&self.data, values, &indices)
+    }
+
+    fn spread_true(
+        &mut self,
+        grouping: &GroupingIndices,
+        values: &ArrayRef,
+    ) -> anyhow::Result<ArrayRef> {
+        anyhow::ensure!(grouping.len() == values.len());
+        anyhow::ensure!(self.data.len() <= grouping.num_groups());
+
+        // TODO: We could do this using a separate null buffer and value buffer.
+        // This would allow us to avoid copying the data from this vector to the
+        // data buffers for `take`.
+        let mut state_take_indices: Vec<Option<u32>> = (0..grouping.num_groups())
+            .map(|index| {
+                if index < self.data.len() {
+                    Some(index as u32)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // This will update the new_state_indices to the last value for each group.
+        // This will null-out the data if the value is null at that point, so we
+        // don't need to hadle that case specially.
+        for (index, group) in grouping.group_iter().enumerate() {
+            state_take_indices[group] = Some((index + self.data.len()) as u32)
+        }
+        let state_take_indices = UInt32Array::from(state_take_indices);
+        self.data = sparrow_arrow::concat_take(&self.data, values, &state_take_indices)?;
+
+        Ok(values.clone())
+    }
+
+    fn spread_false(
+        &mut self,
+        grouping: &GroupingIndices,
+        _value_type: &DataType,
+    ) -> anyhow::Result<ArrayRef> {
+        arrow::compute::take(self.data.as_ref(), grouping.group_indices(), None)
+            .context("failed to take values")
     }
 }
 
