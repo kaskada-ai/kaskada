@@ -17,13 +17,13 @@ pub struct Table {
     preparer: Preparer,
     in_memory_batches: Arc<InMemoryBatches>,
     key_column: usize,
-    key_hash_inverses: Arc<ThreadSafeKeyHashInverse>,
+    key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
 }
 
 impl Table {
     pub(crate) fn new(
         table_info: &mut TableInfo,
-        key_hash_inverses: Arc<ThreadSafeKeyHashInverse>,
+        key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
         key_column: usize,
         expr: Expr,
     ) -> Self {
@@ -51,7 +51,7 @@ impl Table {
             expr,
             preparer,
             in_memory_batches,
-            key_hash_inverses,
+            key_hash_inverse,
             key_column: key_column + KEY_FIELDS.len(),
         }
     }
@@ -68,7 +68,7 @@ impl Table {
 
         let key_hashes = prepared.column(2).as_primitive();
         let keys = prepared.column(self.key_column);
-        self.key_hash_inverses
+        self.key_hash_inverse
             .blocking_add(keys.as_ref(), key_hashes)
             .change_context(Error::Prepare)?;
 

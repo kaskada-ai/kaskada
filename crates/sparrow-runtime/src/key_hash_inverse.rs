@@ -171,7 +171,7 @@ impl KeyHashInverse {
             }
         );
         let mut len = self.key_hash_to_indices.len() as u64;
-        // Determine the indices that we nede to add.
+        // Determine the indices that we need to add.
         let indices_from_batch: Vec<u64> = key_hashes
             .values()
             .iter()

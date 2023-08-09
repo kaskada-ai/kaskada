@@ -24,7 +24,7 @@ use crate::{Error, Expr, Literal, Table};
 pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
-    key_hash_inverses: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
+    key_hash_inverse: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
 }
 
 #[derive(Default)]
@@ -107,8 +107,8 @@ impl Session {
 
         let expr = Expr(dfg_node);
 
-        let key_hash_inverses = self
-            .key_hash_inverses
+        let key_hash_inverse = self
+            .key_hash_inverse
             .entry(table_info.group_id())
             .or_insert_with(|| {
                 Arc::new(ThreadSafeKeyHashInverse::from_data_type(
@@ -117,7 +117,7 @@ impl Session {
             })
             .clone();
 
-        Ok(Table::new(table_info, key_hash_inverses, key_column, expr))
+        Ok(Table::new(table_info, key_hash_inverse, key_column, expr))
     }
 
     pub fn add_cast(
@@ -329,8 +329,8 @@ impl Session {
         let mut options = options.to_sparrow_options();
         options.stop_signal_rx = Some(stop_signal_rx);
 
-        let key_hash_inverses = self
-            .key_hash_inverses
+        let key_hash_inverse = self
+            .key_hash_inverse
             .get(&group_id)
             .cloned()
             .unwrap_or_else(|| {
@@ -346,7 +346,7 @@ impl Session {
                 destination,
                 data_context,
                 options,
-                Some(key_hash_inverses),
+                Some(key_hash_inverse),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))
