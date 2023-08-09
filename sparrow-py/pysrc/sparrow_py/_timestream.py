@@ -1065,11 +1065,13 @@ def _aggregation(
     elif isinstance(window, kt.windows.Sliding):
         return Timestream._call(op, input, *args, window.predicate, window.duration)
     elif isinstance(window, kt.windows.Trailing):
-        if op != 'collect':
-            raise NotImplementedError(f"Aggregation '{op} does not support trailing windows")
-        trailing_seconds = int(window.duration.total_seconds())
-        # HACK: Use null predicate and number of seconds to encode trailing windows.
-        return Timestream._call(op, input, *args, None, trailing_seconds)
+        if op != "collect":
+            raise NotImplementedError(
+                f"Aggregation '{op} does not support trailing windows"
+            )
+        trailing_ns = int(window.duration.total_seconds() * 1e9)
+        # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
+        return Timestream._call(op, input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

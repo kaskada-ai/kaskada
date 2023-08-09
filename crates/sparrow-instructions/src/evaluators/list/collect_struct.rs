@@ -123,10 +123,13 @@ impl Evaluator for CollectStructEvaluator {
                 let token = &mut self.token;
                 let input = info.value(&self.input)?.array_ref()?;
                 let input_times = info.time_column().array_ref()?;
+
+                // The duration is the nanosecond time to trail the window by.
                 let duration = info
                     .value(&self.duration)?
                     .try_primitive_literal::<Int64Type>()?
                     .ok_or_else(|| anyhow::anyhow!("Expected non-null literal duration"))?;
+
                 let key_capacity = info.grouping().num_groups();
                 let entity_indices = info.grouping().group_indices();
                 Self::evaluate_trailing_windowed(

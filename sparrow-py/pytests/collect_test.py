@@ -82,11 +82,37 @@ def test_collect_with_min_and_max(source, golden) -> None:
 
 def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
-    golden.jsonl(kt.record({"m": m, "since_m": m.collect(max=None, window=kt.windows.Since(m > 10))}))
+    golden.jsonl(
+        kt.record(
+            {"m": m, "since_m": m.collect(max=None, window=kt.windows.Since(m > 10))}
+        )
+    )
 
 
-def test_collect_struct_trailing_window(source, golden) -> None:
-    golden.jsonl(source.collect(max=None, window=kt.windows.Trailing(timedelta(days=3))))
+def test_collect_struct_trailing_window_1s(source, golden) -> None:
+    golden.jsonl(
+        source.collect(max=None, window=kt.windows.Trailing(timedelta(seconds=1)))
+    )
+
+
+def test_collect_struct_trailing_window_3s(source, golden) -> None:
+    golden.jsonl(
+        source.collect(max=None, window=kt.windows.Trailing(timedelta(seconds=3)))
+    )
+
+
+def test_collect_struct_trailing_window_3s_with_max(source, golden) -> None:
+    golden.jsonl(
+        source.collect(max=2, window=kt.windows.Trailing(timedelta(seconds=3)))
+    )
+
+
+def test_collect_struct_trailing_window_3s_with_min(source, golden) -> None:
+    golden.jsonl(
+        source.collect(
+            min=3, max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+        )
+    )
 
 
 
