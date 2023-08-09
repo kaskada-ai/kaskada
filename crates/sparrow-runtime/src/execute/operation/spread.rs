@@ -1772,8 +1772,9 @@ impl SpreadImpl for LatchedFallbackSpread {
         let indices = indices.finish();
 
         let state_take_indices = UInt32Array::from(state_take_indices);
+        let result = sparrow_arrow::concat_take(&self.data, values, &indices)?;
         self.data = sparrow_arrow::concat_take(&self.data, values, &state_take_indices)?;
-        sparrow_arrow::concat_take(&self.data, values, &indices)
+        Ok(result)
     }
 
     fn spread_true(
@@ -2269,6 +2270,39 @@ mod tests {
             None,
             Some(vec![Some(3), Some(5), Some(19)]),
             None,
+            Some(vec![Some(6)]),
+        ];
+        let expected = ListArray::from_iter_primitive::<UInt64Type, _, _>(expected);
+
+        let expected: ArrayRef = Arc::new(expected);
+        assert_eq!(&result, &expected)
+    }
+
+    #[test]
+    fn test_latched_uint64_list_spread() {
+        let data = vec![
+            Some(vec![]),
+            None,
+            Some(vec![Some(3), Some(5), Some(19)]),
+            Some(vec![Some(6)]),
+        ];
+        let list_array = ListArray::from_iter_primitive::<UInt64Type, _, _>(data);
+
+        let result = run_spread(
+            Arc::new(list_array),
+            vec![0, 1, 0, 0, 0, 0, 0, 0],
+            vec![true, false, false, true, false, true, false, true],
+            true,
+        );
+
+        let expected = vec![
+            Some(vec![]),
+            None,
+            Some(vec![]),
+            None,
+            None,
+            Some(vec![Some(3), Some(5), Some(19)]),
+            Some(vec![Some(3), Some(5), Some(19)]),
             Some(vec![Some(6)]),
         ];
         let expected = ListArray::from_iter_primitive::<UInt64Type, _, _>(expected);
