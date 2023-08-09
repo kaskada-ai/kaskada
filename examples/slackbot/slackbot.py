@@ -21,8 +21,10 @@ async def main():
     )
 
     # Backfill state with historical data
+    historical_data = pandas.read_parquet("./messages.parquet")[:1]
+    schema = pyarrow.Schema.from_pandas(historical_data)
     messages = kt.sources.ArrowSource(
-        data = pandas.read_parquet("./messages.parquet")[:1],
+        data = historical_data,
         time_column_name = "ts", 
         key_column_name = "channel",
     )
@@ -41,13 +43,17 @@ async def main():
             if "previous_message" in e or  e["type"] == "reaction_added":
                 return
 
-            data = pyarrow.json.read_json(e)
-            
-            print(f'Sending message event to kaskada: {e}')
+            try:
+                e["ts"] = datetime.datetime.fromtimestamp(float(e["ts"]))
+                del e["team"]
+                data = pyarrow.RecordBatch.from_pylist([e], schema=schema)
+                
+                print(f'Sending message event to kaskada: {e}')
 
-            # Deliver the message to Kaskada
-            messages.add_data(data)
-            print("Done sending message")
+                # Deliver the message to Kaskada
+                messages.add_data(data)
+                print("Done sending message")
+            except Exception as e: print(e)
 
     slack.socket_mode_request_listeners.append(handle_message)
     await slack.connect()
