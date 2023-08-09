@@ -1,10 +1,11 @@
 use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{
-    new_empty_array, Array, ArrayRef, AsArray, ListArray, UInt32Array, UInt32Builder,
+    new_empty_array, Array, ArrayRef, AsArray, Int64Array, ListArray, TimestampNanosecondArray,
+    UInt32Array, UInt32Builder,
 };
 use arrow::buffer::{BooleanBuffer, NullBuffer, OffsetBuffer, ScalarBuffer};
-use arrow::datatypes::DataType;
-use arrow_schema::Field;
+use arrow::datatypes::{DataType, Int64Type, TimestampNanosecondType};
+use arrow_schema::{Field, TimeUnit};
 use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
@@ -118,8 +119,28 @@ impl Evaluator for CollectStructEvaluator {
                     self.max,
                 )
             }
+            (true, false) => {
+                let token = &mut self.token;
+                let input = info.value(&self.input)?.array_ref()?;
+                let input_times = info.time_column().array_ref()?;
+                let duration = info
+                    .value(&self.duration)?
+                    .try_primitive_literal::<Int64Type>()?
+                    .ok_or_else(|| anyhow::anyhow!("Expected non-null literal duration"))?;
+                let key_capacity = info.grouping().num_groups();
+                let entity_indices = info.grouping().group_indices();
+                Self::evaluate_trailing_windowed(
+                    token,
+                    key_capacity,
+                    entity_indices,
+                    input,
+                    input_times,
+                    duration,
+                    self.min,
+                    self.max,
+                )
+            }
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
-            (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
     }
 
@@ -292,7 +313,7 @@ impl CollectStructEvaluator {
         );
 
         // Now update the new state using the last entity take indices
-        let new_state = update_token_state(entity_take_indices, old_state_flat, input, fields)?;
+        let new_state = update_token_state(&entity_take_indices, old_state_flat, input, fields)?;
         token.set_state(Arc::new(new_state));
 
         Ok(Arc::new(result))
@@ -395,8 +416,134 @@ impl CollectStructEvaluator {
         );
 
         // Now update the new state using the last entity take indices
-        let new_state = update_token_state(entity_take_indices, old_state_flat, input, fields)?;
+        let new_state = update_token_state(&entity_take_indices, old_state_flat, input, fields)?;
         token.set_state(Arc::new(new_state));
+
+        Ok(Arc::new(result))
+    }
+
+    /// Evaluates the collect function for structs with a `trailing` window.
+    ///
+    /// State is handled in order of "update -> emit -> reset".
+    ///
+    /// Follows the same implementation as above, but includes values in [current time - duration].
+    fn evaluate_trailing_windowed(
+        token: &mut CollectStructToken,
+        key_capacity: usize,
+        entity_indices: &UInt32Array,
+        input: ArrayRef,
+        input_times: ArrayRef,
+        duration: i64,
+        min: usize,
+        max: usize,
+    ) -> anyhow::Result<ArrayRef> {
+        let input_structs = input.as_struct();
+        assert_eq!(entity_indices.len(), input_structs.len());
+
+        Self::ensure_entity_capacity(token, key_capacity)?;
+
+        // Recreate the take indices for the current state
+        let mut entity_take_indices = Self::construct_entity_take_indices(token);
+
+        let old_state = token.state.as_list::<i32>();
+        let old_state_flat = old_state.values();
+
+        let mut take_output_builder = UInt32Builder::new();
+        let mut output_offset_builder = vec![0];
+
+        // Tracks the result's null values
+        let mut null_buffer = vec![];
+
+        // Concat the state's times and the input's times
+        let old_times = token.times.as_list::<i32>();
+        let old_times_flat = old_times.values();
+        let combined_times =
+            arrow::compute::concat(&[old_times_flat.as_ref(), input_times.as_ref()])?;
+        let combined_times: &TimestampNanosecondArray = combined_times.as_primitive();
+        assert_eq!(
+            old_state_flat.len(),
+            old_times_flat.len(),
+            "time and state length mismatch"
+        );
+
+        let mut cur_offset = 0;
+        // For each entity, append the take indices for the new input to the existing
+        // entity take indices
+        for (index, entity_index) in entity_indices.values().iter().enumerate() {
+            // Update state
+            if input.is_valid(index) {
+                let take_index = (old_state_flat.len() + index) as u32;
+                entity_take_indices
+                    .entry(*entity_index)
+                    .and_modify(|v| {
+                        v.push_back(take_index);
+                        if v.len() > max {
+                            v.pop_front();
+                        }
+
+                        // Iterates over the front of the vec and pops off any values that
+                        // exist prior to the start of the current window
+                        if let Some(front_i) = v.front() {
+                            let mut oldest_time = combined_times.value(*front_i as usize);
+                            // Note this uses the `combined_times` and `take_index`
+                            // because it's possible we need to pop off new input
+                            let min_window_start =
+                                combined_times.value(take_index as usize) - duration;
+                            while oldest_time < min_window_start {
+                                v.pop_front();
+                                // Safety: we know there's elements in the vec, and we can't
+                                // have popped the last element because we just added one at a time
+                                // greater than the `min_window_start`.
+                                let front_i = v.front().unwrap();
+                                oldest_time = combined_times.value(*front_i as usize);
+                            }
+                        }
+                    })
+                    .or_insert(vec![take_index].into());
+            }
+
+            // safety: map was resized to handle entity_index size
+            let entity_take = entity_take_indices.get(entity_index).unwrap();
+
+            // Emit state
+            if entity_take.len() >= min {
+                // Append this entity's take indices to the take output builder
+                entity_take.iter().for_each(|i| {
+                    take_output_builder.append_value(*i);
+                });
+
+                // Append this entity's current number of take indices to the output offset builder
+                cur_offset += entity_take.len();
+
+                output_offset_builder.push(cur_offset as i32);
+                null_buffer.push(true);
+            } else {
+                // Append null if there are not enough values
+                take_output_builder.append_null();
+                null_buffer.push(false);
+
+                // Cur offset increases by 1 to account for the null value
+                cur_offset += 1;
+                output_offset_builder.push(cur_offset as i32);
+            }
+        }
+        let output_values =
+            sparrow_arrow::concat_take(old_state_flat, &input, &take_output_builder.finish())?;
+
+        let fields = input_structs.fields().clone();
+        let field = Arc::new(Field::new("item", DataType::Struct(fields.clone()), true));
+
+        let result = ListArray::new(
+            field,
+            OffsetBuffer::new(ScalarBuffer::from(output_offset_builder)),
+            output_values,
+            Some(NullBuffer::from(BooleanBuffer::from(null_buffer))),
+        );
+
+        // Now update the new state using the last entity take indices
+        let new_state = update_token_state(&entity_take_indices, old_state_flat, input, fields)?;
+        let new_times = update_token_times(&entity_take_indices, old_times_flat, input_times)?;
+        token.set_state_and_time(Arc::new(new_state), Arc::new(new_times));
 
         Ok(Arc::new(result))
     }
@@ -404,7 +551,7 @@ impl CollectStructEvaluator {
 
 /// Uses the final entity take indices to get the new state
 fn update_token_state(
-    entity_take_indices: BTreeMap<u32, VecDeque<u32>>,
+    entity_take_indices: &BTreeMap<u32, VecDeque<u32>>,
     old_state_flat: &Arc<dyn Array>,
     input: Arc<dyn Array>,
     fields: arrow_schema::Fields,
@@ -425,6 +572,38 @@ fn update_token_state(
         Arc::new(Field::new("item", DataType::Struct(fields), true)),
         OffsetBuffer::new(ScalarBuffer::from(new_state_offset_builder)),
         new_state_values,
+        None,
+    );
+    Ok(new_state)
+}
+
+/// Uses the final entity take indices to get the new times
+fn update_token_times(
+    entity_take_indices: &BTreeMap<u32, VecDeque<u32>>,
+    old_times_flat: &Arc<dyn Array>,
+    input_times: Arc<dyn Array>,
+) -> anyhow::Result<ListArray> {
+    let mut new_times_offset_builder = Vec::with_capacity(entity_take_indices.len());
+    new_times_offset_builder.push(0);
+
+    let mut cur_times_offset = 0;
+    let take_new_times = entity_take_indices.values().flat_map(|v| {
+        cur_times_offset += v.len() as i32;
+        new_times_offset_builder.push(cur_times_offset);
+        v.iter().copied().map(Some)
+    });
+    let take_new_times = UInt32Array::from_iter(take_new_times);
+
+    let new_times_values =
+        sparrow_arrow::concat_take(old_times_flat, &input_times, &take_new_times)?;
+    let new_state = ListArray::new(
+        Arc::new(Field::new(
+            "item",
+            DataType::Timestamp(TimeUnit::Nanosecond, None),
+            true,
+        )),
+        OffsetBuffer::new(ScalarBuffer::from(new_times_offset_builder)),
+        new_times_values,
         None,
     );
     Ok(new_state)
@@ -794,6 +973,122 @@ mod tests {
             null_structs.as_ref(),
         ])
         .unwrap();
+        assert_eq!(expected.as_ref(), result);
+    }
+
+    #[test]
+    fn test_trailing_collect() {
+        let min = 0;
+        let max = 10;
+        let duration = 6;
+
+        let mut token = default_token();
+        // Batch 1
+        let n_array = Int64Array::from(vec![Some(0), Some(1), Some(2)]);
+        let s_array = StringArray::from(vec![Some("a"), Some("b"), Some("c")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let input = Arc::new(input);
+
+        let key_indices = UInt32Array::from(vec![0, 0, 0]);
+        let key_capacity = 1;
+
+        let input_times = TimestampNanosecondArray::from(vec![0, 5, 10]);
+        let input_times = Arc::new(input_times);
+
+        let result = CollectStructEvaluator::evaluate_trailing_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            input_times,
+            duration,
+            min,
+            max,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 1
+        let n_array = Int64Array::from(vec![Some(0), Some(0), Some(1), Some(1), Some(2)]);
+        let s_array =
+            StringArray::from(vec![Some("a"), Some("a"), Some("b"), Some("b"), Some("c")]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 3, 5]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
+        let expected = Arc::new(expected);
+        assert_eq!(expected.as_ref(), result);
+
+        // Batch 2
+        let n_array = Int64Array::from(vec![Some(3), Some(4), Some(5)]);
+        let s_array = StringArray::from(vec![Some("d"), Some("e"), Some("f")]);
+        let input = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let input = Arc::new(input);
+
+        // New entity!
+        let key_indices = UInt32Array::from(vec![1, 0, 1]);
+        let key_capacity = 2;
+
+        let input_times = TimestampNanosecondArray::from(vec![15, 20, 25]);
+        let input_times = Arc::new(input_times);
+
+        let result = CollectStructEvaluator::evaluate_trailing_windowed(
+            &mut token,
+            key_capacity,
+            &key_indices,
+            input,
+            input_times,
+            duration,
+            min,
+            max,
+        )
+        .unwrap();
+        let result = result.as_list::<i32>();
+
+        // build expected result 2
+        let n_array = Int64Array::from(vec![Some(3), Some(4), Some(5)]);
+        let s_array = StringArray::from(vec![Some("d"), Some("e"), Some("f")]);
+        let expected = StructArray::new(
+            Fields::from(vec![
+                Field::new("n", n_array.data_type().clone(), true),
+                Field::new("s", s_array.data_type().clone(), true),
+            ]),
+            vec![Arc::new(n_array), Arc::new(s_array)],
+            None,
+        );
+        let offsets = ScalarBuffer::from(vec![0, 1, 2, 3]);
+        let expected = ListArray::new(
+            Arc::new(Field::new("item", expected.data_type().clone(), true)),
+            OffsetBuffer::new(offsets),
+            Arc::new(expected),
+            None,
+        );
+        let expected = Arc::new(expected);
         assert_eq!(expected.as_ref(), result);
     }
 

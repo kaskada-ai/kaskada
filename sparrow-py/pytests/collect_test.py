@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 import sparrow_py as kt
 
@@ -80,7 +82,11 @@ def test_collect_with_min_and_max(source, golden) -> None:
 
 def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
-    golden.jsonl(kt.record({"m": m, "since_m": m.sum(window=kt.windows.Since(m > 10))}))
+    golden.jsonl(kt.record({"m": m, "since_m": m.collect(max=None, window=kt.windows.Since(m > 10))}))
+
+
+def test_collect_struct_trailing_window(source, golden) -> None:
+    golden.jsonl(source.collect(max=None, window=kt.windows.Trailing(timedelta(days=3))))
 
 
 
