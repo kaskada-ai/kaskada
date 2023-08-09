@@ -1,6 +1,7 @@
 import pytest
 import sparrow_py as kt
 
+
 @pytest.fixture(scope="module")
 def source() -> kt.sources.CsvSource:
     content = "\n".join(
@@ -15,6 +16,7 @@ def source() -> kt.sources.CsvSource:
         ]
     )
     return kt.sources.CsvSource("time", "key", content)
+
 
 @pytest.mark.skip(reason="no way of currently testing this")
 def test_flatten(source, golden) -> None:

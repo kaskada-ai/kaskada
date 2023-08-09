@@ -317,7 +317,6 @@ class Timestream(object):
             dividend = Timestream._literal(dividend, self._ffi_expr.session())
         return dividend.div(self)
 
-
     def lt(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream that is true if this is less than `rhs`.
@@ -676,7 +675,6 @@ class Timestream(object):
             Timestream containing the collected list at each point.
         """
         if pa.types.is_list(self.data_type):
-            print("collecting list")
             input = record({"value": self})
             collect = _aggregation("collect", input, window, max, min)
             return collect.col("value")
