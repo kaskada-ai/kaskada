@@ -794,7 +794,7 @@ class Timestream(object):
 
     def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
         """
-        Create a Timestream shifting the time of each point to `time`.
+        Create a Timestream shifting each point forward to `time`.
 
         If multiple values are shifted to the same time, they will be emitted in
         the order in which they originally occurred.
@@ -820,35 +820,35 @@ class Timestream(object):
         else:
             return Timestream._call("shift_to", time, self)
 
-    def shift_by(self, time: Union[Timestream, timedelta]) -> Timestream:
+    def shift_by(self, delta: Union[Timestream, timedelta]) -> Timestream:
         """
-        Create a Timestream shifting the time of each point by the delta `time`.
+        Create a Timestream shifting each point forward by the `delta`.
 
         If multiple values are shifted to the same time, they will be emitted in
         the order in which they originally occurred.
 
         Parameters
         ----------
-        time : Union[Timestream, datetime]
-            The time to shift the point forward by.
+        time : Union[Timestream, timedelta]
+            The delta to shift the point forward by.
 
         Returns
         -------
         Timestream
             Timestream containing the shifted points.
         """
-        if isinstance(time, timedelta):
+        if isinstance(delta, timedelta):
             session = self._ffi_expr.session()
             seconds = Timestream._call(
-                "seconds", int(time.total_seconds()), session=session
+                "seconds", int(delta.total_seconds()), session=session
             )
             return Timestream._call("shift_by", seconds, self)
         else:
-            return Timestream._call("shift_by", time, self)
+            return Timestream._call("shift_by", delta, self)
 
     def shift_until(self, predicate: Timestream) -> Timestream:
         """
-        Create a Timestream shifting `self` forward to the time the `predicate`
+        Create a Timestream shifting each point forward to the time the `predicate`
         is true.
 
         Note that if the `predicate` evaluates to true at the same time as `self`,
