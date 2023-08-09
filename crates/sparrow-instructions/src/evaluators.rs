@@ -353,6 +353,7 @@ fn create_simple_evaluator(
         }
         InstOp::TimeOf => TimeOfEvaluator::try_new(info),
         InstOp::Upper => UpperEvaluator::try_new(info),
+        InstOp::Union => UnionEvaluator::try_new(info),
         InstOp::Variance => {
             create_number_evaluator!(
                 &info.args[0].data_type,

@@ -219,7 +219,7 @@ pub async fn execute_new(
     destination: Destination,
     mut data_context: DataContext,
     options: ExecutionOptions,
-    key_hash_inverses: Option<Arc<ThreadSafeKeyHashInverse>>,
+    key_hash_inverse: Option<Arc<ThreadSafeKeyHashInverse>>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let object_stores = Arc::new(ObjectStoreRegistry::default());
 
@@ -233,7 +233,7 @@ pub async fn execute_new(
         )
         .await?;
 
-    let key_hash_inverse = if let Some(key_hash_inverse) = key_hash_inverses {
+    let key_hash_inverse = if let Some(key_hash_inverse) = key_hash_inverse {
         key_hash_inverse
     } else {
         load_key_hash_inverse(&plan, &mut data_context, &compute_store, &object_stores)
