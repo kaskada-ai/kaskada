@@ -675,9 +675,11 @@ class Timestream(object):
             Timestream containing the collected list at each point.
         """
         if pa.types.is_list(self.data_type):
-            input = record({"value": self})
-            collect = _aggregation("collect", input, window, max, min)
-            return collect.col("value")
+            return (
+                record({"value": self})
+                .collect(max=max, min=min, window=window)
+                .col("value")
+            )
         else:
             return _aggregation("collect", self, window, max, min)
 
