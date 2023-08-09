@@ -5,7 +5,7 @@ use arrow::array::{
 use arrow::buffer::{BooleanBuffer, NullBuffer, OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::DataType;
 use arrow_schema::Field;
-use itertools::Itertools;
+use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_plan::ValueRef;
 use std::collections::{BTreeMap, VecDeque};
@@ -102,7 +102,22 @@ impl Evaluator for CollectStructEvaluator {
                     self.max,
                 )
             }
-            (false, true) => unimplemented!("since window aggregation unsupported"),
+            (false, true) => {
+                let token = &mut self.token;
+                let input = info.value(&self.input)?.array_ref()?;
+                let tick = info.value(&self.tick)?.array_ref()?;
+                let key_capacity = info.grouping().num_groups();
+                let entity_indices = info.grouping().group_indices();
+                Self::evaluate_since_windowed(
+                    token,
+                    key_capacity,
+                    entity_indices,
+                    input,
+                    tick,
+                    self.min,
+                    self.max,
+                )
+            }
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
             (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
@@ -276,29 +291,143 @@ impl CollectStructEvaluator {
             Some(NullBuffer::from(BooleanBuffer::from(null_buffer))),
         );
 
-        // Construct the new state offset and values using the current entity take indices
-        let mut new_state_offset_builder = Vec::with_capacity(entity_take_indices.len());
-        new_state_offset_builder.push(0);
-        let mut cur_state_offset = 0;
-
-        let take_new_state = entity_take_indices.values().flat_map(|v| {
-            cur_state_offset += v.len() as i32;
-            new_state_offset_builder.push(cur_state_offset);
-            v.iter().copied().map(Some)
-        });
-        let take_new_state = UInt32Array::from_iter(take_new_state);
-
-        let new_state_values = sparrow_arrow::concat_take(old_state_flat, &input, &take_new_state)?;
-        let new_state = ListArray::new(
-            Arc::new(Field::new("item", DataType::Struct(fields), true)),
-            OffsetBuffer::new(ScalarBuffer::from(new_state_offset_builder)),
-            new_state_values,
-            None,
-        );
-
+        // Now update the new state using the last entity take indices
+        let new_state = update_token_state(entity_take_indices, old_state_flat, input, fields)?;
         token.set_state(Arc::new(new_state));
+
         Ok(Arc::new(result))
     }
+
+    /// Evaluates the collect function for structs with a `since` window.
+    ///
+    /// State is handled in order of "update -> emit -> reset".
+    ///
+    /// Follows the same implementation as above, but resets the state of
+    /// an entity when a `tick` is seen.
+    fn evaluate_since_windowed(
+        token: &mut CollectStructToken,
+        key_capacity: usize,
+        entity_indices: &UInt32Array,
+        input: ArrayRef,
+        ticks: ArrayRef,
+        min: usize,
+        max: usize,
+    ) -> anyhow::Result<ArrayRef> {
+        let ticks = ticks.as_boolean();
+        let input_structs = input.as_struct();
+        assert_eq!(entity_indices.len(), input_structs.len());
+
+        Self::ensure_entity_capacity(token, key_capacity)?;
+
+        // Recreate the take indices for the current state
+        let mut entity_take_indices = Self::construct_entity_take_indices(token);
+
+        let old_state = token.state.as_list::<i32>();
+        let old_state_flat = old_state.values();
+
+        let mut take_output_builder = UInt32Builder::new();
+        let mut output_offset_builder = vec![0];
+
+        // Tracks the result's null values
+        let mut null_buffer = vec![];
+
+        let mut cur_offset = 0;
+        // For each entity, append the take indices for the new input to the existing
+        // entity take indices
+        for (index, (tick, entity_index)) in
+            izip!(ticks.values().iter(), entity_indices.values().iter()).enumerate()
+        {
+            // Update state
+            if input.is_valid(index) {
+                let take_index = (old_state_flat.len() + index) as u32;
+                entity_take_indices
+                    .entry(*entity_index)
+                    .and_modify(|v| {
+                        v.push_back(take_index);
+                        if v.len() > max {
+                            v.pop_front();
+                        }
+                    })
+                    .or_insert(vec![take_index].into());
+            }
+
+            // safety: map was resized to handle entity_index size
+            let entity_take = entity_take_indices.get(entity_index).unwrap();
+
+            // Emit state
+            if entity_take.len() >= min {
+                // Append this entity's take indices to the take output builder
+                entity_take.iter().for_each(|i| {
+                    take_output_builder.append_value(*i);
+                });
+
+                // Append this entity's current number of take indices to the output offset builder
+                cur_offset += entity_take.len();
+
+                output_offset_builder.push(cur_offset as i32);
+                null_buffer.push(true);
+            } else {
+                // Append null if there are not enough values
+                take_output_builder.append_null();
+                null_buffer.push(false);
+
+                // Cur offset increases by 1 to account for the null value
+                cur_offset += 1;
+                output_offset_builder.push(cur_offset as i32);
+            }
+
+            // Reset state
+            if ticks.is_valid(index) && tick {
+                entity_take_indices.insert(*entity_index, vec![].into());
+            }
+        }
+        let output_values =
+            sparrow_arrow::concat_take(old_state_flat, &input, &take_output_builder.finish())?;
+
+        let fields = input_structs.fields().clone();
+        let field = Arc::new(Field::new("item", DataType::Struct(fields.clone()), true));
+
+        let result = ListArray::new(
+            field,
+            OffsetBuffer::new(ScalarBuffer::from(output_offset_builder)),
+            output_values,
+            Some(NullBuffer::from(BooleanBuffer::from(null_buffer))),
+        );
+
+        // Now update the new state using the last entity take indices
+        let new_state = update_token_state(entity_take_indices, old_state_flat, input, fields)?;
+        token.set_state(Arc::new(new_state));
+
+        Ok(Arc::new(result))
+    }
+}
+
+/// Uses the final entity take indices to get the new state
+fn update_token_state(
+    entity_take_indices: BTreeMap<u32, VecDeque<u32>>,
+    old_state_flat: &Arc<dyn Array>,
+    input: Arc<dyn Array>,
+    fields: arrow_schema::Fields,
+) -> anyhow::Result<ListArray> {
+    let mut new_state_offset_builder = Vec::with_capacity(entity_take_indices.len());
+    new_state_offset_builder.push(0);
+
+    let mut cur_state_offset = 0;
+    let take_new_state = entity_take_indices.values().flat_map(|v| {
+        cur_state_offset += v.len() as i32;
+        new_state_offset_builder.push(cur_state_offset);
+        v.iter().copied().map(Some)
+    });
+    let take_new_state = UInt32Array::from_iter(take_new_state);
+
+    let new_state_values = sparrow_arrow::concat_take(old_state_flat, &input, &take_new_state)?;
+    let new_state = ListArray::new(
+        Arc::new(Field::new("item", DataType::Struct(fields), true)),
+        OffsetBuffer::new(ScalarBuffer::from(new_state_offset_builder)),
+        new_state_values,
+        None,
+    );
+    Ok(new_state)
 }
 
 #[cfg(test)]
