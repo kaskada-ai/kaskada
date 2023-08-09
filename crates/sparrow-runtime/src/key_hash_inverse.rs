@@ -4,8 +4,9 @@ use anyhow::Context;
 use arrow::array::{Array, ArrayRef, AsArray, PrimitiveArray, UInt64Array};
 use arrow::datatypes::{DataType, UInt64Type};
 
-use error_stack::{IntoReportCompat, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::TryStreamExt;
+use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_compiler::DataContext;
@@ -21,7 +22,7 @@ use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 /// If the entity key type is null, then all inverse keys are null.
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct KeyHashInverse {
-    key_hash_to_indices: HashMap<u64, usize>,
+    key_hash_to_indices: HashMap<u64, u64>,
     #[serde(with = "sparrow_arrow::serde::array_ref")]
     key: ArrayRef,
 }
@@ -45,6 +46,19 @@ pub enum Error {
     OpeningMetadata,
     #[display(fmt = "failed to read metadata")]
     ReadingMetadata,
+    #[display(fmt = "key hashes contained nulls")]
+    KeyHashContainedNull,
+    #[display(Fmt = "error in Arrow kernel")]
+    Arrow,
+    #[display(fmt = "key hash not registered")]
+    MissingKeyHash,
+    #[display(fmt = "key hashes and keys are of different lengths ({keys} != {key_hashes})")]
+    MismatchedLengths { keys: usize, key_hashes: usize },
+    #[display(fmt = "incompatible key types (expected: {expected:?}, actual: {actual:?})")]
+    IncompatibleKeyTypes {
+        expected: DataType,
+        actual: DataType,
+    },
 }
 
 impl error_stack::Context for Error {}
@@ -68,10 +82,10 @@ impl KeyHashInverse {
     }
 
     /// Creates a new key hash inverse from a primary grouping data type.
-    pub fn from_data_type(primary_grouping_type: DataType) -> Self {
+    pub fn from_data_type(primary_grouping_type: &DataType) -> Self {
         Self {
             key_hash_to_indices: HashMap::new(),
-            key: arrow::array::new_empty_array(&primary_grouping_type),
+            key: arrow::array::new_empty_array(primary_grouping_type),
         }
     }
 
@@ -109,8 +123,7 @@ impl KeyHashInverse {
                 .into_report()
                 .change_context(Error::ReadingMetadata)?;
             let entity_key_col = batch.column(1);
-            self.add(entity_key_col.to_owned(), hash_col)
-                .into_report()
+            self.add(entity_key_col.as_ref(), hash_col)
                 .change_context(Error::ReadingMetadata)?;
         }
 
@@ -128,8 +141,7 @@ impl KeyHashInverse {
                 })
             });
         for (keys, key_hashes) in in_memory {
-            self.add(keys, key_hashes.as_primitive())
-                .into_report()
+            self.add(keys.as_ref(), key_hashes.as_primitive())
                 .change_context(Error::ReadingMetadata)
                 .unwrap();
         }
@@ -143,30 +155,53 @@ impl KeyHashInverse {
     /// values are aligned to map from a key to a hash per index. The
     /// current implementation eagerly adds the keys and hashes to the
     /// inverse but can be optimized to perform the addition lazily.
-    fn add(&mut self, keys: ArrayRef, key_hashes: &UInt64Array) -> anyhow::Result<()> {
+    fn add(
+        &mut self,
+        keys: &dyn Array,
+        key_hashes: &UInt64Array,
+    ) -> error_stack::Result<(), Error> {
         // Since the keys map to the key hashes directly, both arrays need to be the
         // same length
-        anyhow::ensure!(keys.len() == key_hashes.len());
+        error_stack::ensure!(key_hashes.null_count() == 0, Error::KeyHashContainedNull);
+        error_stack::ensure!(
+            keys.data_type() == self.key.data_type(),
+            Error::IncompatibleKeyTypes {
+                expected: self.key.data_type().clone(),
+                actual: keys.data_type().clone(),
+            }
+        );
+        let mut len = self.key_hash_to_indices.len() as u64;
+        // Determine the indices that we need to add.
         let indices_from_batch: Vec<u64> = key_hashes
+            .values()
             .iter()
             .enumerate()
             .flat_map(|(index, key_hash)| {
-                if let Some(key_hash) = key_hash {
-                    if !self.key_hash_to_indices.contains_key(&key_hash) {
-                        self.key_hash_to_indices
-                            .insert(key_hash, self.key_hash_to_indices.len());
-                        return Some(index as u64);
+                match self.key_hash_to_indices.entry(*key_hash) {
+                    Entry::Occupied(_) => {
+                        // Key hash is already registered.
+                        None
+                    }
+                    Entry::Vacant(vacancy) => {
+                        vacancy.insert(len);
+                        len += 1;
+                        Some(index as u64)
                     }
                 }
-                None
             })
             .collect();
+        debug_assert_eq!(self.key_hash_to_indices.len(), len as usize);
+
         if !indices_from_batch.is_empty() {
             let indices_from_batch: PrimitiveArray<UInt64Type> =
                 PrimitiveArray::from_iter_values(indices_from_batch);
-            let keys = arrow::compute::take(&keys, &indices_from_batch, None)?;
+            let keys = arrow_select::take::take(keys, &indices_from_batch, None)
+                .into_report()
+                .change_context(Error::Arrow)?;
             let concatenated_keys: Vec<_> = vec![self.key.as_ref(), keys.as_ref()];
-            let concatenated_keys = arrow::compute::concat(&concatenated_keys)?;
+            let concatenated_keys = arrow_select::concat::concat(&concatenated_keys)
+                .into_report()
+                .change_context(Error::Arrow)?;
             self.key = concatenated_keys;
         }
         Ok(())
@@ -184,19 +219,20 @@ impl KeyHashInverse {
     ///
     /// If the entity key type is null, then a null array is returned of same
     /// length.
-    pub fn inverse(&self, key_hashes: &UInt64Array) -> anyhow::Result<ArrayRef> {
+    pub fn inverse(&self, key_hashes: &UInt64Array) -> error_stack::Result<ArrayRef, Error> {
         let mut key_hash_indices: Vec<u64> = Vec::new();
-        for key_hash in key_hashes {
-            let key_hash = key_hash.with_context(|| "unable to get key_hash")?;
+        for key_hash in key_hashes.values() {
             let key_hash_index = self
                 .key_hash_to_indices
-                .get(&key_hash)
-                .with_context(|| "unable to find key")?;
-            key_hash_indices.push(*key_hash_index as u64);
+                .get(key_hash)
+                .ok_or(Error::MissingKeyHash)?;
+            key_hash_indices.push(*key_hash_index);
         }
         let key_hash_indices: PrimitiveArray<UInt64Type> =
             PrimitiveArray::from_iter_values(key_hash_indices);
-        let result = arrow::compute::take(&self.key, &key_hash_indices, None)?;
+        let result = arrow_select::take::take(&self.key, &key_hash_indices, None)
+            .into_report()
+            .change_context(Error::Arrow)?;
         Ok(result)
     }
 }
@@ -238,10 +274,15 @@ impl ThreadSafeKeyHashInverse {
         }
     }
 
+    /// Creates a new key hash inverse from a primary grouping data type.
+    pub fn from_data_type(primary_grouping_type: &DataType) -> Self {
+        Self::new(KeyHashInverse::from_data_type(primary_grouping_type))
+    }
+
     /// Lookup keys from a key hash array.
     ///
     /// This method is thread-safe and acquires the read-lock.
-    pub async fn inverse(&self, key_hashes: &UInt64Array) -> anyhow::Result<ArrayRef> {
+    pub async fn inverse(&self, key_hashes: &UInt64Array) -> error_stack::Result<ArrayRef, Error> {
         let read = self.key_map.read().await;
         read.inverse(key_hashes)
     }
@@ -255,8 +296,18 @@ impl ThreadSafeKeyHashInverse {
     /// This method is thread safe. It acquires the read lock to check if
     /// any of the keys need to be added to the inverse map, and only acquires
     /// the write lock if needed.
-    pub async fn add(&self, keys: ArrayRef, key_hashes: &UInt64Array) -> anyhow::Result<()> {
-        anyhow::ensure!(keys.len() == key_hashes.len());
+    pub async fn add(
+        &self,
+        keys: &dyn Array,
+        key_hashes: &UInt64Array,
+    ) -> error_stack::Result<(), Error> {
+        error_stack::ensure!(
+            keys.len() == key_hashes.len(),
+            Error::MismatchedLengths {
+                keys: keys.len(),
+                key_hashes: key_hashes.len()
+            }
+        );
         let has_new_keys = {
             let read = self.key_map.read().await;
             read.has_new_keys(key_hashes)
@@ -265,6 +316,27 @@ impl ThreadSafeKeyHashInverse {
         if has_new_keys {
             let mut write = self.key_map.write().await;
             write.add(keys, key_hashes)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn blocking_add(
+        &self,
+        keys: &dyn Array,
+        key_hashes: &UInt64Array,
+    ) -> error_stack::Result<(), Error> {
+        error_stack::ensure!(
+            keys.len() == key_hashes.len(),
+            Error::MismatchedLengths {
+                keys: keys.len(),
+                key_hashes: key_hashes.len()
+            }
+        );
+        let has_new_keys = self.key_map.blocking_read().has_new_keys(key_hashes);
+
+        if has_new_keys {
+            self.key_map.blocking_write().add(keys, key_hashes)
         } else {
             Ok(())
         }
@@ -287,15 +359,15 @@ mod tests {
     use arrow::datatypes::DataType;
     use sparrow_instructions::ComputeStore;
 
-    use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
+    use crate::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 
     #[test]
     fn test_inverse_with_int32() {
         let keys = Arc::new(Int32Array::from(vec![100, 200]));
         let key_hashes = UInt64Array::from(vec![1, 2]);
 
-        let mut key_hash = KeyHashInverse::from_data_type(DataType::Int32);
-        key_hash.add(keys, &key_hashes).unwrap();
+        let mut key_hash = KeyHashInverse::from_data_type(&DataType::Int32);
+        key_hash.add(keys.as_ref(), &key_hashes).unwrap();
 
         let test_hashes = UInt64Array::from_iter_values([1, 2, 1]);
         let result = key_hash.inverse(&test_hashes).unwrap();
@@ -304,11 +376,11 @@ mod tests {
 
     #[test]
     fn test_inverse_with_string() {
-        let keys = Arc::new(StringArray::from(vec!["awkward", "tacos"]));
+        let keys = StringArray::from(vec!["awkward", "tacos"]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
 
-        let mut key_hash = KeyHashInverse::from_data_type(DataType::Utf8);
-        key_hash.add(keys, &key_hashes).unwrap();
+        let mut key_hash = KeyHashInverse::from_data_type(&DataType::Utf8);
+        key_hash.add(&keys, &key_hashes).unwrap();
 
         let test_hashes = UInt64Array::from_iter_values([1, 2, 1]);
         let result = key_hash.inverse(&test_hashes).unwrap();
@@ -320,10 +392,10 @@ mod tests {
 
     #[test]
     fn test_has_new_keys_no_new_keys() {
-        let keys = Arc::new(Int32Array::from(vec![100, 200]));
+        let keys = Int32Array::from(vec![100, 200]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
-        let mut key_hash = KeyHashInverse::from_data_type(DataType::Int32);
-        key_hash.add(keys, &key_hashes).unwrap();
+        let mut key_hash = KeyHashInverse::from_data_type(&DataType::Int32);
+        key_hash.add(&keys, &key_hashes).unwrap();
 
         let verify_key_hashes = UInt64Array::from(vec![1, 2]);
         assert!(!key_hash.has_new_keys(&verify_key_hashes));
@@ -331,10 +403,10 @@ mod tests {
 
     #[test]
     fn test_has_new_keys_some_new_keys() {
-        let keys = Arc::new(Int32Array::from(vec![100, 200]));
+        let keys = Int32Array::from(vec![100, 200]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
-        let mut key_hash = KeyHashInverse::from_data_type(DataType::Int32);
-        key_hash.add(keys, &key_hashes).unwrap();
+        let mut key_hash = KeyHashInverse::from_data_type(&DataType::Int32);
+        key_hash.add(&keys, &key_hashes).unwrap();
 
         let verify_key_hashes = UInt64Array::from(vec![1, 2, 3]);
         assert!(key_hash.has_new_keys(&verify_key_hashes));
@@ -342,10 +414,10 @@ mod tests {
 
     #[test]
     fn test_has_new_keys_all_new_keys() {
-        let keys = Arc::new(Int32Array::from(vec![100, 200]));
+        let keys = Int32Array::from(vec![100, 200]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
-        let mut key_hash = KeyHashInverse::from_data_type(DataType::Int32);
-        key_hash.add(keys, &key_hashes).unwrap();
+        let mut key_hash = KeyHashInverse::from_data_type(&DataType::Int32);
+        key_hash.add(&keys, &key_hashes).unwrap();
 
         let verify_key_hashes = UInt64Array::from(vec![3, 4, 5]);
         assert!(key_hash.has_new_keys(&verify_key_hashes));
@@ -353,12 +425,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_thread_safe_inverse_with_int32() {
-        let keys = Arc::new(Int32Array::from(vec![100, 200]));
+        let keys = Int32Array::from(vec![100, 200]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
-        let key_hash = KeyHashInverse::from_data_type(DataType::Int32);
+        let key_hash = KeyHashInverse::from_data_type(&DataType::Int32);
 
         let key_hash = ThreadSafeKeyHashInverse::new(key_hash);
-        key_hash.add(keys, &key_hashes).await.unwrap();
+        key_hash.add(&keys, &key_hashes).await.unwrap();
 
         let test_hashes = UInt64Array::from_iter_values([1, 2, 1]);
         let result = key_hash.inverse(&test_hashes).await.unwrap();
@@ -367,12 +439,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_thread_safe_inverse_with_string() {
-        let keys = Arc::new(StringArray::from(vec!["awkward", "tacos"]));
+        let keys = StringArray::from(vec!["awkward", "tacos"]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
-        let key_hash = KeyHashInverse::from_data_type(DataType::Utf8);
+        let key_hash = KeyHashInverse::from_data_type(&DataType::Utf8);
 
         let key_hash = ThreadSafeKeyHashInverse::new(key_hash);
-        key_hash.add(keys, &key_hashes).await.unwrap();
+        key_hash.add(&keys, &key_hashes).await.unwrap();
 
         let test_hashes = UInt64Array::from_iter_values([1, 2, 1]);
         let result = key_hash.inverse(&test_hashes).await.unwrap();
@@ -408,9 +480,9 @@ mod tests {
         key_hash.store_to(&compute_store).unwrap();
 
         let mut key_hash = KeyHashInverse::restore_from(&compute_store).unwrap();
-        let keys = Arc::new(StringArray::from(vec!["party", "pizza"]));
+        let keys = StringArray::from(vec!["party", "pizza"]);
         let key_hashes = UInt64Array::from(vec![3, 4]);
-        key_hash.add(keys, &key_hashes).unwrap();
+        key_hash.add(&keys, &key_hashes).unwrap();
         let test_hashes = UInt64Array::from_iter_values([1, 2, 3, 4]);
         let result = key_hash.inverse(&test_hashes).unwrap();
         assert_eq!(
@@ -420,10 +492,10 @@ mod tests {
     }
 
     async fn test_key_hash_inverse() -> KeyHashInverse {
-        let keys = Arc::new(StringArray::from(vec!["awkward", "tacos"]));
+        let keys = StringArray::from(vec!["awkward", "tacos"]);
         let key_hashes = UInt64Array::from(vec![1, 2]);
-        let mut key_hash = KeyHashInverse::from_data_type(DataType::Utf8);
-        key_hash.add(keys, &key_hashes).unwrap();
+        let mut key_hash = KeyHashInverse::from_data_type(&DataType::Utf8);
+        key_hash.add(&keys, &key_hashes).unwrap();
         key_hash
     }
 

@@ -60,10 +60,10 @@ use self::scan::ScanOperation;
 use self::select::SelectOperation;
 use self::tick::TickOperation;
 use self::with_key::WithKeyOperation;
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::expression_executor::{ExpressionExecutor, InputColumn};
 use crate::execute::operation::shift_until::ShiftUntilOperation;
 use crate::execute::Error;
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
 

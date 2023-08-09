@@ -376,9 +376,9 @@ mod tests {
     use sparrow_compiler::DataContext;
     use uuid::Uuid;
 
-    use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
     use crate::execute::operation::testing::batches_to_csv;
     use crate::execute::operation::{OperationContext, OperationExecutor};
+    use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
     use crate::read::testing::write_parquet_file;
     use crate::stores::ObjectStoreRegistry;
 
@@ -486,8 +486,7 @@ mod tests {
             })),
         };
 
-        let key_hash_inverse = KeyHashInverse::from_data_type(DataType::Utf8);
-        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
+        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::Utf8));
 
         let (max_event_tx, mut max_event_rx) = tokio::sync::mpsc::unbounded_channel();
         let (sender, receiver) = tokio::sync::mpsc::channel(10);

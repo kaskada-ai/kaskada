@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -18,12 +20,12 @@ class Since(Window):
 
     Parameters
     ----------
-    predicate : Timestream
+    predicate : Timestream | bool
         The boolean Timestream to use as predicate for the window.
         Each time the predicate evaluates to true the window will be cleared.
     """
 
-    predicate: Timestream
+    predicate: Timestream | bool
 
 
 @dataclass(frozen=True)
@@ -36,13 +38,13 @@ class Sliding(Window):
     duration : int
         The number of sliding intervals to use in the window.
 
-    predicate : Timestream
+    predicate : Timestream | bool
         The boolean Timestream to use as predicate for the window
         Each time the predicate evaluates to true the window starts a new interval.
     """
 
     duration: int
-    predicate: Timestream
+    predicate: Timestream | bool
 
     def __post_init__(self):
         if self.duration <= 0:

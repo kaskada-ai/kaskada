@@ -12,9 +12,9 @@ use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{data_type, ObjectStoreDestination, PulsarDestination};
 use sparrow_arrow::downcast::{downcast_primitive_array, downcast_struct_array};
 
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::OperationContext;
 use crate::execute::progress_reporter::ProgressUpdate;
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::Batch;
 
 mod object_store;

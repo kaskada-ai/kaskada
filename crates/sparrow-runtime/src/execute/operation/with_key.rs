@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use super::BoxedOperation;
 use crate::execute::error::{invalid_operation, Error};
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation, OperationContext};
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::Batch;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -115,8 +115,9 @@ impl WithKeyOperation {
         // primary grouping to produce the key hash inverse for output.
         if self.is_primary_grouping {
             self.key_hash_inverse
-                .add(new_keys.to_owned(), &new_key_hashes)
-                .await?;
+                .add(new_keys.as_ref(), &new_key_hashes)
+                .await
+                .map_err(|e| e.into_error())?;
         }
 
         // Get the take indices, which will allow us to get the requested columns from

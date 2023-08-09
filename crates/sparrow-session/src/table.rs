@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
+use arrow_array::cast::AsArray;
 use arrow_array::types::ArrowPrimitiveType;
 use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::ResultExt;
 use sparrow_compiler::TableInfo;
 use sparrow_merge::InMemoryBatches;
+use sparrow_runtime::key_hash_inverse::ThreadSafeKeyHashInverse;
 use sparrow_runtime::preparer::Preparer;
 
 use crate::{Error, Expr};
@@ -14,10 +16,17 @@ pub struct Table {
     pub expr: Expr,
     preparer: Preparer,
     in_memory_batches: Arc<InMemoryBatches>,
+    key_column: usize,
+    key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
 }
 
 impl Table {
-    pub(crate) fn new(table_info: &mut TableInfo, expr: Expr) -> Self {
+    pub(crate) fn new(
+        table_info: &mut TableInfo,
+        key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
+        key_column: usize,
+        expr: Expr,
+    ) -> Self {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
             .chain(table_info.schema().fields.iter())
@@ -42,6 +51,8 @@ impl Table {
             expr,
             preparer,
             in_memory_batches,
+            key_hash_inverse,
+            key_column: key_column + KEY_FIELDS.len(),
         }
     }
 
@@ -54,6 +65,13 @@ impl Table {
             .preparer
             .prepare_batch(batch)
             .change_context(Error::Prepare)?;
+
+        let key_hashes = prepared.column(2).as_primitive();
+        let keys = prepared.column(self.key_column);
+        self.key_hash_inverse
+            .blocking_add(keys.as_ref(), key_hashes)
+            .change_context(Error::Prepare)?;
+
         self.in_memory_batches
             .add_batch(prepared)
             .change_context(Error::Prepare)?;

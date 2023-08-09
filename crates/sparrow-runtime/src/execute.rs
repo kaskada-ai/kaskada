@@ -14,10 +14,11 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 
+use crate::execute::compute_store_guard::ComputeStoreGuard;
 use crate::execute::error::Error;
-use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::OperationContext;
 use crate::execute::output::Destination;
+use crate::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
 
@@ -25,7 +26,6 @@ mod checkpoints;
 mod compute_executor;
 mod compute_store_guard;
 pub mod error;
-pub(crate) mod key_hash_inverse;
 pub(crate) mod operation;
 pub mod output;
 mod progress_reporter;
@@ -68,7 +68,7 @@ pub async fn execute(
 
     // let output_at_time = request.final_result_time;
 
-    execute_new(plan, destination, data_context, options).await
+    execute_new(plan, destination, data_context, options, None).await
 }
 
 #[derive(Default, Debug)]
@@ -173,11 +173,53 @@ impl ExecutionOptions {
     }
 }
 
+async fn load_key_hash_inverse(
+    plan: &ComputePlan,
+    data_context: &mut DataContext,
+    compute_store: &Option<ComputeStoreGuard>,
+    object_stores: &ObjectStoreRegistry,
+) -> error_stack::Result<Arc<ThreadSafeKeyHashInverse>, Error> {
+    let primary_grouping_key_type = plan
+        .primary_grouping_key_type
+        .to_owned()
+        .ok_or(Error::MissingField("primary_grouping_key_type"))?;
+    let primary_grouping_key_type =
+        arrow::datatypes::DataType::try_from(&primary_grouping_key_type)
+            .into_report()
+            .change_context(Error::internal_msg("decode primary_grouping_key_type"))?;
+
+    let primary_group_id = data_context
+        .get_or_create_group_id(&plan.primary_grouping, &primary_grouping_key_type)
+        .into_report()
+        .change_context(Error::internal_msg("get primary grouping ID"))?;
+
+    let mut key_hash_inverse = KeyHashInverse::from_data_type(&primary_grouping_key_type.clone());
+    if let Some(compute_store) = &compute_store {
+        if let Ok(restored) = KeyHashInverse::restore_from(compute_store.store_ref()) {
+            key_hash_inverse = restored
+        }
+    }
+
+    key_hash_inverse
+        .add_from_data_context(data_context, primary_group_id, object_stores)
+        .await
+        .change_context(Error::internal_msg("initialize key hash inverse"))?;
+    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
+    Ok(key_hash_inverse)
+}
+
+/// Execute a given query based on the options.
+///
+/// Parameters
+/// ----------
+/// - key_hash_inverse: If set, specifies the key hash inverses to use. If None, the
+///   key hashes will be created.
 pub async fn execute_new(
     plan: ComputePlan,
     destination: Destination,
     mut data_context: DataContext,
     options: ExecutionOptions,
+    key_hash_inverses: Option<Arc<ThreadSafeKeyHashInverse>>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let object_stores = Arc::new(ObjectStoreRegistry::default());
 
@@ -191,32 +233,13 @@ pub async fn execute_new(
         )
         .await?;
 
-    let primary_grouping_key_type = plan
-        .primary_grouping_key_type
-        .to_owned()
-        .ok_or(Error::MissingField("primary_grouping_key_type"))?;
-    let primary_grouping_key_type =
-        arrow::datatypes::DataType::try_from(&primary_grouping_key_type)
-            .into_report()
-            .change_context(Error::internal_msg("decode primary_grouping_key_type"))?;
-
-    let mut key_hash_inverse = KeyHashInverse::from_data_type(primary_grouping_key_type.clone());
-    if let Some(compute_store) = &compute_store {
-        if let Ok(restored) = KeyHashInverse::restore_from(compute_store.store_ref()) {
-            key_hash_inverse = restored
-        }
-    }
-
-    let primary_group_id = data_context
-        .get_or_create_group_id(&plan.primary_grouping, &primary_grouping_key_type)
-        .into_report()
-        .change_context(Error::internal_msg("get primary grouping ID"))?;
-
-    key_hash_inverse
-        .add_from_data_context(&data_context, primary_group_id, &object_stores)
-        .await
-        .change_context(Error::internal_msg("initialize key hash inverse"))?;
-    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
+    let key_hash_inverse = if let Some(key_hash_inverse) = key_hash_inverses {
+        key_hash_inverse
+    } else {
+        load_key_hash_inverse(&plan, &mut data_context, &compute_store, &object_stores)
+            .await
+            .change_context(Error::internal_msg("load key hash inverse"))?
+    };
 
     // Channel for the output stats.
     let (progress_updates_tx, progress_updates_rx) =
@@ -303,5 +326,5 @@ pub async fn materialize(
     // TODO: the `execute_with_progress` method contains a lot of additional logic that is theoretically not needed,
     // as the materialization does not exit, and should not need to handle cleanup tasks that regular
     // queries do. We should likely refactor this to use a separate `materialize_with_progress` method.
-    execute_new(plan, destination, data_context, options).await
+    execute_new(plan, destination, data_context, options, None).await
 }

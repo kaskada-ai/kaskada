@@ -4692,6 +4692,8 @@ dependencies = [
  "ahash 0.8.3",
  "anyhow",
  "arrow",
+ "arrow-array",
+ "arrow-select",
  "async-once-cell",
  "async-stream",
  "async-trait",
