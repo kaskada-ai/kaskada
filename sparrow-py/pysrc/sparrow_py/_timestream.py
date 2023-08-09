@@ -710,7 +710,7 @@ class Timestream(object):
             Timestream containing the value `n` points before each point.
         """
         # hack to support structs/lists (as collect supports lists)
-        return self.collect(max=n + 1, min=n + 1, window=None)[0]
+        return self.collect(max=n + 1, min=n + 1)[0]
 
     def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
         """

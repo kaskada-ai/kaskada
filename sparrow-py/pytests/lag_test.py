@@ -33,3 +33,20 @@ def test_lag(source, golden) -> None:
             }
         )
     )
+
+
+def test_lag_struct(source, golden) -> None:
+    golden.jsonl(source.lag(1))
+
+
+def test_lag_list(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "list_m": m.collect(max=None),
+                "lag_list_m": m.collect(max=None).lag(1),
+            }
+        )
+    )
