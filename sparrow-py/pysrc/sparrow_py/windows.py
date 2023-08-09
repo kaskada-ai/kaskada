@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+from datetime import timedelta
 
 from ._timestream import Timestream
-
 
 @dataclass(frozen=True)
 class Window(object):
@@ -9,7 +9,7 @@ class Window(object):
 
 
 @dataclass(frozen=True)
-class SinceWindow(Window):
+class Since(Window):
     """
     Window since the last time a predicate was true.
 
@@ -27,7 +27,7 @@ class SinceWindow(Window):
 
 
 @dataclass(frozen=True)
-class SlidingWindow(Window):
+class Sliding(Window):
     """
     Window for the last `duration` intervals of some `predicate`.
 
@@ -43,3 +43,24 @@ class SlidingWindow(Window):
 
     duration: int
     predicate: Timestream
+
+    def __post_init__(self):
+        if self.duration <= 0:
+            raise ValueError("duration must be positive")
+
+@dataclass(frozen=True)
+class Trailing(Window):
+    """
+    Window the last `duration` time period.
+
+    Parameters
+    ----------
+    duration : timedelta
+        The duration of the window.
+    """
+
+    duration: timedelta
+
+    def __post_init__(self):
+        if self.duration <= timedelta(0):
+            raise ValueError("duration must be positive")

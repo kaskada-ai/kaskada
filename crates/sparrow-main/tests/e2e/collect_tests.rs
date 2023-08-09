@@ -341,6 +341,17 @@ async fn test_collect_structs_map() {
 }
 
 #[tokio::test]
+#[ignore = "unsupported via fenl"]
+async fn test_collect_lists() {
+    insta::assert_snapshot!(QueryFixture::new("
+        let x = Collect.s | collect(max=10) | collect(max=10)
+        in { x }
+        ").run_to_csv(&collect_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,x,y
+    "###);
+}
+
+#[tokio::test]
 async fn test_collect_lag_equality() {
     // Lag is implemented with collect now, so these _better_ be the same.
     insta::assert_snapshot!(QueryFixture::new("{

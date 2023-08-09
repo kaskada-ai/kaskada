@@ -31,9 +31,17 @@ def test_sum_windowed(source, golden) -> None:
         kt.record(
             {
                 "m": m,
-                "sum_m": m.sum(window=kt.SinceWindow(m > 20)),
+                "sum_m": m.sum(window=kt.windows.Since(m > 20)),
                 "n": n,
-                "sum_n": n.sum(window=kt.SlidingWindow(2, m > 10)),
+                "sum_n": n.sum(window=kt.windows.Sliding(2, m > 10)),
             }
         )
     )
+
+def test_sum_since_true(source, golden) -> None:
+    # `since(True)` should be the same as unwindowed, so equals the original vaule.
+    m_sum_since_true = kt.record({
+        "m": source.col("m"),
+        "m_sum": source.col("m").sum(window=kt.SinceWindow(True)),
+    })
+    golden.jsonl(m_sum_since_true)

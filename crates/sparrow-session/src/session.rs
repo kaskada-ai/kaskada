@@ -37,6 +37,8 @@ impl Session {
     pub fn add_literal(&mut self, literal: Literal) -> error_stack::Result<Expr, Error> {
         let literal_value = match literal {
             Literal::Null => LiteralValue::Null,
+            Literal::Bool(true) => LiteralValue::True,
+            Literal::Bool(false) => LiteralValue::False,
             Literal::String(s) => LiteralValue::String(s),
             Literal::Int64(n) => LiteralValue::Number(n.to_string()),
             Literal::UInt64(n) => LiteralValue::Number(n.to_string()),
