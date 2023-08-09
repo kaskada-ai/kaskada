@@ -16,6 +16,7 @@ impl Expr {
 
 pub enum Literal {
     Null,
+    Bool(bool),
     String(String),
     Int64(i64),
     UInt64(u64),

@@ -98,6 +98,7 @@ impl Expr {
 #[derive(FromPyObject)]
 enum Arg {
     Expr(Expr),
+    LiteralBool(bool),
     LiteralUInt(u64),
     LiteralInt(i64),
     LiteralFloat(f64),
@@ -111,6 +112,7 @@ impl Arg {
     ) -> error_stack::Result<RustExpr, sparrow_session::Error> {
         match self {
             Self::Expr(e) => Ok(e.rust_expr.clone()),
+            Self::LiteralBool(b) => session.add_literal(Literal::Bool(b)),
             Self::LiteralUInt(n) => session.add_literal(Literal::UInt64(n)),
             Self::LiteralInt(n) => session.add_literal(Literal::Int64(n)),
             Self::LiteralFloat(n) => session.add_literal(Literal::Float64(n)),
