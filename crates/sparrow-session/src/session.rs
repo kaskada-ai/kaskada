@@ -1,4 +1,6 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
@@ -9,7 +11,9 @@ use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, DataContext, Dfg, DiagnosticCollector};
+use sparrow_plan::GroupId;
 use sparrow_runtime::execute::output::Destination;
+use sparrow_runtime::key_hash_inverse::ThreadSafeKeyHashInverse;
 use sparrow_syntax::{ExprOp, FenlType, LiteralValue, Located, Location, Resolved};
 use uuid::Uuid;
 
@@ -20,6 +24,7 @@ use crate::{Error, Expr, Literal, Table};
 pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
+    key_hash_inverses: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
 }
 
 #[derive(Default)]
@@ -81,6 +86,10 @@ impl Session {
             file_sets: vec![],
         };
 
+        let (key_column, key_field) = schema
+            .column_with_name(key_column_name)
+            .expect("expected key column");
+
         let table_info = self
             .data_context
             .add_table(table)
@@ -98,7 +107,17 @@ impl Session {
 
         let expr = Expr(dfg_node);
 
-        Ok(Table::new(table_info, expr))
+        let key_hash_inverses = self
+            .key_hash_inverses
+            .entry(table_info.group_id())
+            .or_insert_with(|| {
+                Arc::new(ThreadSafeKeyHashInverse::from_data_type(
+                    key_field.data_type(),
+                ))
+            })
+            .clone();
+
+        Ok(Table::new(table_info, key_hash_inverses, key_column, expr))
     }
 
     pub fn add_cast(
@@ -262,13 +281,13 @@ impl Session {
         options: ExecutionOptions,
     ) -> error_stack::Result<Execution, Error> {
         // TODO: Decorations?
+        let group_id = expr
+            .0
+            .grouping()
+            .expect("query to be grouped (non-literal)");
         let primary_group_info = self
             .data_context
-            .group_info(
-                expr.0
-                    .grouping()
-                    .expect("query to be grouped (non-literal)"),
-            )
+            .group_info(group_id)
             .expect("missing group info");
         let primary_grouping = primary_group_info.name().to_owned();
         let primary_grouping_key_type = primary_group_info.key_type();
@@ -280,7 +299,7 @@ impl Session {
             .into_report()
             .change_context(Error::Compile)?;
 
-        // TODO: Run the egraph simplifier.
+        // TODO: Run the egraph simplifications.
         // TODO: Incremental?
         // TODO: Slicing?
         let plan = sparrow_compiler::plan::extract_plan_proto(
@@ -310,6 +329,16 @@ impl Session {
         let mut options = options.to_sparrow_options();
         options.stop_signal_rx = Some(stop_signal_rx);
 
+        let key_hash_inverses = self
+            .key_hash_inverses
+            .get(&group_id)
+            .cloned()
+            .unwrap_or_else(|| {
+                Arc::new(ThreadSafeKeyHashInverse::from_data_type(
+                    primary_grouping_key_type,
+                ))
+            });
+
         // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
         let progress = rt
             .block_on(sparrow_runtime::execute::execute_new(
@@ -317,6 +346,7 @@ impl Session {
                 destination,
                 data_context,
                 options,
+                Some(key_hash_inverses),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))
