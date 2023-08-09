@@ -80,12 +80,20 @@ def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(kt.record({"m": m, "since_m": m.sum(window=kt.SinceWindow(m > 10))}))
 
+
 def test_collect_records(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kt.record({ "m": m, "n": n }).collect(max=None))
 
+
 def test_collect_records_field_ref(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kt.record({ "m": m, "n": n }).collect(max=None).col("m"))
+
+
+def test_collect_lists(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(kt.record({"m": m, "list_m": m.collect(max=10), "collect_list": m.collect(max=10).collect(max=10) }))
+

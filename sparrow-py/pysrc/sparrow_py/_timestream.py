@@ -675,7 +675,13 @@ class Timestream(object):
         Timestream
             Timestream containing the collected list at each point.
         """
-        return _aggregation("collect", self, window, max, min)
+        if pa.types.is_list(self.data_type):
+            print("collecting list")
+            input = record({"value": self})
+            collect = _aggregation("collect", input, window, max, min)
+            return collect.col("value")
+        else:
+            return _aggregation("collect", self, window, max, min)
 
     def time_of(self) -> Timestream:
         """
