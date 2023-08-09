@@ -577,8 +577,8 @@ pub fn add_to_dfg(
                     FenlType::Concrete(DataType::List(f)) => {
                         // ({ x: input } | collect()).x
                         let field_name = dfg.add_string_literal("x")?;
-                        let wrap_in_struct = dfg.add_node(
-                            StepKind::Expression(Expression::Inst(InstKind::Record)),
+                        let wrap_in_struct = dfg.add_expression(
+                            Expression::Inst(InstKind::Record),
                             smallvec![field_name, args[0].value()],
                         )?;
 
@@ -595,7 +595,7 @@ pub fn add_to_dfg(
                             arg.grouping(),
                             arg.time_domain().clone(),
                             arg.location().clone(),
-                            None,
+                            Some(vec![arg.inner().clone()]),
                         ));
                         Ok::<Located<Arc<ast_dfg::AstDfg>>, anyhow::Error>(
                             args[0].with_value(ast_dfg),
