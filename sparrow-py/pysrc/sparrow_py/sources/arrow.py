@@ -1,6 +1,7 @@
 """Provide sources based on PyArrow, including Pandas and CSV."""
 from __future__ import annotations
 from io import BytesIO
+from io import StringIO
 from typing import Optional
 from typing import Union
 
@@ -41,7 +42,7 @@ class Pandas(Source):
         """Add data to the source."""
         table = pa.Table.from_pandas(data, self._schema, preserve_index=False)
         for batch in table.to_batches():
-            self._ffi_table.add_pyarrow(data)
+            self._ffi_table.add_pyarrow(batch)
 
 class PyList(Source):
     """Source reading data from lists of dicts."""
@@ -84,8 +85,10 @@ class PyList(Source):
             self._ffi_table.add_pyarrow(batch)
 
 
+# TODO: We should be able to go straight from CSV to PyArrow, but
+# currently that has some problems with timestamp hadling.
 class CsvString(Source):
-    """Source reading data from CSV strings using PyArrow."""
+    """Source reading data from CSV strings using Pandas."""
 
     def __init__(
         self, csv_string: str, *, schema: Optional[pa.Schema] = None, **kwargs
