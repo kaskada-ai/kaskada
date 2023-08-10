@@ -5,6 +5,7 @@ from slack_sdk.socket_mode.response import SocketModeResponse
 import sparrow_py as kt
 
 async def main():
+    start = datetime.datetime.now()
     
     # Load user label map
     output_map = {}
@@ -38,79 +39,62 @@ async def main():
         await client.send_socket_mode_response(SocketModeResponse(envelope_id=req.envelope_id))
 
         if req.type == "events_api" and "event" in req.payload:
-            e = req.payload["event"]
-
-            print(f'Received event from slack websocket: {e}')
-
             # ignore message edit, delete, reaction events
-            if "previous_message" in e or  e["type"] == "reaction_added":
+            if "previous_message" in req.payload["event"] or req.payload["event"]["type"] == "reaction_added":
                 return
 
-            e["ts"] = datetime.datetime.fromtimestamp(float(e["ts"]))
-            del e["team"]
-            data = pyarrow.RecordBatch.from_pylist([e], schema=schema)
+            req.payload["event"]["ts"] = datetime.datetime.fromtimestamp(float(req.payload["event"]["ts"]))
+            del req.payload["event"]["team"]
+            data = pyarrow.RecordBatch.from_pylist([req.payload["event"]], schema=schema)
             messages.add_data(data)
 
     slack.socket_mode_request_listeners.append(handle_message)
     await slack.connect()
-
+    
 
     
     # Compute conversations from individual messages
-    messages = messages.with_key(kt.record({
+    conversations = messages.with_key(kt.record({
             "channel": messages.col("channel"),
             "thread": messages.col("thread_ts"),
-        }))
-    conversations = messages \
+        })) \
         .select("user", "ts", "text", "reactions") \
-        .collect(max=20)
+        .collect(max=3)
 
 
-
+    
     # Handle each conversation as it occurs
-    start = now = datetime.datetime.now()
-    print("Listening for new messages...")
-    async for conversation in conversations.run(materialize=True).iter_rows_async():
-        if len(conversation) == 0:#or conversation["_time"] < start:
+    async for row in conversations.run(materialize=True).iter_rows_async():
+        conversation = row[" result"]
+        if len(conversation) == 0 or row["_time"] < start:
             continue
 
-        print(f'Conversation: {conversation}')
-        print(f'Starting completion on conversation with first message text: {conversation["result"][0]["text"]}')
-
-        prompt = "start -> " + "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in conversation["result"]]) + "\n\n###\n\n"
-
-        print(f'Using prompt: {prompt}')
+        print(f'Starting completion on conversation with first message text: {conversation[0]["text"]}')
 
         # Ask the model who should be notified
         res = openai.Completion.create(
             model="davinci:ft-personal:coversation-users-full-kaskada-2023-08-05-14-25-30",
-            prompt=prompt,
+            prompt="start -> " + "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in conversation]) + "\n\n###\n\n",
             logprobs=5,
             max_tokens=1,
             stop=" end",
-            temperature=0,
+            temperature=1,
         )
 
-        print(f'Received completion response: {res}')
-
+        msg = conversation.pop(0)
         users = []
         logprobs = res["choices"][0]["logprobs"]["top_logprobs"][0]
-
-        print(f'Found logprobs: {logprobs}')
+        print(f"Predicted interest logprobs: {logprobs}")
+        print(f"Notifying users: {users}")
         for user in logprobs:
-            if math.exp(logprobs[user]) > 0.50:
+            if math.exp(logprobs[user]) > 0.30:
                 user = user.strip()
                 # if users include `nil`, stop processing
                 if user == "nil":
                     users = []
                     break
                 users.append(user)
-
-        print(f'Found users to alert: {users}')
-
-        # alert on most recent message in conversation
-        msg = conversation.pop()
-
+        
         # Send notification to users
         for user_num in users:
             if user_num not in output_map:
