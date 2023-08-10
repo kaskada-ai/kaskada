@@ -50,8 +50,10 @@ impl Interpolations {
                     // always be able to be present in subsequent instructions.
                     Interpolation::AsOf
                 }
+                // TODO: `collect` should be in it's own special grouping,
+                // or we should just start calling it an aggregation everywhere.
                 StepKind::Expression(Expression::Inst(InstKind::Simple(inst)))
-                    if inst.is_aggregation() =>
+                    if inst.is_aggregation() || inst.name() == "collect" =>
                 {
                     Interpolation::AsOf
                 }
