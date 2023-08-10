@@ -476,6 +476,7 @@ async fn test_collect_struct_since_hourly() {
     // TODO: The results here are weird, because `collect` is latched. I don't think I'd expect
     // the results we have here, but it's possible they're technically in line with what we expect
     // given our continuity rules. We should revisit this.
+    // https://github.com/kaskada-ai/kaskada/issues/648
     insta::assert_snapshot!(QueryFixture::new("{ 
         b: Collect.b,
         f0: ({b: Collect.b} | collect(max=10, window=since(hourly())) | index(0)).b | when(is_valid($input)),
