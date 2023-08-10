@@ -7,11 +7,12 @@ Comparison operations produce boolean Timestreams.
 .. currentmodule:: sparrow_py
 
 .. autosummary::
-   :toctree: api/
+   :toctree: ../apidocs/
 
-    Timestream.__getitem__
+    Timestream.col
     Timestream.select
     Timestream.remove
     Timestream.extend
+    Timestream.record
     record
 ```

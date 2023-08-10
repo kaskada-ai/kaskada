@@ -2,16 +2,26 @@
 
 Comparison operations produce boolean Timestreams.
 
+```{note}
+Note: In addition to the chainable methods, standard operators are implemented where appropriate.
+For instance, `a.ge(b)` may be written as `a >= b`.
+See the notes on the specific functions for more information.
+
+To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *not* overloaded.
+```
+
 ```{eval-rst}
 .. currentmodule:: sparrow_py
 
 .. autosummary::
-   :toctree: api/
+   :toctree: ../apidocs/
 
     Timestream.eq
+    Timestream.ge
+    Timestream.gt
+    Timestream.le
+    Timestream.lt
     Timestream.ne
-    Timestream.__gt__
-    Timestream.__ge__
-    Timestream.__lt__
-    Timestream.__le__
+    Timestream.is_null
+    Timestream.is_not_null
 ```

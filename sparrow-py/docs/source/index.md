@@ -6,9 +6,9 @@ title: Kaskada Timestreams
 
 <div class="px-4 py-5 my-5 text-center">
     <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
-    <h1 class="display-5 fw-bold">Event-processing without the fuss.</h1>
-    <div class="col-lg-6 mx-auto">
-      <p class="lead mb-4">Real-time and historic event processing in Python.
+    <h1 class="display-5 fw-bold">Event-processing for AI applications.</h1>
+    <div class="col-lg-7 mx-auto">
+      <p class="lead mb-4">Next-generation, real-time and historic event processing.
       </p>
     </div>
 </div>
@@ -16,22 +16,22 @@ title: Kaskada Timestreams
 ```{gallery-grid}
 :grid-columns: 1 2 2 3
 
-- header: "{fas}`timeline;pst-color-primary` Real-time processing for all events"
-  content: "Quickly process structured events so you can respond in real-time."
+- header: "{fas}`timeline;pst-color-primary` Real-time processing for all"
+  content: "Quickly process events so you can respond in real-time."
   link: ".#stream"
 - header: "{fab}`python;pst-color-primary` Python-native"
   content: "Use Python so you can load data, process it, and train and serve models from one place."
   link: ".#python"
 - header: "{fas}`gauge-high;pst-color-primary` Get started immediately"
-  content: "No infrastructure to deploy let's you jump right in."
+  content: "No infrastructure to provision let's you jump right in."
   link: ".#get-started"
 
-- header: "{fas}`rocket;pst-color-primary` Local, Remote and Distributed"
-  content: "Develop and test locally. Deploy to Docker, K8s or a service for production."
-  link: ".#local-and-distributed"
 - header: "{fas}`fast-forward;pst-color-primary` Real-time, Batch and Streaming"
   content: "Execute large-historic queries or materialize in real-time. Or both."
   link: ".#real-time-and-historic"
+- header: "{fas}`rocket;pst-color-primary` Local, Remote and Distributed"
+  content: "Develop and test locally. Deploy to Docker, K8s or a service for production."
+  link: ".#local-and-distributed"
 - header: "{fas}`backward;pst-color-primary` Time-travel"
   content: "Generate training examples from the past to predict the future."
   link: ".#time-travel"

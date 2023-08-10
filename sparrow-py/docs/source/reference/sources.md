@@ -4,8 +4,12 @@
 .. currentmodule:: sparrow_py.sources
 
 .. autosummary::
-   :toctree: api/
+   :toctree: apidocs/sources
 
-    ArrowSource
-    CsvSource
+    Source
+    CsvString
+    JsonlString
+    Pandas
+    Parquet
+    PyList
 ```

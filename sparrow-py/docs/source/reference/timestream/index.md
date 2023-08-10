@@ -14,9 +14,12 @@
 
 aggregation
 arithmetic
+collection
 comparison
 execution
+grouping
 logical
 misc
 records
+time
 ```

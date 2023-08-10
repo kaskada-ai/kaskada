@@ -53,6 +53,7 @@ html_theme_options: Dict[str, Any] = {
         },
     ],
     "primary_sidebar_end": ["indices.html"],
+    "show_toc_level": 2
 }
 
 templates_path = ["_templates"]

@@ -1,4 +1,4 @@
-# Logical
+# Grouping
 
 ```{eval-rst}
 .. currentmodule:: sparrow_py
@@ -6,7 +6,6 @@
 .. autosummary::
    :toctree: ../apidocs/
 
-    Timestream.and_
-    Timestream.or_
-    Timestream.not_
+    Timestream.lookup
+    Timestream.with_key
 ```
