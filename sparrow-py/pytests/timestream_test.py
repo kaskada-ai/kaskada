@@ -2,6 +2,7 @@ import sys
 
 import pyarrow as pa
 import pytest
+
 import sparrow_py as kt
 
 
