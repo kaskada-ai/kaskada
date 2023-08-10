@@ -1,3 +1,5 @@
+"""Windows to use for Timestream aggregations."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -48,6 +50,7 @@ class Sliding(Window):
     predicate: Timestream | bool
 
     def __post_init__(self):
+        """Validate the window parameters."""
         if self.duration <= 0:
             raise ValueError("duration must be positive")
 
@@ -66,5 +69,6 @@ class Trailing(Window):
     duration: timedelta
 
     def __post_init__(self):
+        """Validate the window parameters."""
         if self.duration <= timedelta(0):
             raise ValueError("duration must be positive")

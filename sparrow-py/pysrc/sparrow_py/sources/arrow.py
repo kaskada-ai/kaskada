@@ -26,6 +26,9 @@ class Pandas(Source):
         ----------
         dataframe : pd.DataFrame
             The DataFrame to start from.
+        schema : pa.Schema, optional
+            The schema to use.
+            If not specified, it will be inferred from the `dataframe`.
         **kwargs : dict, optional
             Additional keyword arguments to pass to the super class.
             Should include the required column names.
@@ -92,7 +95,7 @@ class CsvString(Source):
     """Source reading data from CSV strings using Pandas."""
 
     def __init__(
-        self, csv_string: str, *, schema: Optional[pa.Schema] = None, **kwargs
+        self, csv_string: str | BytesIO, *, schema: Optional[pa.Schema] = None, **kwargs
     ) -> None:
         """
         Create a CSV String Source.
@@ -138,7 +141,11 @@ class JsonlString(Source):
     """Source reading data from line-delimited JSON strings using PyArrow."""
 
     def __init__(
-        self, json_string: str, *, schema: Optional[pa.Schema] = None, **kwargs
+        self,
+        json_string: str | BytesIO,
+        *,
+        schema: Optional[pa.Schema] = None,
+        **kwargs,
     ) -> None:
         """
         Create a JSON String Source.
@@ -158,7 +165,8 @@ class JsonlString(Source):
         --------
         Source.__init__ : For required keyword arguments.
         """
-        json_string = BytesIO(json_string.encode("utf-8"))
+        if isinstance(json_string, str):
+            json_string = BytesIO(json_string.encode("utf-8"))
         if schema is None:
             schema = pa.json.read_json(json_string).schema
             json_string.seek(0)
