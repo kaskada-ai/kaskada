@@ -41,10 +41,16 @@ def test_shift_collect(source, golden) -> None:
         }
     )
 
+    # Currently, the Pandas comparison method being used doesn't handle
+    # date-time like fields nested within a list. So we expand things out.
+    #
+    # TODO: Improve the golden testing so this isn't necessary.
     golden.jsonl(
         base.extend({
             "m": source.col("m"),
-            "shift_by_1_s": base.shift_by(timedelta(seconds=1)),
-            "shift_by_1_m": base.shift_by(timedelta(minutes=1)),
+            "shift_by_1_s_time": base.shift_by(timedelta(seconds=1)).col("time"),
+            "shift_by_1_s_ms": base.shift_by(timedelta(seconds=1)).col("ms"),
+            "shift_by_1_m_time": base.shift_by(timedelta(minutes=1)).col("time"),
+            "shift_by_1_m_ms": base.shift_by(timedelta(minutes=1)).col("ms"),
         })
     )

@@ -50,7 +50,7 @@ class GoldenFixture(object):
         filename = self._filename("jsonl")
 
         if self._save:
-            df.to_json(filename, orient="records", lines=True, date_unit="ns")
+            df.to_json(filename, orient="records", lines=True, date_format="iso")
 
         golden = pd.read_json(
             filename,
@@ -60,7 +60,7 @@ class GoldenFixture(object):
             date_unit="ns",
         )
 
-        pd.testing.assert_frame_equal(df, golden)
+        pd.testing.assert_frame_equal(df, golden, check_datetimelike_compat=True)
 
     def parquet(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
         """Golden test against Parquet file."""
