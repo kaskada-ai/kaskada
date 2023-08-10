@@ -3,7 +3,7 @@ import sparrow_py as kt
 
 
 @pytest.fixture
-def source_int64() -> kt.sources.CsvSource:
+def source_int64() -> kt.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -15,7 +15,7 @@ def source_int64() -> kt.sources.CsvSource:
             "1996-12-19T16:40:02-08:00,A,,",
         ]
     )
-    return kt.sources.CsvSource("time", "key", content)
+    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_iter_pandas(golden, source_int64) -> None:

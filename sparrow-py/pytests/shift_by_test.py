@@ -5,7 +5,7 @@ import sparrow_py as kt
 
 
 @pytest.fixture(scope="module")
-def source() -> kt.sources.CsvSource:
+def source() -> kt.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -15,7 +15,7 @@ def source() -> kt.sources.CsvSource:
             "1997-01-18T16:40:00-08:00,A,,9",
         ]
     )
-    return kt.sources.CsvSource("time", "key", content)
+    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_shift_by_timedelta(source, golden) -> None:

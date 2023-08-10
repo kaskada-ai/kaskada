@@ -3,7 +3,7 @@ import sparrow_py as kt
 
 
 @pytest.fixture(scope="module")
-def key_source() -> kt.sources.CsvSource:
+def key_source() -> kt.sources.CsvString:
     content = "\n".join(
         [
             "time,key,state",
@@ -15,11 +15,11 @@ def key_source() -> kt.sources.CsvSource:
             "1996-12-19T16:40:02-08:00,A,WA",
         ]
     )
-    return kt.sources.CsvSource("time", "key", content)
+    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 @pytest.fixture(scope="module")
-def foreign_source() -> kt.sources.CsvSource:
+def foreign_source() -> kt.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -31,7 +31,7 @@ def foreign_source() -> kt.sources.CsvSource:
             "1996-12-19T16:40:02-08:00,WA,,",
         ]
     )
-    return kt.sources.CsvSource("time", "key", content)
+    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_lookup(key_source, foreign_source, golden) -> None:
