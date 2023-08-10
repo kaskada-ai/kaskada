@@ -19,13 +19,29 @@ class Source(Timestream):
 
     def __init__(
         self,
+        schema: pa.Schema,
         time_column_name: str,
         key_column_name: str,
-        schema: pa.Schema,
         subsort_column_name: Optional[str] = None,
         grouping_name: Optional[str] = None,
     ):
+        assert isinstance(schema, pa.Schema)
         """Create a new source."""
+        # Fix the schema. The fields should be non-nullable.
+        def fix_field(field: pa.Field) -> pa.Field:
+            if field.name in [
+                time_column_name,
+                key_column_name,
+                subsort_column_name,
+            ]:
+                field = field.with_nullable(False)
+            if isinstance(field.type, pa.TimestampType):
+                field = field.with_type(pa.timestamp(field.type.unit, tz=None))
+            return field
+
+        fields = [fix_field(f) for f in schema]
+        schema = pa.schema(fields)
+
         Source._validate_column(time_column_name, schema)
         Source._validate_column(key_column_name, schema)
         Source._validate_column(subsort_column_name, schema)
@@ -35,7 +51,7 @@ class Source(Timestream):
         name = f"table{_TABLE_NUM}"
         _TABLE_NUM += 1
 
-        self._ffi_table = _ffi.Table(
+        ffi_table = _ffi.Table(
             _get_session(),
             name,
             time_column_name,
@@ -44,7 +60,9 @@ class Source(Timestream):
             subsort_column_name,
             grouping_name,
         )
-        super().__init__(self._ffi_table)
+        super().__init__(ffi_table)
+        self._schema = schema
+        self._ffi_table = ffi_table
 
     @property
     def name(self) -> str:
