@@ -1009,6 +1009,36 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
+    def seconds_since(self, time: Union[Timestream, datetime]) -> Timestream:
+        """
+        Create a Timestream containing the number of seconds since `time`.
+
+        Parameters
+        ----------
+        time : Union[Timestream, datetime]
+            The time to compute the seconds since.
+            This must be a datetime or a Timestream of timestamp_ns.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the number of seconds since `time`.
+        """
+        if isinstance(time, datetime):
+            session = self._ffi_expr.session()
+            nanos = Timestream._literal(time.timestamp() * 1e9, session=session)
+            nanos = Timestream.cast(nanos, pa.timestamp('ns', None))
+            self_nanos = Timestream._call("time_of", self)
+            return Timestream._call(
+                "seconds_between", nanos, self_nanos
+            ).cast(pa.int64())
+        else:
+            return Timestream._call(
+                "seconds_between",
+                time,
+                self
+            ).cast(pa.int64())
+
     def flatten(self) -> Timestream:
         """Flatten a list of lists to a list of values."""
         return Timestream._call("flatten", self)
