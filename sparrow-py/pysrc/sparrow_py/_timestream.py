@@ -877,6 +877,22 @@ class Timestream(object):
         """
         return Timestream._call("shift_until", predicate, self)
 
+    def seconds_since_previous(self, n: int = 1) -> Timestream:
+        """
+        Create a Timestream containing the number of seconds since the previous
+        point in this Timestream.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the number of seconds since the previous point.
+        """
+        session = self._ffi_expr.session()
+        time_of_current = Timestream._call("time_of", self, session=session).cast(pa.int64())
+        time_of_previous = Timestream._call("time_of", self, session=session).lag(n).cast(pa.int64())
+        return  (time_of_current - time_of_previous) / 1e9
+
+
     def sum(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
