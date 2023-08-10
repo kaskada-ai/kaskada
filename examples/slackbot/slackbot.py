@@ -1,12 +1,11 @@
 import json, math, datetime, openai, os, pyarrow, pandas, asyncio
-#from slack_sdk.web import WebClient
 from slack_sdk.web.async_client import AsyncWebClient
-#from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.aiohttp import SocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
 import sparrow_py as kt
 
 async def main():
+    
     # Load user label map
     output_map = {}
     with open('./user_output_map.json', 'r') as file:
@@ -20,6 +19,8 @@ async def main():
         web_client=AsyncWebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
     )
 
+
+    
     # Backfill state with historical data
     historical_data = pandas.read_parquet("./messages.parquet")[:1]
     schema = pyarrow.Schema.from_pandas(historical_data)
@@ -29,6 +30,8 @@ async def main():
         key_column_name = "channel",
     )
 
+
+    
     # Receive Slack messages in real-time
     async def handle_message(client, req):
         # Acknowledge the message back to Slack
@@ -43,36 +46,33 @@ async def main():
             if "previous_message" in e or  e["type"] == "reaction_added":
                 return
 
-            try:
-                e["ts"] = datetime.datetime.fromtimestamp(float(e["ts"]))
-                del e["team"]
-                data = pyarrow.RecordBatch.from_pylist([e], schema=schema)
-                
-                print(f'Sending message event to kaskada: {e}')
-
-                # Deliver the message to Kaskada
-                messages.add_data(data)
-                print("Done sending message")
-            except Exception as e: print(e)
+            e["ts"] = datetime.datetime.fromtimestamp(float(e["ts"]))
+            del e["team"]
+            data = pyarrow.RecordBatch.from_pylist([e], schema=schema)
+            messages.add_data(data)
 
     slack.socket_mode_request_listeners.append(handle_message)
     await slack.connect()
 
-    # Handle messages
-    message_time = messages.time_of()
-    #last_message_time = message_time.lag(1) # !!!
-    #is_new_conversation = True #message_time.seconds_since(last_message_time) > 10 * 60
 
+    
+    # Compute conversations from individual messages
+    messages = messages.with_key(kt.record({
+            "channel": messages.col("channel"),
+            "thread": messages.col("thread_ts"),
+        }))
     conversations = messages \
-        .select("user", "ts", "text") \
-        .collect(max=100) #.collect(window=kt.SinceWindow(predicate=is_new_conversation), max=100)
+        .select("user", "ts", "text", "reactions") \
+        .collect(max=20)
 
-    # A "conversation" is a list of messages
+
+
+    # Handle each conversation as it occurs
     start = now = datetime.datetime.now()
     print("Listening for new messages...")
     async for conversation in conversations.run(materialize=True).iter_rows_async():
-        #if len(conversation) == 0 or conversation["_time"] < start:
-        #    continue
+        if len(conversation) == 0:#or conversation["_time"] < start:
+            continue
 
         print(f'Conversation: {conversation}')
         print(f'Starting completion on conversation with first message text: {conversation["result"][0]["text"]}')
@@ -80,9 +80,6 @@ async def main():
         prompt = "start -> " + "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in conversation["result"]]) + "\n\n###\n\n"
 
         print(f'Using prompt: {prompt}')
-
-        # Credentials don't work yet...
-        continue
 
         # Ask the model who should be notified
         res = openai.Completion.create(
@@ -102,7 +99,7 @@ async def main():
         print(f'Found logprobs: {logprobs}')
         for user in logprobs:
             if math.exp(logprobs[user]) > 0.50:
-                user = users.strip()
+                user = user.strip()
                 # if users include `nil`, stop processing
                 if user == "nil":
                     users = []
