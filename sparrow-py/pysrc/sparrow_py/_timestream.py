@@ -954,6 +954,24 @@ class Timestream(object):
         """Flatten a list of lists to a list of values."""
         return Timestream._call("flatten", self)
 
+    def union(self, other: Timestream) -> Timestream:
+        """
+        Union the lists in this timestream with the lists in the other Timestream.
+
+        This correspons to a pair-wise union within each row of the timestreams.
+
+        Parameters
+        ----------
+        other : Timestream
+            The Timestream of lists to union with.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the union of the lists.
+        """
+        return Timestream._call("union", self, other)
+
     def preview(self, limit: int = 100) -> pd.DataFrame:
         """
         Return the first N rows of the result as a Pandas DataFrame.

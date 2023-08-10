@@ -193,6 +193,8 @@ pub enum InstOp {
     TimeOf,
     #[strum(props(signature = "upper(s: string) -> string"))]
     Upper,
+    #[strum(props(signature = "union<T: any>(a: list<T>, b: list<T>) -> list<T>"))]
+    Union,
     #[strum(props(
         signature = "variance<N: number>(input: N, ticks: bool = null, slide_duration: i64 = null) \
                           -> f64"
