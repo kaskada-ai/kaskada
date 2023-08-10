@@ -119,7 +119,8 @@ class CsvString(Source):
         super().__init__(schema, **kwargs)
 
         self._convert_options = pyarrow.csv.ConvertOptions(
-            column_types=schema
+            column_types=schema,
+            strings_can_be_null=True,
         )
         self.add_string(csv_string)
 

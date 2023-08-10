@@ -40,7 +40,9 @@ class GoldenFixture(object):
 
         # Load the CSV file. Use the schema of the data to set expected types.
         golden = pa.read_csv(filename,
-            convert_options = pa.csv.ConvertOptions(column_types=data.schema))
+            convert_options = pa.csv.ConvertOptions(
+                column_types=data.schema,
+                strings_can_be_null=True,))
 
         pd.testing.assert_frame_equal(df, golden)
 
