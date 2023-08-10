@@ -41,12 +41,12 @@ impl StateToken for CollectStructToken {
 
 impl CollectStructToken {
     pub fn new(state: ArrayRef) -> Self {
-        let fr = Arc::new(Field::new(
+        let field_ref = Arc::new(Field::new(
             "item",
             DataType::Timestamp(TimeUnit::Nanosecond, None),
             true,
         ));
-        let times_type = DataType::List(fr);
+        let times_type = DataType::List(field_ref);
         Self {
             state,
             times: new_empty_array(&times_type),
