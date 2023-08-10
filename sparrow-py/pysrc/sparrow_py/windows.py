@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from ._timestream import Timestream
 
+
 @dataclass(frozen=True)
 class Window(object):
     """Base class for window functions."""
@@ -49,6 +50,7 @@ class Sliding(Window):
     def __post_init__(self):
         if self.duration <= 0:
             raise ValueError("duration must be positive")
+
 
 @dataclass(frozen=True)
 class Trailing(Window):

@@ -78,7 +78,6 @@ class Result(object):
         for batch in self.iter_pyarrow():
             yield batch.to_pandas()
 
-
     def iter_rows(self) -> Iterator[dict]:
         """
         Iterate over the results as row dictionaries.

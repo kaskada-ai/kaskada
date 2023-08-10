@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 import sparrow_py as kt
 
@@ -80,15 +82,83 @@ def test_collect_with_min_and_max(source, golden) -> None:
 
 def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
-    golden.jsonl(kt.record({"m": m, "since_m": m.sum(window=kt.windows.Since(m > 10))}))
+    golden.jsonl(
+        kt.record(
+            {"m": m, "since_m": m.collect(max=None, window=kt.windows.Since(m > 10))}
+        )
+    )
 
+
+# Currently, the Pandas comparison method being used doesn't handle
+# date-time like fields nested within a list. So we expand things out.
+#
+# TODO: Improve the golden testing so this isn't necessary.
+def test_collect_struct_trailing_window_1s(source, golden) -> None:
+    collect = source.collect(max=None, window=kt.windows.Trailing(timedelta(seconds=1)))
+    golden.jsonl(
+        kt.record(
+            {
+                "f0": collect[0].col("time"),
+                "f1": collect[1].col("time"),
+                "f2": collect[2].col("time"),
+                "f3": collect[3].col("time"),
+                "f4": collect[4].col("time"),
+            }
+        )
+    )
+
+
+def test_collect_struct_trailing_window_3s(source, golden) -> None:
+    collect = source.collect(max=None, window=kt.windows.Trailing(timedelta(seconds=3)))
+    golden.jsonl(
+        kt.record(
+            {
+                "f0": collect[0].col("time"),
+                "f1": collect[1].col("time"),
+                "f2": collect[2].col("time"),
+                "f3": collect[3].col("time"),
+                "f4": collect[4].col("time"),
+            }
+        )
+    )
+
+
+def test_collect_struct_trailing_window_3s_with_max(source, golden) -> None:
+    collect = source.collect(max=2, window=kt.windows.Trailing(timedelta(seconds=3)))
+    golden.jsonl(
+        kt.record(
+            {
+                "f0": collect[0].col("time"),
+                "f1": collect[1].col("time"),
+                "f2": collect[2].col("time"),
+                "f3": collect[3].col("time"),
+                "f4": collect[4].col("time"),
+            }
+        )
+    )
+
+
+def test_collect_struct_trailing_window_3s_with_min(source, golden) -> None:
+    collect = source.collect(
+        min=3, max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+    )
+    golden.jsonl(
+        kt.record(
+            {
+                "f0": collect[0].col("time"),
+                "f1": collect[1].col("time"),
+                "f2": collect[2].col("time"),
+                "f3": collect[3].col("time"),
+                "f4": collect[4].col("time"),
+            }
+        )
+    )
 
 
 def test_collect_records(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kt.record({"m": m, "n": n}).collect(max=None))
-
 
 
 def test_collect_records_field_ref(source, golden) -> None:

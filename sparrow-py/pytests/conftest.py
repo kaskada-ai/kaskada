@@ -39,10 +39,13 @@ class GoldenFixture(object):
             pa.csv.write(data, filename)
 
         # Load the CSV file. Use the schema of the data to set expected types.
-        golden = pa.read_csv(filename,
-            convert_options = pa.csv.ConvertOptions(
+        golden = pa.read_csv(
+            filename,
+            convert_options=pa.csv.ConvertOptions(
                 column_types=data.schema,
-                strings_can_be_null=True,))
+                strings_can_be_null=True,
+            ),
+        )
 
         pd.testing.assert_frame_equal(df, golden)
 
@@ -100,13 +103,19 @@ def _data_to_dataframe(data: Union[kt.Timestream, pd.DataFrame]) -> pd.DataFrame
     else:
         raise ValueError(f"data must be a Timestream or a DataFrame, was {type(data)}")
 
-def _data_to_pyarrow(data: Union[kt.Timestream, pa.RecordBatch, pa.Table]) -> Union[pa.RecordBatch, pa.Table]:
+
+def _data_to_pyarrow(
+    data: Union[kt.Timestream, pa.RecordBatch, pa.Table]
+) -> Union[pa.RecordBatch, pa.Table]:
     if isinstance(data, kt.Timestream):
         return data.run().to_pyarrow()
     elif isinstance(data, pa.RecordBatch) or isinstance(data, pa.Table):
         return data
     else:
-        raise ValueError(f"data must be a Timestream, RecordBatch, or Table, was {type(data)}")
+        raise ValueError(
+            f"data must be a Timestream, RecordBatch, or Table, was {type(data)}"
+        )
+
 
 @pytest.fixture
 def golden(

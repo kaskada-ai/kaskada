@@ -509,9 +509,9 @@ class Timestream(object):
         """
         data_type = self.data_type
         if isinstance(data_type, pa.MapType):
-            return Timestream._call("get", self, key)
+            return Timestream._call("get", key, self)
         elif isinstance(data_type, pa.ListType):
-            return Timestream._call("index", self, key)
+            return Timestream._call("index", key, self)
         else:
             raise TypeError(f"Cannot index into {data_type}")
 
@@ -1065,11 +1065,13 @@ def _aggregation(
     elif isinstance(window, kt.windows.Sliding):
         return Timestream._call(op, input, *args, window.predicate, window.duration)
     elif isinstance(window, kt.windows.Trailing):
-        if op != 'collect':
-            raise NotImplementedError(f"Aggregation '{op} does not support trailing windows")
-        trailing_seconds = int(window.duration.total_seconds())
-        # HACK: Use null predicate and number of seconds to encode trailing windows.
-        return Timestream._call(op, input, *args, None, trailing_seconds)
+        if op != "collect":
+            raise NotImplementedError(
+                f"Aggregation '{op} does not support trailing windows"
+            )
+        trailing_ns = int(window.duration.total_seconds() * 1e9)
+        # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
+        return Timestream._call(op, input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

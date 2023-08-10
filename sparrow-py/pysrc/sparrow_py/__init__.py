@@ -10,6 +10,7 @@ from ._timestream import Literal
 from ._timestream import Timestream
 from ._timestream import record
 
+
 __all__ = [
     "ExecutionOptions",
     "init_session",
@@ -17,6 +18,6 @@ __all__ = [
     "record",
     "Result",
     "sources",
-    "windows"
+    "windows",
     "Timestream",
 ]
