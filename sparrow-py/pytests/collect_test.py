@@ -84,7 +84,10 @@ def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kt.record(
-            {"m": m, "since_m": m.collect(max=None, window=kt.windows.Since(m > 10))}
+            {
+                "m": m,
+                "since_m": m.collect(max=None, window=kt.windows.Since(m > 10)),
+            }
         )
     )
 
