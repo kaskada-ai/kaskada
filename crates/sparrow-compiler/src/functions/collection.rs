@@ -22,7 +22,7 @@ pub(super) fn register(registry: &mut Registry) {
         )
         .with_implementation(Implementation::Instruction(InstOp::Collect))
         // This makes `collect` a continuous function. Though, it's not perhaps defined
-        // as an aggregation, so we may want to rename or create a new category for it. 
+        // as an aggregation, so we may want to rename or create a new category for it.
         .with_time_domain_check(TimeDomainCheck::Aggregation)
         .set_internal();
 
@@ -34,5 +34,10 @@ pub(super) fn register(registry: &mut Registry) {
     registry
         .register("flatten<T: any>(input: list<list<T>>) -> list<T>")
         .with_implementation(Implementation::Instruction(InstOp::Flatten))
+        .set_internal();
+
+    registry
+        .register("union<T: any>(a: list<T>, b: list<T>) -> list<T>")
+        .with_implementation(Implementation::Instruction(InstOp::Union))
         .set_internal();
 }
