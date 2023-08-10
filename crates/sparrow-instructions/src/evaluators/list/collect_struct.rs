@@ -1,10 +1,10 @@
 use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{
-    new_empty_array, Array, ArrayRef, AsArray, Int64Array, ListArray, TimestampNanosecondArray,
-    UInt32Array, UInt32Builder,
+    new_empty_array, Array, ArrayRef, AsArray, ListArray, TimestampNanosecondArray, UInt32Array,
+    UInt32Builder,
 };
 use arrow::buffer::{BooleanBuffer, NullBuffer, OffsetBuffer, ScalarBuffer};
-use arrow::datatypes::{DataType, Int64Type, TimestampNanosecondType};
+use arrow::datatypes::{DataType, Int64Type};
 use arrow_schema::{Field, TimeUnit};
 use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
@@ -430,6 +430,7 @@ impl CollectStructEvaluator {
     /// State is handled in order of "update -> emit -> reset".
     ///
     /// Follows the same implementation as above, but includes values in [current time - duration].
+    #[allow(clippy::too_many_arguments)]
     fn evaluate_trailing_windowed(
         token: &mut CollectStructToken,
         key_capacity: usize,
