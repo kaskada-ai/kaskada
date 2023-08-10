@@ -648,6 +648,7 @@ class Timestream(object):
 
     def collect(
         self,
+        *,
         max: Optional[int],
         min: Optional[int] = 0,
         window: Optional[kt.windows.Window] = None,
@@ -708,7 +709,8 @@ class Timestream(object):
         Timestream
             Timestream containing the value `n` points before each point.
         """
-        return Timestream._call("lag", n, self)
+        # hack to support structs/lists (as collect supports lists)
+        return self.collect(max=n + 1, min=n + 1)[0]
 
     def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
         """
@@ -875,7 +877,7 @@ class Timestream(object):
         """
         return Timestream._call("shift_until", predicate, self)
 
-    def sum(self, window: Optional[kt.windows.Window] = None) -> Timestream:
+    def sum(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
 
@@ -894,7 +896,7 @@ class Timestream(object):
         """
         return _aggregation("sum", self, window)
 
-    def first(self, window: Optional[kt.windows.Window] = None) -> Timestream:
+    def first(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream containing the first value in the `window`.
 
