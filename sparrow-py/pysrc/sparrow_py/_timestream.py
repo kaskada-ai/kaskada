@@ -877,7 +877,7 @@ class Timestream(object):
         """
         return Timestream._call("shift_until", predicate, self)
 
-    def sum(self, *, window: Optional["kt.Window"] = None) -> Timestream:
+    def sum(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
 
@@ -896,7 +896,7 @@ class Timestream(object):
         """
         return _aggregation("sum", self, window)
 
-    def first(self, *, window: Optional["kt.Window"] = None) -> Timestream:
+    def first(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
         """
         Create a Timestream containing the first value in the `window`.
 
