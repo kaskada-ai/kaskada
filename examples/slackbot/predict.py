@@ -1,7 +1,7 @@
-import openai, pandas, multiprocessing
+import os, openai, pandas, multiprocessing
 
 work_dir = "/Users/eric.pinzur/Documents/slackbot2000"
-openai.api_key = ""
+openai.api_key = os.environ.get("OPEN_AI_KEY")
 
 next_message_model = 'ada:ft-personal:next-message-user-full-kaskada-2023-08-03-15-42-55'
 # i think this model was mistakenly trained with the next_users data
@@ -25,7 +25,7 @@ df['prediction'] = None
 def task(index, prompt):
     if len(prompt) > 5000:
         return (index, {})
-    pred = openai.Completion.create(model=next_users_model, prompt=prompt, max_tokens=1, stop=' end', n=1, logprobs=5, temperature=0)
+    pred = openai.Completion.create(model=model, prompt=prompt, max_tokens=1, stop=' end', n=1, logprobs=5, temperature=0)
     # pred = pred['choices'][0]['text']
     return (index, pred)
 
