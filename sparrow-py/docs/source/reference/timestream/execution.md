@@ -4,7 +4,7 @@
 .. currentmodule:: sparrow_py
 
 .. autosummary::
-   :toctree: api/
+   :toctree: ../apidocs/
 
     Timestream.preview
     Timestream.run

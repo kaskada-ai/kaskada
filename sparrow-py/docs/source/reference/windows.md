@@ -1,11 +1,12 @@
 # Windows
 
 ```{eval-rst}
-.. currentmodule:: sparrow_py
+.. currentmodule:: sparrow_py.windows
 
 .. autosummary::
-    :toctree: api/
+    :toctree: apidocs/windows/
 
-    SinceWindow
-    SlidingWindow
+    Since
+    Sliding
+    Trailing
 ```

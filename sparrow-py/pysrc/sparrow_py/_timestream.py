@@ -469,6 +469,10 @@ class Timestream(object):
         -------
         Timestream
             The Timestream indicating whether the `self` and `other` are equal.
+
+        Note
+        ----
+        Equality is *not* available as `a == b`.
         """
         return Timestream._call("eq", self, other)
 
@@ -485,10 +489,14 @@ class Timestream(object):
         -------
         Timestream
             The Timestream indicating whether `self` and `other` are not equal.
+
+        Note
+        ----
+        Inequality is *not* available as `a != b`.
         """
         return Timestream._call("neq", self, other)
 
-    def __getitem__(self, key: Union[Timestream, Literal]) -> Timestream:
+    def index(self, key: Union[Timestream, Literal]) -> Timestream:
         """
         Index into the elements of a Timestream.
 
@@ -510,6 +518,10 @@ class Timestream(object):
         ------
         TypeError
             When the Timestream is not a record, list, or map.
+
+        Note
+        ----
+        Indexing may be written using the operator `self[key]` instead of `self.index(key)`.
         """
         data_type = self.data_type
         if isinstance(data_type, pa.MapType):
@@ -518,6 +530,9 @@ class Timestream(object):
             return Timestream._call("index", key, self)
         else:
             raise TypeError(f"Cannot index into {data_type}")
+
+    def __getitem__(self, key: Union[Timestream, Literal]) -> Timestream:
+        self.index(key)
 
     def col(self, name: str) -> Timestream:
         """

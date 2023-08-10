@@ -13,10 +13,10 @@ Windowed:
 .. currentmodule:: sparrow_py
 
 .. autosummary::
-   :toctree: api/
+   :toctree: ../apidocs/
 
-    Timestream.sum
+    Timestream.collect
     Timestream.first
     Timestream.last
-    Timestream.collect
+    Timestream.sum
 ```
