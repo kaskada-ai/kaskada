@@ -32,24 +32,21 @@ def test_shift_by_timedelta(source, golden) -> None:
 
 
 def test_shift_collect(source, golden) -> None:
-    time = source.col("time")
-
-    base = kt.record(
-        {
-            "time": time,
-            # LAST shouldn't be needed to make it continuous.
-            "ms": source.col("m").collect(max=10).last(),
-        }
-    )
-
-    # Currently, the Pandas comparison method being used doesn't handle
-    # date-time like fields nested within a list. So we expand things out.
-    #
-    # TODO: Improve the golden testing so this isn't necessary.
     golden.jsonl(
-        base.extend(
+        source
+        .record(lambda input:
             {
-                "m": source.col("m"),
+                "time": input.col("time"),
+                "ms": input.col("m").collect(max = 10),
+                "m": input.col("m"),
+            }
+        )
+        # Currently, the Pandas comparison method being used doesn't handle
+        # date-time like fields nested within a list. So we expand things out.
+        #
+        # TODO: Improve the golden testing so this isn't necessary.
+        .extend(lambda base:
+            {
                 "shift_by_1_s_time": base.shift_by(timedelta(seconds=1)).col("time"),
                 "shift_by_1_s_ms": base.shift_by(timedelta(seconds=1)).col("ms"),
                 "shift_by_1_m_time": base.shift_by(timedelta(minutes=1)).col("time"),

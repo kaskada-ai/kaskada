@@ -23,7 +23,11 @@ from ._execution import ExecutionOptions
 from ._result import Result
 
 
-Literal = Union[int, str, float, bool, None, timedelta, datetime]
+#: A literal value that can be used as an argument to a Timestream operation.
+Literal = Optional[int | str | float | bool | timedelta | datetime]
+
+#: A Timestream or literal which can be used as an argument to a Timestream operation.
+Arg = "Timestream" | Literal
 
 
 def _augment_error(
@@ -575,7 +579,7 @@ class Timestream(object):
         """
         return Timestream._call("remove_fields", self, *args)
 
-    def extend(self, fields: Dict[str, Timestream]) -> Timestream:
+    def extend(self, fields: Dict[str, Arg] | Callable[Timestream, Dict[str, Timestream]]) -> Timestream:
         """
         Extend this Timestream of records with additional fields.
 
@@ -584,7 +588,7 @@ class Timestream(object):
 
         Parameters
         ----------
-        fields : dict[str, Timestream]
+        fields : Dict[str, Arg] | Callable[Timestream, Dict[str, Timestream]]
             Fields to add to each record in the Timestream.
 
         Returns
@@ -594,6 +598,8 @@ class Timestream(object):
         """
         # This argument order is weird, and we shouldn't need to make a record
         # in order to do the extension.
+        if callable(fields):
+            fields = fields(self)
         extension = record(fields)
         return Timestream._call("extend_record", extension, self)
 
@@ -974,6 +980,31 @@ class Timestream(object):
         """
         return Timestream._call("union", self, other)
 
+    def record(self, fields: Callable[Timestream, Dict[str, Timestream]]) -> Timestream:
+        """
+        Create a record Timestream from fields computed from this timestream.
+
+        Parameters
+        ----------
+        fields : dict[str, Timestream]
+            The fields to include in the record.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing records with the given fields.
+
+        See also
+        --------
+        sparrow_py.record: Function for creating a record from one or more
+        timestreams.
+        """
+        import itertools
+
+        fields = fields(self)
+        args: List[Union[str, Timestream]] = list(itertools.chain(*fields.items()))
+        return Timestream._call("record", *args)
+
     def preview(self, limit: int = 100) -> pd.DataFrame:
         """
         Return the first N rows of the result as a Pandas DataFrame.
@@ -1091,6 +1122,11 @@ def record(fields: Dict[str, Timestream]) -> Timestream:
     -------
     Timestream
         Timestream containing records with the given fields.
+
+    See also
+    --------
+    Timestream.record: Method for creating a record from fields computed from
+    a timestream.
     """
     import itertools
 
