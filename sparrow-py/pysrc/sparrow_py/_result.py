@@ -29,13 +29,42 @@ class Result(object):
         This method will block on the complete results of the query and collect
         all results into memory. If this is not desired, use `iter_pandas` instead.
         """
+        return self.to_pyarrow().to_pandas()
+
+    def to_pyarrow(self) -> pa.Table:
+        """
+        Convert the result to a PyArrow Table.
+
+        Returns
+        -------
+        pa.Table
+            The result as a PyArrow Table.
+
+        Warnings
+        --------
+        This method will block on the complete results of the query and collect
+        all results into memory. If this is not desired, use `iter_pyarrow` instead.
+        """
         batches = self._ffi_execution.collect_pyarrow()
         if len(batches) == 0:
-            return pd.DataFrame()
+            return pa.Table.from_batches([], schema=pa.schema([]))
 
         schema = batches[0].schema
-        table = pa.Table.from_batches(batches, schema=schema)
-        return table.to_pandas()
+        return pa.Table.from_batches(batches, schema=schema)
+
+    def iter_pyarrow(self) -> Iterator[pa.RecordBatch]:
+        """
+        Iterate over the results as PyArrow RecordBatches.
+
+        Yields
+        ------
+        pa.RecordBatch
+            The next RecordBatch.
+        """
+        next_batch = self._ffi_execution.next_pyarrow()
+        while next_batch is not None:
+            yield next_batch
+            next_batch = self._ffi_execution.next_pyarrow()
 
     def iter_pandas(self) -> Iterator[pd.DataFrame]:
         """
@@ -46,10 +75,9 @@ class Result(object):
         pd.DataFrame
             The next Pandas DataFrame.
         """
-        next_batch = self._ffi_execution.next_pyarrow()
-        while next_batch is not None:
-            yield next_batch.to_pandas()
-            next_batch = self._ffi_execution.next_pyarrow()
+        for batch in self.iter_pyarrow():
+            yield batch.to_pandas()
+
 
     def iter_rows(self) -> Iterator[dict]:
         """
