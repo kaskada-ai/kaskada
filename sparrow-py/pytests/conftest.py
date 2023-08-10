@@ -2,6 +2,7 @@ import os
 from typing import Union
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 import sparrow_py as kt
 from sparrow_py import init_session
@@ -27,25 +28,19 @@ class GoldenFixture(object):
         """
         Golden test against CSV file.
 
-        Uses Pandas to save and load the CSV file. The schema of the `data`
+        Uses Pyarrow to save and load the CSV file. The schema of the `data`
         is used to align types.
         """
-        df = _data_to_dataframe(data)
+        data = _data_to_pyarrow(data)
         filename = self._filename("csv")
 
         # Save the CSV file, if requested.
         if self._save:
-            df.to_csv(filename, index=False)
+            pa.csv.write(data, filename)
 
         # Load the CSV file. Use the schema of the data to set expected types.
-        dtypes = {}
-        parse_dates = []
-        for name, dtype in df.dtypes.to_dict().items():
-            if pd.api.types.is_datetime64_dtype(dtype):
-                parse_dates.append(name)
-            else:
-                dtypes[name] = dtype
-        golden = pd.read_csv(filename, dtype=dtypes, parse_dates=parse_dates)
+        golden = pa.read_csv(filename,
+            convert_options = pa.csv.ConvertOptions(column_types=data.schema))
 
         pd.testing.assert_frame_equal(df, golden)
 
@@ -55,7 +50,7 @@ class GoldenFixture(object):
         filename = self._filename("jsonl")
 
         if self._save:
-            df.to_json(filename, orient="records", lines=True, date_unit="ns")
+            df.to_json(filename, orient="records", lines=True, date_format="iso")
 
         golden = pd.read_json(
             filename,
@@ -65,7 +60,7 @@ class GoldenFixture(object):
             date_unit="ns",
         )
 
-        pd.testing.assert_frame_equal(df, golden)
+        pd.testing.assert_frame_equal(df, golden, check_datetimelike_compat=True)
 
     def parquet(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
         """Golden test against Parquet file."""
@@ -103,6 +98,13 @@ def _data_to_dataframe(data: Union[kt.Timestream, pd.DataFrame]) -> pd.DataFrame
     else:
         raise ValueError(f"data must be a Timestream or a DataFrame, was {type(data)}")
 
+def _data_to_pyarrow(data: Union[kt.Timestream, pa.RecordBatch, pa.Table]) -> Union[pa.RecordBatch, pa.Table]:
+    if isinstance(data, kt.Timsetream):
+        return data.run().to_pyarrow()
+    elif isinstance(data, pa.RecordBatch) or isinstance(data, pa.Table):
+        return data
+    else:
+        raise ValueError(f"data must be a Timestream, RecordBatch, or Table, was {type(data)}")
 
 @pytest.fixture
 def golden(

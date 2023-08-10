@@ -15,7 +15,7 @@ def source1() -> kt.sources.Source:
             pa.field("y", pa.int32()),
         ]
     )
-    return kt.sources.Source("time", "key", schema)
+    return kt.sources.Source(schema, time_column_name="time", key_column_name="key")
 
 
 def test_field_ref(source1) -> None:
@@ -103,15 +103,15 @@ def test_timestream_preview(golden) -> None:
     content = "\n".join(
         [
             "time,key,m,n",
-            "1996-12-19T16:39:57-08:00,A,5,10",
-            "1996-12-19T16:39:58-08:00,B,24,3",
-            "1996-12-19T16:39:59-08:00,A,17,6",
-            "1996-12-19T16:40:00-08:00,A,,9",
-            "1996-12-19T16:40:01-08:00,A,12,",
-            "1996-12-19T16:40:02-08:00,A,,",
+            "1996-12-19T16:39:57,A,5,10",
+            "1996-12-19T16:39:58,B,24,3",
+            "1996-12-19T16:39:59,A,17,6",
+            "1996-12-19T16:40:00,A,,9",
+            "1996-12-19T16:40:01,A,12,",
+            "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvSource("time", "key", content)
+    source = kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
     golden.jsonl(source.preview(limit=4))
 
@@ -120,15 +120,15 @@ def test_timestream_run_non_record(golden) -> None:
     content = "\n".join(
         [
             "time,key,m,n",
-            "1996-12-19T16:39:57-08:00,A,5,10",
-            "1996-12-19T16:39:58-08:00,B,24,3",
-            "1996-12-19T16:39:59-08:00,A,17,6",
-            "1996-12-19T16:40:00-08:00,A,,9",
-            "1996-12-19T16:40:01-08:00,A,12,",
-            "1996-12-19T16:40:02-08:00,A,,",
+            "1996-12-19T16:39:57,A,5,10",
+            "1996-12-19T16:39:58,B,24,3",
+            "1996-12-19T16:39:59,A,17,6",
+            "1996-12-19T16:40:00,A,,9",
+            "1996-12-19T16:40:01,A,12,",
+            "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvSource("time", "key", content)
+    source = kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
     golden.jsonl(source.col("m"))
 
 
@@ -136,13 +136,13 @@ def test_timestream_cast(golden) -> None:
     content = "\n".join(
         [
             "time,key,m,n",
-            "1996-12-19T16:39:57-08:00,A,5,10",
-            "1996-12-19T16:39:58-08:00,B,24,3",
-            "1996-12-19T16:39:59-08:00,A,17,6",
-            "1996-12-19T16:40:00-08:00,A,,9",
-            "1996-12-19T16:40:01-08:00,A,12,",
-            "1996-12-19T16:40:02-08:00,A,,",
+            "1996-12-19T16:39:57,A,5,10",
+            "1996-12-19T16:39:58,B,24,3",
+            "1996-12-19T16:39:59,A,17,6",
+            "1996-12-19T16:40:00,A,,9",
+            "1996-12-19T16:40:01,A,12,",
+            "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvSource("time", "key", content)
+    source = kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
     golden.jsonl(source.col("time").cast(pa.timestamp("ns")))
