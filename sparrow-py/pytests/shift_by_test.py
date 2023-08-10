@@ -29,3 +29,22 @@ def test_shift_by_timedelta(source, golden) -> None:
             }
         )
     )
+
+def test_shift_collect(source, golden) -> None:
+    time = source.col("time")
+
+    base = kt.record(
+        {
+            "time": time,
+            #LAST shouldn't be needed to make it continuous.
+            "ms": source.col("m").collect(max=10).last(),
+        }
+    )
+
+    golden.jsonl(
+        base.extend({
+            "m": source.col("m"),
+            "shift_by_1_s": base.shift_by(timedelta(seconds=1)),
+            "shift_by_1_m": base.shift_by(timedelta(minutes=1)),
+        })
+    )
