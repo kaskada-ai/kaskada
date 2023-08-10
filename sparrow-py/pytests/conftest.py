@@ -4,6 +4,7 @@ from typing import Union
 import pandas as pd
 import pyarrow as pa
 import pytest
+
 import sparrow_py as kt
 from sparrow_py import init_session
 
@@ -23,31 +24,6 @@ class GoldenFixture(object):
         self._dirname = dirname
         self._test_name = test_name
         self._save = save
-
-    def csv(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
-        """
-        Golden test against CSV file.
-
-        Uses Pyarrow to save and load the CSV file. The schema of the `data`
-        is used to align types.
-        """
-        data = _data_to_pyarrow(data)
-        filename = self._filename("csv")
-
-        # Save the CSV file, if requested.
-        if self._save:
-            pa.csv.write(data, filename)
-
-        # Load the CSV file. Use the schema of the data to set expected types.
-        golden = pa.read_csv(
-            filename,
-            convert_options=pa.csv.ConvertOptions(
-                column_types=data.schema,
-                strings_can_be_null=True,
-            ),
-        )
-
-        pd.testing.assert_frame_equal(df, golden)
 
     def jsonl(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
         """Golden test against newline-delimited JSON file (json-lines)."""

@@ -16,6 +16,7 @@ from typing import final
 
 import pandas as pd
 import pyarrow as pa
+
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
 
@@ -42,9 +43,7 @@ def _augment_error(
 
 
 class Timestream(object):
-    """
-    A `Timestream` represents a computation producing a Timestream.
-    """
+    """A `Timestream` represents a computation producing a Timestream."""
 
     _ffi_expr: _ffi.Expr
 
@@ -203,11 +202,6 @@ class Timestream(object):
         Timestream
             The Timestream resulting from `self + rhs`.
 
-        Raises
-        ------
-        ValueError
-            If attempting to perform an addition that is not possible.
-
         Notes
         -----
         You can also write `a.add(b)` as `a + b`.
@@ -226,9 +220,11 @@ class Timestream(object):
             return Timestream._call("add", self, rhs)
 
     def __add__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self + rhs`."""
         return self.add(rhs)
 
     def __radd__(self, lhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `lhs + self`."""
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.add(self)
@@ -254,9 +250,11 @@ class Timestream(object):
         return Timestream._call("sub", self, rhs)
 
     def __sub__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self - rhs`."""
         return self.sub(rhs)
 
     def __rsub__(self, lhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `lhs - self`."""
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.sub(self)
@@ -282,9 +280,11 @@ class Timestream(object):
         return Timestream._call("mul", self, rhs)
 
     def __mul__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self * rhs`."""
         return self.mul(rhs)
 
     def __rmul__(self, lhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `lhs * self`."""
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.mul(self)
@@ -310,9 +310,11 @@ class Timestream(object):
         return Timestream._call("div", self, divisor)
 
     def __truediv__(self, divisor: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self / divisor`."""
         return self.div(divisor)
 
     def __rtruediv__(self, dividend: Union[Timestream, Literal]) -> Timestream:
+        """Implement `dividend / self`."""
         if not isinstance(dividend, Timestream):
             dividend = Timestream._literal(dividend, self._ffi_expr.session())
         return dividend.div(self)
@@ -338,6 +340,7 @@ class Timestream(object):
         return Timestream._call("lt", self, rhs)
 
     def __lt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self < rhs`."""
         return self.lt(rhs)
 
     def le(self, rhs: Union[Timestream, Literal]) -> Timestream:
@@ -361,6 +364,7 @@ class Timestream(object):
         return Timestream._call("lte", self, rhs)
 
     def __le__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self <= rhs`."""
         return self.le(rhs)
 
     def gt(self, rhs: Union[Timestream, Literal]) -> Timestream:
@@ -384,6 +388,7 @@ class Timestream(object):
         return Timestream._call("gt", self, rhs)
 
     def __gt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self > rhs`."""
         return self.gt(rhs)
 
     def ge(self, rhs: Union[Timestream, Literal]) -> Timestream:
@@ -407,6 +412,7 @@ class Timestream(object):
         return Timestream._call("gte", self, rhs)
 
     def __ge__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Implement `self >= rhs`."""
         return self.ge(rhs)
 
     def and_(self, rhs: Union[Timestream, Literal]) -> Timestream:
@@ -534,13 +540,12 @@ class Timestream(object):
         TypeError
             When the Timestream is not a record.
         """
-
         data_type = self.data_type
         if isinstance(data_type, pa.StructType) or isinstance(data_type, pa.ListType):
             return Timestream._call("fieldref", self, name)
         else:
             raise TypeError(
-                f"Cannot access column '{name}' of non-record type '{data_type}'"
+                f"Cannot access column {name!r} of non-record type '{data_type}'"  # noqa : B907
             )
 
     def select(self, *args: str) -> Timestream:
@@ -714,8 +719,7 @@ class Timestream(object):
 
     def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
         """
-        Create a Timestream containing the value of `self` where `condition` is `true`,
-        or `null` otherwise.
+        Return `self` where `condition` is `true`, or `null` otherwise.
 
         Parameters
         ----------
@@ -732,7 +736,7 @@ class Timestream(object):
 
     def null_if(self, condition: Union[Timestream, Literal]) -> Timestream:
         """
-        Create a Timestream containing `self` where `condition` is `false`, or `null` otherwise.
+        Return `self` where `condition` is `false`, or `null` otherwise.
 
         Parameters
         ----------
@@ -755,6 +759,11 @@ class Timestream(object):
         -------
         Timestream
             Timestream containing the length of `self`.
+
+        Raises
+        ------
+        TypeError
+            When the Timestream is not a string or list.
         """
         if self.data_type.equals(pa.string()):
             return Timestream._call("len", self)
@@ -784,8 +793,12 @@ class Timestream(object):
 
     def lookup(self, key: Union[Timestream, Literal]) -> Timestream:
         """
-        Create a Timestream containing the lookup join between the `key` and
-        `self`.
+        Lookup the value of `self` for each `key` at the times in `key`.
+
+        For each non-`null` point in the `key` timestream, returns the value
+        from `self` at that time and associated with that `key`. Returns `null`
+        if the `key` is `null` or if there is no `value` computed for that key
+        at the corresponding time.
 
         Parameters
         ----------
@@ -817,6 +830,11 @@ class Timestream(object):
         -------
         Timestream
             Timestream containing the shifted points.
+
+        Raises
+        ------
+        NotImplementedError
+            When `time` is a datetime (shift_to literal not yet implemented).
         """
         if isinstance(time, datetime):
             # session = self._ffi_expr.session()
@@ -837,7 +855,7 @@ class Timestream(object):
 
         Parameters
         ----------
-        time : Union[Timestream, timedelta]
+        delta : Union[Timestream, timedelta]
             The delta to shift the point forward by.
 
         Returns
@@ -856,8 +874,7 @@ class Timestream(object):
 
     def shift_until(self, predicate: Timestream) -> Timestream:
         """
-        Create a Timestream shifting each point forward to the time the `predicate`
-        is true.
+        Shift points from `self` forward to the next time `predicate` is true.
 
         Note that if the `predicate` evaluates to true at the same time as `self`,
         the point will be emitted at that time.

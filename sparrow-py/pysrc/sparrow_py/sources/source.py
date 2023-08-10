@@ -2,6 +2,7 @@
 from typing import Optional
 
 import pyarrow as pa
+
 import sparrow_py._ffi as _ffi
 
 from .._session import _get_session
