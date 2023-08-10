@@ -509,9 +509,9 @@ class Timestream(object):
         """
         data_type = self.data_type
         if isinstance(data_type, pa.MapType):
-            return Timestream._call("get", self, key)
+            return Timestream._call("get", key, self)
         elif isinstance(data_type, pa.ListType):
-            return Timestream._call("index", self, key)
+            return Timestream._call("index", key, self)
         else:
             raise TypeError(f"Cannot index into {data_type}")
 
