@@ -1,10 +1,11 @@
 //! An expression based representation of the DFG.
 
 use anyhow::Context;
-use egg::{Id, Language, RecExpr};
+use egg::{AstSize, Extractor, Id, Language, RecExpr};
 
 use super::DfgLang;
-use crate::dfg::StepKind;
+use crate::dfg::{simplification, DfgGraph, StepKind};
+use crate::CompilerOptions;
 
 /// The expression within the DFG.
 ///
@@ -65,6 +66,25 @@ impl DfgExpr {
 
     pub(super) fn expr(&self) -> &RecExpr<DfgLang> {
         &self.expr
+    }
+
+    pub fn simplify(self, options: &CompilerOptions) -> anyhow::Result<Self> {
+        let _span = tracing::info_span!("Running simplificatons").entered();
+
+        let mut graph = DfgGraph::default();
+        let id = graph.add_expr(&self.expr);
+        let graph = simplification::run_simplifications(graph, options)?;
+
+        let extractor = Extractor::new(&graph, AstSize);
+        let (best_cost, best_expr) = extractor.find_best(id);
+
+        tracing::info!(
+            "Extracted expression with cost {} and length {}",
+            best_cost,
+            best_expr.as_ref().len()
+        );
+
+        Ok(Self::new(best_expr))
     }
 
     pub fn operation(&self, id: Id) -> Option<Id> {
