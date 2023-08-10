@@ -1,20 +1,21 @@
 """Provide sources based on PyArrow, including Pandas and CSV."""
 from __future__ import annotations
+
 from io import BytesIO
-from io import StringIO
 from typing import Optional
-from typing import Union
 
 import pandas as pd
-import pyarrow.csv
-import pyarrow.parquet
-import pyarrow.json
 import pyarrow as pa
+import pyarrow.csv
+import pyarrow.json
+import pyarrow.parquet
 
 from .source import Source
 
+
 class Pandas(Source):
     """Source reading data from Pandas dataframe."""
+
     def __init__(
         self, dataframe: pd.DataFrame, *, schema: Optional[pa.Schema] = None, **kwargs
     ) -> None:
@@ -44,8 +45,10 @@ class Pandas(Source):
         for batch in table.to_batches():
             self._ffi_table.add_pyarrow(batch)
 
+
 class PyList(Source):
     """Source reading data from lists of dicts."""
+
     def __init__(
         self, rows: dict | list[dict], *, schema: Optional[pa.Schema] = None, **kwargs
     ) -> None:
@@ -71,9 +74,7 @@ class PyList(Source):
             schema = pa.Table.from_pylist(rows).schema
         super().__init__(schema, **kwargs)
 
-        self._convert_options = pyarrow.csv.ConvertOptions(
-            column_types=schema
-        )
+        self._convert_options = pyarrow.csv.ConvertOptions(column_types=schema)
         self.add_rows(rows)
 
     def add_rows(self, rows: dict | list[dict]) -> None:
@@ -128,9 +129,10 @@ class CsvString(Source):
         """Add data to the source."""
         if isinstance(csv_string, str):
             csv_string = BytesIO(csv_string.encode("utf-8"))
-        content = pa.csv.read_csv(csv_string, convert_options = self._convert_options)
+        content = pa.csv.read_csv(csv_string, convert_options=self._convert_options)
         for batch in content.to_batches():
             self._ffi_table.add_pyarrow(batch)
+
 
 class JsonlString(Source):
     """Source reading data from line-delimited JSON strings using PyArrow."""
@@ -162,21 +164,21 @@ class JsonlString(Source):
             json_string.seek(0)
         super().__init__(schema, **kwargs)
 
-        self._parse_options = pyarrow.json.ParseOptions(
-            explicit_schema=schema
-        )
+        self._parse_options = pyarrow.json.ParseOptions(explicit_schema=schema)
         self.add_string(json_string)
 
     def add_string(self, json_string: str | BytesIO) -> None:
         """Add data to the source."""
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
-        batches = pa.json.read_json(json_string, parse_options = self._parse_options)
+        batches = pa.json.read_json(json_string, parse_options=self._parse_options)
         for batch in batches.to_batches():
             self._ffi_table.add_pyarrow(batch)
 
+
 class Parquet(Source):
     """Source reading data from Parquet files."""
+
     def __init__(
         self, path: str, *, schema: Optional[pa.Schema] = None, **kwargs
     ) -> None:
@@ -208,7 +210,7 @@ class Parquet(Source):
         """Add data to the source."""
         table = pa.parquet.read_table(
             path,
-            schema = self._schema,
+            schema=self._schema,
         )
         for batch in table.to_batches():
             self._ffi_table.add_pyarrow(batch)

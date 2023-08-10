@@ -27,6 +27,7 @@ class Source(Timestream):
     ):
         assert isinstance(schema, pa.Schema)
         """Create a new source."""
+
         # Fix the schema. The fields should be non-nullable.
         def fix_field(field: pa.Field) -> pa.Field:
             if field.name in [

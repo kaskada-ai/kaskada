@@ -1,7 +1,8 @@
 import random
-import pandas as pd
 
+import pandas as pd
 import sparrow_py as kt
+
 
 def test_add_dataframe(golden) -> None:
     random.seed(1000)

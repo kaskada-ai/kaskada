@@ -30,13 +30,14 @@ def test_shift_by_timedelta(source, golden) -> None:
         )
     )
 
+
 def test_shift_collect(source, golden) -> None:
     time = source.col("time")
 
     base = kt.record(
         {
             "time": time,
-            #LAST shouldn't be needed to make it continuous.
+            # LAST shouldn't be needed to make it continuous.
             "ms": source.col("m").collect(max=10).last(),
         }
     )
@@ -46,11 +47,13 @@ def test_shift_collect(source, golden) -> None:
     #
     # TODO: Improve the golden testing so this isn't necessary.
     golden.jsonl(
-        base.extend({
-            "m": source.col("m"),
-            "shift_by_1_s_time": base.shift_by(timedelta(seconds=1)).col("time"),
-            "shift_by_1_s_ms": base.shift_by(timedelta(seconds=1)).col("ms"),
-            "shift_by_1_m_time": base.shift_by(timedelta(minutes=1)).col("time"),
-            "shift_by_1_m_ms": base.shift_by(timedelta(minutes=1)).col("ms"),
-        })
+        base.extend(
+            {
+                "m": source.col("m"),
+                "shift_by_1_s_time": base.shift_by(timedelta(seconds=1)).col("time"),
+                "shift_by_1_s_ms": base.shift_by(timedelta(seconds=1)).col("ms"),
+                "shift_by_1_m_time": base.shift_by(timedelta(minutes=1)).col("time"),
+                "shift_by_1_m_ms": base.shift_by(timedelta(minutes=1)).col("ms"),
+            }
+        )
     )

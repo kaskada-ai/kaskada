@@ -115,12 +115,10 @@ def test_collect_struct_trailing_window_3s_with_min(source, golden) -> None:
     )
 
 
-
 def test_collect_records(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kt.record({"m": m, "n": n}).collect(max=None))
-
 
 
 def test_collect_records_field_ref(source, golden) -> None:

@@ -106,7 +106,10 @@ def _data_to_pyarrow(data: Union[kt.Timestream, pa.RecordBatch, pa.Table]) -> Un
     elif isinstance(data, pa.RecordBatch) or isinstance(data, pa.Table):
         return data
     else:
-        raise ValueError(f"data must be a Timestream, RecordBatch, or Table, was {type(data)}")
+        raise ValueError(
+            f"data must be a Timestream, RecordBatch, or Table, was {type(data)}"
+        )
+
 
 @pytest.fixture
 def golden(

@@ -1,5 +1,6 @@
 import sparrow_py as kt
 
+
 def test_read_csv(golden) -> None:
     content1 = "\n".join(
         [
@@ -25,8 +26,8 @@ def test_read_csv(golden) -> None:
     )
     source = kt.sources.CsvString(
         content1,
-        time_column_name = "time",
-        key_column_name = "key",
+        time_column_name="time",
+        key_column_name="key",
     )
     golden.jsonl(source)
 
