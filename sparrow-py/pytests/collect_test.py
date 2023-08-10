@@ -8,13 +8,13 @@ import sparrow_py as kt
 def source() -> kt.sources.CsvString:
     content = "\n".join(
         [
-            "time,key,m,n",
-            "1996-12-19T16:39:57,A,5,10",
-            "1996-12-19T16:39:58,B,24,3",
-            "1996-12-19T16:39:59,A,17,6",
-            "1996-12-19T16:40:00,A,,9",
-            "1996-12-19T16:40:01,A,12,",
-            "1996-12-19T16:40:02,A,,",
+            "time,key,m,n,s,b",
+            "1996-12-19T16:39:57,A,5,10,a,true",
+            "1996-12-19T16:39:58,B,24,3,b,true",
+            "1996-12-19T16:39:59,A,17,6,b,",
+            "1996-12-19T16:40:00,A,,9,,false",
+            "1996-12-19T16:40:01,A,12,,e,false",
+            "1996-12-19T16:40:02,A,,,f,true",
         ]
     )
     return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
@@ -85,6 +85,174 @@ def test_collect_since_window(source, golden) -> None:
     golden.jsonl(
         kt.record(
             {"m": m, "since_m": m.collect(max=None, window=kt.windows.Since(m > 10))}
+        )
+    )
+
+
+def test_collect_i64_trailing_window_1s(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "collect_m": m.collect(
+                    max=None, window=kt.windows.Trailing(timedelta(seconds=1))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_i64_trailing_window_3s(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "collect_m": m.collect(
+                    max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_i64_trailing_window_3s_with_max(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "collect_m": m.collect(
+                    max=2, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_i64_trailing_window_3s_with_min(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(
+        kt.record(
+            {
+                "m": m,
+                "collect_m": m.collect(
+                    min=3, max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_string_trailing_window_1s(source, golden) -> None:
+    s = source.col("s")
+    golden.jsonl(
+        kt.record(
+            {
+                "m": s,
+                "collect_s": s.collect(
+                    max=None, window=kt.windows.Trailing(timedelta(seconds=1))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_string_trailing_window_3s(source, golden) -> None:
+    s = source.col("s")
+    golden.jsonl(
+        kt.record(
+            {
+                "s": s,
+                "collect_s": s.collect(
+                    max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_string_trailing_window_3s_with_max(source, golden) -> None:
+    s = source.col("s")
+    golden.jsonl(
+        kt.record(
+            {
+                "s": s,
+                "collect_s": s.collect(
+                    max=2, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_string_trailing_window_3s_with_min(source, golden) -> None:
+    s = source.col("s")
+    golden.jsonl(
+        kt.record(
+            {
+                "s": s,
+                "collect_s": s.collect(
+                    min=3, max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_bool_trailing_window_1s(source, golden) -> None:
+    b = source.col("b")
+    golden.jsonl(
+        kt.record(
+            {
+                "b": b,
+                "collect_b": b.collect(
+                    max=None, window=kt.windows.Trailing(timedelta(seconds=1))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_bool_trailing_window_3s(source, golden) -> None:
+    b = source.col("b")
+    golden.jsonl(
+        kt.record(
+            {
+                "b": b,
+                "collect_b": b.collect(
+                    max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_bool_trailing_window_3s_with_max(source, golden) -> None:
+    b = source.col("b")
+    golden.jsonl(
+        kt.record(
+            {
+                "b": b,
+                "collect_b": b.collect(
+                    max=2, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
+        )
+    )
+
+
+def test_collect_bool_trailing_window_3s_with_min(source, golden) -> None:
+    b = source.col("b")
+    golden.jsonl(
+        kt.record(
+            {
+                "b": b,
+                "collect_b": b.collect(
+                    min=3, max=None, window=kt.windows.Trailing(timedelta(seconds=3))
+                ),
+            }
         )
     )
 
