@@ -10,7 +10,7 @@ use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
-use sparrow_compiler::{AstDfgRef, DataContext, Dfg, DiagnosticCollector};
+use sparrow_compiler::{AstDfgRef, CompilerOptions, DataContext, Dfg, DiagnosticCollector};
 use sparrow_plan::GroupId;
 use sparrow_runtime::execute::output::Destination;
 use sparrow_runtime::key_hash_inverse::ThreadSafeKeyHashInverse;
@@ -295,6 +295,12 @@ impl Session {
         // First, extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
         let expr = self.dfg.extract_simplest(expr.0.value());
+        let expr = expr
+            .simplify(&CompilerOptions {
+                ..CompilerOptions::default()
+            })
+            .into_report()
+            .change_context(Error::Compile)?;
         let expr = sparrow_compiler::remove_useless_transforms(expr)
             .into_report()
             .change_context(Error::Compile)?;

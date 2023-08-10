@@ -31,3 +31,6 @@ def test_with_key_grouping(source, golden) -> None:
     new_key = source.col("new_key")
     grouping = "user"
     golden.jsonl(source.with_key(new_key, grouping))
+
+def test_with_key_last(source, golden) -> None:
+    golden.jsonl(source.with_key(source.col("new_key")).last())

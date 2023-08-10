@@ -136,6 +136,20 @@ async fn test_with_computed_key_str() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/644"]
+#[tokio::test]
+async fn test_with_computed_key_str_last_no_simplification() {
+    insta::assert_snapshot!(QueryFixture::new("with_key(Table.foreign_key_str, Table) | last()").without_simplification().run_to_csv(&with_key_data_fixture().await).await.unwrap(), @r###"
+    _time,_subsort,_key_hash,_key,time,subsort,key,foreign_key_i64,foreign_key_str,n
+    1996-12-20T00:39:57.000000000,9223372036854775808,2867199309159137213,B,1996-12-20T00:39:57.000000000,0,A,0,B,0
+    1996-12-20T00:39:58.000000000,9223372036854775808,12960666915911099378,A,1996-12-20T00:39:58.000000000,0,B,1,A,1
+    1996-12-20T00:39:59.000000000,9223372036854775808,5663277146615294718,,1996-12-20T00:39:59.000000000,0,A,2,,
+    1996-12-20T00:40:00.000000000,9223372036854775808,2521269998124177631,C,1996-12-20T00:40:00.000000000,0,A,2,C,2
+    1996-12-20T00:40:01.000000000,9223372036854775808,12960666915911099378,A,1996-12-20T00:40:01.000000000,0,A,1,A,3
+    1996-12-20T00:40:02.000000000,9223372036854775808,2867199309159137213,B,1996-12-20T00:40:02.000000000,0,A,0,B,4
+    "###);
+}
+
 #[tokio::test]
 async fn test_with_key_error_key() {
     insta::assert_yaml_snapshot!(QueryFixture::new("with_key(unbound_key, Table)").run_to_csv(&with_key_data_fixture().await).await.unwrap_err(), @r###"
