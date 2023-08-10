@@ -216,8 +216,9 @@ impl CollectBooleanEvaluator {
                         *input_time,
                         duration,
                     );
+                } else {
+                    self.token.check_time(entity_index, *input_time, duration);
                 }
-
                 // Emit state
                 let cur_list = self.token.state(entity_index);
                 if cur_list.len() >= self.min {

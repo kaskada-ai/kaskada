@@ -493,7 +493,7 @@ impl CollectStructEvaluator {
                             // because it's possible we need to pop off new input
                             let min_window_start =
                                 combined_times.value(take_index as usize) - duration;
-                            while oldest_time < min_window_start {
+                            while oldest_time <= min_window_start {
                                 v.pop_front();
                                 // Safety: we know there's elements in the vec, and we can't
                                 // have popped the last element because we just added one at a time

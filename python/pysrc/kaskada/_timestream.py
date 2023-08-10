@@ -1149,9 +1149,17 @@ def _aggregation(
             raise NotImplementedError(
                 f"Aggregation '{op} does not support trailing windows"
             )
+        is_input = input.is_not_null()
+        shift_by = window.duration
+        input_shift = input.shift_by(shift_by)
         trailing_ns = int(window.duration.total_seconds() * 1e9)
+        input = record({ "input": input, "input_shift": input_shift }).col("input")
+        
         # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
-        return Timestream._call(op, input, *args, None, trailing_ns)
+        collect = Timestream._call(op, input, *args, None, trailing_ns)
+        return collect.filter(is_input)
+
+        # return Timestream._call(op, input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

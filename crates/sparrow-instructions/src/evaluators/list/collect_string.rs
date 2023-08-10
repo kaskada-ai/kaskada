@@ -218,6 +218,8 @@ impl CollectStringEvaluator {
                         *input_time,
                         duration,
                     );
+                } else {
+                    self.token.check_time(entity_index, *input_time, duration);
                 }
 
                 // Emit state
