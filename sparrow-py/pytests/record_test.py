@@ -40,9 +40,7 @@ def test_extend_record(source, golden) -> None:
 
 
 def test_extend_input(source, golden) -> None:
-    golden.jsonl(source.extend(lambda input: {
-        "add": input.col("m") + input.col("n")
-    }))
+    golden.jsonl(source.extend(lambda input: {"add": input.col("m") + input.col("n")}))
 
 
 def test_select_record(source, golden) -> None:
