@@ -10,11 +10,11 @@ def source() -> kd.sources.CsvString:
         [
             "time,key,m,n,s,b",
             "1996-12-19T16:39:57,A,5,10,a,true",
-            "1996-12-19T16:39:58,B,24,3,b,true",
             "1996-12-19T16:39:59,A,17,6,b,",
             "1996-12-19T16:40:00,A,,9,,false",
             "1996-12-19T16:40:01,A,12,,e,false",
             "1996-12-19T16:40:02,A,,,f,true",
+            "1996-12-19T16:40:04,A,,,f,",
         ]
     )
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")

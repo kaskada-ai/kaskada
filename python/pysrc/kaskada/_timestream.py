@@ -1156,10 +1156,10 @@ def _aggregation(
         input = record({ "input": input, "input_shift": input_shift }).col("input")
         
         # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
-        collect = Timestream._call(op, input, *args, None, trailing_ns)
-        return collect.filter(is_input)
+        # collect = Timestream._call(op, input, *args, None, trailing_ns)
+        # return collect.filter(is_input)
 
-        # return Timestream._call(op, input, *args, None, trailing_ns)
+        return Timestream._call(op, input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 
