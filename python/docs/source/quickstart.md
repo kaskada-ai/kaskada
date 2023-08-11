@@ -16,7 +16,7 @@ Write the quick start.
 
 ```{code-cell}
 import kaskada as kd
-kt.init_session()
+kd.init_session()
 content = "\n".join(
     [
         "time,key,m,n",
@@ -28,6 +28,6 @@ content = "\n".join(
         "1996-12-19T16:40:02-08:00,A,,",
     ]
 )
-source = kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+source = kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 source.run().to_pandas()
 ```
