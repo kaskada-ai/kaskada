@@ -34,11 +34,10 @@ def test_shift_by_timedelta(source, golden) -> None:
 
 def test_shift_collect(source, golden) -> None:
     golden.jsonl(
-        source
-        .record(lambda input:
-            {
+        source.record(
+            lambda input: {
                 "time": input.col("time"),
-                "ms": input.col("m").collect(max = 10),
+                "ms": input.col("m").collect(max=10),
                 "m": input.col("m"),
             }
         )
@@ -46,8 +45,8 @@ def test_shift_collect(source, golden) -> None:
         # date-time like fields nested within a list. So we expand things out.
         #
         # TODO: Improve the golden testing so this isn't necessary.
-        .extend(lambda base:
-            {
+        .extend(
+            lambda base: {
                 "shift_by_1_s_time": base.shift_by(timedelta(seconds=1)).col("time"),
                 "shift_by_1_s_ms": base.shift_by(timedelta(seconds=1)).col("ms"),
                 "shift_by_1_m_time": base.shift_by(timedelta(minutes=1)).col("time"),

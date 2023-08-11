@@ -6,8 +6,8 @@ import sys
 from datetime import datetime
 from datetime import timedelta
 from typing import Callable
-from typing import Dict
 from typing import List
+from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -16,6 +16,7 @@ from typing import final
 
 import pandas as pd
 import pyarrow as pa
+from typing_extensions import TypeAlias
 
 import sparrow_py as kt
 import sparrow_py._ffi as _ffi
@@ -25,10 +26,10 @@ from ._result import Result
 
 
 #: A literal value that can be used as an argument to a Timestream operation.
-Literal = Optional[int | str | float | bool | timedelta | datetime]
+Literal: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
 #: A Timestream or literal which can be used as an argument to a Timestream operation.
-Arg = "Timestream" | Literal
+Arg: TypeAlias = Union["Timestream", Literal]
 
 
 def _augment_error(
@@ -538,7 +539,7 @@ class Timestream(object):
             raise TypeError(f"Cannot index into {data_type}")
 
     def __getitem__(self, key: Union[Timestream, Literal]) -> Timestream:
-        self.index(key)
+        return self.index(key)
 
     def col(self, name: str) -> Timestream:
         """
@@ -599,7 +600,9 @@ class Timestream(object):
         """
         return Timestream._call("remove_fields", self, *args)
 
-    def extend(self, fields: Dict[str, Arg] | Callable[Timestream, Dict[str, Timestream]]) -> Timestream:
+    def extend(
+        self, fields: Mapping[str, Arg] | Callable[[Timestream], Mapping[str, Arg]]
+    ) -> Timestream:
         """
         Extend this Timestream of records with additional fields.
 
@@ -608,7 +611,7 @@ class Timestream(object):
 
         Parameters
         ----------
-        fields : Dict[str, Arg] | Callable[Timestream, Dict[str, Timestream]]
+        fields : Mapping[str, Arg] | Callable[[Timestream], Mapping[str, Arg]]
             Fields to add to each record in the Timestream.
 
         Returns
@@ -1012,13 +1015,13 @@ class Timestream(object):
         """
         return Timestream._call("union", self, other)
 
-    def record(self, fields: Callable[Timestream, Dict[str, Timestream]]) -> Timestream:
+    def record(self, fields: Callable[[Timestream], Mapping[str, Arg]]) -> Timestream:
         """
         Create a record Timestream from fields computed from this timestream.
 
         Parameters
         ----------
-        fields : dict[str, Timestream]
+        fields : Callable[[Timestream], Mapping[str, Arg]]
             The fields to include in the record.
 
         Returns
@@ -1031,11 +1034,7 @@ class Timestream(object):
         sparrow_py.record: Function for creating a record from one or more
         timestreams.
         """
-        import itertools
-
-        fields = fields(self)
-        args: List[Union[str, Timestream]] = list(itertools.chain(*fields.items()))
-        return Timestream._call("record", *args)
+        return record(fields(self))
 
     def preview(self, limit: int = 100) -> pd.DataFrame:
         """
@@ -1141,7 +1140,7 @@ def _aggregation(
         raise NotImplementedError(f"Unknown window type {window!r}")
 
 
-def record(fields: Dict[str, Timestream]) -> Timestream:
+def record(fields: Mapping[str, Arg]) -> Timestream:
     """
     Create a record Timestream from the given fields.
 
@@ -1162,5 +1161,5 @@ def record(fields: Dict[str, Timestream]) -> Timestream:
     """
     import itertools
 
-    args: List[Union[str, Timestream]] = list(itertools.chain(*fields.items()))
+    args: List[Arg] = list(itertools.chain(*fields.items()))
     return Timestream._call("record", *args)
