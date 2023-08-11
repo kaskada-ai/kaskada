@@ -1,11 +1,10 @@
 import os
 from typing import Union
 
+import kaskada as kd
 import pandas as pd
 import pyarrow as pa
 import pytest
-
-import kaskada as kt
 from kaskada import init_session
 
 
@@ -25,7 +24,7 @@ class GoldenFixture(object):
         self._test_name = test_name
         self._save = save
 
-    def jsonl(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
+    def jsonl(self, data: Union[kd.Timestream, pd.DataFrame]) -> None:
         """Golden test against newline-delimited JSON file (json-lines)."""
         df = _data_to_dataframe(data)
         filename = self._filename("jsonl")
@@ -43,7 +42,7 @@ class GoldenFixture(object):
 
         pd.testing.assert_frame_equal(df, golden, check_datetimelike_compat=True)
 
-    def parquet(self, data: Union[kt.Timestream, pd.DataFrame]) -> None:
+    def parquet(self, data: Union[kd.Timestream, pd.DataFrame]) -> None:
         """Golden test against Parquet file."""
         df = _data_to_dataframe(data)
         filename = self._filename("parquet")
@@ -71,19 +70,19 @@ class GoldenFixture(object):
         return filename
 
 
-def _data_to_dataframe(data: Union[kt.Timestream, pd.DataFrame]) -> pd.DataFrame:
+def _data_to_dataframe(data: Union[kd.Timestream, pd.DataFrame]) -> pd.DataFrame:
     if isinstance(data, pd.DataFrame):
         return data
-    elif isinstance(data, kt.Timestream):
+    elif isinstance(data, kd.Timestream):
         return data.run().to_pandas()
     else:
         raise ValueError(f"data must be a Timestream or a DataFrame, was {type(data)}")
 
 
 def _data_to_pyarrow(
-    data: Union[kt.Timestream, pa.RecordBatch, pa.Table]
+    data: Union[kd.Timestream, pa.RecordBatch, pa.Table]
 ) -> Union[pa.RecordBatch, pa.Table]:
-    if isinstance(data, kt.Timestream):
+    if isinstance(data, kd.Timestream):
         return data.run().to_pyarrow()
     elif isinstance(data, pa.RecordBatch) or isinstance(data, pa.Table):
         return data

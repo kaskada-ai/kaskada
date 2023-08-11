@@ -1,10 +1,9 @@
+import kaskada as kd
 import pytest
-
-import kaskada as kt
 
 
 @pytest.fixture(scope="module")
-def source() -> kt.sources.CsvString:
+def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -16,14 +15,14 @@ def source() -> kt.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_lag(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
-        kt.record(
+        kd.record(
             {
                 "m": m,
                 "lag_1_m": m.lag(1),
@@ -43,7 +42,7 @@ def test_lag_struct(source, golden) -> None:
 def test_lag_list(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
-        kt.record(
+        kd.record(
             {
                 "m": m,
                 "list_m": m.collect(max=None),

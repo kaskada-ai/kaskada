@@ -14,12 +14,11 @@ from typing import Tuple
 from typing import Union
 from typing import final
 
+import kaskada as kd
+import kaskada._ffi as _ffi
 import pandas as pd
 import pyarrow as pa
 from typing_extensions import TypeAlias
-
-import kaskada as kt
-import kaskada._ffi as _ffi
 
 from ._execution import ExecutionOptions
 from ._result import Result
@@ -516,15 +515,15 @@ class Timestream(object):
         key : Union[Timestream, Literal]
             The key to index into the expression.
 
-        Returns
-        -------
-        Timestream
-            Timestream with the resulting value (or `null` if absent) at each point.
-
         Raises
         ------
         TypeError
             When the Timestream is not a record, list, or map.
+
+        Returns
+        -------
+        Timestream
+            Timestream with the resulting value (or `null` if absent) at each point.
 
         Note
         ----
@@ -539,6 +538,23 @@ class Timestream(object):
             raise TypeError(f"Cannot index into {data_type}")
 
     def __getitem__(self, key: Union[Timestream, Literal]) -> Timestream:
+        """
+        Index into a list or map Timestrem.
+
+        Parameters
+        ----------
+        key : Union[Timestream, Literal]
+            The key to index into the expression.
+
+        Returns
+        -------
+        Timestream
+            Timestream with the resulting value (or `null` if absent) at each point.
+
+        See Also
+        --------
+        index
+        """
         return self.index(key)
 
     def col(self, name: str) -> Timestream:
@@ -680,7 +696,7 @@ class Timestream(object):
         *,
         max: Optional[int],
         min: Optional[int] = 0,
-        window: Optional[kt.windows.Window] = None,
+        window: Optional[kd.windows.Window] = None,
     ) -> Timestream:
         """
         Create a Timestream collecting up to the last `max` values in the `window`.
@@ -918,7 +934,7 @@ class Timestream(object):
         """
         return Timestream._call("shift_until", predicate, self)
 
-    def sum(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
+    def sum(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
         """
         Create a Timestream summing the values in the `window`.
 
@@ -937,7 +953,7 @@ class Timestream(object):
         """
         return _aggregation("sum", self, window)
 
-    def first(self, *, window: Optional[kt.windows.Window] = None) -> Timestream:
+    def first(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
         """
         Create a Timestream containing the first value in the `window`.
 
@@ -957,7 +973,7 @@ class Timestream(object):
         """
         return _aggregation("first", self, window)
 
-    def last(self, window: Optional[kt.windows.Window] = None) -> Timestream:
+    def last(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         """
         Create a Timestream containing the last value in the `window`.
 
@@ -1029,7 +1045,7 @@ class Timestream(object):
         Timestream
             Timestream containing records with the given fields.
 
-        See also
+        See Also
         --------
         kaskada.record: Function for creating a record from one or more
         timestreams.
@@ -1095,7 +1111,7 @@ class Timestream(object):
 def _aggregation(
     op: str,
     input: Timestream,
-    window: Optional[kt.windows.Window],
+    window: Optional[kd.windows.Window],
     *args: Union[Timestream, Literal],
 ) -> Timestream:
     """
@@ -1124,11 +1140,11 @@ def _aggregation(
     """
     if window is None:
         return Timestream._call(op, input, *args, None, None)
-    elif isinstance(window, kt.windows.Since):
+    elif isinstance(window, kd.windows.Since):
         return Timestream._call(op, input, *args, window.predicate, None)
-    elif isinstance(window, kt.windows.Sliding):
+    elif isinstance(window, kd.windows.Sliding):
         return Timestream._call(op, input, *args, window.predicate, window.duration)
-    elif isinstance(window, kt.windows.Trailing):
+    elif isinstance(window, kd.windows.Trailing):
         if op != "collect":
             raise NotImplementedError(
                 f"Aggregation '{op} does not support trailing windows"
@@ -1154,7 +1170,7 @@ def record(fields: Mapping[str, Arg]) -> Timestream:
     Timestream
         Timestream containing records with the given fields.
 
-    See also
+    See Also
     --------
     Timestream.record: Method for creating a record from fields computed from
     a timestream.

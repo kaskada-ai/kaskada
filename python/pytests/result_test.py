@@ -1,10 +1,9 @@
+import kaskada as kd
 import pytest
-
-import kaskada as kt
 
 
 @pytest.fixture
-def source_int64() -> kt.sources.CsvString:
+def source_int64() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -16,7 +15,7 @@ def source_int64() -> kt.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_iter_pandas(golden, source_int64) -> None:

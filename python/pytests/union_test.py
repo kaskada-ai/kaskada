@@ -1,8 +1,8 @@
-import kaskada as kt
+import kaskada as kd
 
 
 def test_union(golden) -> None:
-    source = kt.sources.PyList(
+    source = kd.sources.PyList(
         [
             {"time": "1996-12-19T16:39:57", "user": "A", "m": [5], "n": []},
             {"time": "1996-12-19T17:39:57", "user": "A", "m": [], "n": [5, 6]},

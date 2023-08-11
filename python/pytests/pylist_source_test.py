@@ -1,8 +1,8 @@
-import kaskada as kt
+import kaskada as kd
 
 
 def test_read_pylist(golden) -> None:
-    source = kt.sources.PyList(
+    source = kd.sources.PyList(
         [{"time": "1996-12-19T16:39:57", "user": "A", "m": 5, "n": 10}],
         time_column_name="time",
         key_column_name="user",
@@ -22,7 +22,7 @@ def test_read_pylist(golden) -> None:
 
 
 def test_read_pylist_lists(golden) -> None:
-    source = kt.sources.PyList(
+    source = kd.sources.PyList(
         [{"time": "1996-12-19T16:39:57", "user": "A", "m": [5, 10], "n": 10}],
         time_column_name="time",
         key_column_name="user",

@@ -7,7 +7,7 @@ from typing import Dict
 
 sys.path.append(str(Path(".").resolve()))
 
-project = "sparrow-py"
+project = "kaskada"
 author = "Kaskada Contributors"
 copyright = "2023, Kaskada Contributors"
 extensions = [
@@ -38,7 +38,7 @@ html_theme_options: Dict[str, Any] = {
     "home_page_in_toc": True,
     "use_issues_button": True,
     "repository_branch": "main",
-    "path_to_docs": "sparrow-py/docs/source",
+    "path_to_docs": "kaskada/docs/source",
     "icon_links": [
         {
             "name": "GitHub",
@@ -63,7 +63,7 @@ html_context = {
     "github_user": "kaskada-ai",
     "github_repo": "kaskada",
     "github_version": "main",
-    "doc_path": "sparrow-py/docs/source",
+    "doc_path": "kaskada/docs/source",
 }
 
 intersphinx_mapping: Dict[str, Any] = {

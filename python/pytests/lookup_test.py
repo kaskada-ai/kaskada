@@ -1,10 +1,9 @@
+import kaskada as kd
 import pytest
-
-import kaskada as kt
 
 
 @pytest.fixture(scope="module")
-def key_source() -> kt.sources.CsvString:
+def key_source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,state",
@@ -16,11 +15,11 @@ def key_source() -> kt.sources.CsvString:
             "1996-12-19T16:40:02,A,WA",
         ]
     )
-    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 @pytest.fixture(scope="module")
-def foreign_source() -> kt.sources.CsvString:
+def foreign_source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -32,7 +31,7 @@ def foreign_source() -> kt.sources.CsvString:
             "1996-12-19T16:40:02,WA,,",
         ]
     )
-    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_lookup(key_source, foreign_source, golden) -> None:
@@ -40,7 +39,7 @@ def test_lookup(key_source, foreign_source, golden) -> None:
     foreign_value = foreign_source.col("m")
     last_foreign_value = foreign_source.col("m").last()
     golden.jsonl(
-        kt.record(
+        kd.record(
             {
                 "state": state,
                 "lookup": foreign_value.lookup(state),

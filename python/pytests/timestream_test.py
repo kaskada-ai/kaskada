@@ -1,13 +1,12 @@
 import sys
 
+import kaskada as kd
 import pyarrow as pa
 import pytest
 
-import kaskada as kt
-
 
 @pytest.fixture(scope="module")
-def source1() -> kt.sources.Source:
+def source1() -> kd.sources.Source:
     schema = pa.schema(
         [
             pa.field("time", pa.int32(), nullable=False),
@@ -16,7 +15,7 @@ def source1() -> kt.sources.Source:
             pa.field("y", pa.int32()),
         ]
     )
-    return kt.sources.Source(schema, time_column_name="time", key_column_name="key")
+    return kd.sources.Source(schema, time_column_name="time", key_column_name="key")
 
 
 def test_field_ref(source1) -> None:
@@ -112,7 +111,7 @@ def test_timestream_preview(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvString(
+    source = kd.sources.CsvString(
         content, time_column_name="time", key_column_name="key"
     )
 
@@ -131,7 +130,7 @@ def test_timestream_run_non_record(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvString(
+    source = kd.sources.CsvString(
         content, time_column_name="time", key_column_name="key"
     )
     golden.jsonl(source.col("m"))
@@ -149,7 +148,7 @@ def test_timestream_cast(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvString(
+    source = kd.sources.CsvString(
         content, time_column_name="time", key_column_name="key"
     )
     golden.jsonl(source.col("time").cast(pa.timestamp("ns")))

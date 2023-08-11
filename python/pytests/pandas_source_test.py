@@ -1,8 +1,7 @@
 import random
 
+import kaskada as kd
 import pandas as pd
-
-import kaskada as kt
 
 
 def test_add_dataframe(golden) -> None:
@@ -20,7 +19,7 @@ def test_add_dataframe(golden) -> None:
             )
     dataset1 = pd.DataFrame(records)
 
-    table = kt.sources.Pandas(dataset1, time_column_name="time", key_column_name="key")
+    table = kd.sources.Pandas(dataset1, time_column_name="time", key_column_name="key")
     golden.jsonl(table)
 
     records.clear()

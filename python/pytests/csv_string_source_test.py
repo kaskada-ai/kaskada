@@ -1,4 +1,4 @@
-import kaskada as kt
+import kaskada as kd
 
 
 def test_read_csv(golden) -> None:
@@ -24,7 +24,7 @@ def test_read_csv(golden) -> None:
             "1996-12-19T17:40:02,A,,",
         ]
     )
-    source = kt.sources.CsvString(
+    source = kd.sources.CsvString(
         content1,
         time_column_name="time",
         key_column_name="key",

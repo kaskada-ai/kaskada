@@ -15,7 +15,7 @@ Write the quick start.
 ```
 
 ```{code-cell}
-import kaskada as kt
+import kaskada as kd
 kt.init_session()
 content = "\n".join(
     [

@@ -1,7 +1,6 @@
+import kaskada as kd
 import pyarrow as pa
 import pytest
-
-import kaskada as kt
 
 
 def test_table_valid() -> None:
@@ -12,7 +11,7 @@ def test_table_valid() -> None:
         ]
     )
 
-    kt.sources.Source(schema, time_column_name="time", key_column_name="key")
+    kd.sources.Source(schema, time_column_name="time", key_column_name="key")
 
 
 def test_table_invalid_names() -> None:
@@ -27,7 +26,7 @@ def test_table_invalid_names() -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        kt.sources.Source(
+        kd.sources.Source(
             schema, time_column_name="non_existant_time", key_column_name="key"
         )
 
@@ -35,7 +34,7 @@ def test_table_invalid_names() -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        kt.sources.Source(
+        kd.sources.Source(
             schema, time_column_name="time", key_column_name="non_existant_key"
         )
 
@@ -43,7 +42,7 @@ def test_table_invalid_names() -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        kt.sources.Source(
+        kd.sources.Source(
             schema,
             time_column_name="time",
             key_column_name="key",

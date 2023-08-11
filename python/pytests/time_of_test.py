@@ -1,10 +1,9 @@
+import kaskada as kd
 import pytest
-
-import kaskada as kt
 
 
 @pytest.fixture(scope="module")
-def source() -> kt.sources.CsvString:
+def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -16,14 +15,14 @@ def source() -> kt.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_time_of(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
-        kt.record(
+        kd.record(
             {
                 "m": m,
                 "time_of_m": m.time_of(),
