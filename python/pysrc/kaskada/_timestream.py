@@ -1009,33 +1009,41 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
-    def seconds_since(self, time: Union[Timestream, datetime]) -> Timestream:
+    def seconds_since(self, n: Union[Timestream, Literal] = 1) -> Timestream:
         """
         Create a Timestream containing the number of seconds since `time`.
 
         Parameters
         ----------
-        time : Union[Timestream, datetime]
+        n : Union[Timestream, Literal]
             The time to compute the seconds since.
-            This must be a datetime or a Timestream of timestamp_ns.
+
+            This can be either a stream of timestamps, a datetime literal, or 
+            an integer literal representing the number of points to lag by. 
+
+            For example, `seconds_since(1)` will return a Timestream containing
+            the number of seconds since the the previous point.
 
         Returns
         -------
         Timestream
             Timestream containing the number of seconds since `time`.
         """
-        if isinstance(time, datetime):
+        if isinstance(n, datetime):
             session = self._ffi_expr.session()
-            nanos = Timestream._literal(time.timestamp() * 1e9, session=session)
+            nanos = Timestream._literal(n.timestamp() * 1e9, session=session)
             nanos = Timestream.cast(nanos, pa.timestamp('ns', None))
-            self_nanos = Timestream._call("time_of", self)
             return Timestream._call(
-                "seconds_between", nanos, self_nanos
+                "seconds_between", nanos, self
             ).cast(pa.int64())
+        elif isinstance(n, int):
+            time_of_current = Timestream._call("time_of", self).cast(pa.int64())
+            time_of_previous = Timestream._call("time_of", self).lag(n).cast(pa.int64())
+            return (time_of_current - time_of_previous) / 1e9
         else:
             return Timestream._call(
                 "seconds_between",
-                time,
+                n,
                 self
             ).cast(pa.int64())
 

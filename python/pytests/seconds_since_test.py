@@ -35,7 +35,7 @@ def test_seconds_since(golden, source) -> None:
     )
 
 
-def test_seconds_since_literal(golden, source) -> None:
+def test_seconds_since_datetime(golden, source) -> None:
     t = source.col("time")
     dt = datetime.datetime(1996, 12, 19, 16, 39, 50, tzinfo=datetime.timezone.utc)
     golden.jsonl(
@@ -45,4 +45,17 @@ def test_seconds_since_literal(golden, source) -> None:
                 "seconds_since_literal": t.seconds_since(dt),
             }
         )
+    )
+
+def test_seconds_since_int(golden, source) -> None:
+    t = source.col("time")
+    golden.jsonl(
+        kt.record(
+            {  
+                "t": t,
+                "seconds_since": t.seconds_since(),
+                "seconds_since_1": t.seconds_since(1),
+                "seconds_since_2": t.seconds_since(2),
+            }
+        )  
     )
