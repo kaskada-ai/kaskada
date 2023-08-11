@@ -4,11 +4,15 @@ from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
 
 output_map = {}
-
 with open('/Users/eric.pinzur/Documents/slackbot2000/conversation_users_output_map.json', 'r') as file:
     output_map = json.load(file)
 
+name_map = {}
+with open('/Users/eric.pinzur/Documents/slackbot2000/conversation_user_name_map.json', 'r') as file:
+    name_map = json.load(file)
+
 print(f'Loaded output map: {output_map}')
+print(f'Loaded name map: {name_map}')
 
 
 # Initialize OpenAI
@@ -32,10 +36,14 @@ def handle_conversation(conversation):
 
     print(f'Starting prediction on conversation: {conversation[0]["text"]}')
 
+    prompt=format_prompt(conversation),
+
+    print(f'Sending prompt: {prompt}')
+
     # Ask the model who should be notified
     res = openai.Completion.create(
         model="davinci:ft-personal:coversation-users-full-kaskada-2023-08-05-14-25-30",
-        prompt=format_prompt(conversation),
+        prompt=prompt,
         max_tokens=1,
         stop=" end",
         temperature=0,
@@ -47,9 +55,12 @@ def handle_conversation(conversation):
 
     print(f'Recieved log probs: {logprobs}')
     for user in logprobs:
-        if math.exp(logprobs[user]) > min_prob_for_response:
+        prob = math.exp(logprobs[user])
+        user = user.strip()
+        name = name_map[user] if user in name_map else user
+        print(f'For user: {name} got prob: {prob}')
+        if prob > min_prob_for_response:
             # if `nil` user is an option, stop processing
-            user = user.strip()
             if user == "nil":
                 users = []
                 print('Found nil, stopping.')

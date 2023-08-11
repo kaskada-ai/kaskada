@@ -8,9 +8,11 @@ next_message_model = 'ada:ft-personal:next-message-user-full-kaskada-2023-08-03-
 next_reaction_model = 'ada:ft-personal:next-reaction-full-kaskada-2023-08-03-17-03-13'
 next_users_model = 'ada:ft-personal:next-users-in-window-full-kaskada-2023-08-03-18-17-36'
 coversations_model = "davinci:ft-personal:coversation-users-full-kaskada-2023-08-05-14-25-30"
+conversations_b = "davinci:ft-personal:coversation-users-full-kaskada-b-2023-08-11-01-52-17"
+conversations_c ="davinci:ft-personal:coversation-users-full-kaskada-c-2023-08-11-04-49-55"
 
-in_file_name = 'conversation_user_examples_prepared_valid'
-model = coversations_model
+in_file_name = 'conversation_user_stripped_examples_prepared_valid'
+model = conversations_c
 stop = " end"
 
 
@@ -25,13 +27,13 @@ df['prediction'] = None
 def task(index, prompt):
     if len(prompt) > 5000:
         return (index, {})
-    pred = openai.Completion.create(model=model, prompt=prompt, max_tokens=1, stop=' end', n=1, logprobs=5, temperature=0)
+    pred = openai.Completion.create(model=model, prompt=prompt, max_tokens=1, stop=stop, n=1, logprobs=5, temperature=0)
     # pred = pred['choices'][0]['text']
     return (index, pred)
 
 if __name__ == '__main__':
     # create a process pool that uses all cpus
-    with multiprocessing.Pool() as pool:
+    with multiprocessing.Pool(2) as pool:
         for (index, pred) in pool.starmap(task, items):
             df.at[index, 'prediction'] = pred
 
