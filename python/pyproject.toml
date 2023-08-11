@@ -1,0 +1,123 @@
+[tool.poetry]
+name = "kaskada"
+version = "0.1.0"
+description = "Kaskada query builder and local execution engine."
+authors = []
+
+[tool.poetry.dependencies]
+# Dependencies for using the project.
+pandas = "^2.0.3"
+python = ">=3.8.1,<4.0"
+pyarrow = "^12.0.1"
+typing-extensions = "^4.7.1"
+
+[tool.poetry.group.dev.dependencies]
+# Dependencies for building and developing.
+maturin = "^1.1.0"
+nox = "2023.4.22"
+
+[tool.poetry.group.lint]
+# Dependencies for linting.
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+black = ">=21.10b0"
+darglint = ">=1.8.1"
+flake8 = ">=4.0.1"
+flake8-bugbear = ">=21.9.2"
+flake8-rst-docstrings = ">=0.2.5"
+isort = ">=5.10.1"
+pep8-naming = ">=0.12.1"
+pydocstyle = "^6.3.0"
+pyupgrade = ">=2.29.1"
+autoflake = "^2.2.0"
+
+[tool.poetry.group.safety]
+optional = true
+
+[tool.poetry.group.safety.dependencies]
+safety = ">=1.10.3"
+
+[tool.poetry.group.typecheck]
+# Dependencies for typechecking (mypy, etc.)
+optional = true
+
+[tool.poetry.group.typecheck.dependencies]
+mypy = ">=0.930"
+pandas-stubs = "^2.0.2"
+typeguard = ">=2.13.3"
+
+[tool.poetry.group.docs]
+# Dependencies for documentation.
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = ">=6.0.0"
+sphinx-autobuild = ">=2021.3.14"
+sphinx-book-theme = "^1.0.1"
+sphinx-copybutton = "^0.5.2"
+sphinx-design = "^0.5.0"
+myst-parser = {version = ">=0.16.1"}
+# Use myst-nb from git since the currently released version (0.17.2) pins
+# Sphinx to < 6. Once a new release occurs we can upgrade to `0.18.0` or newer.
+# https://github.com/executablebooks/MyST-NB/issues/530
+myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
+
+[tool.poetry.group.test]
+# Dependencies for testing
+optional = true
+
+[tool.poetry.group.test.dependencies]
+coverage = { extras = ["toml"], version = ">=6.2"}
+pytest = ">=6.2.5"
+pytest-asyncio = "^0.21.1"
+xdoctest = {extras = ["colors"], version = ">=0.15.10"}
+
+[build-system]
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"
+
+[project]
+name = "kaskada"
+version = "0.1.0"
+description = "Kaskada query builder and local execution engine."
+requires-python = ">=3.8,<4.0"
+classifiers = [
+]
+
+[tool.maturin]
+profile = "release"
+# Path to the python source directory
+python-source = "pysrc"
+# Name of the Rust module in Python
+module-name = "kaskada._ffi"
+
+[tool.coverage.paths]
+source = ["pysrc", "*/site-packages"]
+tests = ["pytests"]
+
+[tool.coverage.run]
+branch = true
+source = ["pysrc", "pytests"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
+
+[tool.isort]
+profile = "black"
+force_single_line = true
+lines_after_imports = 2
+
+[tool.mypy]
+strict = true
+warn_unreachable = true
+pretty = true
+show_column_numbers = true
+show_error_context = true
+
+# pyproject.toml
+[tool.pytest.ini_options]
+testpaths = [
+    "pytests",
+]
