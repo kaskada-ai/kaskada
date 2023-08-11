@@ -1,8 +1,17 @@
+[project]
+name = "kaskada"
+version = "0.1."
+description = "Kaskada query builder and local execution engine."
+requires-python = ">=3.8,<4.0"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+]
+
 [tool.poetry]
 name = "kaskada"
-version = "0.6.0"
 description = "Kaskada query builder and local execution engine."
 authors = []
+version = "0.1.0"
 
 [tool.poetry.dependencies]
 # Dependencies for using the project.
@@ -73,17 +82,16 @@ pytest = ">=6.2.5"
 pytest-asyncio = "^0.21.1"
 xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 
+[tool.poetry.group.release]
+# Dependencies for performing the
+optional = true
+
+[tool.poetry.group.release.dependencies]
+python-semantic-release = "^8.0.6"
+
 [build-system]
 requires = ["maturin>=1,<2"]
 build-backend = "maturin"
-
-[project]
-name = "kaskada"
-version = "0.1.0"
-description = "Kaskada query builder and local execution engine."
-requires-python = ">=3.8,<4.0"
-classifiers = [
-]
 
 [tool.maturin]
 profile = "release"
@@ -121,3 +129,20 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
+
+[tool.semantic_release]
+version_toml = [
+    "pyproject.toml:project.version",
+    "pyproject.toml:tool.poetry.version",
+]
+tag_format = "v{version}"
+
+[tool.semantic_release.branches.main]
+match = "python-ci"
+prerelease = true
+prerelease_token = "a"
+
+[tool.semantic_release.branches.release]
+match = "release-*"
+
+[tool.semantic_release.remote]
