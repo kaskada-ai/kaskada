@@ -150,11 +150,12 @@ jobs:
         with:
           command: sdist
           args: --out dist
+          working-directory: ${{ github.workspace }}/python
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist
+          path: ${{ github.workspace }}/python/dist
 
   release:
     name: Release

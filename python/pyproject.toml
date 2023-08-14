@@ -1,6 +1,13 @@
+[project]
+name = "kaskada"
+version = "0.6.0a0"
+description = "Kaskada query builder and local execution engine."
+requires-python = ">=3.8,<4.0"
+classifiers = [
+]
+
 [tool.poetry]
 name = "kaskada"
-version = "0.6.0"
 description = "Kaskada query builder and local execution engine."
 authors = []
 
@@ -76,14 +83,6 @@ xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 [build-system]
 requires = ["maturin>=1,<2"]
 build-backend = "maturin"
-
-[project]
-name = "kaskada"
-version = "0.1.0"
-description = "Kaskada query builder and local execution engine."
-requires-python = ">=3.8,<4.0"
-classifiers = [
-]
 
 [tool.maturin]
 profile = "release"
