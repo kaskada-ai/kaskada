@@ -1,6 +1,6 @@
 [project]
 name = "kaskada"
-version = "0.1.0-a.1"
+version = "0.1.0-a.0"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.8,<4.0"
 classifiers = [
@@ -11,7 +11,7 @@ classifiers = [
 name = "kaskada"
 description = "Kaskada query builder and local execution engine."
 authors = []
-version = "0.1.0-a.1"
+version = "0.1.0-a.0"
 
 [tool.poetry.dependencies]
 # Dependencies for using the project.
