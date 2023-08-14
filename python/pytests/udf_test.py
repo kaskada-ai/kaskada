@@ -1,8 +1,14 @@
 import pandas as pd
 import pyarrow as pa
+<<<<<<< HEAD:python/pytests/udf_test.py
 from kaskada._ffi import call_udf
 from kaskada.udf import Udf
 from kaskada.udf import fenl_udf
+=======
+from sparrow_py._ffi import call_udf
+from sparrow_py.udf import Udf
+from sparrow_py.udf import fenl_udf
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pytests/udf_test.py
 
 
 @fenl_udf("add", "add(x: number, y: number) -> number")

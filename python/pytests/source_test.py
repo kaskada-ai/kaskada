@@ -1,6 +1,10 @@
 import kaskada as kd
 import pyarrow as pa
 import pytest
+<<<<<<< HEAD:python/pytests/source_test.py
+=======
+import sparrow_py as kt
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pytests/source_test.py
 
 
 def test_table_valid() -> None:

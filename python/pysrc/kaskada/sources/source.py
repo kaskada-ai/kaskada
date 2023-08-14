@@ -3,6 +3,10 @@ from typing import Optional
 
 import kaskada._ffi as _ffi
 import pyarrow as pa
+<<<<<<< HEAD:python/pysrc/kaskada/sources/source.py
+=======
+import sparrow_py._ffi as _ffi
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pysrc/sparrow_py/sources/source.py
 
 from .._session import _get_session
 from .._timestream import Timestream

@@ -2,6 +2,10 @@ from datetime import timedelta
 
 import kaskada as kd
 import pytest
+<<<<<<< HEAD:python/pytests/collect_test.py
+=======
+import sparrow_py as kt
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pytests/collect_test.py
 
 
 @pytest.fixture(scope="module")

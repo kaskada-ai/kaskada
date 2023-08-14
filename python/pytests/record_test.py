@@ -1,5 +1,9 @@
 import kaskada as kd
 import pytest
+<<<<<<< HEAD:python/pytests/record_test.py
+=======
+import sparrow_py as kt
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pytests/record_test.py
 
 
 @pytest.fixture

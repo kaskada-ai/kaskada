@@ -5,7 +5,12 @@ import kaskada as kd
 import pandas as pd
 import pyarrow as pa
 import pytest
+<<<<<<< HEAD:python/pytests/conftest.py
 from kaskada import init_session
+=======
+import sparrow_py as kt
+from sparrow_py import init_session
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pytests/conftest.py
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -1,4 +1,3 @@
-import datetime as datetime
 
 import pytest
 import sparrow_py as kt
@@ -20,29 +19,14 @@ def source() -> kt.sources.CsvString:
     return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
-def test_seconds_since(golden, source) -> None:
-    t1 = source.col("time")
-    t2 = source.col("t")
-    golden.jsonl(
-        kt.record(
-            {
-                "t1": t1,
-                "t2": t2,
-                "seconds_since_t1": t2.seconds_since(t1),
-                "seconds_since_t2": t1.seconds_since(t2),
-            }
-        )
-    )
-
-
-def test_seconds_since_datetime(golden, source) -> None:
+def test_seconds_since_previous(golden, source) -> None:
     t = source.col("time")
-    dt = datetime.datetime(1996, 12, 19, 16, 39, 50, tzinfo=datetime.timezone.utc)
     golden.jsonl(
         kt.record(
             {
-                "t1": t,
-                "seconds_since_literal": t.seconds_since(dt),
+                "seconds_since": t.seconds_since_previous(),
+                "seconds_since_1": t.seconds_since_previous(1),
+                "seconds_since_2": t.seconds_since_previous(2),
             }
         )
     )

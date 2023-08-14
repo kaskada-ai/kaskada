@@ -18,6 +18,11 @@ import kaskada as kd
 import kaskada._ffi as _ffi
 import pandas as pd
 import pyarrow as pa
+<<<<<<< HEAD:python/pysrc/kaskada/_timestream.py
+=======
+import sparrow_py as kt
+import sparrow_py._ffi as _ffi
+>>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pysrc/sparrow_py/_timestream.py
 from typing_extensions import TypeAlias
 
 from ._execution import ExecutionOptions
@@ -1009,7 +1014,7 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
-    def seconds_since(self, n: Union[Timestream, Literal] = 1) -> Timestream:
+    def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream containing the number of seconds since `time`.
 
@@ -1018,34 +1023,41 @@ class Timestream(object):
         n : Union[Timestream, Literal]
             The time to compute the seconds since.
 
-            This can be either a stream of timestamps, a datetime literal, or 
-            an integer literal representing the number of points to lag by. 
-
-            For example, `seconds_since(1)` will return a Timestream containing
-            the number of seconds since the the previous point.
+            This can be either a stream of timestamps or a datetime literal.
 
         Returns
         -------
         Timestream
             Timestream containing the number of seconds since `time`.
         """
-        if isinstance(n, datetime):
+        if isinstance(time, datetime):
             session = self._ffi_expr.session()
-            nanos = Timestream._literal(n.timestamp() * 1e9, session=session)
-            nanos = Timestream.cast(nanos, pa.timestamp('ns', None))
-            return Timestream._call(
-                "seconds_between", nanos, self
-            ).cast(pa.int64())
-        elif isinstance(n, int):
-            time_of_current = Timestream._call("time_of", self).cast(pa.int64())
-            time_of_previous = Timestream._call("time_of", self).lag(n).cast(pa.int64())
-            return (time_of_current - time_of_previous) / 1e9
+            nanos = Timestream._literal(time.timestamp() * 1e9, session=session)
+            nanos = Timestream.cast(nanos, pa.timestamp("ns", None))
+            return Timestream._call("seconds_between", nanos, self).cast(pa.int64())
         else:
-            return Timestream._call(
-                "seconds_between",
-                n,
-                self
-            ).cast(pa.int64())
+            return Timestream._call("seconds_between", time, self).cast(pa.int64())
+
+    def seconds_since_previous(self, n: int = 1) -> Timestream:
+        """
+        Create a Timestream containing the number of seconds since the time
+        `n` points ago.
+
+        Parameters
+        ----------
+        n : int
+            The number of points to lag by.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the number of seconds since the time `n`
+            points ago.
+        """
+        time_of_current = Timestream._call("time_of", self).cast(pa.int64())
+        time_of_previous = Timestream._call("time_of", self).lag(n).cast(pa.int64())
+        # `time_of` returns nanoseconds, so divide to get seconds
+        return (time_of_current - time_of_previous) / 1e9
 
     def flatten(self) -> Timestream:
         """Flatten a list of lists to a list of values."""
