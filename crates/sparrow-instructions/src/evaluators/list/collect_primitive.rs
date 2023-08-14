@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, AsArray, ListBuilder, PrimitiveBuilder};
-use arrow::datatypes::{ArrowPrimitiveType, DataType};
+use arrow::array::{ArrayRef, AsArray, ListBuilder, PrimitiveBuilder, TimestampNanosecondArray};
+use arrow::datatypes::{ArrowPrimitiveType, DataType, Int64Type};
 
 use itertools::izip;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_arrow::scalar_value::ScalarValue;
 
 use sparrow_plan::ValueRef;
@@ -100,8 +99,8 @@ where
         match (self.tick.is_literal_null(), self.duration.is_literal_null()) {
             (true, true) => self.evaluate_non_windowed(info),
             (false, true) => self.evaluate_since_windowed(info),
+            (true, false) => self.evaluate_trailing_windowed(info),
             (false, false) => panic!("sliding window aggregation should use other evaluator"),
-            (_, _) => anyhow::bail!("saw invalid combination of tick and duration"),
         }
     }
 
@@ -131,7 +130,7 @@ where
 
         self.ensure_entity_capacity(key_capacity);
 
-        let input = downcast_primitive_array::<T>(input.as_ref())?;
+        let input = input.as_primitive::<T>();
         let builder = PrimitiveBuilder::<T>::new();
         let mut list_builder = ListBuilder::new(builder);
 
@@ -169,7 +168,7 @@ where
 
         self.ensure_entity_capacity(key_capacity);
 
-        let input = downcast_primitive_array::<T>(input.as_ref())?;
+        let input = input.as_primitive::<T>();
         let ticks = info.value(&self.tick)?.array_ref()?;
         let ticks = ticks.as_boolean();
 
@@ -198,6 +197,58 @@ where
                 self.token.reset(entity_index);
             }
         });
+
+        Ok(Arc::new(list_builder.finish()))
+    }
+
+    /// Trailing windows emit values from the window of the current point to the
+    /// current time minus the given duration.
+    fn evaluate_trailing_windowed(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        let duration = info
+            .value(&self.duration)?
+            .try_primitive_literal::<Int64Type>()?
+            .ok_or_else(|| anyhow::anyhow!("Expected non-null literal duration"))?;
+        debug_assert!(duration > 0);
+
+        let input = info.value(&self.input)?.array_ref()?;
+        let key_capacity = info.grouping().num_groups();
+        let entity_indices = info.grouping().group_indices();
+        assert_eq!(entity_indices.len(), input.len());
+
+        self.ensure_entity_capacity(key_capacity);
+
+        let input = input.as_primitive::<T>();
+        let input_times = info.time_column().array_ref()?;
+        let input_times: &TimestampNanosecondArray = input_times.as_primitive();
+
+        let builder = PrimitiveBuilder::<T>::new();
+        let mut list_builder = ListBuilder::new(builder);
+
+        izip!(entity_indices.values(), input, input_times.values()).for_each(
+            |(entity_index, input, input_time)| {
+                let entity_index = *entity_index as usize;
+
+                // Update state
+                // Do not collect null values
+                if input.is_some() {
+                    self.token.add_value_with_time(
+                        self.max,
+                        entity_index,
+                        input,
+                        *input_time,
+                        duration,
+                    );
+                }
+
+                // Emit state
+                let cur_list = self.token.state(entity_index);
+                if cur_list.len() >= self.min {
+                    list_builder.append_value(cur_list.iter().copied());
+                } else {
+                    list_builder.append_null();
+                }
+            },
+        );
 
         Ok(Arc::new(list_builder.finish()))
     }

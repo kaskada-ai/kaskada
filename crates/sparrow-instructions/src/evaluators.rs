@@ -199,8 +199,8 @@ fn create_simple_evaluator(
                 &info.args[0].data_type,
                 CollectPrimitiveEvaluator,
                 CollectStructEvaluator,
-                CollectListEvaluator,
-                CollectMapEvaluator,
+                UnsupportedEvaluator,
+                UnsupportedEvaluator,
                 CollectBooleanEvaluator,
                 CollectStringEvaluator,
                 info

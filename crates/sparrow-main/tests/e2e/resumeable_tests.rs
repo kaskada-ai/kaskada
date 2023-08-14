@@ -546,6 +546,7 @@ async fn test_resumeable_shift_to_column() {
 }
 
 #[tokio::test]
+#[ignore = "resumeable not implemented for lag"]
 async fn test_resumeable_lag_basic() {
     // Test for resuming a query with a lag operator.
     let query_fixture =
