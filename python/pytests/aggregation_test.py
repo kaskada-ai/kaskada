@@ -48,3 +48,18 @@ def test_sum_since_true(source, golden) -> None:
         }
     )
     golden.jsonl(m_sum_since_true)
+
+
+def test_count(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(
+        kd.record(
+            {
+                "m": m,
+                "count_m": m.count(),
+                "n": n,
+                "count_n": n.count(),
+            }
+        )
+    )
