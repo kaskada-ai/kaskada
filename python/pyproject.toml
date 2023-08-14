@@ -4,6 +4,7 @@ version = "0.6.0a0"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.8,<4.0"
 classifiers = [
+    "Development Status :: 3 - Alpha",
 ]
 
 [tool.poetry]
@@ -120,3 +121,20 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
+
+[tool.semantic_release]
+version_toml = [
+    "pyproject.toml:project.version",
+    "Cargo.toml:package.version",
+]
+tag_format = "release-v{version}"
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = true
+prerelease_token = "a"
+
+[tool.semantic_release.branches.release]
+match = "release-*"
+
+[tool.semantic_release.remote]
