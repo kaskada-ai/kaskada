@@ -134,7 +134,6 @@ testpaths = [
 version_toml = [
     "pyproject.toml:project.version",
     "pyproject.toml:tool.poetry.version",
-    "Cargo.toml:package.version",
 ]
 tag_format = "release-v{version}"
 
