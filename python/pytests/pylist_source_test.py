@@ -36,3 +36,20 @@ def test_read_pylist_lists(golden) -> None:
         ]
     )
     golden.jsonl(source)
+
+def test_read_pylist_ignore_column(golden) -> None:
+    # Schema is determined from first row, and doesn't contain an "m" column.
+    source = kd.sources.PyList(
+        [{"time": "1996-12-19T16:39:57", "user": "A", "n": 10}],
+        time_column_name="time",
+        key_column_name="user",
+    )
+    golden.jsonl(source)
+
+    source.add_rows(
+        [
+            {"time": "1996-12-19T16:40:57", "user": "A", "m": 83, "n": 10},
+            {"time": "1996-12-19T16:41:57", "user": "A", "m": 12},
+        ]
+    )
+    golden.jsonl(source)
