@@ -94,7 +94,7 @@ def test_collect_i64_trailing_window_1s(source, golden) -> None:
     golden.jsonl(
         kd.record(
             {
-                "m": m,
+                # "m": m,
                 "collect_m": m.collect(
                     max=None, window=kd.windows.Trailing(timedelta(seconds=1))
                 ),
