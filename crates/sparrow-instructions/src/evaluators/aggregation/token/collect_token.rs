@@ -64,21 +64,15 @@ where
 
     /// Pops all values and times that are outside of the window
     pub fn check_time(&mut self, index: usize, time: i64, window_duration: i64) {
-        println!("time: {}, window_duration: {}", time, window_duration);
         debug_assert_eq!(self.times[index].len(), self.state[index].len());
         let min_time = time - window_duration;
-        println!("min_time: {}", min_time);
 
         if let Some(mut front) = self.times[index].front() {
-            println!("Front: {}", front);
-            println!("Front is less than min time: {}", *front <= min_time);
             while *front <= min_time {
                 self.state[index].pop_front();
                 self.times[index].pop_front();
-                println!("Popped front");
 
                 if let Some(f) = self.times[index].front() {
-                    println!("Next front: {}", f);
                     front = f
                 } else {
                     break;

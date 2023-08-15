@@ -123,7 +123,7 @@ impl CollectStringEvaluator {
 
             let cur_list = self.token.state(entity_index);
             if cur_list.len() >= self.min {
-                list_builder.append_value(cur_list.into_iter().map(Some));
+                list_builder.append_value(cur_list.iter().map(Some));
             } else {
                 list_builder.append_null();
             }
@@ -167,7 +167,7 @@ impl CollectStringEvaluator {
             // Emit state
             let cur_list = self.token.state(entity_index);
             if cur_list.len() >= self.min {
-                list_builder.append_value(cur_list.into_iter().map(Some));
+                list_builder.append_value(cur_list.iter().map(Some));
             } else {
                 list_builder.append_null();
             }
@@ -210,7 +210,6 @@ impl CollectStringEvaluator {
 
                 // Update state
                 // Do not collect null values
-                println!("input: {:?}", input);
                 if let Some(input) = input {
                     self.token.add_value_with_time(
                         self.max,
@@ -226,7 +225,7 @@ impl CollectStringEvaluator {
                 // Emit state
                 let cur_list = self.token.state(entity_index);
                 if cur_list.len() >= self.min {
-                    list_builder.append_value(cur_list.into_iter().map(Some));
+                    list_builder.append_value(cur_list.iter().map(Some));
                 } else {
                     list_builder.append_null();
                 }

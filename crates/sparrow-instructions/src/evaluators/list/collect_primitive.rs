@@ -230,7 +230,6 @@ where
 
                 // Update state
                 // Do not collect null values
-                println!("Primitive input: {:?}", input);
                 if let Some(input) = input {
                     self.token.add_value_with_time(
                         self.max,

@@ -208,7 +208,6 @@ impl CollectBooleanEvaluator {
 
                 // Update state
                 // Do not collect null values
-                println!("Bool input: {:?}", input);
                 if let Some(input) = input {
                     self.token.add_value_with_time(
                         self.max,
@@ -223,7 +222,6 @@ impl CollectBooleanEvaluator {
 
                 // Emit state
                 let cur_list = self.token.state(entity_index);
-                println!("Bool cur_list: {:?}", cur_list);
                 if cur_list.len() >= self.min {
                     list_builder.append_value(cur_list.iter().map(|i| Some(*i)));
                 } else {
@@ -232,9 +230,6 @@ impl CollectBooleanEvaluator {
             },
         );
 
-        let lb = list_builder.finish();
-        println!("OUTPUT: {:?}", lb);
-        Ok(Arc::new(lb))
-        // Ok(Arc::new(list_builder.finish()))
+        Ok(Arc::new(list_builder.finish()))
     }
 }
