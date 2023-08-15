@@ -1011,19 +1011,24 @@ class Timestream(object):
 
     def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
-        Create a Timestream containing the number of seconds since `time`.
+        Create a Timestream containing the number of seconds since `time`
+        from `self.time_of()`.
 
         Parameters
         ----------
-        n : Union[Timestream, Literal]
+        time : Union[Timestream, Literal]
             The time to compute the seconds since.
 
             This can be either a stream of timestamps or a datetime literal.
+            If `time` is a Timestream, the result will contain the seconds
+            from `self.time_of()` to `time.time_of()`.
 
         Returns
         -------
         Timestream
             Timestream containing the number of seconds since `time`.
+
+            If `self.time_of()` is greater than `time`, the result will be positive.
         """
         if isinstance(time, datetime):
             session = self._ffi_expr.session()
@@ -1041,7 +1046,10 @@ class Timestream(object):
         Parameters
         ----------
         n : int
-            The number of points to lag by.
+            The number of points to look back. For example, `n=1` refers to
+            the previous point.
+
+            Defaults to 1.
 
         Returns
         -------
