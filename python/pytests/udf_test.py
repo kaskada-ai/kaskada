@@ -4,6 +4,7 @@ from kaskada._ffi import call_udf
 from kaskada.udf import Udf
 from kaskada.udf import fenl_udf
 
+
 @fenl_udf("add", "add(x: number, y: number) -> number")
 def add(x: pd.Series, y: pd.Series) -> pd.Series:
     return x + y

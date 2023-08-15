@@ -1,8 +1,9 @@
-import pytest
 import kaskada as kd
+import pytest
+
 
 @pytest.fixture
-def source() -> kt.sources.CsvString:
+def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n,t",
@@ -14,7 +15,7 @@ def source() -> kt.sources.CsvString:
             "1996-12-19T16:40:02,A,,,1996-12-19T16:43:02",
         ]
     )
-    return kt.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
 def test_seconds_since_previous(golden, source) -> None:
