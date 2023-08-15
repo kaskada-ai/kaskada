@@ -2,10 +2,6 @@ import random
 
 import kaskada as kd
 import pandas as pd
-<<<<<<< HEAD:python/pytests/pandas_source_test.py
-=======
-import sparrow_py as kt
->>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pytests/pandas_source_test.py
 
 
 def test_add_dataframe(golden) -> None:

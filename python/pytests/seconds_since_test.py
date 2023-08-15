@@ -1,8 +1,7 @@
 import datetime as datetime
 
+import kaskada as kd
 import pytest
-import sparrow_py as kt
-
 
 @pytest.fixture
 def source() -> kt.sources.CsvString:
@@ -24,7 +23,7 @@ def test_seconds_since(golden, source) -> None:
     t1 = source.col("time")
     t2 = source.col("t")
     golden.jsonl(
-        kt.record(
+        kd.record(
             {
                 "t1": t1,
                 "t2": t2,
@@ -39,7 +38,7 @@ def test_seconds_since_datetime(golden, source) -> None:
     t = source.col("time")
     dt = datetime.datetime(1996, 12, 19, 16, 39, 50, tzinfo=datetime.timezone.utc)
     golden.jsonl(
-        kt.record(
+        kd.record(
             {
                 "t1": t,
                 "seconds_since_literal": t.seconds_since(dt),

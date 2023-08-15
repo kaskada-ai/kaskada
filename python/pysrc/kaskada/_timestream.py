@@ -18,11 +18,6 @@ import kaskada as kd
 import kaskada._ffi as _ffi
 import pandas as pd
 import pyarrow as pa
-<<<<<<< HEAD:python/pysrc/kaskada/_timestream.py
-=======
-import sparrow_py as kt
-import sparrow_py._ffi as _ffi
->>>>>>> 571c8f5c (split seconds since previous out):sparrow-py/pysrc/sparrow_py/_timestream.py
 from typing_extensions import TypeAlias
 
 from ._execution import ExecutionOptions
