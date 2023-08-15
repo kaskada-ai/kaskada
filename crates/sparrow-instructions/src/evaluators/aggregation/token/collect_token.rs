@@ -10,9 +10,9 @@ pub struct CollectToken<T>
 where
     T: Clone,
     T: Serialize + DeserializeOwned,
-    Vec<VecDeque<Option<T>>>: Serialize + DeserializeOwned,
+    Vec<VecDeque<T>>: Serialize + DeserializeOwned,
 {
-    state: Vec<VecDeque<Option<T>>>,
+    state: Vec<VecDeque<T>>,
     /// Stores the times of the state values.
     ///
     /// Comprised of lists of timestamps for each entity.
@@ -35,7 +35,7 @@ where
         }
     }
 
-    pub fn add_value(&mut self, max: usize, index: usize, input: Option<T>) {
+    pub fn add_value(&mut self, max: usize, index: usize, input: T) {
         self.state[index].push_back(input);
         if self.state[index].len() > max {
             self.state[index].pop_front();
@@ -47,7 +47,7 @@ where
         &mut self,
         max: usize,
         index: usize,
-        input: Option<T>,
+        input: T,
         time: i64,
         window_duration: i64,
     ) {
@@ -59,19 +59,29 @@ where
         }
         debug_assert_eq!(self.times[index].len(), self.state[index].len());
 
+        self.check_time(index, time, window_duration)
+    }
+
+    /// Pops all values and times that are outside of the window
+    pub fn check_time(&mut self, index: usize, time: i64, window_duration: i64) {
+        debug_assert_eq!(self.times[index].len(), self.state[index].len());
         let min_time = time - window_duration;
 
-        // safety: we just added a time that can't be less than the min time
-        // and max is always greater than 0.
-        let mut front = self.times[index].front().unwrap();
-        while *front < min_time {
-            self.state[index].pop_front();
-            self.times[index].pop_front();
-            front = self.times[index].front().unwrap();
+        if let Some(mut front) = self.times[index].front() {
+            while *front <= min_time {
+                self.state[index].pop_front();
+                self.times[index].pop_front();
+
+                if let Some(f) = self.times[index].front() {
+                    front = f
+                } else {
+                    break;
+                }
+            }
         }
     }
 
-    pub fn state(&self, index: usize) -> &VecDeque<Option<T>> {
+    pub fn state(&self, index: usize) -> &VecDeque<T> {
         &self.state[index]
     }
 

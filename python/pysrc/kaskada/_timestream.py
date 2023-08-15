@@ -1149,9 +1149,23 @@ def _aggregation(
             raise NotImplementedError(
                 f"Aggregation '{op} does not support trailing windows"
             )
+
         trailing_ns = int(window.duration.total_seconds() * 1e9)
-        # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
-        return Timestream._call(op, input, *args, None, trailing_ns)
+
+        # Create the shifted-forward input
+        input_shift = input.shift_by(window.duration)
+
+        # Merge, then extract just the input.
+        #
+        # Note: Assumes the "input" is discrete. Can probably
+        # use a transform to make it discrete (eg., `input.filter(True)`)
+        # or a special function to do that.
+        #
+        # HACK: This places an extra null row in the input to `collect`
+        # which allows us to "clear" the window when the appropriate 
+        # `duration` has passed with no "real" inputs.
+        merged_input = record({ "input": input, "shift": input_shift }).col("input")
+        return Timestream._call("collect", merged_input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 
