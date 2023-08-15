@@ -1,6 +1,7 @@
 import datetime as datetime
 
 import kaskada as kd
+import pyarrow as pa
 import pytest
 
 
@@ -28,8 +29,8 @@ def test_seconds_since(golden, source) -> None:
             {
                 "t1": t1,
                 "t2": t2,
-                "seconds_since_t1": t2.seconds_since(t1),
-                "seconds_since_t2": t1.seconds_since(t2),
+                "seconds_since_t1": t2.seconds_since(t1).cast(pa.int64()),
+                "seconds_since_t2": t1.seconds_since(t2).cast(pa.int64()),
             }
         )
     )
@@ -40,9 +41,6 @@ def test_seconds_since_datetime(golden, source) -> None:
     dt = datetime.datetime(1996, 12, 19, 16, 39, 50, tzinfo=datetime.timezone.utc)
     golden.jsonl(
         kd.record(
-            {
-                "t1": t,
-                "seconds_since_literal": t.seconds_since(dt),
-            }
+            {"t1": t, "seconds_since_literal": t.seconds_since(dt).cast(pa.int64())}
         )
     )

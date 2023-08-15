@@ -1,4 +1,5 @@
 import kaskada as kd
+import pyarrow as pa
 import pytest
 
 
@@ -23,9 +24,9 @@ def test_seconds_since_previous(golden, source) -> None:
     golden.jsonl(
         kd.record(
             {
-                "seconds_since": t.seconds_since_previous(),
-                "seconds_since_1": t.seconds_since_previous(1),
-                "seconds_since_2": t.seconds_since_previous(2),
+                "seconds_since": t.seconds_since_previous().cast(pa.int64()),
+                "seconds_since_1": t.seconds_since_previous(1).cast(pa.int64()),
+                "seconds_since_2": t.seconds_since_previous(2).cast(pa.int64()),
             }
         )
     )

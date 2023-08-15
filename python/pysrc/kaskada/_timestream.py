@@ -1034,9 +1034,9 @@ class Timestream(object):
             session = self._ffi_expr.session()
             nanos = Timestream._literal(time.timestamp() * 1e9, session=session)
             nanos = Timestream.cast(nanos, pa.timestamp("ns", None))
-            return Timestream._call("seconds_between", nanos, self).cast(pa.int64())
+            return Timestream._call("seconds_between", nanos, self)
         else:
-            return Timestream._call("seconds_between", time, self).cast(pa.int64())
+            return Timestream._call("seconds_between", time, self)
 
     def seconds_since_previous(self, n: int = 1) -> Timestream:
         """
@@ -1059,8 +1059,9 @@ class Timestream(object):
         """
         time_of_current = Timestream._call("time_of", self).cast(pa.int64())
         time_of_previous = Timestream._call("time_of", self).lag(n).cast(pa.int64())
+
         # `time_of` returns nanoseconds, so divide to get seconds
-        return (time_of_current - time_of_previous) / 1e9
+        return time_of_current.sub(time_of_previous).div(1e9).cast(pa.duration("s"))
 
     def flatten(self) -> Timestream:
         """Flatten a list of lists to a list of values."""
