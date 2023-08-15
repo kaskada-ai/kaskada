@@ -25,8 +25,8 @@ class Source(Timestream):
         subsort_column_name: Optional[str] = None,
         grouping_name: Optional[str] = None,
     ):
-        assert isinstance(schema, pa.Schema)
         """Create a new source."""
+        assert isinstance(schema, pa.Schema)
 
         # Fix the schema. The fields should be non-nullable.
         def fix_field(field: pa.Field) -> pa.Field:
