@@ -43,7 +43,7 @@ where
     }
 
     /// Adds the input and time, then removes any values that are outside of the window.
-    pub fn add_value_with_time(
+   pub fn add_value_with_time(
         &mut self,
         max: usize,
         index: usize,
