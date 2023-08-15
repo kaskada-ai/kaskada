@@ -108,7 +108,7 @@ jobs:
           args: --release --out dist --zig
           sccache: 'true'
           manylinux: auto
-          working-directory: ${{ github.workspace }}/python
+          working-directory: python
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -222,7 +222,7 @@ jobs:
         with:
           command: sdist
           args: --out dist
-          working-directory: ${{ github.workspace }}/python
+          working-directory: python
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
@@ -295,4 +295,4 @@ jobs:
   #       with:
   #         command: upload
   #         args: --skip-existing *
-  #         working-directory: ${{ github.workspace }}/python
+  #         working-directory: python
