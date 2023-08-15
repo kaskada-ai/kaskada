@@ -78,10 +78,10 @@ jobs:
             target: aarch64
           - host: ubuntu-latest
             target: armv7
+          # - host: ubuntu-latest
+          #   target: s390x
           - host: ubuntu-latest
-            target: s390x
-          - host: ubuntu-latest
-            target: ppc64le
+            target: ppc64el
           - host: windows-latest
             target: x64
           - host: windows-latest
@@ -102,6 +102,10 @@ jobs:
         with:
           python-version: 3.11
           cache: poetry
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -184,8 +188,8 @@ jobs:
             target: aarch64
           - host: ubuntu-latest
             target: armv7
-          - host: ubuntu-latest
-            target: s390x
+          # - host: ubuntu-latest
+          #   target: s390x
           - host: ubuntu-latest
             target: ppc64le
     runs-on: ${{ matrix.host }}
