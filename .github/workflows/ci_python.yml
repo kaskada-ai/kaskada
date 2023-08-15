@@ -43,7 +43,7 @@ jobs:
           cache: poetry
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install peotry
+          pip install poetry
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
       - name: install deps
@@ -98,7 +98,7 @@ jobs:
           cache: poetry
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install peotry
+          pip install poetry
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
       - uses: actions/cache@v3
@@ -161,7 +161,7 @@ jobs:
           cache: poetry
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install peotry
+          pip install poetry
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
       - uses: actions/cache@v3
@@ -249,7 +249,7 @@ jobs:
           cache: poetry
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install peotry
+          pip install poetry
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
       - uses: actions/cache@v3
