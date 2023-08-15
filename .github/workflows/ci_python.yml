@@ -21,6 +21,11 @@ on:
     branches:
       - main
 
+defaults:
+  run:
+    shell: bash
+    working-directory: python
+
 permissions:
   contents: read
 
@@ -113,7 +118,6 @@ jobs:
           args: --release --out dist --zig
           sccache: 'true'
           manylinux: auto
-          working-directory: ${{ github.workspace }}/python
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -174,19 +178,13 @@ jobs:
         with:
           name: wheels
       - name: install deps
-        shell: bash
-        working-directory: ${{ github.workspace }}/python
         run: |
           set -e
           poetry install --no-dev --with=test --with=typecheck
           pip install kaskada --find-links dist --force-reinstall
       - name: pytest
-        shell: bash
-        working-directory: ${{ github.workspace }}/python
         run: pytest
       - name: mypy
-        shell: bash
-        working-directory: ${{ github.workspace }}/python
         run: mypy --install-types --non-interacitve pysrc pytests docs/source/
 
   # Tests that require `run_on_arch`.
@@ -238,7 +236,6 @@ jobs:
         with:
           command: sdist
           args: --out dist
-          working-directory: ${{ github.workspace }}/python
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
@@ -269,12 +266,10 @@ jobs:
         with:
           name: wheels
       - name: Install dependencies
-        working-directory: ${{ github.workspace }}/python
         run: |
           poetry install --no-dev --with=docs --with-typecheck
           pip install kaskada --find-links dist --force-reinstall
       - name: Build docs
-        working-directory: ${{ github.workspace }}/python
         run: |
           sphinx-build docs/source docs/_build -j auto
       - name: Upload artifact
