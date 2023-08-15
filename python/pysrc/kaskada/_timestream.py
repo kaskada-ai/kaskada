@@ -1043,9 +1043,11 @@ class Timestream(object):
 
         Parameters
         ----------
-        n : int, default 1
+        n : int
             The number of points to look back. For example, `n=1` refers to
             the previous point.
+
+            Defaults to 1 (the previous point).
 
         Returns
         -------
