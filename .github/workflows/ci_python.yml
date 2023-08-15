@@ -48,7 +48,7 @@ jobs:
           poetry config virtualenvs.in-project true --local
       - name: install deps
         run: |
-          poetry install --no-dev --with=lint
+          poetry install --only=main --only=lint
       - name: black
         run: |
           poetry run black --diff pysrc pytests docs/source
@@ -175,7 +175,7 @@ jobs:
       - name: install deps
         run: |
           set -e
-          poetry install --no-dev --with=test --with=typecheck
+          poetry install --only=main --only=test --only=typecheck
           pip install kaskada --find-links dist --force-reinstall
       - name: pytest
         run: pytest
@@ -214,7 +214,7 @@ jobs:
             cd ${{ github.workspace }}/python
             # We shouldn't need regular dependencies, since they come from
             # the `pip install` of kaskada later.
-            poetry install --with=test --with=typecheck
+            poetry install --only=main --only=test --only=typecheck
           run: |
             set -e
             pip3 install kaskada --find-links dist --force-reinstall
@@ -262,7 +262,7 @@ jobs:
           name: wheels
       - name: Install dependencies
         run: |
-          poetry install --no-dev --with=docs --with-typecheck
+          poetry install --only=main --only=docs --only=typecheck
           pip install kaskada --find-links dist --force-reinstall
       - name: Build docs
         run: |
