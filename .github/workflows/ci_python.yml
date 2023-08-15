@@ -38,15 +38,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install poetry
-        run: pipx install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
           cache: poetry
-      - name: Setup a local virtual environment (if no poetry.toml file)
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
       - name: install deps
         run: |
           poetry install --only=main --only=lint
@@ -94,20 +93,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install poetry
-        run: pipx install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
           cache: poetry
-      - name: Setup a local virtual environment (if no poetry.toml file)
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
-      - uses: actions/cache@v3
-        name: Define a cache for the virtual environment based on the dependencies lock file
-        with:
-          path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -158,20 +151,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
-        run: pipx install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python || '3.11' }}
           cache: poetry
-      - name: Setup a local virtual environment (if no poetry.toml file)
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
-      - uses: actions/cache@v3
-        name: Define a cache for the virtual environment based on the dependencies lock file
-        with:
-          path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
       - uses: actions/download-artifact@v3
         with:
           name: wheels
@@ -247,20 +234,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
-        run: pipx install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
           cache: poetry
-      - name: Setup a local virtual environment (if no poetry.toml file)
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
-      - uses: actions/cache@v3
-        name: Define a cache for the virtual environment based on the dependencies lock file
-        with:
-          path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
       - uses: actions/download-artifact@v3
         with:
           name: wheels
