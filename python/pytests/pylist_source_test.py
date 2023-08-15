@@ -37,6 +37,7 @@ def test_read_pylist_lists(golden) -> None:
     )
     golden.jsonl(source)
 
+
 def test_read_pylist_ignore_column(golden) -> None:
     # Schema is determined from first row, and doesn't contain an "m" column.
     source = kd.sources.PyList(
