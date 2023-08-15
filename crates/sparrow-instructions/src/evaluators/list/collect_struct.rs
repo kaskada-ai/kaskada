@@ -452,6 +452,8 @@ impl CollectStructEvaluator {
         let old_state = token.state.as_list::<i32>();
         let old_state_flat = old_state.values();
 
+        println!("old_state_flat: {:?}", old_state_flat);
+
         let mut take_output_builder = UInt32Builder::new();
         let mut output_offset_builder = vec![0];
 
@@ -477,6 +479,7 @@ impl CollectStructEvaluator {
             // Update state
             if input.is_valid(index) {
                 let take_index = (old_state_flat.len() + index) as u32;
+                println!("take_index: {}", take_index);
                 entity_take_indices
                     .entry(*entity_index)
                     .and_modify(|v| {
@@ -504,6 +507,29 @@ impl CollectStructEvaluator {
                         }
                     })
                     .or_insert(vec![take_index].into());
+                println!("Entity take indices: {:?}", entity_take_indices);
+            } else {
+                let take_index = (old_state_flat.len() + index) as u32;
+                // Iterates over the front of the vec and pops off any values that
+                // exist prior to the start of the current window
+                let v = entity_take_indices
+                    .entry(*entity_index)
+                    .or_insert(vec![].into());
+
+                if let Some(front_i) = v.front() {
+                    let mut oldest_time = combined_times.value(*front_i as usize);
+                    // Note this uses the `combined_times` and `take_index`
+                    // because it's possible we need to pop off new input
+                    let min_window_start = combined_times.value(take_index as usize) - duration;
+                    while oldest_time <= min_window_start {
+                        v.pop_front();
+                        if let Some(f_i) = v.front() {
+                            oldest_time = combined_times.value(*f_i as usize);
+                        } else {
+                            break;
+                        }
+                    }
+                }
             }
 
             // safety: map was resized to handle entity_index size

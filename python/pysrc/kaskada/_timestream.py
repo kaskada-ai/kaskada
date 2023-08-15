@@ -1149,39 +1149,23 @@ def _aggregation(
             raise NotImplementedError(
                 f"Aggregation '{op} does not support trailing windows"
             )
-        # is_input = input.is_not_null()
-        # shift_by = window.duration
-        # input_shift = input.shift_by(shift_by)
-        # trailing_ns = int(window.duration.total_seconds() * 1e9)
-        # input = record({"input": input, "input_shift": input_shift}).col("input")
 
-        # # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
-        # collect = Timestream._call(op, input, *args, None, trailing_ns)
-        # return collect.filter(is_input)
-
-        # return Timestream._call(op, input, *args, None, trailing_ns)
         trailing_ns = int(window.duration.total_seconds() * 1e9)
 
-        # Shift input forward to create a row `duration` past each row
+        # Create the shifted-forward input
         input_shift = input.shift_by(window.duration)
 
-        # Identify the rows that are "original" inputs
-        input = record({ "input": input, "is_input": True })
-        is_input = input.col("is_input")
-
-        merged_input = record( {"input": input, "shift": input_shift }).col("input")
-        collect = Timestream._call(op, merged_input, *args, None, trailing_ns)
-
-        filtered = collect.filter(is_input).col("input")
-        not_null_filtered = filtered.length().eq(0).or_(filtered[0].is_not_null())
-
-        return filtered.filter(not_null_filtered)
-        # return not_null_filtered
-
-
-        # return collect.filter(is_input)
-        # return collect
-        # return collect.filter(is_input).col("input")
+        # Merge, then extract just the input.
+        #
+        # Note: Assumes the "input" is discrete. Can probably
+        # use a transform to make it discrete (eg., `input.filter(True)`)
+        # or a special function to do that.
+        #
+        # HACK: This places an extra null row in the input to `collect`
+        # which allows us to "clear" the window when the appropriate 
+        # `duration` has passed with no "real" inputs.
+        merged_input = record({ "input": input, "shift": input_shift }).col("input")
+        return Timestream._call("collect", merged_input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 
