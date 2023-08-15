@@ -59,26 +59,27 @@ jobs:
   build-wheel:
     strategy:
       matrix:
-        - host: ubuntu-latest
-          target: x86_64
-        - host: ubuntu-latest
-          target: x86
-        - host: ubuntu-latest
-          target: aarch64
-        - host: ubuntu-latest
-          target: armv7
-        - host: ubuntu-latest
-          target: s390x
-        - host: ubuntu-latest
-          target: ppc64le
-        - host: windows-latest
-          target: x64
-        - host: windows-latest
-          target: x86
-        - host: macos-latest
-          target: x86_64
-        - host: macos-latest
-          target: aarch64
+        include:
+          - host: ubuntu-latest
+            target: x86_64
+          - host: ubuntu-latest
+            target: x86
+          - host: ubuntu-latest
+            target: aarch64
+          - host: ubuntu-latest
+            target: armv7
+          - host: ubuntu-latest
+            target: s390x
+          - host: ubuntu-latest
+            target: ppc64le
+          - host: windows-latest
+            target: x64
+          - host: windows-latest
+            target: x86
+          - host: macos-latest
+            target: x86_64
+          - host: macos-latest
+            target: aarch64
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v2
@@ -104,33 +105,34 @@ jobs:
     needs: [build-wheel]
     strategy:
       matrix:
-        - host: ubuntu-latest
-          target: x86_64
-        - host: ubuntu-latest
-          target: x86_64
-          python: 3.10
-        - host: ubuntu-latest
-          target: x86_64
-          python: 3.9
-        - host: ubuntu-latest
-          target: x86_64
-          python: 3.8
-        - host: ubuntu-latest
-          target: x86
-        # - host: ubuntu-latest
-        #   target: aarch64
-        # - host: ubuntu-latest
-        #   target: armv7
-        # - host: ubuntu-latest
-        #   target: s390x
-        # - host: ubuntu-latest
-        #   target: ppc64le
-        - host: windows-latest
-          target: x64
-        - host: macos-latest
-          target: x86_64
-        # - host: macos-latest
-        #   target: aarch64
+        include:
+          - host: ubuntu-latest
+            target: x86_64
+          - host: ubuntu-latest
+            target: x86_64
+            python: 3.10
+          - host: ubuntu-latest
+            target: x86_64
+            python: 3.9
+          - host: ubuntu-latest
+            target: x86_64
+            python: 3.8
+          - host: ubuntu-latest
+            target: x86
+          # - host: ubuntu-latest
+          #   target: aarch64
+          # - host: ubuntu-latest
+          #   target: armv7
+          # - host: ubuntu-latest
+          #   target: s390x
+          # - host: ubuntu-latest
+          #   target: ppc64le
+          - host: windows-latest
+            target: x64
+          - host: macos-latest
+            target: x86_64
+          # - host: macos-latest
+          #   target: aarch64
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v3
@@ -162,14 +164,15 @@ jobs:
     needs: [build-wheel]
     strategy:
       matrix:
-        - host: ubuntu-latest
-          target: aarch64
-        - host: ubuntu-latest
-          target: armv7
-        - host: ubuntu-latest
-          target: s390x
-        - host: ubuntu-latest
-          target: ppc64le
+        include:
+          - host: ubuntu-latest
+            target: aarch64
+          - host: ubuntu-latest
+            target: armv7
+          - host: ubuntu-latest
+            target: s390x
+          - host: ubuntu-latest
+            target: ppc64le
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v3
@@ -234,21 +237,27 @@ jobs:
       - name: Upload artifact
         # Automatically uploads an artifact from the './_site' directory by default
         uses: actions/upload-pages-artifact@v2
-        path: ${{ github.workspace }}/python/docs/_build
+        with:
+            path: ${{ github.workspace }}/python/docs/_build
 
   docs-deploy:
     # Deployment job
-    deploy:
-      environment:
-        name: github-pages
-        url: ${{ steps.deployment.outputs.page_url }}
-      if: github.ref == 'refs/heads/main'
-      runs-on: ubuntu-latest
-      needs: [docs-build]
-      steps:
-        - name: Deploy to GitHub Pages
-          id: deployment
-          uses: actions/deploy-pages@v2
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+      # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [docs-build]
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
 
   # release:
   #   name: Release
