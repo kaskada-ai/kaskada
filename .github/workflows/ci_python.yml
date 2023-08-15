@@ -67,6 +67,7 @@ jobs:
 
   build-wheel:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - host: ubuntu-latest
