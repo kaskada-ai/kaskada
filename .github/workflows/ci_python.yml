@@ -155,6 +155,10 @@ jobs:
       #     toolchain: stable
       #     profile: minimal
       #     default: true
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
