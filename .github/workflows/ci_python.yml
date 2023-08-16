@@ -8,6 +8,11 @@
 # - `xdoctest`
 name: CI
 
+# Only one job per-ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -65,58 +70,10 @@ jobs:
         run: |
           poetry run pydocstyle pysrc
 
-  build-wheel:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - host: ubuntu-latest
-            target: x86_64
-            test: host
-            python_versions: |
-              3.8
-              3.9
-              3.10
-              3.11
-          - host: ubuntu-latest
-            target: x86
-            test: host
-          - host: ubuntu-latest
-            target: aarch64
-            test: run_on_arch
-          - host: ubuntu-latest
-            target: armv7
-            test: run_on_arch
-          #
-          # Fail to build `ring` crate
-          # - host: ubuntu-latest
-          #   target: s390x
-          #
-          # Fail to build `ring` crate
-          # - host: ubuntu-latest
-          #   target: ppc64le
-          #
-          # Linker error
-          # - host: windows-latest
-          #   target: x64
-          #
-          #  "your Rust target architecture (32-bit) does not match your python interpreter (64-bit)"
-          # - host: windows-latest
-          #   target: x86
-          #
-          - host: macos-latest
-            target: x86_64
-          - host: macos-latest
-            target: aarch64
-            test: host
-            python_versions: |
-              3.8
-              3.9
-              3.10
-              3.11
-    runs-on: ${{ matrix.host }}
+  build-wheel-macos:
+    runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install poetry
         run: |
           pipx install poetry
@@ -124,40 +81,30 @@ jobs:
           poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python_versions || '3.11' }}
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+          architecture: x64
           cache: poetry
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
+      - name: Build wheel (Mac x86_64)
+        uses: messense/maturin-action@v1
         with:
-          target: ${{ matrix.target }}
-          args: --release --out dist
-          sccache: 'true'
-          manylinux: auto
+          target: x86_64
+          args: --release --out dist --sdist
           working-directory: python
-          before-script-linux: |
-            # We need to add the protobuf-compiler since manylinux builds happen
-            # in a docker container that doesn't have it.
-            PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-${{ matrix.target }}.zip
-            unzip protoc-24.0-linux-${{ matrix.target }}.zip -d $HOME/.local
-            export PATH="$PATH:$HOME/.local/bin"
-      - name: Upload wheels
-        uses: actions/upload-artifact@v3
-        with:
-          name: wheels
-          path: ${{ github.workspace }}/python/dist
-      - name: pytest and mypy (host)
-        if: ${{ matrix.test == 'host' }}
+      - name: pytest and mypy (Mac x86_64)
         run: |
-          for V in $(echo "${{ matrix.python_versions }}" | xargs); do
+          for V in "3.8 3.9 3.10 3.11" | xargs); do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
-            pip install kaskada>=0.6.0-a.0 --find-links dist --force-reinstall
+            pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -166,29 +113,114 @@ jobs:
             poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
             echo "::endgroup::"
           done
-      - name: pytest (on arch)
-        uses: uraimo/run-on-arch-action@v2.5.0
-        if: ${{ matrix.test == 'run_on_arch' }}
+      - name: Build wheel (Mac universal2)
+        uses: messense/maturin-action@v1
         with:
-          arch: ${{ matrix.target }}
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          dockerRunArgs: |
-            --volume "${{ github.workspace }}/python:/python"
-          install: |
-            apt-get update
-            apt-get install -y --no-install-recommends python3 python3-pip
-            pip3 install -U pip poetry
-          run: |
-            set -e
-            cd /python
-            echo "Directory contents"
-            ls
-            # We shouldn't need regular dependencies, since they come from
-            # the `pip install` of kaskada later.
+          target: universal2
+          args: --release --out dist --sdist
+          working-directory: python
+      - name: pytest and mypy (Mac universal2)
+        run: |
+            echo "::group::Install for Python 3.11")
+            poetry env use 3.11
             poetry install --only=main --only=test --only=typecheck
-            pip3 install kaskada>=0.6.0-a.0 --find-links dist --force-reinstall
-            pytest
+            pip install dist/kaskada-*universal2.whl --force-reinstall
+            echo "::endgroup::"
+            echo "::group::Test Python 3.11"
+            poetry run pytest
+            echo "::endgroup::"
+            echo "::group::MyPy Python 3.11"
+            poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+            echo "::endgroup::
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+
+  build-wheel-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x64, x86]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          architecture: ${{ matrix.target }}
+      # - name: Install Rust toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: stable
+      #     profile: minimal
+      #     default: true
+      - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist
+          working-direcotry: python
+      - name: pytest and mypy (Windows ${{ matrix.target }})
+        shell: bash
+        run: |
+          echo "::group::Install for Python 3.11"
+          poetry install --only=main --only=test --only=typecheck
+          pip install dist/kaskada-*.whl --force-reinstall
+          echo "::endgroup::"
+          echo "::group::Test Python 3.11"
+          poetry run pytest
+          echo "::endgroup::"
+          echo "::group::MyPy Python 3.11"
+          poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+          echo "::endgroup::"
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+
+  build-wheel-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, i686]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+      - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: auto
+          args: --release --out dist
+      - name: pytest and mypy (Linux x86_64)
+        if: matrix.target == 'x86_64'
+        run: |
+          for V in "3.8 3.9 3.10 3.11" | xargs); do
+            echo "::group::Install for Python $V"
+            poetry env use $V
+            poetry install --only=main --only=test --only=typecheck
+            pip install dist/kaskada-*.whl --force-reinstall
+            echo "::endgroup::"
+            echo "::group::Test Python $V"
+            poetry run pytest
+            echo "::endgroup::"
+            echo "::group::MyPy Python $V"
+            poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+            echo "::endgroup::"
+          done
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
 
   # Make the source distribution
   sdist:
@@ -209,7 +241,7 @@ jobs:
 
   # Make the documentation site
   docs-build:
-    needs: [build-wheel]
+    needs: [build-wheel-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -228,7 +260,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install --only=main --only=docs --only=typecheck
-          pip install kaskada --find-links dist --force-reinstall
+          pip install kaskada>=0.6.0-a.0 --find-links dist --force-reinstall
       - name: Build docs
         run: |
           sphinx-build docs/source docs/_build -j auto
