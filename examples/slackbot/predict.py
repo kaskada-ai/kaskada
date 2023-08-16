@@ -10,10 +10,17 @@ next_users_model = 'ada:ft-personal:next-users-in-window-full-kaskada-2023-08-03
 coversations_model = "davinci:ft-personal:coversation-users-full-kaskada-2023-08-05-14-25-30"
 conversations_b = "davinci:ft-personal:coversation-users-full-kaskada-b-2023-08-11-01-52-17"
 conversations_c ="davinci:ft-personal:coversation-users-full-kaskada-c-2023-08-11-04-49-55"
+conversations_nu_ada = "ada:ft-personal:coversation-next-message-ada-2023-08-15-12-27-13"
+conversations_nu_cur = "curie:ft-personal:coversation-next-message-ada-2023-08-15-12-45-56"
 
-in_file_name = 'conversation_user_stripped_examples_prepared_valid'
-model = conversations_c
-stop = " end"
+cur4_model = "curie:ft-datastax:coversation-next-message-cur-4-2023-08-15-16-49-08"
+dav_model = "davinci:ft-datastax:coversation-next-message-dav-2023-08-15-16-40-40"
+dav4_model = "davinci:ft-datastax:coversation-next-message-dav-4-2023-08-15-18-05-07"
+cur8_model = "curie:ft-datastax:coversation-next-message-cur-8-2023-08-15-18-01-18"
+
+in_file_name = 'conversation_next_message_examples_joined_prepared_valid'
+model = cur8_model
+stop = None
 
 
 df = pandas.read_json(f'{work_dir}/{in_file_name}.jsonl', lines=True)
