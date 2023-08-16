@@ -144,7 +144,7 @@ jobs:
       - name: pytest and mypy (host)
         if: ${{ matrix.test == 'host' }}
         run: |
-          for V in ${{ matrix.python_versions }}; do
+          for V in "${{ matrix.python_versions }}"; do
             pip install kaskada --find-links dist --force-reinstall
             poetry run pytest --python $V
             poetry run mypy --python $V -- --install-types --non-interacitve pysrc pytests docs/source/
@@ -159,7 +159,9 @@ jobs:
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
             pip3 install -U pip poetry
-            cd ${{ github.workspace }}/python
+            echo $(pwd)
+            ls
+            cd python
             # We shouldn't need regular dependencies, since they come from
             # the `pip install` of kaskada later.
             poetry install --only=main --only=test --only=typecheck
