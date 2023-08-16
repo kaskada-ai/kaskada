@@ -18,33 +18,37 @@ def source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
-def test_sum_unwindowed(source, golden) -> None:
+def test_null_if(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
-    golden.jsonl(kd.record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
+    condition_m = m > 15
+    condition_n = n > 5
+    golden.jsonl(
+        kd.record(
+            {
+                "m": m,
+                "condition_m": condition_m,
+                "null_if_m": m.null_if(condition_m),
+                "n": n,
+                "condition_n": condition_n,
+                "null_if_n": n.null_if(condition_n),
+            }
+        )
+    )
 
 
-def test_sum_windowed(source, golden) -> None:
+def test_is_null(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
         kd.record(
             {
                 "m": m,
-                "sum_m": m.sum(window=kd.windows.Since(m > 20)),
+                "is_null_m": m.is_null(),
+                "is_not_null_m": m.is_not_null(),
                 "n": n,
-                "sum_n": n.sum(window=kd.windows.Sliding(2, m > 10)),
+                "is_null_n": n.is_null(),
+                "is_not_null_n": n.is_not_null(),
             }
         )
     )
-
-
-def test_sum_since_true(source, golden) -> None:
-    # `since(True)` should be the same as unwindowed, so equals the original vaule.
-    m_sum_since_true = kd.record(
-        {
-            "m": source.col("m"),
-            "m_sum": source.col("m").sum(window=kd.windows.Since(True)),
-        }
-    )
-    golden.jsonl(m_sum_since_true)

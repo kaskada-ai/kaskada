@@ -47,6 +47,7 @@ class Table(Expr):
         schema: pa.Schema,
         subsort_column_name: Optional[str],
         grouping_name: Optional[str],
+        time_unit: Optional[str],
     ) -> None: ...
     @property
     def name(self) -> str: ...

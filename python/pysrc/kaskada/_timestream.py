@@ -662,7 +662,7 @@ class Timestream(object):
         Timestream
             Timestream with `true` when self is `null` and `false` when it isn't.
         """
-        return self.is_not_null().neg()
+        return self.is_not_null().not_()
 
     def is_not_null(self) -> Timestream:
         """
@@ -993,6 +993,26 @@ class Timestream(object):
         """
         return _aggregation("last", self, window)
 
+    def count(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the count value in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the count value for the key in the window for
+            each point.
+        """
+        return _aggregation("count", self, window)
+
     def cast(self, data_type: pa.DataType) -> Timestream:
         """
         Cast the type of this Timestream to the given data type.
@@ -1011,7 +1031,7 @@ class Timestream(object):
 
     def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
-        Return the number of seconds between `time` and `self.time_of()`.
+        Return a Timestream containing seconds betewen `time` and `self`.
 
         Parameters
         ----------
@@ -1039,7 +1059,7 @@ class Timestream(object):
 
     def seconds_since_previous(self, n: int = 1) -> Timestream:
         """
-        Return the number of seconds since the time `n`-th past point.
+        Return a Timestream containing seconds between `self` and the time `n` points ago.
 
         Parameters
         ----------

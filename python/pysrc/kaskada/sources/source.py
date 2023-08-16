@@ -24,6 +24,7 @@ class Source(Timestream):
         key_column_name: str,
         subsort_column_name: Optional[str] = None,
         grouping_name: Optional[str] = None,
+        time_unit: Optional[str] = None,
     ):
         """Create a new source."""
         assert isinstance(schema, pa.Schema)
@@ -60,6 +61,7 @@ class Source(Timestream):
             schema,
             subsort_column_name,
             grouping_name,
+            time_unit,
         )
         super().__init__(ffi_table)
         self._schema = schema

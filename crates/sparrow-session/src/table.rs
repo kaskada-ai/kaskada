@@ -26,7 +26,8 @@ impl Table {
         key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
         key_column: usize,
         expr: Expr,
-    ) -> Self {
+        time_unit: Option<&str>,
+    ) -> error_stack::Result<Self, Error> {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
             .chain(table_info.schema().fields.iter())
@@ -45,15 +46,19 @@ impl Table {
             table_info.config().group_column_name.clone(),
             prepared_schema,
             prepare_hash,
-        );
+            time_unit,
+        )
+        .change_context_lazy(|| Error::CreateTable {
+            name: table_info.name().to_owned(),
+        })?;
 
-        Self {
+        Ok(Self {
             expr,
             preparer,
             in_memory_batches,
             key_hash_inverse,
             key_column: key_column + KEY_FIELDS.len(),
-        }
+        })
     }
 
     pub fn schema(&self) -> SchemaRef {

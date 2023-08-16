@@ -16,6 +16,7 @@ Windowed:
    :toctree: ../apidocs/
 
     Timestream.collect
+    Timestream.count
     Timestream.first
     Timestream.last
     Timestream.sum
