@@ -1,9 +1,9 @@
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, AsArray, Int32Array, Int64Array, ListArray};
 
+use crate::ValueRef;
 use arrow_schema::DataType;
 use itertools::Itertools;
-use sparrow_plan::ValueRef;
 use std::sync::Arc;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};

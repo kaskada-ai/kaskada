@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
+use crate::ValueRef;
 use arrow::array::{Array, ArrayRef, AsArray, BufferBuilder, ListArray};
 use arrow::buffer::{OffsetBuffer, ScalarBuffer};
 use arrow::row::{RowConverter, SortField};
 use arrow_schema::{DataType, FieldRef};
 use hashbrown::HashSet;
 use itertools::Itertools;
-use sparrow_plan::ValueRef;
 
 /// Evaluator for the `union` instruction.
 #[derive(Debug)]

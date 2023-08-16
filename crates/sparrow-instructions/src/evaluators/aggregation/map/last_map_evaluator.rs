@@ -4,7 +4,7 @@ use arrow::array::{
     as_map_array, new_empty_array, Array, ArrayRef, AsArray, PrimitiveArray, UInt32Array,
 };
 
-use sparrow_plan::ValueRef;
+use crate::ValueRef;
 
 use crate::{
     AggregationArgs, Evaluator, EvaluatorFactory, MapAccumToken, RuntimeInfo, StateToken,

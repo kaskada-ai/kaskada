@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{Array, ArrayData, ArrayRef, BooleanArray};
 use arrow::buffer::bitwise_bin_op_helper;
 use arrow::datatypes::DataType;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

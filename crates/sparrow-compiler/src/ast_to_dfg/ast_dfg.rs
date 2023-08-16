@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use egg::Id;
-use sparrow_plan::GroupId;
+use sparrow_instructions::GroupId;
 use sparrow_syntax::{FenlType, Location};
 
 use crate::time_domain::TimeDomain;

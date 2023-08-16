@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::Context;
 use arrow::array::{Array, ArrayRef, StringArray};
 use owning_ref::ArcRef;
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
@@ -107,7 +107,7 @@ mod tests {
     use arrow::datatypes::DataType;
     use owning_ref::OwningRef;
     use sparrow_arrow::downcast::downcast_string_array;
-    use sparrow_plan::{InstKind, InstOp};
+    use sparrow_instructions::{InstKind, InstOp};
 
     use super::*;
     use crate::StaticArg;

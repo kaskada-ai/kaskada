@@ -1,7 +1,7 @@
 use anyhow::Context;
 use egg::Id;
 use itertools::Itertools;
-use sparrow_plan::TableId;
+use sparrow_instructions::TableId;
 use sparrow_syntax::{Located, Location};
 
 use crate::{AstDfgRef, DataContext, DiagnosticBuilder, DiagnosticCode};

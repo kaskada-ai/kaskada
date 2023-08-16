@@ -1,7 +1,7 @@
+use crate::{InstKind, InstOp, ValueRef};
 use arrow::array::ArrayRef;
 use arrow::datatypes::DataType;
 use itertools::Itertools;
-use sparrow_plan::{InstKind, InstOp};
 
 use crate::evaluators::macros::{
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
@@ -37,7 +37,6 @@ use logical::*;
 use map::*;
 use math::*;
 use record::*;
-use sparrow_plan::ValueRef;
 use string::*;
 use time::*;
 

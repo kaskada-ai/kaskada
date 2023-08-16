@@ -4,12 +4,12 @@
 
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::{ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray};
 use arrow::datatypes::DataType;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_kernels::time::i64_to_two_i32;
-use sparrow_plan::ValueRef;
 use sparrow_syntax::FenlType;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};

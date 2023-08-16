@@ -10,11 +10,11 @@ use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::expression_plan::Operator;
 use sparrow_api::kaskada::v1alpha::{ExpressionPlan, LateBoundValue, OperationInputRef};
 use sparrow_arrow::scalar_value::ScalarValue;
+use sparrow_instructions::ValueRef;
 use sparrow_instructions::{
-    create_evaluator, ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo,
-    StaticArg, StaticInfo, StoreKey,
+    create_evaluator, ColumnarValue, ComputeStore, Evaluator, GroupingIndices, InstKind, InstOp,
+    RuntimeInfo, StaticArg, StaticInfo, StoreKey,
 };
-use sparrow_plan::ValueRef;
 
 use crate::execute::operation::InputBatch;
 use crate::Batch;
@@ -96,14 +96,14 @@ impl ExpressionExecutor {
                     // TODO: This could probably be cleaned up, possibly by eliminating
                     // `inst kind` entirely.
                     let inst_kind = if inst == "field_ref" {
-                        sparrow_plan::InstKind::FieldRef
+                        InstKind::FieldRef
                     } else if inst == "record" {
-                        sparrow_plan::InstKind::Record
+                        InstKind::Record
                     } else if inst == "cast" {
-                        sparrow_plan::InstKind::Cast(data_type.clone())
+                        InstKind::Cast(data_type.clone())
                     } else {
-                        let inst_op = sparrow_plan::InstOp::from_str(&inst)?;
-                        sparrow_plan::InstKind::Simple(inst_op)
+                        let inst_op = InstOp::from_str(&inst)?;
+                        InstKind::Simple(inst_op)
                     };
 
                     let static_info = StaticInfo::new(&inst_kind, args, &data_type);
@@ -309,10 +309,7 @@ impl WorkArea {
 // grouping, time, etc. We may be able to do something simpler using the
 // information from the operation input.
 impl RuntimeInfo for WorkArea {
-    fn value(
-        &self,
-        arg: &sparrow_plan::ValueRef,
-    ) -> anyhow::Result<sparrow_instructions::ColumnarValue> {
+    fn value(&self, arg: &ValueRef) -> anyhow::Result<ColumnarValue> {
         match arg {
             ValueRef::Input(index) => Ok(ColumnarValue::Array(
                 self.input_columns[*index as usize].clone(),
@@ -332,11 +329,11 @@ impl RuntimeInfo for WorkArea {
         &self.grouping
     }
 
-    fn time_column(&self) -> sparrow_instructions::ColumnarValue {
+    fn time_column(&self) -> ColumnarValue {
         ColumnarValue::Array(self.time.clone())
     }
 
-    fn storage(&self) -> Option<&sparrow_instructions::ComputeStore> {
+    fn storage(&self) -> Option<&ComputeStore> {
         todo!()
     }
 

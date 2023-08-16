@@ -1,7 +1,7 @@
 use arrow::array::ArrayRef;
 
+use crate::ValueRef;
 use arrow_schema::DataType;
-use sparrow_plan::ValueRef;
 use std::sync::Arc;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};

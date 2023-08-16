@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
+use crate::ValueRef;
 use arrow::array::{Array, ArrayRef, AsArray, BufferBuilder, ListArray};
 use arrow::buffer::{OffsetBuffer, ScalarBuffer};
 use arrow_schema::{DataType, Field};
-use sparrow_plan::ValueRef;
 
 /// Evaluator for the `flatten` instruction.
 #[derive(Debug)]
