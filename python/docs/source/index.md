@@ -87,8 +87,9 @@ Compute temporal joins at the correct times, without risk of leakage.
 ```{toctree}
 :hidden:
 
+why
+tour
 quickstart
-concepts
 examples/index
 ```
 
@@ -98,6 +99,11 @@ examples/index
 :maxdepth: 1
 
 guide/introduction
+guide/installation
+guide/timestreams
+guide/aggregation
+guide/joins
+guide/sources
 ```
 
 ```{toctree}
