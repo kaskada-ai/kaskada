@@ -184,7 +184,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64, i686]
+        include:
+          - target: x86_64
+            protoc_target: x86_64
+          - target: i686
+            protoc_target: x86_32
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -202,11 +206,12 @@ jobs:
           args: --release --out dist --zig
           working-directory: python
           before-script-linux: |
+            set -e
             # We need to add the protobuf-compiler since manylinux builds happen
             # in a docker container that doesn't have it.
             PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-${{ matrix.target }}.zip
-            unzip protoc-24.0-linux-${{ matrix.target }}.zip -d $HOME/.local
+            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-${{ matrix.protoc_target }}.zip
+            unzip protoc-24.0-linux-${{ matrix.protoc_target }}.zip -d $HOME/.local
             export PATH="$PATH:$HOME/.local/bin"
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
