@@ -159,14 +159,12 @@ jobs:
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
             pip3 install -U pip poetry
-            echo $(pwd)
-            ls
-            cd python
             # We shouldn't need regular dependencies, since they come from
             # the `pip install` of kaskada later.
             poetry install --only=main --only=test --only=typecheck
           run: |
             set -e
+            cd python
             pip3 install kaskada --find-links dist --force-reinstall
             pytest
 
