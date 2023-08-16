@@ -2,7 +2,7 @@
 % Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
 % Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
 
-# Tour of Fenl
+# Tour of Kaskada
 
 This provides an overview of the key features in Kaskada that enable feature engineering on event-based data.
 The [Quick Start](quickstart) has details on how you can quickly get started running Kaskada queries.
@@ -20,11 +20,13 @@ A natural question to ask about the purchases is the total--or `sum`--of all pur
 This is accomplished by _aggregating_ the events.
 The results of an aggregation change over time as additional events occur.
 
-TODO: Port an example showing timestreams and aggregations.
+```{todo}
+Port an example showing timestreams and aggregations.
+```
 
-[The guide][guide/aggregation.md] has more details on aggregations, including how to use windows to control which events are aggregated.
+The User Guide has [more details on aggregation](guide/aggregation.md), including how to use windows to control which events are aggregated.
 
-== Discrete and Continuous
+## Discrete and Continuous
 We say that events (and values derived from them) are _discrete_ because they occur at specific in time.
 and the results of the aggregation are [_continuous_](guide/timestreams.md#continuity).
 In the example, after the purchase with amount 13 the sum was 20.
@@ -35,7 +37,7 @@ Thus, an aggregation at a given point in time reflects all events that have happ
 The concept of continuity applies to many other operations in Kaskada, not just aggregations.
 This is part of what we mean when we say that Kaskada is a temporal query language.
 
-== Grouping
+## Grouping
 Another property of Kaskada is that events are implicitly grouped by _entity_.
 In the previous example, we assumed that all purchases were made by the same user.
 When the purchases are made by multiple users, there is a natural grouping for the aggregation.
@@ -45,39 +47,31 @@ One way to understand this grouping is as a separate stream associated with each
 The stream of purchases for each user may be shown separately, as we do here, or it may be pictured flattened into a single stream keyed by user.
 The idea of grouped streams as separate, per-entity streams is often useful for understanding the behavior of Kaskada Timestreams.
 
-TODO: Add example of multiple entity aggregation.
+```{todo}
+Add example of multiple entity aggregation.
+```
 
-## Streams as Tables
+The User Guide has [more details on grouping](guide/entities.md), including how to change the grouping of a Timestream.
 
-In addition to visualizing the result of expressions as a stream, we can show them as a table.
-When shown as a table, there is a column for each expression (stream) and a row for each point in the domain.
+## History and Snapshots
 
-.Streams as Tables
-====
-The following table matches the results of the previous example.
-Unlike the stream view which makes it easy to see the different events and which entity performed them, the table presents a flat view.
-On the other hand, it is easy to see the domain since that is just the rows along with the time and entity in the table.
-The table view is also useful for showing more information in less space.
-It makes it easier to see both the amounts of purchases as well as the sum as it changes.
+Since the Timestream describes how values are computed at every point in time, there are several useful ways they may be output.
 
-[cols="1,1,1,1"]
-|===
-|Time |Entity |`Purchase.amount` |`sum(Purchase.amount)`
+For training a model, it is often useful to output historic values matching some `filter`.
+These historic points can then be used as training examples, allowing the model to be trained on past points.
+This historic output is also useful for visualizing a Timestream at multiple points.
 
-| 2020-02-01 | Jordan | 2  | 2
-| 2020-02-01 | Ryan   | 4  | 4
-| 2020-02-02 | Ben    | 5  | 5
-| 2020-02-03 | Ben    | 2  | 7
-| 2020-02-03 | Jordan | 3  | 5
-| 2020-02-04 | Jordan | 1  | 6
-| 2020-02-05 | Jordan | 4  | 10
-| 2020-02-06 | Ryan   | 9  | 13
-| 2020-02-07 | Ben    | 13 | 20
-| 2020-02-08 | Ben    | 4  | 24
-|===
-====
+For serving a model, it is often useful to output the value of a Timestream for every entity at a specific point in time.
+This is most often used to output a snapshot at the current time.
 
-== Windowed Aggregation
+For both kinds of output, it is also useful to be able to select only the points after a specific time.
+This would filter out points from the history, or limit the snapshot to only those entities which have changed.
+
+## Windowed Aggregation
+
+```{todo}
+Update to reflect actual syntax. Include example.
+```
 
 In addition to the default behavior of aggregating over all events up to a given time, aggregations may be performed over specific windows.
 For example, `hourly()` describes periodic windows of an hour.
@@ -87,67 +81,6 @@ For example, if there were purchases at 8:45 AM, 9:15 AM and 9:25 AM and 10:02 A
 A non-cumulative windowed aggregation produces values only at the end of a window.
 For instance, `sum(Purchases, window=hourly(), cumulative=false)` will produce the sum for the past hour.
 With the purchases in the previous example, this would mean that at 9:00 AM an event is produced containing the amount of the purchase at 8:45 AM, and at 10:00 AM an event is produced containing the sum of the purchases at 9:15 AM and 9:25 AM.
-A window must be specified when using a non-comulative aggregation.
+A window must be specified when using a non-cumulative aggregation.
 
-.Windowed Aggregation
-====
-The following example shows how to use windowed aggregations to compute the daily total of purchases.
-Note that each window corresponds to an interval of time.
-As shown, the interval is inclusive of the start of the window and exclusive at the end.
-
-[stream_viz,name=windowed_aggregation,alt="Windowed aggregation"]
-....
-[
-   {
-    "label": "Purchase.amount",
-    "kind": "discrete",
-    "data": [
-      [
-        {"t": 2, "v": 5},
-        {"t": 3, "v": 2},
-        {"t": 7, "v": 13},
-        {"t": 8, "v": 4}
-      ]
-    ]
-  },
-  {
-    "label": "daily()",
-    "kind": "windows",
-    "data": [
-      [0, 3],
-      [3, 6],
-      [6, 9]
-    ]
-  },
-  {
-    "label": "sum(Purchase.amount, window=daily())",
-    "kind": "continuous",
-    "data": [
-      [
-        {"t": 2, "v": 5},
-        {"t": 3, "v": 2},
-        {"t": 6, "v": null},
-        {"t": 7, "v": 13},
-        {"t": 8, "v": 17}
-      ]
-    ]
-  }
-]
-....
-====
-
-As shown in the example, windowed aggregations produce the cumulative value in the current window as each event occurs.
-See xref:concepts/aggregation.adoc[] for more details, including how to produce just the final value at the end of each window instead.
-
-== Domains and Implicit Joins
-
-It is sometimes useful to consider the _domain_ of an expression.
-This corresponds to the points in time and entities associated with the points in the expression.
-For discrete values, this corresponds to the points at which those values occur.
-For continuous values, this corresponds to the points at which the value changes.
-
-Whenever expressions with two (or more) different domains are used in the same expression they are implicitly joined.
-The join is an outer join that contains an event if either (any) of the input domains contained an event.
-For any input table that is continuous, the join is `as of` the time of the output, taking the latest value from that input.
-
-The xref:spec/domains.adoc#multiple_domains_implicit_joins[Domains] section of the guide includes more details on implicit joins.
+The User Guide [on Aggregation](guide/aggregation.md#windowing) has more information on windowing.
