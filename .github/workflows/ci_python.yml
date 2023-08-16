@@ -72,24 +72,42 @@ jobs:
         include:
           - host: ubuntu-latest
             target: x86_64
+            test: host
+            python_versions: 3.8 3.9 3.10 3.11
           - host: ubuntu-latest
             target: x86
+            test: host
           - host: ubuntu-latest
             target: aarch64
+            test: run_on_arch
           - host: ubuntu-latest
             target: armv7
+            test: run_on_arch
+          #
+          # Fail to build `ring` crate
           # - host: ubuntu-latest
           #   target: s390x
-          - host: ubuntu-latest
-            target: ppc64el
-          - host: windows-latest
-            target: x64
-          - host: windows-latest
-            target: x86
-          - host: macos-latest
-            target: x86_64
-          - host: macos-latest
-            target: aarch64
+          #
+          # Fail to build `ring` crate
+          # - host: ubuntu-latest
+          #   target: ppc64le
+          #
+          # Linker error
+          # - host: windows-latest
+          #   target: x64
+          #
+          #  "your Rust target architecture (32-bit) does not match your python interpreter (64-bit)"
+          # - host: windows-latest
+          #   target: x86
+          #
+          # unsupported linker arg: -exported_symbols_list
+          # - host: macos-latest
+          #  target: x86_64
+          #
+          # unsupported linker arg: -exported_symbols_list
+          # - host: macos-latest
+          #   target: aarch64
+          #   test: host
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v2
@@ -100,7 +118,7 @@ jobs:
           poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: ${{ matrix.python_versions || '3.11' }}
           cache: poetry
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -119,86 +137,16 @@ jobs:
         with:
           name: wheels
           path: ${{ github.workspace }}/python/dist
-
-  # Tests that we can run on the host.
-  test:
-    needs: [build-wheel]
-    strategy:
-      matrix:
-        include:
-          - host: ubuntu-latest
-            target: x86_64
-          - host: ubuntu-latest
-            target: x86_64
-            python: 3.10
-          - host: ubuntu-latest
-            target: x86_64
-            python: 3.9
-          - host: ubuntu-latest
-            target: x86_64
-            python: 3.8
-          - host: ubuntu-latest
-            target: x86
-          # - host: ubuntu-latest
-          #   target: aarch64
-          # - host: ubuntu-latest
-          #   target: armv7
-          # - host: ubuntu-latest
-          #   target: s390x
-          # - host: ubuntu-latest
-          #   target: ppc64le
-          - host: windows-latest
-            target: x64
-          - host: macos-latest
-            target: x86_64
-          # - host: macos-latest
-          #   target: aarch64
-    runs-on: ${{ matrix.host }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install poetry
+      - name: pytest and mypy (host)
+        if: ${{ matrix.test == 'host' }}
         run: |
-          pipx install poetry
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python || '3.11' }}
-          cache: poetry
-      - uses: actions/download-artifact@v3
-        with:
-          name: wheels
-      - name: install deps
-        run: |
-          set -e
-          poetry install --only=main --only=test --only=typecheck
-          pip install kaskada --find-links dist --force-reinstall
-      - name: pytest
-        run: pytest
-      - name: mypy
-        run: mypy --install-types --non-interacitve pysrc pytests docs/source/
-
-  # Tests that require `run_on_arch`.
-  run_on_arch_test:
-    needs: [build-wheel]
-    strategy:
-      matrix:
-        include:
-          - host: ubuntu-latest
-            target: aarch64
-          - host: ubuntu-latest
-            target: armv7
-          # - host: ubuntu-latest
-          #   target: s390x
-          - host: ubuntu-latest
-            target: ppc64le
-    runs-on: ${{ matrix.host }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
-        with:
-          name: wheels
-      - uses: uraimo/run-on-arch-action@v2.5.0
+          for V in ${{ matrix.python_versions }}; do
+            pip install kaskada --find-links dist --force-reinstall
+            poetry run pytest --python $V
+            poetry run mypy --python $V -- --install-types --non-interacitve pysrc pytests docs/source/
+          done
+      - name: pytest (on arch)
+        uses: uraimo/run-on-arch-action@v2.5.0
         with:
           arch: ${{ matrix.target }}
           distro: ubuntu22.04
@@ -215,7 +163,6 @@ jobs:
             set -e
             pip3 install kaskada --find-links dist --force-reinstall
             pytest
-            mypy --install-types --non-interactive pysrc pytests docs/source/
 
   # Make the source distribution
   sdist:
