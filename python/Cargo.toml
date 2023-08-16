@@ -30,6 +30,5 @@ name = "kaskada"
 crate-type = ["cdylib"]
 
 [profile.release]
-strip = true
 lto = true
 codegen-units = 1
