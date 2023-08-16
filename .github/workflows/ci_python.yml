@@ -141,7 +141,10 @@ jobs:
           before-script-linux: |
             # We need to add the protobuf-compiler since manylinux builds happen
             # in a docker container that doesn't have it.
-            yum install -y protobuf-compiler
+            PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-${{ matrix.target }}.zip
+            unzip protoc-24.0-linux-${{ matrix.target }}.zip -d $HOME/.local
+            export PATH="$PATH:$HOME/.local/bin"
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
