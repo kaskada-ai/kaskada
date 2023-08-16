@@ -35,3 +35,20 @@ def test_null_if(source, golden) -> None:
             }
         )
     )
+
+
+def test_is_null(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(
+        kd.record(
+            {
+                "m": m,
+                "is_null_m": m.is_null(),
+                "is_not_null_m": m.is_not_null(),
+                "n": n,
+                "is_null_n": n.is_null(),
+                "is_not_null_n": n.is_not_null(),
+            }
+        )
+    )
