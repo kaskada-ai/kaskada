@@ -28,3 +28,8 @@ name = "kaskada"
 # `cdylib` is necessary to produce a shared library for Python.
 # This can't be used by downstream Rust code (eg., as a library).
 crate-type = ["cdylib"]
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
