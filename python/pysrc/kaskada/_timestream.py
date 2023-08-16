@@ -662,7 +662,7 @@ class Timestream(object):
         Timestream
             Timestream with `true` when self is `null` and `false` when it isn't.
         """
-        return self.is_not_null().neg()
+        return self.is_not_null().not_()
 
     def is_not_null(self) -> Timestream:
         """
@@ -1236,9 +1236,9 @@ def _aggregation(
         # or a special function to do that.
         #
         # HACK: This places an extra null row in the input to `collect`
-        # which allows us to "clear" the window when the appropriate 
+        # which allows us to "clear" the window when the appropriate
         # `duration` has passed with no "real" inputs.
-        merged_input = record({ "input": input, "shift": input_shift }).col("input")
+        merged_input = record({"input": input, "shift": input_shift}).col("input")
         return Timestream._call("collect", merged_input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
