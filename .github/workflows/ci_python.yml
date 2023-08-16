@@ -145,9 +145,11 @@ jobs:
         if: ${{ matrix.test == 'host' }}
         run: |
           for V in "${{ matrix.python_versions }}"; do
+            poetry env use $V
+            poetry install --only=main --only=test --only=typecheck
             pip install kaskada --find-links dist --force-reinstall
-            poetry run pytest --python $V
-            poetry run mypy --python $V -- --install-types --non-interacitve pysrc pytests docs/source/
+            poetry run pytest
+            poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
           done
       - name: pytest (on arch)
         uses: uraimo/run-on-arch-action@v2.5.0
@@ -159,12 +161,12 @@ jobs:
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
             pip3 install -U pip poetry
-            # We shouldn't need regular dependencies, since they come from
-            # the `pip install` of kaskada later.
-            poetry install --only=main --only=test --only=typecheck
           run: |
             set -e
             cd python
+            # We shouldn't need regular dependencies, since they come from
+            # the `pip install` of kaskada later.
+            poetry install --only=main --only=test --only=typecheck
             pip3 install kaskada --find-links dist --force-reinstall
             pytest
 
