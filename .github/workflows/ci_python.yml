@@ -100,7 +100,7 @@ jobs:
           working-directory: python
       - name: pytest and mypy (Mac x86_64)
         run: |
-          for V in "3.8 3.9 3.10 3.11" | xargs); do
+          for V in "3.8 3.9 3.10 3.11"; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
@@ -145,10 +145,16 @@ jobs:
         target: [x64, x86]
     steps:
       - uses: actions/checkout@v3
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
           architecture: ${{ matrix.target }}
+          cache: poetry
       # - name: Install Rust toolchain
       #   uses: actions-rs/toolchain@v1
       #   with:
@@ -220,7 +226,7 @@ jobs:
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
-          for V in "3.8 3.9 3.10 3.11" | xargs); do
+          for V in "3.8 3.9 3.10 3.11"; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
