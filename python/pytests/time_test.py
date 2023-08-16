@@ -18,6 +18,21 @@ def source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
+def test_time_of_point(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(
+        kd.record(
+            {
+                "m": m,
+                "time_of_m": m.time(),
+                "n": n,
+                "time_of_n": n.time(),
+            }
+        )
+    )
+
+
 def test_time_add_days(source, golden) -> None:
     time = source.col("time")
     golden.jsonl(kd.record({"time": time, "time_plus_day": time + timedelta(days=1)}))
