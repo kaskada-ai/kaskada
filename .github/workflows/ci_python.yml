@@ -199,8 +199,15 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: auto
-          args: --release --out dist
+          args: --release --out dist --zig
           working-directory: python
+          before-script-linux: |
+            # We need to add the protobuf-compiler since manylinux builds happen
+            # in a docker container that doesn't have it.
+            PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-${{ matrix.target }}.zip
+            unzip protoc-24.0-linux-${{ matrix.target }}.zip -d $HOME/.local
+            export PATH="$PATH:$HOME/.local/bin"
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
