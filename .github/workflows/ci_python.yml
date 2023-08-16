@@ -157,7 +157,7 @@ jobs:
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
-            pip install kaskada --find-links dist --force-reinstall
+            pip install kaskada>=0.6.0-a.0 --find-links dist --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -187,7 +187,7 @@ jobs:
             # We shouldn't need regular dependencies, since they come from
             # the `pip install` of kaskada later.
             poetry install --only=main --only=test --only=typecheck
-            pip3 install kaskada --find-links dist --force-reinstall
+            pip3 install kaskada>=0.6.0-a.0 --find-links dist --force-reinstall
             pytest
 
   # Make the source distribution
