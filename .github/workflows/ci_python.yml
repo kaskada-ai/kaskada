@@ -144,7 +144,8 @@ jobs:
       - name: pytest and mypy (host)
         if: ${{ matrix.test == 'host' }}
         run: |
-          for V in "${{ matrix.python_versions }}"; do
+          for V in "echo ${{ matrix.python_versions }} | xargs"; do
+            echo "Testing with Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
             pip install kaskada --find-links dist --force-reinstall
@@ -163,7 +164,8 @@ jobs:
             pip3 install -U pip poetry
           run: |
             set -e
-            cd python
+            echo "CD to workspace ${{ github.workspace }}/python"
+            cd ${{ github.workspace }}/python
             # We shouldn't need regular dependencies, since they come from
             # the `pip install` of kaskada later.
             poetry install --only=main --only=test --only=typecheck
