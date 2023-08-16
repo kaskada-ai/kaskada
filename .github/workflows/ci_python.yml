@@ -138,6 +138,10 @@ jobs:
           sccache: 'true'
           manylinux: auto
           working-directory: python
+          before-script-linux: |
+            # We need to add the protobuf-compiler since manylinux builds happen
+            # in a docker container that doesn't have it.
+            yum install -y protobuf-compiler
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:

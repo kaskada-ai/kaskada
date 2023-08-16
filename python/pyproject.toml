@@ -100,6 +100,11 @@ python-source = "pysrc"
 # Name of the Rust module in Python
 module-name = "kaskada._ffi"
 
+[tool.maturin.target.x86_64-apple-darwin]
+macos-deployment-target = "11.0"
+[tool.maturin.target.aarch64-apple-darwin]
+macos-deployment-target = "11.0"
+
 [tool.coverage.paths]
 source = ["pysrc", "*/site-packages"]
 tests = ["pytests"]
