@@ -1029,6 +1029,60 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
+    def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream containing the number of seconds since `time`
+        from `self.time_of()`.
+
+        Parameters
+        ----------
+        time : Union[Timestream, Literal]
+            The time to compute the seconds since.
+
+            This can be either a stream of timestamps or a datetime literal.
+            If `time` is a Timestream, the result will contain the seconds
+            from `self.time_of()` to `time.time_of()`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the number of seconds since `time`.
+
+            If `self.time_of()` is greater than `time`, the result will be positive.
+        """
+        if isinstance(time, datetime):
+            session = self._ffi_expr.session()
+            nanos = Timestream._literal(time.timestamp() * 1e9, session=session)
+            nanos = Timestream.cast(nanos, pa.timestamp("ns", None))
+            return Timestream._call("seconds_between", nanos, self)
+        else:
+            return Timestream._call("seconds_between", time, self)
+
+    def seconds_since_previous(self, n: int = 1) -> Timestream:
+        """
+        Create a Timestream containing the number of seconds since the time
+        `n` points ago.
+
+        Parameters
+        ----------
+        n : int
+            The number of points to look back. For example, `n=1` refers to
+            the previous point.
+
+            Defaults to 1.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the number of seconds since the time `n`
+            points ago.
+        """
+        time_of_current = Timestream._call("time_of", self).cast(pa.int64())
+        time_of_previous = Timestream._call("time_of", self).lag(n).cast(pa.int64())
+
+        # `time_of` returns nanoseconds, so divide to get seconds
+        return time_of_current.sub(time_of_previous).div(1e9).cast(pa.duration("s"))
+
     def flatten(self) -> Timestream:
         """Flatten a list of lists to a list of values."""
         return Timestream._call("flatten", self)
@@ -1169,9 +1223,23 @@ def _aggregation(
             raise NotImplementedError(
                 f"Aggregation '{op} does not support trailing windows"
             )
+
         trailing_ns = int(window.duration.total_seconds() * 1e9)
-        # HACK: Use null predicate and number of nanoseconds to encode trailing windows.
-        return Timestream._call(op, input, *args, None, trailing_ns)
+
+        # Create the shifted-forward input
+        input_shift = input.shift_by(window.duration)
+
+        # Merge, then extract just the input.
+        #
+        # Note: Assumes the "input" is discrete. Can probably
+        # use a transform to make it discrete (eg., `input.filter(True)`)
+        # or a special function to do that.
+        #
+        # HACK: This places an extra null row in the input to `collect`
+        # which allows us to "clear" the window when the appropriate 
+        # `duration` has passed with no "real" inputs.
+        merged_input = record({ "input": input, "shift": input_shift }).col("input")
+        return Timestream._call("collect", merged_input, *args, None, trailing_ns)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

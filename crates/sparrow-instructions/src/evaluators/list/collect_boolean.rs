@@ -116,13 +116,13 @@ impl CollectBooleanEvaluator {
             let entity_index = *entity_index as usize;
 
             // Do not collect null values
-            if input.is_some() {
+            if let Some(input) = input {
                 self.token.add_value(self.max, entity_index, input);
             }
 
             let cur_list = self.token.state(entity_index);
             if cur_list.len() >= self.min {
-                list_builder.append_value(cur_list.iter().copied());
+                list_builder.append_value(cur_list.iter().map(|i| Some(*i)));
             } else {
                 list_builder.append_null();
             }
@@ -158,14 +158,14 @@ impl CollectBooleanEvaluator {
 
             // Update state
             // Do not collect null values
-            if input.is_some() {
+            if let Some(input) = input {
                 self.token.add_value(self.max, entity_index, input);
             }
 
             // Emit state
             let cur_list = self.token.state(entity_index);
             if cur_list.len() >= self.min {
-                list_builder.append_value(cur_list.iter().copied());
+                list_builder.append_value(cur_list.iter().map(|i| Some(*i)));
             } else {
                 list_builder.append_null();
             }
@@ -208,7 +208,7 @@ impl CollectBooleanEvaluator {
 
                 // Update state
                 // Do not collect null values
-                if input.is_some() {
+                if let Some(input) = input {
                     self.token.add_value_with_time(
                         self.max,
                         entity_index,
@@ -216,12 +216,14 @@ impl CollectBooleanEvaluator {
                         *input_time,
                         duration,
                     );
+                } else {
+                    self.token.check_time(entity_index, *input_time, duration);
                 }
 
                 // Emit state
                 let cur_list = self.token.state(entity_index);
                 if cur_list.len() >= self.min {
-                    list_builder.append_value(cur_list.iter().copied());
+                    list_builder.append_value(cur_list.iter().map(|i| Some(*i)));
                 } else {
                     list_builder.append_null();
                 }
