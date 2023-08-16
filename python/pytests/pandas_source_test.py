@@ -1,37 +1,41 @@
-import random
-
 import kaskada as kd
 import pandas as pd
 
+def test_float_microseconds(golden) -> None:
+    data = {
+        'time': [1671477472.026119],
+        'user': ['tom']
+    }
+    df = pd.DataFrame(data)
+    table = kd.sources.Pandas(df, time_column_name="time", key_column_name="user", time_unit="us")
 
-def test_add_dataframe(golden) -> None:
-    random.seed(1000)
-    member_ids = list(range(0, 10))
-    records = []
-    for member_id in member_ids:
-        for _i in range(0, 10):
-            records.append(
-                {
-                    # number of seconds from epoch
-                    "time": random.randint(1000, 4000) * 1000000000000,
-                    "key": member_id,
-                }
-            )
-    dataset1 = pd.DataFrame(records)
-
-    table = kd.sources.Pandas(dataset1, time_column_name="time", key_column_name="key")
     golden.jsonl(table)
 
-    records.clear()
-    for member_id in member_ids:
-        for _i in range(0, 10):
-            records.append(
-                {
-                    # number of seconds from epoch
-                    "time": random.randint(3000, 7000) * 1000000000000,
-                    "key": member_id,
-                }
-            )
-    dataset2 = pd.DataFrame(records)
-    table.add_data(dataset2)
+def test_float_nanoseconds(golden) -> None:
+    data = {
+        'time': [1671477472026.119],
+        'user': ['tom']
+    }
+    df = pd.DataFrame(data)
+    table = kd.sources.Pandas(df, time_column_name="time", key_column_name="user")
+
+    golden.jsonl(table)
+
+def test_add_dataframe(golden) -> None:
+    pass
+
+def test_add_dataframe(golden) -> None:
+    df1 = pd.DataFrame({
+        "time": [1000000000000],
+        "key": ['a'],
+    })
+
+    table = kd.sources.Pandas(df1, time_column_name="time", key_column_name="key")
+    golden.jsonl(table)
+
+    df2 = pd.DataFrame({
+        "time": [1000000000000],
+        "key": ['a'],
+    })
+    table.add_data(df2)
     golden.jsonl(table)
