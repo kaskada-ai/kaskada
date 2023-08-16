@@ -103,11 +103,11 @@ impl EvaluatorFactory for JsonFieldEvaluator {
 mod tests {
     use std::sync::Arc;
 
+    use crate::{InstKind, InstOp};
     use arrow::array::{GenericStringArray, StringArray};
     use arrow::datatypes::DataType;
     use owning_ref::OwningRef;
     use sparrow_arrow::downcast::downcast_string_array;
-    use sparrow_instructions::{InstKind, InstOp};
 
     use super::*;
     use crate::StaticArg;
