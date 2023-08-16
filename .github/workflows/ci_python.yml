@@ -151,12 +151,17 @@ jobs:
         if: ${{ matrix.test == 'host' }}
         run: |
           for V in $(echo "${{ matrix.python_versions }}" | xargs); do
-            echo "Testing with Python $V"
+            echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
             pip install kaskada --find-links dist --force-reinstall
+            echo "::endgroup::"
+            echo "::group::Test Python $V"
             poetry run pytest
+            echo "::endgroup::"
+            echo "::group::MyPy Python $V"
             poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+            echo "::endgroup::"
           done
       - name: pytest (on arch)
         uses: uraimo/run-on-arch-action@v2.5.0
