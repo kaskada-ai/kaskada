@@ -47,7 +47,6 @@ def render(*args: Plot,
 
     fig = make_subplots(rows=len(args), cols=1)
 
-    print(f"Colorway: {template.layout.colorway}")
     next_color = itertools.cycle(template.layout.colorway)
     color_map = {}
 
