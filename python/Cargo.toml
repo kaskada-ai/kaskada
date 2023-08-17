@@ -3,7 +3,7 @@ name = "kaskada"
 authors = ["Kaskada Developers"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.1.0-a.1"
+version = "0.6.0-a.1"
 description = """
 Python library for building and executing temporal queries.
 """

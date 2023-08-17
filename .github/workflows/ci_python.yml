@@ -211,12 +211,6 @@ jobs:
           python-version: 3.11
           architecture: x64
           cache: poetry
-      # - name: Install Rust toolchain
-      #   uses: actions-rs/toolchain@v1
-      #   with:
-      #     toolchain: stable
-      #     profile: minimal
-      #     default: true
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:

@@ -1961,7 +1961,7 @@ dependencies = [
 
 [[package]]
 name = "kaskada"
-version = "0.1.0-a.1"
+version = "0.6.0-a.1"
 dependencies = [
  "arrow",
  "derive_more",
