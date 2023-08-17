@@ -10,7 +10,6 @@
 
 ```{toctree}
 :hidden:
-:maxdepth: 3
 
 aggregation
 arithmetic
