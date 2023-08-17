@@ -123,7 +123,7 @@ jobs:
           working-directory: python
       - name: pytest and mypy (Mac universal2)
         run: |
-            echo "::group::Install for Python 3.11")
+            echo "::group::Install for Python 3.11"
             poetry env use 3.11
             source $(poetry env info --path)/bin/activate
             poetry install --only=main --only=test --only=typecheck
@@ -176,7 +176,7 @@ jobs:
         shell: bash
         run: |
           echo "::group::Install for Python 3.11"
-          source $(poetry env info --path)/bin/activate
+          source $(poetry env info --path)\bin\activate
           poetry install --only=main --only=test --only=typecheck
           pip install dist/kaskada-*.whl --force-reinstall
           echo "::endgroup::"
