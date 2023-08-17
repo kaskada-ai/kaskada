@@ -28,6 +28,10 @@ pandas = "^2.0.3"
 python = ">=3.8.1,<4.0"
 pyarrow = "^12.0.1"
 typing-extensions = "^4.7.1"
+plotly = {version = "^5.16.1", optional = true}
+
+[tool.poetry.extras]
+visualize = ["plotly"]
 
 [tool.poetry.group.dev.dependencies]
 # Dependencies for building and developing.

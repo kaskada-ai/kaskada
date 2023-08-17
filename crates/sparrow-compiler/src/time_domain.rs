@@ -39,6 +39,10 @@ impl TimeDomain {
     pub fn error() -> Self {
         TimeDomain::Error
     }
+
+    pub fn is_continuous(&self) -> bool {
+        matches!(self, TimeDomain::Continuous)
+    }
 }
 
 /// Return the `TimeDomain` of an operation combining the given inputs.
