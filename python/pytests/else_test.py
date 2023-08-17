@@ -1,6 +1,4 @@
 import kaskada as kd
-
-import kaskada as kd
 import pytest
 
 

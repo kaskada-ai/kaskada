@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from datetime import datetime
 from datetime import timedelta
 from typing import Callable
@@ -506,6 +507,22 @@ class Timestream(object):
         Inequality is *not* available as `a != b`.
         """
         return Timestream._call("neq", self, other)
+
+    def __eq__(self, other: object) -> bool:
+        """Warn when Timestreams are compared using `==`."""
+        warnings.warn(
+            "Using '==' with Timestreams doesn't produce a boolean stream. Use 'eq' instead.",
+            stacklevel=2,
+        )
+        return super().__eq__(other)
+
+    def __ne__(self, other: object) -> bool:
+        """Warn when Timestreams are compared using `!=`."""
+        warnings.warn(
+            "Using '!=' with Timestreams doesn't produce a boolean stream. Use 'ne' instead.",
+            stacklevel=2,
+        )
+        return super().__ne__(other)
 
     def index(self, key: Union[Timestream, Literal]) -> Timestream:
         """
@@ -1052,8 +1069,7 @@ class Timestream(object):
 
     def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
-        Create a Timestream containing the number of seconds since `time`
-        from `self.time_of()`.
+        Return a Timestream containing seconds betewen `time` and `self`.
 
         Parameters
         ----------
@@ -1081,8 +1097,7 @@ class Timestream(object):
 
     def seconds_since_previous(self, n: int = 1) -> Timestream:
         """
-        Create a Timestream containing the number of seconds since the time
-        `n` points ago.
+        Return a Timsetream containing seconds between `self` and the time `n` points ago.
 
         Parameters
         ----------

@@ -82,6 +82,17 @@ def test_timestream_comparison(source1) -> None:
     assert a.or_(b).data_type == pa.bool_()
 
 
+def test_timestream_eq_warning(source1) -> None:
+    x = source1.col("x")
+    y = source1.col("y")
+
+    with pytest.warns(UserWarning, match="Use 'eq'"):
+        x == y  # noqa : B015
+
+    with pytest.warns(UserWarning, match="Use 'ne'"):
+        x != y  # noqa : B015
+
+
 def test_timestream_arithmetic_types(source1) -> None:
     x = source1.col("x")
     assert (x.eq(1)).data_type == pa.bool_()
