@@ -220,7 +220,7 @@ impl InstOp {
 }
 
 // #[derive(Clone, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
-#[derive(Debug, Hash, Eq, Ord, PartialOrd)]
+#[derive(Debug, Eq, Ord, PartialOrd)]
 pub enum InstKind {
     /// Applies a callable function to the inputs.
     Simple(InstOp),
@@ -239,7 +239,7 @@ pub enum InstKind {
 impl Clone for InstKind {
     fn clone(&self) -> Self {
         match self {
-            Self::Simple(arg0) => Self::Simple(arg0.clone()),
+            Self::Simple(arg0) => Self::Simple(*arg0),
             Self::FieldRef => Self::FieldRef,
             Self::Cast(arg0) => Self::Cast(arg0.clone()),
             Self::Record => Self::Record,
@@ -257,6 +257,16 @@ impl PartialEq for InstKind {
             (Self::Record, Self::Record) => true,
             (Self::Udf(l0), Self::Udf(r0)) => l0 == r0,
             _ => false,
+        }
+    }
+}
+
+use std::hash::Hash;
+impl Hash for InstKind {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            InstKind::Udf(udf) => udf.hash(state),
+            _ => core::mem::discriminant(self).hash(state),
         }
     }
 }

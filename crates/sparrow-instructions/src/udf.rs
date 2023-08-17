@@ -34,7 +34,7 @@ impl Hash for dyn Udf {
 
 impl PartialEq for dyn Udf {
     fn eq(&self, other: &Self) -> bool {
-        &*self.signature() == &*other.signature()
+        self.signature() == other.signature()
     }
 }
 
