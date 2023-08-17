@@ -264,7 +264,7 @@ impl Dfg {
                         );
                     }
                     Expression::Inst(InstKind::Simple(op)) => op
-                        .signature(sparrow_instructions::Mode::Plan)
+                        .signature()
                         .assert_valid_argument_count(children.len() - 1),
                     Expression::Inst(InstKind::FieldRef) => {
                         anyhow::ensure!(

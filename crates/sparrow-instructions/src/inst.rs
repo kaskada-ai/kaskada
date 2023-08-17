@@ -10,14 +10,6 @@ use strum::EnumProperty;
 
 use crate::value::ValueRef;
 
-/// The mode an instruction is being used in.
-///
-/// Affects which signature is used.
-pub enum Mode {
-    Dfg,
-    Plan,
-}
-
 /// Enumeration of the instruction operations.
 ///
 /// Instructions don't include any "payload" -- they are an operation applied
@@ -223,15 +215,12 @@ impl InstOp {
         )
     }
 
-    pub fn signature(&self, mode: Mode) -> &'static Signature {
-        match mode {
-            Mode::Dfg => INST_OP_SIGNATURES[*self].dfg(),
-            Mode::Plan => INST_OP_SIGNATURES[*self].plan(),
-        }
+    pub fn signature(&self) -> &'static Signature {
+        &INST_OP_SIGNATURES[*self]
     }
 
     pub fn name(&self) -> &'static str {
-        self.signature(Mode::Dfg).name()
+        self.signature().name()
     }
 }
 
@@ -272,50 +261,19 @@ impl Inst {
     }
 }
 
-struct OpSignatures {
-    dfg: Arc<Signature>,
-    plan: Arc<Signature>,
-}
-
-impl OpSignatures {
-    pub fn dfg(&self) -> &Signature {
-        self.dfg.as_ref()
-    }
-
-    pub fn plan(&self) -> &Signature {
-        self.plan.as_ref()
-    }
-}
-
 #[dynamic]
-static INST_OP_SIGNATURES: EnumMap<InstOp, OpSignatures> = {
+static INST_OP_SIGNATURES: EnumMap<InstOp, Arc<Signature>> = {
     enum_map! {
         op => {
             let signature = parse_signature(op, "signature");
-            let dfg_signature = parse_signature(op, "dfg_signature");
-            let plan_signature = parse_signature(op, "plan_signature");
-
-            let signatures = match (signature, dfg_signature, plan_signature) {
-                (None, Some(dfg), Some(plan)) => {
-                    assert_eq!(dfg.name(), plan.name(), "Names for both DFG and Plan signature must be the same");
-                    OpSignatures { dfg, plan }
-                },
-                (Some(shared), None, None) => {
-                    OpSignatures {
-                        dfg: shared.clone(),
-                        plan: shared
-                    }
-                }
-                (shared, dfg, plan) => {
-                    // Must have either (shared) or (dfg and plan).
-                    panic!("Missing or invalid signatures for instruction {op:?}: shared={shared:?}, dfg={dfg:?}, plan={plan:?}")
-                }
+            let signature = match signature {
+                Some(s) => s,
+                None => panic!("Missing or invalid signatures for instruction {op:?}: signature={signature:?}")
             };
 
-            for parameter in signatures.plan().parameters().types() {
+            for parameter in signature.parameters().types() {
                 if matches!(parameter.inner(), FenlType::Window) {
-                    panic!("Illegal type '{}' in plan_signature for instruction {:?}", parameter.inner(), op)
-
+                    panic!("Illegal type '{}' in signature for instruction {:?}", parameter.inner(), op)
                 }
             }
 
@@ -324,10 +282,10 @@ static INST_OP_SIGNATURES: EnumMap<InstOp, OpSignatures> = {
             // make sure we don't accidentally introduce `InstOp` with
             // these names (since they are handled specially in the
             // planning / execution).
-            assert_ne!(signatures.dfg().name(), "record", "'record' is a reserved instruction name");
-            assert_ne!(signatures.dfg().name(), "field_ref", "'field_ref' is a reserved instruction name");
+            assert_ne!(signature.name(), "record", "'record' is a reserved instruction name");
+            assert_ne!(signature.name(), "field_ref", "'field_ref' is a reserved instruction name");
 
-            signatures
+            signature
         }
     }
 };

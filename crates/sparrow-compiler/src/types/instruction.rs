@@ -5,7 +5,7 @@ use arrow::datatypes::{DataType, Field};
 use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
-use sparrow_instructions::{InstKind, Mode};
+use sparrow_instructions::InstKind;
 use sparrow_syntax::{ArgVec, Collection, FenlType, Resolved};
 
 use crate::types::inference::validate_instantiation;
@@ -20,11 +20,10 @@ pub(crate) fn typecheck_inst(
     inst: &InstKind,
     argument_types: ArgVec<FenlType>,
     argument_literals: &[Option<ScalarValue>],
-    mode: Mode,
 ) -> anyhow::Result<FenlType> {
     match inst {
         InstKind::Simple(instruction) => {
-            let signature = instruction.signature(mode);
+            let signature = instruction.signature();
             let argument_types = Resolved::new(
                 Cow::Borrowed(signature.parameters().names()),
                 argument_types,
