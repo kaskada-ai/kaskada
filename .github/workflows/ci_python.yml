@@ -176,7 +176,7 @@ jobs:
         shell: bash
         run: |
           echo "::group::Install for Python 3.11"
-          source $(poetry env info --path)\bin\activate
+          source $(poetry env info --path)\\bin\\activate
           poetry install --only=test --only=typecheck
           pip install dist/kaskada-*.whl --force-reinstall
           echo "::endgroup::"

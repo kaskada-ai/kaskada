@@ -2,9 +2,16 @@
 name = "kaskada"
 version = "0.6.0-a.0"
 description = "Kaskada query builder and local execution engine."
-requires-python = ">=3.8,<4.0"
+requires-python = ">=3.8.1,<4.0"
 classifiers = [
     "Development Status :: 3 - Alpha",
+]
+# We need to list dependencies here for maturin to put them in the package.
+# They should match what poetry believes we need.
+dependencies = [
+  "pandas >= 2.0.0, < 3.0.0",
+  "pyarrow >= 12.0.0,
+  "typing-extensions >= 4.6.0",
 ]
 
 [tool.poetry]
@@ -14,7 +21,9 @@ authors = []
 version = "0.6.0-a.0"
 
 [tool.poetry.dependencies]
-# Dependencies for using the project.
+# Dependencies to install for using the project.
+# These are used when we do `poetry install`.
+# They should be reflected in `dependencies` above.
 pandas = "^2.0.3"
 python = ">=3.8.1,<4.0"
 pyarrow = "^12.0.1"
