@@ -8,7 +8,7 @@ use sparrow_syntax::{FeatureSetPart, FenlType, Signature};
 use static_init::dynamic;
 use strum::EnumProperty;
 
-use crate::value::ValueRef;
+use crate::{value::ValueRef, UserDefinedFunction};
 
 /// Enumeration of the instruction operations.
 ///
@@ -31,6 +31,7 @@ use crate::value::ValueRef;
     strum_macros::EnumIter,
     strum_macros::EnumProperty,
     strum_macros::IntoStaticStr,
+    strum_macros::EnumDiscriminants,
     Eq,
     FromStr,
     Hash,
@@ -162,12 +163,6 @@ pub enum InstOp {
     NullIf,
     #[strum(props(signature = "powf(base: f64, power: f64) -> f64"))]
     Powf,
-    // TODO: FRAZ
-    // we need to accept any number of variable length and type parameters
-    // and return variable type result (doesn't have to be in the signature params either)
-    // how?
-    // #[strum(props(signature = "python_udf<T: any>(class: T) -> T"))]
-    // PythonUDF(Arc<dyn UserDefinedFunction>),
     #[strum(props(signature = "round<N: number>(n: N) -> N"))]
     Round,
     #[strum(props(signature = "seconds(seconds: i64) -> duration_s"))]
@@ -224,7 +219,8 @@ impl InstOp {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
+// #[derive(Clone, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
+#[derive(Debug, Hash, Eq, Ord, PartialOrd)]
 pub enum InstKind {
     /// Applies a callable function to the inputs.
     Simple(InstOp),
@@ -236,15 +232,44 @@ pub enum InstKind {
     ///
     /// The number of arguments should match the number of fields.
     Record,
+
+    /// TODO: UDF
+    Udf(Box<dyn UserDefinedFunction>),
+}
+
+impl Clone for InstKind {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Simple(arg0) => Self::Simple(arg0.clone()),
+            Self::FieldRef => Self::FieldRef,
+            Self::Cast(arg0) => Self::Cast(arg0.clone()),
+            Self::Record => Self::Record,
+            Self::Udf(arg0) => Self::Udf(arg0.clone()),
+        }
+    }
+}
+
+impl PartialEq for InstKind {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Simple(l0), Self::Simple(r0)) => l0 == r0,
+            (Self::FieldRef, Self::FieldRef) => true,
+            (Self::Cast(l0), Self::Cast(r0)) => l0 == r0,
+            (Self::Record, Self::Record) => true,
+            (Self::Udf(l0), Self::Udf(r0)) => l0.signature() == r0.signature(),
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for InstKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            InstKind::Simple(instruction) => write!(f, "{instruction}"),
+            InstKind::Simple(instruction) => write!(f, "{instruction:?}"),
             InstKind::FieldRef => write!(f, "field"),
             InstKind::Cast(data_type) => write!(f, "cast:{data_type}"),
             InstKind::Record => write!(f, "record"),
+            InstKind::Udf(_) => write!(f, "TODO FRAZ"),
         }
     }
 }

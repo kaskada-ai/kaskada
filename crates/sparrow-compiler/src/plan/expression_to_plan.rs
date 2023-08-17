@@ -35,6 +35,8 @@ pub(super) fn dfg_to_plan(
                 InstKind::FieldRef => "field_ref".to_owned(),
                 InstKind::Record => "record".to_owned(),
                 InstKind::Cast(_) => "cast".to_owned(),
+                // TODO: FRAZ
+                InstKind::Udf(udf) => udf.signature().name().to_owned(),
             };
 
             let result_type =

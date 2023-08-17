@@ -17,7 +17,7 @@ use crate::{FenlType, Located, Location};
 /// The parameter names for a single method must be unique.
 ///
 /// Required parameters must appear before optional parameters.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Parameters<T> {
     /// The names of each parameter.
@@ -170,7 +170,7 @@ impl<T: std::fmt::Debug> Parameters<T> {
 pub type ArgVec<T> = SmallVec<[T; 2]>;
 
 /// Represents a single argument, which is either positional or keyword.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub enum Argument<T> {
     /// An argument passed by position -- eg., `5` in `foo(5, x = 6)`.
@@ -210,7 +210,7 @@ impl<T> Argument<T> {
 ///
 /// Before being used the arguments must be resolved against the parameters of
 /// the corresponding function.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 #[repr(transparent)]
 pub struct Arguments<T>(ArgVec<Argument<T>>);
