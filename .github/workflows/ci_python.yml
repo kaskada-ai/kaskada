@@ -70,7 +70,77 @@ jobs:
         run: |
           poetry run pydocstyle pysrc
 
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - uses: actions/setup-python@v4
+        with:
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+          cache: poetry
+      - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: x86_64
+          manylinux: auto
+          args: --out dist --zig
+          working-directory: python
+          before-script-linux: |
+            set -e
+            # We need to add the protobuf-compiler since manylinux builds happen
+            # in a docker container that doesn't have it.
+            PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-x86_64.zip
+            unzip protoc-24.0-linux-x86_64.zip -d $HOME/.local
+            export PATH="$PATH:$HOME/.local/bin"
+      - name: pytest and mypy
+        run: |
+          for V in 3.8 3.9 3.10 3.11; do
+            echo "::group::Install for Python $V"
+            poetry env use $V
+            poetry env info
+            source $(poetry env info --path)/bin/activate
+            poetry install --only=test --only=typecheck
+            pip install dist/kaskada-*.whl --force-reinstall
+            echo "::endgroup::"
+            echo "::group::Test Python $V"
+            poetry run pytest
+            echo "::endgroup::"
+            echo "::group::MyPy Python $V"
+            poetry run mypy -- --install-types --non-interactive pysrc pytests
+            echo "::endgroup::"
+            deactivate
+          done
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ${{ github.workspace }}/python/dist
+      - name: Build docs
+        run: |
+          poetry env use 3.11
+          source $(poetry env info --path)/bin/activate
+          poetry install --with=docs
+          ls docs/source/_static
+          sphinx-build docs/source docs/_build -j auto -W
+          deactivate
+      - name: Upload docs
+        uses: actions/upload-pages-artifact@v2
+        with:
+          # Automatically uploads an artifact from the './_site' directory by default
+          path: ${{ github.workspace }}/python/docs/_build
+
   build-wheel-macos:
+    if: github.event == 'push'
     runs-on: macos-latest
     strategy:
       matrix:
@@ -127,6 +197,7 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-windows:
+    if: github.event == 'push'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -178,6 +249,7 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-linux:
+    if: github.event == 'push'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -240,24 +312,10 @@ jobs:
         with:
           name: wheels
           path: ${{ github.workspace }}/python/dist
-      - name: Build docs
-        if: matrix.target == 'x86_64'
-        run: |
-          poetry env use 3.11
-          source $(poetry env info --path)/bin/activate
-          poetry install --with=docs
-          ls docs/source/_static
-          sphinx-build docs/source docs/_build -j auto -W
-          deactivate
-      - name: Upload artifact
-        if: matrix.target == 'x86_64'
-        uses: actions/upload-pages-artifact@v2
-        with:
-          # Automatically uploads an artifact from the './_site' directory by default
-          path: ${{ github.workspace }}/python/docs/_build
 
   # Make the source distribution
   sdist:
+    if: github.event == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -274,6 +332,7 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   docs-deploy:
+    if: github.event == 'push' && github.ref == 'refs/heads/main'
     # Deployment job
     environment:
       name: github-pages
@@ -284,9 +343,8 @@ jobs:
       pages: write      # to deploy to Pages
       id-token: write   # to verify the deployment originates from an appropriate source
 
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: [build-wheel-linux]
+    needs: [debug]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
