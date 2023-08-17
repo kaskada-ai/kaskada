@@ -19,33 +19,33 @@ def source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
-def test_sum_unwindowed(source, golden) -> None:
+def test_mean_unwindowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
-    golden.jsonl(kd.record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
+    golden.jsonl(kd.record({"m": m, "mean_m": m.mean(), "n": n, "mean_n": n.mean()}))
 
 
-def test_sum_windowed(source, golden) -> None:
+def test_mean_windowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
         kd.record(
             {
                 "m": m,
-                "sum_m": m.sum(window=kd.windows.Since(m > 20)),
+                "mean_m": m.mean(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "sum_n": n.sum(window=kd.windows.Sliding(2, m > 10)),
+                "mean_n": n.mean(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )
 
 
-def test_sum_since_true(source, golden) -> None:
+def test_mean_since_true(source, golden) -> None:
     # `since(True)` should be the same as unwindowed, so equals the original vaule.
-    m_sum_since_true = kd.record(
+    m_mean_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_sum": source.col("m").sum(window=kd.windows.Since(True)),
+            "m_mean": source.col("m").mean(window=kd.windows.Since(True)),
         }
     )
-    golden.jsonl(m_sum_since_true)
+    golden.jsonl(m_mean_since_true)

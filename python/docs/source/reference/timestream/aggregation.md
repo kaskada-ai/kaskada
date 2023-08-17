@@ -17,7 +17,13 @@ Windowed:
 
     Timestream.collect
     Timestream.count
+    Timestream.count_if
     Timestream.first
     Timestream.last
+    Timestream.max
+    Timestream.mean
+    Timestream.min
+    Timestream.stddev
     Timestream.sum
+    Timestream.variance
 ```
