@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sparrow_arrow::scalar_value::ScalarValue;
 
-use sparrow_plan::ValueRef;
+use crate::ValueRef;
 
 use crate::{CollectToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 

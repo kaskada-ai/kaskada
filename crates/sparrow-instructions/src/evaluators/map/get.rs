@@ -1,3 +1,4 @@
+use crate::ValueRef;
 use anyhow::Context;
 use arrow::array::{
     as_boolean_array, as_largestring_array, as_primitive_array, as_string_array, Array,
@@ -7,7 +8,6 @@ use arrow::buffer::OffsetBuffer;
 use arrow::downcast_primitive_array;
 use arrow_schema::DataType;
 use itertools::Itertools;
-use sparrow_plan::ValueRef;
 use std::sync::Arc;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};

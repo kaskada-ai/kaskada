@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{
     ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray, TimestampNanosecondArray,
     UInt32Array,
@@ -11,7 +12,6 @@ use arrow::datatypes::{
 };
 use arrow::temporal_conversions::timestamp_ns_to_datetime;
 use chrono::Datelike;
-use sparrow_plan::ValueRef;
 
 use crate::evaluators::{Evaluator, RuntimeInfo};
 use crate::{EvaluatorFactory, StaticInfo};

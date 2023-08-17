@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, FieldRef};
 use egg::{Id, Subst, Var};
 use smallvec::smallvec;
-use sparrow_plan::InstKind;
+use sparrow_instructions::InstKind;
 
 use crate::dfg::{ChildrenVec, Dfg, DfgPattern, Expression};
 

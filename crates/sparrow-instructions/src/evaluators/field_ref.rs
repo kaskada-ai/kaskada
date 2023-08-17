@@ -3,13 +3,13 @@
 
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::{make_array, Array, ArrayRef, AsArray, ListArray};
 use arrow::buffer::NullBuffer;
 use arrow::datatypes::DataType;
 use arrow_schema::{Field, FieldRef};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, StaticInfo};
 

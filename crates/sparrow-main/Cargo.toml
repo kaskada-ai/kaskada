@@ -38,7 +38,6 @@ sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }
 sparrow-materialize = { path = "../sparrow-materialize" }
-sparrow-plan = { path = "../sparrow-plan" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-runtime = { path = "../sparrow-runtime" }
 sparrow-syntax = { path = "../sparrow-syntax" }

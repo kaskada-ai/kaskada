@@ -17,7 +17,7 @@ use arrow::datatypes::{DataType, TimeUnit};
 use smallvec::smallvec;
 use sparrow_api::kaskada::v1alpha::compile_request::ExpressionKind;
 use sparrow_api::kaskada::v1alpha::{FeatureSet, LateBoundValue, PerEntityBehavior, SlicePlan};
-use sparrow_plan::GroupId;
+use sparrow_instructions::GroupId;
 use sparrow_syntax::{FeatureSetPart, FenlType, Location};
 use tracing::error;
 

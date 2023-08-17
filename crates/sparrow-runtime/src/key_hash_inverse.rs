@@ -10,8 +10,8 @@ use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_compiler::DataContext;
+use sparrow_instructions::GroupId;
 use sparrow_instructions::{ComputeStore, StoreKey};
-use sparrow_plan::GroupId;
 
 use crate::read::ParquetFile;
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};

@@ -64,7 +64,6 @@ sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }
 sparrow-merge = { path = "../sparrow-merge", features = ["testing"] }
-sparrow-plan = { path = "../sparrow-plan" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true

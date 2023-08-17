@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use crate::{
     AggregationArgs, Evaluator, EvaluatorFactory, ListAccumToken, RuntimeInfo, StateToken,
     StaticInfo,
@@ -7,7 +8,6 @@ use crate::{
 use arrow::array::{
     as_list_array, new_empty_array, Array, ArrayRef, AsArray, PrimitiveArray, UInt32Array,
 };
-use sparrow_plan::ValueRef;
 
 /// Evaluator for the `First` instruction on lists
 pub struct FirstListEvaluator {
