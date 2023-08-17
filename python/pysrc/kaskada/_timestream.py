@@ -1015,7 +1015,7 @@ class Timestream(object):
 
     def count_if(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         """
-        Create a Timestream containing the count value if true in the `window`.
+        Create a Timestream containing the count of `true` values in `window`.
 
         Computed for each key separately.
 
@@ -1095,7 +1095,7 @@ class Timestream(object):
 
     def stddev(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         """
-        Create a Timestream containing the standard deviation value in the `window`.
+        Create a Timestream containing the standard deviation in the `window`.
 
         Computed for each key separately.
 
@@ -1115,7 +1115,7 @@ class Timestream(object):
 
     def variance(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         """
-        Create a Timestream containing the variance value in the `window`.
+        Create a Timestream containing the variance in the `window`.
 
         Computed for each key separately.
 

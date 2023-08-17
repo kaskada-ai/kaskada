@@ -2,7 +2,7 @@ import pytest
 import kaskada as kd
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def count_if_source() -> kd.sources.CsvString:
     content = "\n".join(
         [
@@ -34,7 +34,6 @@ def test_count_if_unwindowed(count_if_source, golden) -> None:
     )
 
 
-# TODO: This test doesn't appear correct.
 def test_count_if_windowed(count_if_source, golden) -> None:
     is_valid = count_if_source.col("is_valid")
     m = count_if_source.col("m")
