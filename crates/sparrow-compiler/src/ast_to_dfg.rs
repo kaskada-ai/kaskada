@@ -218,6 +218,7 @@ pub fn add_to_dfg(
                 None,
             )))
         }
+        // TODO: FRAZ - make exprop::udf
         ExprOp::Call(function_name) => {
             // Assumption: All instructions are exposed as Fenl functions. It seems
             // reasonable / desirable to keep this consistency, until such

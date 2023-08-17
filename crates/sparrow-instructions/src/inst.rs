@@ -234,7 +234,7 @@ pub enum InstKind {
     Record,
 
     /// TODO: UDF
-    Udf(Box<dyn UserDefinedFunction>),
+    Udf(Arc<dyn UserDefinedFunction>),
 }
 
 impl Clone for InstKind {

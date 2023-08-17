@@ -11,7 +11,7 @@ use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, CompilerOptions, DataContext, Dfg, DiagnosticCollector};
-use sparrow_instructions::GroupId;
+use sparrow_instructions::{GroupId, UserDefinedFunction};
 use sparrow_runtime::execute::output::Destination;
 use sparrow_runtime::key_hash_inverse::ThreadSafeKeyHashInverse;
 use sparrow_syntax::{ExprOp, FenlType, LiteralValue, Located, Location, Resolved};
@@ -137,6 +137,14 @@ impl Session {
             false,
         );
         self.add_to_dfg(op, args).map(Expr)
+    }
+
+    pub fn add_udf(
+        &mut self,
+        udf: Arc<dyn UserDefinedFunction>,
+        args: Vec<Expr>,
+    ) -> error_stack::Result<Expr, Error> {
+        todo!()
     }
 
     pub fn add_expr(
