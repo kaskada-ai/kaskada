@@ -100,7 +100,7 @@ jobs:
           working-directory: python
       - name: pytest and mypy (Mac x86_64)
         run: |
-          for V in "3.8 3.9 3.10 3.11"; do
+          for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
@@ -140,9 +140,6 @@ jobs:
 
   build-wheel-windows:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        target: [x64, x86]
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
@@ -153,7 +150,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
-          architecture: ${{ matrix.target }}
+          architecture: x64
           cache: poetry
       # - name: Install Rust toolchain
       #   uses: actions-rs/toolchain@v1
@@ -168,10 +165,10 @@ jobs:
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
-          target: ${{ matrix.target }}
+          target: x64
           args: --release --out dist
           working-directory: python
-      - name: pytest and mypy (Windows ${{ matrix.target }})
+      - name: pytest and mypy (Windows x64)
         shell: bash
         run: |
           echo "::group::Install for Python 3.11"
@@ -226,7 +223,7 @@ jobs:
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
-          for V in "3.8 3.9 3.10 3.11"; do
+          for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry install --only=main --only=test --only=typecheck
