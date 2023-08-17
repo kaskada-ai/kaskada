@@ -264,6 +264,7 @@ jobs:
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
+          ls docs/source/_static
           sphinx-build docs/source docs/_build -j auto -W
           deactivate
       - name: Upload artifact
