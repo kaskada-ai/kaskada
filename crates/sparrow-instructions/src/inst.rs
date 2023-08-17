@@ -255,7 +255,7 @@ impl PartialEq for InstKind {
             (Self::FieldRef, Self::FieldRef) => true,
             (Self::Cast(l0), Self::Cast(r0)) => l0 == r0,
             (Self::Record, Self::Record) => true,
-            (Self::Udf(l0), Self::Udf(r0)) => l0.eq(r0),
+            (Self::Udf(l0), Self::Udf(r0)) => l0 == r0,
             _ => false,
         }
     }
