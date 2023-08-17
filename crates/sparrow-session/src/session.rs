@@ -56,6 +56,7 @@ impl Session {
         .map(Expr)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn add_table(
         &mut self,
         name: &str,
@@ -64,6 +65,7 @@ impl Session {
         subsort_column_name: Option<&str>,
         key_column_name: &str,
         grouping_name: Option<&str>,
+        time_unit: Option<&str>,
     ) -> error_stack::Result<Table, Error> {
         let uuid = Uuid::new_v4();
         let schema_proto = sparrow_api::kaskada::v1alpha::Schema::try_from(schema.as_ref())
@@ -117,7 +119,7 @@ impl Session {
             })
             .clone();
 
-        Ok(Table::new(table_info, key_hash_inverse, key_column, expr))
+        Table::new(table_info, key_hash_inverse, key_column, expr, time_unit)
     }
 
     pub fn add_cast(
@@ -421,7 +423,7 @@ mod tests {
             Field::new("b", DataType::Int64, true),
         ]));
         let table = session
-            .add_table("table", schema, "time", None, "key", Some("user"))
+            .add_table("table", schema, "time", None, "key", Some("user"), None)
             .unwrap();
 
         let field_name = session
