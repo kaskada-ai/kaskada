@@ -264,7 +264,7 @@ impl PartialEq for InstKind {
 impl fmt::Display for InstKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            InstKind::Simple(instruction) => write!(f, "{instruction:?}"),
+            InstKind::Simple(instruction) => write!(f, "{instruction}"),
             InstKind::FieldRef => write!(f, "field"),
             InstKind::Cast(data_type) => write!(f, "cast:{data_type}"),
             InstKind::Record => write!(f, "record"),
