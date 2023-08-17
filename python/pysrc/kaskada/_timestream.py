@@ -1029,6 +1029,22 @@ class Timestream(object):
         """
         return Timestream(self._ffi_expr.cast(data_type))
 
+    def else_(self, other: Timestream) -> Timestream:
+        """
+        Return `self` if not `null` otherwise `other`.
+
+        Parameters
+        ----------
+        other : Timestream
+            The Timestream to use if self is `null`.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the value of `self` not `null` otherwise `other`.
+        """
+        return Timestream._call("else", other, self)
+
     def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
         Return a Timestream containing seconds betewen `time` and `self`.

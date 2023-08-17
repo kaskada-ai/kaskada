@@ -86,18 +86,13 @@ Compute temporal joins at the correct times, without risk of leakage.
 
 ```{toctree}
 :hidden:
+:maxdepth: 3
 
+why
+tour
 quickstart
-concepts
 examples/index
-```
-
-```{toctree}
-:caption: User Guide
-:hidden:
-:maxdepth: 1
-
-guide/introduction
+guide/index
 ```
 
 ```{toctree}

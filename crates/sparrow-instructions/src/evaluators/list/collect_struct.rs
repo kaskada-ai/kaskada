@@ -1,3 +1,4 @@
+use crate::ValueRef;
 use crate::{CollectStructToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{
     new_empty_array, Array, ArrayRef, AsArray, ListArray, TimestampNanosecondArray, UInt32Array,
@@ -8,7 +9,6 @@ use arrow::datatypes::{DataType, Int64Type};
 use arrow_schema::{Field, TimeUnit};
 use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::ValueRef;
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 

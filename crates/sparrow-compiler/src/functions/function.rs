@@ -4,7 +4,7 @@ use std::sync::Arc;
 use egg::{Subst, Var};
 use itertools::{izip, Itertools};
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use sparrow_plan::GroupId;
+use sparrow_instructions::GroupId;
 use sparrow_syntax::{FeatureSetPart, FenlType, Located, Location, Signature};
 
 use crate::ast_to_dfg::AstDfg;

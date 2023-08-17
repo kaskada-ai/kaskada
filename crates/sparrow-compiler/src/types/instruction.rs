@@ -5,7 +5,7 @@ use arrow::datatypes::{DataType, Field};
 use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
-use sparrow_plan::{InstKind, Mode};
+use sparrow_instructions::{InstKind, Mode};
 use sparrow_syntax::{ArgVec, Collection, FenlType, Resolved};
 
 use crate::types::inference::validate_instantiation;

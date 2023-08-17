@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::Context;
 use arrow::array::ArrayRef;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

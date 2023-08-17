@@ -170,6 +170,12 @@ pub enum InstOp {
     NullIf,
     #[strum(props(signature = "powf(base: f64, power: f64) -> f64"))]
     Powf,
+    // TODO: FRAZ
+    // we need to accept any number of variable length and type parameters
+    // and return variable type result (doesn't have to be in the signature params either)
+    // how?
+    // #[strum(props(signature = "python_udf<T: any>(class: T) -> T"))]
+    // PythonUDF(Arc<dyn UserDefinedFunction>),
     #[strum(props(signature = "round<N: number>(n: N) -> N"))]
     Round,
     #[strum(props(signature = "seconds(seconds: i64) -> duration_s"))]

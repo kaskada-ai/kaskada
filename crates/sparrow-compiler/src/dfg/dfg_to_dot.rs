@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 
 use itertools::Itertools;
-use sparrow_plan::InstKind;
+use sparrow_instructions::InstKind;
 
 use super::StepKind;
 use crate::dfg::{DfgExpr, Expression};

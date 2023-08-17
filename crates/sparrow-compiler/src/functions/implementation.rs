@@ -6,7 +6,7 @@ use itertools::izip;
 use once_cell::sync::OnceCell;
 use smallvec::smallvec;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use sparrow_plan::InstOp;
+use sparrow_instructions::InstOp;
 use sparrow_syntax::{Expr, FeatureSetPart, FenlType, Located, ResolvedExpr, WindowBehavior};
 
 use crate::ast_to_dfg::ast_to_dfg;

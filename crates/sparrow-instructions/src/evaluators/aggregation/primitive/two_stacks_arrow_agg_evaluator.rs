@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::{ArrowNativeType, Int64Type};
@@ -7,7 +8,6 @@ use itertools::izip;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sparrow_arrow::downcast::downcast_primitive_array;
-use sparrow_plan::ValueRef;
 
 use crate::{
     AggregationArgs, ArrowAggFn, Evaluator, RuntimeInfo, StateToken, TwoStacks,

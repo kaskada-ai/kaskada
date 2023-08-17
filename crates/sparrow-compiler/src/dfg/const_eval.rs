@@ -4,7 +4,7 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{
     ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo, StaticArg, StaticInfo,
 };
-use sparrow_plan::{InstKind, InstOp, ValueRef};
+use sparrow_instructions::{InstKind, InstOp, ValueRef};
 
 use crate::types::instruction::typecheck_inst;
 
@@ -142,7 +142,7 @@ pub(super) fn evaluate_constant(
         kind,
         argument_types,
         &argument_literals,
-        sparrow_plan::Mode::Dfg,
+        sparrow_instructions::Mode::Dfg,
     )?;
     let result_type = result_type.arrow_type().with_context(|| {
         format!(
@@ -204,7 +204,7 @@ impl RuntimeInfo for ConstEvaluator {
 #[cfg(test)]
 mod tests {
     use sparrow_arrow::scalar_value::ScalarValue;
-    use sparrow_plan::{InstKind, InstOp};
+    use sparrow_instructions::{InstKind, InstOp};
     use strum::IntoEnumIterator;
 
     #[test]
@@ -222,7 +222,7 @@ mod tests {
             let inputs = vec![
                 ScalarValue::Null;
                 inst_op
-                    .signature(sparrow_plan::Mode::Dfg)
+                    .signature(sparrow_instructions::Mode::Dfg)
                     .parameters()
                     .len()
             ];

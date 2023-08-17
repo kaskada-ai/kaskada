@@ -6,8 +6,8 @@ use arrow::datatypes::{DataType, SchemaRef};
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_api::kaskada::v1alpha::{compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
+use sparrow_instructions::{GroupId, TableId};
 use sparrow_merge::InMemoryBatches;
-use sparrow_plan::{GroupId, TableId};
 use sparrow_syntax::Location;
 use uuid::Uuid;
 
@@ -407,7 +407,7 @@ impl TableInfo {
 
     pub fn dfg_node(&self, dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {
         use smallvec::smallvec;
-        use sparrow_plan::InstOp;
+        use sparrow_instructions::InstOp;
         use sparrow_syntax::FenlType;
 
         use crate::ast_to_dfg::AstDfg;
