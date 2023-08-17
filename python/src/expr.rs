@@ -93,6 +93,15 @@ impl Expr {
             _ => Ok(None),
         }
     }
+
+    #[pyo3(signature = ())]
+    fn is_continuous(&self) -> bool {
+        self.rust_expr.is_continuous()
+    }
+
+    fn grouping(&self) -> Option<String> {
+        self.rust_expr.grouping()
+    }
 }
 
 #[derive(FromPyObject)]

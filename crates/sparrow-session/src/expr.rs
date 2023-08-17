@@ -12,6 +12,14 @@ impl Expr {
             _ => None,
         }
     }
+
+    pub fn is_continuous(&self) -> bool {
+        self.0.time_domain().is_continuous()
+    }
+
+    pub fn grouping(&self) -> Option<String> {
+        self.0.grouping().map(|grouping| grouping.to_string())
+    }
 }
 
 pub enum Literal {
