@@ -1013,6 +1013,26 @@ class Timestream(object):
         """
         return _aggregation("count", self, window)
 
+    def count_if(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the count value if true in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the count value if true for the key in the window for
+            each point.
+        """
+        return _aggregation("count_if", self, window)
+
     def cast(self, data_type: pa.DataType) -> Timestream:
         """
         Cast the type of this Timestream to the given data type.
