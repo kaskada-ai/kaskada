@@ -134,7 +134,7 @@ jobs:
             echo "::endgroup::"
             echo "::group::MyPy Python 3.11"
             poetry run mypy -- --install-types --non-interactive pysrc pytests
-            echo "::endgroup::
+            echo "::endgroup::"
             deactivate
       - name: Upload wheels
         uses: actions/upload-artifact@v2
@@ -176,9 +176,7 @@ jobs:
         shell: bash
         run: |
           echo "::group::Install for Python 3.11"
-          ls $(poetry env info --path)
-          ls $(poetry env info --path)\\bin
-          source $(poetry env info --path)\\bin\\activate
+          source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
           pip install dist/kaskada-*.whl --force-reinstall
           echo "::endgroup::"
