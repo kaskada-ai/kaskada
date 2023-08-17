@@ -59,6 +59,7 @@ def render(*args: Plot,
         # TODO: Change markers when colorway cycles.
         # TODO: Use different markers for different entity types.
         # TODO: Render categorical values.
+        # TODO: Warn if number of points / keys exceeds some threshold.
         new = False
         if key not in color_map:
           new = True
