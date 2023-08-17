@@ -1,12 +1,9 @@
 **/target
-**/*.rs.bk
 /.idea
 *.iml
 **/.*.pending-snap
-/catalog.json
-*.svg
-sparrow-main/tests/test-output
-sparrow-main/test-storage
+/crates/sparrow-main/tests/test-output
+/crates/sparrow-main/test-storage
 !/.vscode
 
 # ignore notice files copied to the wren folder during local builds
