@@ -104,14 +104,14 @@ jobs:
             echo "::group::Install for Python $V"
             poetry env use $V
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck --only=docs
+            poetry install --only=main --only=test --only=typecheck
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
             echo "::endgroup::"
             echo "::group::MyPy Python $V"
-            poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
+            poetry run mypy -- --install-types --non-interactive pysrc pytests
             echo "::endgroup::"
             deactivate
           done
@@ -126,14 +126,14 @@ jobs:
             echo "::group::Install for Python 3.11")
             poetry env use 3.11
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck --only=docs
+            poetry install --only=main --only=test --only=typecheck
             pip install dist/kaskada-*universal2.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python 3.11"
             poetry run pytest
             echo "::endgroup::"
             echo "::group::MyPy Python 3.11"
-            poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
+            poetry run mypy -- --install-types --non-interactive pysrc pytests
             echo "::endgroup::
             deactivate
       - name: Upload wheels
@@ -177,14 +177,14 @@ jobs:
         run: |
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)/bin/activate
-          poetry install --only=main --only=test --only=typecheck --only=docs
+          poetry install --only=main --only=test --only=typecheck
           pip install dist/kaskada-*.whl --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
           poetry run pytest
           echo "::endgroup::"
           echo "::group::MyPy Python 3.11"
-          poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
+          poetry run mypy -- --install-types --non-interactive pysrc pytests
           echo "::endgroup::"
           deactivate
       - name: Upload wheels
@@ -240,14 +240,14 @@ jobs:
             poetry env use $V
             poetry env info
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck --only=docs
+            poetry install --only=main --only=test --only=typecheck
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
             echo "::endgroup::"
             echo "::group::MyPy Python $V"
-            poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
+            poetry run mypy -- --install-types --non-interactive pysrc pytests
             echo "::endgroup::"
             deactivate
           done
@@ -258,7 +258,12 @@ jobs:
           path: dist
       - name: Build docs
         if: matrix.target == 'x86_64'
-        run: sphinx-build docs/source docs/_build -j auto -W
+        run: |
+          poetry env use 3.11
+          source $(poetry env info --path)/bin/activate
+          poetry install --only=docs
+          sphinx-build docs/source docs/_build -j auto -W
+          deactivate
       - name: Upload artifact
         if: matrix.target == 'x86_64'
         uses: actions/upload-pages-artifact@v2
