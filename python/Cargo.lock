@@ -3726,7 +3726,6 @@ dependencies = [
  "sparrow-instructions",
  "sparrow-kernels",
  "sparrow-merge",
- "sparrow-plan",
  "sparrow-syntax",
  "static_init",
  "strum 0.25.0",
@@ -3770,6 +3769,7 @@ dependencies = [
  "bitvec",
  "chrono",
  "derive_more",
+ "enum-map",
  "erased-serde",
  "error-stack",
  "hashbrown 0.14.0",
@@ -3777,6 +3777,7 @@ dependencies = [
  "lz4-sys",
  "num",
  "owning_ref",
+ "parse-display",
  "prost",
  "prost-wkt-types",
  "rocksdb",
@@ -3786,12 +3787,14 @@ dependencies = [
  "sparrow-api",
  "sparrow-arrow",
  "sparrow-kernels",
- "sparrow-plan",
  "sparrow-syntax",
  "static_init",
+ "strum 0.25.0",
+ "strum_macros 0.25.1",
  "tempfile",
  "tonic",
  "tracing",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -3833,26 +3836,6 @@ dependencies = [
  "sparrow-core",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "sparrow-plan"
-version = "0.11.0"
-dependencies = [
- "anyhow",
- "arrow",
- "enum-map",
- "hashbrown 0.14.0",
- "itertools 0.11.0",
- "parse-display",
- "sparrow-api",
- "sparrow-arrow",
- "sparrow-syntax",
- "static_init",
- "strum 0.25.0",
- "strum_macros 0.25.1",
- "tracing",
- "uuid 1.4.1",
 ]
 
 [[package]]
@@ -3930,7 +3913,6 @@ dependencies = [
  "sparrow-instructions",
  "sparrow-kernels",
  "sparrow-merge",
- "sparrow-plan",
  "sparrow-qfr",
  "sparrow-syntax",
  "static_init",
@@ -3958,8 +3940,8 @@ dependencies = [
  "smallvec",
  "sparrow-api",
  "sparrow-compiler",
+ "sparrow-instructions",
  "sparrow-merge",
- "sparrow-plan",
  "sparrow-runtime",
  "sparrow-syntax",
  "static_init",
