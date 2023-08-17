@@ -87,7 +87,7 @@ jobs:
             3.10
             3.11
           cache: poetry
-      - name: Build wheels
+      - name: Build debug wheels
         uses: messense/maturin-action@v1
         with:
           target: x86_64
@@ -120,11 +120,6 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
-      - name: Upload wheels
-        uses: actions/upload-artifact@v2
-        with:
-          name: wheels
-          path: ${{ github.workspace }}/python/dist
       - name: Build docs
         run: |
           poetry env use 3.11
