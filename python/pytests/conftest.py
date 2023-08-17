@@ -30,7 +30,13 @@ class GoldenFixture(object):
         filename = self._filename("jsonl")
 
         if self._save:
-            df.to_json(filename, orient="records", lines=True, date_format="iso", date_unit="ns")
+            df.to_json(
+                filename,
+                orient="records",
+                lines=True,
+                date_format="iso",
+                date_unit="ns",
+            )
 
         golden = pd.read_json(
             filename,
