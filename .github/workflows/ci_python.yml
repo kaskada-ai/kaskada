@@ -72,6 +72,11 @@ jobs:
 
   build-wheel-macos:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64
+          - target: universal2
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
@@ -92,13 +97,13 @@ jobs:
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build wheel (Mac x86_64)
+      - name: Build wheel
         uses: messense/maturin-action@v1
         with:
-          target: x86_64
+          target: ${{ matrix.target }}
           args: --release --out dist --sdist
           working-directory: python
-      - name: pytest and mypy (Mac x86_64)
+      - name: pytest and mypy
         run: |
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
@@ -115,27 +120,6 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
-      - name: Build wheel (Mac universal2)
-        uses: messense/maturin-action@v1
-        with:
-          target: universal2
-          args: --release --out dist --sdist
-          working-directory: python
-      - name: pytest and mypy (Mac universal2)
-        run: |
-            echo "::group::Install for Python 3.11"
-            poetry env use 3.11
-            source $(poetry env info --path)/bin/activate
-            poetry install --only=test --only=typecheck
-            pip install dist/kaskada-*universal2.whl --force-reinstall
-            echo "::endgroup::"
-            echo "::group::Test Python 3.11"
-            poetry run pytest
-            echo "::endgroup::"
-            echo "::group::MyPy Python 3.11"
-            poetry run mypy -- --install-types --non-interactive pysrc pytests
-            echo "::endgroup::"
-            deactivate
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
