@@ -92,7 +92,7 @@ jobs:
         with:
           target: x86_64
           manylinux: auto
-          args: --out dist --zig
+          args: --out dist --zig --profile debug
           working-directory: python
           before-script-linux: |
             set -e
