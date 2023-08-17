@@ -2,11 +2,11 @@ use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::compute::kernels::arity::unary;
 use arrow::datatypes::ArrowNumericType;
 use num::traits::Float;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

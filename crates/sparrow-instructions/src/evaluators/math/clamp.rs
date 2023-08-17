@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::datatypes::ArrowNumericType;
 use itertools::izip;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

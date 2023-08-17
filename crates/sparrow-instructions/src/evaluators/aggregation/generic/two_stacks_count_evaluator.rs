@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::{Int64Type, UInt32Type};
 use itertools::izip;
 use sparrow_arrow::downcast::downcast_boolean_array;
-use sparrow_plan::ValueRef;
 
 use crate::{AggregationArgs, Count, Evaluator, RuntimeInfo, StateToken, TwoStacksCountAccumToken};
 

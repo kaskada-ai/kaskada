@@ -10,7 +10,7 @@ use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
-use sparrow_plan::TableId;
+use sparrow_instructions::TableId;
 use sparrow_qfr::FlightRecorder;
 
 use super::BoxedOperation;

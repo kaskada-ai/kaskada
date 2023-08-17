@@ -1,4 +1,4 @@
-# Introduction
+# User Guide
 
 Understanding and reacting to the world in real-time requires understanding what is happening _now_ in the context of what happened in the past.
 You need the ability to understand if what just happened is unusual, how it relates to what happened previously, and how it relates to other things that are happening at the same time.
@@ -12,14 +12,10 @@ Use time-travel to compute training examples from historic data and understand h
 
 ## What are "Timestreams"?
 
-A [Timestream](../reference/timestream/index) describes how a value changes over time. In the same way that SQL
-queries transform tables and graph queries transform nodes and edges,
-Kaskada queries transform Timestreams.
+A [Timestream](timestreams) describes how a value changes over time.
+In the same way that SQL queries transform tables and graph queries transform nodes and edges, Kaskada queries transform Timestreams.
 
-In comparison to a timeseries which often contains simple values (e.g., numeric
-observations) defined at fixed, periodic times (i.e., every minute), a Timestream
-contains any kind of data (records or collections as well as primitives) and may
-be defined at arbitrary times corresponding to when the events occur.
+In comparison to a timeseries which often contains simple values (e.g., numeric observations) defined at fixed, periodic times (i.e., every minute), a Timestream contains any kind of data (records or collections as well as primitives) and may be defined at arbitrary times corresponding to when the events occur.
 
 ## Getting Started with Timestreams
 
@@ -35,4 +31,17 @@ data = t.sources.Parquet.from_file(
     key = "user")
 # Get the count of events associated with each user over time, as a dataframe.
 data.count().run().to_pandas()
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+
+installation
+timestreams
+data_types
+entities
+aggregation
+joins
+sources
 ```

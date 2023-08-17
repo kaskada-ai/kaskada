@@ -21,9 +21,9 @@ smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-merge = { path = "../sparrow-merge" }
-sparrow-plan = { path = "../sparrow-plan" }
 sparrow-runtime = { path = "../sparrow-runtime" }
 sparrow-syntax = { path = "../sparrow-syntax" }
+sparrow-instructions = { path = "../sparrow-instructions" }
 static_init.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
