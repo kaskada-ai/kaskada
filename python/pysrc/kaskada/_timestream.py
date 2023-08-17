@@ -1064,8 +1064,7 @@ class Timestream(object):
 
     def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
-        Create a Timestream containing the number of seconds since `time`
-        from `self.time_of()`.
+        Return a Timestream containing seconds betewen `time` and `self`.
 
         Parameters
         ----------
@@ -1093,8 +1092,7 @@ class Timestream(object):
 
     def seconds_since_previous(self, n: int = 1) -> Timestream:
         """
-        Create a Timestream containing the number of seconds since the time
-        `n` points ago.
+        Return a Timsetream containing seconds between `self` and the time `n` points ago.
 
         Parameters
         ----------
