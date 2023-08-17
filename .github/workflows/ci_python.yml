@@ -104,7 +104,7 @@ jobs:
             echo "::group::Install for Python $V"
             poetry env use $V
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck
+            poetry install --only=test --only=typecheck
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
@@ -126,7 +126,7 @@ jobs:
             echo "::group::Install for Python 3.11"
             poetry env use 3.11
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck
+            poetry install --only=test --only=typecheck
             pip install dist/kaskada-*universal2.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python 3.11"
@@ -177,7 +177,7 @@ jobs:
         run: |
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)\bin\activate
-          poetry install --only=main --only=test --only=typecheck
+          poetry install --only=test --only=typecheck
           pip install dist/kaskada-*.whl --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
@@ -240,7 +240,7 @@ jobs:
             poetry env use $V
             poetry env info
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck
+            poetry install --only=test --only=typecheck
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
@@ -261,7 +261,7 @@ jobs:
         run: |
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
-          poetry install --only=docs
+          poetry install --with=docs
           sphinx-build docs/source docs/_build -j auto -W
           deactivate
       - name: Upload artifact
