@@ -8,6 +8,7 @@
 
     Timestream.cast
     Timestream.data_type
+    Timestream.else_
     Timestream.filter
     Timestream.if_
     Timestream.lag

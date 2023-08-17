@@ -78,7 +78,7 @@ mod tests {
     use egg::{EGraph, Pattern, Searcher, Var};
     use smallvec::smallvec;
     use sparrow_arrow::scalar_value::ScalarValue;
-    use sparrow_plan::{InstKind, InstOp};
+    use sparrow_instructions::{InstKind, InstOp};
 
     use super::*;
     use crate::dfg::Expression;

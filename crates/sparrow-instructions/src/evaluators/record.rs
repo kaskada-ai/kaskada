@@ -4,12 +4,12 @@
 
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::ArrayRef;
 use arrow::datatypes::{DataType, FieldRef, Fields};
 use itertools::Itertools;
 use sparrow_arrow::utils::make_struct_array;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

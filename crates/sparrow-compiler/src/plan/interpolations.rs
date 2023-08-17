@@ -1,5 +1,5 @@
 use sparrow_api::kaskada::v1alpha::operation_input_ref::Interpolation;
-use sparrow_plan::{InstKind, InstOp};
+use sparrow_instructions::{InstKind, InstOp};
 
 use crate::dfg::{DfgExpr, Expression, Operation, StepKind};
 

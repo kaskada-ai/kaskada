@@ -6,7 +6,7 @@ use hashbrown::HashSet;
 use itertools::{izip, Itertools};
 use smallvec::{smallvec, SmallVec};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::InstKind;
+use sparrow_instructions::InstKind;
 use sparrow_syntax::{ArgVec, FenlType, Located, Location, Resolved};
 
 use crate::ast_to_dfg::{is_any_new, missing_field_diagnostic, verify_same_partitioning};

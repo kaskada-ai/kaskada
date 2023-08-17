@@ -39,6 +39,10 @@ html_theme_options: Dict[str, Any] = {
     "use_issues_button": True,
     "repository_branch": "main",
     "path_to_docs": "kaskada/docs/source",
+    "announcement": (
+        "This describes the next version of Kaskada. "
+        "It is currently available as an alpha release."
+    ),
     "icon_links": [
         {
             "name": "GitHub",
@@ -54,6 +58,7 @@ html_theme_options: Dict[str, Any] = {
     ],
     "primary_sidebar_end": ["indices.html"],
     "show_toc_level": 2,
+    "show_nav_level": 2,
 }
 
 templates_path = ["_templates"]

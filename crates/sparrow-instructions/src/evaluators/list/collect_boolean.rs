@@ -1,9 +1,9 @@
+use crate::ValueRef;
 use crate::{CollectToken, Evaluator, EvaluatorFactory, RuntimeInfo, StateToken, StaticInfo};
 use arrow::array::{ArrayRef, AsArray, BooleanBuilder, ListBuilder, TimestampNanosecondArray};
 use arrow::datatypes::{DataType, Int64Type};
 use itertools::izip;
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::ValueRef;
 use std::sync::Arc;
 
 /// Evaluator for the `collect` instruction.
