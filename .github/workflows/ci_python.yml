@@ -103,6 +103,7 @@ jobs:
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
+            source $(poetry env info --path)/bin/activate
             poetry install --only=main --only=test --only=typecheck
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
@@ -110,8 +111,9 @@ jobs:
             poetry run pytest
             echo "::endgroup::"
             echo "::group::MyPy Python $V"
-            poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+            poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
             echo "::endgroup::"
+            deactivate
           done
       - name: Build wheel (Mac universal2)
         uses: messense/maturin-action@v1
@@ -123,6 +125,7 @@ jobs:
         run: |
             echo "::group::Install for Python 3.11")
             poetry env use 3.11
+            source $(poetry env info --path)/bin/activate
             poetry install --only=main --only=test --only=typecheck
             pip install dist/kaskada-*universal2.whl --force-reinstall
             echo "::endgroup::"
@@ -130,8 +133,9 @@ jobs:
             poetry run pytest
             echo "::endgroup::"
             echo "::group::MyPy Python 3.11"
-            poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+            poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
             echo "::endgroup::
+            deactivate
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
@@ -179,7 +183,7 @@ jobs:
           poetry run pytest
           echo "::endgroup::"
           echo "::group::MyPy Python 3.11"
-          poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+          poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
           echo "::endgroup::"
       - name: Upload wheels
         uses: actions/upload-artifact@v2
@@ -241,7 +245,7 @@ jobs:
             poetry run pytest
             echo "::endgroup::"
             echo "::group::MyPy Python $V"
-            poetry run mypy -- --install-types --non-interacitve pysrc pytests docs/source/
+            poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
             echo "::endgroup::"
             deactivate
           done
