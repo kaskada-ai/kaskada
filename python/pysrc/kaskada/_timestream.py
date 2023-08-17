@@ -125,6 +125,11 @@ class Timestream(object):
         """The PyArrow type of values in this Timestream."""
         return self._ffi_expr.data_type()
 
+    @property
+    def is_continuous(self) -> bool:
+        """Returns true if this Timestream is continuous."""
+        return self._ffi_expr.is_continuous()
+
     @final
     def pipe(
         self,
