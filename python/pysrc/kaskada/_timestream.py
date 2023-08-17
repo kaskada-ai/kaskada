@@ -1030,6 +1030,126 @@ class Timestream(object):
         """
         return _aggregation("count", self, window)
 
+    def count_if(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the count of `true` values in `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the count value if true for the key in the window for
+            each point.
+        """
+        return _aggregation("count_if", self, window)
+
+    def max(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the max value in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the max value for the key in the window for
+            each point.
+        """
+        return _aggregation("max", self, window)
+
+    def min(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the min value in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the min value for the key in the window for
+            each point.
+        """
+        return _aggregation("min", self, window)
+
+    def mean(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the mean value in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the mean value for the key in the window for
+            each point.
+        """
+        return _aggregation("mean", self, window)
+
+    def stddev(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the standard deviation in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the standard deviation for the key in the window for
+            each point.
+        """
+        return _aggregation("stddev", self, window)
+
+    def variance(self, window: Optional[kd.windows.Window] = None) -> Timestream:
+        """
+        Create a Timestream containing the variance in the `window`.
+
+        Computed for each key separately.
+
+        Parameters
+        ----------
+        window : Optional[Window]
+            The window to use for the aggregation.
+            If not specified, the entire Timestream is used.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the variance for the key in the window for
+            each point.
+        """
+        return _aggregation("variance", self, window)
+
     def cast(self, data_type: pa.DataType) -> Timestream:
         """
         Cast the type of this Timestream to the given data type.
