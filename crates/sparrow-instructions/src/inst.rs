@@ -8,7 +8,7 @@ use sparrow_syntax::{FeatureSetPart, FenlType, Signature};
 use static_init::dynamic;
 use strum::EnumProperty;
 
-use crate::{value::ValueRef, UserDefinedFunction};
+use crate::{value::ValueRef, Udf};
 
 /// Enumeration of the instruction operations.
 ///
@@ -232,9 +232,8 @@ pub enum InstKind {
     ///
     /// The number of arguments should match the number of fields.
     Record,
-
-    /// TODO: UDF
-    Udf(Arc<dyn UserDefinedFunction>),
+    /// A user defined function.
+    Udf(Arc<dyn Udf>),
 }
 
 impl Clone for InstKind {
@@ -256,7 +255,7 @@ impl PartialEq for InstKind {
             (Self::FieldRef, Self::FieldRef) => true,
             (Self::Cast(l0), Self::Cast(r0)) => l0 == r0,
             (Self::Record, Self::Record) => true,
-            (Self::Udf(l0), Self::Udf(r0)) => l0.signature() == r0.signature(),
+            (Self::Udf(l0), Self::Udf(r0)) => l0.eq(r0),
             _ => false,
         }
     }
@@ -269,7 +268,7 @@ impl fmt::Display for InstKind {
             InstKind::FieldRef => write!(f, "field"),
             InstKind::Cast(data_type) => write!(f, "cast:{data_type}"),
             InstKind::Record => write!(f, "record"),
-            InstKind::Udf(_) => write!(f, "TODO FRAZ"),
+            InstKind::Udf(udf) => write!(f, "{}", udf.signature().name()),
         }
     }
 }

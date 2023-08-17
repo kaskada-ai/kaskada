@@ -160,7 +160,7 @@ pub fn create_evaluator(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluato
             Ok(CastEvaluator::try_new(info)?)
         }
         InstKind::Record => Ok(RecordEvaluator::try_new(info)?),
-        InstKind::Udf(_) => panic!("TODO:"),
+        InstKind::Udf(udf) => Ok(udf.make_evaluator(info)),
     }
 }
 

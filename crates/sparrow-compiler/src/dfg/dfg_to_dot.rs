@@ -91,7 +91,6 @@ fn node_label(kind: &StepKind) -> Cow<'static, str> {
         StepKind::Error => Cow::Borrowed("error"),
         StepKind::Window(window) => Cow::Borrowed(window.label()),
         StepKind::Expression(Expression::Inst(InstKind::Udf(udf))) => {
-            // TODO: FRAZ Maybe too long a label
             Cow::Owned(udf.signature().name().to_owned())
         }
     }
