@@ -2,7 +2,7 @@ use anyhow::Context;
 use sparrow_api::kaskada::v1alpha::DataType;
 use sparrow_api::kaskada::v1alpha::{expression_plan, ExpressionPlan};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::{InstKind, Mode};
+use sparrow_instructions::InstKind;
 use sparrow_syntax::{ArgVec, FenlType};
 
 use crate::dfg::Expression;
@@ -97,11 +97,7 @@ fn infer_result_type(
         }
     }
 
-    let result_type = crate::types::instruction::typecheck_inst(
-        inst_kind,
-        argument_types,
-        &argument_literals,
-        Mode::Plan,
-    )?;
+    let result_type =
+        crate::types::instruction::typecheck_inst(inst_kind, argument_types, &argument_literals)?;
     DataType::try_from(&result_type).context("unable to encode result type")
 }
