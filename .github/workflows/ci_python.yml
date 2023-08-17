@@ -104,7 +104,7 @@ jobs:
             echo "::group::Install for Python $V"
             poetry env use $V
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck
+            poetry install --only=main --only=test --only=typecheck --only=docs
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
@@ -126,7 +126,7 @@ jobs:
             echo "::group::Install for Python 3.11")
             poetry env use 3.11
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck
+            poetry install --only=main --only=test --only=typecheck --only=docs
             pip install dist/kaskada-*universal2.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python 3.11"
@@ -176,7 +176,8 @@ jobs:
         shell: bash
         run: |
           echo "::group::Install for Python 3.11"
-          poetry install --only=main --only=test --only=typecheck
+          source $(poetry env info --path)/bin/activate
+          poetry install --only=main --only=test --only=typecheck --only=docs
           pip install dist/kaskada-*.whl --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
@@ -185,6 +186,7 @@ jobs:
           echo "::group::MyPy Python 3.11"
           poetry run mypy -- --install-types --non-interactive pysrc pytests docs/source/
           echo "::endgroup::"
+          deactivate
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
@@ -238,7 +240,7 @@ jobs:
             poetry env use $V
             poetry env info
             source $(poetry env info --path)/bin/activate
-            poetry install --only=main --only=test --only=typecheck
+            poetry install --only=main --only=test --only=typecheck --only=docs
             pip install dist/kaskada-*.whl --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
@@ -254,6 +256,15 @@ jobs:
         with:
           name: wheels
           path: dist
+      - name: Build docs
+        if: matrix.target == 'x86_64'
+        run: sphinx-build docs/source docs/_build -j auto -W
+      - name: Upload artifact
+        if: matrix.target == 'x86_64'
+        uses: actions/upload-pages-artifact@v2
+        with:
+          # Automatically uploads an artifact from the './_site' directory by default
+          path: ${{ github.workspace }}/python/docs/_build
 
   # Make the source distribution
   sdist:
@@ -272,37 +283,6 @@ jobs:
           name: wheels
           path: ${{ github.workspace }}/python/dist
 
-  # Make the documentation site
-  docs-build:
-    needs: [build-wheel-linux]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install poetry
-        run: |
-          pipx install poetry
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-          cache: poetry
-      - uses: actions/download-artifact@v3
-        with:
-          name: wheels
-      - name: Install dependencies
-        run: |
-          poetry install --only=main --only=docs --only=typecheck
-          pip install kaskada>=0.6.0-a.0 --find-links dist --force-reinstall
-      - name: Build docs
-        run: |
-          sphinx-build docs/source docs/_build -j auto
-      - name: Upload artifact
-        # Automatically uploads an artifact from the './_site' directory by default
-        uses: actions/upload-pages-artifact@v2
-        with:
-            path: ${{ github.workspace }}/python/docs/_build
-
   docs-deploy:
     # Deployment job
     environment:
@@ -316,7 +296,7 @@ jobs:
 
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: [docs-build]
+    needs: [build-wheel-linux]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
