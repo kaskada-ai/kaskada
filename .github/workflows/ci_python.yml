@@ -140,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: wheels
-          path: dist
+          path: ${{ github.workspace }}/python/dist
 
   build-wheel-windows:
     runs-on: windows-latest
@@ -176,6 +176,8 @@ jobs:
         shell: bash
         run: |
           echo "::group::Install for Python 3.11"
+          ls $(poetry env info --path)
+          ls $(poetry env info --path)\\bin
           source $(poetry env info --path)\\bin\\activate
           poetry install --only=test --only=typecheck
           pip install dist/kaskada-*.whl --force-reinstall
@@ -191,7 +193,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: wheels
-          path: dist
+          path: ${{ github.workspace }}/python/dist
 
   build-wheel-linux:
     runs-on: ubuntu-latest
@@ -255,7 +257,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: wheels
-          path: dist
+          path: ${{ github.workspace }}/python/dist
       - name: Build docs
         if: matrix.target == 'x86_64'
         run: |
