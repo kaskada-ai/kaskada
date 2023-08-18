@@ -92,11 +92,12 @@ jobs:
         with:
           target: x86_64
           manylinux: 2_28
-          args: --out dist --profile dev --zig
+          args: --out dist --profile dev #--zig
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel gcc-toolset-12
+            dnf -y install clang protobuf-devel
+            dnf -y group install "Development Tools"
             clang --version
             protoc --version
             ld -v
