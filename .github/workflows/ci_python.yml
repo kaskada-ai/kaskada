@@ -103,9 +103,10 @@ jobs:
             unzip protoc-24.0-linux-x86_64.zip -d $HOME/.local
             export PATH="$PATH:$HOME/.local/bin"
             # Install Clang
-            yum -y install epel-release
+            yum makecache
             yum -y install clang
             clang --version
+            exit 1
       - name: pytest and mypy
         run: |
           for V in 3.8 3.9 3.10 3.11; do
