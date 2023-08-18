@@ -96,9 +96,10 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel
+            dnf -y install clang protobuf-devel gcc-toolset
             clang --version
             protoc --version
+            ld -v
       - name: pytest and mypy
         run: |
           for V in 3.8 3.9 3.10 3.11; do
@@ -265,7 +266,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel
+            dnf -y install clang protobuf-devel gcc-toolset
             clang --version
             protoc --version
       - name: pytest and mypy (Linux x86_64)
