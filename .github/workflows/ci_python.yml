@@ -265,7 +265,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel gcc-toolset-12
+            dnf -y install clang protobuf-devel lld
             clang --version
             protoc --version
       - name: pytest and mypy (Linux x86_64)
