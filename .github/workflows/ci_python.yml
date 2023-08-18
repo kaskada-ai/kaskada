@@ -99,7 +99,6 @@ jobs:
             dnf -y install clang protobuf-compiler
             clang --version
             protoc --version
-            exit 1
       - name: pytest and mypy
         run: |
           for V in 3.8 3.9 3.10 3.11; do
@@ -133,7 +132,7 @@ jobs:
           path: ${{ github.workspace }}/python/docs/_build
 
   build-wheel-macos:
-    if: github.event == 'push'
+    # if: github\.event == 'push'
     runs-on: macos-latest
     strategy:
       matrix:
@@ -190,7 +189,7 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-windows:
-    if: github.event == 'push'
+    # if: github\.event == 'push'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -236,7 +235,7 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-linux:
-    if: github.event == 'push'
+    # if: github.event == 'push'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -269,17 +268,9 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            # We need to add the protobuf-compiler since manylinux builds happen
-            # in a docker container that doesn't have it.
-            PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-${{ matrix.protoc_target }}.zip
-            unzip protoc-24.0-linux-${{ matrix.protoc_target }}.zip -d $HOME/.local
-            export PATH="$PATH:$HOME/.local/bin"
-            # Install Clang
-            yum install -y centos-release-scl
-            yum install -y llvm-toolset-7.0
-            scl enable llvm-toolset-7.0 bash
+            dnf -y install clang protobuf-compiler
             clang --version
+            protoc --version
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
@@ -307,7 +298,7 @@ jobs:
 
   # Make the source distribution
   sdist:
-    if: github.event == 'push'
+    # if: github\.event == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
