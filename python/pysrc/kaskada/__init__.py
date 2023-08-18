@@ -10,14 +10,17 @@ from ._timestream import Literal
 from ._timestream import Timestream
 from ._timestream import record
 
+from . import plot
+
 
 __all__ = [
     "ExecutionOptions",
     "init_session",
     "Literal",
+    "plot",
     "record",
     "Result",
     "sources",
-    "windows",
     "Timestream",
+    "windows",
 ]
