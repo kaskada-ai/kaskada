@@ -874,7 +874,11 @@ class Timestream(object):
             Timestream containing the lookup join between the `key` and `self`.
         """
         return Timestream._call("lookup", key, self)
-
+    
+    def coalesce(self, values: List[Timestream]) -> Timestream:
+        return Timestream._call("coalesce", self, values)
+    
+    
     def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
         """
         Create a Timestream shifting each point forward to `time`.
