@@ -31,6 +31,9 @@ impl Expr {
 
         let mut rust_session = session.rust_session()?;
         let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
+        // TODO: FRAZ - Support adding a UDF here.
+        // It probably needs a different function, add_udf, because we need
+        // to be able to pass the udf and not just the op / args.
         let rust_expr = match rust_session.add_expr(&operation, args) {
             Ok(node) => node,
             Err(e) => {
