@@ -11,7 +11,7 @@ use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, CompilerOptions, DataContext, Dfg, DiagnosticCollector};
-use sparrow_instructions::GroupId;
+use sparrow_instructions::{GroupId, Udf};
 use sparrow_runtime::execute::output::Destination;
 use sparrow_runtime::key_hash_inverse::ThreadSafeKeyHashInverse;
 use sparrow_syntax::{ExprOp, FenlType, LiteralValue, Located, Location, Resolved};
@@ -137,6 +137,33 @@ impl Session {
             false,
         );
         self.add_to_dfg(op, args).map(Expr)
+    }
+
+    pub fn add_udf(
+        &mut self,
+        udf: Arc<dyn sparrow_instructions::Udf>,
+        args: Vec<Expr>,
+    ) -> error_stack::Result<Expr, Error> {
+        // TODO: FRAZ - problem.
+        // I want the `ExprOp::Udf to have Arc<dyn Udf>, but Udf lives in sparrow-instructions,
+        // and ExprOp lives in sparrow-syntax.
+        // Sparrow-session uses instructions though..?
+        let op = ExprOp::Udf(Located::builder(function.to_owned()));
+
+        // TODO: Make this a proper error (not an assertion).
+        let signature = function.internal_signature();
+        signature.assert_valid_argument_count(args.len());
+
+        let has_vararg =
+            signature.parameters().has_vararg && args.len() > signature.arg_names().len();
+        let args = Resolved::new(
+            signature.arg_names().into(),
+            args.into_iter()
+                .map(|arg| Located::builder(arg.0))
+                .collect(),
+            has_vararg,
+        );
+        (op, args)
     }
 
     pub fn add_expr(

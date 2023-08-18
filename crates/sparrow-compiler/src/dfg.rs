@@ -255,7 +255,6 @@ impl Dfg {
 
                 // 2. The number of args should be correct.
                 match expr {
-                    Expression::Inst(InstKind::Udf(_)) => unimplemented!("udf unsupported"),
                     Expression::Literal(_) | Expression::LateBound(_) => {
                         anyhow::ensure!(
                             children.len() == 1,
@@ -265,6 +264,9 @@ impl Dfg {
                         );
                     }
                     Expression::Inst(InstKind::Simple(op)) => op
+                        .signature()
+                        .assert_valid_argument_count(children.len() - 1),
+                    Expression::Inst(InstKind::Udf(udf)) => udf
                         .signature()
                         .assert_valid_argument_count(children.len() - 1),
                     Expression::Inst(InstKind::FieldRef) => {
