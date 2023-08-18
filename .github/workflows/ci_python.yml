@@ -96,7 +96,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel binutils
+            dnf -y install clang protobuf-devel lld
             clang --version
             protoc --version
       - name: pytest and mypy
