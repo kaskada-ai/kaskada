@@ -103,10 +103,10 @@ jobs:
             unzip protoc-24.0-linux-x86_64.zip -d $HOME/.local
             export PATH="$PATH:$HOME/.local/bin"
             # Install Clang
-            yum makecache
-            yum -y install clang
+            yum install -y centos-release-scl
+            yum install -y llvm-toolset-7.0
+            scl enable llvm-toolset-7.0 bash
             clang --version
-            exit 1
       - name: pytest and mypy
         run: |
           for V in 3.8 3.9 3.10 3.11; do
@@ -283,8 +283,9 @@ jobs:
             unzip protoc-24.0-linux-${{ matrix.protoc_target }}.zip -d $HOME/.local
             export PATH="$PATH:$HOME/.local/bin"
             # Install Clang
-            yum -y install epel-release
-            yum -y install clang
+            yum install -y centos-release-scl
+            yum install -y llvm-toolset-7.0
+            scl enable llvm-toolset-7.0 bash
             clang --version
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
