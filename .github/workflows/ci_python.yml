@@ -92,7 +92,7 @@ jobs:
         with:
           target: x86_64
           manylinux: 2_28
-          args: --out dist --profile dev
+          args: --out dist --profile dev --zig
           working-directory: python
           before-script-linux: |
             set -e
