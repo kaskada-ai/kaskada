@@ -49,7 +49,7 @@ impl TypeParameter {
 }
 
 /// The signature of an operator or function.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Signature {
     /// The name of the operator or function.

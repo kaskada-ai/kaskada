@@ -17,6 +17,7 @@ mod ids;
 mod inst;
 mod state;
 mod store_key;
+mod udf;
 mod value;
 
 pub use aggregation_args::*;
@@ -28,4 +29,5 @@ pub use ids::*;
 pub use inst::*;
 pub use state::*;
 pub use store_key::*;
+pub use udf::*;
 pub use value::*;
