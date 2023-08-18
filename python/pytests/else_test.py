@@ -42,7 +42,7 @@ def test_else_(source, golden) -> None:
 def record_source() -> kd.sources.JsonlString:
     content = "\n".join(
         [
-            """{"time":"1996-12-19T16:39:57","key":"A","default_record":{"test":"default"},"override": {"test":"override_val"}}""",
+            """{"time":"1996-12-19T16:39:57","key":"A","override": {"test":"override_val"}}""",
             """{"time":"1996-12-19T16:39:58","key":"A","default_record":{"test":"default"}}""",
         ]
     )
