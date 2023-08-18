@@ -36,3 +36,30 @@ def test_else_(source, golden) -> None:
             }
         )
     )
+
+
+@pytest.fixture(scope="module")
+def record_source() -> kd.sources.JsonlString:
+    content = "\n".join(
+        [
+            """{"time":"1996-12-19T16:39:57","key":"A","default_record":{"test":"default"},"override": {"test":"override_val"}}""",
+            """{"time":"1996-12-19T16:39:58","key":"A","default_record":{"test":"default"}}""",
+        ]
+    )
+    return kd.sources.JsonlString(
+        content, time_column_name="time", key_column_name="key"
+    )
+
+
+def test_else_debug(record_source, golden) -> None:
+    default_record = record_source.col("default_record")
+    override_column = record_source.col("override")
+    golden.jsonl(
+        kd.record(
+            {
+                "default_record": default_record,
+                "overide": override_column,
+                "override_else_default": override_column.else_(default_record),
+            }
+        )
+    )
