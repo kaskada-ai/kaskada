@@ -96,7 +96,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel gcc-toolset
+            dnf -y install clang protobuf-devel gcc-toolset-12
             clang --version
             protoc --version
             ld -v
@@ -108,7 +108,7 @@ jobs:
             poetry env info
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install dist/kaskada-*.whl --force-reinstall
+            pip install 'dist/kaskada-*.whl[plot]' --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -173,7 +173,7 @@ jobs:
             poetry env use $V
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install dist/kaskada-*.whl --force-reinstall
+            pip install 'dist/kaskada-*.whl[plot]' --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -220,7 +220,7 @@ jobs:
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
-          pip install dist/kaskada-*.whl --force-reinstall
+          pip install 'dist/kaskada-*.whl[plot]' --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
           poetry run pytest
@@ -266,7 +266,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf-devel gcc-toolset
+            dnf -y install clang protobuf-devel gcc-toolset-12
             clang --version
             protoc --version
       - name: pytest and mypy (Linux x86_64)
@@ -278,7 +278,7 @@ jobs:
             poetry env info
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install dist/kaskada-*.whl --force-reinstall
+            pip install 'dist/kaskada-*.whl[plot]' --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest

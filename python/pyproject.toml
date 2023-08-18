@@ -14,6 +14,11 @@ dependencies = [
   "typing-extensions >= 4.6.0",
 ]
 
+[project.optional-dependencies]
+plot = [
+  "plotly >= 5.0.0, < 6.0.0",
+]
+
 [tool.poetry]
 name = "kaskada"
 description = "Kaskada query builder and local execution engine."
@@ -31,7 +36,7 @@ typing-extensions = "^4.7.1"
 plotly = {version = "^5.16.1", optional = true}
 
 [tool.poetry.extras]
-visualize = ["plotly"]
+plot = ["plotly"]
 
 [tool.poetry.group.dev.dependencies]
 # Dependencies for building and developing.
