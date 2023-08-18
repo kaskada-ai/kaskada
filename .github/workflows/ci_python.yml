@@ -96,7 +96,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf protobuf-compiler
+            dnf -y install clang protobuf-devel
             clang --version
             protoc --version
       - name: pytest and mypy
@@ -265,7 +265,7 @@ jobs:
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install clang protobuf protobuf-compiler
+            dnf -y install clang protobuf-devel
             clang --version
             protoc --version
       - name: pytest and mypy (Linux x86_64)
