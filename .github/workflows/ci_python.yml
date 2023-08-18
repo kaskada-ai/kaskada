@@ -91,22 +91,15 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           target: x86_64
-          manylinux: auto
+          manylinux: 2_28
           args: --out dist --profile dev
           working-directory: python
           before-script-linux: |
             set -e
-            # We need to add the protobuf-compiler since manylinux builds happen
-            # in a docker container that doesn't have it.
-            PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-            curl -LO $PB_REL/download/v24.0/protoc-24.0-linux-x86_64.zip
-            unzip protoc-24.0-linux-x86_64.zip -d $HOME/.local
-            export PATH="$PATH:$HOME/.local/bin"
-            # Install Clang
-            yum install -y centos-release-scl
-            yum install -y llvm-toolset-7.0
-            scl enable llvm-toolset-7.0 bash
+            dnf -y install clang protobuf-compiler
             clang --version
+            protoc --version
+            exit 1
       - name: pytest and mypy
         run: |
           for V in 3.8 3.9 3.10 3.11; do
@@ -271,7 +264,7 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          manylinux: auto
+          manylinux: 2_28
           args: --release --out dist
           working-directory: python
           before-script-linux: |
