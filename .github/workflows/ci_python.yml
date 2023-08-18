@@ -92,11 +92,12 @@ jobs:
         with:
           target: x86_64
           manylinux: 2_28
-          args: --out dist --profile dev --zig
+          args: --out dist --profile dev
           working-directory: python
           before-script-linux: |
             set -e
-            dnf -y install protobuf-devel
+            dnf -y install clang protobuf-devel binutils
+            clang --version
             protoc --version
       - name: pytest and mypy
         run: |
