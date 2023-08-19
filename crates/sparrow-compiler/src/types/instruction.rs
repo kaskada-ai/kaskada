@@ -35,7 +35,7 @@ pub(crate) fn typecheck_inst(
         InstKind::Udf(udf) => {
             let signature = udf.signature();
             let argument_types = Resolved::new(
-                Cow::Borrowed(signature.parameters().names()),
+                Cow::Owned(signature.parameters().names().to_owned()),
                 argument_types,
                 signature.parameters().has_vararg,
             );

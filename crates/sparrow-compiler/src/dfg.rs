@@ -37,7 +37,7 @@ use hashbrown::HashMap;
 use itertools::{izip, Itertools};
 pub(crate) use language::ChildrenVec;
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::{InstKind, InstOp};
+use sparrow_instructions::{InstKind, InstOp, Udf};
 use sparrow_syntax::{FenlType, Location};
 pub(crate) use step_kind::*;
 type DfgGraph = egg::EGraph<language::DfgLang, analysis::DfgAnalysis>;
@@ -123,6 +123,14 @@ impl Dfg {
         children: ChildrenVec,
     ) -> anyhow::Result<Id> {
         self.add_expression(Expression::Inst(InstKind::Simple(instruction)), children)
+    }
+
+    pub(super) fn add_udf(
+        &mut self,
+        udf: Arc<dyn Udf>,
+        children: ChildrenVec,
+    ) -> anyhow::Result<Id> {
+        self.add_expression(Expression::Inst(InstKind::Udf(udf)), children)
     }
 
     /// Add an expression to the DFG.

@@ -139,33 +139,6 @@ impl Session {
         self.add_to_dfg(op, args).map(Expr)
     }
 
-    pub fn add_udf(
-        &mut self,
-        udf: Arc<dyn sparrow_instructions::Udf>,
-        args: Vec<Expr>,
-    ) -> error_stack::Result<Expr, Error> {
-        // TODO: FRAZ - problem.
-        // I want the `ExprOp::Udf to have Arc<dyn Udf>, but Udf lives in sparrow-instructions,
-        // and ExprOp lives in sparrow-syntax.
-        // Sparrow-session uses instructions though..?
-        let op = ExprOp::Udf(Located::builder(function.to_owned()));
-
-        // TODO: Make this a proper error (not an assertion).
-        let signature = function.internal_signature();
-        signature.assert_valid_argument_count(args.len());
-
-        let has_vararg =
-            signature.parameters().has_vararg && args.len() > signature.arg_names().len();
-        let args = Resolved::new(
-            signature.arg_names().into(),
-            args.into_iter()
-                .map(|arg| Located::builder(arg.0))
-                .collect(),
-            has_vararg,
-        );
-        (op, args)
-    }
-
     pub fn add_expr(
         &mut self,
         function: &str,
@@ -287,6 +260,58 @@ impl Session {
             &op,
             args,
             None,
+        )
+        .into_report()
+        .change_context(Error::Invalid)?;
+
+        if diagnostics.num_errors() > 0 {
+            let errors = diagnostics
+                .finish()
+                .into_iter()
+                .filter(|diagnostic| diagnostic.is_error())
+                .map(|diagnostic| diagnostic.formatted)
+                .collect();
+            Err(Error::Errors(errors))?
+        } else {
+            Ok(result)
+        }
+    }
+
+    /// The [Expr] will call this to add a user-defined-function to the DFG directly.
+    ///
+    /// This bypasses much of the plumbing of the [ExprOp] required due to our construction
+    /// of the AST.
+    #[allow(unused)]
+    fn add_udf_to_dfg(
+        &mut self,
+        udf: Arc<dyn Udf>,
+        args: Vec<Expr>,
+    ) -> error_stack::Result<AstDfgRef, Error> {
+        let signature = udf.signature();
+        // TODO: Why do I have to do this?
+        // Why lifetime on arc now happy?
+        let arg_names = signature.arg_names().to_owned();
+        // let arg_names = Cow::Borrowed(signature.arg_names());
+        signature.assert_valid_argument_count(args.len());
+
+        let has_vararg =
+            signature.parameters().has_vararg && args.len() > signature.arg_names().len();
+        let args = Resolved::new(
+            arg_names.into(),
+            args.into_iter()
+                .map(|arg| Located::builder(arg.0))
+                .collect(),
+            has_vararg,
+        );
+        let feature_set = FeatureSet::default();
+        let mut diagnostics = DiagnosticCollector::new(&feature_set);
+
+        let result = sparrow_compiler::add_udf_to_dfg(
+            udf.clone(),
+            &mut self.dfg,
+            args,
+            &mut self.data_context,
+            &mut diagnostics,
         )
         .into_report()
         .change_context(Error::Invalid)?;

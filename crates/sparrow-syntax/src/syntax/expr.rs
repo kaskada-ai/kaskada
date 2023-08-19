@@ -298,11 +298,6 @@ pub enum ExprOp {
     SelectFields(Location),
     /// Cast the input to the given type.
     Cast(Located<FenlType>, Location),
-    /// A user defined expression.
-    ///
-    /// This should functional similar to a [ExprOp::Call], but the udf
-    /// defines the signature and behavior.
-    // Udf(Arc<dyn Udf>),
     /// Indicates an error parsing an expression.
     Error,
 }
