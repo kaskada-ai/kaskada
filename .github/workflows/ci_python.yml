@@ -108,7 +108,7 @@ jobs:
             poetry env info
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install '${WHEEL}[plot]' --force-reinstall
+            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall'
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
