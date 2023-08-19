@@ -8,7 +8,7 @@ use crate::parser::try_parse_expr;
 use crate::{ArgVec, Arguments, FenlType, LiteralValue, ParseErrors, Resolved};
 
 /// Identifies a specific part of a feature set query.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub enum FeatureSetPart {
     /// Internal definitions that don't reference contents of FeatureSet.
@@ -32,7 +32,7 @@ pub enum FeatureSetPart {
 /// The location of part of an expression in the original source.
 ///
 /// Contains the start and end position in bytes within the source.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Location {
     /// The part of the feature set this location is in.
@@ -220,7 +220,7 @@ impl<T: std::hash::Hash> std::hash::Hash for Located<T> {
 /// can be passed around without copying.
 pub type ExprRef = Arc<Expr>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Expr {
     op: ExprOp,
@@ -256,7 +256,7 @@ impl ResolvedExpr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub enum ExprOp {
     Literal(Located<LiteralValue>),
