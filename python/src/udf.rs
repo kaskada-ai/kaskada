@@ -23,8 +23,6 @@ pub(super) fn call_udf<'py>(
         udf_args.push(py_array);
     }
     let args = PyTuple::new(py, udf_args);
-    // TODO: FRAZ - so..this I think will need to pass the udf to a timestream
-
     let result = udf.call_method("run_pyarrow", args, None)?;
 
     let array_data: ArrayData = ArrayData::from_pyarrow(result)?;
