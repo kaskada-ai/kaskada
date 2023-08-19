@@ -13,6 +13,7 @@ class Result(object):
     """Result of running a timestream query."""
 
     def __init__(self, ffi_execution: _ffi.Execution) -> None:
+        """Create a result object for the given FFI execution."""
         self._ffi_execution = ffi_execution
 
     def to_pandas(self) -> pd.DataFrame:

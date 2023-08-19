@@ -3,7 +3,7 @@ name = "kaskada"
 authors = ["Kaskada Developers"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.6.0"
+version = "0.6.0-a.1"
 description = """
 Python library for building and executing temporal queries.
 """
@@ -17,6 +17,9 @@ derive_more = "0.99.17"
 error-stack = { version = "0.3.1", features = ["anyhow", "spantrace"] }
 futures = "0.3.27"
 itertools = "0.11.0"
+# local_dynamic_tls is necessary (at least on Linux) to avoid
+#   "cannot allocate memory in static TLS block"
+mimalloc = { version = "0.1.37", default-features = false, features = ["local_dynamic_tls"] }
 pyo3 = {version = "0.19.1", features = ["abi3-py38", "extension-module", "generate-import-lib"]}
 pyo3-asyncio = { version = "0.19.0", features = ["tokio-runtime"] }
 sparrow-session = { path = "../crates/sparrow-session" }
@@ -28,3 +31,7 @@ name = "kaskada"
 # `cdylib` is necessary to produce a shared library for Python.
 # This can't be used by downstream Rust code (eg., as a library).
 crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+codegen-units = 1

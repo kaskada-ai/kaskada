@@ -1,11 +1,34 @@
+[project]
+name = "kaskada"
+version = "0.6.0-a.0"
+description = "Kaskada query builder and local execution engine."
+requires-python = ">=3.8.1,<4.0"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+]
+# We need to list dependencies here for maturin to put them in the package.
+# They should match what poetry believes we need.
+dependencies = [
+  "pandas >= 2.0.0, < 3.0.0",
+  "pyarrow >= 12.0.0",
+  "typing-extensions >= 4.6.0",
+]
+
+[project.optional-dependencies]
+plot = [
+  "plotly >= 5.0.0, < 6.0.0",
+]
+
 [tool.poetry]
 name = "kaskada"
-version = "0.6.0"
 description = "Kaskada query builder and local execution engine."
 authors = []
+version = "0.6.0-a.0"
 
 [tool.poetry.dependencies]
-# Dependencies for using the project.
+# Dependencies to install for using the project.
+# These are used when we do `poetry install`.
+# They should be reflected in `dependencies` above.
 pandas = "^2.0.3"
 python = ">=3.8.1,<4.0"
 pyarrow = "^12.0.1"
@@ -13,7 +36,7 @@ typing-extensions = "^4.7.1"
 plotly = {version = "^5.16.1", optional = true}
 
 [tool.poetry.extras]
-visualize = ["plotly"]
+plot = ["plotly"]
 
 [tool.poetry.group.dev.dependencies]
 # Dependencies for building and developing.
@@ -77,17 +100,16 @@ pytest = ">=6.2.5"
 pytest-asyncio = "^0.21.1"
 xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 
+[tool.poetry.group.release]
+# Dependencies for performing the
+optional = true
+
+[tool.poetry.group.release.dependencies]
+python-semantic-release = "^8.0.6"
+
 [build-system]
 requires = ["maturin>=1,<2"]
 build-backend = "maturin"
-
-[project]
-name = "kaskada"
-version = "0.1.0"
-description = "Kaskada query builder and local execution engine."
-requires-python = ">=3.8,<4.0"
-classifiers = [
-]
 
 [tool.maturin]
 profile = "release"
@@ -95,6 +117,11 @@ profile = "release"
 python-source = "pysrc"
 # Name of the Rust module in Python
 module-name = "kaskada._ffi"
+
+[tool.maturin.target.x86_64-apple-darwin]
+macos-deployment-target = "11.0"
+[tool.maturin.target.aarch64-apple-darwin]
+macos-deployment-target = "11.0"
 
 [tool.coverage.paths]
 source = ["pysrc", "*/site-packages"]
@@ -125,3 +152,20 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
+
+[tool.semantic_release]
+version_toml = [
+    "pyproject.toml:project.version",
+    "pyproject.toml:tool.poetry.version",
+]
+tag_format = "v{version}"
+
+[tool.semantic_release.branches.main]
+match = "python-ci"
+prerelease = true
+prerelease_token = "a"
+
+[tool.semantic_release.branches.release]
+match = "release-*"
+
+[tool.semantic_release.remote]

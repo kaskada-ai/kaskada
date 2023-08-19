@@ -1189,7 +1189,7 @@ class Timestream(object):
 
     def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
         """
-        Return a Timestream containing seconds betewen `time` and `self`.
+        Return a Timestream containing seconds between `time` and `self`.
 
         Parameters
         ----------
@@ -1198,7 +1198,7 @@ class Timestream(object):
 
             This can be either a stream of timestamps or a datetime literal.
             If `time` is a Timestream, the result will contain the seconds
-            from `self.time_of()` to `time.time_of()`.
+            from `self.time_of()` to `time.time_of()` for each point.
 
         Returns
         -------
@@ -1217,7 +1217,7 @@ class Timestream(object):
 
     def seconds_since_previous(self, n: int = 1) -> Timestream:
         """
-        Return a Timsetream containing seconds between `self` and the time `n` points ago.
+        Return a Timestream containing seconds between `self` and the time `n` points ago.
 
         Parameters
         ----------
@@ -1225,7 +1225,7 @@ class Timestream(object):
             The number of points to look back. For example, `n=1` refers to
             the previous point.
 
-            Defaults to 1.
+            Defaults to 1 (the previous point).
 
         Returns
         -------
