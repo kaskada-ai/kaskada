@@ -6,6 +6,10 @@
 # - `safety`
 # - `typeguard`
 # - `xdoctest`
+#
+# Currently, `mypy` and `pytest` are running as part of building the rules.
+# We could (in theory) use a matrix to do these in parallel fetching the
+# built wheels, but it doesn't seem likely to provide a significant speedup.
 name: CI
 
 # Only one job per-ref
@@ -132,7 +136,9 @@ jobs:
           path: ${{ github.workspace }}/python/docs/_build
 
   build-wheel-macos:
-    # if: github\.event == 'push'
+    # Build wheels in the merge queue. We can either duplicate this in `main`
+    # or retrieve the built wheels.
+    if: github.event == 'merge_group'
     runs-on: macos-latest
     strategy:
       matrix:
@@ -189,7 +195,9 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-windows:
-    # if: github\.event == 'push'
+    # Build wheels in the merge queue. We can either duplicate this in `main`
+    # or retrieve the built wheels.
+    if: github.event == 'merge_group'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -235,7 +243,11 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-linux:
-    # if: github.event == 'push'
+    # Build wheels in the merge queue. We also do this on push to `main`
+    # because it builds the docs which we'll release.
+    if: |
+      github.event == 'merge_group' ||
+      (github.event == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -312,6 +324,7 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   docs-deploy:
+    # Deploy docs on push to main.
     if: github.event == 'push' && github.ref == 'refs/heads/main'
     # Deployment job
     environment:
