@@ -101,7 +101,6 @@ jobs:
             protoc --version
       - name: pytest and mypy
         run: |
-          WHEEL=(dist/kaskada-*.whl)
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
@@ -168,13 +167,12 @@ jobs:
           working-directory: python
       - name: pytest and mypy
         run: |
-          WHEEL=(dist/kaskada-*.whl)
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install '${WHEEL}[plot]' --force-reinstall
+            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -218,11 +216,10 @@ jobs:
       - name: pytest and mypy (Windows x64)
         shell: bash
         run: |
-          WHEEL=(dist/kaskada-*.whl)
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
-          pip install '${WHEEL}[plot]' --force-reinstall
+          pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
           poetry run pytest
@@ -274,14 +271,13 @@ jobs:
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
-          WHEEL=(dist/kaskada-*.whl)
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry env info
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install '${WHEEL}[plot]' --force-reinstall
+            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
