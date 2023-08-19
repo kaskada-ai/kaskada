@@ -307,7 +307,9 @@ jobs:
 
   # Make the source distribution
   sdist:
-    # if: github\.event == 'push'
+    # Build wheels in the merge queue. We can either duplicate this in `main`
+    # or retrieve the built wheels.
+    if: github.event == 'merge_group'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
