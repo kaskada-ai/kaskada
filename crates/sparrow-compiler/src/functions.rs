@@ -20,6 +20,7 @@ pub use function::*;
 use implementation::*;
 pub(crate) use pushdown::*;
 pub use registry::*;
+pub use time_domain_check::*;
 
 /// Register all the functions available in the registry.
 fn register_functions(registry: &mut Registry) {
