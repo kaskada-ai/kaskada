@@ -80,7 +80,7 @@ jobs:
           python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
             pyproject.toml:project.version \
             pyproject.toml:tool.poetry.version \
-            Cargo.toml:workspace.package.version
+            Cargo.toml:package.version
       - name: Build wheel
         uses: messense/maturin-action@v1
         with:
@@ -137,7 +137,7 @@ jobs:
             python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
               pyproject.toml:project.version \
               pyproject.toml:tool.poetry.version \
-              Cargo.toml:workspace.package.version
+              Cargo.toml:package.version
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
@@ -195,7 +195,7 @@ jobs:
           python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
             pyproject.toml:project.version \
             pyproject.toml:tool.poetry.version \
-            Cargo.toml:workspace.package.version
+            Cargo.toml:package.version
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
@@ -247,7 +247,7 @@ jobs:
           python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
             pyproject.toml:project.version \
             pyproject.toml:tool.poetry.version \
-            Cargo.toml:workspace.package.version
+            Cargo.toml:package.version
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
