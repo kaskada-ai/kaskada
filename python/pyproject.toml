@@ -1,6 +1,6 @@
 [project]
 name = "kaskada"
-version = "0.6.0-a.0"
+version = "0.6.0-a.1"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.8.1,<4.0"
 classifiers = [
@@ -23,7 +23,7 @@ plot = [
 name = "kaskada"
 description = "Kaskada query builder and local execution engine."
 authors = []
-version = "0.6.0-a.0"
+version = "0.6.0-a.1"
 
 [tool.poetry.dependencies]
 # Dependencies to install for using the project.
@@ -152,17 +152,3 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
-
-[tool.semantic_release]
-version_toml = [
-    "pyproject.toml:project.version",
-    "pyproject.toml:tool.poetry.version",
-]
-tag_format = "v{version}"
-
-[tool.semantic_release.branches.main]
-match = "release-tests"
-prerelease = true
-prerelease_token = "a"
-
-[tool.semantic_release.remote]
