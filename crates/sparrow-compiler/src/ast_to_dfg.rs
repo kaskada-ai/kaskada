@@ -96,6 +96,7 @@ pub(super) fn ast_to_dfg(
 }
 
 pub fn add_udf_to_dfg(
+    location: &Located<String>,
     udf: Arc<dyn Udf>,
     dfg: &mut Dfg,
     arguments: Resolved<Located<AstDfgRef>>,
@@ -105,13 +106,8 @@ pub fn add_udf_to_dfg(
     let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
     let signature = udf.signature();
 
-    // TODO: No locations anymore
-    let fake_location = Located::new("fake".to_owned(), Location::internal_str("fake"));
-
-    // TODO: Ask about what python handles for us in regards to type checking, what we can pull
-    // out of here re: diagnostics since they're not reported(?)
     let (instantiated_types, instantiated_result_type) =
-        match instantiate(&fake_location, &argument_types, signature) {
+        match instantiate(&location, &argument_types, signature) {
             Ok(result) => result,
             Err(diagnostic) => {
                 diagnostic.emit(diagnostics);
@@ -125,7 +121,7 @@ pub fn add_udf_to_dfg(
     let grouping = verify_same_partitioning(
         data_context,
         diagnostics,
-        &fake_location.with_value(fake_location.inner().as_str()),
+        &location.with_value(location.inner().as_str()),
         &arguments,
     )?;
 
@@ -149,7 +145,7 @@ pub fn add_udf_to_dfg(
 
     let time_domain_check = TimeDomainCheck::Compatible;
     let time_domain =
-        time_domain_check.check_args(fake_location.location(), diagnostics, &args, data_context)?;
+        time_domain_check.check_args(location.location(), diagnostics, &args, data_context)?;
 
     Ok(Arc::new(AstDfg::new(
         value,
@@ -157,7 +153,7 @@ pub fn add_udf_to_dfg(
         instantiated_result_type,
         grouping,
         time_domain,
-        fake_location.location().clone(),
+        location.location().clone(),
         None,
     )))
 }

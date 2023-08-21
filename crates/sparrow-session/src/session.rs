@@ -288,10 +288,7 @@ impl Session {
         args: Vec<Expr>,
     ) -> error_stack::Result<AstDfgRef, Error> {
         let signature = udf.signature();
-        // TODO: Why do I have to do this?
-        // Why lifetime on arc now happy?
         let arg_names = signature.arg_names().to_owned();
-        // let arg_names = Cow::Borrowed(signature.arg_names());
         signature.assert_valid_argument_count(args.len());
 
         let has_vararg =
@@ -306,7 +303,9 @@ impl Session {
         let feature_set = FeatureSet::default();
         let mut diagnostics = DiagnosticCollector::new(&feature_set);
 
+        let location = Located::builder("udf".to_owned());
         let result = sparrow_compiler::add_udf_to_dfg(
+            &location,
             udf.clone(),
             &mut self.dfg,
             args,

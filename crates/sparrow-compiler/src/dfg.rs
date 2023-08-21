@@ -125,6 +125,7 @@ impl Dfg {
         self.add_expression(Expression::Inst(InstKind::Simple(instruction)), children)
     }
 
+    /// Add a udf node to the DFG.
     pub(super) fn add_udf(
         &mut self,
         udf: Arc<dyn Udf>,
