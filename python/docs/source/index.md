@@ -1,7 +1,6 @@
 ---
 hide-toc: true
 html_theme.sidebar_secondary.remove: true
-title: Kaskada Timestreams
 ---
 # Introduction
 
