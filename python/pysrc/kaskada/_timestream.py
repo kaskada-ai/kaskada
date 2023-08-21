@@ -874,11 +874,21 @@ class Timestream(object):
             Timestream containing the lookup join between the `key` and `self`.
         """
         return Timestream._call("lookup", key, self)
-    
-    def coalesce(self, values: List[Timestream]) -> Timestream:
-        return Timestream._call("coalesce", self, values)
-    
-    
+
+    def coalesce(
+        self, arg: Timestream | Literal, *args: Timestream | Literal
+    ) -> Timestream:
+        """
+        Create a Timestream for returning the first non-null value or null if all values are null.
+
+        Args:
+            arg (Timestream | Literal): The next value to be coalesced (required).
+
+        Returns:
+            Timestream containing the first non-null value from that row. If all values are null, then returns null.
+        """
+        return Timestream._call("coalesce", self, arg, *args)
+
     def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
         """
         Create a Timestream shifting each point forward to `time`.
