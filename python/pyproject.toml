@@ -105,7 +105,7 @@ xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 optional = true
 
 [tool.poetry.group.release.dependencies]
-python-semantic-release = "^8.0.6"
+tomlkit = "^0.12.1"
 
 [build-system]
 requires = ["maturin>=1,<2"]
@@ -161,11 +161,8 @@ version_toml = [
 tag_format = "v{version}"
 
 [tool.semantic_release.branches.main]
-match = "python-ci"
+match = "release-tests"
 prerelease = true
 prerelease_token = "a"
-
-[tool.semantic_release.branches.release]
-match = "release-*"
 
 [tool.semantic_release.remote]

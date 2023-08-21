@@ -25,12 +25,24 @@ jobs:
           disable-autolabeler: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  python_client_draft:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: python-client-release
+    steps:
+      - name: Draft Python Client release
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: release-drafter-python-client.yml
+          disable-autolabeler: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   python_draft:
     runs-on: ubuntu-latest
     concurrency:
       group: python-release
     steps:
-      - name: Draft Python release
+      - name: Draft Release Notes
         uses: release-drafter/release-drafter@v5
         with:
           config-name: release-drafter-python.yml
