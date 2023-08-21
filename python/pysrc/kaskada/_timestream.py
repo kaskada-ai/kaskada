@@ -751,7 +751,7 @@ class Timestream(object):
         else:
             return _aggregation("collect", self, window, max, min)
 
-    def time_of(self) -> Timestream:
+    def time(self) -> Timestream:
         """
         Create a Timestream containing the time of each point.
 
@@ -1198,14 +1198,14 @@ class Timestream(object):
 
             This can be either a stream of timestamps or a datetime literal.
             If `time` is a Timestream, the result will contain the seconds
-            from `self.time_of()` to `time.time_of()` for each point.
+            from `self.time()` to `time.time()` for each point.
 
         Returns
         -------
         Timestream
             Timestream containing the number of seconds since `time`.
 
-            If `self.time_of()` is greater than `time`, the result will be positive.
+            If `self.time()` is greater than `time`, the result will be positive.
         """
         if isinstance(time, datetime):
             session = self._ffi_expr.session()

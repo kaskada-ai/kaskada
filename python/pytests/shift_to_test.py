@@ -37,7 +37,7 @@ def test_shift_to_column(source, golden) -> None:
         kd.record(
             {
                 "time": time,
-                "time_plus_seconds": time.shift_to(time.time_of() + shift_by_timedelta),
+                "time_plus_seconds": time.shift_to(time.time() + shift_by_timedelta),
             }
         )
     )
