@@ -29,6 +29,7 @@ jobs:
         with:
           python-version: 3.11
       - name: Determine version (current)
+        if: github.event_name != 'release'
         run: |
           pip install tomlkit
           VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
