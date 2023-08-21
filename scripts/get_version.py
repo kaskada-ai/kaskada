@@ -22,7 +22,7 @@ def main():
 
     toml_path = args.path.split('.')
     value = get_value_from_toml(args.file, toml_path)
-    print(f"Value at '{args.path}' in '{args.file}': {value}")
+    print(f"{value}")
 
 if __name__ == "__main__":
     main()
