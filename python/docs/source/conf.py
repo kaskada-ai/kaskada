@@ -38,7 +38,7 @@ html_theme_options: Dict[str, Any] = {
     "home_page_in_toc": False,
     "use_issues_button": True,
     "repository_branch": "main",
-    "path_to_docs": "kaskada/docs/source",
+    "path_to_docs": "python/docs/source",
     "announcement": (
         "This describes the next version of Kaskada. "
         "It is currently available as an alpha release."
