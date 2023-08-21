@@ -19,6 +19,16 @@ def source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
-def test_clamp(source, golden) -> None:
+def test_clamp_min_max(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(kd.record({"m": m, "clamped_m": m.clamp(min=5, max=100)}))
+
+
+def test_clamp_min(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(kd.record({"m": m, "clamped_min": m.clamp(min=5)}))
+
+
+def test_clamp_max(source, golden) -> None:
+    m = source.col("m")
+    golden.jsonl(kd.record({"m": m, "clamped_min": m.clamp(max=100)}))

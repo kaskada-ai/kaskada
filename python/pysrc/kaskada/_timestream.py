@@ -249,7 +249,9 @@ class Timestream(object):
         """
         return Timestream._call("ceil", self)
 
-    def clamp(self, min: Literal, max: Literal) -> Timestream:
+    def clamp(
+        self, min: Union[Timestream, None] = None, max: Union[Timestream, None] = None
+    ) -> Timestream:
         """
         Create a Timestream clampped between the bounds of min and max.
 
