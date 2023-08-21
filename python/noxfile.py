@@ -167,7 +167,7 @@ def install(session: nox.Session, *, groups: Iterable[str], root: bool = True) -
         external=True,
     )
     if root:
-        session.run_always("maturin", "develop")
+        session.run_always("maturin", "develop", "--profile", "dev")
 
 
 def export_requirements(session: nox.Session, *, extras: Iterable[str] = ()) -> Path:
