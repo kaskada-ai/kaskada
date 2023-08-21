@@ -89,6 +89,7 @@ myst-parser = {version = ">=0.16.1"}
 # Sphinx to < 6. Once a new release occurs we can upgrade to `0.18.0` or newer.
 # https://github.com/executablebooks/MyST-NB/issues/530
 myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
+plotly = {version = "^5.16.1"}
 
 [tool.poetry.group.test]
 # Dependencies for testing

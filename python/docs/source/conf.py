@@ -29,6 +29,7 @@ html_theme = "sphinx_book_theme"
 html_favicon = "_static/favicon.png"
 html_logo = "_static/kaskada.svg"
 html_title = "Kaskada Timestreams"
+html_js_files = ["https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"]
 
 html_theme_options: Dict[str, Any] = {
     "repository_url": "https://github.com/kaskada-ai/kaskada",
@@ -111,3 +112,5 @@ autodoc_class_signature = "separated"
 autosummary_generate = True
 
 napoleon_preprocess_types = True
+
+suppress_warnings = ["mystnb.unknown_mime_type"]
