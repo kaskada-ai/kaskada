@@ -1,5 +1,5 @@
-import pytest
 import kaskada as kd
+import pytest
 
 
 @pytest.fixture(scope="module")

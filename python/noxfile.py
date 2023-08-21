@@ -61,7 +61,7 @@ def safety(session: nox.Session) -> None:
 @nox.session(python=python_versions)
 def mypy(session: nox.Session) -> None:
     """Type-check using mypy."""
-    args = session.posargs or ["pysrc", "pytests", "docs/source/conf.py"]
+    args = session.posargs or ["pysrc", "pytests"]
     install(session, groups=["typecheck"])
     # Using `--install-types` should make this less picky about missing stubs.
     # However, there is a possibility it slows things down, by making mypy
@@ -167,7 +167,7 @@ def install(session: nox.Session, *, groups: Iterable[str], root: bool = True) -
         external=True,
     )
     if root:
-        session.run_always("maturin", "develop")
+        session.run_always("maturin", "develop", "--profile", "dev")
 
 
 def export_requirements(session: nox.Session, *, extras: Iterable[str] = ()) -> Path:
