@@ -153,11 +153,13 @@ jobs:
         with:
           python-version: 3.11
       - name: Determine version (merge)
+        if: github.event_name == 'merge_group' || github.event_name == 'push'
         run: |
           pip install tomlkit
           VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Determine version (release)
+        if: github.event_name == 'release'
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -433,6 +435,5 @@ jobs:
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1
-        # To Test
-        # with:
-        #   To test: repository_url: https://test.pypi.org/legacy/
+        with:
+          repository_url: https://test.pypi.org/legacy/
