@@ -8,7 +8,6 @@ import pyarrow as pa
 
 from . import _ffi
 
-
 class Result(object):
     """Result of running a timestream query."""
 
@@ -50,8 +49,9 @@ class Result(object):
         if len(batches) == 0:
             return pa.Table.from_batches([], schema=pa.schema([]))
 
-        schema = batches[0].schema
-        return pa.Table.from_batches(batches, schema=schema)
+        table = pa.Table.from_batches(batches)
+        table = table.drop_columns(["_subsort", "_key_hash"])
+        return table
 
     def iter_pyarrow(self) -> Iterator[pa.RecordBatch]:
         """
@@ -64,7 +64,13 @@ class Result(object):
         """
         next_batch = self._ffi_execution.next_pyarrow()
         while next_batch is not None:
-            yield next_batch
+            # Annoyingly, PyArrow doesn't suport `drop_columns` on batches.
+            # So we need to convert to a Table and back.
+            table = pa.Table.from_batches([next_batch])
+            table = table.drop_columns(["_subsort", "_key_hash"])
+            for batch in table.to_batches():
+                yield next_batch
+
             next_batch = self._ffi_execution.next_pyarrow()
 
     def iter_pandas(self) -> Iterator[pd.DataFrame]:
@@ -88,11 +94,29 @@ class Result(object):
         dict
             The next row as a dictionary.
         """
-        next_batch = self._ffi_execution.next_pyarrow()
-        while next_batch is not None:
-            for row in next_batch.to_pylist():
+        for batch in self.iter_pyarrow():
+            for row in batch.to_pylist():
                 yield row
-            next_batch = self._ffi_execution.next_pyarrow()
+
+    async def iter_pyarrow_async(self) -> AsyncIterator[pa.RecordBatch]:
+        """
+        Asynchronously iterate over the results as PyArrow RecordBatches.
+
+        Yields
+        ------
+        pa.RecordBatch
+            The next RecordBatch.
+        """
+        next_batch = await self._ffi_execution.next_pyarrow_async()
+        while next_batch is not None:
+            # Annoyingly, PyArrow doesn't suport `drop_columns` on batches.
+            # So we need to convert to a Table and back.
+            table = pa.Table.from_batches([next_batch])
+            table = table.drop_columns(["_subsort", "_key_hash"])
+            for batch in table.to_batches():
+                yield next_batch
+
+            next_batch = await self._ffi_execution.next_pyarrow_async()
 
     async def iter_pandas_async(self) -> AsyncIterator[pd.DataFrame]:
         """
@@ -103,10 +127,8 @@ class Result(object):
         pd.DataFrame
             The next Pandas DataFrame.
         """
-        next_batch = await self._ffi_execution.next_pyarrow_async()
-        while next_batch is not None:
-            yield next_batch.to_pandas()
-            next_batch = await self._ffi_execution.next_pyarrow_async()
+        async for batch in self.iter_pyarrow_async():
+            yield batch.to_pandas()
 
     async def iter_rows_async(self) -> AsyncIterator[dict]:
         """
@@ -117,11 +139,9 @@ class Result(object):
         dict
             The next row as a dictionary.
         """
-        next_batch = await self._ffi_execution.next_pyarrow_async()
-        while next_batch is not None:
+        async for batch in self.iter_pyarrow_async():
             for row in next_batch.to_pylist():
                 yield row
-            next_batch = await self._ffi_execution.next_pyarrow_async()
 
     def stop(self) -> None:
         """Stop the underlying execution."""
