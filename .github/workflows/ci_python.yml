@@ -153,7 +153,6 @@ jobs:
         with:
           python-version: 3.11
       - name: Determine version (merge)
-        if: github.event_name == 'merge_group' || github.event_name == 'push'
         run: |
           pip install tomlkit
           VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
