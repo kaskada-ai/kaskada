@@ -165,7 +165,7 @@ jobs:
       - name: Set version
         id: set-version
         run: |
-          echo "version=$VERSION" >> $GITHUB_OUTPUT"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
 
   build-wheel-macos:
