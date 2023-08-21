@@ -69,6 +69,7 @@ html_context = {
     "github_repo": "kaskada",
     "github_version": "main",
     "doc_path": "kaskada/docs/source",
+    "google_analytics": "G-HR9E2E6TG4",
 }
 
 intersphinx_mapping: Dict[str, Any] = {
