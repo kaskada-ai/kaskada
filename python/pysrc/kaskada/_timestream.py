@@ -956,7 +956,8 @@ class Timestream(object):
         Returns
         -------
         Timestream
-            Timestream containing the first non-null value from that row. If all values are null, then returns null.
+            Timestream containing the first non-null value from that row.
+            If all values are null, then returns null.
         """
         return Timestream._call("coalesce", self, arg, *args)
 
