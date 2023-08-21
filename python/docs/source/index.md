@@ -22,7 +22,7 @@ title: Kaskada Timestreams
 - header: "{fas}`timeline;pst-color-primary` Real-time Aggregation"
   content: "Precompute model inputs from streaming data with robust data connectors, transformations & aggregations."
 - header: "{fas}`binoculars;pst-color-primary` Event Detection"
-  content: "Trigger pro-active AI behaviors by identifying significant changes in your data, when they happen."
+  content: "Trigger pro-active AI behaviors by identifying important activities, as they happen."
 - header: "{fas}`backward;pst-color-primary` History Replay"
   content: "Backtest and fine-tune from historical data using per-example time travel and point-in-time joins."
 ```
@@ -36,7 +36,6 @@ Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you
 There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](quickstart).
 
 
-(scalable-and-reliable)=
 ### Built for scale and reliability
 
 Implemented in [Rust](https://www.rust-lang.org/) using [Apache Arrow](https://arrow.apache.org/), Kaskada's compute engine uses columnar data to efficiently execute large historic and high-throughput streaming queries.
