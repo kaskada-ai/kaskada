@@ -27,8 +27,6 @@ language = "en"
 
 html_theme = "sphinx_book_theme"
 html_favicon = "_static/favicon.png"
-html_logo = "_static/kaskada.svg"
-html_title = "Kaskada Timestreams"
 
 html_theme_options: Dict[str, Any] = {
     "repository_url": "https://github.com/kaskada-ai/kaskada",
@@ -56,6 +54,10 @@ html_theme_options: Dict[str, Any] = {
             "icon": "fa-brands fa-slack",
         },
     ],
+    "logo": {
+        "image_light": "_static/kaskada-positive.svg",
+        "image_dark": "_static/kaskada-negative.svg",
+    },
     "primary_sidebar_end": ["indices.html"],
     "show_toc_level": 2,
     "show_nav_level": 2,
