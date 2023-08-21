@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sys
 import warnings
+import inspect
+
 from datetime import datetime
 from datetime import timedelta
 from typing import Callable
@@ -64,6 +66,74 @@ class Timestream(object):
         elif isinstance(value, datetime):
             raise TypeError("Cannot create a literal Timestream from a datetime")
         return Timestream(_ffi.Expr.literal(session, value))
+
+    @staticmethod
+    def _test_apply_udf(
+        signature: inspect.Signature,
+        *args: Union[Timestream, Literal],
+        session: Optional[_ffi.Session] = None,
+    ) -> Timestream:
+        """
+        todo
+        """
+        if session is None:
+            session = next(
+                arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
+            )
+
+        def make_arg(arg: Union[Timestream, Literal]) -> _ffi.Expr:
+            if isinstance(arg, Timestream):
+                return arg._ffi_expr
+            else:
+                return Timestream._literal(arg, session)._ffi_expr
+
+        ffi_args = [make_arg(arg) for arg in args]
+
+        arg_types = [param.annotation for param in signature.parameters.values()]
+        result_type = signature.return_annotation
+
+        try:
+            return Timestream(
+                _ffi.Expr.udf(session=session, arg_types=arg_types, result_type=result_type, args=ffi_args)
+            )
+        except TypeError as e:
+            # noqa: DAR401
+            raise _augment_error(args, TypeError(str(e))) from e
+        except ValueError as e:
+            raise _augment_error(args, ValueError(str(e))) from e
+
+    @staticmethod
+    def _test_decorator_udf(
+        signature: inspect.Signature,
+        *args: Union[Timestream, Literal],
+        session: Optional[_ffi.Session] = None,
+    ) -> Timestream:
+        """
+        todo
+        """
+        if session is None:
+            session = next(
+                arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
+            )
+
+        def make_arg(arg: Union[Timestream, Literal]) -> _ffi.Expr:
+            if isinstance(arg, Timestream):
+                return arg._ffi_expr
+            else:
+                return Timestream._literal(arg, session)._ffi_expr
+
+        try:
+            return Timestream(
+                _ffi.Expr.decorator_udf(session=session, args=ffi_args)
+            )
+        except TypeError as e:
+            # noqa: DAR401
+            raise _augment_error(args, TypeError(str(e))) from e
+        except ValueError as e:
+            raise _augment_error(args, ValueError(str(e))) from e
+
+
+
 
     @staticmethod
     def _call(
@@ -198,6 +268,16 @@ class Timestream(object):
             return func(*args, **kwargs)
         else:
             return func(self, *args, **kwargs)
+
+# TODO: How does udf work? We kind of want it like... apply some function on an input? 
+# But also want like `Timestream.udf(f, args*)`
+    def udf(callable: Callable, *args: Timestream) -> Timestream: 
+        """
+        todo
+        """
+        signature = inspect.signature(callable)
+
+        return Timestream._test_udf(signature, args)
 
     def add(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """

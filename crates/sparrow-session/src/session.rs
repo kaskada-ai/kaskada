@@ -282,7 +282,7 @@ impl Session {
     /// This bypasses much of the plumbing of the [ExprOp] required due to our construction
     /// of the AST.
     #[allow(unused)]
-    fn add_udf_to_dfg(
+    pub fn add_udf_to_dfg(
         &mut self,
         udf: Arc<dyn Udf>,
         args: Vec<Expr>,

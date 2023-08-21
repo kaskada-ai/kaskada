@@ -1970,9 +1970,13 @@ dependencies = [
  "itertools 0.11.0",
  "pyo3",
  "pyo3-asyncio",
+ "sparrow-compiler",
+ "sparrow-instructions",
  "sparrow-session",
+ "sparrow-syntax",
  "tokio",
  "tracing",
+ "uuid 1.4.1",
 ]
 
 [[package]]

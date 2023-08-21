@@ -1,26 +1,43 @@
 import pandas as pd
 import pyarrow as pa
-from kaskada._ffi import call_udf
-from kaskada.udf import Udf
-from kaskada.udf import fenl_udf
+import kaskada as kd
+import kaskdaa._ffi as _ffi
+import pytest
 
-
-@fenl_udf("add", "add(x: number, y: number) -> number")
+@kd.udf("add(x: number, y: number) -> number")
 def add(x: pd.Series, y: pd.Series) -> pd.Series:
+    """Use Pandas to add two numbers."""
     return x + y
 
 
-def test_numeric_udf_pure_python() -> None:
-    assert isinstance(add, Udf)
-
-    x = pa.array([1, 12, 17, 23, 28], type=pa.int8())
-    y = pa.array([1, 13, 18, 20, 4], type=pa.int8())
-    result = add.run_pyarrow(pa.int8(), x, y)
-    assert result == pa.array([2, 25, 35, 43, 32], type=pa.int8())
+def test_docstring() -> None:
+    assert add.__doc__ == "Use Pandas to add two numbers."    
 
 
-def test_numeric_udf_rust() -> None:
-    x = pa.array([1, 12, 17, 23, 28], type=pa.int8())
-    y = pa.array([1, 13, 18, 20, 4], type=pa.int8())
-    result = call_udf(add, pa.int8(), x, y)
-    assert result == pa.array([2, 25, 35, 43, 32], type=pa.int8())
+def test_udf_instance() -> None:
+    assert isinstance(add, _ffi.Udf)
+
+@pytest.fixture
+def source_int64() -> kd.sources.CsvString:
+    content = "\n".join(
+        [
+            "time,key,m,n",
+            "1996-12-19T16:39:57,A,5,10",
+            "1996-12-19T16:39:58,B,24,3",
+            "1996-12-19T16:39:59,A,17,6",
+            "1996-12-19T16:40:00,A,,9",
+            "1996-12-19T16:40:01,A,12,",
+            "1996-12-19T16:40:02,A,,",
+        ]
+    )
+    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
+
+def test_add_udf_direct(golden, source_int64) -> None:
+    m = source_int64.col("m")
+    n = source_int64.col("n")
+    golden.jsonl(add(m, n))
+
+def test_add_udf_pipe(golden, source_int64) -> None:
+    m = source_int64.col("m")
+    n = source_int64.col("n")
+    golden.jsonl(m.pipe(add, n))

@@ -44,6 +44,68 @@ impl Expr {
         Ok(Self { rust_expr, session })
     }
 
+    // TODO: FRAZ
+    // Could you add a udf() method here that the _timestream calls?
+    // I want to be able to call a python function from the _timestream.
+    // I want to be able to do like polars:
+    // I like their `map` and `apply` method distinction -- `map` works on series,
+    // and `apply` works on individual values.
+    //
+    //
+    // TODO: Here is where you need to create your `Arc<PythonUdf>`.
+    // That means you need to
+    // 1. Infer arg types and result types from python signature
+    // 2. Infer FENL TYPES conversions (aka rust/data types kinda)
+    // 3. Create a SIGNATURE (Do arg names matter?)
+    // 4. Create Python Udf - signature + args?
+    //
+    // Signature inspection happens in _timestream.
+    // So I pass in arg_types and result_type, then construct signature here.
+
+    #[staticmethod]
+    #[pyo3(signature = (session, arg_types, result_type, args))]
+    fn udf(
+        session: Session,
+        arg_types: Vec<&str>,
+        result_type: &str,
+        args: Vec<Expr>,
+    ) -> PyResult<Self> {
+        if !args.iter().all(|e| e.session() == session) {
+            return Err(PyValueError::new_err(
+                "all arguments must be in the same session",
+            ));
+        }
+
+        let mut rust_session = session.rust_session()?;
+        let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
+        println!("arg_types: {:?}", arg_types);
+        println!("result_type: {:?}", result_type);
+
+        panic!("ok")
+
+        // The python signature
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (session, args))]
+    fn decorator_udf(
+        session: Session,
+        // TODO: signature?
+        args: Vec<Expr>,
+    ) -> PyResult<Self> {
+        if !args.iter().all(|e| e.session() == session) {
+            return Err(PyValueError::new_err(
+                "all arguments must be in the same session",
+            ));
+        }
+
+        let mut rust_session = session.rust_session()?;
+        let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
+        println!("arg_types: {:?}", arg_types);
+        println!("result_type: {:?}", result_type);
+        panic!("ok")
+    }
+
     #[staticmethod]
     #[pyo3(signature = (session, value))]
     fn literal(session: Session, value: Option<Arg>) -> PyResult<Self> {
