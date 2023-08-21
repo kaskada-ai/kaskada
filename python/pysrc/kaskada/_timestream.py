@@ -352,6 +352,20 @@ class Timestream(object):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.mul(self)
 
+    def powf(self, power: Union[Timestream, Literal]) -> Timestream:
+        """
+
+        Parameters
+        ----------
+        power : Union[Timestream, Literal]
+            The Timestream or literal value to raise this by.
+
+        Returns
+        -------
+            Timestream: The Timestream resulting from `self ^ power`.
+        """
+        return Timestream._call("powf", self, power)
+
     def div(self, divisor: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream by dividing this and `divisor`.
