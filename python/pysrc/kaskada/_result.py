@@ -8,6 +8,7 @@ import pyarrow as pa
 
 from . import _ffi
 
+
 class Result(object):
     """Result of running a timestream query."""
 
@@ -69,7 +70,7 @@ class Result(object):
             table = pa.Table.from_batches([next_batch])
             table = table.drop_columns(["_subsort", "_key_hash"])
             for batch in table.to_batches():
-                yield next_batch
+                yield batch
 
             next_batch = self._ffi_execution.next_pyarrow()
 
@@ -114,7 +115,7 @@ class Result(object):
             table = pa.Table.from_batches([next_batch])
             table = table.drop_columns(["_subsort", "_key_hash"])
             for batch in table.to_batches():
-                yield next_batch
+                yield batch
 
             next_batch = await self._ffi_execution.next_pyarrow_async()
 
@@ -140,7 +141,7 @@ class Result(object):
             The next row as a dictionary.
         """
         async for batch in self.iter_pyarrow_async():
-            for row in next_batch.to_pylist():
+            for row in batch.to_pylist():
                 yield row
 
     def stop(self) -> None:
