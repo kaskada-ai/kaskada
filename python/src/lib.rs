@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod call_udf;
 mod error;
 mod execution;
 mod expr;
@@ -16,7 +17,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[pymodule]
 #[pyo3(name = "_ffi")]
 fn ffi(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(udf::call_udf, m)?)?;
+    m.add_class::<udf::Udf>()?;
     m.add_class::<session::Session>()?;
     m.add_class::<expr::Expr>()?;
     m.add_class::<table::Table>()?;
