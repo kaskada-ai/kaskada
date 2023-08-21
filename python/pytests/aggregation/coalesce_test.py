@@ -23,4 +23,3 @@ def test_coalesce_unwindowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kd.record({"m": m, "n": n, "coalesced_val": m.coalesce(n)}))
-

@@ -239,6 +239,16 @@ class Timestream(object):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.add(self)
 
+    def ceil(self) -> Timestream:
+        """
+        Create a Timestream for the number rounded up to the next largest integer.
+
+        Returns:
+            Timestream
+                The Timestream resulting from the numeric ceiling of this.
+        """
+        return Timestream._call("ceil", self)
+
     def sub(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream substracting `rhs` from this.
