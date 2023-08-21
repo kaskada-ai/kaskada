@@ -144,10 +144,6 @@ jobs:
           path: ${{ github.workspace }}/python/docs/_build
 
   version:
-    # Build wheels in the merge queue (to verify they build) and during release.
-    if: |
-      github.event_name == 'merge_group' ||
-      github.event_name == 'release'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.set-version.outputs.version }}
@@ -159,17 +155,17 @@ jobs:
       - name: Determine version (merge)
         run: |
           pip install tomlkit
-          VERSION=$(python ../scripts/get_version.py path_to_toml_file.toml path.within.toml)
+          VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Determine version (release)
+        if: github.event_name == 'release'
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Set version
         id: set-version
         run: |
-          echo VERSION=$VERSION
-          echo "::set-output name=version::$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
 
   build-wheel-macos:
@@ -436,7 +432,6 @@ jobs:
           name: artifact
           path: dist
 
-      # - uses: pypa/gh-action-pypi-publish@release/v1
-        # To Test
-        #with:
-          # To test: repository_url: https://test.pypi.org/legacy/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository_url: https://test.pypi.org/legacy/
