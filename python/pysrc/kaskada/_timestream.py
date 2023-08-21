@@ -298,6 +298,17 @@ class Timestream(object):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.sub(self)
 
+    def exp(self) -> Timestream:
+        """
+        Create a Timestreamp raising e to the power of this.
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from `e^power`.
+        """
+        return Timestream._call("exp", self)
+
     def mul(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream multiplying this and `rhs`.
