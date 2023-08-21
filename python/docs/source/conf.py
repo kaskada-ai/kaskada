@@ -71,7 +71,7 @@ html_context = {
     "github_repo": "kaskada",
     "github_version": "main",
     "doc_path": "kaskada/docs/source",
-    "analytics":{
+    "analytics": {
         "google_analytics_id": "G-HR9E2E6TG4",
     },
 }
