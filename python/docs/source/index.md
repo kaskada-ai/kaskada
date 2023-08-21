@@ -1,12 +1,11 @@
 ---
 hide-toc: true
 html_theme.sidebar_secondary.remove: true
-title: Kaskada Timestreams
 ---
 
 <div class="px-4 py-5 my-5 text-center">
     <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
-    <h1 class="display-5 fw-bold">Event-processing for AI applications.</h1>
+    <h2 class="display-5 fw-bold">Event-processing for AI applications.</h2>
     <div class="col-lg-7 mx-auto">
       <p class="lead mb-4">Next-generation, real-time and historic event processing.
       </p>

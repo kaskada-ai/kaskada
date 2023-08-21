@@ -35,7 +35,7 @@ html_theme_options: Dict[str, Any] = {
     "use_repository_button": True,
     "use_source_button": True,
     "use_edit_page_button": True,
-    "home_page_in_toc": True,
+    "home_page_in_toc": False,
     "use_issues_button": True,
     "repository_branch": "main",
     "path_to_docs": "kaskada/docs/source",
