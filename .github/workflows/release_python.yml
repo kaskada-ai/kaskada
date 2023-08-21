@@ -1,0 +1,281 @@
+name: Python Release
+
+# Only one job per-ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  release:
+    types:
+      - published
+
+defaults:
+  run:
+    shell: bash
+    working-directory: python
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Determine version (current)
+        run: |
+          pip install tomlkit
+          VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Determine version (release)
+        if: github.event_name == 'release'
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set version
+        id: set-version
+        run: |
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  build-wheel-macos:
+    # Build wheels during release.
+    if: github.event_name == 'release'
+    runs-on: macos-latest
+    needs: [version]
+    strategy:
+      matrix:
+        include:
+          - target: x86_64
+          - target: universal2
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - uses: actions/setup-python@v4
+        with:
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+          architecture: x64
+          cache: poetry
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+          pip install tomlkit
+          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pyproject.toml:project.version \
+            pyproject.toml:tool.poetry.version \
+            Cargo.toml:workspace.package.version
+      - name: Build wheel
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --sdist
+          working-directory: python
+      - name: pytest and mypy
+        run: |
+          for V in 3.8 3.9 3.10 3.11; do
+            echo "::group::Install for Python $V"
+            poetry env use $V
+            source $(poetry env info --path)/bin/activate
+            poetry install --only=test --only=typecheck
+            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+            echo "::endgroup::"
+            echo "::group::Test Python $V"
+            poetry run pytest
+            echo "::endgroup::"
+            echo "::group::MyPy Python $V"
+            poetry run mypy -- --install-types --non-interactive pysrc pytests
+            echo "::endgroup::"
+            deactivate
+          done
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ${{ github.workspace }}/python/dist
+
+  build-wheel-windows:
+    if: github.event_name == 'release'
+    needs: [version]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          architecture: x64
+          cache: poetry
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+            pip install tomlkit
+            python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+              pyproject.toml:project.version \
+              pyproject.toml:tool.poetry.version \
+              Cargo.toml:workspace.package.version
+      - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: x64
+          args: --release --out dist
+          working-directory: python
+      - name: pytest and mypy (Windows x64)
+        shell: bash
+        run: |
+          echo "::group::Install for Python 3.11"
+          source $(poetry env info --path)\\Scripts\\activate
+          poetry install --only=test --only=typecheck
+          pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+          echo "::endgroup::"
+          echo "::group::Test Python 3.11"
+          poetry run pytest
+          echo "::endgroup::"
+          echo "::group::MyPy Python 3.11"
+          poetry run mypy -- --install-types --non-interactive pysrc pytests
+          echo "::endgroup::"
+          deactivate
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ${{ github.workspace }}/python/dist
+
+  build-wheel-linux:
+    if: github.event_name == 'release'
+    needs: [version]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - uses: actions/setup-python@v4
+        with:
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+          cache: poetry
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+          pip install tomlkit
+          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pyproject.toml:project.version \
+            pyproject.toml:tool.poetry.version \
+            Cargo.toml:workspace.package.version
+      - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: 2_28
+          args: --release --out dist
+          working-directory: python
+          before-script-linux: |
+            set -e
+            dnf -y install clang protobuf-devel lld
+            clang --version
+            protoc --version
+      - name: pytest and mypy (Linux x86_64)
+        if: matrix.target == 'x86_64'
+        run: |
+          for V in 3.8 3.9 3.10 3.11; do
+            echo "::group::Install for Python $V"
+            poetry env use $V
+            poetry env info
+            source $(poetry env info --path)/bin/activate
+            poetry install --only=test --only=typecheck
+            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+            echo "::endgroup::"
+            echo "::group::Test Python $V"
+            poetry run pytest
+            echo "::endgroup::"
+            echo "::group::MyPy Python $V"
+            poetry run mypy -- --install-types --non-interactive pysrc pytests
+            echo "::endgroup::"
+            deactivate
+          done
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ${{ github.workspace }}/python/dist
+
+  # Make the source distribution
+  sdist:
+    if: github.event_name == 'release'
+    needs: [version]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+          pip install tomlkit
+          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pyproject.toml:project.version \
+            pyproject.toml:tool.poetry.version \
+            Cargo.toml:workspace.package.version
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+          working-directory: python
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: ${{ github.workspace }}/python/dist
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    environment: pypi
+    needs: [build-wheel-linux, build-wheel-windows, build-wheel-macos, sdist]
+    permissions:
+      id-token: write
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: artifact
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository_url: https://test.pypi.org/legacy/
