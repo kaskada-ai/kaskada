@@ -29,6 +29,9 @@ on:
   merge_group:
     branches:
       - main
+  release:
+    types:
+      - published
 
 defaults:
   run:
@@ -43,6 +46,7 @@ jobs:
   #
   # Also, only do it on one machine.
   lint:
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -75,6 +79,10 @@ jobs:
           poetry run pydocstyle pysrc
 
   debug:
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'merge_group' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -135,11 +143,42 @@ jobs:
           # Automatically uploads an artifact from the './_site' directory by default
           path: ${{ github.workspace }}/python/docs/_build
 
+  version:
+    # Build wheels in the merge queue (to verify they build) and during release.
+    if: |
+      github.event_name == 'merge_group' ||
+      github.event_name == 'release'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Determine version (merge)
+        run: |
+          pip install tomlkit
+          VERSION=$(python ../scripts/get_version.py path_to_toml_file.toml path.within.toml)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Determine version (release)
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set version
+        id: set-version
+        run: |
+          echo VERSION=$VERSION
+          echo "::set-output name=version::$VERSION"
+
+
   build-wheel-macos:
-    # Build wheels in the merge queue. We can either duplicate this in `main`
-    # or retrieve the built wheels.
-    if: github.event_name == 'merge_group'
+    # Build wheels in the merge queue (to verify they build) and during release.
+    if: |
+      github.event_name == 'merge_group' ||
+      github.event_name == 'release'
     runs-on: macos-latest
+    needs: [version]
     strategy:
       matrix:
         include:
@@ -165,6 +204,14 @@ jobs:
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+          pip install tomlkit
+          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pyproject.toml:project.version \
+            pyproject.toml:tool.poetry.version \
+            Cargo.toml:workspace.package.version
       - name: Build wheel
         uses: messense/maturin-action@v1
         with:
@@ -195,9 +242,11 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-windows:
-    # Build wheels in the merge queue. We can either duplicate this in `main`
-    # or retrieve the built wheels.
-    if: github.event_name == 'merge_group'
+    # Build wheels in the merge queue (to verify they build) and during release.
+    if: |
+      github.event_name == 'merge_group' ||
+      github.event_name == 'release'
+    needs: [version]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -215,6 +264,14 @@ jobs:
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+            pip install tomlkit
+            python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+              pyproject.toml:project.version \
+              pyproject.toml:tool.poetry.version \
+              Cargo.toml:workspace.package.version
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
@@ -243,11 +300,11 @@ jobs:
           path: ${{ github.workspace }}/python/dist
 
   build-wheel-linux:
-    # Build wheels in the merge queue. We also do this on push to `main`
-    # because it builds the docs which we'll release.
+    # Build wheels in the merge queue (to verify they build) and during release.
     if: |
       github.event_name == 'merge_group' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      github.event_name == 'release'
+    needs: [version]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -268,6 +325,14 @@ jobs:
             3.10
             3.11
           cache: poetry
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+          pip install tomlkit
+          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pyproject.toml:project.version \
+            pyproject.toml:tool.poetry.version \
+            Cargo.toml:workspace.package.version
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
@@ -307,12 +372,22 @@ jobs:
 
   # Make the source distribution
   sdist:
-    # Build wheels in the merge queue. We can either duplicate this in `main`
-    # or retrieve the built wheels.
-    if: github.event_name == 'merge_group'
+    # Build wheels in the merge queue (to verify they build) and during release.
+    if: |
+      github.event_name == 'merge_group' ||
+      github.event_name == 'release'
+    needs: [version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Set Version (For Release)
+        if: github.event_name == 'release'
+        run: |
+          pip install tomlkit
+          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pyproject.toml:project.version \
+            pyproject.toml:tool.poetry.version \
+            Cargo.toml:workspace.package.version
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -345,20 +420,23 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v2
 
-  # release:
-  #   name: Release
-  #   runs-on: ubuntu-latest
-  #   if: "startsWith(github.ref, 'refs/tags/')"
-  #   needs: [linux, windows, macos, sdist]
-  #   steps:
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: wheels
-  #     - name: Publish to PyPI
-  #       uses: PyO3/maturin-action@v1
-  #       env:
-  #         MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-  #       with:
-  #         command: upload
-  #         args: --skip-existing *
-  #         working-directory: python
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    environment: pypi
+    needs: [build-wheel-linux, build-wheel-windows, build-wheel-macos, sdist]
+    permissions:
+      id-token: write
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: artifact
+          path: dist
+
+      # - uses: pypa/gh-action-pypi-publish@release/v1
+        # To Test
+        #with:
+          # To test: repository_url: https://test.pypi.org/legacy/
