@@ -243,28 +243,30 @@ class Timestream(object):
         """
         Create a Timestream for the number rounded up to the next largest integer.
 
-        Returns:
-            Timestream
-                The Timestream resulting from the numeric ceiling of this.
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from the numeric ceiling of this.
         """
         return Timestream._call("ceil", self)
 
     def clamp(
-        self, min: Union[Timestream, None] = None, max: Union[Timestream, None] = None
+        self, min: Union[Literal, None] = None, max: Union[Literal, None] = None
     ) -> Timestream:
         """
         Create a Timestream clampped between the bounds of min and max.
 
         Parameters
         ----------
-        min : Literal
+        min : Union[Literal, None]
             The literal value to set as the lower bound
-        max : Literal
+        max : Union[Literal, None]
             The literal value to set as the upper bound
 
-        Returns:
-            Timestream
-                The Timestream resulting from the clamped bounds between min and max.
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from the clamped bounds between min and max.
         """
         return Timestream._call("clamp", self, min, max)
 
@@ -308,6 +310,17 @@ class Timestream(object):
             The Timestream resulting from `e^power`.
         """
         return Timestream._call("exp", self)
+
+    def floor(self) -> Timestream:
+        """
+        Create a Timestream for the number rounded down to the previous largest integer.
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from the numeric ceiling of this.
+        """
+        return Timestream._call("floor", self)
 
     def mul(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
@@ -916,15 +929,19 @@ class Timestream(object):
         return Timestream._call("lookup", key, self)
 
     def coalesce(
-        self, arg: Timestream | Literal, *args: Timestream | Literal
+        self, arg: Union[Timestream, Literal], *args: Union[Timestream, Literal]
     ) -> Timestream:
         """
         Create a Timestream for returning the first non-null value or null if all values are null.
 
-        Args:
-            arg (Timestream | Literal): The next value to be coalesced (required).
+        Parameters
+        ----------
+        arg : Union[Timestream, Literal]
+            The next value to be coalesced (required).
 
-        Returns:
+        Returns
+        -------
+        Timestream
             Timestream containing the first non-null value from that row. If all values are null, then returns null.
         """
         return Timestream._call("coalesce", self, arg, *args)
