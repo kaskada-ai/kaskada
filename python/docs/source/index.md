@@ -9,30 +9,28 @@ title: Kaskada Timestreams
     <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
     <h1 class="display-5 fw-bold">Real-Time AI without the fuss.</h1>
     <div class="col-lg-7 mx-auto">
-      <p class="lead mb-4">Kaskada is a simple streaming engine that connects AI models to real-time & historical data.
+      <p class="lead mb-4">Kaskada is a next-generation streaming engine that connects AI models to real-time & historical data.
       </p>
     </div>
 </div>
 
-(what-it-provides)=
 ## Kaskada completes the Real-Time AI stack, providing...
 
 ```{gallery-grid}
 :grid-columns: 1 2 2 3
 
-- header: "{fas}`timeline;pst-color-primary` Stream Processing"
+- header: "{fas}`timeline;pst-color-primary` Real-time Aggregation"
   content: "Precompute model inputs from streaming data with robust data connectors, transformations & aggregations."
 - header: "{fas}`binoculars;pst-color-primary` Event Detection"
-  content: "Trigger pro-active application behavior by identifying meaningful changes in your data as they happen."
+  content: "Trigger pro-active AI behaviors by identifying significant changes in your data, when they happen."
 - header: "{fas}`backward;pst-color-primary` History Replay"
   content: "Backtest and fine-tune from historical data using per-example time travel and point-in-time joins."
 ```
 
 
-(real-time-ai)=
 ### Real-time AI in minutes
 
-Connect and compute from streaming data _or_ databases, and dynamically load data using Python.
+Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python..
 Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you can load data, process it, train and serve models all in the same place.
 
 There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](quickstart).
@@ -41,16 +39,15 @@ There's no infrastructure to provision (and no JVM hiding under the covers), so 
 (scalable-and-reliable)=
 ### Built for scale and reliability
 
-Implemented in [Rust](https://www.rust-lang.org/) using [Apache Arrow](https://arrow.apache.org/), Kaskada's compute engine uses columnar data to efficiently execute large historic or streaming queries.
+Implemented in [Rust](https://www.rust-lang.org/) using [Apache Arrow](https://arrow.apache.org/), Kaskada's compute engine uses columnar data to efficiently execute large historic and high-throughput streaming queries.
 Every operation in Kaskada is implemented incrementally, allowing automatic recovery if the process is terminated or killed.
 
-Kaskada makes most jobs fast enough to run locally, so it's easy to build and test your real-time queries.
-As your needs grow, Kaskada's cloud-native design and support for partitioned exeuction gives you the volume and throughput you need to scale.
+With Kaskada, most jobs are fast enough to run locally, so it's easy to build and test your real-time queries.
+As your needs grow, Kaskada's cloud-native design and support for partitioned execution gives you the volume and throughput you need to scale.
 Kaskada was built by core contributors to [Apache Beam](https://beam.apache.org/), [Google Cloud Dataflow](https://cloud.google.com/dataflow), and [Apache Cassandra](https://cassandra.apache.org/), and is under active development
 
 * * *
 
-(example-app)=
 ## Example Real-Time App: BeepGPT
 
 [BeepGPT](https://github.com/kaskada-ai/beep-gpt/tree/main) keeps you in the loop without disturbing your focus. Its personalized, intelligent AI continuously monitors your Slack workspace, alerting you to important conversations and freeing you to concentrate on what’s most important.
@@ -76,9 +73,10 @@ slack.socket_mode_request_listeners.append(handle_message)
 slack.connect()
 
 # Aggregate multiple messages into a "conversation"
-conversations = messages \
-    .select("user", "text") \
+conversations = ( messages
+    .select("user", "text")
     .collect(max=20)
+)
 
 # Handle each conversation as it occurs
 async for row in conversations.run(materialize=True).iter_rows_async():
@@ -103,7 +101,6 @@ For more details, check out the [BeepGPT Github project](https://github.com/kask
 
 * * *
 
-(get_started)=
 ## Get Started
 
 Getting started with Kaskda is a `pip install kaskada` away.
