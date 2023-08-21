@@ -249,6 +249,23 @@ class Timestream(object):
         """
         return Timestream._call("ceil", self)
 
+    def clamp(self, min: Literal, max: Literal) -> Timestream:
+        """
+        Create a Timestream clampped between the bounds of min and max.
+
+        Parameters
+        ----------
+        min : Literal
+            The literal value to set as the lower bound
+        max : Literal
+            The literal value to set as the upper bound
+
+        Returns:
+            Timestream
+                The Timestream resulting from the clamped bounds between min and max.
+        """
+        return Timestream._call("clamp", self, min, max)
+
     def sub(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream substracting `rhs` from this.
