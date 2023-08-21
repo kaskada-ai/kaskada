@@ -318,7 +318,7 @@ class Timestream(object):
         Returns
         -------
         Timestream
-            The Timestream resulting from the numeric ceiling of this.
+            The Timestream resulting from the numeric floor of this.
         """
         return Timestream._call("floor", self)
 
