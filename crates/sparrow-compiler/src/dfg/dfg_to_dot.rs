@@ -90,5 +90,8 @@ fn node_label(kind: &StepKind) -> Cow<'static, str> {
         StepKind::Transform => Cow::Borrowed("transform"),
         StepKind::Error => Cow::Borrowed("error"),
         StepKind::Window(window) => Cow::Borrowed(window.label()),
+        StepKind::Expression(Expression::Inst(InstKind::Udf(udf))) => {
+            Cow::Owned(udf.signature().name().to_owned())
+        }
     }
 }

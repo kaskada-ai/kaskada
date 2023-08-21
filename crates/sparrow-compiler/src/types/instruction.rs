@@ -22,6 +22,7 @@ pub(crate) fn typecheck_inst(
     argument_literals: &[Option<ScalarValue>],
 ) -> anyhow::Result<FenlType> {
     match inst {
+        InstKind::Udf(_) => unimplemented!("udf type checking unsupported"),
         InstKind::Simple(instruction) => {
             let signature = instruction.signature();
             let argument_types = Resolved::new(
