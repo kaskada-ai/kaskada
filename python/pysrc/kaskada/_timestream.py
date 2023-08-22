@@ -356,7 +356,8 @@ class Timestream(object):
 
     def powf(self, power: Union[Timestream, Literal]) -> Timestream:
         """
-
+        Create a Timestream raising `this` to the power of `power`.
+        
         Parameters
         ----------
         power : Union[Timestream, Literal]
