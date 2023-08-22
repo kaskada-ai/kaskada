@@ -2,8 +2,6 @@
 hide-toc: true
 html_theme.sidebar_secondary.remove: true
 ---
-# Introduction
-
 <div class="px-4 py-5 my-5 text-center">
     <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
     <h1 class="display-5 fw-bold">Real-Time AI without the fuss.</h1>
@@ -13,7 +11,7 @@ html_theme.sidebar_secondary.remove: true
     </div>
 </div>
 
-## Kaskada completes the Real-Time AI stack, providing...
+# Kaskada completes the Real-Time AI stack, providing...
 
 ```{gallery-grid}
 :grid-columns: 1 2 2 3
@@ -27,7 +25,7 @@ html_theme.sidebar_secondary.remove: true
 ```
 
 
-### Real-time AI in minutes
+## Real-time AI in minutes
 
 Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python..
 Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you can load data, process it, train and serve models all in the same place.
@@ -35,7 +33,7 @@ Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you
 There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](quickstart).
 
 
-### Built for scale and reliability
+## Built for scale and reliability
 
 Implemented in [Rust](https://www.rust-lang.org/) using [Apache Arrow](https://arrow.apache.org/), Kaskada's compute engine uses columnar data to efficiently execute large historic and high-throughput streaming queries.
 Every operation in Kaskada is implemented incrementally, allowing automatic recovery if the process is terminated or killed.
@@ -60,7 +58,7 @@ kd.init_session()
 messages = kd.sources.PyList(
     rows = pyarrow.parquet.read_table("./messages.parquet")
         .to_pylist(),
-    time_column_name = "ts", 
+    time_column_name = "ts",
     key_column_name = "channel",
 )
 
@@ -78,7 +76,7 @@ conversations = ( messages
 
 # Handle each conversation as it occurs
 async for row in conversations.run(materialize=True).iter_rows_async():
-  
+
     # Use a pre-trained model to identify interested users
     prompt = "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in row["result"]])
     res = openai.Completion.create(
