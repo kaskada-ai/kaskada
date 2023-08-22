@@ -264,11 +264,13 @@ impl PartialEq for InstKind {
 
 impl Hash for InstKind {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
         match self {
             InstKind::Udf(udf) => udf.hash(state),
             InstKind::Simple(op) => op.hash(state),
             InstKind::Cast(dt) => dt.hash(state),
-            _ => core::mem::discriminant(self).hash(state),
+            InstKind::Record => {}
+            InstKind::FieldRef => {}
         }
     }
 }
