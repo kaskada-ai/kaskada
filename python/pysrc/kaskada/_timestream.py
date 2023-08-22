@@ -251,16 +251,18 @@ class Timestream(object):
         return Timestream._call("ceil", self)
 
     def clamp(
-        self, min: Union[Literal, None] = None, max: Union[Literal, None] = None
+        self,
+        min: Union[Timestream, Literal, None] = None,
+        max: Union[Timestream, Literal, None] = None,
     ) -> Timestream:
         """
-        Create a Timestream clampped between the bounds of min and max.
+        Create a Timestream clamped between the bounds of min and max.
 
         Parameters
         ----------
-        min : Union[Literal, None]
+        min : Union[Timestream, Literal, None]
             The literal value to set as the lower bound
-        max : Union[Literal, None]
+        max : Union[Timestream, Literal, None]
             The literal value to set as the upper bound
 
         Returns
@@ -302,18 +304,18 @@ class Timestream(object):
 
     def exp(self) -> Timestream:
         """
-        Create a Timestreamp raising e to the power of this.
+        Create a Timestream raising `e` to the power of this.
 
         Returns
         -------
         Timestream
-            The Timestream resulting from `e^power`.
+            The Timestream resulting from `e^this`.
         """
         return Timestream._call("exp", self)
 
     def floor(self) -> Timestream:
         """
-        Create a Timestream for the number rounded down to the previous largest integer.
+        Create a Timestream of the values rounded down to the nearest integer.
 
         Returns
         -------
@@ -952,6 +954,8 @@ class Timestream(object):
         ----------
         arg : Union[Timestream, Literal]
             The next value to be coalesced (required).
+        args : Union[Timestream, Literal]
+            Additional values to be coalesced (optional).
 
         Returns
         -------

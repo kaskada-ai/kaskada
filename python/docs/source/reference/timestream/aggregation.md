@@ -15,7 +15,6 @@ Windowed:
 .. autosummary::
    :toctree: ../apidocs/
 
-    Timestream.coalesce
     Timestream.collect
     Timestream.count
     Timestream.count_if

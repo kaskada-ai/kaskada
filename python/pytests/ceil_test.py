@@ -19,6 +19,6 @@ def source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
-def test_ceil_unwindowed(source, golden) -> None:
+def test_ceil(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(kd.record({"m": m, "ceil_m": m.ceil()}))

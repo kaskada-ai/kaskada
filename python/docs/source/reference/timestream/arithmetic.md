@@ -18,7 +18,7 @@ See the notes on the specific functions for more information.
     Timestream.ceil
     Timestream.clamp
     Timestream.exp
-    Timestream.flor
+    Timestream.floor
     Timestream.powf
     Timestream.sub
     Timestream.mul
