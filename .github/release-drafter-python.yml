@@ -3,3 +3,4 @@ _extends: kaskada:.github/release-drafter.yml
 name-template: Kaskada $RESOLVED_VERSION-a.0
 tag-template: v$RESOLVED_VERSION-a.0
 tag-prefix: v
+include-pre-releases: true
