@@ -107,7 +107,7 @@ pub fn add_udf_to_dfg(
     let signature = udf.signature();
 
     let (instantiated_types, instantiated_result_type) =
-        match instantiate(&location, &argument_types, signature) {
+        match instantiate(location, &argument_types, signature) {
             Ok(result) => result,
             Err(diagnostic) => {
                 diagnostic.emit(diagnostics);
