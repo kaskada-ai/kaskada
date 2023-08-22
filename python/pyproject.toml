@@ -106,7 +106,7 @@ xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 optional = true
 
 [tool.poetry.group.release.dependencies]
-python-semantic-release = "^8.0.6"
+tomlkit = "^0.12.1"
 
 [build-system]
 requires = ["maturin>=1,<2"]
@@ -153,17 +153,3 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
-
-[tool.semantic_release]
-version_toml = [
-    "pyproject.toml:project.version",
-    "pyproject.toml:tool.poetry.version",
-]
-tag_format = "v{version}"
-
-[tool.semantic_release.branches.main]
-match = "main"
-prerelease = true
-prerelease_token = "a"
-
-[tool.semantic_release.remote]
