@@ -50,7 +50,7 @@ def banking_source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
-def test_clamp_banknig_min_max(banking_source, golden) -> None:
+def test_clamp_banking_min_max(banking_source, golden) -> None:
     current_balance = banking_source.col("current_balance")
     min_balance = banking_source.col("min_balance")
     max_balance = banking_source.col("max_balance")
