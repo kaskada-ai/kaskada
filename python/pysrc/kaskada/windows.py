@@ -23,12 +23,15 @@ class Since(Window):
 
     Parameters
     ----------
-    predicate : Timestream | bool
+    predicate : Timestream | Callable[..., Timestream] | bool
         The boolean Timestream to use as predicate for the window.
         Each time the predicate evaluates to true the window will be cleared.
+
+        The predicate may be a callable which returns the boolean Timestream, in
+        which case it is applied to the Timestream being aggregated.
     """
 
-    predicate: Timestream | bool
+    predicate: Timestream | Callable[..., Timestream] | bool
 
 
 @dataclass(frozen=True)
@@ -41,13 +44,16 @@ class Sliding(Window):
     duration : int
         The number of sliding intervals to use in the window.
 
-    predicate : Timestream | bool
+    predicate : Timestream | Callable[..., Timestream] | bool
         The boolean Timestream to use as predicate for the window
         Each time the predicate evaluates to true the window starts a new interval.
+
+        The predicate may be a callable which returns the boolean Timestream, in
+        which case it is applied to the Timestream being aggregated.
     """
 
     duration: int
-    predicate: Timestream | bool
+    predicate: Timestream | Callable[..., Timestream] | bool
 
     def __post_init__(self):
         """Validate the window parameters."""

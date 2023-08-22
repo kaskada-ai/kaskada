@@ -121,6 +121,111 @@ class Timestream(object):
         except ValueError as e:
             raise _augment_error(args, ValueError(str(e))) from e
 
+    @staticmethod
+    def minutely(domain: Timestream) -> Timestream:
+        """
+        Return a timestream containing `true` every minute.
+
+        The set of entities present in the timestream and the time range are
+        determined by `domain`. Any entity that has appeared in the `domain`
+        by the given time will appear in the resulting timestream.
+
+        Parameters
+        ----------
+        domain : Timestream
+            Timestream to use as the domain.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `true` every minute.
+        """
+        return Timestream._call("minutely", domain)
+
+    @staticmethod
+    def hourly(domain: Timestream) -> Timestream:
+        """
+        Return a timestream containing `true` every hour.
+
+        The set of entities present in the timestream and the time range are
+        determined by `domain`. Any entity that has appeared in the `domain`
+        by the given time will appear in the resulting timestream.
+
+        Parameters
+        ----------
+        domain : Timestream
+            Timestream to use as the domain.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `true` every hour.
+        """
+        return Timestream._call("hourly", domain)
+
+    @staticmethod
+    def daily(domain: Timestream) -> Timestream:
+        """
+        Return a timestream containing `true` every day.
+
+        The set of entities present in the timestream and the time range are
+        determined by `domain`. Any entity that has appeared in the `domain`
+        by the given time will appear in the resulting timestream.
+
+        Parameters
+        ----------
+        domain : Timestream
+            Timestream to use as the domain.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `true` every day.
+        """
+        return Timestream._call("hourly", domain)
+
+    @staticmethod
+    def monthly(domain: Timestream) -> Timestream:
+        """
+        Return a timestream containing `true` every month.
+
+        The set of entities present in the timestream and the time range are
+        determined by `domain`. Any entity that has appeared in the `domain`
+        by the given time will appear in the resulting timestream.
+
+        Parameters
+        ----------
+        domain : Timestream
+            Timestream to use as the domain.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `true` every month.
+        """
+        return Timestream._call("monthly", domain)
+
+    @staticmethod
+    def yearly(domain: Timestream) -> Timestream:
+        """
+        Return a timestream containing `true` every year.
+
+        The set of entities present in the timestream and the time range are
+        determined by `domain`. Any entity that has appeared in the `domain`
+        by the given time will appear in the resulting timestream.
+
+        Parameters
+        ----------
+        domain : Timestream
+            Timestream to use as the domain.
+
+        Returns
+        -------
+        Timestream
+            Timestream containing `true` every year.
+        """
+        return Timestream._call("yearly", domain)
+
     @property
     def data_type(self) -> pa.DataType:
         """The PyArrow type of values in this Timestream."""
@@ -1463,9 +1568,15 @@ def _aggregation(
     if window is None:
         return Timestream._call(op, input, *args, None, None)
     elif isinstance(window, kd.windows.Since):
-        return Timestream._call(op, input, *args, window.predicate, None)
+        predicate = window.predicate
+        if callable(predicate):
+            predicate = predicate(input)
+        return Timestream._call(op, input, *args, predicate, None)
     elif isinstance(window, kd.windows.Sliding):
-        return Timestream._call(op, input, *args, window.predicate, window.duration)
+        predicate = window.predicate
+        if callable(predicate):
+            predicate = predicate(input)
+        return Timestream._call(op, input, *args, predicate, window.duration)
     elif isinstance(window, kd.windows.Trailing):
         if op != "collect":
             raise NotImplementedError(

@@ -16,6 +16,7 @@ use egg::Id;
 use itertools::{izip, Itertools};
 use record_ops_to_dfg::*;
 use smallvec::{smallvec, SmallVec};
+use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{CastEvaluator, Udf};
 use sparrow_instructions::{GroupId, InstKind, InstOp};
@@ -305,20 +306,7 @@ pub fn add_to_dfg(
                 // recreate them?
                 let behavior = function.tick_behavior().context("tick behavior")?;
                 if let Ok(agg_input) = dfg.get_binding("$condition_input") {
-                    // The argument is a tick, so we can directly create the necessary node.
-                    let agg_input_op = dfg.operation(agg_input.value());
-                    let tick_input = smallvec![agg_input_op];
-                    let tick_node = dfg.add_operation(Operation::Tick(behavior), tick_input)?;
-                    let tick_node = Arc::new(AstDfg::new(
-                        tick_node,
-                        tick_node,
-                        FenlType::Concrete(DataType::Boolean),
-                        agg_input.grouping(),
-                        agg_input.time_domain().clone(),
-                        function_name.location().clone(),
-                        None,
-                    ));
-                    return Ok(tick_node);
+                    return add_tick(dfg, behavior, agg_input.value());
                 }
             }
 
@@ -711,6 +699,30 @@ pub fn add_to_dfg(
             argument_types,
         ),
     }
+}
+
+/// Add a tick to the DFG.
+///
+/// The input is used to determine the domain, but only the operation is necessary.
+/// The actual value (and whether it is null or new) isn't used.
+pub fn add_tick(
+    dfg: &mut Dfg,
+    behavior: TickBehavior,
+    input: &AstDfgRef,
+) -> anyhow::Result<AstDfgRef> {
+    let input_op = dfg.operation(input.value());
+
+    let tick_op = dfg.add_operation(Operation::Tick(behavior), smallvec![input_op])?;
+    let tick_node = Arc::new(AstDfg::new(
+        tick_op,
+        tick_op,
+        FenlType::Concrete(DataType::Boolean),
+        input.grouping(),
+        input.time_domain().clone(),
+        Location::builder(),
+        None,
+    ));
+    Ok(tick_node)
 }
 
 #[allow(clippy::type_complexity)]
