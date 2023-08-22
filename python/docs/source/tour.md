@@ -1,3 +1,12 @@
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+  display_name: Python 3
+mystnb:
+  execution_mode: cache
+---
+
 % Level: Beginner
 % Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
 % Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
@@ -7,6 +16,28 @@
 This provides an overview of the key features in Kaskada that enable feature engineering on event-based data.
 The [Quick Start](quickstart) has details on how you can quickly get started running Kaskada queries.
 For a more complete explanation, see the User Guide.
+
+This tour uses Kaskada and Plotly to render the illustrations.
+The initial setup / data is below.
+
+```{code-cell}
+---
+tags: [hide-cell]
+---
+import kaskada as kd
+kd.init_session()
+single_entity = "\n".join(
+    [
+        "time,key,m,n",
+        "1996-12-19T16:39:57,A,5,10",
+        "1996-12-20T16:39:59,A,17,6",
+        "1996-12-22T16:40:00,A,,9",
+        "1996-12-23T16:40:01,A,12,",
+        "1996-12-24T16:40:02,A,,",
+    ]
+)
+single_entity = kd.sources.CsvString(single_entity, time_column_name="time", key_column_name="key")
+```
 
 ## Events and Aggregations
 
@@ -20,8 +51,14 @@ A natural question to ask about the purchases is the total--or `sum`--of all pur
 This is accomplished by _aggregating_ the events.
 The results of an aggregation change over time as additional events occur.
 
-```{todo}
-Port an example showing timestreams and aggregations.
+```{code-cell}
+---
+tags: [remove-input]
+---
+kd.plot.render(
+    kd.plot.Plot(single_entity.col("m"), name="m"),
+    kd.plot.Plot(single_entity.col("m").sum(), name="sum of m")
+)
 ```
 
 The User Guide has [more details on aggregation](guide/aggregation.md), including how to use windows to control which events are aggregated.

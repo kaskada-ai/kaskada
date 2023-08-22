@@ -27,8 +27,10 @@ language = "en"
 
 html_theme = "sphinx_book_theme"
 html_favicon = "_static/favicon.png"
-html_logo = "_static/kaskada.svg"
-html_title = "Kaskada Timestreams"
+html_title = "Kaskada"
+html_js_files = [
+    "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"
+]
 
 html_theme_options: Dict[str, Any] = {
     "repository_url": "https://github.com/kaskada-ai/kaskada",
@@ -38,7 +40,7 @@ html_theme_options: Dict[str, Any] = {
     "home_page_in_toc": False,
     "use_issues_button": True,
     "repository_branch": "main",
-    "path_to_docs": "kaskada/docs/source",
+    "path_to_docs": "python/docs/source",
     "announcement": (
         "This describes the next version of Kaskada. "
         "It is currently available as an alpha release."
@@ -56,6 +58,10 @@ html_theme_options: Dict[str, Any] = {
             "icon": "fa-brands fa-slack",
         },
     ],
+    "logo": {
+        "image_light": "_static/kaskada-positive.svg",
+        "image_dark": "_static/kaskada-negative.svg",
+    },
     "primary_sidebar_end": ["indices.html"],
     "show_toc_level": 2,
     "show_nav_level": 2,
@@ -111,3 +117,5 @@ autodoc_class_signature = "separated"
 autosummary_generate = True
 
 napoleon_preprocess_types = True
+
+suppress_warnings = ["mystnb.unknown_mime_type"]

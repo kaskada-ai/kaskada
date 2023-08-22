@@ -89,6 +89,7 @@ myst-parser = {version = ">=0.16.1"}
 # Sphinx to < 6. Once a new release occurs we can upgrade to `0.18.0` or newer.
 # https://github.com/executablebooks/MyST-NB/issues/530
 myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
+plotly = {version = "^5.16.1"}
 
 [tool.poetry.group.test]
 # Dependencies for testing
@@ -105,7 +106,7 @@ xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 optional = true
 
 [tool.poetry.group.release.dependencies]
-python-semantic-release = "^8.0.6"
+tomlkit = "^0.12.1"
 
 [build-system]
 requires = ["maturin>=1,<2"]
@@ -152,17 +153,3 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
-
-[tool.semantic_release]
-version_toml = [
-    "pyproject.toml:project.version",
-    "pyproject.toml:tool.poetry.version",
-]
-tag_format = "v{version}"
-
-[tool.semantic_release.branches.main]
-match = "main"
-prerelease = true
-prerelease_token = "a"
-
-[tool.semantic_release.remote]
