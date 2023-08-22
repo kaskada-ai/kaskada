@@ -37,7 +37,7 @@ use hashbrown::HashMap;
 use itertools::{izip, Itertools};
 pub(crate) use language::ChildrenVec;
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::{InstKind, InstOp};
+use sparrow_instructions::{InstKind, InstOp, Udf};
 use sparrow_syntax::{FenlType, Location};
 pub(crate) use step_kind::*;
 type DfgGraph = egg::EGraph<language::DfgLang, analysis::DfgAnalysis>;
@@ -123,6 +123,15 @@ impl Dfg {
         children: ChildrenVec,
     ) -> anyhow::Result<Id> {
         self.add_expression(Expression::Inst(InstKind::Simple(instruction)), children)
+    }
+
+    /// Add a udf node to the DFG.
+    pub(super) fn add_udf(
+        &mut self,
+        udf: Arc<dyn Udf>,
+        children: ChildrenVec,
+    ) -> anyhow::Result<Id> {
+        self.add_expression(Expression::Inst(InstKind::Udf(udf)), children)
     }
 
     /// Add an expression to the DFG.
@@ -255,7 +264,6 @@ impl Dfg {
 
                 // 2. The number of args should be correct.
                 match expr {
-                    Expression::Inst(InstKind::Udf(_)) => unimplemented!("udf unsupported"),
                     Expression::Literal(_) | Expression::LateBound(_) => {
                         anyhow::ensure!(
                             children.len() == 1,
@@ -265,6 +273,9 @@ impl Dfg {
                         );
                     }
                     Expression::Inst(InstKind::Simple(op)) => op
+                        .signature()
+                        .assert_valid_argument_count(children.len() - 1),
+                    Expression::Inst(InstKind::Udf(udf)) => udf
                         .signature()
                         .assert_valid_argument_count(children.len() - 1),
                     Expression::Inst(InstKind::FieldRef) => {

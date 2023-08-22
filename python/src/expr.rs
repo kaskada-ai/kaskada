@@ -31,6 +31,7 @@ impl Expr {
 
         let mut rust_session = session.rust_session()?;
         let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
+        // TODO: - Support adding a UDF here.
         let rust_expr = match rust_session.add_expr(&operation, args) {
             Ok(node) => node,
             Err(e) => {
