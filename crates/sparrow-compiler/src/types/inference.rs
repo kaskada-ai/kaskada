@@ -586,7 +586,7 @@ fn promote_concrete(concrete: FenlType, type_class: &TypeClass) -> Option<FenlTy
         (TypeClass::TimeDelta, FenlType::Concrete(Duration(_) | Interval(_))) => Some(concrete),
         (TypeClass::TimeDelta, FenlType::Concrete(_)) => None,
 
-        // Ordered types include all numbered types and timestamps.
+        // Ordered types include all numbered types, timestamps, and timedeltas.
         (
             TypeClass::Ordered,
             FenlType::Concrete(
@@ -595,6 +595,7 @@ fn promote_concrete(concrete: FenlType, type_class: &TypeClass) -> Option<FenlTy
             ),
         ) => Some(concrete),
         (TypeClass::Ordered, FenlType::Concrete(Timestamp(_, _))) => Some(concrete),
+        (TypeClass::Ordered, FenlType::Concrete(Duration(_) | Interval(_))) => Some(concrete),
         (TypeClass::Ordered, _) => None,
 
         // Keys include anything we can currently hash.
