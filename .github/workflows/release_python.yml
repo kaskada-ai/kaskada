@@ -302,7 +302,8 @@ jobs:
         #   repository-url: https://test.pypi.org/legacy/
 
       - name: Publish release
-        # TODO: Add `--latest` when we
+        # TODO: Add `--latest` when we stop having the python client download
+        # the latest version.
         run: |
           gh release edit ${{ github.ref_name }} \
             --draft=false --discussion-category=Announcements"
