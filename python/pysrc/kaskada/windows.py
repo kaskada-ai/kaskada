@@ -33,6 +33,65 @@ class Since(Window):
 
     predicate: Timestream | Callable[..., Timestream] | bool
 
+    @staticmethod
+    def minutely() -> Since:
+        """
+        Return a window since the start of each minute.
+
+        Returns
+        -------
+        Since
+            Window since the start of each minute.
+        """
+        return Since(predicate = lambda domain: Timestream._call("minutely", domain))
+
+    @staticmethod
+    def hourly() -> Since:
+        """
+        Return a window since the start of each hour.
+
+        Returns
+        -------
+        Since
+            Window since the start of each hour.
+        """
+        return Since(predicate = lambda domain: Timestream._call("hourly", domain))
+
+    @staticmethod
+    def daily() -> Since:
+        """
+        Return a window since the start of each day.
+
+        Returns
+        -------
+        Since
+            Window since the start of each day.
+        """
+        return Since(predicate = lambda domain: Timestream._call("daily", domain))
+
+    @staticmethod
+    def monthly() -> Since:
+        """
+        Return a window since the start of each month.
+
+        Returns
+        -------
+        Since
+            Window since the start of each month.
+        """
+        return Since(predicate = lambda domain: Timestream._call("monthly", domain))
+
+    @staticmethod
+    def yearly() -> Since:
+        """
+        Return a window since the start of each year.
+
+        Returns
+        -------
+        Since
+            Window since the start of each year.
+        """
+        return Since(predicate = lambda domain: Timestream._call("yearly", domain))
 
 @dataclass(frozen=True)
 class Sliding(Window):
@@ -60,6 +119,101 @@ class Sliding(Window):
         if self.duration <= 0:
             raise ValueError("duration must be positive")
 
+
+    @staticmethod
+    def minutely(duration: int) -> Sliding:
+        """
+        Return a sliding window containing `duration` minutes.
+
+        Parameters
+        ----------
+        duration : int
+            The number of minutes to use in the window.
+
+        Returns
+        -------
+        Sliding
+            Sliding window with `duration` minutes, advancing every minute.
+        """
+        return Sliding(
+            duration = duration,
+            predicate = lambda domain: Timestream._call("minutely", domain))
+
+    @staticmethod
+    def hourly(duration: int) -> Sliding:
+        """
+        Return a sliding window containing `duration` hours.
+
+        Parameters
+        ----------
+        duration : int
+            The number of hours to use in the window.
+
+        Returns
+        -------
+        Sliding
+            Sliding window with `duration` hours, advancing every hour.
+        """
+        return Sliding(
+            duration = duration,
+            predicate = lambda domain: Timestream._call("hourly", domain))
+
+    @staticmethod
+    def daily(duration: int) -> Sliding:
+        """
+        Return a sliding window containing `duration` daily.
+
+        Parameters
+        ----------
+        duration : int
+            The number of days to use in the window.
+
+        Returns
+        -------
+        Sliding
+            Sliding window with `duration` days, advancing every day.
+        """
+        return Sliding(
+            duration = duration,
+            predicate = lambda domain: Timestream._call("daily", domain))
+
+    @staticmethod
+    def monthly(duration: int) -> Sliding:
+        """
+        Return a sliding window containing `duration` months.
+
+        Parameters
+        ----------
+        duration : int
+            The number of months to use in the window.
+
+        Returns
+        -------
+        Sliding
+            Sliding window with `duration` months, advancing every month.
+        """
+        return Sliding(
+            duration = duration,
+            predicate = lambda domain: Timestream._call("monthly", domain))
+
+    @staticmethod
+    def yearly(duration: int) -> Sliding:
+        """
+        Return a sliding window containing `duration` years.
+
+        Parameters
+        ----------
+        duration : int
+            The number of years to use in the window.
+
+        Returns
+        -------
+        Sliding
+            Sliding window with `duration` years, advancing every year.
+        """
+        return Sliding(
+            duration = duration,
+            predicate = lambda domain: Timestream._call("yearly", domain))
 
 @dataclass(frozen=True)
 class Trailing(Window):

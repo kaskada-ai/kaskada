@@ -306,7 +306,7 @@ pub fn add_to_dfg(
                 // recreate them?
                 let behavior = function.tick_behavior().context("tick behavior")?;
                 if let Ok(agg_input) = dfg.get_binding("$condition_input") {
-                    return add_tick(dfg, behavior, agg_input.value());
+                    return add_tick(dfg, behavior, &agg_input);
                 }
             }
 
