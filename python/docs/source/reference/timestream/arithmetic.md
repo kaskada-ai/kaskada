@@ -15,6 +15,11 @@ See the notes on the specific functions for more information.
    :toctree: ../apidocs/
 
     Timestream.add
+    Timestream.ceil
+    Timestream.clamp
+    Timestream.exp
+    Timestream.floor
+    Timestream.powf
     Timestream.sub
     Timestream.mul
     Timestream.div

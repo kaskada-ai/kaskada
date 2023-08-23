@@ -240,6 +240,39 @@ class Timestream(object):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.add(self)
 
+    def ceil(self) -> Timestream:
+        """
+        Create a Timestream for the number rounded up to the next largest integer.
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from the numeric ceiling of this.
+        """
+        return Timestream._call("ceil", self)
+
+    def clamp(
+        self,
+        min: Union[Timestream, Literal, None] = None,
+        max: Union[Timestream, Literal, None] = None,
+    ) -> Timestream:
+        """
+        Create a Timestream clamped between the bounds of min and max.
+
+        Parameters
+        ----------
+        min : Union[Timestream, Literal, None]
+            The literal value to set as the lower bound
+        max : Union[Timestream, Literal, None]
+            The literal value to set as the upper bound
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from the clamped bounds between min and max.
+        """
+        return Timestream._call("clamp", self, min, max)
+
     def sub(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream substracting `rhs` from this.
@@ -270,6 +303,28 @@ class Timestream(object):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.sub(self)
 
+    def exp(self) -> Timestream:
+        """
+        Create a Timestream raising `e` to the power of this.
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from `e^this`.
+        """
+        return Timestream._call("exp", self)
+
+    def floor(self) -> Timestream:
+        """
+        Create a Timestream of the values rounded down to the nearest integer.
+
+        Returns
+        -------
+        Timestream
+            The Timestream resulting from the numeric floor of this.
+        """
+        return Timestream._call("floor", self)
+
     def mul(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream multiplying this and `rhs`.
@@ -299,6 +354,21 @@ class Timestream(object):
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.mul(self)
+
+    def powf(self, power: Union[Timestream, Literal]) -> Timestream:
+        """
+        Create a Timestream raising `this` to the power of `power`.
+
+        Parameters
+        ----------
+        power : Union[Timestream, Literal]
+            The Timestream or literal value to raise this by.
+
+        Returns
+        -------
+            Timestream: The Timestream resulting from `self ^ power`.
+        """
+        return Timestream._call("powf", self, power)
 
     def div(self, divisor: Union[Timestream, Literal]) -> Timestream:
         """
@@ -875,6 +945,27 @@ class Timestream(object):
             Timestream containing the lookup join between the `key` and `self`.
         """
         return Timestream._call("lookup", key, self)
+
+    def coalesce(
+        self, arg: Union[Timestream, Literal], *args: Union[Timestream, Literal]
+    ) -> Timestream:
+        """
+        Create a Timestream for returning the first non-null value or null if all values are null.
+
+        Parameters
+        ----------
+        arg : Union[Timestream, Literal]
+            The next value to be coalesced (required).
+        args : Union[Timestream, Literal]
+            Additional values to be coalesced (optional).
+
+        Returns
+        -------
+        Timestream
+            Timestream containing the first non-null value from that row.
+            If all values are null, then returns null.
+        """
+        return Timestream._call("coalesce", self, arg, *args)
 
     def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
         """
