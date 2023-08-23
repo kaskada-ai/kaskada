@@ -95,6 +95,12 @@ impl ExpressionExecutor {
                 Operator::Instruction(inst) => {
                     // TODO: This could probably be cleaned up, possibly by eliminating
                     // `inst kind` entirely.
+                    println!("Inst: {:?}", inst);
+                    // TODO: OH SHIT LOL
+                    // It's called `add`, which is a built-in function, so it's just doing add
+                    // HAHAHA
+                    // This needs to make the udf
+                    // but hm...how?
                     let inst_kind = if inst == "field_ref" {
                         InstKind::FieldRef
                     } else if inst == "record" {

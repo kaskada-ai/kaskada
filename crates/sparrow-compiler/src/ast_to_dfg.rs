@@ -104,6 +104,7 @@ pub fn add_udf_to_dfg(
     data_context: &mut DataContext,
     diagnostics: &mut DiagnosticCollector<'_>,
 ) -> anyhow::Result<AstDfgRef> {
+    println!("sparrow_compiler::add_udf_to_dfg");
     let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
     let signature = udf.signature();
 
@@ -141,8 +142,8 @@ pub fn add_udf_to_dfg(
         })
         .try_collect()?;
 
-    let is_new = dfg.add_udf(udf.clone(), args.iter().map(|i| i.value()).collect())?;
-    let value = is_any_new(dfg, &args)?;
+    let value = dfg.add_udf(udf.clone(), args.iter().map(|i| i.value()).collect())?;
+    let is_new = is_any_new(dfg, &args)?;
 
     let time_domain_check = TimeDomainCheck::Compatible;
     let time_domain =

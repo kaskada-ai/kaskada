@@ -22,8 +22,8 @@ class Udf:
 
     def __call__(self, *args: Timestream | Literal) -> Timestream:
         """Apply the UDF to the given arguments."""
-        # TODO: Timestream>_udf_call?
-        Timestream._call_udf(self._ffi, *args)
+        print("Calling udf")
+        return Timestream._call_udf(self._ffi, *args)
 
 def udf(signature: str):
     """Decorate a function for use as a Kaskada UDF."""

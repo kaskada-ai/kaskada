@@ -296,6 +296,7 @@ impl Session {
         udf: Arc<dyn Udf>,
         args: Vec<Expr>,
     ) -> error_stack::Result<Expr, Error> {
+        println!("session::add_udf_to_dfg");
         let signature = udf.signature();
         let arg_names = signature.arg_names().to_owned();
         signature.assert_valid_argument_count(args.len());

@@ -35,13 +35,12 @@ impl sparrow_instructions::Udf for PyUdf {
 
     // FRAZ: Should we allow this to return an error?
     fn make_evaluator(&self, info: StaticInfo<'_>) -> Box<dyn Evaluator> {
-        println!("Making udf evaluator");
-        // Idea: Create a random value of each argument type and verify that the callbale
+        // TODO: Idea: Create a random value of each argument type and verify that the callbale
         // is invokable on that. This would let us detect errors early.
 
+        println!("Making python udf evaluator");
         let args = info.args.iter().map(|arg| arg.value_ref.clone()).collect();
 
-        // FRAZ: Get the value refs for each static arg.
         Box::new(PyUdfEvaluator {
             args,
             callable: self.callable.clone(),
@@ -55,6 +54,7 @@ impl sparrow_instructions::Udf for PyUdf {
 
 impl Evaluator for PyUdfEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        println!("Evaluating Python UDF");
         let args = self.args
             .iter()
             .map(|value_ref| -> anyhow::Result<_> {
@@ -62,7 +62,7 @@ impl Evaluator for PyUdfEvaluator {
             }).try_collect()?;
  
         let result = Python::with_gil(|py| -> anyhow::Result<ArrayRef> {
-            // todo: uhh
+            // todo: 
             Ok(self.evaluate_py(py, args))
         })?;
         // FRAZ: handle python errors.
@@ -72,8 +72,6 @@ impl Evaluator for PyUdfEvaluator {
 
 impl PyUdfEvaluator {
     fn evaluate_py<'py>(&self, py: Python<'py>, args: Vec<ArrayRef>) -> ArrayRef {
-        println!("Evaluating python");
-
         // self.callable.call1(py, (args,)).unwrap().extract(py).unwrap();
         // let args: Vec<PyObject> = args 
         //     .iter()
@@ -119,6 +117,7 @@ impl Udf {
     #[new]
     #[pyo3(signature = (signature, callable))]
     fn new(signature: String, callable: Py<PyAny>) -> Self {
+        println!("Creating udf with signature: {:?}", signature);
         let uuid = Uuid::new_v4();
         // TODO: sig name string cannot be &'static str
         let signature = Signature::try_from_str(FeatureSetPart::Function("udf"), &signature).expect("signature to parse");

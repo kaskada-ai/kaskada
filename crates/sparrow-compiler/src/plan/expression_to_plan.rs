@@ -35,11 +35,16 @@ pub(super) fn dfg_to_plan(
                 InstKind::FieldRef => "field_ref".to_owned(),
                 InstKind::Record => "record".to_owned(),
                 InstKind::Cast(_) => "cast".to_owned(),
-                InstKind::Udf(udf) => udf.signature().name().to_owned(),
+                InstKind::Udf(udf) => {
+                    println!("dfg_to_plan udf: {:?}", udf.signature().name());
+                    udf.signature().name().to_owned()
+                    // TODO: Do we need to serialize the callable into the plan?
+                }
             };
 
             let result_type =
                 infer_result_type(inst, &arguments, plan_builder.expressions(operation_index)?)?;
+            println!("result type: {:?}", result_type);
 
             let operator = expression_plan::Operator::Instruction(name);
             (operator, result_type)

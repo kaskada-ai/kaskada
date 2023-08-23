@@ -33,7 +33,6 @@ impl Expr {
 
         let mut rust_session = session.rust_session()?;
         let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
-        // TODO: - Support adding a UDF here.
         let rust_expr = match rust_session.add_expr(&operation, args) {
             Ok(node) => node,
             Err(e) => {
@@ -52,6 +51,7 @@ impl Expr {
     #[staticmethod]
     #[pyo3(signature = (session, udf, args))]
     fn call_udf(session: Session, udf: Udf, args: Vec<Expr>) -> PyResult<Self> {
+        println!("SparrowExpr::call_udf");
         let sparrow_udf = udf.0;
         if !args.iter().all(|e| e.session() == session) {
             return Err(PyValueError::new_err(
