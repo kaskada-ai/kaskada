@@ -1,5 +1,5 @@
+use hashbrown::HashMap;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use arrow_schema::SchemaRef;
@@ -25,6 +25,13 @@ pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
     key_hash_inverse: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
+    /// Keeps track of the uuid mapping.
+    ///
+    /// This is a bit of a hack that allows to serialize the uuid instead of the
+    /// `Arc<dyn Udf` into the compute plan, then look up that mapping during plan
+    /// construction. Once we run on multiple machines we'll need to serialize the
+    /// udf.
+    udfs: HashMap<Uuid, Arc<dyn Udf>>,
 }
 
 #[derive(Default)]
@@ -296,7 +303,6 @@ impl Session {
         udf: Arc<dyn Udf>,
         args: Vec<Expr>,
     ) -> error_stack::Result<Expr, Error> {
-        println!("session::add_udf_to_dfg");
         let signature = udf.signature();
         let arg_names = signature.arg_names().to_owned();
         signature.assert_valid_argument_count(args.len());
@@ -334,6 +340,7 @@ impl Session {
                 .collect();
             Err(Error::Errors(errors))?
         } else {
+            self.udfs.insert(udf.uuid().clone(), udf.clone());
             Ok(Expr(result))
         }
     }
@@ -416,6 +423,7 @@ impl Session {
                 data_context,
                 options,
                 Some(key_hash_inverse),
+                &self.udfs,
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))

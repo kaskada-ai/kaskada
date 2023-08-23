@@ -5,16 +5,19 @@ use enum_map::EnumMap;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::{FuturesUnordered, PollNext};
 use futures::{FutureExt, Stream, TryFutureExt};
+use hashbrown::HashMap;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
 use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_arrow::scalar_value::ScalarValue;
+use sparrow_instructions::Udf;
 use sparrow_qfr::io::writer::FlightRecordWriter;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_qfr::FlightRecorderFactory;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
 use tracing::{error, info, info_span, Instrument};
+use uuid::Uuid;
 
 use crate::execute::compute_store_guard::ComputeStoreGuard;
 use crate::execute::operation::{OperationContext, OperationExecutor};
@@ -56,6 +59,7 @@ impl ComputeExecutor {
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
         destination: Destination,
         stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
+        udfs: &HashMap<Uuid, Arc<dyn Udf>>,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
 
@@ -147,6 +151,7 @@ impl ComputeExecutor {
                         max_event_time_tx.clone(),
                         late_bindings,
                         stop_signal_rx.clone(),
+                        &udfs,
                     )
                     .await?,
             );

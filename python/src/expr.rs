@@ -6,8 +6,8 @@ use arrow::datatypes::DataType;
 use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use std::sync::Arc;
 use sparrow_session::{Expr as RustExpr, Literal, Session as RustSession};
+use std::sync::Arc;
 
 /// Kaskada expression node.
 #[derive(Clone)]
@@ -61,6 +61,7 @@ impl Expr {
 
         let mut rust_session = session.rust_session()?;
         let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
+
         let rust_expr = match rust_session.add_udf_to_dfg(sparrow_udf.clone(), args) {
             Ok(node) => node,
             Err(e) => {

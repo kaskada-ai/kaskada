@@ -1,8 +1,8 @@
+use itertools::Itertools;
 use std::fmt::Debug;
 use std::sync::Arc;
-use itertools::Itertools;
 
-use arrow::array::{ArrayData, ArrayRef};
+use arrow::array::{new_empty_array, ArrayData, ArrayRef};
 use arrow::datatypes::DataType;
 use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::prelude::*;
@@ -25,7 +25,7 @@ struct PyUdfEvaluator {
 
 #[derive(Clone)]
 #[pyclass]
-// TODO: Does it need to extend Expr for some reason? 
+// TODO: Does it need to extend Expr for some reason?
 pub(crate) struct Udf(pub Arc<dyn sparrow_instructions::Udf>);
 
 impl sparrow_instructions::Udf for PyUdf {
@@ -55,14 +55,15 @@ impl sparrow_instructions::Udf for PyUdf {
 impl Evaluator for PyUdfEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         println!("Evaluating Python UDF");
-        let args = self.args
+        let args = self
+            .args
             .iter()
-            .map(|value_ref| -> anyhow::Result<_> {
-                Ok(info.value(value_ref)?.array_ref()?)
-            }).try_collect()?;
- 
+            .map(|value_ref| -> anyhow::Result<_> { Ok(info.value(value_ref)?.array_ref()?) })
+            .try_collect()?;
+
         let result = Python::with_gil(|py| -> anyhow::Result<ArrayRef> {
-            // todo: 
+            // todo:
+            println!("inside gil");
             Ok(self.evaluate_py(py, args))
         })?;
         // FRAZ: handle python errors.
@@ -73,7 +74,7 @@ impl Evaluator for PyUdfEvaluator {
 impl PyUdfEvaluator {
     fn evaluate_py<'py>(&self, py: Python<'py>, args: Vec<ArrayRef>) -> ArrayRef {
         // self.callable.call1(py, (args,)).unwrap().extract(py).unwrap();
-        // let args: Vec<PyObject> = args 
+        // let args: Vec<PyObject> = args
         //     .iter()
         //     .map::<anyhow::Result<_>, _>(|value_ref| {
         //         let value: ColumnarValue = info.value(value_ref)?;
@@ -108,7 +109,8 @@ impl PyUdfEvaluator {
         //     "unexpected result length from Python UDF"
         // );
 
-        panic!("arrayref")
+        println!("array ref panic?");
+        new_empty_array(&DataType::Int32)
     }
 }
 
@@ -120,7 +122,8 @@ impl Udf {
         println!("Creating udf with signature: {:?}", signature);
         let uuid = Uuid::new_v4();
         // TODO: sig name string cannot be &'static str
-        let signature = Signature::try_from_str(FeatureSetPart::Function("udf"), &signature).expect("signature to parse");
+        let signature = Signature::try_from_str(FeatureSetPart::Function("udf"), &signature)
+            .expect("signature to parse");
         let udf = PyUdf {
             signature,
             callable,

@@ -53,14 +53,18 @@ impl Execution {}
 
 #[pymethods]
 impl Execution {
-    fn collect_pyarrow(&mut self, py: Python<'_>) -> Result<Vec<PyObject>> {
+    fn collect_pyarrow(&mut self) -> Result<Vec<PyObject>> {
         let execution = self.take_execution()?;
         let batches = execution.collect_all_blocking()?;
-        let results = batches
-            .into_iter()
-            .map(|batch| batch.to_pyarrow(py))
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(results)
+        println!("Execution::collect_pyarrow: batches.len() = {}", batches.len());
+        let result = Python::with_gil(|py| -> PyResult<Vec<_>> {
+            let results = batches
+                .into_iter()
+                .map(|batch| batch.to_pyarrow(py))
+                .collect::<PyResult<Vec<_>>>()?;
+            Ok(results)
+        });
+        result.map_err(|_| error_stack::report!(ErrorContext::Python).into())
     }
 
     fn next_pyarrow(&mut self, py: Python<'_>) -> Result<Option<PyObject>> {

@@ -4,6 +4,7 @@ use chrono::NaiveDateTime;
 use enum_map::EnumMap;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::Stream;
+use hashbrown::HashMap;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
@@ -12,7 +13,9 @@ use sparrow_api::kaskada::v1alpha::{
 };
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::{hash_compute_plan_proto, DataContext};
+use sparrow_instructions::Udf;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
+use uuid::Uuid;
 
 use crate::execute::compute_store_guard::ComputeStoreGuard;
 use crate::execute::error::Error;
@@ -67,9 +70,15 @@ pub async fn execute(
         ..ExecutionOptions::default()
     };
 
-    // let output_at_time = request.final_result_time;
-
-    execute_new(plan, destination, data_context, options, None).await
+    execute_new(
+        plan,
+        destination,
+        data_context,
+        options,
+        None,
+        &HashMap::new(),
+    )
+    .await
 }
 
 #[derive(Default, Debug)]
@@ -215,12 +224,18 @@ async fn load_key_hash_inverse(
 /// ----------
 /// - key_hash_inverse: If set, specifies the key hash inverses to use. If None, the
 ///   key hashes will be created.
+/// - udfs: contains the mapping of uuid to udf implementation. This is currently used
+///   so we can serialize the uuid to the ComputePlan, then look up what implementation to use
+///   when creating the evaluator. This works because we are on a single machine, and don't need
+///   to pass the plan around. However, we'll eventually need to look into serializing/pickling
+///   the callable.
 pub async fn execute_new(
     plan: ComputePlan,
     destination: Destination,
     mut data_context: DataContext,
     options: ExecutionOptions,
     key_hash_inverse: Option<Arc<ThreadSafeKeyHashInverse>>,
+    udfs: &HashMap<Uuid, Arc<dyn Udf>>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let object_stores = Arc::new(ObjectStoreRegistry::default());
 
@@ -287,6 +302,7 @@ pub async fn execute_new(
         progress_updates_rx,
         destination,
         options.stop_signal_rx,
+        udfs,
     )
     .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
@@ -327,5 +343,15 @@ pub async fn materialize(
     // TODO: the `execute_with_progress` method contains a lot of additional logic that is theoretically not needed,
     // as the materialization does not exit, and should not need to handle cleanup tasks that regular
     // queries do. We should likely refactor this to use a separate `materialize_with_progress` method.
-    execute_new(plan, destination, data_context, options, None).await
+
+    // TODO: Materialize with udfs
+    execute_new(
+        plan,
+        destination,
+        data_context,
+        options,
+        None,
+        &HashMap::new(),
+    )
+    .await
 }
