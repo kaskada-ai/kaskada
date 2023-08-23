@@ -1,10 +1,10 @@
 import pandas as pd
 import pyarrow as pa
 import kaskada as kd
-import kaskdaa._ffi as _ffi
+import kaskada._ffi as _ffi
 import pytest
 
-@kd.udf("add(x: number, y: number) -> number")
+@kd.udf("add<N: number>(x: N, y: N) -> N")
 def add(x: pd.Series, y: pd.Series) -> pd.Series:
     """Use Pandas to add two numbers."""
     return x + y
@@ -15,7 +15,8 @@ def test_docstring() -> None:
 
 
 def test_udf_instance() -> None:
-    assert isinstance(add, _ffi.Udf)
+    assert isinstance(add, kd.Udf)
+    assert isinstance(add._ffi, _ffi.Udf)
 
 @pytest.fixture
 def source_int64() -> kd.sources.CsvString:

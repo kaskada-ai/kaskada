@@ -21,6 +21,7 @@ use crate::execute::output::Destination;
 use crate::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
+pub use operation::WorkArea;
 
 mod checkpoints;
 mod compute_executor;

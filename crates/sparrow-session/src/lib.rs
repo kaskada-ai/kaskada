@@ -10,4 +10,4 @@ pub use expr::{Expr, Literal};
 pub use session::{ExecutionOptions, Session};
 pub use table::Table;
 
-pub type Udf = sparrow_instructions::Udf;
+// pub type Udf = dyn sparrow_instructions::Udf;

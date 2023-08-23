@@ -263,7 +263,7 @@ impl ExpressionExecutor {
 }
 
 /// Wrapper around the columns produced during execution.
-struct WorkArea {
+pub struct WorkArea {
     time: ArrayRef,
     subsort: ArrayRef,
     key_hash: ArrayRef,

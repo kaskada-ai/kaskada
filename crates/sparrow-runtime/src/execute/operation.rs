@@ -66,6 +66,7 @@ use crate::execute::Error;
 use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
+pub use expression_executor::WorkArea;
 
 /// Information used while creating operations.
 ///

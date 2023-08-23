@@ -1,6 +1,5 @@
 use pyo3::prelude::*;
 
-mod call_udf;
 mod error;
 mod execution;
 mod expr;

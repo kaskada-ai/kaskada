@@ -189,7 +189,6 @@ impl Signature {
                 self.name,
                 self.parameters.names().len(),
                 num_args,
-                me
             )
         }
     }

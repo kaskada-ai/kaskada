@@ -1,9 +1,17 @@
-use arrow::array::ArrayData;
+use std::fmt::Debug;
+use std::sync::Arc;
+use itertools::Itertools;
+
+use arrow::array::{ArrayData, ArrayRef};
 use arrow::datatypes::DataType;
 use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+use sparrow_instructions::{Evaluator, RuntimeInfo, StaticInfo, ValueRef};
+use sparrow_syntax::{FeatureSetPart, Signature};
+use uuid::Uuid;
 
+#[derive(Debug)]
 struct PyUdf {
     signature: Signature,
     callable: Py<PyAny>,
@@ -17,17 +25,20 @@ struct PyUdfEvaluator {
 
 #[derive(Clone)]
 #[pyclass]
-pub(crate) struct Udf(Arc<dyn sparrow_session::Udf>);
+pub(crate) struct Udf(Arc<dyn sparrow_instructions::Udf>);
 
-impl sparrow_session::Udf for PyUdf {
+impl sparrow_instructions::Udf for PyUdf {
     fn signature(&self) -> &Signature {
-        &self.signatrue
+        &self.signature
     }
 
     // FRAZ: Should we allow this to return an error?
-    fn make_evaluator(&self, static_info: StaticInfo<'_>) -> Box<dyn Evaluator> {
+    fn make_evaluator(&self, info: StaticInfo<'_>) -> Box<dyn Evaluator> {
+        println!("Making udf evaluator");
         // Idea: Create a random value of each argument type and verify that the callbale
         // is invokable on that. This would let us detect errors early.
+
+        let args = info.args.iter().map(|arg| arg.value_ref.clone()).collect();
 
         // FRAZ: Get the value refs for each static arg.
         Box::new(PyUdfEvaluator {
@@ -42,9 +53,17 @@ impl sparrow_session::Udf for PyUdf {
 }
 
 impl Evaluator for PyUdfEvaluator {
-    /// Evaluate the function with the given runtime info.
-    fn evaluate(&self, work_area: &WorkArea<'_>) -> error_stack::Result<ArrayRef, Error> {
-        let result = Python::with_gil(|py| -> PyResult<()> { evaluate_py(py, args) });
+    fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        let args = self.args
+            .iter()
+            .map(|value_ref| -> anyhow::Result<_> {
+                Ok(info.value(value_ref)?.array_ref()?)
+            }).try_collect()?;
+ 
+        let result = Python::with_gil(|py| -> anyhow::Result<ArrayRef> {
+            // todo: uhh
+            Ok(self.evaluate_py(py, args))
+        })?;
         // FRAZ: handle python errors.
         Ok(result)
     }
@@ -52,8 +71,45 @@ impl Evaluator for PyUdfEvaluator {
 
 impl PyUdfEvaluator {
     fn evaluate_py<'py>(&self, py: Python<'py>, args: Vec<ArrayRef>) -> ArrayRef {
-        // FRAZ: Fill in based on `call_udf`
-        todo!()
+        println!("Evaluating python");
+
+        // self.callable.call1(py, (args,)).unwrap().extract(py).unwrap();
+        // let args: Vec<PyObject> = args 
+        //     .iter()
+        //     .map::<anyhow::Result<_>, _>(|value_ref| {
+        //         let value: ColumnarValue = info.value(value_ref)?;
+        //         let array_ref: ArrayRef = value.array_ref()?;
+        //         let array_data: ArrayData = aray_ref.to_data();
+        //         let py_obj: PyObject = array_data.to_pyarrow(py)?;
+
+        //         Ok(py_obj)
+        //     })
+        //     .collect::<anyhow::Result<_>>()?;
+
+        // let locals = [("args", args)].into_py_dict(py);
+        // py.run(&self.code, None, Some(&locals))?;
+        // let result_py: PyObject = locals.get_item("ret").unwrap().into();
+
+        // let result_array_data: ArrayData = ArrayData::from_pyarrow(result_py.as_ref(py))?;
+
+        // // We can't control the returned type, but we can refuse to accept the "wrong" type.
+        // ensure!(
+        //     *result_array_data.data_type() == self.result_type,
+        //     "expected Python UDF to return type {:?}, but received {:?}",
+        //     result_array_data.data_type(),
+        //     self.result_type
+        // );
+
+        // let result_array_ref: ArrayRef = array::make_array(result_array_data);
+
+        // // This is a "map" operation - each row should reflect the time of the
+        // // corresponding input row, and have the same length.
+        // ensure!(
+        //     result_array_ref.len() == info.num_rows(),
+        //     "unexpected result length from Python UDF"
+        // );
+
+        panic!("arrayref")
     }
 }
 
@@ -61,41 +117,14 @@ impl PyUdfEvaluator {
 impl Udf {
     #[new]
     fn new(signature: String, callable: Py<PyAny>) -> Self {
-        // FRAZ: Parse the signature and create an instance of PyUdf.
-        // Then, create an `Arc<dyn Udf>` from that and pass that to
-        // Udf.
+        let uuid = Uuid::new_v4();
+        // TODO: sig name string cannot be &'static str
+        let signature = Signature::try_from_str(FeatureSetPart::Function("udf"), &signature).expect("signature to parse");
         let udf = PyUdf {
-            signature: todo!(),
+            signature,
             callable,
-            uuid: todo!(),
+            uuid,
         };
         Udf(Arc::new(udf))
     }
 }
-
-// #[pyfunction]
-// #[pyo3(signature = (udf, result_type, *args))]
-// pub(super) fn call_udf<'py>(
-//     py: Python<'py>,
-//     udf: &'py PyAny,
-//     result_type: &'py PyAny,
-//     args: &'py PyTuple,
-// ) -> PyResult<&'py PyAny> {
-//     let result_type = DataType::from_pyarrow(result_type)?;
-
-//     // 1. Make sure we can convert each input to and from arrow arrays.
-//     let mut udf_args = Vec::with_capacity(args.len() + 1);
-//     udf_args.push(result_type.to_pyarrow(py)?);
-//     for arg in args {
-//         let array_data = ArrayData::from_pyarrow(arg)?;
-//         let py_array: PyObject = array_data.to_pyarrow(py)?;
-//         udf_args.push(py_array);
-//     }
-//     let args = PyTuple::new(py, udf_args);
-//     let result = udf.call_method("run_pyarrow", args, None)?;
-
-//     let array_data: ArrayData = ArrayData::from_pyarrow(result)?;
-//     assert_eq!(array_data.data_type(), &result_type);
-
-//     Ok(result)
-// }

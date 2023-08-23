@@ -9,7 +9,7 @@ import pyarrow as pa
 
 from ._timestream import Timestream
 from ._timestream import Literal
-import _ffi
+from . import _ffi
 
 # TODO: Allow functions to return `pd.DataFrame` for struct arrays.
 FuncType = Callable[..., pd.Series]
@@ -22,6 +22,7 @@ class Udf:
 
     def __call__(self, *args: Timestream | Literal) -> Timestream:
         """Apply the UDF to the given arguments."""
+        # TODO: Timestream>_udf_call?
         Timestream._call(self._ffi, *args)
 
 def udf(signature: str):

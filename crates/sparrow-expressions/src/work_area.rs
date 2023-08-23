@@ -4,7 +4,7 @@ use sparrow_arrow::Batch;
 use crate::values::WorkAreaValue;
 
 /// Information about an in-progress batch used for evaluation.
-pub struct WorkArea<'a> {
+pub(super) struct WorkArea<'a> {
     pub input: &'a Batch,
     pub expressions: Vec<ArrayRef>,
 }

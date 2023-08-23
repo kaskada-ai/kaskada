@@ -1963,6 +1963,7 @@ dependencies = [
 name = "kaskada"
 version = "0.6.0-a.1"
 dependencies = [
+ "anyhow",
  "arrow",
  "derive_more",
  "error-stack",
@@ -1971,8 +1972,8 @@ dependencies = [
  "mimalloc",
  "pyo3",
  "pyo3-asyncio",
- "sparrow-compiler",
  "sparrow-instructions",
+ "sparrow-runtime",
  "sparrow-session",
  "sparrow-syntax",
  "tokio",
