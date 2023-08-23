@@ -11,7 +11,7 @@ use sparrow_api::kaskada::v1alpha::{
     ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, CompilerOptions, DataContext, Dfg, DiagnosticCollector};
-use sparrow_instructions::GroupId;
+use sparrow_instructions::{GroupId, Udf};
 use sparrow_runtime::execute::output::Destination;
 use sparrow_runtime::key_hash_inverse::ThreadSafeKeyHashInverse;
 use sparrow_syntax::{ExprOp, FenlType, LiteralValue, Located, Location, Resolved};
@@ -260,6 +260,57 @@ impl Session {
             &op,
             args,
             None,
+        )
+        .into_report()
+        .change_context(Error::Invalid)?;
+
+        if diagnostics.num_errors() > 0 {
+            let errors = diagnostics
+                .finish()
+                .into_iter()
+                .filter(|diagnostic| diagnostic.is_error())
+                .map(|diagnostic| diagnostic.formatted)
+                .collect();
+            Err(Error::Errors(errors))?
+        } else {
+            Ok(result)
+        }
+    }
+
+    /// The [Expr] will call this to add a user-defined-function to the DFG directly.
+    ///
+    /// This bypasses much of the plumbing of the [ExprOp] required due to our construction
+    /// of the AST.
+    #[allow(unused)]
+    fn add_udf_to_dfg(
+        &mut self,
+        udf: Arc<dyn Udf>,
+        args: Vec<Expr>,
+    ) -> error_stack::Result<AstDfgRef, Error> {
+        let signature = udf.signature();
+        let arg_names = signature.arg_names().to_owned();
+        signature.assert_valid_argument_count(args.len());
+
+        let has_vararg =
+            signature.parameters().has_vararg && args.len() > signature.arg_names().len();
+        let args = Resolved::new(
+            arg_names.into(),
+            args.into_iter()
+                .map(|arg| Located::builder(arg.0))
+                .collect(),
+            has_vararg,
+        );
+        let feature_set = FeatureSet::default();
+        let mut diagnostics = DiagnosticCollector::new(&feature_set);
+
+        let location = Located::builder("udf".to_owned());
+        let result = sparrow_compiler::add_udf_to_dfg(
+            &location,
+            udf.clone(),
+            &mut self.dfg,
+            args,
+            &mut self.data_context,
+            &mut diagnostics,
         )
         .into_report()
         .change_context(Error::Invalid)?;

@@ -112,6 +112,7 @@ class Timestream(object):
         ffi_args = [make_arg(arg) for arg in args]
         try:
             return Timestream(
+                # TODO: FRAZ - so I need a `call` that can take the udf
                 _ffi.Expr.call(session=session, operation=func, args=ffi_args)
             )
         except TypeError as e:

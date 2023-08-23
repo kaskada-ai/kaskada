@@ -17,7 +17,7 @@ use itertools::{izip, Itertools};
 use record_ops_to_dfg::*;
 use smallvec::{smallvec, SmallVec};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::CastEvaluator;
+use sparrow_instructions::{CastEvaluator, Udf};
 use sparrow_instructions::{GroupId, InstKind, InstOp};
 use sparrow_syntax::{
     Collection, ExprOp, FenlType, FormatDataType, LiteralValue, Located, Location, Resolved,
@@ -29,7 +29,7 @@ use crate::dfg::{Dfg, Expression, Operation};
 use crate::diagnostics::DiagnosticCode;
 use crate::time_domain::TimeDomain;
 use crate::types::inference::instantiate;
-use crate::{DataContext, DiagnosticBuilder, DiagnosticCollector};
+use crate::{DataContext, DiagnosticBuilder, DiagnosticCollector, TimeDomainCheck};
 
 /// Convert the `expr` to corresponding DFG nodes.
 pub(super) fn ast_to_dfg(
@@ -93,6 +93,69 @@ pub(super) fn ast_to_dfg(
         arguments,
         Some(expr),
     )
+}
+
+pub fn add_udf_to_dfg(
+    location: &Located<String>,
+    udf: Arc<dyn Udf>,
+    dfg: &mut Dfg,
+    arguments: Resolved<Located<AstDfgRef>>,
+    data_context: &mut DataContext,
+    diagnostics: &mut DiagnosticCollector<'_>,
+) -> anyhow::Result<AstDfgRef> {
+    let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
+    let signature = udf.signature();
+
+    let (instantiated_types, instantiated_result_type) =
+        match instantiate(location, &argument_types, signature) {
+            Ok(result) => result,
+            Err(diagnostic) => {
+                diagnostic.emit(diagnostics);
+                return Ok(dfg.error_node());
+            }
+        };
+
+    if argument_types.iter().any(|arg| arg.is_error()) {
+        return Ok(dfg.error_node());
+    }
+    let grouping = verify_same_partitioning(
+        data_context,
+        diagnostics,
+        &location.with_value(location.inner().as_str()),
+        &arguments,
+    )?;
+
+    let args: Vec<_> = izip!(arguments, instantiated_types)
+        .map(|(arg, expected_type)| -> anyhow::Result<_> {
+            let ast_dfg = Arc::new(AstDfg::new(
+                cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
+                arg.is_new(),
+                expected_type,
+                arg.grouping(),
+                arg.time_domain().clone(),
+                arg.location().clone(),
+                None,
+            ));
+            Ok(arg.with_value(ast_dfg))
+        })
+        .try_collect()?;
+
+    let is_new = dfg.add_udf(udf.clone(), args.iter().map(|i| i.value()).collect())?;
+    let value = is_any_new(dfg, &args)?;
+
+    let time_domain_check = TimeDomainCheck::Compatible;
+    let time_domain =
+        time_domain_check.check_args(location.location(), diagnostics, &args, data_context)?;
+
+    Ok(Arc::new(AstDfg::new(
+        value,
+        is_new,
+        instantiated_result_type,
+        grouping,
+        time_domain,
+        location.location().clone(),
+        None,
+    )))
 }
 
 pub fn add_to_dfg(

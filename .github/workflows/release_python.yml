@@ -1,3 +1,25 @@
+# Release workflow for the Kaskada Python library.
+#
+# This flow is triggered by the creation of a new GitHub release.
+# Generally, the new release should be marked as a "Pre-Release".
+#
+# The creation of the release will cause this to determine the version
+# and build the Python wheels on multiple platforms, before combining
+# them and uploading the new Python library to PyPI.
+#
+# Ideas for improvement
+# ---------------------
+# 1. After releasing we should update the `latest` tag. We don't do this
+#    yet because the old version of the Kaskada Python client downloads
+#    the latest engine release.
+# 2. After releasing, we should update the version in the checked in
+#    project configurations to be a `-dev` pre-release of the next version.
+# 3. We could add a step that uploads the wheels to Test PyPi for verification.
+# 4. We could build the wheels on merge to main, allowing the release process
+#    to retrieve them rather than building them. This would also let us do the
+#    the bulk of the multi-platform testing regularly, as well as making it
+#    less likely that we'd need to recreate a release to deal with problems.
+# 5. Schedule a weekly, automatic release.
 name: Python Release
 
 # Only one job per-ref
@@ -278,3 +300,10 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         # with:
         #   repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish release
+        # TODO: Add `--latest` when we stop having the python client download
+        # the latest version.
+        run: |
+          gh release edit ${{ github.ref_name }} \
+            --draft=false --discussion-category=Announcements"
