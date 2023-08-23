@@ -3,7 +3,8 @@ hide-toc: true
 html_theme.sidebar_secondary.remove: true
 ---
 <div class="px-4 py-5 my-5 text-center">
-    <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
+    <img class="d-block mx-auto mb-4 only-light" src="_static/kaskada-positive.svg" alt="" width="50%">
+    <img class="d-block mx-auto mb-4 only-dark" src="_static/kaskada-negative.svg" alt="" width="50%">
     <h1 class="display-5 fw-bold">Real-Time AI without the fuss.</h1>
     <div class="col-lg-7 mx-auto">
       <p class="lead mb-4">Kaskada is a next-generation streaming engine that connects AI models to real-time & historical data.
