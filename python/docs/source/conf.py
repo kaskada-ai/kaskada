@@ -65,6 +65,9 @@ html_theme_options: Dict[str, Any] = {
     "primary_sidebar_end": ["indices.html"],
     "show_toc_level": 2,
     "show_nav_level": 2,
+    "analytics": {
+        "google_analytics_id": "G-HR9E2E6TG4",
+    },
 }
 
 templates_path = ["_templates"]
@@ -75,9 +78,6 @@ html_context = {
     "github_repo": "kaskada",
     "github_version": "main",
     "doc_path": "kaskada/docs/source",
-    "analytics": {
-        "google_analytics_id": "G-HR9E2E6TG4",
-    },
 }
 
 intersphinx_mapping: Dict[str, Any] = {
