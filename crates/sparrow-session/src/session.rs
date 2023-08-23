@@ -291,12 +291,11 @@ impl Session {
     ///
     /// This bypasses much of the plumbing of the [ExprOp] required due to our construction
     /// of the AST.
-    #[allow(unused)]
     pub fn add_udf_to_dfg(
         &mut self,
         udf: Arc<dyn Udf>,
         args: Vec<Expr>,
-    ) -> error_stack::Result<AstDfgRef, Error> {
+    ) -> error_stack::Result<Expr, Error> {
         let signature = udf.signature();
         let arg_names = signature.arg_names().to_owned();
         signature.assert_valid_argument_count(args.len());
@@ -334,7 +333,7 @@ impl Session {
                 .collect();
             Err(Error::Errors(errors))?
         } else {
-            Ok(result)
+            Ok(Expr(result))
         }
     }
 

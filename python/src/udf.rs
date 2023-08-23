@@ -25,7 +25,8 @@ struct PyUdfEvaluator {
 
 #[derive(Clone)]
 #[pyclass]
-pub(crate) struct Udf(Arc<dyn sparrow_instructions::Udf>);
+// TODO: Does it need to extend Expr for some reason? 
+pub(crate) struct Udf(pub Arc<dyn sparrow_instructions::Udf>);
 
 impl sparrow_instructions::Udf for PyUdf {
     fn signature(&self) -> &Signature {
@@ -116,6 +117,7 @@ impl PyUdfEvaluator {
 #[pymethods]
 impl Udf {
     #[new]
+    #[pyo3(signature = (signature, callable))]
     fn new(signature: String, callable: Py<PyAny>) -> Self {
         let uuid = Uuid::new_v4();
         // TODO: sig name string cannot be &'static str

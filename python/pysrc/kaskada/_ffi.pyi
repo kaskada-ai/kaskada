@@ -25,6 +25,12 @@ class Expr:
         args: Sequence[Expr],
     ) -> Expr: ...
     @staticmethod
+    def call_udf(
+        session: Session,
+        udf: Udf, # TODO: ffi udf? 
+        args: Sequence[Expr],
+    ) -> Expr: ...
+    @staticmethod
     def literal(
         session: Session,
         value: int | float | str | None,
@@ -35,6 +41,7 @@ class Expr:
     def session(self) -> Session: ...
     def execute(self, options: Optional[ExecutionOptions] = None) -> Execution: ...
     def grouping(self) -> Optional[str]: ...
+    
 
 class Table(Expr):
     def __init__(
