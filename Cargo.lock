@@ -4853,6 +4853,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-types"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "derive_more",
+ "enum-as-inner",
+ "enum-map",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "itertools 0.11.0",
+ "regex",
+ "static_init",
+]
+
+[[package]]
 name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
