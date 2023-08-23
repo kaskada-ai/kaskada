@@ -4,15 +4,14 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::array::{
     new_null_array, Array, ArrayData, ArrayRef, BooleanArray, BooleanBufferBuilder,
-    GenericStringArray, GenericStringBuilder, Int32BufferBuilder, ListArray, MapArray,
-    OffsetSizeTrait, PrimitiveArray, PrimitiveBuilder, StringArray, StringBuilder, StructArray,
+    GenericStringArray, GenericStringBuilder, Int32Builder, OffsetSizeTrait, PrimitiveArray,
+    PrimitiveBuilder, StructArray, UInt32Array, UInt32Builder,
 };
 use arrow::datatypes::{self, ArrowPrimitiveType, DataType, Fields};
 use bitvec::vec::BitVec;
 use itertools::{izip, Itertools};
 use sparrow_arrow::downcast::{
-    downcast_boolean_array, downcast_list_array, downcast_map_array, downcast_primitive_array,
-    downcast_string_array, downcast_struct_array,
+    downcast_boolean_array, downcast_primitive_array, downcast_string_array, downcast_struct_array,
 };
 use sparrow_arrow::utils::make_null_array;
 use sparrow_instructions::GroupingIndices;
@@ -43,7 +42,7 @@ impl<'de> serde::Deserialize<'de> for Spread {
         let e = SerializedSpread::deserialize(deserializer)?;
         let Some(spread_impl) = e.into_spread_impl() else {
             use serde::de::Error;
-            return Err(D::Error::custom("expected owned"))
+            return Err(D::Error::custom("expected owned"));
         };
 
         Ok(Self { spread_impl })
@@ -167,10 +166,10 @@ enum SerializedSpread<'a> {
     UnlatchedString(Boo<'a, UnlatchedStringSpread<i32>>),
     LatchedLargeString(Boo<'a, LatchedStringSpread<i64>>),
     UnlatchedLargeString(Boo<'a, UnlatchedStringSpread<i64>>),
-    UnlatchedUInt64List(Boo<'a, UnlatchedUInt64ListSpread>),
-    UnlatchedMap(Boo<'a, UnlatchedMapSpread>),
     LatchedStruct(Boo<'a, StructSpread<LatchedStructSpreadState>>),
     UnlatchedStruct(Boo<'a, StructSpread<UnlatchedStructSpreadState>>),
+    LatchedFallback(Boo<'a, LatchedFallbackSpread>),
+    UnlatchedFallback(Boo<'a, UnlatchedFallbackSpread>),
 }
 
 fn into_spread_impl<T: SpreadImpl + 'static>(spread: Boo<'_, T>) -> Option<Box<dyn SpreadImpl>> {
@@ -246,10 +245,10 @@ impl<'a> SerializedSpread<'a> {
             SerializedSpread::UnlatchedString(spread) => into_spread_impl(spread),
             SerializedSpread::LatchedLargeString(spread) => into_spread_impl(spread),
             SerializedSpread::UnlatchedLargeString(spread) => into_spread_impl(spread),
-            SerializedSpread::UnlatchedUInt64List(spread) => into_spread_impl(spread),
-            SerializedSpread::UnlatchedMap(spread) => into_spread_impl(spread),
             SerializedSpread::LatchedStruct(spread) => into_spread_impl(spread),
             SerializedSpread::UnlatchedStruct(spread) => into_spread_impl(spread),
+            SerializedSpread::LatchedFallback(spread) => into_spread_impl(spread),
+            SerializedSpread::UnlatchedFallback(spread) => into_spread_impl(spread),
         }
     }
 }
@@ -347,23 +346,13 @@ impl Spread {
                     Box::new(StructSpread::try_new_unlatched(fields)?)
                 }
             }
-            DataType::Map(_, _) => {
-                anyhow::ensure!(!latched, "Latched map spread not supported");
-                Box::new(UnlatchedMapSpread)
+            fallback => {
+                if latched {
+                    Box::new(LatchedFallbackSpread::new(fallback))
+                } else {
+                    Box::new(UnlatchedFallbackSpread)
+                }
             }
-            DataType::List(field) => {
-                anyhow::ensure!(!latched, "Latched list spread not supported");
-                anyhow::ensure!(
-                    field.data_type() == &DataType::UInt64,
-                    "Unsupported type {:?} for list spread",
-                    field.data_type()
-                );
-                Box::new(UnlatchedUInt64ListSpread)
-            }
-            unsupported => anyhow::bail!(
-                "Unsupported type for spread: {:?} (latched = {latched})",
-                unsupported
-            ),
         };
 
         Ok(Self { spread_impl })
@@ -1262,10 +1251,10 @@ where
         values: &ArrayRef,
         signal: &BooleanArray,
     ) -> anyhow::Result<ArrayRef> {
-        let values: &StringArray = downcast_string_array(values.as_ref())?;
+        let values: &GenericStringArray<O> = downcast_string_array(values.as_ref())?;
         let mut values = values.iter();
 
-        let mut builder = StringBuilder::with_capacity(grouping.len(), 1024);
+        let mut builder = GenericStringBuilder::<O>::with_capacity(grouping.len(), 1024);
         for signal in signal.iter() {
             match signal {
                 Some(true) => builder.append_option(values.next().context("missing value")?),
@@ -1288,9 +1277,9 @@ where
     fn spread_false(
         &mut self,
         grouping: &GroupingIndices,
-        _value_type: &DataType,
+        value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
-        Ok(new_null_array(&DataType::Utf8, grouping.len()))
+        Ok(new_null_array(value_type, grouping.len()))
     }
 }
 
@@ -1676,61 +1665,33 @@ pub(super) fn bit_run_iterator(
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct UnlatchedUInt64ListSpread;
+struct UnlatchedFallbackSpread;
 
-impl ToSerializedSpread for UnlatchedUInt64ListSpread {
+impl ToSerializedSpread for UnlatchedFallbackSpread {
     fn to_serialized_spread(&self) -> SerializedSpread<'_> {
-        SerializedSpread::UnlatchedUInt64List(Boo::Borrowed(self))
+        SerializedSpread::UnlatchedFallback(Boo::Borrowed(self))
     }
 }
 
-impl SpreadImpl for UnlatchedUInt64ListSpread {
+impl SpreadImpl for UnlatchedFallbackSpread {
     fn spread_signaled(
         &mut self,
         grouping: &GroupingIndices,
         values: &ArrayRef,
         signal: &BooleanArray,
     ) -> anyhow::Result<ArrayRef> {
-        // This is a little tricky. Since we're an unlatched spread, we don't
-        // need to spread the underlying values (each item in the list will be
-        // referenced exactly once). Instead, we need to spread out the offset
-        // array.
-
-        let values = downcast_list_array(values.as_ref())?;
-        let mut offset_builder = Int32BufferBuilder::new(grouping.len() + 1);
-
-        let mut null_builder = BooleanBufferBuilder::new(grouping.len());
-
-        // Ensure the buffers are aligned to the offset.
-        offset_builder.append_n_zeroed(values.offset());
-        null_builder.append_n(values.offset(), false);
-
-        let mut offset_iter = values.value_offsets().iter();
-        let mut offset = *offset_iter.next().context("missing offset")?;
-        offset_builder.append(offset);
-
-        let mut index = 0;
+        let mut indices = Int32Builder::with_capacity(grouping.len());
+        let mut next_index = 0;
         for signal in signal.iter() {
-            if matches!(signal, Some(true)) {
-                offset = *offset_iter.next().context("missing offset")?;
-                null_builder.append(values.is_valid(index));
-                index += 1;
+            if signal.unwrap_or(false) {
+                indices.append_value(next_index);
+                next_index += 1;
             } else {
-                null_builder.append(false);
+                indices.append_null();
             }
-            offset_builder.append(offset);
         }
-
-        let data_builder = values.to_data().into_builder();
-        let offset = offset_builder.finish();
-        let array_data = data_builder
-            .len(grouping.len())
-            .null_bit_buffer(Some(null_builder.finish().into_inner()))
-            .buffers(vec![offset])
-            .build()?;
-        let result = ListArray::from(array_data);
-
-        Ok(Arc::new(result))
+        let indices = indices.finish();
+        arrow::compute::take(values.as_ref(), &indices, None).context("failed to take values")
     }
 
     fn spread_true(
@@ -1752,56 +1713,68 @@ impl SpreadImpl for UnlatchedUInt64ListSpread {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct UnlatchedMapSpread;
+struct LatchedFallbackSpread {
+    // The index of the group is used as the index in the data.
+    #[serde(with = "sparrow_arrow::serde::array_ref")]
+    data: ArrayRef,
+}
 
-impl ToSerializedSpread for UnlatchedMapSpread {
-    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
-        SerializedSpread::UnlatchedMap(Boo::Borrowed(self))
+impl LatchedFallbackSpread {
+    fn new(data_type: &DataType) -> Self {
+        // TODO: Upgrade to arrow>=45 and this can be `make_empty(data_type)`
+        let data = ArrayData::new_empty(data_type);
+        let data = arrow::array::make_array(data);
+
+        Self { data }
     }
 }
 
-impl SpreadImpl for UnlatchedMapSpread {
+impl ToSerializedSpread for LatchedFallbackSpread {
+    fn to_serialized_spread(&self) -> SerializedSpread<'_> {
+        SerializedSpread::LatchedFallback(Boo::Borrowed(self))
+    }
+}
+
+impl SpreadImpl for LatchedFallbackSpread {
     fn spread_signaled(
         &mut self,
         grouping: &GroupingIndices,
         values: &ArrayRef,
         signal: &BooleanArray,
     ) -> anyhow::Result<ArrayRef> {
-        let map_values = downcast_map_array(values.as_ref())?;
+        debug_assert_eq!(grouping.len(), signal.len());
+        anyhow::ensure!(self.data.len() <= grouping.num_groups());
 
-        let mut offset_builder = Int32BufferBuilder::new(grouping.len() + 1);
-        let mut null_builder = BooleanBufferBuilder::new(grouping.len());
+        // TODO: We could do this using a separate null buffer and value buffer.
+        // This would allow us to avoid copying the data from this vector to the
+        // data buffers for `take`.
+        let mut state_take_indices: Vec<Option<u32>> = (0..grouping.num_groups())
+            .map(|index| {
+                if index < self.data.len() {
+                    Some(index as u32)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
-        // Ensure the buffers are aligned to the offset.
-        offset_builder.append_n_zeroed(values.offset());
-        null_builder.append_n(values.offset(), false);
-
-        let mut offset_iter = map_values.value_offsets().iter();
-        let mut offset = *offset_iter.next().context("missing offset")?;
-        offset_builder.append(offset);
-
-        let mut index = 0;
-        for signal in signal.iter() {
-            if matches!(signal, Some(true)) {
-                offset = *offset_iter.next().context("missing offset")?;
-                null_builder.append(values.is_valid(index));
-                index += 1;
+        let mut indices = UInt32Builder::with_capacity(grouping.len());
+        let mut next_index = self.data.len() as u32;
+        for (signal, group) in signal.iter().zip(grouping.group_iter()) {
+            if signal.unwrap_or(false) {
+                indices.append_value(next_index);
+                state_take_indices[group] = Some(next_index);
+                next_index += 1;
             } else {
-                null_builder.append(false);
+                indices.append_option(state_take_indices[group]);
             }
-            offset_builder.append(offset);
         }
+        let indices = indices.finish();
 
-        let data_builder = values.to_data().into_builder();
-        let offset = offset_builder.finish();
-        let array_data = data_builder
-            .len(grouping.len())
-            .null_bit_buffer(Some(null_builder.finish().into_inner()))
-            .buffers(vec![offset])
-            .build()?;
-        let result = MapArray::from(array_data);
-
-        Ok(Arc::new(result))
+        let state_take_indices = UInt32Array::from(state_take_indices);
+        let result = sparrow_arrow::concat_take(&self.data, values, &indices)?;
+        self.data = sparrow_arrow::concat_take(&self.data, values, &state_take_indices)?;
+        Ok(result)
     }
 
     fn spread_true(
@@ -1810,15 +1783,40 @@ impl SpreadImpl for UnlatchedMapSpread {
         values: &ArrayRef,
     ) -> anyhow::Result<ArrayRef> {
         anyhow::ensure!(grouping.len() == values.len());
+        anyhow::ensure!(self.data.len() <= grouping.num_groups());
+
+        // TODO: We could do this using a separate null buffer and value buffer.
+        // This would allow us to avoid copying the data from this vector to the
+        // data buffers for `take`.
+        let mut state_take_indices: Vec<Option<u32>> = (0..grouping.num_groups())
+            .map(|index| {
+                if index < self.data.len() {
+                    Some(index as u32)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // This will update the new_state_indices to the last value for each group.
+        // This will null-out the data if the value is null at that point, so we
+        // don't need to hadle that case specially.
+        for (index, group) in grouping.group_iter().enumerate() {
+            state_take_indices[group] = Some((index + self.data.len()) as u32)
+        }
+        let state_take_indices = UInt32Array::from(state_take_indices);
+        self.data = sparrow_arrow::concat_take(&self.data, values, &state_take_indices)?;
+
         Ok(values.clone())
     }
 
     fn spread_false(
         &mut self,
         grouping: &GroupingIndices,
-        value_type: &DataType,
+        _value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
-        Ok(new_null_array(value_type, grouping.len()))
+        arrow::compute::take(self.data.as_ref(), grouping.group_indices(), None)
+            .context("failed to take values")
     }
 }
 
@@ -2210,6 +2208,44 @@ mod tests {
     }
 
     #[test]
+    fn test_large_string_unlatched() {
+        let nums = LargeStringArray::from(vec![
+            Some("5"),
+            Some("8"),
+            None,
+            Some("10"),
+            None,
+            Some("12"),
+        ]);
+        let result = run_spread(
+            Arc::new(nums),
+            vec![0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 0],
+            vec![
+                false, true, false, true, false, true, false, true, false, true, false,
+            ],
+            false,
+        );
+        let result: &LargeStringArray = downcast_string_array(result.as_ref()).unwrap();
+
+        assert_eq!(
+            result,
+            &LargeStringArray::from(vec![
+                None,
+                Some("5"),
+                None,
+                Some("8"),
+                None,
+                None,
+                None,
+                Some("10"),
+                None,
+                None,
+                None
+            ])
+        );
+    }
+
+    #[test]
     fn test_unlatched_uint64_list_spread() {
         let data = vec![
             Some(vec![]),
@@ -2234,6 +2270,39 @@ mod tests {
             None,
             Some(vec![Some(3), Some(5), Some(19)]),
             None,
+            Some(vec![Some(6)]),
+        ];
+        let expected = ListArray::from_iter_primitive::<UInt64Type, _, _>(expected);
+
+        let expected: ArrayRef = Arc::new(expected);
+        assert_eq!(&result, &expected)
+    }
+
+    #[test]
+    fn test_latched_uint64_list_spread() {
+        let data = vec![
+            Some(vec![]),
+            None,
+            Some(vec![Some(3), Some(5), Some(19)]),
+            Some(vec![Some(6)]),
+        ];
+        let list_array = ListArray::from_iter_primitive::<UInt64Type, _, _>(data);
+
+        let result = run_spread(
+            Arc::new(list_array),
+            vec![0, 1, 0, 0, 0, 0, 0, 0],
+            vec![true, false, false, true, false, true, false, true],
+            true,
+        );
+
+        let expected = vec![
+            Some(vec![]),
+            None,
+            Some(vec![]),
+            None,
+            None,
+            Some(vec![Some(3), Some(5), Some(19)]),
+            Some(vec![Some(3), Some(5), Some(19)]),
             Some(vec![Some(6)]),
         ];
         let expected = ListArray::from_iter_primitive::<UInt64Type, _, _>(expected);

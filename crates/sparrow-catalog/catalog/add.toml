@@ -1,8 +1,8 @@
-name = 'add'
-signature = 'add(a: number, b: number) -> number'
-operator = 'a + b'
-short_doc = 'Returns the sum of two numbers.'
-long_doc = '''
+name = "add"
+signature = "add(a: number, b: number) -> number"
+operator = "a + b"
+short_doc = "Returns the sum of two numbers."
+long_doc = """
 This is the function used for the binary operation `a + b`.
 
 ### Parameters
@@ -16,28 +16,28 @@ following the [numeric type coercion rules](docs:data-model#numeric-type-coercio
 Returns a numeric column of the promoted numeric type compatible with both `a` and `b`.
 The result contains `null` if `a` or `b` was null at that row.
 Otherwise the row contains the sum of `a` and `b`.
-'''
-tags = ['math']
+"""
+tags = ["math"]
 
 [[examples]]
-name = 'Addition'
-description = '''
+name = "Addition"
+description = """
 In this example, `a` is an integer column (defaulting to `i64`) and `b`
 is a floating point column (defaulting to `f64`). The result is a floating
 point column, achieved by implicitly converting `a` to `f64`.
-'''
-expression = 'Input.a + Input.b'
-input_csv = '''
+"""
+expression = "Input.a + Input.b"
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,A,5,1.2
 2021-01-02T00:00:00.000000000Z,A,6.3,0.4
 2021-03-01T00:00:00.000000000Z,B,,3.7
 2021-04-10T00:00:00.000000000Z,A,13,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b,result
 2021-01-01T00:00:00.000000000,A,5.0,1.2,6.2
 2021-01-02T00:00:00.000000000,A,6.3,0.4,6.7
 2021-03-01T00:00:00.000000000,B,,3.7,
 2021-04-10T00:00:00.000000000,A,13.0,,
-'''
+"""

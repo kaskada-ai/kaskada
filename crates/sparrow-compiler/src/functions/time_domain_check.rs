@@ -12,7 +12,7 @@ use crate::{AstDfgRef, DataContext, DiagnosticCollector};
 /// are subject to change. It may be better to use a closure to allow defining
 /// the special behaviors as part of each function.
 #[derive(Default)]
-pub(super) enum TimeDomainCheck {
+pub enum TimeDomainCheck {
     /// The function requires the arguments to be compatible, and returns
     /// the resulting time domain.
     ///
@@ -47,7 +47,7 @@ pub(super) enum TimeDomainCheck {
 }
 
 impl TimeDomainCheck {
-    pub(super) fn check_args(
+    pub fn check_args(
         &self,
         location: &Location,
         diagnostics: &mut DiagnosticCollector<'_>,

@@ -282,9 +282,8 @@ impl ColumnBehavior {
                     }
                 );
 
-                let entity_column = sparrow_arrow::hash::hash(column)
-                    .into_report()
-                    .change_context(Error::PreparingColumn)?;
+                let entity_column =
+                    sparrow_arrow::hash::hash(column).change_context(Error::PreparingColumn)?;
 
                 Arc::new(entity_column)
             }

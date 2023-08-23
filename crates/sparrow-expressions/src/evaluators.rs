@@ -94,11 +94,11 @@ impl<'a> StaticInfo<'a> {
     /// Return the scalar value corresponding to the exactly-one literal arguments.
     fn literal(&self) -> error_stack::Result<&'a ScalarValue, Error> {
         error_stack::ensure!(
-            self.args.len() == 1,
+            self.literal_args.len() == 1,
             Error::InvalidLiteralCount {
                 name: self.name.clone(),
                 expected: 1,
-                actual: self.args.len()
+                actual: self.literal_args.len()
             }
         );
         Ok(&self.literal_args[0])

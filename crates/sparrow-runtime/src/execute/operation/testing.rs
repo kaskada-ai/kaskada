@@ -4,11 +4,11 @@ use anyhow::Context;
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use arrow::record_batch::RecordBatch;
 use itertools::Itertools;
-use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan, PlanHash};
+use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan};
 use sparrow_compiler::DataContext;
 
-use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::execute::operation::{OperationContext, OperationExecutor};
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
 
@@ -173,15 +173,13 @@ pub(super) async fn run_operation(
     // Channel for the output stats.
     let (progress_updates_tx, _) = tokio::sync::mpsc::channel(29);
 
-    let key_hash_inverse = KeyHashInverse::from_data_type(DataType::Utf8);
-    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
+    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::Utf8));
 
     let mut context = OperationContext {
         plan: ComputePlan {
             operations: vec![plan],
             ..ComputePlan::default()
         },
-        plan_hash: PlanHash::default(),
         object_stores: Arc::new(ObjectStoreRegistry::default()),
         data_context: DataContext::default(),
         compute_store: None,
@@ -190,6 +188,7 @@ pub(super) async fn run_operation(
         progress_updates_tx,
         output_at_time: None,
         bounded_lateness_ns: None,
+        materialize: false,
     };
     executor
         .execute(
@@ -223,8 +222,7 @@ pub(super) async fn run_operation_json(
         inputs.push(receiver);
     }
 
-    let key_hash_inverse = KeyHashInverse::from_data_type(DataType::Utf8);
-    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
+    let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::Utf8));
 
     let (max_event_tx, mut max_event_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -239,7 +237,6 @@ pub(super) async fn run_operation_json(
             operations: vec![plan],
             ..ComputePlan::default()
         },
-        plan_hash: PlanHash::default(),
         object_stores: Arc::new(ObjectStoreRegistry::default()),
         data_context: DataContext::default(),
         compute_store: None,
@@ -248,6 +245,7 @@ pub(super) async fn run_operation_json(
         progress_updates_tx,
         output_at_time: None,
         bounded_lateness_ns: None,
+        materialize: false,
     };
     executor
         .execute(

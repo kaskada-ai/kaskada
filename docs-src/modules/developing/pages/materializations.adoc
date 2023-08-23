@@ -118,9 +118,7 @@ Python::
 [source,python]
 ----
 from kaskada import materialization
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 materialization.list_materializations()
 ----
@@ -144,9 +142,6 @@ Python::
 [source,python]
 ----
 from kaskada import materialization
-from kaskada.api.session import LocalBuilder
-
-session = LocalBuilder().build()
 
 materialization.get_materialization("PurchaseStats")
 ----
@@ -176,9 +171,7 @@ Python::
 [source,python]
 ----
 from kaskada import materialization
-from kaskada.api.session import LocalBuilder
 
-session = LocalBuilder().build()
 
 materialization.delete_materialization("PurchaseStats")
 ----

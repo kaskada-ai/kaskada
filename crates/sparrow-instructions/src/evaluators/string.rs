@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::ArrayRef;
 use arrow::datatypes::DataType;
 use sparrow_arrow::downcast::downcast_primitive_array;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

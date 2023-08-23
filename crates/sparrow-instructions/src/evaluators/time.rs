@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
+use crate::ValueRef;
 use arrow::array::{
     ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray, TimestampNanosecondArray,
     UInt32Array,
@@ -12,14 +12,9 @@ use arrow::datatypes::{
 };
 use arrow::temporal_conversions::timestamp_ns_to_datetime;
 use chrono::Datelike;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_kernels::lag::LagPrimitive;
-use sparrow_plan::ValueRef;
 
 use crate::evaluators::{Evaluator, RuntimeInfo};
-use crate::{EvaluatorFactory, StateToken, StaticInfo};
+use crate::{EvaluatorFactory, StaticInfo};
 
 /// Evaluator for the `TimeOf` instruction.
 pub(super) struct TimeOfEvaluator {}
@@ -398,62 +393,5 @@ impl EvaluatorFactory for MonthsBetweenEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
         let (time1, time2) = info.unpack_arguments()?;
         Ok(Box::new(Self { time1, time2 }))
-    }
-}
-
-/// Evaluator for the `Lag` instruction.
-pub(super) struct PrimitiveLagEvaluator<T: ArrowPrimitiveType> {
-    input: ValueRef,
-    lag: usize,
-    state: LagPrimitive<T>,
-}
-
-impl<T> Evaluator for PrimitiveLagEvaluator<T>
-where
-    T: ArrowPrimitiveType,
-    T::Native: Serialize + DeserializeOwned + Copy,
-{
-    fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let grouping = info.grouping();
-        self.state.execute(
-            grouping.num_groups(),
-            grouping.group_indices(),
-            &info.value(&self.input)?.array_ref()?,
-            self.lag,
-        )
-    }
-
-    fn state_token(&self) -> Option<&dyn StateToken> {
-        Some(&self.state)
-    }
-
-    fn state_token_mut(&mut self) -> Option<&mut dyn StateToken> {
-        Some(&mut self.state)
-    }
-}
-
-impl<T> EvaluatorFactory for PrimitiveLagEvaluator<T>
-where
-    T: ArrowPrimitiveType,
-    T::Native: Serialize + DeserializeOwned + Copy,
-{
-    fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
-        let (lag, input) = info.unpack_arguments()?;
-        let lag = lag
-            .literal_value()
-            .ok_or_else(|| anyhow!("Expected value of lag to be a literal, was {:?}", lag))?;
-        match lag {
-            ScalarValue::Int64(None) => Err(anyhow!("Unexpected `null` size for lag")),
-            ScalarValue::Int64(Some(lag)) if *lag <= 0 => {
-                Err(anyhow!("Unexpected value of lag ({}) -- must be > 0", lag))
-            }
-            ScalarValue::Int64(Some(lag)) => {
-                let lag = *lag as usize;
-                // TODO: Pass the value of `lag` to the state.
-                let state = LagPrimitive::new();
-                Ok(Box::new(Self { input, lag, state }))
-            }
-            unexpected => anyhow::bail!("Unexpected literal {:?} for lag", unexpected),
-        }
     }
 }

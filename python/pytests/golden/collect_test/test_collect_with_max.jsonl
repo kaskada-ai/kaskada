@@ -1,0 +1,7 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","m":5.0,"collect_m_max_2":[5],"n":10.0,"collect_n_max_2":[10]}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","m":24.0,"collect_m_max_2":[24],"n":3.0,"collect_n_max_2":[3]}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","m":17.0,"collect_m_max_2":[5,17],"n":6.0,"collect_n_max_2":[10,6]}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","m":null,"collect_m_max_2":[5,17],"n":9.0,"collect_n_max_2":[6,9]}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","m":12.0,"collect_m_max_2":[17,12],"n":null,"collect_n_max_2":[6,9]}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","m":null,"collect_m_max_2":[17,12],"n":null,"collect_n_max_2":[6,9]}
+{"_time":"1996-12-19T16:40:04.000000000","_key":"A","m":null,"collect_m_max_2":[17,12],"n":null,"collect_n_max_2":[6,9]}

@@ -25,7 +25,7 @@
 mod batch;
 pub mod execute;
 mod key_hash_index;
-pub mod merge;
+pub mod key_hash_inverse;
 mod metadata;
 mod min_heap;
 pub mod prepare;
@@ -38,6 +38,7 @@ use std::path::PathBuf;
 
 pub use batch::*;
 pub use metadata::*;
+pub use prepare::preparer;
 use read::*;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 
@@ -47,6 +48,7 @@ static DETERMINISTIC_RUNTIME_HASHER: ahash::RandomState =
 #[derive(Debug, Default, Clone)]
 pub(crate) struct RuntimeOptions {
     pub limits: Limits,
+    pub max_batch_size: Option<usize>,
 
     /// Path to store the Query Flight Record to.
     /// Defaults to not storing anything.

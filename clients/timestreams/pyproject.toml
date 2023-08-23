@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "timestreams"
+version = "0.0.1a1"
+description = "A placeholder for a future kaskada project"
+authors = ["Kaskada <maintainers@kaskada.io>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [
+    { include = "timestreams", from = "src" },
+]
+include = ["**/src/timestreams/timestreams/**/*.py"]
+
+[tool.poetry.dependencies]
+python = "^3.8.2"

@@ -1,7 +1,7 @@
-name = 'hash'
-signature = 'hash(input: key) -> u64'
-short_doc = 'Returns the hash of the `input`.'
-long_doc = '''
+name = "hash"
+signature = "hash(input: key) -> u64"
+short_doc = "Returns the hash of the `input`."
+long_doc = """
 ### Parameters
 * input: The argument to hash.
 
@@ -11,13 +11,13 @@ Returns a `u64` column which contains the hash of the `input`.
 Note: Unlike many functions which return `null` if any of
 their arguments are `null`, `hash` will never return
 `null`.
-'''
-tags = ['misc']
+"""
+tags = ["misc"]
 
 [[examples]]
-name = 'String Hash'
-expression = 'hash(Input.value)'
-input_csv = '''
+name = "String Hash"
+expression = "hash(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,hello
 2021-01-01T00:00:00.000000000Z,Ryan,
@@ -25,21 +25,21 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,hi
 2021-01-04T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,earth
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
-2021-01-01T00:00:00.000000000,Ben,hello,13572866306152653102
-2021-01-01T00:00:00.000000000,Ryan,,8429509363638065888
-2021-01-02T00:00:00.000000000,Ryan,world,16979493163667785006
-2021-01-03T00:00:00.000000000,Ben,hi,16532275944129373820
-2021-01-04T00:00:00.000000000,Ben,,8429509363638065888
-2021-01-04T00:00:00.000000000,Ryan,earth,9400903662585293146
-'''
+2021-01-01T00:00:00.000000000,Ben,hello,1472103086483932002
+2021-01-01T00:00:00.000000000,Ryan,,5663277146615294718
+2021-01-02T00:00:00.000000000,Ryan,world,8057155968893317866
+2021-01-03T00:00:00.000000000,Ben,hi,2460612554838835252
+2021-01-04T00:00:00.000000000,Ben,,5663277146615294718
+2021-01-04T00:00:00.000000000,Ryan,earth,14489671231712828724
+"""
 
 [[examples]]
-name = 'Integer Hash'
-expression = 'hash(Input.value)'
-input_csv = '''
+name = "Integer Hash"
+expression = "hash(Input.value)"
+input_csv = """
 time,key,value
 2021-01-01T00:00:00.000000000Z,Ben,5
 2021-01-01T00:00:00.000000000Z,Ryan,8
@@ -47,13 +47,13 @@ time,key,value
 2021-01-03T00:00:00.000000000Z,Ben,8
 2021-01-04T00:00:00.000000000Z,Ben,
 2021-01-04T00:00:00.000000000Z,Ryan,9
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,result
-2021-01-01T00:00:00.000000000,Ben,5,10021492687541564645
-2021-01-01T00:00:00.000000000,Ryan,8,4864632034659211723
-2021-01-02T00:00:00.000000000,Ryan,9,2122274938272070218
-2021-01-03T00:00:00.000000000,Ben,8,4864632034659211723
-2021-01-04T00:00:00.000000000,Ben,,11832085162654999889
-2021-01-04T00:00:00.000000000,Ryan,9,2122274938272070218
-'''
+2021-01-01T00:00:00.000000000,Ben,5,16461383214845928621
+2021-01-01T00:00:00.000000000,Ryan,8,6794973171266502674
+2021-01-02T00:00:00.000000000,Ryan,9,15653042715643359010
+2021-01-03T00:00:00.000000000,Ben,8,6794973171266502674
+2021-01-04T00:00:00.000000000,Ben,,0
+2021-01-04T00:00:00.000000000,Ryan,9,15653042715643359010
+"""

@@ -1,0 +1,302 @@
+[
+    {
+        "client_msg_id": "591fec0d-bdfb-474b-8978-77a54893f62b",
+        "type": "message",
+        "text": "old message in random channel",
+        "user": "U05JQJJDJ6P",
+        "ts": "1690360213.550579",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "jeu",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "old message in random channel"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "g18ebd8787ba",
+            "image_72": "https:\/\/secure.gravatar.com\/avatar\/18ebd8787bac254cb250ef312cb79868.jpg?s=72&d=https%3A%2F%2Fa.slack-edge.com%2Fdf10d%2Fimg%2Favatars%2Fava_0012-72.png",
+            "first_name": "eric",
+            "real_name": "eric",
+            "display_name": "",
+            "team": "T05JA5XCR9D",
+            "name": "eric.pinzur",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        },
+        "edited": {
+            "user": "U05JQJJDJ6P",
+            "ts": "1690360225.000000"
+        }
+    },
+    {
+        "client_msg_id": "0cd6b256-a19f-4038-8c7f-a054f64e71eb",
+        "type": "message",
+        "text": "old thread in random channel",
+        "user": "U05JQJJDJ6P",
+        "ts": "1690360240.229079",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "bQ8",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "old thread in random channel"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "g18ebd8787ba",
+            "image_72": "https:\/\/secure.gravatar.com\/avatar\/18ebd8787bac254cb250ef312cb79868.jpg?s=72&d=https%3A%2F%2Fa.slack-edge.com%2Fdf10d%2Fimg%2Favatars%2Fava_0012-72.png",
+            "first_name": "eric",
+            "real_name": "eric",
+            "display_name": "",
+            "team": "T05JA5XCR9D",
+            "name": "eric.pinzur",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        },
+        "thread_ts": "1690360240.229079",
+        "reply_count": 4,
+        "reply_users_count": 2,
+        "latest_reply": "1690400587.318779",
+        "reply_users": [
+            "U05JQJJDJ6P",
+            "U05JH8BCZST"
+        ],
+        "replies": [
+            {
+                "user": "U05JQJJDJ6P",
+                "ts": "1690360249.137789"
+            },
+            {
+                "user": "U05JQJJDJ6P",
+                "ts": "1690360253.041239"
+            },
+            {
+                "user": "U05JQJJDJ6P",
+                "ts": "1690360257.375049"
+            },
+            {
+                "user": "U05JH8BCZST",
+                "ts": "1690400587.318779"
+            }
+        ],
+        "is_locked": false,
+        "subscribed": true,
+        "last_read": "1690400587.318779"
+    },
+    {
+        "client_msg_id": "9c0ca20a-1ba2-4a77-8ae6-0a0df6e1b170",
+        "type": "message",
+        "text": "reply  1",
+        "user": "U05JQJJDJ6P",
+        "ts": "1690360249.137789",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "RmwzB",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "reply  1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "g18ebd8787ba",
+            "image_72": "https:\/\/secure.gravatar.com\/avatar\/18ebd8787bac254cb250ef312cb79868.jpg?s=72&d=https%3A%2F%2Fa.slack-edge.com%2Fdf10d%2Fimg%2Favatars%2Fava_0012-72.png",
+            "first_name": "eric",
+            "real_name": "eric",
+            "display_name": "",
+            "team": "T05JA5XCR9D",
+            "name": "eric.pinzur",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        },
+        "thread_ts": "1690360240.229079",
+        "parent_user_id": "U05JQJJDJ6P"
+    },
+    {
+        "client_msg_id": "39f61ac4-158f-455a-96d7-95620f56316e",
+        "type": "message",
+        "text": "reply 2",
+        "user": "U05JQJJDJ6P",
+        "ts": "1690360253.041239",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "OAk",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "reply 2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "g18ebd8787ba",
+            "image_72": "https:\/\/secure.gravatar.com\/avatar\/18ebd8787bac254cb250ef312cb79868.jpg?s=72&d=https%3A%2F%2Fa.slack-edge.com%2Fdf10d%2Fimg%2Favatars%2Fava_0012-72.png",
+            "first_name": "eric",
+            "real_name": "eric",
+            "display_name": "",
+            "team": "T05JA5XCR9D",
+            "name": "eric.pinzur",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        },
+        "thread_ts": "1690360240.229079",
+        "parent_user_id": "U05JQJJDJ6P"
+    },
+    {
+        "client_msg_id": "74b7d4b6-664c-48f1-b751-246ed6ffc571",
+        "type": "message",
+        "text": "reply 3",
+        "user": "U05JQJJDJ6P",
+        "ts": "1690360257.375049",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "B+5ba",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "reply 3"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "g18ebd8787ba",
+            "image_72": "https:\/\/secure.gravatar.com\/avatar\/18ebd8787bac254cb250ef312cb79868.jpg?s=72&d=https%3A%2F%2Fa.slack-edge.com%2Fdf10d%2Fimg%2Favatars%2Fava_0012-72.png",
+            "first_name": "eric",
+            "real_name": "eric",
+            "display_name": "",
+            "team": "T05JA5XCR9D",
+            "name": "eric.pinzur",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        },
+        "thread_ts": "1690360240.229079",
+        "parent_user_id": "U05JQJJDJ6P"
+    },
+    {
+        "type": "message",
+        "subtype": "channel_join",
+        "ts": "1690365307.466529",
+        "user": "U05K6LQRDKK",
+        "text": "<@U05K6LQRDKK> has joined the channel",
+        "inviter": "U05JQJJDJ6P"
+    },
+    {
+        "type": "message",
+        "subtype": "channel_join",
+        "ts": "1690400220.312529",
+        "user": "U05JH8BCZST",
+        "text": "<@U05JH8BCZST> has joined the channel"
+    },
+    {
+        "client_msg_id": "92cc8463-bd49-47e5-8501-2cc30ef12efd",
+        "type": "message",
+        "text": "howdy",
+        "user": "U05JH8BCZST",
+        "ts": "1690400587.318779",
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "2Go",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "howdy"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "team": "T05JA5XCR9D",
+        "user_team": "T05JA5XCR9D",
+        "source_team": "T05JA5XCR9D",
+        "user_profile": {
+            "avatar_hash": "b2cae8d05d70",
+            "image_72": "https:\/\/avatars.slack-edge.com\/2023-07-26\/5646266959572_b2cae8d05d70db19c666_72.png",
+            "first_name": "Ryan",
+            "real_name": "Ryan Michael",
+            "display_name": "Ryan Michael",
+            "team": "T05JA5XCR9D",
+            "name": "ryan.michael",
+            "is_restricted": false,
+            "is_ultra_restricted": false
+        },
+        "thread_ts": "1690360240.229079",
+        "parent_user_id": "U05JQJJDJ6P",
+        "reactions": [
+            {
+                "name": "+1",
+                "users": [
+                    "U05JQJJDJ6P"
+                ],
+                "count": 1
+            }
+        ]
+    },
+    {
+        "type": "message",
+        "subtype": "channel_join",
+        "ts": "1690402590.237779",
+        "user": "U05JV3K9RB7",
+        "text": "<@U05JV3K9RB7> has joined the channel"
+    }
+]

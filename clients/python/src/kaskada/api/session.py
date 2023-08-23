@@ -1,9 +1,12 @@
 import logging
 import os
+import re
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+import semver
 
 import kaskada.client
 from kaskada.api import release
@@ -146,11 +149,14 @@ class LocalBuilder(Builder):
 
     manager_configs: Dict[str, Any]
     engine_configs: Dict[str, Any]
+    # The engine version to download, e.g., `engine@v1.2.3-beta.1`. Defaults to None to get latest release.
+    _engine_version: Optional[str]
 
     def __init__(
         self,
         endpoint: str = kaskada.client.KASKADA_DEFAULT_ENDPOINT,
         is_secure: bool = kaskada.client.KASKADA_IS_SECURE,
+        engine_version: Optional[str] = None,
     ) -> None:
         super().__init__()
         self.manager_configs = {"-no-color": "1"}
@@ -162,6 +168,7 @@ class LocalBuilder(Builder):
         self.in_memory(False)
         self.engine_configs: Dict[str, Any] = {"--log-no-color": "1"}
         self.keep_alive(True)
+        self._engine_version = engine_version
 
     def path(self, path: str):
         self._path = path
@@ -221,6 +228,32 @@ class LocalBuilder(Builder):
         self.manager_configs["-grpc-port"] = port
         return self
 
+    def engine_version(self, version: str):
+        """Set a specific version of the engine to download. The version must be in the format `engine@v<semantic-version>`.
+
+        Args:
+            version (str): The git tag for a release on the kaskada repo
+
+        Raises:
+            ValueError: When an invalid version if provided. Note this does not check to the version's existence on Github.
+
+        Returns:
+            LocalBuilder: Updated instance of LocalBuilder with the engine version set.
+        """
+        error_message = "invalid version provided. See https://github.com/kaskada-ai/kaskada/tags for valid values."
+        match = re.search(r"^engine@v(.*)$", version)
+        if match:
+            sem_ver = match.group(1)
+            try:
+                semver.Version.parse(sem_ver)
+            except:
+                raise ValueError(error_message)
+        else:
+            raise ValueError(error_message)
+
+        self._engine_version = version
+        return self
+
     def __get_log_path(self, file_name: str) -> Path:
         if self._path is None:
             raise ValueError("no path provided and KASKADA_PATH was not set")
@@ -274,25 +307,30 @@ class LocalBuilder(Builder):
         )
         return (manager_service, engine_service)
 
-    def __download_latest_release(self):
-        """Downloads the latest release version to the binary path."""
+    def __download_release(self, engine_version: Optional[str] = None):
+        """Downloads a kaskada release version to the binary path.
+
+        Args:
+            engine_version (Optional[str]): The engine version to download, e.g., engine@v<semantic-version>. Defaults to None for latest release.
+        """
         client = release.ReleaseClient()
         download_path = self.__get_binary_path()
         download_path.mkdir(parents=True, exist_ok=True)
-        local_release = client.download_latest_release(
+        local_release = client.download_release(
             download_path,
             KASKADA_MANAGER_BIN_NAME_DEFAULT,
             KASKADA_ENGINE_BIN_NAME_DEFAULT,
+            engine_version,
         )
         logger.debug(f"Download Path: {local_release._download_path}")
         logger.debug(f"Manager Path: {local_release._manager_path}")
         logger.debug(f"Engine Path: {local_release._engine_path}")
         # Update the binary path to the path downloaded and saved to by the latest release downloader.
-        self.bin_path(
-            local_release._download_path.absolute().relative_to(
-                Path(self._path).expanduser().absolute()
-            )
+        full_path = local_release._download_path.absolute().relative_to(
+            Path(self._path).expanduser().absolute()
         )
+        self.bin_path(str(full_path))
+
         os.chmod(local_release._manager_path, 0o755)
         os.chmod(local_release._engine_path, 0o755)
 
@@ -322,7 +360,7 @@ class LocalBuilder(Builder):
                 )
 
         if self._download:
-            self.__download_latest_release()
+            self.__download_release(self._engine_version)
 
         manager_process, engine_process = self.__get_local_services()
         session = LocalSession(

@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{Array, ArrayRef, BooleanArray, UInt32Array};
 use itertools::izip;
 use sparrow_arrow::downcast::downcast_boolean_array;
-use sparrow_plan::ValueRef;
 
 use super::two_stacks_first_boolean_evaluator::TwoStacksFirstBooleanEvaluator;
 use crate::{

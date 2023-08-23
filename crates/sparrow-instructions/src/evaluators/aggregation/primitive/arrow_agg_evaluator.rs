@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::ArrowNativeType;
 use itertools::izip;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sparrow_arrow::downcast::downcast_primitive_array;
-use sparrow_plan::ValueRef;
 
 use super::two_stacks_arrow_agg_evaluator::TwoStacksArrowAggEvaluator;
 use crate::evaluators::aggregation::function::agg_fn::ArrowAggFn;

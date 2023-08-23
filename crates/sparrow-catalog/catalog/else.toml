@@ -1,7 +1,7 @@
-name = 'else'
-signature = 'else(default: any, value: any) -> any'
-short_doc = 'Return the `value` if it is non-`null`, `default` otherwise.'
-long_doc = '''
+name = "else"
+signature = "else(default: any, value: any) -> any"
+short_doc = "Return the `value` if it is non-`null`, `default` otherwise."
+long_doc = """
 ### Parameters
 * default: The result to use if `value` is `null`.
 * value: The result to prefer if it is non-`null`.
@@ -14,52 +14,52 @@ it with the pipe syntax to provide default values, as in
 
 For each row, returns `value` if it is non-`null` in that row, or
 `default` if `value is `null`.
-'''
-tags = ['logical']
+"""
+tags = ["logical"]
 
 [[examples]]
-name = 'Choosing between two values'
-description = '''
+name = "Choosing between two values"
+description = """
 In this example the result is `Input.a` if it is non-`null`, and `Input.b`
 otherwise. This may be combined with [`if`](#if) to conditionaly `null` out
 cases to implement various logical operations.
 
 When chaining multiple conditionals, it may be better to use [`coalesce`](#coalesce).
-'''
-expression = 'Input.a | else(Input.b)'
-input_csv = '''
+"""
+expression = "Input.a | else(Input.b)"
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,X,57.8,63
 2021-01-02T00:00:00.000000000Z,Y,,86.3
 2021-01-03T00:00:00.000000000Z,X,6873,
 2021-01-04T00:00:00.000000000Z,X,,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b,result
 2021-01-01T00:00:00.000000000,X,57.8,63.0,57.8
 2021-01-02T00:00:00.000000000,Y,,86.3,86.3
 2021-01-03T00:00:00.000000000,X,6873.0,,6873.0
 2021-01-04T00:00:00.000000000,X,,,
-'''
+"""
 
 [[examples]]
-name = 'Providing a default value'
-description = '''
+name = "Providing a default value"
+description = """
 This example shows how to use `else` to provide a default value for a
 possibly `null` value.
-'''
-expression = 'Input.a | else(42.0)'
-input_csv = '''
+"""
+expression = "Input.a | else(42.0)"
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,X,57.8,63
 2021-01-02T00:00:00.000000000Z,Y,,86.3
 2021-01-03T00:00:00.000000000Z,X,6873,
 2021-01-04T00:00:00.000000000Z,X,,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b,result
 2021-01-01T00:00:00.000000000,X,57.8,63.0,57.8
 2021-01-02T00:00:00.000000000,Y,,86.3,42.0
 2021-01-03T00:00:00.000000000,X,6873.0,,6873.0
 2021-01-04T00:00:00.000000000,X,,,42.0
-'''
+"""

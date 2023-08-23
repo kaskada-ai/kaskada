@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use arrow::array::{Array, ListArray, UInt32Array, UInt64Array};
+use arrow::array::{Array, AsArray, ListArray, UInt32Array, UInt64Array};
 use async_trait::async_trait;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::StreamExt;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::operation_plan;
-use sparrow_arrow::downcast::{downcast_list_array, downcast_primitive_array};
+use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -111,8 +111,7 @@ impl LookupResponseOperation {
             return Ok(None);
         }
 
-        let requesting_key_hash_list: &ListArray =
-            downcast_list_array(requesting_key_hash_list.as_ref())?;
+        let requesting_key_hash_list: &ListArray = requesting_key_hash_list.as_ref().as_list();
         let requesting_key_hashes = requesting_key_hash_list.values();
         let requesting_key_hashes: &UInt64Array =
             downcast_primitive_array(requesting_key_hashes.as_ref())?;

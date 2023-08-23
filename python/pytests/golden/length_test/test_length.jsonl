@@ -1,0 +1,6 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","str":"apple","len_key":5.0,"list":["apple"],"len_list":1}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","str":"dog","len_key":3.0,"list":["dog"],"len_list":1}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","str":"carrot","len_key":6.0,"list":["apple","carrot"],"len_list":2}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","str":null,"len_key":null,"list":["apple","carrot"],"len_list":2}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","str":"eggplant","len_key":8.0,"list":["apple","carrot","eggplant"],"len_list":3}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","str":"fig","len_key":3.0,"list":["apple","carrot","eggplant","fig"],"len_list":4}

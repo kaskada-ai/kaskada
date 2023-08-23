@@ -188,7 +188,7 @@ pub(super) async fn write(
     // Inform tracker of destination type
     progress_updates_tx
         .send(ProgressUpdate::Destination {
-            destination: Destination::ObjectStore(destination.clone()),
+            destination: Some(Destination::ObjectStore(destination.clone())),
         })
         .await
         .into_report()

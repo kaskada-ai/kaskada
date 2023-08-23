@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use anyhow::Context;
 use arrow::array::ArrayRef;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 
@@ -34,7 +34,7 @@ pub(super) struct HashEvaluator {
 impl Evaluator for HashEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let input = info.value(&self.input)?.array_ref()?;
-        let result = sparrow_arrow::hash::hash(input.as_ref())?;
+        let result = sparrow_arrow::hash::hash(input.as_ref()).map_err(|e| e.into_error())?;
         Ok(Arc::new(result))
     }
 }

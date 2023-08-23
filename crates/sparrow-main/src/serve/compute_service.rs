@@ -20,6 +20,7 @@ use sparrow_instructions::ComputeStore;
 use sparrow_materialize::{Materialization, MaterializationControl};
 use sparrow_qfr::kaskada::sparrow::v1alpha::{flight_record_header, FlightRecordHeader};
 use sparrow_runtime::execute::error::Error;
+use sparrow_runtime::execute::output::Destination;
 use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use tempfile::NamedTempFile;
 
@@ -301,7 +302,8 @@ fn start_materialization_impl(
     let destination = request
         .destination
         .ok_or(Error::MissingField("destination"))?;
-
+    let destination =
+        Destination::try_from(destination).change_context(Error::InvalidDestination)?;
     let materialization = Materialization::new(id, plan, tables, destination);
     // TODO: Support lateness
     // Spawns the materialization thread and begin exeution
@@ -792,7 +794,7 @@ mod tests {
 
         let parquet_metadata = reader.metadata();
         let parquet_metadata = parquet_metadata.file_metadata();
-        assert_eq!(parquet_metadata.num_rows(), 54_068);
+        assert_eq!(parquet_metadata.num_rows(), 49_540);
         assert_eq!(parquet_metadata.schema_descr().num_columns(), 11);
 
         // Second, redact the output paths and check the response.

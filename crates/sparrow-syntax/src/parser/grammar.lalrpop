@@ -264,8 +264,18 @@ TypeClass: TypeClass = {
   }
 }
 
-Type: FenlType = {
-  <l:@L> <name:ParameterWithTypeVars> <r:@R> => FenlType::from_str(&name).unwrap_or_else(|e| {
+pub(crate) Type: FenlType = {
+    <l:@L> <name:ident> "<" <types:Comma<Type>> ">" <r:@R> => {
+    if name == "list" && types.len() == 1 {
+      FenlType::Collection(Collection::List, types.to_vec()).normalize()
+    } else if name == "map" && types.len() == 2 {
+      FenlType::Collection(Collection::Map, types.to_vec()).normalize()
+    } else {
+      errors.push(ParseError::User{ error: (l, format!("Invalid Fenl Type"), r)});
+      FenlType::Error
+    }
+  },
+  <l:@L> <name:ident> <r:@R> => FenlType::from_str(&name).unwrap_or_else(|e| {
     errors.push(ParseError::User{ error: (l, format!("Invalid Fenl Type '{}'", name), r)});
     e
   }),
@@ -273,22 +283,6 @@ Type: FenlType = {
     errors.push(<>.error);
     FenlType::Error
   }
-}
-
-ParameterWithTypeVars: String = {
-  <name:ident> => name.to_string(),
-  <name:ident> <type_vars:TypeVariables> => {
-    let mut result = String::new();
-    result.push_str(name);
-    result.push('<');
-    result.push_str(&type_vars.join(","));
-    result.push('>');
-    result
-  },
-}
-
-TypeVariables: ArgVec<&'input str> = {
-  "<" <args:Comma<ident>> ">" => args,
 }
 
 Located<T>: Located<T> = {

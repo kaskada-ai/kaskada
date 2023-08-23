@@ -1,3 +1,4 @@
+use hashbrown::HashSet;
 use itertools::Itertools;
 
 use crate::parser::try_parse_signature;
@@ -48,7 +49,7 @@ impl TypeParameter {
 }
 
 /// The signature of an operator or function.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Signature {
     /// The name of the operator or function.
@@ -65,6 +66,77 @@ pub struct Signature {
     result: FenlType,
 }
 
+fn check_signature(
+    name: &str,
+    parameters: &Parameters<ExprRef>,
+    type_parameters: &[TypeParameter],
+    result: &FenlType,
+) -> anyhow::Result<()> {
+    fn visit_type<'a>(type_vars: &mut HashSet<&'a TypeVariable>, ty: &'a FenlType) {
+        match ty {
+            FenlType::TypeRef(type_var) => {
+                type_vars.insert(type_var);
+            }
+            FenlType::Collection(_, coll_types) => {
+                for type_var in coll_types {
+                    visit_type(type_vars, type_var);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // collect all the type variables and verify they are defined
+    let mut type_vars = HashSet::new();
+    let defined: HashSet<_> = type_parameters.iter().map(|p| &p.name).collect();
+
+    for t in parameters.types() {
+        visit_type(&mut type_vars, t.inner());
+    }
+
+    // check that all type variables defined are used in the parameters.
+    // we do this before adding the result since we can't infer the type
+    // for a type variable used only in the return.
+    for tp in type_parameters {
+        anyhow::ensure!(
+            type_vars.contains(&&tp.name),
+            "Type variable '{:?}' is defined in the type parameters for signature '{}',
+          but is not used in the parameters",
+            tp.name,
+            name
+        );
+    }
+
+    visit_type(&mut type_vars, result);
+
+    // check that all referenced type variables are defined
+    for type_var in type_vars {
+        anyhow::ensure!(
+            defined.contains(&type_var),
+            "Type variable '{:?}' is not defined in the type parameters for signature: '{:?}'",
+            type_var,
+            name
+        );
+    }
+
+    // check that no duplicates exist in the type_parameters
+    let duplicates: Vec<_> = type_parameters
+        .iter()
+        .map(|p| &p.name.0)
+        .duplicates()
+        .collect();
+    if !duplicates.is_empty() {
+        anyhow::bail!(
+            "Duplicate type parameters: {} in signature for '{name}'",
+            duplicates
+                .iter()
+                .format_with(",", |elt, f| f(&format_args!("'{elt}'")))
+        );
+    };
+
+    Ok(())
+}
+
 impl Signature {
     pub(crate) fn try_new(
         name: String,
@@ -72,54 +144,7 @@ impl Signature {
         type_parameters: Vec<TypeParameter>,
         result: FenlType,
     ) -> anyhow::Result<Self> {
-        // collect all the type variables and verify they are defined
-        let mut type_vars = Vec::new();
-        for t in parameters.types() {
-            match t.inner() {
-                FenlType::TypeRef(type_var) => {
-                    verify_is_defined(type_var, &type_parameters, &name)?;
-                    type_vars.push(type_var)
-                }
-                FenlType::Collection(_, coll_types) => {
-                    for type_var in coll_types {
-                        verify_is_defined(type_var, &type_parameters, &name)?;
-                        type_vars.push(type_var);
-                    }
-                }
-                _ => (),
-            }
-        }
-        if let FenlType::TypeRef(type_var) = &result {
-            verify_is_defined(type_var, &type_parameters, &name)?;
-            type_vars.push(type_var);
-        }
-
-        // check that all type parameters defined are used in the parameters or result
-        for tp in &type_parameters {
-            anyhow::ensure!(
-                type_vars.iter().contains(&&tp.name),
-                "Type variable '{:?}' is defined in the type parameters for signature '{}',
-                    but is not used in the parameters or result",
-                tp.name,
-                name
-            );
-        }
-
-        // check that no duplicates exist in the type_parameters
-        let duplicates: Vec<_> = type_parameters
-            .iter()
-            .map(|p| &p.name.0)
-            .duplicates()
-            .collect();
-        if !duplicates.is_empty() {
-            anyhow::bail!(
-                "Duplicate type parameters: {} in signature for '{name}'",
-                duplicates
-                    .iter()
-                    .format_with(",", |elt, f| f(&format_args!("'{elt}'")))
-            );
-        };
-
+        check_signature(&name, &parameters, &type_parameters, &result)?;
         Ok(Self {
             name,
             parameters,
@@ -160,29 +185,13 @@ impl Signature {
         } else {
             assert!(
                 num_args == self.parameters.names().len(),
-                "Expected operator '{:?}' to have exactly {:?} arguments, but was {:?}",
+                "Expected operator '{:?}' to have exactly {:?} arguments, but was {:?} ({self:?})",
                 self.name,
                 self.parameters.names().len(),
                 num_args,
             )
         }
     }
-}
-
-/// Verifies the type variable is defined in the type parameters.
-fn verify_is_defined(
-    type_var: &TypeVariable,
-    type_parameters: &[TypeParameter],
-    signature: &str,
-) -> anyhow::Result<()> {
-    if !type_parameters.iter().any(|tp| &tp.name == type_var) {
-        anyhow::bail!(
-            "Type variable '{:?}' is not defined in the type parameters for signature: '{:?}'",
-            type_var,
-            signature
-        )
-    }
-    Ok(())
 }
 
 #[cfg(test)]

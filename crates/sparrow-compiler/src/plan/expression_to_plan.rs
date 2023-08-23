@@ -2,7 +2,7 @@ use anyhow::Context;
 use sparrow_api::kaskada::v1alpha::DataType;
 use sparrow_api::kaskada::v1alpha::{expression_plan, ExpressionPlan};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::{InstKind, Mode};
+use sparrow_instructions::InstKind;
 use sparrow_syntax::{ArgVec, FenlType};
 
 use crate::dfg::Expression;
@@ -35,6 +35,7 @@ pub(super) fn dfg_to_plan(
                 InstKind::FieldRef => "field_ref".to_owned(),
                 InstKind::Record => "record".to_owned(),
                 InstKind::Cast(_) => "cast".to_owned(),
+                InstKind::Udf(udf) => udf.signature().name().to_owned(),
             };
 
             let result_type =
@@ -97,11 +98,7 @@ fn infer_result_type(
         }
     }
 
-    let result_type = crate::types::instruction::typecheck_inst(
-        inst_kind,
-        argument_types,
-        &argument_literals,
-        Mode::Plan,
-    )?;
+    let result_type =
+        crate::types::instruction::typecheck_inst(inst_kind, argument_types, &argument_literals)?;
     DataType::try_from(&result_type).context("unable to encode result type")
 }

@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use super::BoxedOperation;
 use crate::execute::error::{invalid_operation, Error};
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::expression_executor::InputColumn;
 use crate::execute::operation::single_consumer_helper::SingleConsumerHelper;
 use crate::execute::operation::{InputBatch, Operation, OperationContext};
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::Batch;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -104,7 +104,7 @@ impl WithKeyOperation {
 
         // Hash the new key column
         let new_keys = input.column(self.new_key_input_index);
-        let new_key_hashes = sparrow_arrow::hash::hash(new_keys)?;
+        let new_key_hashes = sparrow_arrow::hash::hash(new_keys).map_err(|e| e.into_error())?;
         let time = input.column(0);
         let subsort = input.column(1);
 
@@ -115,8 +115,9 @@ impl WithKeyOperation {
         // primary grouping to produce the key hash inverse for output.
         if self.is_primary_grouping {
             self.key_hash_inverse
-                .add(new_keys.to_owned(), &new_key_hashes)
-                .await?;
+                .add(new_keys.as_ref(), &new_key_hashes)
+                .await
+                .map_err(|e| e.into_error())?;
         }
 
         // Get the take indices, which will allow us to get the requested columns from
@@ -234,10 +235,10 @@ mod tests {
         .unwrap();
         insta::assert_snapshot!(run_operation(vec![input], plan).await.unwrap(), @r###"
         _time,_subsort,_key_hash,e2,e3
-        1970-01-01T00:00:00.000002000,0,16001504133914743519,0.2,1.2
-        1970-01-01T00:00:00.000003000,0,8744336087600879417,2.0,4.0
-        1970-01-01T00:00:00.000004000,0,16001504133914743519,3.2,6.2
-        1970-01-01T00:00:00.000005000,0,16001504133914743519,2.1,6.1
+        1970-01-01T00:00:00.000002000,0,11333881584776451256,0.2,1.2
+        1970-01-01T00:00:00.000003000,0,4285267486210181199,2.0,4.0
+        1970-01-01T00:00:00.000004000,0,11333881584776451256,3.2,6.2
+        1970-01-01T00:00:00.000005000,0,11333881584776451256,2.1,6.1
         "###);
     }
 }

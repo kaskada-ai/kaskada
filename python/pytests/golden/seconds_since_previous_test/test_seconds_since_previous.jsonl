@@ -1,0 +1,6 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","seconds_since":null,"seconds_since_1":null,"seconds_since_2":null}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","seconds_since":null,"seconds_since_1":null,"seconds_since_2":null}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","seconds_since":2.0,"seconds_since_1":2.0,"seconds_since_2":null}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","seconds_since":1.0,"seconds_since_1":1.0,"seconds_since_2":3.0}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","seconds_since":1.0,"seconds_since_1":1.0,"seconds_since_2":2.0}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","seconds_since":1.0,"seconds_since_1":1.0,"seconds_since_2":2.0}

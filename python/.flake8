@@ -1,0 +1,7 @@
+[flake8]
+select = B,B9,C,E,F,N,W
+ignore = E203,E501,W503
+max-line-length = 100
+max-complexity = 10
+rst-roles = class,const,func,meth,mod,ref
+rst-directives = deprecated

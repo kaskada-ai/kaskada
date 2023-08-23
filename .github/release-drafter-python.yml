@@ -1,9 +1,6 @@
 _extends: kaskada:.github/release-drafter.yml
 
-name-template: Python $RESOLVED_VERSION
-tag-template: python@v$RESOLVED_VERSION
-tag-prefix: python@v
-
-# Only include PRs with one of these labels
-include-labels:
-  - python
+name-template: Kaskada $RESOLVED_VERSION-a.0
+tag-template: v$RESOLVED_VERSION-a.0
+tag-prefix: v
+include-pre-releases: true

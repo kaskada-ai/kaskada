@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::compute::math_op;
 use arrow::datatypes::{ArrowNativeTypeOp, ArrowNumericType};
 use num::traits::Pow;
 use sparrow_arrow::scalar_value::NativeFromScalar;
-use sparrow_plan::ValueRef;
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
 

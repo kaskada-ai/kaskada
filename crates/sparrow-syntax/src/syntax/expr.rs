@@ -8,7 +8,7 @@ use crate::parser::try_parse_expr;
 use crate::{ArgVec, Arguments, FenlType, LiteralValue, ParseErrors, Resolved};
 
 /// Identifies a specific part of a feature set query.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub enum FeatureSetPart {
     /// Internal definitions that don't reference contents of FeatureSet.
@@ -25,12 +25,14 @@ pub enum FeatureSetPart {
     Formula(u32),
     /// The query.
     Query,
+    /// Code coming from python.
+    Builder,
 }
 
 /// The location of part of an expression in the original source.
 ///
 /// Contains the start and end position in bytes within the source.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Location {
     /// The part of the feature set this location is in.
@@ -44,6 +46,10 @@ pub struct Location {
 impl Location {
     pub fn new(part: FeatureSetPart, start: usize, end: usize) -> Self {
         Self { part, start, end }
+    }
+
+    pub fn builder() -> Self {
+        Location::new(FeatureSetPart::Builder, 0, "builder".len())
     }
 
     pub fn internal_str(value: &'static str) -> Self {
@@ -107,6 +113,13 @@ impl<T> Located<T> {
         Self { value, location }
     }
 
+    pub fn builder(value: T) -> Self {
+        Self {
+            value,
+            location: Location::builder(),
+        }
+    }
+
     pub fn inner(&self) -> &T {
         &self.value
     }
@@ -132,6 +145,13 @@ impl<T> Located<T> {
             value: f(self.value),
             location: self.location,
         }
+    }
+
+    pub fn try_map<T2, E>(self, f: impl FnOnce(T) -> Result<T2, E>) -> Result<Located<T2>, E> {
+        Ok(Located {
+            value: f(self.value)?,
+            location: self.location,
+        })
     }
 
     pub fn with_value<T2>(&self, value: T2) -> Located<T2> {
@@ -200,7 +220,7 @@ impl<T: std::hash::Hash> std::hash::Hash for Located<T> {
 /// can be passed around without copying.
 pub type ExprRef = Arc<Expr>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct Expr {
     op: ExprOp,
@@ -236,7 +256,7 @@ impl ResolvedExpr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub enum ExprOp {
     Literal(Located<LiteralValue>),

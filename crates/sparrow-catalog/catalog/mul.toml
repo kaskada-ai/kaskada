@@ -1,8 +1,8 @@
-name = 'mul'
-signature = 'mul(a: number, b: number) -> number'
-operator = 'a * b'
-short_doc = 'Returns the product of two numbers.'
-long_doc = '''
+name = "mul"
+signature = "mul(a: number, b: number) -> number"
+operator = "a * b"
+short_doc = "Returns the product of two numbers."
+long_doc = """
 This is the function used for the binary operation `a * b`.
 
 ### Parameters
@@ -16,23 +16,23 @@ following the [numeric type coercion rules](docs:data-model#numeric-type-coercio
 Returns a numeric column of the promoted numeric type compatible with both `a` and `b`.
 The result contains `null` if `a` or `b` was null at that row.
 Otherwise the row contains the product of `a` and `b`.
-'''
-tags = ['math']
+"""
+tags = ["math"]
 
 [[examples]]
-name = 'Multiplication'
-expression = 'Input.a * Input.b'
-input_csv = '''
+name = "Multiplication"
+expression = "Input.a * Input.b"
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,A,5.7,1.2
 2021-01-01T00:00:00.000000000Z,A,6.3,0.4
 2021-01-01T00:00:00.000000000Z,B,,3.7
 2021-01-01T00:00:00.000000000Z,A,13.2,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b,result
 2021-01-01T00:00:00.000000000,A,5.7,1.2,6.84
 2021-01-01T00:00:00.000000000,A,6.3,0.4,2.52
 2021-01-01T00:00:00.000000000,B,,3.7,
 2021-01-01T00:00:00.000000000,A,13.2,,
-'''
+"""

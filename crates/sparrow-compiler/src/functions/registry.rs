@@ -3,6 +3,8 @@ use hashbrown::HashMap;
 use sparrow_syntax::{FeatureSetPart, Signature};
 use static_init::dynamic;
 
+use crate::nearest_matches::NearestMatches;
+
 use super::{Function, FunctionBuilder};
 
 pub(super) struct Registry {
@@ -56,9 +58,9 @@ impl Registry {
 ///
 /// # Errors
 /// Returns the 5 closest matches from the registry.
-pub fn get_function(name: &str) -> Result<&'static Function, Vec<&'static str>> {
+pub fn get_function(name: &str) -> Result<&'static Function, NearestMatches<&'static str>> {
     REGISTRY.get_by_name(name).ok_or_else(|| {
-        crate::nearest_matches::nearest_matches(
+        crate::nearest_matches::NearestMatches::new_nearest_strs(
             name,
             REGISTRY
                 .iter()

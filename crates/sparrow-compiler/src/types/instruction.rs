@@ -5,8 +5,8 @@ use arrow::datatypes::{DataType, Field};
 use itertools::{izip, Itertools};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::CastEvaluator;
-use sparrow_plan::{InstKind, Mode};
-use sparrow_syntax::{ArgVec, FenlType, Resolved};
+use sparrow_instructions::InstKind;
+use sparrow_syntax::{ArgVec, Collection, FenlType, Resolved};
 
 use crate::types::inference::validate_instantiation;
 
@@ -20,13 +20,22 @@ pub(crate) fn typecheck_inst(
     inst: &InstKind,
     argument_types: ArgVec<FenlType>,
     argument_literals: &[Option<ScalarValue>],
-    mode: Mode,
 ) -> anyhow::Result<FenlType> {
     match inst {
         InstKind::Simple(instruction) => {
-            let signature = instruction.signature(mode);
+            let signature = instruction.signature();
             let argument_types = Resolved::new(
                 Cow::Borrowed(signature.parameters().names()),
+                argument_types,
+                signature.parameters().has_vararg,
+            );
+
+            validate_instantiation(&argument_types, signature)
+        }
+        InstKind::Udf(udf) => {
+            let signature = udf.signature();
+            let argument_types = Resolved::new(
+                Cow::Owned(signature.parameters().names().to_owned()),
                 argument_types,
                 signature.parameters().has_vararg,
             );
@@ -54,32 +63,7 @@ pub(crate) fn typecheck_inst(
                     );
                 };
 
-            if let FenlType::Concrete(DataType::Struct(fields)) = &argument_types[0] {
-                // TODO: Handle nullability?
-                let result_type = fields
-                    .iter()
-                    .find_map(|field| {
-                        if field.name() == field_name {
-                            Some(FenlType::Concrete(field.data_type().clone()))
-                        } else {
-                            None
-                        }
-                    })
-                    .with_context(|| {
-                        format!(
-                            "No field named '{}' found in struct {:?}",
-                            field_name, argument_types[0]
-                        )
-                    })?;
-
-                Ok(result_type)
-            } else {
-                Err(anyhow!(
-                    "Unable to access field {} of type {:?}",
-                    field_name,
-                    argument_types[0]
-                ))
-            }
+            typecheck_field_ref(field_name, &argument_types[0])
         }
         InstKind::Cast(data_type) => {
             anyhow::ensure!(
@@ -137,5 +121,34 @@ pub(crate) fn typecheck_inst(
             let result_type = DataType::Struct(fields.into());
             Ok(FenlType::Concrete(result_type))
         }
+    }
+}
+
+fn typecheck_field_ref(field_name: &str, base: &FenlType) -> anyhow::Result<FenlType> {
+    if let FenlType::Concrete(DataType::Struct(fields)) = base {
+        // TODO: Handle nullability?
+        let result_type = fields
+            .iter()
+            .find_map(|field| {
+                if field.name() == field_name {
+                    Some(FenlType::Concrete(field.data_type().clone()))
+                } else {
+                    None
+                }
+            })
+            .with_context(|| {
+                format!("No field named '{}' found in struct {:?}", field_name, base)
+            })?;
+
+        Ok(result_type)
+    } else if let Some(args) = base.collection_args(&sparrow_syntax::Collection::List) {
+        let field = typecheck_field_ref(field_name, &args[0])?;
+        Ok(FenlType::Collection(Collection::List, vec![field]).normalize())
+    } else {
+        Err(anyhow!(
+            "Unable to access field {} of type {:?}",
+            field_name,
+            base
+        ))
     }
 }

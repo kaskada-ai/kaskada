@@ -236,7 +236,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      helpers.GetFileURI(fileName),
+						Uri:      helpers.GetTestFileURI(fileName),
 					},
 				},
 			})
@@ -298,7 +298,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      helpers.GetFileURI(fileName),
+						Uri:      helpers.GetTestFileURI(fileName),
 					},
 				},
 			})
@@ -320,7 +320,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      helpers.GetFileURI(fileName),
+						Uri:      helpers.GetTestFileURI(fileName),
 					},
 				},
 			})
@@ -366,7 +366,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      helpers.GetFileURI(fileName),
+						Uri:      helpers.GetTestFileURI(fileName),
 					},
 				},
 				CopyToFilesystem: true,
@@ -387,7 +387,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      helpers.GetFileURI(fileName),
+						Uri:      helpers.GetTestFileURI(fileName),
 					},
 				},
 				CopyToFilesystem: true,
@@ -538,7 +538,7 @@ var _ = Describe("Tables", Ordered, func() {
 				SourceData: &v1alpha.LoadDataRequest_FileInput{
 					FileInput: &v1alpha.FileInput{
 						FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-						Uri:      helpers.GetFileURI(fileName),
+						Uri:      helpers.GetTestFileURI(fileName),
 					},
 				},
 			})

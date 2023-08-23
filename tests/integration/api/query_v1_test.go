@@ -193,7 +193,7 @@ min_amount: query_v1_test.amount | min(),
 					SourceData: &v1alpha.LoadDataRequest_FileInput{
 						FileInput: &v1alpha.FileInput{
 							FileType: v1alpha.FileType_FILE_TYPE_PARQUET,
-							Uri:      helpers.GetFileURI("purchases/purchases_part2.parquet"),
+							Uri:      helpers.GetTestFileURI("purchases/purchases_part2.parquet"),
 						},
 					},
 					CopyToFilesystem: true,

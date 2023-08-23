@@ -16,7 +16,7 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = Describe("Materializations", Ordered, Label("redis"), Label("redis-ai"), func() {
+var _ = Describe("Materializations", Ordered, func() {
 	var ctx context.Context
 	var cancel context.CancelFunc
 	var conn *grpc.ClientConn

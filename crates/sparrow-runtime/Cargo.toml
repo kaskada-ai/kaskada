@@ -18,6 +18,8 @@ pulsar = ["dep:pulsar", "avro", "lz4"]
 ahash.workspace = true
 anyhow.workspace = true
 arrow.workspace = true
+arrow-array.workspace = true
+arrow-select.workspace = true
 async-once-cell.workspace = true
 async-stream.workspace = true
 async-trait.workspace = true
@@ -63,7 +65,7 @@ sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }
-sparrow-plan = { path = "../sparrow-plan" }
+sparrow-merge = { path = "../sparrow-merge", features = ["testing"] }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true
@@ -89,7 +91,3 @@ tempfile.workspace = true
 [lib]
 bench = false
 doctest = false
-
-[[bench]]
-name = "main"
-harness = false

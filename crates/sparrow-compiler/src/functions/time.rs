@@ -1,4 +1,4 @@
-use sparrow_plan::InstOp;
+use sparrow_instructions::InstOp;
 
 use crate::functions::time_domain_check::TimeDomainCheck;
 use crate::functions::{Implementation, Registry};
@@ -133,5 +133,7 @@ pub(super) fn register(registry: &mut Registry) {
     // Note: Lag is specifically *not* an aggregation function.
     registry
         .register("lag<O: ordered>(const n: i64, input: O) -> O")
-        .with_implementation(Implementation::Instruction(InstOp::Lag));
+        .with_implementation(Implementation::new_fenl_rewrite(
+            "input | collect(min=n+1, max=n+1) | index(0)",
+        ));
 }

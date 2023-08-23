@@ -1,7 +1,7 @@
-name = 'extend'
-signature = 'extend(new, old) -> extended'
-short_doc = 'Extends a record with fields from another.'
-long_doc = '''
+name = "extend"
+signature = "extend(new, old) -> extended"
+short_doc = "Extends a record with fields from another."
+long_doc = """
 ### Parameters
 * new: The record column containing the new fields.
 * old: The record column containing the old fields.
@@ -13,25 +13,25 @@ a way to add fields to the `old` record.
 Returns a column containing the combined record fields from both `old` and `new`.
 If either `old` or `new` are `null` then the fields from the given record are `null`.
 If a field exists in both `old` and `new`, the value from `new` is preferred.
-'''
-tags = ['record']
+"""
+tags = ["record"]
 
 [[examples]]
-name = 'Record Extension'
-full_expression = '''
+name = "Record Extension"
+full_expression = """
 extend(Input, { sum: Input.a + Input.b, five: 5 })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,a,b
 2021-01-01T00:00:00.000000000Z,A,5,1.2
 2021-01-02T00:00:00.000000000Z,A,6.3,0.4
 2021-03-01T00:00:00.000000000Z,B,,3.7
 2021-04-10T00:00:00.000000000Z,A,13,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,a,b,sum,five
 2021-01-01T00:00:00.000000000,A,5.0,1.2,6.2,5
 2021-01-02T00:00:00.000000000,A,6.3,0.4,6.7,5
 2021-03-01T00:00:00.000000000,B,,3.7,,5
 2021-04-10T00:00:00.000000000,A,13.0,,,5
-'''
+"""

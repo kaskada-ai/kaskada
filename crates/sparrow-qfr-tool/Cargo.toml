@@ -23,7 +23,6 @@ serde_yaml.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-plan = { path = "../sparrow-plan" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 tracing.workspace = true

@@ -10,7 +10,7 @@ use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{self, operation_input_ref, operation_plan};
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_instructions::ComputeStore;
-use sparrow_plan::TableId;
+use sparrow_instructions::TableId;
 use sparrow_qfr::FlightRecorder;
 
 use super::BoxedOperation;
@@ -156,6 +156,59 @@ impl ScanOperation {
                     "scan operation failed to convert schema to Arrow schema"
                 ))?,
         );
+
+        if let Some(in_memory) = &table_info.in_memory {
+            // Hacky. When doing the Python-builder, use the in-memory batch.
+            // Ideally, this would be merged with the contents of the file.
+            // Bonus points if it deduplicates. That would allow us to use the
+            // in-memory batch as the "hot-store" for history+stream hybrid
+            // queries.
+            assert!(requested_slice.is_none());
+
+            // TODO: Consider stoppable batch scans (and queries).
+            let input_stream = if context.materialize {
+                in_memory
+                    .subscribe()
+                    .map_err(|e| e.change_context(Error::internal_msg("invalid input")))
+                    .and_then(|batch| async move {
+                        Batch::try_new_from_batch(batch)
+                            .into_report()
+                            .change_context(Error::internal_msg("invalid input"))
+                    })
+                    // TODO: Share this code / unify it with other scans.
+                    .take_until(async move {
+                        let mut stop_signal_rx =
+                            stop_signal_rx.expect("stop signal for use with materialization");
+                        while !*stop_signal_rx.borrow() {
+                            match stop_signal_rx.changed().await {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    tracing::error!(
+                                        "stop signal receiver dropped unexpectedly: {:?}",
+                                        e
+                                    );
+                                    break;
+                                }
+                            }
+                        }
+                    })
+                    .boxed()
+            } else {
+                let batch = in_memory.current();
+                futures::stream::once(async move {
+                    Batch::try_new_from_batch(batch)
+                        .into_report()
+                        .change_context(Error::internal_msg("invalid input"))
+                })
+                .boxed()
+            };
+            return Ok(Box::new(Self {
+                projected_schema,
+                input_stream,
+                key_hash_index: KeyHashIndex::default(),
+                progress_updates_tx: context.progress_updates_tx.clone(),
+            }));
+        }
 
         // Figure out the projected columns from the table schema.
         //
@@ -332,16 +385,16 @@ mod tests {
     use sparrow_api::kaskada::v1alpha::{self, data_type};
     use sparrow_api::kaskada::v1alpha::{
         expression_plan, literal, operation_plan, ComputePlan, ComputeTable, ExpressionPlan,
-        Literal, OperationInputRef, OperationPlan, PlanHash, PreparedFile, SlicePlan, TableConfig,
+        Literal, OperationInputRef, OperationPlan, PreparedFile, SlicePlan, TableConfig,
         TableMetadata,
     };
     use sparrow_arrow::downcast::downcast_primitive_array;
     use sparrow_compiler::DataContext;
     use uuid::Uuid;
 
-    use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
     use crate::execute::operation::testing::batches_to_csv;
     use crate::execute::operation::{OperationContext, OperationExecutor};
+    use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
     use crate::read::testing::write_parquet_file;
     use crate::stores::ObjectStoreRegistry;
 
@@ -449,8 +502,7 @@ mod tests {
             })),
         };
 
-        let key_hash_inverse = KeyHashInverse::from_data_type(DataType::Utf8);
-        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(key_hash_inverse));
+        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::Utf8));
 
         let (max_event_tx, mut max_event_rx) = tokio::sync::mpsc::unbounded_channel();
         let (sender, receiver) = tokio::sync::mpsc::channel(10);
@@ -464,7 +516,6 @@ mod tests {
                 operations: vec![plan],
                 ..ComputePlan::default()
             },
-            plan_hash: PlanHash::default(),
             object_stores: Arc::new(ObjectStoreRegistry::default()),
             data_context,
             compute_store: None,
@@ -473,6 +524,7 @@ mod tests {
             progress_updates_tx,
             output_at_time: None,
             bounded_lateness_ns: None,
+            materialize: false,
         };
 
         executor

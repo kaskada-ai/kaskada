@@ -13,6 +13,7 @@ Compiler from Fenl syntax to Sparrow execution plans.
 ahash.workspace = true
 anyhow.workspace = true
 arrow.workspace = true
+arrow-schema.workspace = true
 bit-set.workspace = true
 chrono.workspace = true
 const_format.workspace = true
@@ -42,7 +43,7 @@ sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-kernels = { path = "../sparrow-kernels" }
-sparrow-plan = { path = "../sparrow-plan" }
+sparrow-merge = { path = "../sparrow-merge" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true
 strum.workspace = true

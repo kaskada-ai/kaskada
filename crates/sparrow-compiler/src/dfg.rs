@@ -28,7 +28,7 @@ pub mod simplification;
 mod step_kind;
 mod useless_transforms;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub(crate) use analysis::*;
 use anyhow::Context;
@@ -37,7 +37,7 @@ use hashbrown::HashMap;
 use itertools::{izip, Itertools};
 pub(crate) use language::ChildrenVec;
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::{InstKind, InstOp};
+use sparrow_instructions::{InstKind, InstOp, Udf};
 use sparrow_syntax::{FenlType, Location};
 pub(crate) use step_kind::*;
 type DfgGraph = egg::EGraph<language::DfgLang, analysis::DfgAnalysis>;
@@ -45,17 +45,18 @@ pub(super) use expr::DfgExpr;
 pub(crate) use pattern::*;
 use smallvec::smallvec;
 use tracing::{info, info_span};
-pub(crate) use useless_transforms::*;
+pub use useless_transforms::*;
 
 use crate::ast_to_dfg::AstDfg;
 use crate::dfg::language::DfgLang;
 use crate::env::Env;
+use crate::nearest_matches::NearestMatches;
 use crate::time_domain::TimeDomain;
 use crate::{AstDfgRef, CompilerOptions};
 
 #[derive(Debug)]
 /// A wrapper around the DFG construction / manipulation functions.
-pub(super) struct Dfg {
+pub struct Dfg {
     /// The DFG being built/manipulated.
     graph: DfgGraph,
     /// A mapping from identifiers to corresponding DFG nodes.
@@ -80,7 +81,7 @@ impl Default for Dfg {
         // Preemptively create a single error node, allowing for shallow
         // clones of the reference.
         let error_id = graph.add(DfgLang::new(StepKind::Error, smallvec![]));
-        let error_node = Rc::new(AstDfg::new(
+        let error_node = Arc::new(AstDfg::new(
             error_id,
             error_id,
             FenlType::Error,
@@ -106,9 +107,8 @@ impl Default for Dfg {
 }
 
 impl Dfg {
-    pub(super) fn add_literal(&mut self, literal: impl Into<ScalarValue>) -> anyhow::Result<Id> {
+    pub fn add_literal(&mut self, literal: impl Into<ScalarValue>) -> anyhow::Result<Id> {
         let literal = literal.into();
-        // TODO: FRAZ - do I need to support large string literal here?
         if let ScalarValue::Utf8(Some(literal)) = literal {
             self.add_string_literal(&literal)
         } else {
@@ -123,6 +123,15 @@ impl Dfg {
         children: ChildrenVec,
     ) -> anyhow::Result<Id> {
         self.add_expression(Expression::Inst(InstKind::Simple(instruction)), children)
+    }
+
+    /// Add a udf node to the DFG.
+    pub(super) fn add_udf(
+        &mut self,
+        udf: Arc<dyn Udf>,
+        children: ChildrenVec,
+    ) -> anyhow::Result<Id> {
+        self.add_expression(Expression::Inst(InstKind::Udf(udf)), children)
     }
 
     /// Add an expression to the DFG.
@@ -253,7 +262,7 @@ impl Dfg {
                     );
                 }
 
-                // 2. The number of arguments should be correct.
+                // 2. The number of args should be correct.
                 match expr {
                     Expression::Literal(_) | Expression::LateBound(_) => {
                         anyhow::ensure!(
@@ -264,7 +273,10 @@ impl Dfg {
                         );
                     }
                     Expression::Inst(InstKind::Simple(op)) => op
-                        .signature(sparrow_plan::Mode::Plan)
+                        .signature()
+                        .assert_valid_argument_count(children.len() - 1),
+                    Expression::Inst(InstKind::Udf(udf)) => udf
+                        .signature()
                         .assert_valid_argument_count(children.len() - 1),
                     Expression::Inst(InstKind::FieldRef) => {
                         anyhow::ensure!(
@@ -352,19 +364,19 @@ impl Dfg {
     ///
     /// # Error
     /// Returns an error containing the (up-to-5) nearest matches.
-    pub(super) fn get_binding(&self, name: &str) -> Result<AstDfgRef, Vec<&String>> {
+    pub(super) fn get_binding(&self, name: &str) -> Result<AstDfgRef, NearestMatches<&'_ str>> {
         if let Some(found) = self.env.get(name) {
             Ok(found.clone())
         } else {
-            Err(crate::nearest_matches::nearest_matches(
+            Err(crate::nearest_matches::NearestMatches::new_nearest_strs(
                 name,
-                self.env.keys(),
+                self.env.keys().map(|s| s.as_str()),
             ))
         }
     }
 
     /// Runs simplifications on the graph.
-    pub(crate) fn run_simplifications(&mut self, options: &CompilerOptions) -> anyhow::Result<()> {
+    pub fn run_simplifications(&mut self, options: &CompilerOptions) -> anyhow::Result<()> {
         let span = info_span!("Running simplifications");
         let _enter = span.enter();
 
@@ -375,7 +387,7 @@ impl Dfg {
     }
 
     /// Extract the simplest representation of the node `id` from the graph.
-    pub(crate) fn extract_simplest(&self, id: Id) -> DfgExpr {
+    pub fn extract_simplest(&self, id: Id) -> DfgExpr {
         let span = info_span!("Extracting simplest DFG");
         let _enter = span.enter();
 
@@ -447,7 +459,7 @@ impl Dfg {
     /// Remove nodes that aren't needed for the `output` from the graph.
     ///
     /// Returns the new ID of the `output`.
-    pub(crate) fn prune(&mut self, output: Id) -> anyhow::Result<Id> {
+    pub fn prune(&mut self, output: Id) -> anyhow::Result<Id> {
         // The implementation is somewhat painful -- we extract a `RecExpr`, and then
         // recreate the EGraph. This has the desired property -- only referenced nodes
         // are extracted. But, it may cause the IDs to change.
@@ -488,12 +500,12 @@ impl Dfg {
         });
         self.env.foreach_value(|node| {
             let old_value = old_graph.find(node.value());
-            node.value
-                .replace_with(|_| mapping.get(&old_value).copied().unwrap_or(new_error));
+            let new_value = mapping.get(&old_value).copied().unwrap_or(new_error);
+            *node.value.lock().unwrap() = new_value;
 
             let old_is_new = old_graph.find(node.is_new());
-            node.is_new
-                .replace_with(|_| mapping.get(&old_is_new).copied().unwrap_or(new_error));
+            let new_is_new = mapping.get(&old_is_new).copied().unwrap_or(new_error);
+            *node.is_new.lock().unwrap() = new_is_new;
         });
         self.graph = new_graph;
         Ok(new_output)
@@ -502,6 +514,15 @@ impl Dfg {
     /// Returns `Some(literal)` if the ID is a literal in the graph.
     pub fn literal(&self, id: Id) -> Option<&ScalarValue> {
         self.graph[id].data.literal_opt()
+    }
+
+    /// Returns `Some(str)` if the ID is a string literal in the graph.
+    pub fn string_literal(&self, id: Id) -> Option<&str> {
+        self.literal(id).and_then(|s| match s {
+            ScalarValue::Utf8(s) => s.as_ref().map(|s| s.as_str()),
+            ScalarValue::LargeUtf8(s) => s.as_ref().map(|s| s.as_str()),
+            _ => None,
+        })
     }
 
     /// Returns the ID of the operation node defining the domain of `id`.
@@ -526,7 +547,7 @@ impl Dfg {
     }
 
     #[cfg(test)]
-    pub fn data(&self, id: Id) -> &DfgAnalysisData {
+    pub(crate) fn data(&self, id: Id) -> &DfgAnalysisData {
         &self.graph[id].data
     }
 }

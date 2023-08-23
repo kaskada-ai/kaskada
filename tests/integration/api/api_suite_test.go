@@ -7,15 +7,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/RedisAI/redisai-go/redisai"
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/gomodule/redigo/redis"
 	_ "github.com/lib/pq"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -42,8 +39,6 @@ var (
 	minioRootUser        = flag.String("minio-root-user", "minio", "root username for connecting to minio")
 	minioRootPassword    = flag.String("minio-root-password", "minio123", "root password for connecting to minio")
 	minioEndpoint        = flag.String("minio-endpoint", "127.0.0.1:9000", "endpoint for connecting to minio")
-	redisAIPort          = flag.Int("redis-ai-port", 6379, "Port to connect to the redis-ai integration instance. Note that this should be a specific instance for integration tests only, as the test cleanup will wipe any existing data from the redis instance.")
-	redisAIHost          = flag.String("redis-ai-host", "127.0.0.1", "Host to connect to the redis-ai integration instance. Note that this should be a specific instance for integration tests only, as the test cleanup will wipe any existing data from the redis instance.")
 	kaskadaHostname      = flag.String("hostname", "127.0.0.1", "hostname of Kaskada to connect")
 	kaskadaGrpcPort      = flag.Int("grpc-port", 50051, "Kaskada's gRPC port to connect")
 	kaskadaRestPort      = flag.Int("rest-port", 3365, "Kaskada's REST port to connect")
@@ -58,7 +53,7 @@ var (
 	grpcConfig helpers.HostConfig
 )
 
-// Before starting tests, delete all tables associated with the Integration clientID.  Also completely wipes connected RedisAI instance.
+// Before starting tests, delete all tables associated with the Integration clientID.
 var _ = BeforeSuite(func() {
 	flag.Parse()
 
@@ -110,23 +105,6 @@ func proxyMinioRequests() {
 
 func isARM() bool {
 	return strings.Contains(runtime.GOARCH, "arm")
-}
-
-func getRedisAIClient(db int) *redisai.Client {
-	pool := &redis.Pool{Dial: func() (redis.Conn, error) {
-		return redis.Dial("tcp", fmt.Sprintf("%s:%d", *redisAIHost, *redisAIPort), redis.DialDatabase(db))
-	}}
-
-	return redisai.Connect("", pool)
-}
-
-func wipeRedisDatabase(db int) {
-	//Cleanup all existing data in RedisAI
-	redisAIClient := getRedisAIClient(db)
-	defer redisAIClient.Close()
-	redisAIClient.ActiveConnNX()
-	err := redisAIClient.ActiveConn.Send("FLUSHALL", "SYNC")
-	Expect(err).ShouldNot(HaveOccurred())
 }
 
 func getRestRequest(ctx context.Context, method, endpoint string, jsonBody []byte) *http.Request {
@@ -205,7 +183,7 @@ func primitiveSchemaField(name string, primitiveType v1alpha.DataType_PrimitiveT
 }
 
 func getRemotePulsarHostname() string {
-	if os.Getenv("ENV") == "local-local" {
+	if helpers.TestsAreRunningLocally() {
 		return "localhost"
 	} else {
 		return "pulsar"

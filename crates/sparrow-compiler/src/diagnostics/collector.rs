@@ -10,7 +10,7 @@ use crate::diagnostics::DiagnosticCode;
 use crate::DiagnosticBuilder;
 
 /// Collects the diagnostic messages being reported.
-pub(crate) struct DiagnosticCollector<'a> {
+pub struct DiagnosticCollector<'a> {
     feature_set: FeatureSetParts<'a>,
     /// Collect the diagnostic messages.
     collected: Vec<CollectedDiagnostic>,
@@ -29,7 +29,8 @@ impl<'a> std::fmt::Debug for DiagnosticCollector<'a> {
 #[derive(Clone, Debug)]
 pub struct CollectedDiagnostic {
     code: DiagnosticCode,
-    formatted: String,
+    pub formatted: String,
+    pub message: String,
 }
 
 impl CollectedDiagnostic {
@@ -119,9 +120,11 @@ impl<'a> DiagnosticCollector<'a> {
             self.collected.push(CollectedDiagnostic {
                 code: DiagnosticCode::FailedToReport,
                 formatted: "Failed to report diagnostic".to_owned(),
+                message: "Failed to report diagnostic".to_owned(),
             });
             return;
         };
+        let message = diagnostic.message.clone();
         let formatted = match String::from_utf8(buffer.into_inner()) {
             Ok(formatted) => formatted,
             Err(err) => {
@@ -132,12 +135,17 @@ impl<'a> DiagnosticCollector<'a> {
                 self.collected.push(CollectedDiagnostic {
                     code: DiagnosticCode::FailedToReport,
                     formatted: "Failed to report diagnostic".to_owned(),
+                    message,
                 });
                 return;
             }
         };
 
-        let diagnostic = CollectedDiagnostic { code, formatted };
+        let diagnostic = CollectedDiagnostic {
+            code,
+            formatted,
+            message,
+        };
 
         match code.severity() {
             Severity::Bug | Severity::Error => {

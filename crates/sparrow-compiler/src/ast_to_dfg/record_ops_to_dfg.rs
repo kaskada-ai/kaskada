@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::datatypes::{DataType, Field, FieldRef};
@@ -6,7 +6,7 @@ use hashbrown::HashSet;
 use itertools::{izip, Itertools};
 use smallvec::{smallvec, SmallVec};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_plan::InstKind;
+use sparrow_instructions::InstKind;
 use sparrow_syntax::{ArgVec, FenlType, Located, Location, Resolved};
 
 use crate::ast_to_dfg::{is_any_new, missing_field_diagnostic, verify_same_partitioning};
@@ -137,7 +137,7 @@ pub(super) fn record_to_dfg(
     // Create the value after the fields since this takes ownership of the names.
     let value = dfg.add_expression(Expression::Inst(InstKind::Record), instruction_args)?;
 
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         is_new,
         value_type,
@@ -250,7 +250,7 @@ pub(super) fn extend_record_to_dfg(
             TimeDomain::error()
         });
 
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         is_new,
         value_type,
@@ -377,7 +377,7 @@ pub(super) fn select_remove_fields(
     let value = dfg.add_expression(Expression::Inst(InstKind::Record), record_args)?;
     let value_type = FenlType::Concrete(DataType::Struct(result_fields.into()));
 
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         record.is_new(),
         value_type,

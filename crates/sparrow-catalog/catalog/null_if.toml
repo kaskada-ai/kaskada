@@ -1,8 +1,8 @@
-name = 'null_if'
-signature = 'null_if(condition: bool, value: any) -> any'
-short_doc = 'Return the `value` if `condition` is `false`, `null` otherwise.'
-long_doc = '''
-`null_if` "nulls out" the `value` if `condition` is `true`.
+name = "null_if"
+signature = "null_if(condition: bool, value: any) -> any"
+short_doc = "Return the `value` if `condition` is `false`, `null` otherwise."
+long_doc = """
+`null_if` \"nulls out\" the `value` if `condition` is `true`.
 It is equivalent to `if(!condition, value)`](#if).
 
 See also [`if`](#if).
@@ -12,31 +12,31 @@ See also [`if`](#if).
 * value: The value to return if `condition` is `false`.
 
 Note: The order of arguments is chosen to allow use with the pipe operation.
-Specifically, `value | null_if(condition)` may be used to conditionally "null-out"
+Specifically, `value | null_if(condition)` may be used to conditionally \"null-out\"
 the value on the left-hand side.
 
 ### Results
 For each row, return the `value` if `condition` is `false`.
 Returns `null` if the `condition` is `true` or `null`.
-'''
-tags = ['logical']
+"""
+tags = ["logical"]
 
 [[examples]]
-name = 'Null If'
-expression = 'Input.value | null_if(Input.condition)'
-input_csv = '''
+name = "Null If"
+expression = "Input.value | null_if(Input.condition)"
+input_csv = """
 time,key,value,condition
 2021-01-01T00:00:00.000000000Z,A,57.8,false
 2021-01-02T00:00:00.000000000Z,B,58.7,true
 2021-01-03T00:00:00.000000000Z,A,,true
 2021-01-04T00:00:00.000000000Z,A,876,
 2021-01-05T00:00:00.000000000Z,A,786.0,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,condition,result
 2021-01-01T00:00:00.000000000,A,57.8,false,57.8
 2021-01-02T00:00:00.000000000,B,58.7,true,
 2021-01-03T00:00:00.000000000,A,,true,
 2021-01-04T00:00:00.000000000,A,876.0,,
 2021-01-05T00:00:00.000000000,A,786.0,,
-'''
+"""

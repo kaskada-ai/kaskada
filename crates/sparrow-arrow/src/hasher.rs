@@ -7,11 +7,12 @@ use arrow_array::cast::{
 };
 use arrow_array::types::{ArrowDictionaryKeyType, Decimal128Type, Decimal256Type};
 use arrow_array::{
-    downcast_dictionary_array, downcast_primitive_array, Array, ArrayAccessor, BooleanArray,
-    DictionaryArray, FixedSizeBinaryArray,
+    downcast_dictionary_array, downcast_primitive_array, Array, ArrayAccessor, ArrayRef,
+    BooleanArray, DictionaryArray, FixedSizeBinaryArray, UInt64Array,
 };
-use arrow_buffer::{i256, ArrowNativeType, NullBuffer};
+use arrow_buffer::{i256, ArrowNativeType, Buffer, NullBuffer};
 use arrow_schema::DataType;
+use error_stack::{IntoReport, ResultExt};
 
 pub struct Hasher {
     random_state: RandomState,
@@ -34,25 +35,33 @@ pub enum Error {
     NoArraysToHash,
     #[display(fmt = "hash of '{_0:?}' unsupported")]
     UnsupportedType(DataType),
+    #[display(fmt = "unable to create resulting UInt64Array")]
+    FailedToCreate,
 }
 
 impl error_stack::Context for Error {}
 
 impl Hasher {
-    pub fn hash_array(
-        &mut self,
-        array: impl std::borrow::Borrow<dyn Array>,
-    ) -> error_stack::Result<&[u64], Error> {
-        self.hash_arrays(&[array.borrow()])
+    pub fn hash_to_uint64(&mut self, array: &dyn Array) -> error_stack::Result<UInt64Array, Error> {
+        let hashes = self.hash_array(array)?;
+        let hashes = Buffer::from_slice_ref(hashes);
+        UInt64Array::try_new(hashes.into(), None)
+            .into_report()
+            .change_context(Error::FailedToCreate)
     }
 
-    pub fn hash_arrays(
-        &mut self,
-        arrays: &[impl std::borrow::Borrow<dyn Array>],
-    ) -> error_stack::Result<&[u64], Error> {
-        error_stack::ensure!(!arrays.is_empty(), Error::NoArraysToHash);
+    pub fn hash_array(&mut self, array: &dyn Array) -> error_stack::Result<&[u64], Error> {
+        self.hash_arrays(std::iter::once(array))
+    }
 
-        let num_rows = arrays[0].borrow().len();
+    pub fn hash_arrays<'a>(
+        &mut self,
+        arrays: impl Iterator<Item = &'a dyn Array> + 'a,
+    ) -> error_stack::Result<&[u64], Error> {
+        let mut arrays = arrays.peekable();
+        error_stack::ensure!(arrays.peek().is_some(), Error::NoArraysToHash);
+
+        let num_rows = arrays.peek().unwrap().len();
 
         self.hash_buffer.clear();
         self.hash_buffer.resize(num_rows, 0);
@@ -74,15 +83,14 @@ impl Hasher {
 /// The number of rows to hash is determined by `hashes_buffer.len()`.
 /// `hashes_buffer` should be pre-sized appropriately
 #[allow(clippy::ptr_arg)]
-fn create_hashes(
-    arrays: &[impl std::borrow::Borrow<dyn Array>],
+fn create_hashes<'a>(
+    arrays: impl Iterator<Item = &'a dyn Array> + 'a,
     random_state: &RandomState,
     hashes_buffer: &mut Vec<u64>,
     mask: Option<&NullBuffer>,
     mut multi_col: bool,
 ) -> error_stack::Result<(), Error> {
-    for col in arrays {
-        let array = col.borrow();
+    for array in arrays {
         downcast_primitive_array! {
             array => hash_array(array, random_state, hashes_buffer, mask, multi_col),
             DataType::Null => hash_null(random_state, hashes_buffer, multi_col),
@@ -115,7 +123,7 @@ fn create_hashes(
                 }
 
                 let mask = NullBuffer::union(mask, array.nulls());
-                create_hashes(array.columns(), random_state, hashes_buffer, mask.as_ref(), true)?;
+                create_hashes(iterate_array_refs(array.columns()), random_state, hashes_buffer, mask.as_ref(), true)?;
             }
             unsupported => {
                 // This is internal because we should have caught this before.
@@ -127,6 +135,10 @@ fn create_hashes(
     }
 
     Ok(())
+}
+
+fn iterate_array_refs(arrays: &[ArrayRef]) -> impl Iterator<Item = &'_ dyn Array> {
+    arrays.iter().map(|a| a.as_ref())
 }
 
 #[inline]
@@ -260,7 +272,13 @@ fn hash_dictionary<K: ArrowDictionaryKeyType>(
     // redundant hashing for large dictionary elements (e.g. strings)
     let values = array.values().clone();
     let mut dict_hashes = vec![0; values.len()];
-    create_hashes(&[values], random_state, &mut dict_hashes, None, false)?;
+    create_hashes(
+        [values.as_ref()].into_iter(),
+        random_state,
+        &mut dict_hashes,
+        None,
+        false,
+    )?;
 
     // combine hash for each index in values
     match (mask, multi_col) {

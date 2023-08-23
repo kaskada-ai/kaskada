@@ -1,7 +1,7 @@
+use crate::{InstKind, InstOp, ValueRef};
 use arrow::array::ArrayRef;
 use arrow::datatypes::DataType;
 use itertools::Itertools;
-use sparrow_plan::{InstKind, InstOp};
 
 use crate::evaluators::macros::{
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
@@ -16,6 +16,7 @@ mod equality;
 mod field_ref;
 mod general;
 mod json_field;
+mod list;
 mod logical;
 mod macros;
 mod map;
@@ -31,11 +32,11 @@ use equality::*;
 use field_ref::*;
 use general::*;
 use json_field::*;
+use list::*;
 use logical::*;
 use map::*;
 use math::*;
 use record::*;
-use sparrow_plan::ValueRef;
 use string::*;
 use time::*;
 
@@ -159,6 +160,22 @@ pub fn create_evaluator(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluato
             Ok(CastEvaluator::try_new(info)?)
         }
         InstKind::Record => Ok(RecordEvaluator::try_new(info)?),
+        InstKind::Udf(udf) => Ok(udf.make_evaluator(info)),
+    }
+}
+
+/// Placeholder struct for unsupported evaluators.
+struct UnsupportedEvaluator;
+
+impl Evaluator for UnsupportedEvaluator {
+    fn evaluate(&mut self, _info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
+        anyhow::bail!("Unsupported evaluator")
+    }
+}
+
+impl EvaluatorFactory for UnsupportedEvaluator {
+    fn try_new(_info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        anyhow::bail!("Unsupported evaluator")
     }
 }
 
@@ -177,6 +194,18 @@ fn create_simple_evaluator(
             create_number_evaluator!(&info.args[0].data_type, ClampEvaluator, info)
         }
         InstOp::Coalesce => CoalesceEvaluator::try_new(info),
+        InstOp::Collect => {
+            create_typed_evaluator!(
+                &info.args[0].data_type,
+                CollectPrimitiveEvaluator,
+                CollectStructEvaluator,
+                UnsupportedEvaluator,
+                UnsupportedEvaluator,
+                CollectBooleanEvaluator,
+                CollectStringEvaluator,
+                info
+            )
+        }
         InstOp::CountIf => CountIfEvaluator::try_new(info),
         InstOp::DayOfMonth => DayOfMonthEvaluator::try_new(info),
         InstOp::DayOfMonth0 => DayOfMonth0Evaluator::try_new(info),
@@ -195,6 +224,8 @@ fn create_simple_evaluator(
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                UnsupportedEvaluator,
+                FirstListEvaluator,
                 FirstMapEvaluator,
                 FirstBooleanEvaluator,
                 FirstStringEvaluator,
@@ -202,8 +233,10 @@ fn create_simple_evaluator(
                 info
             )
         }
+        InstOp::Flatten => FlattenEvaluator::try_new(info),
         InstOp::Floor => FloorEvaluator::try_new(info),
         InstOp::Get => GetEvaluator::try_new(info),
+        InstOp::Index => IndexEvaluator::try_new(info),
         InstOp::Gt => match (info.args[0].is_literal(), info.args[1].is_literal()) {
             (_, true) => {
                 create_ordered_evaluator!(&info.args[0].data_type, GtScalarEvaluator, info)
@@ -239,13 +272,12 @@ fn create_simple_evaluator(
         // rely on simplification for conversion.
         InstOp::Json => anyhow::bail!("No evaluator defined for json function"),
         InstOp::JsonField => JsonFieldEvaluator::try_new(info),
-        InstOp::Lag => {
-            create_ordered_evaluator!(&info.args[1].data_type, PrimitiveLagEvaluator, info)
-        }
         InstOp::Last => {
             create_typed_evaluator!(
                 &info.args[0].data_type,
                 ArrowAggEvaluator,
+                UnsupportedEvaluator,
+                LastListEvaluator,
                 LastMapEvaluator,
                 LastBooleanEvaluator,
                 LastStringEvaluator,
@@ -254,6 +286,7 @@ fn create_simple_evaluator(
             )
         }
         InstOp::Len => LenEvaluator::try_new(info),
+        InstOp::ListLen => ListLenEvaluator::try_new(info),
         InstOp::LogicalAnd => LogicalAndKleeneEvaluator::try_new(info),
         InstOp::LogicalOr => LogicalOrKleeneEvaluator::try_new(info),
         InstOp::Lower => LowerEvaluator::try_new(info),
@@ -320,6 +353,7 @@ fn create_simple_evaluator(
         }
         InstOp::TimeOf => TimeOfEvaluator::try_new(info),
         InstOp::Upper => UpperEvaluator::try_new(info),
+        InstOp::Union => UnionEvaluator::try_new(info),
         InstOp::Variance => {
             create_number_evaluator!(
                 &info.args[0].data_type,

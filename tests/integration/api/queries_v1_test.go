@@ -237,7 +237,7 @@ var _ = Describe("Queries V1", Ordered, Label("pulsar"), func() {
 			Expect(stream).ShouldNot(BeNil())
 			queryResponses, err := helpers.GetCreateQueryResponses(stream)
 			Expect(err).Should(HaveOccurredGrpc())
-			Expect(queryResponses).Should(BeEmpty())
+			Expect(queryResponses).Should(HaveLen(1))
 
 			//inspect error response
 			errStatus, ok := status.FromError(err)

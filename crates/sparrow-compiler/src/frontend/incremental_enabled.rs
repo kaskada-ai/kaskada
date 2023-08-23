@@ -1,5 +1,5 @@
 use sparrow_api::kaskada::v1alpha::PerEntityBehavior;
-use sparrow_plan::{InstKind, InstOp};
+use sparrow_instructions::{InstKind, InstOp};
 
 use crate::dfg::{DfgExpr, Expression, Operation, StepKind};
 use crate::CompilerOptions;
@@ -27,7 +27,7 @@ pub(super) fn is_incremental_enabled(dfg: &DfgExpr, options: &CompilerOptions) -
 fn is_incremental_supported(step: &StepKind) -> bool {
     match step {
         StepKind::Operation(Operation::Empty | Operation::MergeJoin) => true,
-        StepKind::Expression(Expression::Inst(InstKind::Simple(InstOp::Lag))) => true,
+        StepKind::Expression(Expression::Inst(InstKind::Simple(InstOp::Collect))) => true,
         StepKind::Operation(Operation::Scan { .. } | Operation::Select | Operation::Tick(_)) => {
             true
         }

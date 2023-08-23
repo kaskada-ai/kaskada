@@ -1,10 +1,10 @@
-use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use egg::{Subst, Var};
 use itertools::{izip, Itertools};
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use sparrow_plan::GroupId;
+use sparrow_instructions::GroupId;
 use sparrow_syntax::{FeatureSetPart, FenlType, Located, Location, Signature};
 
 use crate::ast_to_dfg::AstDfg;
@@ -118,18 +118,13 @@ impl Function {
         self.internal
     }
 
-    /// Returns the internal signature, if one exists. Else, returns the
-    /// user-facing signature.
-    ///
-    /// This is used for certain functions like aggregations, where the
-    /// arguments are flattened in the DFG, requiring us to check parameters
-    /// against an internal signature representing the flattened arguments.
-    pub(crate) fn signature(&self) -> &Signature {
-        if let Some(signature) = &self.internal_signature {
-            signature
-        } else {
-            &self.signature
-        }
+    /// Returns the user-facing signature.
+    pub fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    pub fn internal_signature(&self) -> &Signature {
+        self.internal_signature.as_ref().unwrap_or(&self.signature)
     }
 
     pub fn signature_str(&self) -> &'static str {
@@ -224,7 +219,7 @@ impl Function {
             self.time_domain_check
                 .check_args(location, diagnostics, args, data_context)?;
 
-        Ok(Rc::new(AstDfg::new(
+        Ok(Arc::new(AstDfg::new(
             value,
             is_new,
             value_type,

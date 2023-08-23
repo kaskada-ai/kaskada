@@ -1,0 +1,4 @@
+[report]
+exclude_also =
+    # Don't complain about `__all__ = ...`
+    __all__ =

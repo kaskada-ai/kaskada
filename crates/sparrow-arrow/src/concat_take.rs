@@ -10,6 +10,6 @@ pub fn concat_take(
     array2: &ArrayRef,
     indices: &UInt32Array,
 ) -> anyhow::Result<ArrayRef> {
-    let combined = arrow::compute::concat(&[array1, array2])?;
-    Ok(arrow::compute::take(&combined, indices, None)?)
+    let combined = arrow_select::concat::concat(&[array1, array2])?;
+    Ok(arrow_select::take::take(&combined, indices, None)?)
 }

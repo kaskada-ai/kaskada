@@ -1,7 +1,7 @@
-name = 'months'
-signature = 'months(months: i64) -> interval_months'
-short_doc = 'Produces an interval corresponding to the given number of calendar months.'
-long_doc = '''
+name = "months"
+signature = "months(months: i64) -> interval_months"
+short_doc = "Produces an interval corresponding to the given number of calendar months."
+long_doc = """
 ### Parameters
 * months: The number of calendar months to create the interval for.
 
@@ -10,16 +10,16 @@ Returns an `interval_months` column with each row containing the
 value of `months` converted to an interval with the corresponding
 number of calendar months. Rows where `months` is `null`, less than
 `i32::MIN` or greater than `i32::MAX` will be `null`.
-'''
-tags = ['time']
+"""
+tags = ["time"]
 
 [[examples]]
-description = '''
+description = """
 This example uses [`add_time`](#add-time) to add the created
 interval to the `time` column.
-'''
-expression = 'Input.time | add_time(months(Input.n))'
-input_csv = '''
+"""
+expression = "Input.time | add_time(months(Input.n))"
+input_csv = """
 time,key,n
 1996-03-21T00:00:00-00:00,Ben,1
 1996-04-21T00:00:00-00:00,Ryan,2
@@ -27,8 +27,8 @@ time,key,n
 1996-06-21T00:00:00-00:00,Ryan,
 1996-07-21T00:00:00-00:00,Ben,2
 1996-08-21T00:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,result
 1996-03-21T00:00:00.000000000,Ben,1,1996-04-21T00:00:00.000000000
 1996-04-21T00:00:00.000000000,Ryan,2,1996-06-21T00:00:00.000000000
@@ -36,4 +36,4 @@ time,key,n,result
 1996-06-21T00:00:00.000000000,Ryan,,
 1996-07-21T00:00:00.000000000,Ben,2,1996-09-21T00:00:00.000000000
 1996-08-21T00:00:00.000000000,Ben,1,1996-09-21T00:00:00.000000000
-'''
+"""

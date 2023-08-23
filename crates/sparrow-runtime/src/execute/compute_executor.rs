@@ -7,19 +7,18 @@ use futures::stream::{FuturesUnordered, PollNext};
 use futures::{FutureExt, Stream, TryFutureExt};
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::ComputeSnapshot;
-use sparrow_api::kaskada::v1alpha::ComputeSnapshotConfig;
-use sparrow_api::kaskada::v1alpha::{self, ExecuteResponse, LateBoundValue, PlanHash};
+use sparrow_api::kaskada::v1alpha::{ExecuteResponse, LateBoundValue, PlanHash};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::ComputeStore;
 use sparrow_qfr::io::writer::FlightRecordWriter;
 use sparrow_qfr::kaskada::sparrow::v1alpha::FlightRecordHeader;
 use sparrow_qfr::FlightRecorderFactory;
-use tempfile::TempDir;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
 use tracing::{error, info, info_span, Instrument};
 
+use crate::execute::compute_store_guard::ComputeStoreGuard;
 use crate::execute::operation::{OperationContext, OperationExecutor};
+use crate::execute::output::Destination;
 use crate::execute::progress_reporter::{progress_stream, ProgressUpdate};
 use crate::execute::spawner::ComputeTaskSpawner;
 use crate::execute::Error;
@@ -30,7 +29,6 @@ use crate::{Batch, RuntimeOptions};
 
 pub(crate) struct ComputeExecutor {
     object_stores: Arc<ObjectStoreRegistry>,
-    compute_store: Option<Arc<ComputeStore>>,
     plan_hash: PlanHash,
     futures: FuturesUnordered<JoinTask<()>>,
     progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
@@ -52,10 +50,11 @@ impl ComputeExecutor {
     /// Spawns the compute tasks using the new operation based executor.
     pub async fn try_spawn(
         mut context: OperationContext,
+        plan_hash: PlanHash,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         runtime_options: &RuntimeOptions,
         progress_updates_rx: tokio::sync::mpsc::Receiver<ProgressUpdate>,
-        destination: v1alpha::Destination,
+        destination: Destination,
         stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
     ) -> error_stack::Result<Self, Error> {
         let mut spawner = ComputeTaskSpawner::new();
@@ -88,6 +87,7 @@ impl ComputeExecutor {
                 futures::StreamExt::boxed(tokio_stream::wrappers::ReceiverStream::new(output_rx)),
                 context.progress_updates_tx.clone(),
                 destination,
+                runtime_options.max_batch_size,
             )
             .change_context(Internal("error writing output"))?
             .map_err(|e| e.change_context(Internal("error writing output"))),
@@ -154,8 +154,7 @@ impl ComputeExecutor {
 
         Ok(Self {
             object_stores: context.object_stores,
-            compute_store: context.compute_store,
-            plan_hash: context.plan_hash,
+            plan_hash,
             futures: spawner.finish(),
             progress_updates_rx,
             max_event_time_rx,
@@ -166,14 +165,12 @@ impl ComputeExecutor {
     ///
     /// The `finish` function is called after the final compute result has been
     /// created, but before progress information stops being streamed.
-    pub fn execute_with_progress(
+    pub(super) fn execute_with_progress(
         self,
-        storage_dir: Option<TempDir>,
-        compute_snapshot_config: Option<ComputeSnapshotConfig>,
+        store: Option<ComputeStoreGuard>,
     ) -> impl Stream<Item = error_stack::Result<ExecuteResponse, Error>> {
         let Self {
             object_stores,
-            compute_store,
             plan_hash,
             futures,
             progress_updates_rx,
@@ -200,40 +197,16 @@ impl ComputeExecutor {
                 };
                 let compute_result = compute_result.expect("ok");
 
-                if let Some(compute_store) = compute_store {
-                    // Write the max input time to the store.
-                    if let Err(e) = compute_store
-                        .put_max_event_time(&compute_result.max_input_timestamp)
-                        .into_report()
-                    {
-                        return ProgressUpdate::ExecutionFailed {
-                            error: e
-                                .change_context(Error::Internal("failed to report max event time")),
-                        };
-                    }
-
-                    // Now that everything has completed, we attempt to get the compute store out.
-                    // This lets us explicitly drop the store here.
-                    match Arc::try_unwrap(compute_store) {
-                        Ok(owned_compute_store) => std::mem::drop(owned_compute_store),
-                        Err(_) => panic!("unable to reclaim compute store"),
-                    };
-                }
-
-                let compute_snapshots = upload_compute_snapshots(
-                    object_stores,
-                    storage_dir,
-                    compute_snapshot_config,
-                    compute_result,
-                )
-                .instrument(tracing::info_span!("Uploading checkpoint files"))
-                .await
-                .unwrap_or_else(|e| {
-                    // Log, but don't fail if we couldn't upload snapshots.
-                    // We can still produce valid answers, but won't perform an incremental query.
-                    error!("Failed to upload compute snapshot(s):\n{:?}", e);
-                    Vec::new()
-                });
+                let compute_snapshots =
+                    upload_compute_snapshots(object_stores.as_ref(), store, compute_result)
+                        .instrument(tracing::info_span!("Uploading checkpoint files"))
+                        .await
+                        .unwrap_or_else(|e| {
+                            // Log, but don't fail if we couldn't upload snapshots.
+                            // We can still produce valid answers, but won't perform an incremental query.
+                            error!("Failed to upload compute snapshot(s):\n{:?}", e);
+                            Vec::new()
+                        });
 
                 Ok(ProgressUpdate::ExecutionComplete { compute_snapshots })
             };
@@ -269,30 +242,14 @@ fn select_biased<T: 'static>(
 }
 
 async fn upload_compute_snapshots(
-    object_stores: Arc<ObjectStoreRegistry>,
-    storage_dir: Option<TempDir>,
-    compute_snapshot_config: Option<ComputeSnapshotConfig>,
+    object_stores: &ObjectStoreRegistry,
+    store: Option<ComputeStoreGuard>,
     compute_result: ComputeResult,
 ) -> error_stack::Result<Vec<ComputeSnapshot>, Error> {
     let mut snapshots = Vec::new();
 
-    // If a snapshot config exists, let's assume for now that this
-    // indicates we want to upload snapshots.
-    //
-    // There may be situations where we want to resume from a snapshot,
-    // but not upload new snapshots.
-    if let Some(snapshot_config) = compute_snapshot_config {
-        let storage_dir = storage_dir.ok_or(Error::Internal("missing storage dir"))?;
-
-        let snapshot_metadata = super::checkpoints::upload(
-            object_stores.as_ref(),
-            storage_dir,
-            snapshot_config,
-            compute_result,
-        )
-        .await
-        .change_context(Error::Internal("uploading snapshot"))?;
-        snapshots.push(snapshot_metadata);
+    if let Some(store) = store {
+        snapshots.push(store.finish(object_stores, compute_result).await?);
     } else {
         tracing::info!("No snapshot config; not uploading compute store.")
     }

@@ -4,7 +4,7 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_instructions::{
     ColumnarValue, ComputeStore, Evaluator, GroupingIndices, RuntimeInfo, StaticArg, StaticInfo,
 };
-use sparrow_plan::{InstKind, InstOp, ValueRef};
+use sparrow_instructions::{InstKind, InstOp, ValueRef};
 
 use crate::types::instruction::typecheck_inst;
 
@@ -34,7 +34,6 @@ pub(super) fn evaluate_constant(
             // now to fix various panics caused by not having *some* behavior defined.
             InstOp::CountIf => return Ok(ScalarValue::UInt32(Some(0))),
             InstOp::First => return Ok(inputs[0].null()),
-            InstOp::Lag => return Ok(inputs[0].null()),
             InstOp::Last => return Ok(inputs[0].null()),
             InstOp::Max => return Ok(inputs[0].null()),
             InstOp::Mean => return Ok(ScalarValue::Float64(None)),
@@ -139,12 +138,7 @@ pub(super) fn evaluate_constant(
 
     let argument_types = args.iter().map(|i| i.data_type.clone().into()).collect();
     let argument_literals: Vec<_> = inputs.into_iter().map(Some).collect();
-    let result_type = typecheck_inst(
-        kind,
-        argument_types,
-        &argument_literals,
-        sparrow_plan::Mode::Dfg,
-    )?;
+    let result_type = typecheck_inst(kind, argument_types, &argument_literals)?;
     let result_type = result_type.arrow_type().with_context(|| {
         format!(
             "Expected result of literal instruction to have concrete type, but got {result_type:?}"
@@ -205,7 +199,7 @@ impl RuntimeInfo for ConstEvaluator {
 #[cfg(test)]
 mod tests {
     use sparrow_arrow::scalar_value::ScalarValue;
-    use sparrow_plan::{InstKind, InstOp};
+    use sparrow_instructions::{InstKind, InstOp};
     use strum::IntoEnumIterator;
 
     #[test]
@@ -220,13 +214,7 @@ mod tests {
             }
 
             let kind = InstKind::Simple(inst_op);
-            let inputs = vec![
-                ScalarValue::Null;
-                inst_op
-                    .signature(sparrow_plan::Mode::Dfg)
-                    .parameters()
-                    .len()
-            ];
+            let inputs = vec![ScalarValue::Null; inst_op.signature().parameters().len()];
 
             if let Err(e) = super::evaluate_constant(&kind, inputs) {
                 println!("Failed to evaluate '{inst_op}': {e:?}");

@@ -41,7 +41,7 @@ mod frontend;
 mod functions;
 mod nearest_matches;
 mod options;
-mod plan;
+pub mod plan;
 mod time_domain;
 mod types;
 
@@ -49,8 +49,11 @@ mod types;
 pub use ast_to_dfg::*;
 pub use compile::*;
 pub use data_context::*;
+pub use dfg::{remove_useless_transforms, Dfg};
 pub use diagnostics::*;
 pub use error::*;
 pub use frontend::*;
 pub use functions::*;
 pub use options::*;
+
+pub use nearest_matches::NearestMatches;

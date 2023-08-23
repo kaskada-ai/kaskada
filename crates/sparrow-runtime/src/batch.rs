@@ -399,3 +399,109 @@ impl<'a> std::fmt::Display for AsJson<'a> {
         write!(f, "{json_string}")
     }
 }
+
+impl sparrow_merge::old::InputItem for Batch {
+    fn min_time(&self) -> i64 {
+        self.lower_bound.time
+    }
+
+    fn max_time(&self) -> i64 {
+        self.upper_bound.time
+    }
+
+    fn split_at(self, split_time: i64) -> anyhow::Result<(Option<Self>, Option<Self>)> {
+        if self.is_empty() {
+            return Ok((None, None));
+        } else if split_time <= self.min_time() {
+            return Ok((None, Some(self)));
+        } else if split_time > self.max_time() {
+            return Ok((Some(self), None));
+        }
+
+        let times = self.times()?;
+        let split_point = match times.binary_search(&split_time) {
+            Ok(mut found_index) => {
+                // Just do a linear search for the first value less than split time.
+                while found_index > 0 && times[found_index - 1] == split_time {
+                    found_index -= 1
+                }
+                found_index
+            }
+            Err(not_found_index) => not_found_index,
+        };
+
+        let lt = if split_point > 0 {
+            let lt = self.data.slice(0, split_point);
+            Some(Batch::try_new_from_batch(lt)?)
+        } else {
+            None
+        };
+
+        let gte = if split_point < self.num_rows() {
+            let gte = self.data.slice(split_point, self.num_rows() - split_point);
+            Some(Batch::try_new_from_batch(gte)?)
+        } else {
+            None
+        };
+        Ok((lt, gte))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use arrow::datatypes::{DataType, Field};
+    use itertools::Itertools;
+    use proptest::prelude::*;
+    use sparrow_core::TableSchema;
+    use sparrow_merge::old::InputItem;
+
+    use super::*;
+    use sparrow_merge::old::testing::{arb_i64_array, arb_key_triples};
+
+    fn arb_batch(max_len: usize) -> impl Strategy<Value = RecordBatch> {
+        (1..max_len)
+            .prop_flat_map(|len| (arb_key_triples(len), arb_i64_array(len)))
+            .prop_map(|((time, subsort, key_hash), values)| {
+                let schema = TableSchema::from_data_fields([Arc::new(Field::new(
+                    "data",
+                    DataType::Int64,
+                    true,
+                ))])
+                .unwrap();
+                let schema = schema.schema_ref();
+                RecordBatch::try_new(
+                    schema.clone(),
+                    vec![
+                        Arc::new(time),
+                        Arc::new(subsort),
+                        Arc::new(key_hash),
+                        Arc::new(values),
+                    ],
+                )
+                .unwrap()
+            })
+    }
+
+    proptest! {
+        #[test]
+        fn test_splitting(batch in arb_batch(1000)) {
+            // For every time value in the batch, try splitting there and make sure
+            // the ordering constraints are satisfied.
+            let input = Batch::try_new_from_batch(batch).unwrap();
+            let times = input.times().unwrap();
+
+            for split_time in times.iter().dedup() {
+                let (lt, gte) = input.clone().split_at(*split_time).unwrap();
+
+                if let Some(lt) = lt {
+                    lt.times().unwrap().iter().all(|t| *t < *split_time);
+                }
+                if let Some(gte) = gte {
+                    gte.times().unwrap().iter().all(|t| *t >= *split_time);
+                }
+            }
+        }
+    }
+}

@@ -1,29 +1,29 @@
-name = 'yearly'
-signature = 'yearly() -> bool'
-short_doc = 'A periodic function that produces a `true` value at the start of each calendar year (UTC).'
-long_doc = '''
+name = "yearly"
+signature = "yearly() -> bool"
+short_doc = "A periodic function that produces a `true` value at the start of each calendar year (UTC)."
+long_doc = """
 This function is often used in aggregations to produce windows or
 as a predicate column.
 
 ### Results
 Returns a boolean column with each row containing a `true` value
 at the start of each calendary yea rand `null` at all other times.
-'''
-tags = ['tick']
+"""
+tags = ["tick"]
 
 [[examples]]
-name = 'Yearly Aggregated Window'
-description = '''
+name = "Yearly Aggregated Window"
+description = """
 In this example, the `yearly()` function is used as an argument to
 the [`since](#since) function, which produces a window. The result
 is a windowed aggregation that resets at the start of each calendar
 year (UTC).
-'''
-full_expression = '''
+"""
+full_expression = """
 { n: Input.n, yearly_sum: sum(Input.n, window = since(yearly())) }
 | extend({time: time_of($input), key: first(Input.key) })
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,n
 1996-12-19T16:00:00-00:00,Ben,2
 1996-12-19T16:00:00-00:00,Ryan,3
@@ -31,31 +31,31 @@ time,key,n
 1997-12-20T16:01:00-00:00,Ben,9
 1997-12-21T16:00:00-00:00,Ryan,8
 1998-12-21T16:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n,yearly_sum
 1996-12-19T16:00:00.000000000,Ben,2,2
 1996-12-19T16:00:00.000000000,Ryan,3,3
-1997-01-01T00:00:00.000000000,Ben,,2
 1997-01-01T00:00:00.000000000,Ryan,,3
+1997-01-01T00:00:00.000000000,Ben,,2
 1997-12-20T16:00:00.000000000,Ben,6,6
 1997-12-20T16:01:00.000000000,Ben,9,15
 1997-12-21T16:00:00.000000000,Ryan,8,8
-1998-01-01T00:00:00.000000000,Ben,,15
 1998-01-01T00:00:00.000000000,Ryan,,8
+1998-01-01T00:00:00.000000000,Ben,,15
 1998-12-21T16:00:00.000000000,Ben,1,1
-'''
+"""
 
 [[examples]]
-name = 'Filter Yearly'
-description = '''
+name = "Filter Yearly"
+description = """
 In this example, the `yearly()` function is used as an argument to
 the [`when`](#when) function, which filters input.
 
 The output includes the last input row before a [`tick`](#tick) occurs.
-'''
-full_expression = 'Input | last() | when(yearly())'
-input_csv = '''
+"""
+full_expression = "Input | last() | when(yearly())"
+input_csv = """
 time,key,n
 1996-12-19T16:00:00-00:00,Ben,2
 1996-12-19T16:00:00-00:00,Ryan,3
@@ -63,11 +63,11 @@ time,key,n
 1997-12-20T16:01:00-00:00,Ben,9
 1997-12-21T16:00:00-00:00,Ryan,8
 1998-12-21T16:00:00-00:00,Ben,1
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,n
-1996-12-19T16:00:00.000000000,Ben,2
 1996-12-19T16:00:00.000000000,Ryan,3
-1997-12-20T16:01:00.000000000,Ben,9
+1996-12-19T16:00:00.000000000,Ben,2
 1997-12-21T16:00:00.000000000,Ryan,8
-'''
+1997-12-20T16:01:00.000000000,Ben,9
+"""

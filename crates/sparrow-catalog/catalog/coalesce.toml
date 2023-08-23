@@ -1,7 +1,7 @@
-name = 'coalesce'
-signature = 'coalesce(values+: any) -> any'
-short_doc = 'Return first non-`null` value or `null` if all values are `null`.'
-long_doc = '''
+name = "coalesce"
+signature = "coalesce(values+: any) -> any"
+short_doc = "Return first non-`null` value or `null` if all values are `null`."
+long_doc = """
 ### Parameters
 * values: One or more values to be coalesced.
 Note that all of the values must be promotable to the same type.
@@ -12,11 +12,11 @@ If all values are `null`, then returns `null`.
 
 The type of the result is the minimum type that all of the `values`
 were [promotable](docs:data-model#type-promotion-rules) to.
-'''
-tags = ['logical']
+"""
+tags = ["logical"]
 
 [[examples]]
-description = '''
+description = """
 In this example we use `coalesce` to apply multiple conditions, almost
 like a `switch` statement. Each case uses [`if`](#if) to only pass through
 the cases where the condition is met.
@@ -24,8 +24,8 @@ the cases where the condition is met.
 One thing to be aware of when using `coalesce` like this is that the first
 non-`null` is taken. Which means that even if a condition is met, if the
 corresponding value was `null`, it would move on to other conditions.
-'''
-expression = '''
+"""
+expression = """
 coalesce(
     # Tax exempt items
     Input.value | if(Input.tax_category == 'exempt'),
@@ -34,18 +34,18 @@ coalesce(
     # Normal tax (10%) items
     Input.value * 1.1
 )
-'''
-input_csv = '''
+"""
+input_csv = """
 time,key,value,tax_category
 2020-01-01T00:00:00.000000000Z,Ben,10.00,exempt
 2020-01-02T00:00:00.000000000Z,Ben,12.00,
 2020-01-02T01:00:00.000000000Z,Ryan,13.00,flat
 2020-01-02T01:00:00.000000000Z,Ryan,,exempt
-'''
-output_csv = '''
+"""
+output_csv = """
 time,key,value,tax_category,result
 2020-01-01T00:00:00.000000000,Ben,10.0,exempt,10.0
 2020-01-02T00:00:00.000000000,Ben,12.0,,13.200000000000001
 2020-01-02T01:00:00.000000000,Ryan,13.0,flat,14.0
 2020-01-02T01:00:00.000000000,Ryan,,exempt,
-'''
+"""

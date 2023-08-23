@@ -44,9 +44,7 @@ use error_stack::{IntoReport, IntoReportCompat, Report, Result, ResultExt};
 use futures::Future;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
-use sparrow_api::kaskada::v1alpha::{
-    operation_plan, ComputePlan, LateBoundValue, OperationPlan, PlanHash,
-};
+use sparrow_api::kaskada::v1alpha::{operation_plan, ComputePlan, LateBoundValue, OperationPlan};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::DataContext;
 use sparrow_instructions::ComputeStore;
@@ -62,10 +60,10 @@ use self::scan::ScanOperation;
 use self::select::SelectOperation;
 use self::tick::TickOperation;
 use self::with_key::WithKeyOperation;
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::execute::operation::expression_executor::{ExpressionExecutor, InputColumn};
 use crate::execute::operation::shift_until::ShiftUntilOperation;
 use crate::execute::Error;
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
 
@@ -80,7 +78,6 @@ use crate::Batch;
 /// the method to create a table reader on to it.
 pub(crate) struct OperationContext {
     pub plan: ComputePlan,
-    pub plan_hash: PlanHash,
     pub object_stores: Arc<ObjectStoreRegistry>,
     pub data_context: DataContext,
     pub compute_store: Option<Arc<ComputeStore>>,
@@ -99,6 +96,13 @@ pub(crate) struct OperationContext {
     ///
     /// If not set, defaults to the [BOUNDED_LATENESS_NS] const.
     pub bounded_lateness_ns: Option<i64>,
+    /// If true, the execution is a materialization.
+    ///
+    /// It will subscribe to the input stream and continue running as new data
+    /// arrives. It won't send final ticks.
+    ///
+    /// Derived from the ExecutionOptions,
+    pub materialize: bool,
 }
 
 impl OperationContext {

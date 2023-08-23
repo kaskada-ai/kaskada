@@ -6,20 +6,22 @@ mod window_args;
 
 #[cfg(test)]
 mod tests;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, FieldRef};
+use arrow_schema::Field;
 pub use ast_dfg::*;
 use egg::Id;
 use itertools::{izip, Itertools};
 use record_ops_to_dfg::*;
 use smallvec::{smallvec, SmallVec};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::CastEvaluator;
-use sparrow_plan::{GroupId, InstKind, InstOp};
+use sparrow_instructions::{CastEvaluator, Udf};
+use sparrow_instructions::{GroupId, InstKind, InstOp};
 use sparrow_syntax::{
-    ExprOp, FenlType, FormatDataType, LiteralValue, Located, Location, Resolved, ResolvedExpr,
+    Collection, ExprOp, FenlType, FormatDataType, LiteralValue, Located, Location, Resolved,
+    ResolvedExpr,
 };
 
 use self::window_args::flatten_window_args;
@@ -27,7 +29,7 @@ use crate::dfg::{Dfg, Expression, Operation};
 use crate::diagnostics::DiagnosticCode;
 use crate::time_domain::TimeDomain;
 use crate::types::inference::instantiate;
-use crate::{DataContext, DiagnosticBuilder, DiagnosticCollector};
+use crate::{DataContext, DiagnosticBuilder, DiagnosticCollector, TimeDomainCheck};
 
 /// Convert the `expr` to corresponding DFG nodes.
 pub(super) fn ast_to_dfg(
@@ -48,7 +50,7 @@ pub(super) fn ast_to_dfg(
     // Create the DFG for each argument. This is usually straightforward, unless
     // the operator has bind values. In that case, we need to handle the environment
     // specially.
-    let mut arguments = match expr.op() {
+    let arguments = match expr.op() {
         ExprOp::Pipe(_) => {
             let lhs = ast_to_dfg(data_context, dfg, diagnostics, &arguments[0])?;
             dfg.enter_env();
@@ -82,9 +84,91 @@ pub(super) fn ast_to_dfg(
             Ok(e.with_value(ast_dfg))
         })?,
     };
+
+    add_to_dfg(
+        data_context,
+        dfg,
+        diagnostics,
+        expr.op(),
+        arguments,
+        Some(expr),
+    )
+}
+
+pub fn add_udf_to_dfg(
+    location: &Located<String>,
+    udf: Arc<dyn Udf>,
+    dfg: &mut Dfg,
+    arguments: Resolved<Located<AstDfgRef>>,
+    data_context: &mut DataContext,
+    diagnostics: &mut DiagnosticCollector<'_>,
+) -> anyhow::Result<AstDfgRef> {
+    let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
+    let signature = udf.signature();
+
+    let (instantiated_types, instantiated_result_type) =
+        match instantiate(location, &argument_types, signature) {
+            Ok(result) => result,
+            Err(diagnostic) => {
+                diagnostic.emit(diagnostics);
+                return Ok(dfg.error_node());
+            }
+        };
+
+    if argument_types.iter().any(|arg| arg.is_error()) {
+        return Ok(dfg.error_node());
+    }
+    let grouping = verify_same_partitioning(
+        data_context,
+        diagnostics,
+        &location.with_value(location.inner().as_str()),
+        &arguments,
+    )?;
+
+    let args: Vec<_> = izip!(arguments, instantiated_types)
+        .map(|(arg, expected_type)| -> anyhow::Result<_> {
+            let ast_dfg = Arc::new(AstDfg::new(
+                cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
+                arg.is_new(),
+                expected_type,
+                arg.grouping(),
+                arg.time_domain().clone(),
+                arg.location().clone(),
+                None,
+            ));
+            Ok(arg.with_value(ast_dfg))
+        })
+        .try_collect()?;
+
+    let is_new = dfg.add_udf(udf.clone(), args.iter().map(|i| i.value()).collect())?;
+    let value = is_any_new(dfg, &args)?;
+
+    let time_domain_check = TimeDomainCheck::Compatible;
+    let time_domain =
+        time_domain_check.check_args(location.location(), diagnostics, &args, data_context)?;
+
+    Ok(Arc::new(AstDfg::new(
+        value,
+        is_new,
+        instantiated_result_type,
+        grouping,
+        time_domain,
+        location.location().clone(),
+        None,
+    )))
+}
+
+pub fn add_to_dfg(
+    data_context: &mut DataContext,
+    dfg: &mut Dfg,
+    diagnostics: &mut DiagnosticCollector<'_>,
+    op: &ExprOp,
+    mut arguments: Resolved<Located<AstDfgRef>>,
+    original_ast: Option<&ResolvedExpr>,
+) -> anyhow::Result<AstDfgRef> {
     let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
 
-    match expr.op() {
+    match op {
         ExprOp::Literal(literal) => {
             let (value_id, value_type) = match literal.inner() {
                 LiteralValue::String(s) => {
@@ -116,7 +200,7 @@ pub(super) fn ast_to_dfg(
 
             if CastEvaluator::is_supported_fenl(from_type, to_type) {
                 if let FenlType::Concrete(to_type) = to_type.inner() {
-                    return Ok(Rc::new(AstDfg::new(
+                    return Ok(Arc::new(AstDfg::new(
                         dfg.add_expression(
                             Expression::Inst(InstKind::Cast(to_type.clone())),
                             smallvec![input.value()],
@@ -158,12 +242,7 @@ pub(super) fn ast_to_dfg(
                     .with_note(if nearest.is_empty() {
                         "No formulas, tables, or let-bound names available".to_owned()
                     } else {
-                        format!(
-                            "Nearest matches: {}",
-                            nearest
-                                .iter()
-                                .format_with(", ", |e, f| f(&format_args!("'{e}'")))
-                        )
+                        format!("Nearest matches: {nearest}")
                     })
                     .emit(diagnostics);
                 Ok(dfg.error_node())
@@ -173,41 +252,14 @@ pub(super) fn ast_to_dfg(
             let base = &arguments[0];
             let base_type = &argument_types[0];
 
-            let field_type = match base_type.inner() {
-                FenlType::Concrete(DataType::Struct(fields)) => {
-                    if let Some(field) = fields.iter().find(|f| f.name() == field.inner()) {
-                        field.data_type()
-                    } else {
-                        missing_field_diagnostic(fields, field.inner(), field.location())
-                            .emit(diagnostics);
-                        return Ok(dfg.error_node());
-                    }
-                }
-                FenlType::Json => {
-                    // This is a pseudo-hack that allows us to support json datatypes without
-                    // a specific arrow-representable json type. All `json` functions are converted
-                    // to `json_field` instructions that take a `string` and output a `string`,
-                    // hence the `utf8` return type here.
-                    &DataType::Utf8
-                }
-                FenlType::Error => {
-                    // The original error is already reported.
+            let field_type = match field_type(field, base_type.inner(), arguments[0].location()) {
+                Ok(Some(field_type)) => field_type,
+                Ok(None) => {
+                    // already reported error.
                     return Ok(dfg.error_node());
                 }
-                _ => {
-                    DiagnosticCode::IllegalFieldRef
-                        .builder()
-                        .with_label(
-                            // If the base is not a struct, that is the "primary" problem.
-                            expr.arg(0)
-                                .unwrap()
-                                .location()
-                                .primary_label()
-                                .with_message(format!(
-                                    "No fields for non-record base type {base_type}"
-                                )),
-                        )
-                        .emit(diagnostics);
+                Err(diagnostic) => {
+                    diagnostic.emit(diagnostics);
                     return Ok(dfg.error_node());
                 }
             };
@@ -218,8 +270,8 @@ pub(super) fn ast_to_dfg(
                 smallvec![base.value(), field_name],
             )?;
             let is_new = base.is_new();
-            let value_type = field_type.clone().into();
-            Ok(Rc::new(AstDfg::new(
+            let value_type = field_type.into();
+            Ok(Arc::new(AstDfg::new(
                 value,
                 is_new,
                 value_type,
@@ -257,7 +309,7 @@ pub(super) fn ast_to_dfg(
                     let agg_input_op = dfg.operation(agg_input.value());
                     let tick_input = smallvec![agg_input_op];
                     let tick_node = dfg.add_operation(Operation::Tick(behavior), tick_input)?;
-                    let tick_node = Rc::new(AstDfg::new(
+                    let tick_node = Arc::new(AstDfg::new(
                         tick_node,
                         tick_node,
                         FenlType::Concrete(DataType::Boolean),
@@ -270,13 +322,23 @@ pub(super) fn ast_to_dfg(
                 }
             }
 
+            let signature = if original_ast.is_some() {
+                // If we have an original AST, then we're running from a Fenl file.
+                // In that case, we use the AST signature.
+                function.signature()
+            } else {
+                // If not, we're running from the builder, and can use the internal
+                // DFG signature.
+                function.internal_signature()
+            };
+
             let mut invalid = false;
-            for constant_index in function.signature().parameters().constant_indices() {
+            for constant_index in signature.parameters().constant_indices() {
                 let argument = &arguments.values()[constant_index];
                 if dfg.literal(argument.value()).is_none() {
                     invalid = true;
 
-                    let argument_name = &function.signature().arg_names()[constant_index];
+                    let argument_name = &signature.arg_names()[constant_index];
                     DiagnosticCode::InvalidNonConstArgument
                         .builder()
                         .with_label(argument.location().primary_label().with_message(format!(
@@ -291,7 +353,7 @@ pub(super) fn ast_to_dfg(
             }
 
             let (instantiated_types, instantiated_result_type) =
-                match instantiate(function_name, &argument_types, function.signature()) {
+                match instantiate(function_name, &argument_types, signature) {
                     Ok(result) => result,
                     Err(diagnostic) => {
                         diagnostic.emit(diagnostics);
@@ -490,7 +552,7 @@ pub(super) fn ast_to_dfg(
             // Add cast operations as necessary
             let args: Vec<_> = izip!(arguments, instantiated_types)
                 .map(|(arg, expected_type)| -> anyhow::Result<_> {
-                    let ast_dfg = Rc::new(AstDfg::new(
+                    let ast_dfg = Arc::new(AstDfg::new(
                         cast_if_needed(dfg, arg.value(), arg.value_type(), &expected_type)?,
                         arg.is_new(),
                         expected_type,
@@ -504,44 +566,106 @@ pub(super) fn ast_to_dfg(
                 .try_collect()?;
 
             let args: Vec<_> = if function.is_aggregation() {
-                // If the function is an aggregation, we may need to flatten the window.
-                dfg.enter_env();
-                dfg.bind("$condition_input", args[0].inner().clone());
+                let window_arg = original_ast.map(|e| &e.args()[1]);
+                let (condition, duration) = match window_arg {
+                    Some(window) => {
+                        // If the function is an aggregation, we may need to flatten the window.
+                        dfg.enter_env();
+                        dfg.bind("$condition_input", args[0].inner().clone());
 
-                let window = &expr.args()[1];
-                let (condition, duration) = match window.op() {
-                    ExprOp::Call(window_name) => {
-                        flatten_window_args(window_name, window, dfg, data_context, diagnostics)?
+                        let result =
+                            flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+                        dfg.exit_env();
+                        result
                     }
-                    ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
-                        // Unwindowed aggregations just use nulls
-                        let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
-                        let null_arg = Located::new(
-                            add_literal(
-                                dfg,
-                                null_arg,
-                                FenlType::Concrete(DataType::Null),
-                                window.location().clone(),
-                            )?,
-                            window.location().clone(),
-                        );
-
-                        (null_arg.clone(), null_arg)
+                    None => {
+                        // If `expr` is None, we're running the Python builder code,
+                        // which already flattened things.
+                        //
+                        // Note that this won't define the `condition_input` for the
+                        // purposes of ticks.
+                        (args[1].clone(), args[2].clone())
                     }
-                    unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
                 };
 
-                dfg.exit_env();
                 // [agg_input, condition, duration]
                 vec![args[0].clone(), condition, duration]
-            } else if function.name() == "when" || function.name() == "if" {
-                dfg.enter_env();
-                dfg.bind("$condition_input", args[1].inner().clone());
+            } else if function.name() == "collect" {
+                // The collect function contains a window, but does not follow the same signature
+                // pattern as aggregations, so it requires a different flattening strategy.
+                //
+                // TODO: Flattening the window arguments is hacky and confusing. We should instead
+                // incorporate the tick directly into the function containing the window.
+                let window_arg = original_ast.map(|e| &e.args()[3]);
+                let (condition, duration) = match window_arg {
+                    Some(window) => {
+                        dfg.enter_env();
+                        dfg.bind("$condition_input", args[0].inner().clone());
 
-                let condition = ast_to_dfg(data_context, dfg, diagnostics, &expr.args()[0])?;
-                dfg.exit_env();
-                // [condition, value]
-                vec![expr.args()[0].with_value(condition), args[1].clone()]
+                        let result =
+                            flatten_window_args_if_needed(window, dfg, data_context, diagnostics)?;
+                        dfg.exit_env();
+                        result
+                    }
+                    None => {
+                        // If `expr` is None, we're running the Python builder code,
+                        // which already flattened things.
+                        //
+                        // Note that this won't define the `condition_input` for the
+                        // purposes of ticks.
+                        (args[3].clone(), args[4].clone())
+                    }
+                };
+
+                let min = dfg.literal(args[2].value());
+                let max = dfg.literal(args[1].value());
+                match (min, max) {
+                    (Some(ScalarValue::Int64(Some(min))), Some(ScalarValue::Int64(Some(max)))) => {
+                        if min > max {
+                            DiagnosticCode::IllegalCast
+                                .builder()
+                                .with_label(args[2].location().primary_label().with_message(
+                                    format!(
+                                        "min '{min}' must be less than or equal to max '{max}'"
+                                    ),
+                                ))
+                                .emit(diagnostics);
+                        }
+                    }
+                    (Some(_), Some(_)) => (),
+                    (_, _) => panic!("previously verified min and max are scalar types"),
+                }
+
+                // [input, max, min, condition, duration]
+                vec![
+                    args[0].clone(),
+                    args[1].clone(),
+                    args[2].clone(),
+                    condition,
+                    duration,
+                ]
+            } else if function.name() == "when" || function.name() == "if" {
+                match original_ast {
+                    Some(original_ast) => {
+                        dfg.enter_env();
+                        dfg.bind("$condition_input", args[1].inner().clone());
+
+                        let condition = original_ast.args()[0].as_ref().try_map(|condition| {
+                            ast_to_dfg(data_context, dfg, diagnostics, condition)
+                        })?;
+
+                        dfg.exit_env();
+                        vec![condition, args[1].clone()]
+                    }
+                    None => {
+                        // If `expr` is None, we're running the Python builder code,
+                        // which already flattened things.
+                        //
+                        // Note that this won't define the `condition_input` for the
+                        // purposes of ticks.
+                        vec![args[0].clone(), args[1].clone()]
+                    }
+                }
             } else {
                 args
             };
@@ -587,6 +711,37 @@ pub(super) fn ast_to_dfg(
             argument_types,
         ),
     }
+}
+
+#[allow(clippy::type_complexity)]
+fn flatten_window_args_if_needed(
+    window: &Located<Box<ResolvedExpr>>,
+    dfg: &mut Dfg,
+    data_context: &mut DataContext,
+    diagnostics: &mut DiagnosticCollector<'_>,
+) -> anyhow::Result<(Located<Arc<AstDfg>>, Located<Arc<AstDfg>>)> {
+    let (condition, duration) = match window.op() {
+        ExprOp::Call(window_name) => {
+            flatten_window_args(window_name, window, dfg, data_context, diagnostics)?
+        }
+        ExprOp::Literal(v) if v.inner() == &LiteralValue::Null => {
+            // Unwindowed aggregations just use nulls
+            let null_arg = dfg.add_literal(LiteralValue::Null.to_scalar()?)?;
+            let null_arg = Located::new(
+                add_literal(
+                    dfg,
+                    null_arg,
+                    FenlType::Concrete(DataType::Null),
+                    window.location().clone(),
+                )?,
+                window.location().clone(),
+            );
+
+            (null_arg.clone(), null_arg)
+        }
+        unexpected => anyhow::bail!("expected window, found {:?}", unexpected),
+    };
+    Ok((condition, duration))
 }
 
 // Verify that the arguments are compatibly partitioned.
@@ -653,6 +808,13 @@ fn cast_if_needed(
         {
             Ok(value)
         }
+        // Ensures that list types with the same inner types are compatible, regardless of the (arbitary) field naming.
+        (FenlType::Concrete(DataType::List(s)), FenlType::Concrete(DataType::List(s2)))
+            if list_types_are_equal(s, s2) =>
+        {
+            Ok(value)
+        }
+
         (FenlType::Concrete(DataType::Null), FenlType::Window) => Ok(value),
         (
             FenlType::Concrete(DataType::Struct(actual_fields)),
@@ -712,6 +874,14 @@ fn map_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
     }
 }
 
+// When constructing the concrete list during inference, we use arbitary names for the inner data
+// field since we don't have access to the user's naming patterns there.
+// By comparing the list types based on just the inner type, we can ensure that the types are
+// still treated as equal.
+fn list_types_are_equal(a: &FieldRef, b: &FieldRef) -> bool {
+    a.data_type() == b.data_type()
+}
+
 pub(crate) fn is_any_new(dfg: &mut Dfg, arguments: &[Located<AstDfgRef>]) -> anyhow::Result<Id> {
     let mut argument_is_new = arguments.iter().map(|a| a.is_new()).unique();
     let mut result = argument_is_new
@@ -730,7 +900,7 @@ fn add_literal(
     location: Location,
 ) -> anyhow::Result<AstDfgRef> {
     let is_new = dfg.add_literal(false)?;
-    Ok(Rc::new(AstDfg::new(
+    Ok(Arc::new(AstDfg::new(
         value,
         is_new,
         value_type,
@@ -758,15 +928,55 @@ fn missing_field_diagnostic(
         .with_note(if fields.is_empty() {
             "No fields available on base record".to_owned()
         } else {
-            let candidates = crate::nearest_matches::nearest_matches(
+            let candidates = crate::nearest_matches::NearestMatches::new_nearest_strs(
                 field_name,
-                fields.iter().map(|f| f.name()),
+                fields.iter().map(|f| f.name().as_str()),
             );
-            format!(
-                "Nearest fields: {}",
-                candidates
-                    .iter()
-                    .format_with(", ", |name, f| f(&format_args!("'{name}'")))
-            )
+            format!("Nearest fields: {candidates}",)
         })
+}
+
+fn field_type(
+    field: &Located<String>,
+    base_type: &FenlType,
+    base_location: &Location,
+) -> Result<Option<DataType>, DiagnosticBuilder> {
+    match base_type {
+        FenlType::Concrete(DataType::Struct(fields)) => {
+            if let Some(field) = fields.iter().find(|f| f.name() == field.inner()) {
+                Ok(Some(field.data_type().clone()))
+            } else {
+                Err(missing_field_diagnostic(
+                    fields,
+                    field.inner(),
+                    field.location(),
+                ))
+            }
+        }
+        FenlType::Json => {
+            // This is a pseudo-hack that allows us to support json datatypes without
+            // a specific arrow-representable json type. All `json` functions are converted
+            // to `json_field` instructions that take a `string` and output a `string`,
+            // hence the `utf8` return type here.
+            Ok(Some(DataType::Utf8))
+        }
+        FenlType::Error => {
+            // The original error is already reported.
+            Ok(None)
+        }
+        _ => {
+            if let Some(args) = base_type.collection_args(&Collection::List) {
+                let item_type = field_type(field, &args[0], base_location)?;
+                Ok(item_type
+                    .map(|item_type| DataType::List(Arc::new(Field::new("item", item_type, true)))))
+            } else {
+                Err(DiagnosticCode::IllegalFieldRef.builder().with_label(
+                    // If the base is not a struct, that is the "primary" problem.
+                    base_location
+                        .primary_label()
+                        .with_message(format!("No fields for non-record base type {base_type}")),
+                ))
+            }
+        }
+    }
 }

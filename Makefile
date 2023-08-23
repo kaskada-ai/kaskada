@@ -64,8 +64,8 @@ test/int/docker-up:
 test/int/docker-up-s3:
 	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans --force-recreate
 
-test/int/docker-up-s3-only:
-	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans --force-recreate minio
+test/int/docker-up-dependencies-only:
+	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.s3.yml up --build --remove-orphans --force-recreate minio pulsar
 
 test/int/docker-up-postgres:
 	docker compose -f ./tests/integration/docker-compose.yml -f ./tests/integration/docker-compose.postgres.yml up --build --remove-orphans --force-recreate

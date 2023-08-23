@@ -17,12 +17,12 @@ use sparrow_qfr::{
 use tokio_stream::StreamExt;
 use tracing::info;
 
-use crate::merge::{homogeneous_merge, GatheredBatches, Gatherer};
 use crate::min_heap::{HasPriority, MinHeap};
 use crate::read::error::Error;
 use crate::read::parquet_stream::{self, new_parquet_stream};
 use crate::stores::ObjectStoreRegistry;
 use crate::Batch;
+use sparrow_merge::old::{homogeneous_merge, GatheredBatches, Gatherer};
 
 const READ_TABLE: Activity = activity!("scan.read_file");
 const GATHER_TABLE_BATCHES: Activity = activity!("scan.gather");
@@ -661,7 +661,7 @@ mod tests {
         let mut data_context = DataContext::default();
         let schema =
             sparrow_api::kaskada::v1alpha::Schema::try_from(TABLE_SCHEMA.as_ref()).unwrap();
-        let table_id = data_context
+        let table_info = data_context
             .add_table(ComputeTable {
                 config: Some(CONFIG.clone()),
                 metadata: Some(TableMetadata {
@@ -674,7 +674,6 @@ mod tests {
                 }],
             })
             .unwrap();
-        let table_info = data_context.table_info(table_id).unwrap();
 
         let prepared_files =
             select_prepared_files(table_info, &None, Some(max_event_in_snapshot)).unwrap();
@@ -719,7 +718,7 @@ mod tests {
         let mut data_context = DataContext::default();
         let schema =
             sparrow_api::kaskada::v1alpha::Schema::try_from(TABLE_SCHEMA.as_ref()).unwrap();
-        let table_id = data_context
+        let table_info = data_context
             .add_table(ComputeTable {
                 config: Some(CONFIG.clone()),
                 metadata: Some(TableMetadata {
@@ -732,7 +731,6 @@ mod tests {
                 }],
             })
             .unwrap();
-        let table_info = data_context.table_info(table_id).unwrap();
 
         let upper_bound_opt = if let Some(ts) = max_event_time {
             NaiveDateTime::from_timestamp_opt(ts.seconds, ts.nanos as u32)

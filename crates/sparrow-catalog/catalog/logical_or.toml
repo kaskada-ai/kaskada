@@ -1,8 +1,8 @@
-name = 'logical_or'
-signature = 'logical_or(a: bool, b: bool) -> bool'
-operator = 'a or b'
-short_doc = 'Returns the logical disjunction (OR) of two booleans.'
-long_doc = '''
+name = "logical_or"
+signature = "logical_or(a: bool, b: bool) -> bool"
+operator = "a or b"
+short_doc = "Returns the logical disjunction (OR) of two booleans."
+long_doc = """
 This is the function used for the binary operation `a or b`.
 
 ### Parameters
@@ -13,13 +13,13 @@ This is the function used for the binary operation `a or b`.
 * Returns `true` if `a` or `b` are `true`.
 * Returns `false` if `a` and `b` are both `false`.
 * Returns `null` if `a` or `b` are `null`.
-'''
-tags = ['logical']
+"""
+tags = ["logical"]
 
 [[examples]]
-name = 'Logical Or'
-expression = 'Input.a or Input.b'
-input_csv = '''
+name = "Logical Or"
+expression = "Input.a or Input.b"
+input_csv = """
 time,subsort,key,a,b
 2021-01-01T00:00:00.000000000Z,0,A,true,false
 2021-01-02T00:00:00.000000000Z,0,B,true,true
@@ -29,8 +29,8 @@ time,subsort,key,a,b
 2021-02-01T00:00:00.000000000Z,0,B,true,
 2021-02-02T00:00:00.000000000Z,0,A,,false
 2021-03-01T00:00:00.000000000Z,0,B,false,
-'''
-output_csv = '''
+"""
+output_csv = """
 time,subsort,key,a,b,result
 2021-01-01T00:00:00.000000000,0,A,true,false,true
 2021-01-02T00:00:00.000000000,0,B,true,true,true
@@ -40,4 +40,4 @@ time,subsort,key,a,b,result
 2021-02-01T00:00:00.000000000,0,B,true,,true
 2021-02-02T00:00:00.000000000,0,A,,false,
 2021-03-01T00:00:00.000000000,0,B,false,,
-'''
+"""

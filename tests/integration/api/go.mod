@@ -10,7 +10,6 @@ replace github.com/kaskada-ai/kaskada/tests/integration/shared => ../shared
 
 require (
 	github.com/apache/pulsar-client-go v0.9.0
-	github.com/gomodule/redigo v1.8.9
 	github.com/google/uuid v1.3.0
 	github.com/jt-nti/gproto v0.0.0-20210304092907-23e645af1351
 	github.com/mattn/go-sqlite3 v1.14.16
@@ -112,7 +111,6 @@ require (
 require (
 	ariga.io/atlas v0.5.0 // indirect
 	entgo.io/ent v0.11.1 // indirect
-	github.com/RedisAI/redisai-go v1.0.1
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/c2fo/vfs v2.1.4+incompatible // indirect

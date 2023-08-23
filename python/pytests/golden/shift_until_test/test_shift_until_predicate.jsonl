@@ -1,0 +1,11 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","m":5.0,"sum_m":5,"predicate":false,"shift_until":null}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","m":24.0,"sum_m":24,"predicate":false,"shift_until":null}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","m":17.0,"sum_m":22,"predicate":false,"shift_until":null}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","m":null,"sum_m":22,"predicate":false,"shift_until":5.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","m":null,"sum_m":22,"predicate":false,"shift_until":17.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","m":null,"sum_m":22,"predicate":false,"shift_until":10.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","m":10.0,"sum_m":32,"predicate":true,"shift_until":10.0}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","m":null,"sum_m":32,"predicate":true,"shift_until":12.0}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","m":12.0,"sum_m":44,"predicate":true,"shift_until":12.0}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","m":null,"sum_m":44,"predicate":true,"shift_until":12.0}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","m":null,"sum_m":44,"predicate":true,"shift_until":12.0}

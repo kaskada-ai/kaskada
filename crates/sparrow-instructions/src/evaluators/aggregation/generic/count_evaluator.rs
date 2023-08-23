@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use crate::ValueRef;
 use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 use arrow::datatypes::UInt32Type;
 use itertools::izip;
 use sparrow_arrow::downcast::downcast_boolean_array;
-use sparrow_plan::ValueRef;
 
 use super::two_stacks_count_evaluator::TwoStacksCountIfEvaluator;
 use crate::{

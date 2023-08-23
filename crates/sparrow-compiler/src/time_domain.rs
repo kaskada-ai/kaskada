@@ -1,7 +1,7 @@
 use anyhow::Context;
 use egg::Id;
 use itertools::Itertools;
-use sparrow_plan::TableId;
+use sparrow_instructions::TableId;
 use sparrow_syntax::{Located, Location};
 
 use crate::{AstDfgRef, DataContext, DiagnosticBuilder, DiagnosticCode};
@@ -11,7 +11,7 @@ use crate::{AstDfgRef, DataContext, DiagnosticBuilder, DiagnosticCode};
 /// It is used to report warnings about operations between incompatible
 /// domains.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub(super) enum TimeDomain {
+pub enum TimeDomain {
     /// The TimeDomain represents an error.
     Error,
     /// The TimeDomain represents a continuous value, such as a literal or
@@ -38,6 +38,10 @@ impl TimeDomain {
 
     pub fn error() -> Self {
         TimeDomain::Error
+    }
+
+    pub fn is_continuous(&self) -> bool {
+        matches!(self, TimeDomain::Continuous)
     }
 }
 

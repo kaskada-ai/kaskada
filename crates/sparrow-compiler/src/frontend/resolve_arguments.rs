@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use itertools::Itertools;
 use sparrow_syntax::{
     Arguments, Expr, ExprOp, ExprRef, Located, ResolveError, Resolved, ResolvedExpr,
 };
@@ -9,7 +8,7 @@ use static_init::dynamic;
 use crate::{DiagnosticBuilder, DiagnosticCode};
 
 #[dynamic]
-static FIELD_REF_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("record")];
+pub(crate) static FIELD_REF_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("record")];
 
 #[dynamic]
 static PIPE_ARGUMENTS: [Located<String>; 2] = [
@@ -106,12 +105,7 @@ fn resolve_arguments(
                             .primary_label()
                             .with_message(format!("No function named '{function_name}'")),
                     )
-                    .with_note(format!(
-                        "Nearest matches: {}",
-                        candidates
-                            .iter()
-                            .format_with(", ", |e, f| f(&format_args!("'{e}'")))
-                    ));
+                    .with_note(format!("Nearest matches: {candidates}"));
                 return Err(Some(diagnostic));
             }
         },
@@ -223,15 +217,15 @@ fn resolve_arguments(
             )),
         )),
         ResolveError::InvalidKeywordArgument { keyword } => {
-            let nearest = crate::nearest_matches::nearest_matches(
+            let nearest = crate::nearest_matches::NearestMatches::new_nearest_strs(
                 keyword.inner(),
-                names.iter().map(Located::inner),
+                names.iter().map(|s| s.inner().as_str()),
             );
             Some(
                 DiagnosticCode::InvalidArguments
                     .builder()
                     .with_label(operator_location.primary_label())
-                    .with_note(format!("Nearest matches: {}", nearest.iter().format(", "))),
+                    .with_note(format!("Nearest matches: {nearest}")),
             )
         }
     })
@@ -322,9 +316,9 @@ mod tests {
             _ => panic!("expected call"),
         };
 
-        // Sum should have three args: [input, tick, duration].
+        // Sum should have two args: [input, window].
         let sum_arg = args[1].inner().args();
-        assert_eq!(sum_arg.len(), 3);
+        assert_eq!(sum_arg.len(), 2);
         let input = sum_arg[0].inner();
         match input.op() {
             ExprOp::Reference(str) => assert_eq!(str.inner(), "$input"),

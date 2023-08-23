@@ -1,0 +1,8 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","is_valid":true,"count_if":1,"m":5.0}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","is_valid":true,"count_if":1,"m":24.0}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","is_valid":false,"count_if":1,"m":17.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","is_valid":false,"count_if":1,"m":null}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","is_valid":true,"count_if":2,"m":12.0}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","is_valid":null,"count_if":2,"m":null}
+{"_time":"1996-12-19T16:40:03.000000000","_key":"B","is_valid":true,"count_if":2,"m":26.0}
+{"_time":"1996-12-19T16:40:04.000000000","_key":"B","is_valid":true,"count_if":3,"m":30.0}

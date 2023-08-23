@@ -1,0 +1,12 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":"1996-12-19T16:39:57.000000000","ms":[5],"m":5.0}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"A","shift_by_1_s_time":"1996-12-19T16:39:57.000000000","shift_by_1_s_ms":[5],"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":null,"ms":[5],"m":null}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":"1996-12-19T16:39:58.000000000","ms":[24],"m":24.0}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"B","shift_by_1_s_time":"1996-12-19T16:39:58.000000000","shift_by_1_s_ms":[24],"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":null,"ms":[24],"m":null}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":"1996-12-19T16:39:59.000000000","ms":[5,17],"m":17.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","shift_by_1_s_time":"1996-12-19T16:39:59.000000000","shift_by_1_s_ms":[5,17],"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":null,"ms":[5,17],"m":null}
+{"_time":"1996-12-19T16:40:57.000000000","_key":"A","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":"1996-12-19T16:39:57.000000000","shift_by_1_m_ms":[5],"time":null,"ms":[5,17],"m":null}
+{"_time":"1996-12-19T16:40:58.000000000","_key":"B","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":"1996-12-19T16:39:58.000000000","shift_by_1_m_ms":[24],"time":null,"ms":[24],"m":null}
+{"_time":"1996-12-19T16:40:59.000000000","_key":"A","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":"1996-12-19T16:39:59.000000000","shift_by_1_m_ms":[5,17],"time":null,"ms":[5,17],"m":null}
+{"_time":"1997-01-18T16:40:00.000000000","_key":"A","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":"1997-01-18T16:40:00.000000000","ms":[5,17],"m":null}
+{"_time":"1997-01-18T16:40:01.000000000","_key":"A","shift_by_1_s_time":"1997-01-18T16:40:00.000000000","shift_by_1_s_ms":[5,17],"shift_by_1_m_time":null,"shift_by_1_m_ms":null,"time":null,"ms":[5,17],"m":null}
+{"_time":"1997-01-18T16:41:00.000000000","_key":"A","shift_by_1_s_time":null,"shift_by_1_s_ms":null,"shift_by_1_m_time":"1997-01-18T16:40:00.000000000","shift_by_1_m_ms":[5,17],"time":null,"ms":[5,17],"m":null}

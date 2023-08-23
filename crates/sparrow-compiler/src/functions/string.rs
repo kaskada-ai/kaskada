@@ -1,4 +1,4 @@
-use sparrow_plan::InstOp;
+use sparrow_instructions::InstOp;
 
 use crate::functions::{Implementation, Registry};
 

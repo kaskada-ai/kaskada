@@ -24,7 +24,7 @@ const DBG_PRINT_PLAN: bool = false;
 /// TODO: The `DataContext` is used to get the table name from an ID, which is
 /// only necessary to create the `slice_plan` because it uses a name instead of
 /// an ID.
-pub(super) fn extract_plan_proto(
+pub fn extract_plan_proto(
     data_context: &DataContext,
     expr: DfgExpr,
     per_entity_behavior: PerEntityBehavior,

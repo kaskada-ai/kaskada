@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context};
 use arrow::datatypes::{DataType, FieldRef};
 use egg::{Id, Subst, Var};
 use smallvec::smallvec;
-use sparrow_plan::InstKind;
+use sparrow_instructions::InstKind;
 
 use crate::dfg::{ChildrenVec, Dfg, DfgPattern, Expression};
 
@@ -111,6 +111,7 @@ impl Pushdown {
             | DataType::Interval(_)
             | DataType::Utf8
             | DataType::LargeUtf8
+            | DataType::List(..)
             | DataType::Map(..) => {
                 let mut subst = subst.clone();
                 subst.insert(

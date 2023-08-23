@@ -1,0 +1,6 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","state":"WA","lookup":null,"lookup_last":null}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","state":"NC","lookup":24.0,"lookup_last":24.0}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","state":"WA","lookup":17.0,"lookup_last":17.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","state":"NC","lookup":null,"lookup_last":24.0}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","state":"SC","lookup":null,"lookup_last":null}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","state":"WA","lookup":null,"lookup_last":12.0}

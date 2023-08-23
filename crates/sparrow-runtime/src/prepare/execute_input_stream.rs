@@ -14,7 +14,7 @@ use sparrow_api::kaskada::v1alpha::{slice_plan, TableConfig};
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_core::TableSchema;
 
-use crate::execute::key_hash_inverse::ThreadSafeKeyHashInverse;
+use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
 
@@ -309,9 +309,8 @@ async fn update_key_inverse(
         .into_report()
         .change_context(Error::PreparingColumn)?;
     key_hash_inverse
-        .add(keys.clone(), key_hashes)
+        .add(keys.as_ref(), key_hashes)
         .await
-        .into_report()
         .change_context(Error::PreparingColumn)?;
     Ok(())
 }
@@ -329,7 +328,7 @@ mod tests {
     use static_init::dynamic;
     use uuid::Uuid;
 
-    use crate::execute::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
+    use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
     use crate::prepare::execute_input_stream;
     use crate::RawMetadata;
 
@@ -379,9 +378,8 @@ mod tests {
         let batch2 = make_time_batch(&[6, 12, 10, 17, 11, 12]);
         let batch3 = make_time_batch(&[20]);
         let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
-        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
-            KeyHashInverse::from_data_type(DataType::UInt64),
-        ));
+        let key_hash_inverse =
+            Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::UInt64));
 
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
@@ -429,9 +427,8 @@ mod tests {
         let batch3 = make_time_batch(&[20]);
 
         let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
-        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
-            KeyHashInverse::from_data_type(DataType::UInt64),
-        ));
+        let key_hash_inverse =
+            Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::UInt64));
 
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(
@@ -480,9 +477,8 @@ mod tests {
         let batch3 = make_time_batch(&[7, 17]);
 
         let reader = futures::stream::iter(vec![Ok(batch1), Ok(batch2), Ok(batch3)]).boxed();
-        let key_hash_inverse = Arc::new(ThreadSafeKeyHashInverse::new(
-            KeyHashInverse::from_data_type(DataType::UInt64),
-        ));
+        let key_hash_inverse =
+            Arc::new(ThreadSafeKeyHashInverse::from_data_type(&DataType::UInt64));
 
         let raw_metadata = RawMetadata::from_raw_schema(RAW_SCHEMA.clone()).unwrap();
         let mut stream = execute_input_stream::prepare_input(

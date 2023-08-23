@@ -474,7 +474,7 @@ async fn test_parse_error_missing_parentheses() {
           - "1 | { n: Numbers.n"
           - "  |               ^ Unexpected EOF"
           - "  |"
-          - "  = Expected \")\",\",\",\"]\",\"in\",\"let\",\"}\""
+          - "  = Expected \",\",\"}\""
           - ""
           - ""
     "###);
@@ -497,7 +497,7 @@ async fn test_parse_error_unrecognized() {
           - "1 | limit x = 5 in { n: Numbers.n}"
           - "  |       ^ Invalid token 'x'"
           - "  |"
-          - "  = Expected \"!=\", \"(\", \")\", \"*\", \"+\", \",\", \"-\", \".\", \"/\", \":\", \"<\", \"<=\", \"<>\", \"=\", \"=\", \"==\", \">\", \">=\", \"[\", \"]\", \"and\", \"as\", \"in\", \"let\", \"or\", \"|\", \"}\""
+          - "  = Expected \"!=\", \"(\", \"*\", \"+\", \"-\", \".\", \"/\", \"<\", \"<=\", \"<>\", \"==\", \">\", \">=\", \"[\", \"and\", \"as\", \"or\", \"|\""
           - ""
           - ""
       - severity: error
@@ -731,7 +731,7 @@ async fn test_invalid_named_arguments_duplicates() {
           - "1 | { n: ceil(x = Numbers.n, x = 5) } "
           - "  |      ^^^^"
           - "  |"
-          - "  = Nearest matches: n"
+          - "  = Nearest matches: 'n'"
           - ""
           - ""
     "###);
