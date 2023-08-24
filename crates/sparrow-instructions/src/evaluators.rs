@@ -45,7 +45,7 @@ use time::*;
 pub struct StaticInfo<'a> {
     inst_kind: &'a InstKind,
     pub args: Vec<StaticArg>,
-    result_type: &'a DataType,
+    pub result_type: &'a DataType,
 }
 
 impl<'a> StaticInfo<'a> {

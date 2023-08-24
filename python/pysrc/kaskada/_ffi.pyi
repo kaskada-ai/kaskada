@@ -27,7 +27,7 @@ class Expr:
     @staticmethod
     def call_udf(
         session: Session,
-        udf: Udf, # TODO: ffi udf? 
+        udf: Udf,
         args: Sequence[Expr],
     ) -> Expr: ...
     @staticmethod

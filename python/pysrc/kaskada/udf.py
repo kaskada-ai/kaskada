@@ -33,7 +33,8 @@ def udf(signature: str):
         # This needs to take the PyArrow result type and PyArrow inputs,
         # convert them to Pandas, call the function, and convert the result
         # back to PyArrow.
-        func = lambda *args: _converted_func(func, *args)
+        func = lambda result_type, *args: _converted_func(func, result_type, *args)
+        # func = lambda *args: _converted_func(func, pa.int64(), *args)
 
         # 2. Create the UDF object.
         return Udf(signature, func)
@@ -45,8 +46,14 @@ def _converted_func(func: FuncType, result_type: pa.DataType, *args: pa.Array) -
     # TODO: I believe this will return a series for simple arrays, and a
     # dataframe for struct arrays. We should explore how this handles
     # different types.
-    pd_args = [arg.to_pandas() for arg in args]
-    pd_result = func(*pd_args)
+    print("CONVERTING FUNC")
+    print(f"Result type: ", result_type)
+    print(f"Args: ", args)
+    print()
+
+    # pd_args = [arg.to_pandas() for arg in args]
+    # pd_result = func(*pd_args)
+    pd_result = func(*args)
 
     if isinstance(pd_result, pd.Series):
         return pa.Array.from_pandas(pd_result, type=result_type)

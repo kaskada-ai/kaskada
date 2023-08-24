@@ -257,16 +257,6 @@ class Timestream(object):
         else:
             return func(self, *args, **kwargs)
 
-# TODO: How does udf work? We kind of want it like... apply some function on an input? 
-# But also want like `Timestream.udf(f, args*)`
-    # def udf(callable: Callable, *args: Timestream) -> Timestream: 
-    #     """
-    #     todo
-    #     """
-    #     signature = inspect.signature(callable)
-
-    #     return Timestream._test_udf(signature, args)
-
     def add(self, rhs: Union[Timestream, Literal]) -> Timestream:
         """
         Create a Timestream adding this and `rhs`.

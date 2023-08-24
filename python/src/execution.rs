@@ -56,18 +56,15 @@ impl Execution {
     fn collect_pyarrow(&mut self, py: Python<'_>) -> Result<Vec<PyObject>> {
         let execution = self.take_execution().unwrap();
 
-        // Explicitly allow threads to take the gil during execution, so 
+        // Explicitly allow threads to take the gil during execution, so
         // the udf evaluator can acquire it to execute python.
-        let batches = py.allow_threads(move || {
-            execution.collect_all_blocking()
-        })?;
+        let batches = py.allow_threads(move || execution.collect_all_blocking())?;
 
         let results = batches
             .into_iter()
             .map(|batch| batch.to_pyarrow(py))
             .collect::<PyResult<Vec<_>>>()?;
         Ok(results)
-        // result.map_err(|_| error_stack::report!(ErrorContext::Python).into())
     }
 
     fn next_pyarrow(&mut self, py: Python<'_>) -> Result<Option<PyObject>> {
