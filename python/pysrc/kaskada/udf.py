@@ -17,7 +17,7 @@ FuncType = Callable[..., pd.Series]
 class Udf:
     def __init__(self, signature: str, func: Callable[..., pa.Array]) -> None:
         """Create a UDF with the given signature."""
-        functools.update_wrapper(self, func)
+        # functools.update_wrapper(self, func)
         self._ffi = _ffi.Udf(signature, func)
 
     def __call__(self, *args: Timestream | Literal) -> Timestream:
@@ -28,20 +28,19 @@ class Udf:
 def udf(signature: str):
     """Decorate a function for use as a Kaskada UDF."""
 
-    def decorator(func: FuncType):
+    def decorator(func_type: FuncType):
         # 1. Convert the `FuncType` to the type expected by Udf.
         # This needs to take the PyArrow result type and PyArrow inputs,
         # convert them to Pandas, call the function, and convert the result
         # back to PyArrow.
-        func = lambda result_type, *args: _converted_func(func, result_type, *args)
-        # func = lambda *args: _converted_func(func, pa.int64(), *args)
+        func = lambda result_type, *args: _converted_func(func_type, result_type, *args)
 
         # 2. Create the UDF object.
         return Udf(signature, func)
 
     return decorator
 
-def _converted_func(func: FuncType, result_type: pa.DataType, *args: pa.Array) -> pa.Array:
+def _converted_func(func_type: FuncType, result_type: pa.DataType, *args: pa.Array) -> pa.Array:
     """Run the function producing the given result type."""
     # TODO: I believe this will return a series for simple arrays, and a
     # dataframe for struct arrays. We should explore how this handles
@@ -51,9 +50,9 @@ def _converted_func(func: FuncType, result_type: pa.DataType, *args: pa.Array) -
     print(f"Args: ", args)
     print()
 
-    # pd_args = [arg.to_pandas() for arg in args]
-    # pd_result = func(*pd_args)
-    pd_result = func(*args)
+    pd_args = [arg.to_pandas() for arg in args]
+    pd_result = func_type(*pd_args)
+    # pd_result = func_type(*args)
 
     if isinstance(pd_result, pd.Series):
         return pa.Array.from_pandas(pd_result, type=result_type)

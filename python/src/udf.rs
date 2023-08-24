@@ -87,25 +87,21 @@ impl PyUdfEvaluator {
             })
             .collect::<anyhow::Result<_>>()?;
 
-        // let asdf: Vec<PyObject> = vec![DataType::to_pyarrow(&self.result_type, py)?];
-        // combine asdf and args
-        // let args: Vec<PyObject> = asdf.into_iter().chain(inputs.into_iter()).collect();
-
-        // let args = PyTuple::new(py, args);
-
         // 2. Call the python function
-        // Call the Python function
         let result_ty = DataType::to_pyarrow(&self.result_type, py)?;
-        // let kwargs = PyDict::new(py);
-        // Set the 'result_type' key to a specific value
-        // kwargs.set_item("result_type", result_ty)?;
-
         let result_ty_vec: Vec<PyObject> = vec![result_ty];
         let inputs: Vec<_> = result_ty_vec.into_iter().chain(inputs).collect();
         let inputs = PyTuple::new(py, inputs);
 
         println!("CALLING CALLABLE ");
         let py_result = self.callable.call1(py, inputs)?;
+
+        // let kwargs = PyDict::new(py);
+        // // Set the 'result_type' key to a specific value
+        // let result_ty = DataType::to_pyarrow(&self.result_type, py)?;
+        // kwargs.set_item("result_type", result_ty)?;
+
+        // let inputs = PyTuple::new(py, inputs);
         // let py_result = self.callable.call(py, inputs, Some(kwargs))?;
 
         //////////
