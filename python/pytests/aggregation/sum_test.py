@@ -69,7 +69,5 @@ def test_sum_since_true(source, golden) -> None:
 
 def test_sum_since_hourly(source_spread_across_days, golden) -> None:
     golden.jsonl(
-        source_spread_across_days.col("m").sum(
-            window=kd.windows.Since.hourly()
-        )
+        source_spread_across_days.col("m").sum(window=kd.windows.Since.hourly())
     )
