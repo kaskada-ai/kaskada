@@ -45,10 +45,7 @@ impl<T: ArrowPrimitiveType> std::fmt::Debug for PrimitiveValue<T> {
 
 impl<T: ArrowPrimitiveType> Clone for PrimitiveValue<T> {
     fn clone(&self) -> Self {
-        Self {
-            index: self.index,
-            _phantom: self._phantom,
-        }
+        *self
     }
 }
 impl<T: ArrowPrimitiveType> Copy for PrimitiveValue<T> {}
