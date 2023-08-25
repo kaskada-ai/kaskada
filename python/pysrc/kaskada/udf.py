@@ -17,6 +17,8 @@ FuncType = Callable[..., pd.Series]
 
 
 class Udf:
+    """User defined function."""
+
     def __init__(self, signature: str, func: Callable[..., pa.Array]) -> None:
         """Create a UDF with the given signature."""
         functools.update_wrapper(self, func)
@@ -35,7 +37,8 @@ def udf(signature: str):
         # This needs to take the PyArrow result type and PyArrow inputs,
         # convert them to Pandas, call the function, and convert the result
         # back to PyArrow.
-        func = lambda result_type, *args: _converted_func(func_type, result_type, *args)
+        def func(result_type, *args):
+            _converted_func(func_type, result_type, *args)
 
         # 2. Create the UDF object.
         return Udf(signature, func)
