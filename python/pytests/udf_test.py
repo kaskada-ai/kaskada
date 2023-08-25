@@ -12,7 +12,7 @@ def add(x: pd.Series, y: pd.Series) -> pd.Series:
 
 @kd.udf("add_x2<N: number>(x: N, y: N) -> N")
 def add_x2(x: pd.Series, y: pd.Series) -> pd.Series:
-    """Use Pandas to add and multiple"""
+    """Use Pandas to add then multiply by 2"""
     return (x + y) * 2
 
 

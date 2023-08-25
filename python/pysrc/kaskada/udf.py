@@ -56,6 +56,7 @@ def _converted_func(
     pd_args = [arg.to_pandas() for arg in args]
     pd_result = func_type(*pd_args)
 
+    print("Result type: ", result_type)
     if isinstance(pd_result, pd.Series):
         return pa.Array.from_pandas(pd_result, type=result_type)
     else:

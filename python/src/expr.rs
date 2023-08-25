@@ -7,7 +7,6 @@ use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use sparrow_session::{Expr as RustExpr, Literal, Session as RustSession};
-use std::sync::Arc;
 
 /// Kaskada expression node.
 #[derive(Clone)]

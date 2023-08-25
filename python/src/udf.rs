@@ -2,12 +2,12 @@ use itertools::Itertools;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use arrow::array::{new_empty_array, ArrayData, ArrayRef};
+use arrow::array::{ArrayData, ArrayRef};
 use arrow::datatypes::DataType;
 use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyTuple};
-use sparrow_instructions::{ColumnarValue, Evaluator, RuntimeInfo, StaticInfo, ValueRef};
+use pyo3::types::PyTuple;
+use sparrow_instructions::{Evaluator, RuntimeInfo, StaticInfo, ValueRef};
 use sparrow_syntax::{FeatureSetPart, Signature};
 use uuid::Uuid;
 

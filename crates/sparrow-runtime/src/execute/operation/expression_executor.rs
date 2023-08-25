@@ -98,7 +98,6 @@ impl ExpressionExecutor {
                 Operator::Instruction(inst) => {
                     // TODO: This could probably be cleaned up, possibly by eliminating
                     // `inst kind` entirely.
-                    println!("Inst: {:?}", inst);
                     let inst_kind = if inst == "field_ref" {
                         InstKind::FieldRef
                     } else if inst == "record" {
