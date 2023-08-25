@@ -1,7 +1,7 @@
 # Data Types
 
 Kaskada operates on typed Timestreams.
-Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated type.
+Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated [PyArrow data type](https://arrow.apache.org/docs/python/api/datatypes.html) returned by {py:attr}`kaskada.Timestream.data_type`.
 The set of supported types is based on the types supported by [Apache Arrow](https://arrow.apache.org/).
 
 Each `Timestream` contains points of the corresponding type.
@@ -72,6 +72,16 @@ Field names must start with a letter.
 For example, `{name: string, age: u32 }` is a record type with two fields and `{name: 'Ben', age: 33 }` is corresponding value.
 
 NOTE: Record types may be nested.
+
+## Collection Types
+
+Kaskada also supports collections -- lists and maps.
+
+The type `list<T>` describes a list of elements of type `T`.
+For example, `list<i64>` is a list of 64-bit integers.
+
+Similarly, `map<K, V>` describes a map containing keys of type `K` and values of type `V`.
+For example, `map<str, i64>` is a map from strings to 64-bit integers.
 
 ## Type Coercion
 Kaskada implicitly coerces numeric types when different kinds of numbers are combined.
