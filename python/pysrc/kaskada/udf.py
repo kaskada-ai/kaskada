@@ -7,12 +7,14 @@ from typing import Callable
 import pandas as pd
 import pyarrow as pa
 
-from ._timestream import Timestream
-from ._timestream import Literal
 from . import _ffi
+from ._timestream import Literal
+from ._timestream import Timestream
+
 
 # TODO: Allow functions to return `pd.DataFrame` for struct arrays.
 FuncType = Callable[..., pd.Series]
+
 
 class Udf:
     def __init__(self, signature: str, func: Callable[..., pa.Array]) -> None:
@@ -23,6 +25,7 @@ class Udf:
     def __call__(self, *args: Timestream | Literal) -> Timestream:
         """Apply the UDF to the given arguments."""
         return Timestream._call(self._ffi, *args)
+
 
 def udf(signature: str):
     """Decorate a function for use as a Kaskada UDF."""
@@ -39,7 +42,10 @@ def udf(signature: str):
 
     return decorator
 
-def _converted_func(func_type: FuncType, result_type: pa.DataType, *args: pa.Array) -> pa.Array:
+
+def _converted_func(
+    func_type: FuncType, result_type: pa.DataType, *args: pa.Array
+) -> pa.Array:
     """Run the function producing the given result type."""
     # TODO: I believe this will return a series for simple arrays, and a
     # dataframe for struct arrays. We should explore how this handles

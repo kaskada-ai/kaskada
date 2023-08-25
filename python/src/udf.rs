@@ -105,7 +105,7 @@ impl PyUdfEvaluator {
         anyhow::ensure!(
             *result_array_data.data_type() == self.result_type,
             "expected Python UDF to return type {:?}, but received {:?}",
-            self.result_type
+            self.result_type,
             result_array_data.data_type(),
         );
 

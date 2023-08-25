@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import warnings
-
 from datetime import datetime
 from datetime import timedelta
 from typing import Callable
@@ -113,11 +112,17 @@ class Timestream(object):
         ffi_args = [make_arg(arg) for arg in args]
         try:
             if isinstance(func, str):
-                return Timestream(_ffi.Expr.call(session=session, operation=func, args=ffi_args))
+                return Timestream(
+                    _ffi.Expr.call(session=session, operation=func, args=ffi_args)
+                )
             elif isinstance(func, _ffi.Udf):
-                return Timestream(_ffi.Expr.call_udf(session=session, udf=func, args=ffi_args))
+                return Timestream(
+                    _ffi.Expr.call_udf(session=session, udf=func, args=ffi_args)
+                )
             else:
-                raise TypeError(f"invalid type for func. Expected str or udf, saw: {type(func)}")
+                raise TypeError(
+                    f"invalid type for func. Expected str or udf, saw: {type(func)}"
+                )
         except TypeError as e:
             # noqa: DAR401
             raise _augment_error(args, TypeError(str(e))) from e

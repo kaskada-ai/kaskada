@@ -10,8 +10,9 @@ from ._session import init_session
 from ._timestream import Literal
 from ._timestream import Timestream
 from ._timestream import record
-from .udf import Udf
 from .udf import udf
+from .udf import Udf
+
 
 __all__ = [
     "ExecutionOptions",
@@ -22,6 +23,7 @@ __all__ = [
     "Result",
     "sources",
     "Timestream",
+    "Udf",
     "udf",
     "windows",
 ]
