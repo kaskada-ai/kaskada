@@ -169,6 +169,7 @@ impl OperationExecutor {
     /// This function will not return until the operation is complete -- either
     /// because all inputs have been processed or because it has been
     /// interrupted due to an error or reaching a preview-rows limit, etc.
+    #[allow(clippy::too_many_arguments)]
     pub async fn execute(
         self,
         operation_index: usize,

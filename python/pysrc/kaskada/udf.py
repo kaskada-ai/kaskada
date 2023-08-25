@@ -38,7 +38,7 @@ def udf(signature: str):
         # convert them to Pandas, call the function, and convert the result
         # back to PyArrow.
         def func(result_type, *args):
-            _converted_func(func_type, result_type, *args)
+            return _converted_func(func_type, result_type, *args)
 
         # 2. Create the UDF object.
         return Udf(signature, func)

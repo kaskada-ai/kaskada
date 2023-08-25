@@ -340,7 +340,7 @@ impl Session {
                 .collect();
             Err(Error::Errors(errors))?
         } else {
-            self.udfs.insert(udf.uuid().clone(), udf.clone());
+            self.udfs.insert(*udf.uuid(), udf.clone());
             Ok(Expr(result))
         }
     }

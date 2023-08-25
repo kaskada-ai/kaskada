@@ -51,6 +51,7 @@ pub struct ComputeResult {
 
 impl ComputeExecutor {
     /// Spawns the compute tasks using the new operation based executor.
+    #[allow(clippy::too_many_arguments)]
     pub async fn try_spawn(
         mut context: OperationContext,
         plan_hash: PlanHash,
@@ -151,7 +152,7 @@ impl ComputeExecutor {
                         max_event_time_tx.clone(),
                         late_bindings,
                         stop_signal_rx.clone(),
-                        &udfs,
+                        udfs,
                     )
                     .await?,
             );

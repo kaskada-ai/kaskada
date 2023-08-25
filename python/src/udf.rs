@@ -59,7 +59,7 @@ impl Evaluator for PyUdfEvaluator {
         let inputs = self
             .args
             .iter()
-            .map(|value_ref| -> anyhow::Result<_> { Ok(info.value(value_ref)?.array_ref()?) })
+            .map(|value_ref| -> anyhow::Result<_> { info.value(value_ref)?.array_ref() })
             .try_collect()?;
 
         let result =
@@ -74,7 +74,7 @@ impl Evaluator for PyUdfEvaluator {
 }
 
 impl PyUdfEvaluator {
-    fn evaluate_py<'py>(&self, py: Python<'py>, inputs: Vec<ArrayRef>) -> anyhow::Result<ArrayRef> {
+    fn evaluate_py(&self, py: Python<'_>, inputs: Vec<ArrayRef>) -> anyhow::Result<ArrayRef> {
         // Convert all arg inputs into pyarrow arrays then to python objects
         let inputs: Vec<PyObject> = inputs
             .iter()
