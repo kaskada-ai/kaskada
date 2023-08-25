@@ -46,7 +46,6 @@ class Result(object):
         This method will block on the complete results of the query and collect
         all results into memory. If this is not desired, use `iter_pyarrow` instead.
         """
-        print("Converting to_pyarrow")
         batches = self._ffi_execution.collect_pyarrow()
         if len(batches) == 0:
             return pa.Table.from_batches([], schema=pa.schema([]))

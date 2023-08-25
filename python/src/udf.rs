@@ -87,46 +87,26 @@ impl PyUdfEvaluator {
             })
             .collect::<anyhow::Result<_>>()?;
 
-        // 2. Call the python function
-        let result_ty = DataType::to_pyarrow(&self.result_type, py)?;
-        let result_ty_vec: Vec<PyObject> = vec![result_ty];
-        let inputs: Vec<_> = result_ty_vec.into_iter().chain(inputs).collect();
-        let inputs = PyTuple::new(py, inputs);
+        // The callable expects [result_type, *args]
+        let mut py_inputs = vec![DataType::to_pyarrow(&self.result_type, py)?];
+        py_inputs.extend(inputs);
 
-        println!("CALLING CALLABLE ");
+        // let inputs: Vec<_> = result_ty_vec.into_iter().chain(inputs).collect();
+        let inputs = PyTuple::new(py, py_inputs);
+
+        // 3. Execute the udf
         let py_result = self.callable.call1(py, inputs)?;
-
-        // let kwargs = PyDict::new(py);
-        // // Set the 'result_type' key to a specific value
-        // let result_ty = DataType::to_pyarrow(&self.result_type, py)?;
-        // kwargs.set_item("result_type", result_ty)?;
-
-        // let inputs = PyTuple::new(py, inputs);
-        // let py_result = self.callable.call(py, inputs, Some(kwargs))?;
-
-        //////////
-        // let mut new_args: Vec<PyObject> = vec![DataType::to_pyarrow(&self.result_type, py)?];
-
-        // // Collect the other arguments
-        // for input in inputs.iter() {
-        //     let array_data: ArrayData = input.to_data();
-        //     let py_obj: PyObject = array_data.to_pyarrow(py)?;
-        //     new_args.push(py_obj);
-        // }
-
-        // println!("New args: {:?}", new_args);
-        // let args = PyTuple::new(py, new_args);
-        // let py_result = self.callable.call(py, args, Some(kwargs))?;
 
         // 3. Convert the result from pyarrow array to arrow array
         let result_array_data: ArrayData = ArrayData::from_pyarrow(py_result.as_ref(py))?;
 
-        // We can't control the returned type, but we can refuse to accept the "wrong" type.
+        // We attempt to coerce the return type into our expected result type, but this
+        // check exists to ensure the roundtrip type is as expected.
         anyhow::ensure!(
             *result_array_data.data_type() == self.result_type,
             "expected Python UDF to return type {:?}, but received {:?}",
-            result_array_data.data_type(),
             self.result_type
+            result_array_data.data_type(),
         );
 
         let result: ArrayRef = arrow::array::make_array(result_array_data);
@@ -139,9 +119,7 @@ impl Udf {
     #[new]
     #[pyo3(signature = (signature, callable))]
     fn new(signature: String, callable: Py<PyAny>) -> Self {
-        println!("Creating udf with signature: {:?}", signature);
         let uuid = Uuid::new_v4();
-        // TODO: sig name string cannot be &'static str
         let signature = Signature::try_from_str(FeatureSetPart::Function("udf"), &signature)
             .expect("signature to parse");
         let udf = PyUdf {

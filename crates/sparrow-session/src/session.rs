@@ -27,10 +27,10 @@ pub struct Session {
     key_hash_inverse: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
     /// Keeps track of the uuid mapping.
     ///
-    /// This is a bit of a hack that allows to serialize the uuid instead of the
-    /// `Arc<dyn Udf` into the compute plan, then look up that mapping during plan
-    /// construction. Once we run on multiple machines we'll need to serialize the
-    /// udf.
+    /// We currently do not serialize the `dyn Udf` into the plan, and instead
+    /// directly use this local mapping to look up the udf from the serialized
+    /// uuid. Once we run on multiple machines, we'll have to serialize/pickle the
+    /// udf as well.
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
 }
 

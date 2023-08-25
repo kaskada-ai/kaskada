@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import warnings
-import inspect
 
 from datetime import datetime
 from datetime import timedelta
@@ -68,65 +67,8 @@ class Timestream(object):
         return Timestream(_ffi.Expr.literal(session, value))
 
     @staticmethod
-    def _call_udf(
-        udf: _ffi.Udf,
-        *args: Union[Timestream, Literal],
-        session: Optional[_ffi.Session] = None,
-    ) -> Timestream:
-        """
-        Construct a new Timestream by calling the given function.
-
-        Parameters
-        ----------
-        func : str
-            Name of the function to apply.
-        *args : Timestream | int | str | float | bool | None
-            List of arguments to the expression.
-        session : FFI Session
-            FFI Session to create the expression in.
-            If unspecified, will infer from the arguments.
-            Will fail if all arguments are literals and the session is not provided.
-
-        Returns
-        -------
-        Timestream
-            Timestream representing the result of the function applied to the arguments.
-
-        Raises
-        ------
-        # noqa: DAR401 _augment_error
-        TypeError
-            If the argument types are invalid for the given function.
-        ValueError
-            If the argument values are invalid for the given function.
-        """
-        if session is None:
-            session = next(
-                arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
-            )
-
-        def make_arg(arg: Union[Timestream, Literal]) -> _ffi.Expr:
-            if isinstance(arg, Timestream):
-                return arg._ffi_expr
-            else:
-                return Timestream._literal(arg, session)._ffi_expr
-
-        ffi_args = [make_arg(arg) for arg in args]
-
-        try:
-            return Timestream(
-                _ffi.Expr.call_udf(session=session, udf=udf, args=ffi_args)
-            )
-        except TypeError as e:
-            # noqa: DAR401
-            raise _augment_error(args, TypeError(str(e))) from e
-        except ValueError as e:
-            raise _augment_error(args, ValueError(str(e))) from e
-
-
-    @staticmethod
     def _call(
-        func: str,
+        func: Union[str, _ffi.Udf],
         *args: Union[Timestream, Literal],
         session: Optional[_ffi.Session] = None,
     ) -> Timestream:
@@ -170,9 +112,12 @@ class Timestream(object):
 
         ffi_args = [make_arg(arg) for arg in args]
         try:
-            return Timestream(
-                _ffi.Expr.call(session=session, operation=func, args=ffi_args)
-            )
+            if isinstance(func, str):
+                return Timestream(_ffi.Expr.call(session=session, operation=func, args=ffi_args))
+            elif isinstance(func, _ffi.Udf):
+                return Timestream(_ffi.Expr.call_udf(session=session, udf=func, args=ffi_args))
+            else:
+                raise TypeError(f"invalid type for func. Expected str or udf, saw: {type(func)}")
         except TypeError as e:
             # noqa: DAR401
             raise _augment_error(args, TypeError(str(e))) from e

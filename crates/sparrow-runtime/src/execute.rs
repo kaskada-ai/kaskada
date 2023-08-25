@@ -24,7 +24,6 @@ use crate::execute::output::Destination;
 use crate::key_hash_inverse::{KeyHashInverse, ThreadSafeKeyHashInverse};
 use crate::stores::ObjectStoreRegistry;
 use crate::RuntimeOptions;
-pub use operation::WorkArea;
 
 mod checkpoints;
 mod compute_executor;
@@ -344,14 +343,8 @@ pub async fn materialize(
     // as the materialization does not exit, and should not need to handle cleanup tasks that regular
     // queries do. We should likely refactor this to use a separate `materialize_with_progress` method.
 
-    // TODO: Materialize with udfs
-    execute_new(
-        plan,
-        destination,
-        data_context,
-        options,
-        None,
-        &HashMap::new(),
-    )
-    .await
+    // TODO: Unimplemented feature - UDFs
+    let udfs = HashMap::new();
+
+    execute_new(plan, destination, data_context, options, None, &udfs).await
 }
