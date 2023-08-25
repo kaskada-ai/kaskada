@@ -3,6 +3,8 @@ from typing import Optional
 
 import kaskada._ffi as _ffi
 import pyarrow as pa
+from typing import Literal
+from typing_extensions import TypeAlias
 
 from .._session import _get_session
 from .._timestream import Timestream
@@ -10,6 +12,7 @@ from .._timestream import Timestream
 
 _TABLE_NUM: int = 0
 
+TimeUnit: TypeAlias = Optional[Literal["ns", "us", "ms", "s"]]
 
 class Source(Timestream):
     """A source (input) Timestream."""
@@ -24,7 +27,7 @@ class Source(Timestream):
         key_column_name: str,
         subsort_column_name: Optional[str] = None,
         grouping_name: Optional[str] = None,
-        time_unit: Optional[str] = None,
+        time_unit: TimeUnit = None,
     ):
         """Create a new source."""
         assert isinstance(schema, pa.Schema)
