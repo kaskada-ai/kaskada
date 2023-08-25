@@ -1,5 +1,4 @@
 import kaskada as kd
-
 import pytest
 
 

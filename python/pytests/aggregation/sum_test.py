@@ -18,6 +18,23 @@ def source() -> kd.sources.CsvString:
     return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
 
 
+@pytest.fixture(scope="module")
+def source_spread_across_days() -> kd.sources.PyList:
+    return kd.sources.PyList(
+        rows=[
+            {"time": "2021-01-01T00:00:00", "key": "A", "m": 1, "n": 2},
+            {"time": "2021-01-01T01:10:01", "key": "A", "m": 3, "n": 4},
+            {"time": "2021-01-01T02:20:02", "key": "A", "m": 5, "n": 6},
+            {"time": "2021-01-01T03:20:03", "key": "A", "m": 7, "n": 8},
+            {"time": "2021-01-01T04:35:04", "key": "A", "m": 9, "n": 10},
+            {"time": "2021-01-01T05:40:05", "key": "A", "m": 11, "n": 12},
+            {"time": "2021-01-01T05:45:06", "key": "A", "m": 13, "n": 14},
+        ],
+        time_column_name="time",
+        key_column_name="key",
+    )
+
+
 def test_sum_unwindowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
@@ -48,3 +65,9 @@ def test_sum_since_true(source, golden) -> None:
         }
     )
     golden.jsonl(m_sum_since_true)
+
+
+def test_sum_since_hourly(source_spread_across_days, golden) -> None:
+    golden.jsonl(
+        source_spread_across_days.col("m").sum(window=kd.windows.Since.hourly())
+    )

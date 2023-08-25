@@ -226,6 +226,16 @@ impl Session {
                     }
                 };
 
+                if function.is_tick() {
+                    assert_eq!(args.len(), 1);
+                    let input = &args[0].0;
+                    let tick_behavior = function.tick_behavior().expect("tick behavior");
+                    let tick = sparrow_compiler::add_tick(&mut self.dfg, tick_behavior, input)
+                        .into_report()
+                        .change_context(Error::Compile)?;
+                    return Ok(Expr(tick));
+                }
+
                 // TODO: Make this a proper error (not an assertion).
                 let signature = function.internal_signature();
                 signature.assert_valid_argument_count(args.len());

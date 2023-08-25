@@ -41,7 +41,9 @@ impl Evaluator for RecordEvaluator {
 
 fn create(info: StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluator>, Error> {
     let DataType::Struct(fields) = info.result_type else {
-        error_stack::bail!(Error::InvalidNonStructResultType { actual: info.result_type.clone() })
+        error_stack::bail!(Error::InvalidNonStructResultType {
+            actual: info.result_type.clone()
+        })
     };
 
     error_stack::ensure!(

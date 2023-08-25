@@ -1463,9 +1463,15 @@ def _aggregation(
     if window is None:
         return Timestream._call(op, input, *args, None, None)
     elif isinstance(window, kd.windows.Since):
-        return Timestream._call(op, input, *args, window.predicate, None)
+        predicate = window.predicate
+        if callable(predicate):
+            predicate = predicate(input)
+        return Timestream._call(op, input, *args, predicate, None)
     elif isinstance(window, kd.windows.Sliding):
-        return Timestream._call(op, input, *args, window.predicate, window.duration)
+        predicate = window.predicate
+        if callable(predicate):
+            predicate = predicate(input)
+        return Timestream._call(op, input, *args, predicate, window.duration)
     elif isinstance(window, kd.windows.Trailing):
         if op != "collect":
             raise NotImplementedError(
