@@ -75,7 +75,7 @@ impl Evaluator for PyUdfEvaluator {
 
 impl PyUdfEvaluator {
     fn evaluate_py<'py>(&self, py: Python<'py>, inputs: Vec<ArrayRef>) -> anyhow::Result<ArrayRef> {
-        // 1. Convert all arg inputs into pyarrow arrays then to python objects
+        // Convert all arg inputs into pyarrow arrays then to python objects
         let inputs: Vec<PyObject> = inputs
             .iter()
             .map::<anyhow::Result<_>, _>(|arg_array| {
@@ -89,13 +89,11 @@ impl PyUdfEvaluator {
         let mut py_inputs = vec![DataType::to_pyarrow(&self.result_type, py)?];
         py_inputs.extend(inputs);
 
-        // let inputs: Vec<_> = result_ty_vec.into_iter().chain(inputs).collect();
         let inputs = PyTuple::new(py, py_inputs);
 
-        // 3. Execute the udf
+        // Execute the python udf
         let py_result = self.callable.call1(py, inputs)?;
 
-        // 3. Convert the result from pyarrow array to arrow array
         let result_array_data: ArrayData = ArrayData::from_pyarrow(py_result.as_ref(py))?;
 
         // We attempt to coerce the return type into our expected result type, but this
