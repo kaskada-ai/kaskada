@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use arrow::record_batch::RecordBatch;
+use hashbrown::HashMap;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::{ComputePlan, OperationPlan};
 use sparrow_compiler::DataContext;
@@ -198,6 +199,7 @@ pub(super) async fn run_operation(
             max_event_tx,
             &Default::default(),
             None,
+            &HashMap::new(),
         )
         .await
         .unwrap()
@@ -255,6 +257,7 @@ pub(super) async fn run_operation_json(
             max_event_tx,
             &Default::default(),
             None,
+            &HashMap::new(),
         )
         .await
         .unwrap()

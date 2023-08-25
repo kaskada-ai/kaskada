@@ -6,7 +6,6 @@ from typing import Sequence
 import pyarrow as pa
 
 from ._execution import ExecutionOptions
-from .udf import Udf
 
 class Session:
     def __init__(self) -> None: ...
