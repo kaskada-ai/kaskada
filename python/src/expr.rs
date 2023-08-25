@@ -47,11 +47,10 @@ impl Expr {
 
     /// Create a new udf.
     ///
-    /// This creates a new udf based on the `udf` and `args` provided.
+    /// This creates a new expression based on the `udf` and `args` provided.
     #[staticmethod]
     #[pyo3(signature = (session, udf, args))]
     fn call_udf(session: Session, udf: Udf, args: Vec<Expr>) -> PyResult<Self> {
-        println!("SparrowExpr::call_udf");
         let sparrow_udf = udf.0;
         if !args.iter().all(|e| e.session() == session) {
             return Err(PyValueError::new_err(

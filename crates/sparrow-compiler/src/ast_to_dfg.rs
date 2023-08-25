@@ -104,7 +104,6 @@ pub fn add_udf_to_dfg(
     data_context: &mut DataContext,
     diagnostics: &mut DiagnosticCollector<'_>,
 ) -> anyhow::Result<AstDfgRef> {
-    println!("sparrow_compiler::add_udf_to_dfg");
     let argument_types = arguments.transform(|i| i.with_value(i.value_type().clone()));
     let signature = udf.signature();
 

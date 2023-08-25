@@ -26,7 +26,6 @@ struct PyUdfEvaluator {
 
 #[derive(Clone)]
 #[pyclass]
-// TODO: Does it need to extend Expr for some reason?
 pub(crate) struct Udf(pub Arc<dyn sparrow_instructions::Udf>);
 
 impl sparrow_instructions::Udf for PyUdf {
@@ -34,12 +33,12 @@ impl sparrow_instructions::Udf for PyUdf {
         &self.signature
     }
 
-    // FRAZ: Should we allow this to return an error?
     fn make_evaluator(&self, info: StaticInfo<'_>) -> Box<dyn Evaluator> {
-        // TODO: Idea: Create a random value of each argument type and verify that the callbale
+        // Idea: Create a random value of each argument type and verify that the callbale
         // is invokable on that. This would let us detect errors early.
+        //
+        // Though, it still wouldn't give us compile-time errors.
 
-        println!("Making python udf evaluator");
         let result_type = info.result_type.clone();
         let args = info.args.iter().map(|arg| arg.value_ref.clone()).collect();
 
@@ -57,7 +56,6 @@ impl sparrow_instructions::Udf for PyUdf {
 
 impl Evaluator for PyUdfEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        println!("Evaluating Python UDF");
         let inputs = self
             .args
             .iter()
