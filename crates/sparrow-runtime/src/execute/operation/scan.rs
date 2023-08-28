@@ -510,6 +510,7 @@ mod tests {
             output_at_time: None,
             bounded_lateness_ns: None,
             materialize: false,
+            udfs: HashMap::new(),
         };
 
         executor
@@ -520,7 +521,6 @@ mod tests {
                 max_event_tx,
                 &Default::default(),
                 None,
-                &HashMap::new(),
             )
             .await
             .unwrap()

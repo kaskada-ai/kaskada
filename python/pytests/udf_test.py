@@ -2,6 +2,7 @@ import kaskada as kd
 import kaskada._ffi as _ffi
 import pandas as pd
 import pytest
+from kaskada.udf import Udf
 
 
 @kd.udf("add<N: number>(x: N, y: N) -> N")
@@ -16,14 +17,13 @@ def add_x2(x: pd.Series, y: pd.Series) -> pd.Series:
     return (x + y) * 2
 
 
-@pytest.mark.skip(reason="currently not working")
+def test_udf_instance() -> None:
+    assert isinstance(add, Udf)
+    assert isinstance(add._ffi, _ffi.Udf)
+
+
 def test_docstring() -> None:
     assert add.__doc__ == "Use Pandas to add two numbers."
-
-
-def test_udf_instance() -> None:
-    assert isinstance(add, kd.Udf)
-    assert isinstance(add._ffi, _ffi.Udf)
 
 
 @pytest.fixture

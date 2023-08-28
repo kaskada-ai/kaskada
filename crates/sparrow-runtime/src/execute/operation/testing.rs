@@ -190,6 +190,7 @@ pub(super) async fn run_operation(
         output_at_time: None,
         bounded_lateness_ns: None,
         materialize: false,
+        udfs: HashMap::new(),
     };
     executor
         .execute(
@@ -199,7 +200,6 @@ pub(super) async fn run_operation(
             max_event_tx,
             &Default::default(),
             None,
-            &HashMap::new(),
         )
         .await
         .unwrap()
@@ -248,6 +248,7 @@ pub(super) async fn run_operation_json(
         output_at_time: None,
         bounded_lateness_ns: None,
         materialize: false,
+        udfs: HashMap::new(),
     };
     executor
         .execute(
@@ -257,7 +258,6 @@ pub(super) async fn run_operation_json(
             max_event_tx,
             &Default::default(),
             None,
-            &HashMap::new(),
         )
         .await
         .unwrap()

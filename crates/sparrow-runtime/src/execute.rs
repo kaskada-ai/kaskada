@@ -75,7 +75,7 @@ pub async fn execute(
         data_context,
         options,
         None,
-        &HashMap::new(),
+        HashMap::new(),
     )
     .await
 }
@@ -234,7 +234,7 @@ pub async fn execute_new(
     mut data_context: DataContext,
     options: ExecutionOptions,
     key_hash_inverse: Option<Arc<ThreadSafeKeyHashInverse>>,
-    udfs: &HashMap<Uuid, Arc<dyn Udf>>,
+    udfs: HashMap<Uuid, Arc<dyn Udf>>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
     let object_stores = Arc::new(ObjectStoreRegistry::default());
 
@@ -280,6 +280,7 @@ pub async fn execute_new(
         output_at_time,
         bounded_lateness_ns: options.bounded_lateness_ns,
         materialize: options.materialize,
+        udfs,
     };
 
     // Start executing the query. We pass the response channel to the
@@ -301,7 +302,6 @@ pub async fn execute_new(
         progress_updates_rx,
         destination,
         options.stop_signal_rx,
-        udfs,
     )
     .await
     .change_context(Error::internal_msg("spawn compute executor"))?;
@@ -346,5 +346,5 @@ pub async fn materialize(
     // TODO: Unimplemented feature - UDFs
     let udfs = HashMap::new();
 
-    execute_new(plan, destination, data_context, options, None, &udfs).await
+    execute_new(plan, destination, data_context, options, None, udfs).await
 }

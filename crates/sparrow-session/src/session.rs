@@ -423,7 +423,7 @@ impl Session {
                 data_context,
                 options,
                 Some(key_hash_inverse),
-                &self.udfs,
+                self.udfs.clone(),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))

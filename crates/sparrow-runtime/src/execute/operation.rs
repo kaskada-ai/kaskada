@@ -105,6 +105,8 @@ pub(crate) struct OperationContext {
     ///
     /// Derived from the ExecutionOptions,
     pub materialize: bool,
+    /// Mapping of uuid to user-defined functions.
+    pub udfs: HashMap<Uuid, Arc<dyn Udf>>,
 }
 
 impl OperationContext {
@@ -169,7 +171,6 @@ impl OperationExecutor {
     /// This function will not return until the operation is complete -- either
     /// because all inputs have been processed or because it has been
     /// interrupted due to an error or reaching a preview-rows limit, etc.
-    #[allow(clippy::too_many_arguments)]
     pub async fn execute(
         self,
         operation_index: usize,
@@ -178,7 +179,6 @@ impl OperationExecutor {
         max_event_time_tx: tokio::sync::mpsc::UnboundedSender<Timestamp>,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
         stop_signal_rx: Option<tokio::sync::watch::Receiver<bool>>,
-        udfs: &HashMap<Uuid, Arc<dyn Udf>>,
     ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
         let Self {
             operation,
@@ -195,7 +195,7 @@ impl OperationExecutor {
             operation_label,
             operation.expressions,
             late_bindings,
-            udfs,
+            &context.udfs,
         )
         .into_report()
         .change_context(Error::internal_msg("unable to create executor"))?;
