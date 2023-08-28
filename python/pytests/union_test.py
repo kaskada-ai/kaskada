@@ -15,8 +15,8 @@ def test_union(golden) -> None:
                 "n": [9, 8, 10],
             },
         ],
-        time_column_name="time",
-        key_column_name="user",
+        time_column="time",
+        key_column="user",
     )
 
     golden.jsonl(source.col("m").union(source.col("n")))

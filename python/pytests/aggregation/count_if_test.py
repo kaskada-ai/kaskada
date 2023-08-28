@@ -17,7 +17,7 @@ def count_if_source() -> kd.sources.CsvString:
             "1996-12-19T16:40:04,B,30,1,true",
         ]
     )
-    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column="time", key_column="key")
 
 
 def test_count_if_unwindowed(count_if_source, golden) -> None:

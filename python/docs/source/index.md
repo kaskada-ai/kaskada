@@ -59,8 +59,8 @@ kd.init_session()
 messages = kd.sources.PyList(
     rows = pyarrow.parquet.read_table("./messages.parquet")
         .to_pylist(),
-    time_column_name = "ts",
-    key_column_name = "channel",
+    time_column = "ts",
+    key_column = "channel",
 )
 
 # Send each Slack message to Kaskada

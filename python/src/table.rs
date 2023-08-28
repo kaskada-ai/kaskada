@@ -21,15 +21,15 @@ pub(crate) struct Table {
 impl Table {
     /// Create a new table.
     #[new]
-    #[pyo3(signature = (session, name, time_column_name, key_column_name, schema, subsort_column_name, grouping_name, time_unit))]
+    #[pyo3(signature = (session, name, time_column, key_column, schema, subsort_column, grouping_name, time_unit))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         session: Session,
         name: String,
-        time_column_name: &str,
-        key_column_name: &str,
+        time_column: &str,
+        key_column: &str,
         schema: PyArrowType<Schema>,
-        subsort_column_name: Option<&str>,
+        subsort_column: Option<&str>,
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
     ) -> Result<(Self, Expr)> {
@@ -38,9 +38,9 @@ impl Table {
         let rust_table = session.rust_session()?.add_table(
             &name,
             raw_schema,
-            time_column_name,
-            subsort_column_name,
-            key_column_name,
+            time_column,
+            subsort_column,
+            key_column,
             grouping_name,
             time_unit,
         )?;
