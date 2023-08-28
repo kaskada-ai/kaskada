@@ -59,7 +59,9 @@ jobs:
       - name: Determine version (release)
         if: github.event_name == 'release'
         run: |
+          echo "GITHUB_REF_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Set version
         id: set-version
