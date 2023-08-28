@@ -30,8 +30,8 @@ def source_spread_across_days() -> kd.sources.PyList:
             {"time": "2021-01-01T05:40:05", "key": "A", "m": 11, "n": 12},
             {"time": "2021-01-01T05:45:06", "key": "A", "m": 13, "n": 14},
         ],
-        time_column_name="time",
-        key_column_name="key",
+        time_column="time",
+        key_column="key",
     )
 
 

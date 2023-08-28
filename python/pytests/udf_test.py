@@ -39,7 +39,7 @@ def source_int64() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column="time", key_column="key")
 
 
 def test_add_udf_direct(golden, source_int64) -> None:
