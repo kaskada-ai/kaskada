@@ -46,9 +46,7 @@ def record_source() -> kd.sources.JsonlString:
             """{"time":"1996-12-19T16:39:58","key":"A","default_record":{"test":"default"}}""",
         ]
     )
-    return kd.sources.JsonlString(
-        content, time_column="time", key_column="key"
-    )
+    return kd.sources.JsonlString(content, time_column="time", key_column="key")
 
 
 def test_else_debug(record_source, golden) -> None:

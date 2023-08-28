@@ -5,9 +5,7 @@ import pandas as pd
 def test_float_seconds(golden) -> None:
     data = {"time": [1671477472.026119], "user": ["tom"]}
     df = pd.DataFrame(data)
-    table = kd.sources.Pandas(
-        df, time_column="time", key_column="user", time_unit="s"
-    )
+    table = kd.sources.Pandas(df, time_column="time", key_column="user", time_unit="s")
 
     golden.jsonl(table)
 
@@ -15,9 +13,7 @@ def test_float_seconds(golden) -> None:
 def test_float_milliseconds(golden) -> None:
     data = {"time": [1671477472026.119], "user": ["tom"]}
     df = pd.DataFrame(data)
-    table = kd.sources.Pandas(
-        df, time_column="time", key_column="user", time_unit="ms"
-    )
+    table = kd.sources.Pandas(df, time_column="time", key_column="user", time_unit="ms")
 
     golden.jsonl(table)
 

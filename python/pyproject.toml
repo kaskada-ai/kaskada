@@ -48,7 +48,7 @@ nox = "2023.4.22"
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-black = ">=21.10b0"
+black = { version = ">=21.10b0", extras = ["jupyter"] }
 darglint = ">=1.8.1"
 flake8 = ">=4.0.1"
 flake8-bugbear = ">=21.9.2"

@@ -122,9 +122,7 @@ def test_timestream_preview(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
-        content, time_column="time", key_column="key"
-    )
+    source = kd.sources.CsvString(content, time_column="time", key_column="key")
 
     golden.jsonl(source.preview(limit=4))
 
@@ -141,9 +139,7 @@ def test_timestream_run_non_record(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
-        content, time_column="time", key_column="key"
-    )
+    source = kd.sources.CsvString(content, time_column="time", key_column="key")
     golden.jsonl(source.col("m"))
 
 
@@ -159,7 +155,5 @@ def test_timestream_cast(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
-        content, time_column="time", key_column="key"
-    )
+    source = kd.sources.CsvString(content, time_column="time", key_column="key")
     golden.jsonl(source.col("time").cast(pa.timestamp("ns")))

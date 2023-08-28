@@ -26,17 +26,13 @@ def test_table_invalid_names() -> None:
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        kd.sources.Source(
-            schema, time_column="non_existant_time", key_column="key"
-        )
+        kd.sources.Source(schema, time_column="non_existant_time", key_column="key")
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
         # existing column names from Sparrow.
         # TODO: Do that.
-        kd.sources.Source(
-            schema, time_column="time", key_column="non_existant_key"
-        )
+        kd.sources.Source(schema, time_column="time", key_column="non_existant_key")
 
     with pytest.raises(KeyError):
         # Currently, this doesn't propagate the suggestions from
