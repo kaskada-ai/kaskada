@@ -1,3 +1,4 @@
+from typing import Callable
 from typing import List
 from typing import Optional
 from typing import Sequence
@@ -5,7 +6,6 @@ from typing import Sequence
 import pyarrow as pa
 
 from ._execution import ExecutionOptions
-from .udf import Udf
 
 class Session:
     def __init__(self) -> None: ...
@@ -24,6 +24,12 @@ class Expr:
         args: Sequence[Expr],
     ) -> Expr: ...
     @staticmethod
+    def call_udf(
+        session: Session,
+        udf: Udf,
+        args: Sequence[Expr],
+    ) -> Expr: ...
+    @staticmethod
     def literal(
         session: Session,
         value: int | float | str | None,
@@ -34,8 +40,6 @@ class Expr:
     def session(self) -> Session: ...
     def execute(self, options: Optional[ExecutionOptions] = None) -> Execution: ...
     def grouping(self) -> Optional[str]: ...
-
-def call_udf(udf: Udf, result_type: pa.DataType, *args: pa.Array) -> pa.Array: ...
 
 class Table(Expr):
     def __init__(
@@ -52,3 +56,6 @@ class Table(Expr):
     @property
     def name(self) -> str: ...
     def add_pyarrow(self, data: pa.RecordBatch) -> None: ...
+
+class Udf(object):
+    def __init__(self, result_ty: str, result_fn: Callable[..., pa.Array]) -> None: ...

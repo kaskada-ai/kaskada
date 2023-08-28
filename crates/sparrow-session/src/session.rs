@@ -1,5 +1,5 @@
+use hashbrown::HashMap;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use arrow_schema::SchemaRef;
@@ -25,6 +25,13 @@ pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
     key_hash_inverse: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
+    /// Keeps track of the uuid mapping.
+    ///
+    /// We currently do not serialize the `dyn Udf` into the plan, and instead
+    /// directly use this local mapping to look up the udf from the serialized
+    /// uuid. Once we run on multiple machines, we'll have to serialize/pickle the
+    /// udf as well.
+    udfs: HashMap<Uuid, Arc<dyn Udf>>,
 }
 
 #[derive(Default)]
@@ -291,12 +298,11 @@ impl Session {
     ///
     /// This bypasses much of the plumbing of the [ExprOp] required due to our construction
     /// of the AST.
-    #[allow(unused)]
-    fn add_udf_to_dfg(
+    pub fn add_udf_to_dfg(
         &mut self,
         udf: Arc<dyn Udf>,
         args: Vec<Expr>,
-    ) -> error_stack::Result<AstDfgRef, Error> {
+    ) -> error_stack::Result<Expr, Error> {
         let signature = udf.signature();
         let arg_names = signature.arg_names().to_owned();
         signature.assert_valid_argument_count(args.len());
@@ -334,7 +340,8 @@ impl Session {
                 .collect();
             Err(Error::Errors(errors))?
         } else {
-            Ok(result)
+            self.udfs.insert(*udf.uuid(), udf.clone());
+            Ok(Expr(result))
         }
     }
 
@@ -416,6 +423,7 @@ impl Session {
                 data_context,
                 options,
                 Some(key_hash_inverse),
+                self.udfs.clone(),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))

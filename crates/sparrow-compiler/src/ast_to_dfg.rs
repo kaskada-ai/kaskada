@@ -141,8 +141,8 @@ pub fn add_udf_to_dfg(
         })
         .try_collect()?;
 
-    let is_new = dfg.add_udf(udf.clone(), args.iter().map(|i| i.value()).collect())?;
-    let value = is_any_new(dfg, &args)?;
+    let value = dfg.add_udf(udf.clone(), args.iter().map(|i| i.value()).collect())?;
+    let is_new = is_any_new(dfg, &args)?;
 
     let time_domain_check = TimeDomainCheck::Compatible;
     let time_domain =
