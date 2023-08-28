@@ -20,6 +20,7 @@ extensions = [
     # "myst_parser",
     "myst_nb",
     "sphinx_copybutton",
+    "sphinx_autodoc_typehints",  # must be after napoleon
     "_extensions.gallery_directive",
 ]
 autodoc_typehints = "description"
@@ -110,6 +111,7 @@ myst_heading_anchors = 3
 # Automatically extract typehints when specified and place them in
 # descriptions of the relevant function/method.
 autodoc_typehints = "description"
+autodoc_type_aliases = {"kaskada.Arg": "kaskada.Arg"}
 
 # Don't show class signature with the class' name.
 autodoc_class_signature = "separated"
@@ -117,5 +119,10 @@ autodoc_class_signature = "separated"
 autosummary_generate = True
 
 napoleon_preprocess_types = True
+napoleon_attr_annotations = True
+napoleon_use_rtype = False
+typehints_use_rtype = False
+typehints_document_rtype = False
+typehints_defaults = 'comma'
 
 suppress_warnings = ["mystnb.unknown_mime_type"]

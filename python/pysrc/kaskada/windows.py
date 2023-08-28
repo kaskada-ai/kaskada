@@ -16,104 +16,56 @@ class Window(object):
 
 @dataclass(frozen=True)
 class Since(Window):
-    """
-    Window since the last time a predicate was true.
+    """Window since the last time a predicate was true.
 
     Aggregations will contain all values starting from the last time the predicate
     evaluated to true (inclusive).
-
-    Parameters
-    ----------
-    predicate : Timestream | Callable[..., Timestream] | bool
-        The boolean Timestream to use as predicate for the window.
-        Each time the predicate evaluates to true the window will be cleared.
-
-        The predicate may be a callable which returns the boolean Timestream, in
-        which case it is applied to the Timestream being aggregated.
     """
 
+    #: The boolean Timestream to use as predicate for the window.
+    #: Each time the predicate evaluates to true the window will be cleared.
+#:
+    #: The predicate may be a callable which returns the boolean Timestream, in
+    #: which case it is applied to the Timestream being aggregated.
     predicate: Timestream | Callable[..., Timestream] | bool
 
     @staticmethod
     def minutely() -> Since:
-        """
-        Return a window since the start of each minute.
-
-        Returns
-        -------
-        Since
-            Window since the start of each minute.
-        """
+        """Return a window since the start of each minute."""
         return Since(predicate=lambda domain: Timestream._call("minutely", domain))
 
     @staticmethod
     def hourly() -> Since:
-        """
-        Return a window since the start of each hour.
-
-        Returns
-        -------
-        Since
-            Window since the start of each hour.
-        """
+        """Return a window since the start of each hour."""
         return Since(predicate=lambda domain: Timestream._call("hourly", domain))
 
     @staticmethod
     def daily() -> Since:
-        """
-        Return a window since the start of each day.
-
-        Returns
-        -------
-        Since
-            Window since the start of each day.
-        """
+        """Return a window since the start of each day."""
         return Since(predicate=lambda domain: Timestream._call("daily", domain))
 
     @staticmethod
     def monthly() -> Since:
-        """
-        Return a window since the start of each month.
-
-        Returns
-        -------
-        Since
-            Window since the start of each month.
-        """
+        """Return a window since the start of each month."""
         return Since(predicate=lambda domain: Timestream._call("monthly", domain))
 
     @staticmethod
     def yearly() -> Since:
-        """
-        Return a window since the start of each year.
-
-        Returns
-        -------
-        Since
-            Window since the start of each year.
-        """
+        """Return a window since the start of each year."""
         return Since(predicate=lambda domain: Timestream._call("yearly", domain))
 
 
 @dataclass(frozen=True)
 class Sliding(Window):
-    """
-    Window for the last `duration` intervals of some `predicate`.
+    """Window for the last `duration` intervals of some `predicate`."""
 
-    Parameters
-    ----------
-    duration : int
-        The number of sliding intervals to use in the window.
-
-    predicate : Timestream | Callable[..., Timestream] | bool
-        The boolean Timestream to use as predicate for the window
-        Each time the predicate evaluates to true the window starts a new interval.
-
-        The predicate may be a callable which returns the boolean Timestream, in
-        which case it is applied to the Timestream being aggregated.
-    """
-
+    #: The number of sliding intervals to use in the window.
     duration: int
+    #: The boolean Timestream to use as a predicate for the window.
+    #: Each time the predicate evaluates to true the window starts a new interval.
+    #:
+    #:  The predicate may be a callable which returns the boolean Timestream, in
+    #: which case it is applied to the Timestream being aggregated.
     predicate: Timestream | Callable[..., Timestream] | bool
 
     def __post_init__(self):
@@ -123,18 +75,10 @@ class Sliding(Window):
 
     @staticmethod
     def minutely(duration: int) -> Sliding:
-        """
-        Return a sliding window containing `duration` minutes.
+        """Return a sliding window containing `duration` minutes.
 
-        Parameters
-        ----------
-        duration : int
-            The number of minutes to use in the window.
-
-        Returns
-        -------
-        Sliding
-            Sliding window with `duration` minutes, advancing every minute.
+        Args:
+            duration: The number of minutes to use in the window.
         """
         return Sliding(
             duration=duration,
@@ -143,18 +87,10 @@ class Sliding(Window):
 
     @staticmethod
     def hourly(duration: int) -> Sliding:
-        """
-        Return a sliding window containing `duration` hours.
+        """Return a sliding window containing `duration` hours.
 
-        Parameters
-        ----------
-        duration : int
-            The number of hours to use in the window.
-
-        Returns
-        -------
-        Sliding
-            Sliding window with `duration` hours, advancing every hour.
+        Args:
+            duration: The number of hours to use in the window.
         """
         return Sliding(
             duration=duration,
@@ -163,18 +99,10 @@ class Sliding(Window):
 
     @staticmethod
     def daily(duration: int) -> Sliding:
-        """
-        Return a sliding window containing `duration` daily.
+        """Return a sliding window containing `duration` daily.
 
-        Parameters
-        ----------
-        duration : int
-            The number of days to use in the window.
-
-        Returns
-        -------
-        Sliding
-            Sliding window with `duration` days, advancing every day.
+        Args:
+            duration: The number of days to use in the window.
         """
         return Sliding(
             duration=duration,
@@ -183,18 +111,10 @@ class Sliding(Window):
 
     @staticmethod
     def monthly(duration: int) -> Sliding:
-        """
-        Return a sliding window containing `duration` months.
+        """Return a sliding window containing `duration` months.
 
-        Parameters
-        ----------
-        duration : int
-            The number of months to use in the window.
-
-        Returns
-        -------
-        Sliding
-            Sliding window with `duration` months, advancing every month.
+        Args:
+            duration: The number of months to use in the window.
         """
         return Sliding(
             duration=duration,
@@ -203,18 +123,10 @@ class Sliding(Window):
 
     @staticmethod
     def yearly(duration: int) -> Sliding:
-        """
-        Return a sliding window containing `duration` years.
+        """Return a sliding window containing `duration` years.
 
-        Parameters
-        ----------
-        duration : int
-            The number of years to use in the window.
-
-        Returns
-        -------
-        Sliding
-            Sliding window with `duration` years, advancing every year.
+        Args:
+            duration: The number of years to use in the window.
         """
         return Sliding(
             duration=duration,
@@ -224,15 +136,13 @@ class Sliding(Window):
 
 @dataclass(frozen=True)
 class Trailing(Window):
-    """
-    Window the last `duration` time period.
+    """Window the last `duration` time period.
 
-    Parameters
-    ----------
-    duration : timedelta
-        The duration of the window.
+    Args:
+        duration: The duration of the window.
     """
 
+    #: The duration of the window.
     duration: timedelta
 
     def __post_init__(self):
