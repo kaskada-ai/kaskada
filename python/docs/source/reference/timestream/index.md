@@ -10,6 +10,8 @@ html_theme.sidebar_secondary.remove:
 .. autoclass:: kaskada.Literal
 .. autoclass:: kaskada.Timestream
     :exclude-members: __init__
+
+    .. autoproperty:: data_type
 ```
 
 ```{toctree}
