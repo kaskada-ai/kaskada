@@ -64,7 +64,7 @@ class Sliding(Window):
     #: The boolean Timestream to use as a predicate for the window.
     #: Each time the predicate evaluates to true the window starts a new interval.
     #:
-    #:  The predicate may be a callable which returns the boolean Timestream, in
+    #: The predicate may be a callable which returns the boolean Timestream, in
     #: which case it is applied to the Timestream being aggregated.
     predicate: Timestream | Callable[..., Timestream] | bool
 

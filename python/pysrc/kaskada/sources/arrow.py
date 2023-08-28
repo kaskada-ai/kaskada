@@ -37,7 +37,7 @@ class Pandas(Source):
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
-            grouping_name: The name of the groups associated with each key.
+            grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
@@ -85,7 +85,7 @@ class PyList(Source):
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
-            grouping_name: The name of the groups associated with each key.
+            grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
@@ -139,7 +139,7 @@ class CsvString(Source):
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
-            grouping_name: The name of the groups associated with each key.
+            grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
@@ -197,7 +197,7 @@ class JsonlString(Source):
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
-            grouping_name: The name of the groups associated with each key.
+            grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
@@ -253,7 +253,7 @@ class Parquet(Source):
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
-            grouping_name: The name of the groups associated with each key.
+            grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
