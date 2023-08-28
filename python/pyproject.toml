@@ -1,6 +1,6 @@
 [project]
 name = "kaskada"
-version = "0.6.0-a.1"
+version = "0.6.0-a.2"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.8.1,<4.0"
 classifiers = [
