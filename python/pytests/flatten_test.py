@@ -10,8 +10,8 @@ def test_flatten(golden) -> None:
             {"time": "1996-12-19T19:39:57", "user": "A", "m": [[6], [7]]},
             {"time": "1996-12-19T19:39:57", "user": "A", "m": [[7, 8], [9, 10]]},
         ],
-        time_column_name="time",
-        key_column_name="user",
+        time_column="time",
+        key_column="user",
     )
 
     golden.jsonl(source.col("m").flatten())

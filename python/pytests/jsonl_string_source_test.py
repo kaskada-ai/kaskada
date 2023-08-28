@@ -4,8 +4,8 @@ import kaskada as kd
 def test_read_jsonl(golden) -> None:
     source = kd.sources.JsonlString(
         '{"time": "1996-12-19T16:39:57", "user": "A", "m": 5, "n": 10}',
-        time_column_name="time",
-        key_column_name="user",
+        time_column="time",
+        key_column="user",
     )
     golden.jsonl(source)
 
@@ -22,8 +22,8 @@ def test_read_jsonl(golden) -> None:
 def test_read_jsonl_lists(golden) -> None:
     source = kd.sources.JsonlString(
         '{"time": "1996-12-19T16:39:57", "user": "A", "m": [5, 10], "n": 10}',
-        time_column_name="time",
-        key_column_name="user",
+        time_column="time",
+        key_column="user",
     )
     golden.jsonl(source)
 

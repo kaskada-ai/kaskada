@@ -42,10 +42,10 @@ class Table(Expr):
         self,
         session: Session,
         name: str,
-        time_column_name: str,
-        key_column_name: str,
+        time_column: str,
+        key_column: str,
         schema: pa.Schema,
-        subsort_column_name: Optional[str],
+        subsort_column: Optional[str],
         grouping_name: Optional[str],
         time_unit: Optional[str],
     ) -> None: ...

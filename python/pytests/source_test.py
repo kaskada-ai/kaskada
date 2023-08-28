@@ -11,7 +11,7 @@ def test_table_valid() -> None:
         ]
     )
 
-    kd.sources.Source(schema, time_column_name="time", key_column_name="key")
+    kd.sources.Source(schema, time_column="time", key_column="key")
 
 
 def test_table_invalid_names() -> None:
@@ -27,7 +27,7 @@ def test_table_invalid_names() -> None:
         # existing column names from Sparrow.
         # TODO: Do that.
         kd.sources.Source(
-            schema, time_column_name="non_existant_time", key_column_name="key"
+            schema, time_column="non_existant_time", key_column="key"
         )
 
     with pytest.raises(KeyError):
@@ -35,7 +35,7 @@ def test_table_invalid_names() -> None:
         # existing column names from Sparrow.
         # TODO: Do that.
         kd.sources.Source(
-            schema, time_column_name="time", key_column_name="non_existant_key"
+            schema, time_column="time", key_column="non_existant_key"
         )
 
     with pytest.raises(KeyError):
@@ -44,7 +44,7 @@ def test_table_invalid_names() -> None:
         # TODO: Do that.
         kd.sources.Source(
             schema,
-            time_column_name="time",
-            key_column_name="key",
-            subsort_column_name="non_existant_subsort",
+            time_column="time",
+            key_column="key",
+            subsort_column="non_existant_subsort",
         )

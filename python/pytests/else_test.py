@@ -15,7 +15,7 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,,-1",
         ]
     )
-    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column="time", key_column="key")
 
 
 def test_else_(source, golden) -> None:
@@ -47,7 +47,7 @@ def record_source() -> kd.sources.JsonlString:
         ]
     )
     return kd.sources.JsonlString(
-        content, time_column_name="time", key_column_name="key"
+        content, time_column="time", key_column="key"
     )
 
 

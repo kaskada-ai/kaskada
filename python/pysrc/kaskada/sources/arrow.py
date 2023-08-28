@@ -21,12 +21,12 @@ class Pandas(Source):
         self,
         dataframe: pd.DataFrame,
         *,
-        time_column_name: str,
-        key_column_name: str,
-        subsort_column_name: Optional[str] = None,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: TimeUnit = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
         """
         Create a source reading Pandas DataFrames.
@@ -35,11 +35,11 @@ class Pandas(Source):
         ----------
         dataframe : pd.DataFrame
             The DataFrame to start from.
-        time_column_name : str
+        time_column : str
             The name of the column containing the time.
-        key_column_name : str
+        key_column : str
             The name of the column containing the key.
-        subsort_column_name : str, optional
+        subsort_column : str, optional
             The name of the column containing the subsort.
             If not provided, the subsort will be assigned by the system.
         schema : pa.Schema, optional
@@ -58,9 +58,9 @@ class Pandas(Source):
             schema = pa.Schema.from_pandas(dataframe)
         super().__init__(
             schema=schema,
-            time_column_name=time_column_name,
-            key_column_name=key_column_name,
-            subsort_column_name=subsort_column_name,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
@@ -80,12 +80,12 @@ class PyList(Source):
         self,
         rows: dict | list[dict],
         *,
-        time_column_name: str,
-        key_column_name: str,
-        subsort_column_name: Optional[str] = None,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: TimeUnit = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
         """
         Create a source reading from rows represented as dicts.
@@ -94,11 +94,11 @@ class PyList(Source):
         ----------
         rows : dict | list[dict]
             One or more represented as dicts.
-        time_column_name : str
+        time_column : str
             The name of the column containing the time.
-        key_column_name : str
+        key_column : str
             The name of the column containing the key.
-        subsort_column_name : str, optional
+        subsort_column : str, optional
             The name of the column containing the subsort.
             If not provided, the subsort will be assigned by the system.
         schema : pa.Schema, optional
@@ -117,9 +117,9 @@ class PyList(Source):
             schema = pa.Table.from_pylist(rows).schema
         super().__init__(
             schema=schema,
-            time_column_name=time_column_name,
-            key_column_name=key_column_name,
-            subsort_column_name=subsort_column_name,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
@@ -145,12 +145,12 @@ class CsvString(Source):
         self,
         csv_string: str | BytesIO,
         *,
-        time_column_name: str,
-        key_column_name: str,
-        subsort_column_name: Optional[str] = None,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: TimeUnit = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
         """
         Create a CSV String Source.
@@ -159,11 +159,11 @@ class CsvString(Source):
         ----------
         csv_string : str
             The CSV string to start from.
-        time_column_name : str
+        time_column : str
             The name of the column containing the time.
-        key_column_name : str
+        key_column : str
             The name of the column containing the key.
-        subsort_column_name : str, optional
+        subsort_column : str, optional
             The name of the column containing the subsort.
             If not provided, the subsort will be assigned by the system.
         schema : pa.Schema, optional
@@ -185,9 +185,9 @@ class CsvString(Source):
             csv_string.seek(0)
         super().__init__(
             schema=schema,
-            time_column_name=time_column_name,
-            key_column_name=key_column_name,
-            subsort_column_name=subsort_column_name,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
@@ -214,12 +214,12 @@ class JsonlString(Source):
         self,
         json_string: str | BytesIO,
         *,
-        time_column_name: str,
-        key_column_name: str,
-        subsort_column_name: Optional[str] = None,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: TimeUnit = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
         """
         Create a JSON String Source.
@@ -228,11 +228,11 @@ class JsonlString(Source):
         ----------
         json_string : str
             The line-delimited JSON string to start from.
-        time_column_name : str
+        time_column : str
             The name of the column containing the time.
-        key_column_name : str
+        key_column : str
             The name of the column containing the key.
-        subsort_column_name : str, optional
+        subsort_column : str, optional
             The name of the column containing the subsort.
             If not provided, the subsort will be assigned by the system.
         schema : pa.Schema, optional
@@ -254,9 +254,9 @@ class JsonlString(Source):
             json_string.seek(0)
         super().__init__(
             schema=schema,
-            time_column_name=time_column_name,
-            key_column_name=key_column_name,
-            subsort_column_name=subsort_column_name,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
@@ -280,12 +280,12 @@ class Parquet(Source):
         self,
         path: str,
         *,
-        time_column_name: str,
-        key_column_name: str,
-        subsort_column_name: Optional[str] = None,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: TimeUnit = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
         """
         Create a Parquet source.
@@ -294,11 +294,11 @@ class Parquet(Source):
         ----------
         path : str
             The path to the Parquet file to add.
-        time_column_name : str
+        time_column : str
             The name of the column containing the time.
-        key_column_name : str
+        key_column : str
             The name of the column containing the key.
-        subsort_column_name : str, optional
+        subsort_column : str, optional
             The name of the column containing the subsort.
             If not provided, the subsort will be assigned by the system.
         schema : pa.Schema, optional
@@ -317,9 +317,9 @@ class Parquet(Source):
             schema = pa.parquet.read_schema(path)
         super().__init__(
             schema=schema,
-            time_column_name=time_column_name,
-            key_column_name=key_column_name,
-            subsort_column_name=subsort_column_name,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
