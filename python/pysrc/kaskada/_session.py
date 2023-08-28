@@ -24,8 +24,7 @@ def init_session() -> None:
 
 
 def _get_session() -> _ffi.Session:
-    """
-    Assert that the session has been initialized.
+    """Assert that the session has been initialized.
 
     Returns: The FFI session handle.
 

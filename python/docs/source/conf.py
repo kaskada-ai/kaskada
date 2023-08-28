@@ -123,6 +123,6 @@ napoleon_attr_annotations = True
 napoleon_use_rtype = False
 typehints_use_rtype = False
 typehints_document_rtype = False
-typehints_defaults = 'comma'
+typehints_defaults = "comma"
 
 suppress_warnings = ["mystnb.unknown_mime_type"]

@@ -243,8 +243,7 @@ class Parquet(Source):
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a Parquet source.
+        """Create a Parquet source.
 
         Args:
             path: The path to the Parquet file to add.

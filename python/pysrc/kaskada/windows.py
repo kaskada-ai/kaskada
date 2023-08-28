@@ -24,7 +24,7 @@ class Since(Window):
 
     #: The boolean Timestream to use as predicate for the window.
     #: Each time the predicate evaluates to true the window will be cleared.
-#:
+    #:
     #: The predicate may be a callable which returns the boolean Timestream, in
     #: which case it is applied to the Timestream being aggregated.
     predicate: Timestream | Callable[..., Timestream] | bool
