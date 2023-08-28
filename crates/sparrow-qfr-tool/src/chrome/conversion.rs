@@ -60,7 +60,7 @@ impl Conversion {
 
     fn report_activity(&mut self, activity: ReportActivity) -> error_stack::Result<(), Error> {
         let stack_frame_id = StackFrameId(activity.activity_id);
-        let Some(name )= self.activity_names.get(&stack_frame_id) else {
+        let Some(name) = self.activity_names.get(&stack_frame_id) else {
             error_stack::bail!(Error::UndefinedActivityId)
         };
 

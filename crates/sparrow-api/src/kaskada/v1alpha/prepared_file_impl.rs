@@ -23,7 +23,9 @@ impl From<&PreparedFile> for PreparedFile {
 impl PreparedFile {
     pub fn min_event_time(&self) -> error_stack::Result<NaiveDateTime, Error> {
         let Some(timestamp) = self.min_event_time.as_ref() else {
-            error_stack::bail!(Error::MissingField { field: "min_event_time" })
+            error_stack::bail!(Error::MissingField {
+                field: "min_event_time"
+            })
         };
         NaiveDateTime::from_timestamp_opt(timestamp.seconds, timestamp.nanos as u32).ok_or_else(
             || {
@@ -36,7 +38,9 @@ impl PreparedFile {
 
     pub fn max_event_time(&self) -> error_stack::Result<NaiveDateTime, Error> {
         let Some(timestamp) = self.max_event_time.as_ref() else {
-            error_stack::bail!(Error::MissingField { field: "max_event_time" })
+            error_stack::bail!(Error::MissingField {
+                field: "max_event_time"
+            })
         };
         NaiveDateTime::from_timestamp_opt(timestamp.seconds, timestamp.nanos as u32).ok_or_else(
             || {
