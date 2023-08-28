@@ -67,7 +67,7 @@ class Timestream(object):
 
     @staticmethod
     def _call(
-        func: str,
+        func: Union[str, _ffi.Udf],
         *args: Union[Timestream, Literal],
         session: Optional[_ffi.Session] = None,
     ) -> Timestream:
@@ -111,10 +111,18 @@ class Timestream(object):
 
         ffi_args = [make_arg(arg) for arg in args]
         try:
-            return Timestream(
-                # TODO: FRAZ - so I need a `call` that can take the udf
-                _ffi.Expr.call(session=session, operation=func, args=ffi_args)
-            )
+            if isinstance(func, str):
+                return Timestream(
+                    _ffi.Expr.call(session=session, operation=func, args=ffi_args)
+                )
+            elif isinstance(func, _ffi.Udf):
+                return Timestream(
+                    _ffi.Expr.call_udf(session=session, udf=func, args=ffi_args)
+                )
+            else:
+                raise TypeError(
+                    f"invalid type for func. Expected str or udf, saw: {type(func)}"
+                )
         except TypeError as e:
             # noqa: DAR401
             raise _augment_error(args, TypeError(str(e))) from e
