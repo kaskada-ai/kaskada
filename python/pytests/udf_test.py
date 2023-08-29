@@ -64,7 +64,11 @@ def test_add_udf_pipe(golden, source_int64) -> None:
 
 
 # Tests that redefining a UDF with the same signature overwrites the
-# existing implementation
+# existing implementation.
+#
+# A bug existed where the UDF was hashing the signature rather than
+# the uuid, so the DFG was equating two different UDFs with the
+# same signature and using the first definition.
 def test_add_udf_redefined_inline(golden, source_int64) -> None:
     m = source_int64.col("m")
     n = source_int64.col("n")
@@ -73,10 +77,22 @@ def test_add_udf_redefined_inline(golden, source_int64) -> None:
     def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:
         return x - y
 
+    applied_1 = my_sub(m, n)
+
     @kd.udf("my_sub<N: number>(x: N, y: N) -> N")
     def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:
         return (x - y) - 5
 
+    applied_2 = my_sub(m, n)
+
     golden.jsonl(
-        kd.record({"m": m, "n": n, "rust_sub": m.sub(n), "udf_sub_1": my_sub(m, n)})
+        kd.record(
+            {
+                "m": m,
+                "n": n,
+                "rust_sub": m.sub(n),
+                "udf_sub_1": applied_1,
+                "udf_sub_2": applied_2,
+            }
+        )
     )
