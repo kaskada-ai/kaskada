@@ -137,7 +137,7 @@ jobs:
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
-          pip install dist/kaskada-${version}-cp38-abi3-manylinux_2_28_x86_64.whl --force-reinstall
+          pip install ${WHEEL} --force-reinstall
           sphinx-build docs/source docs/_build -j auto -W
           deactivate
       - name: Upload docs
