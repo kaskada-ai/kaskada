@@ -29,7 +29,7 @@ from ._result import Result
 Literal: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
 #: A Timestream or literal which can be used as an argument to a Timestream operation.
-Arg: TypeAlias = Union["Timestream", Callable[("Timestream"), "Timestream"], Literal]
+Arg: TypeAlias = Union["Timestream", Callable[["Timestream"], "Timestream"], Literal]
 
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
@@ -45,7 +45,9 @@ def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
     return e
 
 
-def _extract_arg(arg: Arg, session: _ffi.Session) -> _ffi.Expr:
+def _extract_arg(
+    arg: Arg, input: Optional[Timestream], session: _ffi.Session
+) -> _ffi.Expr:
     """Extract the FFI expression from an argument."""
     if callable(arg):
         if input is None:
@@ -83,7 +85,7 @@ class Timestream(object):
     def _call(
         func: Union[str, _ffi.Udf],
         *args: Arg,
-        input: Timestream = None,
+        input: Optional[Timestream] = None,
         session: Optional[_ffi.Session] = None,
     ) -> Timestream:
         """Construct a new Timestream by calling the given function.
@@ -124,7 +126,7 @@ class Timestream(object):
                 # input.
                 session = input._ffi_expr.session()
 
-        ffi_args = [_extract_arg(arg, session=session) for arg in args]
+        ffi_args = [_extract_arg(arg, input=input, session=session) for arg in args]
         try:
             if isinstance(func, str):
                 return Timestream(
@@ -239,6 +241,8 @@ class Timestream(object):
 
     def __radd__(self, lhs: Arg) -> Timestream:
         """Implement `lhs + self`."""
+        if callable(lhs):
+            lhs = lhs(self)
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.add(self)
@@ -273,6 +277,8 @@ class Timestream(object):
 
     def __rsub__(self, lhs: Arg) -> Timestream:
         """Implement `lhs - self`."""
+        if callable(lhs):
+            lhs = lhs(self)
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.sub(self)
