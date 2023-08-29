@@ -102,6 +102,7 @@ myst_enable_extensions = [
     "deflist",
     "smartquotes",
     "replacements",
+    "linkify",
 ]
 myst_heading_anchors = 3
 
