@@ -17,6 +17,12 @@ def add_x2(x: pd.Series, y: pd.Series) -> pd.Series:
     return (x + y) * 2
 
 
+@kd.udf("add_x2<N: number>(x: N, y: N) -> N")
+def add_x2(x: pd.Series, y: pd.Series) -> pd.Series:
+    """Use Pandas to add then multiply by 2"""
+    return (x + y) * 2
+
+
 def test_udf_instance() -> None:
     assert isinstance(add, Udf)
     assert isinstance(add._ffi, _ffi.Udf)
@@ -60,4 +66,23 @@ def test_add_udf_pipe(golden, source_int64) -> None:
                 "add_x2": m.pipe(add_x2, n),
             }
         )
+    )
+
+
+# Tests that redefining a UDF with the same signature overwrites the
+# existing implementation
+def test_add_udf_redefined_inline(golden, source_int64) -> None:
+    m = source_int64.col("m")
+    n = source_int64.col("n")
+
+    @kd.udf("my_sub<N: number>(x: N, y: N) -> N")
+    def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:
+        return x - y
+
+    @kd.udf("my_sub<N: number>(x: N, y: N) -> N")
+    def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:
+        return (x - y) - 5
+
+    golden.jsonl(
+        kd.record({"m": m, "n": n, "rust_sub": m.sub(n), "udf_sub_1": my_sub(m, n)})
     )
