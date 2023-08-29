@@ -17,12 +17,6 @@ def add_x2(x: pd.Series, y: pd.Series) -> pd.Series:
     return (x + y) * 2
 
 
-@kd.udf("add_x2<N: number>(x: N, y: N) -> N")
-def add_x2(x: pd.Series, y: pd.Series) -> pd.Series:
-    """Use Pandas to add then multiply by 2"""
-    return (x + y) * 2
-
-
 def test_udf_instance() -> None:
     assert isinstance(add, Udf)
     assert isinstance(add._ffi, _ffi.Udf)
