@@ -17,34 +17,26 @@ class Result(object):
         self._ffi_execution = ffi_execution
 
     def to_pandas(self) -> pd.DataFrame:
-        """
-        Convert the result to a Pandas DataFrame.
+        """Convert the result to a Pandas DataFrame.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             The result as a Pandas DataFrame.
 
-        Warnings
-        --------
-        This method will block on the complete results of the query and collect
-        all results into memory. If this is not desired, use `iter_pandas` instead.
+        Warnings:
+            This method will block on the complete results of the query and collect
+            all results into memory. If this is not desired, use `iter_pandas` instead.
         """
         return self.to_pyarrow().to_pandas()
 
     def to_pyarrow(self) -> pa.Table:
-        """
-        Convert the result to a PyArrow Table.
+        """Convert the result to a PyArrow Table.
 
-        Returns
-        -------
-        pa.Table
+        Returns:
             The result as a PyArrow Table.
 
-        Warnings
-        --------
-        This method will block on the complete results of the query and collect
-        all results into memory. If this is not desired, use `iter_pyarrow` instead.
+        Warnings:
+            This method will block on the complete results of the query and collect
+            all results into memory. If this is not desired, use `iter_pyarrow` instead.
         """
         batches = self._ffi_execution.collect_pyarrow()
         if len(batches) == 0:
@@ -55,14 +47,7 @@ class Result(object):
         return table
 
     def iter_pyarrow(self) -> Iterator[pa.RecordBatch]:
-        """
-        Iterate over the results as PyArrow RecordBatches.
-
-        Yields
-        ------
-        pa.RecordBatch
-            The next RecordBatch.
-        """
+        """Yield the results as PyArrow RecordBatches."""
         next_batch = self._ffi_execution.next_pyarrow()
         while next_batch is not None:
             # Annoyingly, PyArrow doesn't suport `drop_columns` on batches.
@@ -75,39 +60,18 @@ class Result(object):
             next_batch = self._ffi_execution.next_pyarrow()
 
     def iter_pandas(self) -> Iterator[pd.DataFrame]:
-        """
-        Iterate over the results as Pandas DataFrames.
-
-        Yields
-        ------
-        pd.DataFrame
-            The next Pandas DataFrame.
-        """
+        """Yield the resulting Pandas DataFrames."""
         for batch in self.iter_pyarrow():
             yield batch.to_pandas()
 
     def iter_rows(self) -> Iterator[dict]:
-        """
-        Iterate over the results as row dictionaries.
-
-        Yields
-        ------
-        dict
-            The next row as a dictionary.
-        """
+        """Yield the resulting rows as dictionaries."""
         for batch in self.iter_pyarrow():
             for row in batch.to_pylist():
                 yield row
 
     async def iter_pyarrow_async(self) -> AsyncIterator[pa.RecordBatch]:
-        """
-        Asynchronously iterate over the results as PyArrow RecordBatches.
-
-        Yields
-        ------
-        pa.RecordBatch
-            The next RecordBatch.
-        """
+        """Yield the resulting PyArrow RecordBatches asynchronously."""
         next_batch = await self._ffi_execution.next_pyarrow_async()
         while next_batch is not None:
             # Annoyingly, PyArrow doesn't suport `drop_columns` on batches.
@@ -120,26 +84,12 @@ class Result(object):
             next_batch = await self._ffi_execution.next_pyarrow_async()
 
     async def iter_pandas_async(self) -> AsyncIterator[pd.DataFrame]:
-        """
-        Asynchronously iterate over the results as Pandas DataFrames.
-
-        Yields
-        ------
-        pd.DataFrame
-            The next Pandas DataFrame.
-        """
+        """Yield the resulting Pandas DataFrames asynchronously."""
         async for batch in self.iter_pyarrow_async():
             yield batch.to_pandas()
 
     async def iter_rows_async(self) -> AsyncIterator[dict]:
-        """
-        Asycnchronously iterate over the results as row dictionaries.
-
-        Yields
-        ------
-        dict
-            The next row as a dictionary.
-        """
+        """Yield the resulting row dictionaries asynchronously."""
         async for batch in self.iter_pyarrow_async():
             for row in batch.to_pylist():
                 yield row

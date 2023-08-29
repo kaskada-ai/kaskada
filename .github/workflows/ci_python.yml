@@ -68,9 +68,6 @@ jobs:
       - name: isort
         run: |
           poetry run isort --filter-files --diff pysrc pytests docs/source
-      - name: darglint
-        run: |
-          poetry run darglint pysrc
       - name: pydocstyle
         run: |
           poetry run pydocstyle pysrc

@@ -1,7 +1,11 @@
 ---
 hide-toc: true
 html_theme.sidebar_secondary.remove: true
+sd_hide_title: true
 ---
+
+# Real-Time AI without the fuss.
+
 <div class="px-4 py-5 my-5 text-center">
     <img class="d-block mx-auto mb-4 only-light" src="_static/kaskada-positive.svg" alt="" width="50%">
     <img class="d-block mx-auto mb-4 only-dark" src="_static/kaskada-negative.svg" alt="" width="50%">
@@ -12,7 +16,7 @@ html_theme.sidebar_secondary.remove: true
     </div>
 </div>
 
-# Kaskada completes the Real-Time AI stack, providing...
+## Kaskada completes the Real-Time AI stack, providing...
 
 ```{gallery-grid}
 :grid-columns: 1 2 2 3

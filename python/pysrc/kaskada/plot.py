@@ -25,16 +25,11 @@ from ._timestream import Timestream
 
 @dataclass
 class Plot(object):
-    """
-    Configuration for a single plot to render.
+    """Configuration for a single plot to render.
 
-    Parameters
-    ----------
-    stream : Timestream
-        The Timestream to render.
-    name: str
-        The name of the plot to render.
-        Defaults to `Result` if not set.
+    Attributes:
+        stream: The Timestream to render.
+        name: The name of the plot to render. Defaults to `Result` if not set.
     """
 
     stream: Timestream

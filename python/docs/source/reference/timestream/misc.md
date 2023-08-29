@@ -13,4 +13,5 @@
     Timestream.if_
     Timestream.lag
     Timestream.null_if
+    Timestream.pipe
 ```

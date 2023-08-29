@@ -12,6 +12,7 @@ html_theme.sidebar_secondary.remove:
     :exclude-members: __init__
 
     .. autoproperty:: data_type
+.. autoclass:: kaskada.Arg
 ```
 
 ```{toctree}

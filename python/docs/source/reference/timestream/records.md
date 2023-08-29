@@ -1,7 +1,8 @@
 # Records
 
 Record operations create, extract or manipulate Timestreams of records.
-Comparison operations produce boolean Timestreams.
+
+## Record Methods
 
 ```{eval-rst}
 .. currentmodule:: kaskada

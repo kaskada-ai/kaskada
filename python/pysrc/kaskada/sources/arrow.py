@@ -28,31 +28,20 @@ class Pandas(Source):
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a source reading Pandas DataFrames.
+        """Create a source reading Pandas DataFrames.
 
-        Parameters
-        ----------
-        dataframe : pd.DataFrame
-            The DataFrame to start from.
-        time_column : str
-            The name of the column containing the time.
-        key_column : str
-            The name of the column containing the key.
-        subsort_column : str, optional
-            The name of the column containing the subsort.
-            If not provided, the subsort will be assigned by the system.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not specified, it will be inferred from the `dataframe`.
-        grouping_name : str, optional
-            The name of the groups associated with each key.
-            This is used to ensure implicit joins are only performed between
-            sources with compatible groupings.
-        time_unit : str, optional
-            The unit of the time column.
-            One of `ns`, `us`, `ms`, or `s`.
-            If not specified (and not specified in the `dataframe`), nanosecond will be assumed.
+        Args:
+            dataframe: The DataFrame to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             schema = pa.Schema.from_pandas(dataframe)
@@ -87,31 +76,20 @@ class PyList(Source):
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a source reading from rows represented as dicts.
+        """Create a source reading from rows represented as dicts.
 
-        Parameters
-        ----------
-        rows : dict | list[dict]
-            One or more represented as dicts.
-        time_column : str
-            The name of the column containing the time.
-        key_column : str
-            The name of the column containing the key.
-        subsort_column : str, optional
-            The name of the column containing the subsort.
-            If not provided, the subsort will be assigned by the system.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not specified, it will be inferred from the `rows`.
-        grouping_name : str, optional
-            The name of the groups associated with each key.
-            This is used to ensure implicit joins are only performed between
-            sources with compatible groupings.
-        time_unit : str, optional
-            The unit of the time column.
-            One of `ns`, `us`, `ms`, or `s`.
-            If not specified nanosecond will be assumed.
+        Args:
+            rows: One or more rows represented as dicts.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             schema = pa.Table.from_pylist(rows).schema
@@ -152,31 +130,20 @@ class CsvString(Source):
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a CSV String Source.
+        """Create a CSV String Source.
 
-        Parameters
-        ----------
-        csv_string : str
-            The CSV string to start from.
-        time_column : str
-            The name of the column containing the time.
-        key_column : str
-            The name of the column containing the key.
-        subsort_column : str, optional
-            The name of the column containing the subsort.
-            If not provided, the subsort will be assigned by the system.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not specified, it will be inferred from the `csv_string`.
-        grouping_name : str, optional
-            The name of the groups associated with each key.
-            This is used to ensure implicit joins are only performed between
-            sources with compatible groupings.
-        time_unit : str, optional
-            The unit of the time column.
-            One of `ns`, `us`, `ms`, or `s`.
-            If not specified nanosecond will be assumed.
+        Args:
+            csv_string: The CSV string to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if isinstance(csv_string, str):
             csv_string = BytesIO(csv_string.encode("utf-8"))
@@ -221,31 +188,20 @@ class JsonlString(Source):
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a JSON String Source.
+        """Create a JSON String Source.
 
-        Parameters
-        ----------
-        json_string : str
-            The line-delimited JSON string to start from.
-        time_column : str
-            The name of the column containing the time.
-        key_column : str
-            The name of the column containing the key.
-        subsort_column : str, optional
-            The name of the column containing the subsort.
-            If not provided, the subsort will be assigned by the system.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not specified, it will be inferred from the JSON records.
-        grouping_name : str, optional
-            The name of the groups associated with each key.
-            This is used to ensure implicit joins are only performed between
-            sources with compatible groupings.
-        time_unit : str, optional
-            The unit of the time column.
-            One of `ns`, `us`, `ms`, or `s`.
-            If not specified nanosecond will be assumed.
+        Args:
+            json_string: The line-delimited JSON string to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
@@ -287,31 +243,21 @@ class Parquet(Source):
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a Parquet source.
+        """Create a Parquet source.
 
-        Parameters
-        ----------
-        path : str
-            The path to the Parquet file to add.
-        time_column : str
-            The name of the column containing the time.
-        key_column : str
-            The name of the column containing the key.
-        subsort_column : str, optional
-            The name of the column containing the subsort.
-            If not provided, the subsort will be assigned by the system.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not specified, it will be inferred from the Parquet file.
-        grouping_name : str, optional
-            The name of the groups associated with each key.
-            This is used to ensure implicit joins are only performed between
-            sources with compatible groupings.
-        time_unit : str, optional
-            The unit of the time column.
-            One of `ns`, `us`, `ms`, or `s`.
-            If not specified nanosecond will be assumed.
+        Args:
+            path: The path to the Parquet file to add.
+            dataframe: The DataFrame to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             schema = pa.parquet.read_schema(path)
