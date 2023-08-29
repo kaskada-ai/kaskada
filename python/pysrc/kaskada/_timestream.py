@@ -527,7 +527,8 @@ class Timestream(object):
 
     def extend(
         self,
-        fields: Timestream | Mapping[str, Arg]
+        fields: Timestream
+        | Mapping[str, Arg]
         | Callable[[Timestream], Timestream | Mapping[str, Arg]],
     ) -> Timestream:
         """Return a Timestream containing fields from `self` and `fields`.
