@@ -10,7 +10,7 @@ mystnb:
 # Timestreams
 
 Kaskada is built on the concept of a _Timestream_.
-Each Timestream is ordered by time and partitioned by _entity_.
+Each Timestream is ordered by _time_ and partitioned by _entity_.
 This makes it easy to focus on events happening over time and how aggregations change.
 
 ```{code-cell}
