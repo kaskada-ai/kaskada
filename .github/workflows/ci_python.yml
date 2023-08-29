@@ -105,7 +105,16 @@ jobs:
             dnf -y install clang protobuf-devel lld
             clang --version
             protoc --version
+      - name: Determine Version
+        if: github.event_name != 'release'
+        run: |
+          pip install tomlkit
+          VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
+          echo "WHEEL=dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_x86_64.whl"
+          echo "WHEEL: ${WHEEL}"
       - name: pytest and mypy
+        # This installs the kaskada package using the wheel.
+        # This ensures that we don't accidentally install the version from pypi.
         run: |
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
@@ -113,7 +122,7 @@ jobs:
             poetry env info
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+            pip install ${WHEEL} --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -128,7 +137,7 @@ jobs:
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
-          pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+          pip install dist/kaskada-${version}-cp38-abi3-manylinux_2_28_x86_64.whl --force-reinstall
           sphinx-build docs/source docs/_build -j auto -W
           deactivate
       - name: Upload docs

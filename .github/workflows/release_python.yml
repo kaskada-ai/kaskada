@@ -77,7 +77,11 @@ jobs:
       matrix:
         include:
           - target: x86_64
+            wheel_suffix: macosx_11_0_x86_64
+          - target: arm64
+            wheel_suffix: macosx_11_0_arm64
           - target: universal2
+            wheel_suffix: macosx_11_0_x86_64.macosx_11_0_arm64.macosx_11_0_universal2
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
@@ -113,13 +117,16 @@ jobs:
           args: --release --out dist --sdist
           working-directory: python
       - name: pytest and mypy
+        if: matrix.target != 'arm64'
         run: |
+          WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-${{ matrix.wheel_suffix }}.whl"
+          echo "WHEEL=${WHEEL}"
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+            pip install ${WHEEL} --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -175,7 +182,9 @@ jobs:
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
-          pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+          WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-win_amd64.whl"
+          echo "WHEEL=${WHEEL}"
+          pip install ${WHEEL} --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
           poetry run pytest
@@ -236,13 +245,15 @@ jobs:
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
+          WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-manylinux_2_28_${{ matrix.target }}.whl"
+          echo "WHEEL=${WHEEL}"
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry env info
             source $(poetry env info --path)/bin/activate
             poetry install --only=test --only=typecheck
-            pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
+            pip install ${WHEEL} --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
             poetry run pytest
@@ -304,6 +315,10 @@ jobs:
         #   repository-url: https://test.pypi.org/legacy/
 
       - name: Publish release
+        # We don't need the source for the release, so we don't currently check it out.
+        # However, we set a default working-directory of `python` which is within the source.
+        # To avoid problems, we explicitly set the working-directory to the root here.
+        working-directory:
         # TODO: Add `--latest` when we stop having the python client download
         # the latest version.
         run: |
