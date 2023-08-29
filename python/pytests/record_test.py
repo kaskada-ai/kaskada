@@ -32,13 +32,23 @@ def test_record(source, golden) -> None:
     )
 
 
-def test_extend_record(source, golden) -> None:
+def test_extend_dict(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(source.extend({"add": m + n}))
 
 
-def test_extend_input(source, golden) -> None:
+def test_extend_record(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(source.extend(kd.record({"add": m + n})))
+
+
+def test_extend_computed_record(source, golden) -> None:
+    golden.jsonl(source.extend(lambda i: kd.record({"add": i.col("m") + i.col("n")})))
+
+
+def test_extend_computed_dict(source, golden) -> None:
     golden.jsonl(source.extend(lambda input: {"add": input.col("m") + input.col("n")}))
 
 

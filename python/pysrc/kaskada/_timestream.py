@@ -32,8 +32,7 @@ Literal: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 Arg: TypeAlias = Union["Timestream", Callable[("Timestream"), "Timestream"], Literal]
 
 
-def _augment_error(args: Sequence[Arg], e: Exception
-) -> Exception:
+def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
     if sys.version_info >= (3, 11):
         # If we can add notes to the exception, indicate the types.
@@ -44,6 +43,22 @@ def _augment_error(args: Sequence[Arg], e: Exception
             else:
                 e.add_note(f"Arg[{n}]: Literal {arg} ({type(arg)})")
     return e
+
+
+def _extract_arg(arg: Arg, session: _ffi.Session) -> _ffi.Expr:
+    """Extract the FFI expression from an argument."""
+    if callable(arg):
+        if input is None:
+            raise ValueError(
+                "Cannot use a callable argument without an input Timestream"
+            )
+        else:
+            arg = arg(input)
+
+    if isinstance(arg, Timestream):
+        return arg._ffi_expr
+    else:
+        return Timestream._literal(arg, session)._ffi_expr
 
 
 class Timestream(object):
@@ -91,29 +106,25 @@ class Timestream(object):
             TypeError: If the argument types are invalid for the given function.
             ValueError: If the argument values are invalid for the given function.
         """
+        # Determine the session. This is unfortunately necessary for creating literals
+        # and other expressions.
         if session is None:
             if input is None:
+                # If there is no input, then at least one of the argumets must be a
+                # Timestream. Specifically, we shouldn't have all literals, nor should
+                # we have all Callables that produce Timestreams.
                 session = next(
-                    arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
+                    arg._ffi_expr.session()
+                    for arg in args
+                    if isinstance(arg, Timestream)
                 )
             else:
+                # If there is a session, it is possible (but unlikely) that all arguments
+                # are Callables. To handle this, we need to determine the session from the
+                # input.
                 session = input._ffi_expr.session()
 
-        def make_arg(arg: Union[Timestream, Literal]) -> _ffi.Expr:
-            if callable(arg):
-                if input is None:
-                    raise ValueError(
-                        "Cannot use a callable argument without an input Timestream"
-                    )
-                else:
-                    arg = arg(input)
-
-            if isinstance(arg, Timestream):
-                return arg._ffi_expr
-            else:
-                return Timestream._literal(arg, session)._ffi_expr
-
-        ffi_args = [make_arg(arg) for arg in args]
+        ffi_args = [_extract_arg(arg, session=session) for arg in args]
         try:
             if isinstance(func, str):
                 return Timestream(
@@ -516,7 +527,8 @@ class Timestream(object):
 
     def extend(
         self,
-        fields: Mapping[str, Arg] | Callable[[Timestream], Mapping[str, Timestream | Literal]]
+        fields: Timestream | Mapping[str, Arg]
+        | Callable[[Timestream], Timestream | Mapping[str, Arg]],
     ) -> Timestream:
         """Return a Timestream containing fields from `self` and `fields`.
 
@@ -530,8 +542,9 @@ class Timestream(object):
         # in order to do the extension.
         if callable(fields):
             fields = fields(self)
-        extension = record(fields)
-        return Timestream._call("extend_record", extension, self, input=self)
+        if not isinstance(fields, Timestream):
+            fields = record(fields)
+        return Timestream._call("extend_record", fields, self, input=self)
 
     def neg(self) -> Timestream:
         """Return a Timestream from the numeric negation of self."""
@@ -649,9 +662,7 @@ class Timestream(object):
         """
         return Timestream._call("lookup", key, self, input=self)
 
-    def coalesce(
-        self, arg: Arg, *args: Arg
-    ) -> Timestream:
+    def coalesce(self, arg: Arg, *args: Arg) -> Timestream:
         """Return a Timestream containing the first non-null point from self and the arguments.
 
         Args:
