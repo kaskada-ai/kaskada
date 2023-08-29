@@ -1,15 +1,10 @@
 # Aggregation
 
-Timestream aggregations are:
+The User Guide has details on [aggregations in general](../../guide/aggregation.md).
 
-Cumulative
-: They reflect all values up to and including the current time.
-
-Grouped
-: They reflect the values for each entity separately.
-
-Windowed
-: They reflect the values within a specific [window](../windows.md).
+```{note}
+It is important to remember that aggregations are partitioned by entity and windowed, with the default behavior being cumulative up to the current time.
+```
 
 ## Aggregation Methods
 
