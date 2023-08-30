@@ -73,14 +73,14 @@ def test_add_udf_redefined_inline(golden, source_int64) -> None:
     m = source_int64.col("m")
     n = source_int64.col("n")
 
-    @kd.udf("my_sub<N: number>(x: N, y: N) -> N")
+    @kd.udf("my_sub<N: number>(x: N, y: N) -> N")     
     def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:
         return x - y
 
     applied_1 = my_sub(m, n)
 
-    @kd.udf("my_sub<N: number>(x: N, y: N) -> N")
-    def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:
+    @kd.udf("my_sub<N: number>(x: N, y: N) -> N") # type: ignore
+    def my_sub(x: pd.Series, y: pd.Series) -> pd.Series:         
         return (x - y) - 5
 
     applied_2 = my_sub(m, n)
