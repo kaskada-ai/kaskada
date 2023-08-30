@@ -1,13 +1,15 @@
 import tomlkit
 import argparse
+from typing import Dict
 from typing import List
 from packaging.version import parse
 
-def get_value_from_toml(file_path: str, toml_path: List[str]) -> str:
+def get_value_from_toml(file_path: str, toml_path: str | List[str]) -> str:
     """Retrieve a value from a TOML file at the given path."""
     with open(file_path, 'r') as f:
         data = tomlkit.parse(f.read())
-
+    if isinstance(toml_path, str):
+        toml_path = toml_path.split('.')
     temp = data
     for key in toml_path:
         temp = temp[key]
@@ -50,18 +52,19 @@ def update_versions(entries: List[str], version: str) -> None:
         with open(file_path, 'w') as f:
             f.write(dumps(data))
 
-def normalize(version_str: str) -> str:
+def normalize_version(version_str: str) -> str:
     """Normalize a version string."""
     version = parse(version_str)
     return str(version)
 
-parser = argparse.ArgumentParser(description="Manage versions in TOML files")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Manage versions in TOML files")
     subparsers = parser.add_subparsers(dest="command")
 
     # Setup 'get' command
     get_parser = subparsers.add_parser("get", help="Get version from a toml_file at a specific path")
     get_parser.add_argument("toml_file", type=str, help="Path to the TOML file")
-    get_parser.add_argument("path", type=str, help="Path within the TOML file (e.g., package.version)"))
+    get_parser.add_argument("path", type=str, help="Path within the TOML file (e.g., package.version)")
     get_parser.add_argument("--normalize", action="store_true", help="Normalize the version")
 
     # Setup 'set' command
