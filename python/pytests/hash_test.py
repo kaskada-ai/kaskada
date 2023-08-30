@@ -22,6 +22,7 @@ def test_hash_string(string_source, golden) -> None:
     m = string_source.col("m")
     golden.jsonl(kd.record({"m": m, "hash_m": m.hash()}))
 
+
 @pytest.fixture(scope="module")
 def integer_source() -> kd.sources.CsvString:
     content = "\n".join(
@@ -36,6 +37,7 @@ def integer_source() -> kd.sources.CsvString:
         ]
     )
     return kd.sources.CsvString(content, time_column="time", key_column="key")
+
 
 def test_hash_integer(integer_source, golden) -> None:
     m = integer_source.col("m")
