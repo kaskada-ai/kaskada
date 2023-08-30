@@ -301,6 +301,19 @@ class Timestream(object):
         """Return a Timestream of self rounded down to the nearest integer."""
         return Timestream._call("floor", self)
 
+    def hash(self) -> Timestream:
+        """Return a Timestream containing the hash of the input.
+
+        Notes:
+            Unlike many functions which return `null` if an input is `null`,
+              `hash` will never return `null`.
+        """
+        return Timestream._call("hash", self)
+
+    def lower(self) -> Timestream:
+        """Return a Timestream with all values converted to lower case."""
+        return Timestream._call("lower", self)
+
     def mul(self, rhs: Arg) -> Timestream:
         """Return a Timestream multiplying this and `rhs`.
 
@@ -923,12 +936,97 @@ class Timestream(object):
         """
         return record(fields(self))
 
+<<<<<<< HEAD
     def preview(
         self,
         limit: int = 10,
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
     ) -> pd.DataFrame:
         """Preview the points in this TimeStream as a DataFrame.
+=======
+    def round(self) -> Timestream:
+        """Return a Timestream with all values rounded to the nearest integer.
+
+        Returns:
+            A Timestream of the same type as `self`. The result contains `null`
+              if the value was `null` at that position. Otherwise, it contains
+              the result of rounding the value to the nearest integer.
+
+        Notes:
+            This method may be applied to any numeric type. For anything other
+              than `float32` and `float64` it has no affect since the values
+              are already integers.
+
+        See Also:
+            `ceil` and `floor`
+        """
+        return Timestream._call("round", self)
+
+    def sqrt(self) -> Timestream:
+        """Return a Timestream with the square root of all values.
+
+        Returns:
+            A Timestream of type `float64`. The result contains `null`
+              if the value was `null` at that row. Otherwise the row
+              contains the square root the value.
+        """
+        return Timestream._call("sqrt", self)
+
+    def upper(self) -> Timestream:
+        """Return a Timestream with all values converted to upper case."""
+        return Timestream._call("upper", self)
+
+    def zip_max(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Return a Timestream with the maximum of `self` and `rhs`
+
+        Args:
+            rhs: The Timestream or literal value to compare to this.
+
+        Returns:
+            A numeric Timestream of the promoted type. Each row
+              contains the value from `self` if `self` is greater
+              than `rhs`, otherwise it contains `rhs`. If `self` or
+              `rhs` is `NaN` or `null`, then `rhs` will be returned.
+
+        Notes:
+            Both `self` and `rhs` are promoted to a compatible ordered
+              type following the docs:data-model#numeric-type-coercion-table[numeric type coercion rules].
+
+        See Also:
+            This returns the maximum of two values. See the
+              aggregation `max` for the maximum of values in
+              a column up to and including the current row.
+        """
+        return Timestream._call("zip_max", self, rhs)
+
+    def zip_min(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Return a Timestream with the minimum of `self` and `rhs`
+
+        Args:
+            rhs: The Timestream or literal value to compare to this.
+
+        Returns:
+            A numeric Timestream of the promoted type. Each row
+              contains the value from `self` if `self` is less than
+              `rhs`, otherwise it contains `rhs`. If `self` or `rhs`
+              is `NaN` or `null`, then `rhs` will be returned.
+
+        Notes:
+            Both `self` and `rhs` are promoted to a compatible ordered
+              type following the docs:data-model#numeric-type-coercion-table[numeric type coercion rules].
+
+        See Also:
+            This returns the minimum of two values. See the
+              aggregation `min` for the minimum of values in
+              a column up to and including the current row.
+        """
+        return Timestream._call("zip_min", self, rhs)
+
+    def preview(self, limit: int = 100) -> pd.DataFrame:
+        """Return the first N rows of the result as a Pandas DataFrame.
+
+        This makes it easy to preview the content of the Timestream.
+>>>>>>> 4f3e84d3 (implemented numerous existing operations)
 
         Args:
             limit: The number of points to preview.

@@ -1,0 +1,6 @@
+{"_time":"2021-01-01T00:00:00.000000000","_key":"Ben","m":"Hello World","lower_m":"hello world"}
+{"_time":"2021-01-02T00:00:00.000000000","_key":"Ryan","m":null,"lower_m":null}
+{"_time":"2021-01-02T00:00:00.000000000","_key":"Ryan","m":"Hi Earth","lower_m":"hi earth"}
+{"_time":"2021-01-03T00:00:00.000000000","_key":"Ben","m":"Hello","lower_m":"hello"}
+{"_time":"2021-01-03T00:00:00.000000000","_key":"Ben","m":null,"lower_m":null}
+{"_time":"2021-01-04T00:00:00.000000000","_key":"Ryan","m":"hi","lower_m":"hi"}
