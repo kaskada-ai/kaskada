@@ -1,5 +1,4 @@
 import kaskada as kd
-
 import pytest
 
 
@@ -16,7 +15,7 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,5",
         ]
     )
-    return kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
+    return kd.sources.CsvString(content, time_column="time", key_column="key")
 
 
 def test_exp(source, golden) -> None:

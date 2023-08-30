@@ -1,14 +1,18 @@
 """Provide the base-class for Kaskada sources."""
+from typing import Literal
 from typing import Optional
 
 import kaskada._ffi as _ffi
 import pyarrow as pa
+from typing_extensions import TypeAlias
 
 from .._session import _get_session
 from .._timestream import Timestream
 
 
 _TABLE_NUM: int = 0
+
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
 
 
 class Source(Timestream):
@@ -20,11 +24,11 @@ class Source(Timestream):
     def __init__(
         self,
         schema: pa.Schema,
-        time_column_name: str,
-        key_column_name: str,
-        subsort_column_name: Optional[str] = None,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         grouping_name: Optional[str] = None,
-        time_unit: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
     ):
         """Create a new source."""
         assert isinstance(schema, pa.Schema)
@@ -32,9 +36,9 @@ class Source(Timestream):
         # Fix the schema. The fields should be non-nullable.
         def fix_field(field: pa.Field) -> pa.Field:
             if field.name in [
-                time_column_name,
-                key_column_name,
-                subsort_column_name,
+                time_column,
+                key_column,
+                subsort_column,
             ]:
                 field = field.with_nullable(False)
             if isinstance(field.type, pa.TimestampType):
@@ -44,9 +48,9 @@ class Source(Timestream):
         fields = [fix_field(f) for f in schema]
         schema = pa.schema(fields)
 
-        Source._validate_column(time_column_name, schema)
-        Source._validate_column(key_column_name, schema)
-        Source._validate_column(subsort_column_name, schema)
+        Source._validate_column(time_column, schema)
+        Source._validate_column(key_column, schema)
+        Source._validate_column(subsort_column, schema)
 
         # Hack -- Sparrow currently requires tables be named.
         global _TABLE_NUM
@@ -56,10 +60,10 @@ class Source(Timestream):
         ffi_table = _ffi.Table(
             _get_session(),
             name,
-            time_column_name,
-            key_column_name,
+            time_column,
+            key_column,
             schema,
-            subsort_column_name,
+            subsort_column,
             grouping_name,
             time_unit,
         )

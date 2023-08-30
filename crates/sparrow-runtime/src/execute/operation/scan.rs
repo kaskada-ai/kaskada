@@ -361,6 +361,7 @@ mod tests {
     use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
     use arrow::record_batch::RecordBatch;
     use futures::StreamExt;
+    use hashbrown::HashMap;
     use itertools::Itertools;
     use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
     use sparrow_api::kaskada::v1alpha::operation_input_ref::{self, Column};
@@ -509,6 +510,7 @@ mod tests {
             output_at_time: None,
             bounded_lateness_ns: None,
             materialize: false,
+            udfs: HashMap::new(),
         };
 
         executor

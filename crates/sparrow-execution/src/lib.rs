@@ -171,7 +171,7 @@ mod tests {
             1,
             TransformPipeline::try_new(
                 &scan,
-                vec![project].iter(),
+                [project].iter(),
                 PipelineInput::new(sink_pipeline, 0),
             )
             .change_context(Error::Creating)?,

@@ -6,15 +6,17 @@ use arrow::array::ArrayRef;
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use arrow::record_batch::RecordBatch;
 use enum_map::EnumMap;
+use hashbrown::HashMap;
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::expression_plan::Operator;
 use sparrow_api::kaskada::v1alpha::{ExpressionPlan, LateBoundValue, OperationInputRef};
 use sparrow_arrow::scalar_value::ScalarValue;
-use sparrow_instructions::ValueRef;
 use sparrow_instructions::{
     create_evaluator, ColumnarValue, ComputeStore, Evaluator, GroupingIndices, InstKind, InstOp,
     RuntimeInfo, StaticArg, StaticInfo, StoreKey,
 };
+use sparrow_instructions::{Udf, ValueRef};
+use uuid::Uuid;
 
 use crate::execute::operation::InputBatch;
 use crate::Batch;
@@ -49,6 +51,7 @@ impl ExpressionExecutor {
         operation_label: &'static str,
         expressions: Vec<ExpressionPlan>,
         late_bindings: &EnumMap<LateBoundValue, Option<ScalarValue>>,
+        udfs: &HashMap<Uuid, Arc<dyn Udf>>,
     ) -> anyhow::Result<Self> {
         let mut input_columns = Vec::new();
 
@@ -102,8 +105,15 @@ impl ExpressionExecutor {
                     } else if inst == "cast" {
                         InstKind::Cast(data_type.clone())
                     } else {
-                        let inst_op = InstOp::from_str(&inst)?;
-                        InstKind::Simple(inst_op)
+                        // This assumes we'll never have an InstOp function name that
+                        // matches a uuid, which should be safe.
+                        if let Ok(uuid) = Uuid::from_str(&inst) {
+                            let udf = udfs.get(&uuid).ok_or(anyhow::anyhow!("expected udf"))?;
+                            InstKind::Udf(udf.clone())
+                        } else {
+                            let inst_op = InstOp::from_str(&inst)?;
+                            InstKind::Simple(inst_op)
+                        }
                     };
 
                     let static_info = StaticInfo::new(&inst_kind, args, &data_type);

@@ -1,6 +1,6 @@
 [project]
 name = "kaskada"
-version = "0.6.0-a.1"
+version = "0.6.0-a.2"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.8.1,<4.0"
 classifiers = [
@@ -23,7 +23,7 @@ plot = [
 name = "kaskada"
 description = "Kaskada query builder and local execution engine."
 authors = []
-version = "0.6.0-a.1"
+version = "0.6.0-a.2"
 
 [tool.poetry.dependencies]
 # Dependencies to install for using the project.
@@ -48,8 +48,7 @@ nox = "2023.4.22"
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-black = ">=21.10b0"
-darglint = ">=1.8.1"
+black = { version = ">=21.10b0", extras = ["jupyter"] }
 flake8 = ">=4.0.1"
 flake8-bugbear = ">=21.9.2"
 flake8-rst-docstrings = ">=0.2.5"
@@ -81,6 +80,7 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 sphinx = ">=6.0.0"
 sphinx-autobuild = ">=2021.3.14"
+sphinx-autodoc-typehints = ">=1.23.0"
 sphinx-book-theme = "^1.0.1"
 sphinx-copybutton = "^0.5.2"
 sphinx-design = "^0.5.0"

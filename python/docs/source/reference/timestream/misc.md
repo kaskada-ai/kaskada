@@ -8,10 +8,10 @@
 
     Timestream.cast
     Timestream.coalesce
-    Timestream.data_type
     Timestream.else_
     Timestream.filter
     Timestream.if_
     Timestream.lag
     Timestream.null_if
+    Timestream.pipe
 ```

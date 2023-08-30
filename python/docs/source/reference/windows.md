@@ -6,6 +6,7 @@
 .. autosummary::
     :toctree: apidocs/windows/
 
+    Window
     Since
     Sliding
     Trailing

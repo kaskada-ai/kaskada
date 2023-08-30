@@ -28,6 +28,6 @@ content = "\n".join(
         "1996-12-19T16:40:02,A,,",
     ]
 )
-source = kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
+source = kd.sources.CsvString(content, time_column="time", key_column="key")
 source.run().to_pandas()
 ```

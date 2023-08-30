@@ -68,9 +68,6 @@ jobs:
       - name: isort
         run: |
           poetry run isort --filter-files --diff pysrc pytests docs/source
-      - name: darglint
-        run: |
-          poetry run darglint pysrc
       - name: pydocstyle
         run: |
           poetry run pydocstyle pysrc
@@ -132,7 +129,6 @@ jobs:
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
           pip install 'kaskada[plot]>=0.6.0-a.0' --find-links dist --force-reinstall
-          ls docs/source/_static
           sphinx-build docs/source docs/_build -j auto -W
           deactivate
       - name: Upload docs

@@ -11,35 +11,48 @@ import pyarrow.json
 import pyarrow.parquet
 
 from .source import Source
+from .source import TimeUnit
 
 
 class Pandas(Source):
     """Source reading data from Pandas dataframe."""
 
     def __init__(
-        self, dataframe: pd.DataFrame, *, schema: Optional[pa.Schema] = None, **kwargs
+        self,
+        dataframe: pd.DataFrame,
+        *,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
+        schema: Optional[pa.Schema] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a source reading Pandas DataFrames.
+        """Create a source reading Pandas DataFrames.
 
-        Parameters
-        ----------
-        dataframe : pd.DataFrame
-            The DataFrame to start from.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not specified, it will be inferred from the `dataframe`.
-        **kwargs : dict, optional
-            Additional keyword arguments to pass to the super class.
-            Should include the required column names.
-
-        See Also
-        --------
-        Source.__init__ : For required keyword arguments.
+        Args:
+            dataframe: The DataFrame to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             schema = pa.Schema.from_pandas(dataframe)
-        super().__init__(schema, **kwargs)
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
         self.add_data(dataframe)
 
     def add_data(self, data: pd.DataFrame) -> None:
@@ -53,29 +66,41 @@ class PyList(Source):
     """Source reading data from lists of dicts."""
 
     def __init__(
-        self, rows: dict | list[dict], *, schema: Optional[pa.Schema] = None, **kwargs
+        self,
+        rows: dict | list[dict],
+        *,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
+        schema: Optional[pa.Schema] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a source reading from rows represented as dicts.
+        """Create a source reading from rows represented as dicts.
 
-        Parameters
-        ----------
-        rows : dict | list[dict]
-            One or more represented as dicts.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not provided, the schema will be inferred from the `csv_string`.
-        **kwargs : dict, optional
-            Additional keyword arguments to pass to the super class.
-            Should include the required column names.
-
-        See Also
-        --------
-        Source.__init__ : For required keyword arguments.
+        Args:
+            rows: One or more rows represented as dicts.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             schema = pa.Table.from_pylist(rows).schema
-        super().__init__(schema, **kwargs)
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
 
         self._convert_options = pyarrow.csv.ConvertOptions(column_types=schema)
         self.add_rows(rows)
@@ -95,32 +120,44 @@ class CsvString(Source):
     """Source reading data from CSV strings using Pandas."""
 
     def __init__(
-        self, csv_string: str | BytesIO, *, schema: Optional[pa.Schema] = None, **kwargs
+        self,
+        csv_string: str | BytesIO,
+        *,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
+        schema: Optional[pa.Schema] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a CSV String Source.
+        """Create a CSV String Source.
 
-        Parameters
-        ----------
-        csv_string : str
-            The CSV string to start from.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not provided, the schema will be inferred from the `csv_string`.
-        **kwargs : dict, optional
-            Additional keyword arguments to pass to the super class.
-            Should include the required column names.
-
-        See Also
-        --------
-        Source.__init__ : For required keyword arguments.
+        Args:
+            csv_string: The CSV string to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if isinstance(csv_string, str):
             csv_string = BytesIO(csv_string.encode("utf-8"))
         if schema is None:
             schema = pa.csv.read_csv(csv_string).schema
             csv_string.seek(0)
-        super().__init__(schema, **kwargs)
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
 
         self._convert_options = pyarrow.csv.ConvertOptions(
             column_types=schema,
@@ -144,33 +181,41 @@ class JsonlString(Source):
         self,
         json_string: str | BytesIO,
         *,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
-        **kwargs,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a JSON String Source.
+        """Create a JSON String Source.
 
-        Parameters
-        ----------
-        json_string : str
-            The line-delimited JSON string to start from.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not provided, the schema will be inferred from the `csv_string`.
-        **kwargs : dict, optional
-            Additional keyword arguments to pass to the super class.
-            Should include the required column names.
-
-        See Also
-        --------
-        Source.__init__ : For required keyword arguments.
+        Args:
+            json_string: The line-delimited JSON string to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
         if schema is None:
             schema = pa.json.read_json(json_string).schema
             json_string.seek(0)
-        super().__init__(schema, **kwargs)
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
 
         self._parse_options = pyarrow.json.ParseOptions(explicit_schema=schema)
         self.add_string(json_string)
@@ -188,29 +233,42 @@ class Parquet(Source):
     """Source reading data from Parquet files."""
 
     def __init__(
-        self, path: str, *, schema: Optional[pa.Schema] = None, **kwargs
+        self,
+        path: str,
+        *,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
+        schema: Optional[pa.Schema] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
     ) -> None:
-        """
-        Create a Parquet source.
+        """Create a Parquet source.
 
-        Parameters
-        ----------
-        path : str
-            The path to the Parquet file to add.
-        schema : pa.Schema, optional
-            The schema to use.
-            If not provided, the schema will be inferred from the `csv_string`.
-        **kwargs : dict, optional
-            Additional keyword arguments to pass to the super class.
-            Should include the required column names.
-
-        See Also
-        --------
-        Source.__init__ : For required keyword arguments.
+        Args:
+            path: The path to the Parquet file to add.
+            dataframe: The DataFrame to start from.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             schema = pa.parquet.read_schema(path)
-        super().__init__(schema, **kwargs)
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
 
         self.add_file(path)
 
