@@ -4,16 +4,8 @@ from __future__ import annotations
 
 import sys
 import warnings
-from datetime import datetime
-from datetime import timedelta
-from typing import Callable
-from typing import List
-from typing import Mapping
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
-from typing import Union
-from typing import final
+from datetime import datetime, timedelta
+from typing import Callable, List, Mapping, Optional, Sequence, Tuple, Union, final
 
 import kaskada as kd
 import kaskada._ffi as _ffi

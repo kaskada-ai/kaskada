@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import AsyncIterator
-from typing import Iterator
+from typing import AsyncIterator, Iterator
 
 import pandas as pd
 import pyarrow as pa
