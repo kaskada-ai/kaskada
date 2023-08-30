@@ -81,7 +81,6 @@ optional = true
 sphinx = ">=6.0.0"
 sphinx-autobuild = ">=2021.3.14"
 sphinx-autodoc-typehints = ">=1.23.0"
-sphinx-book-theme = "^1.0.1"
 sphinx-copybutton = "^0.5.2"
 sphinx-design = "^0.5.0"
 myst-parser = {version = ">=0.16.1"}
@@ -91,6 +90,7 @@ myst-parser = {version = ">=0.16.1"}
 myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
 plotly = {version = "^5.16.1"}
 linkify-it-py = "^2.0.2"
+pydata-sphinx-theme = "^0.13.3"
 
 [tool.poetry.group.test]
 # Dependencies for testing
