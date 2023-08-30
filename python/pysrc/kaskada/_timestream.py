@@ -112,14 +112,20 @@ class Timestream(object):
         # and other expressions.
         if session is None:
             if input is None:
-                # If there is no input, then at least one of the argumets must be a
+                # If there is no input, then at least one of the arguments must be a
                 # Timestream. Specifically, we shouldn't have all literals, nor should
                 # we have all Callables that produce Timestreams.
-                session = next(
-                    arg._ffi_expr.session()
-                    for arg in args
-                    if isinstance(arg, Timestream)
-                )
+                try:
+                    session = next(
+                        arg._ffi_expr.session()
+                        for arg in args
+                        if isinstance(arg, Timestream)
+                    )
+                except StopIteration:
+                    raise ValueError(
+                        "Cannot determine session from only literal arguments. "
+                        "Please provide a session explicitly or use at least one non-literal."
+                    )
             else:
                 # If there is a session, it is possible (but unlikely) that all arguments
                 # are Callables. To handle this, we need to determine the session from the

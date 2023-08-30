@@ -157,3 +157,7 @@ def test_timestream_cast(golden) -> None:
     )
     source = kd.sources.CsvString(content, time_column="time", key_column="key")
     golden.jsonl(source.col("time").cast(pa.timestamp("ns")))
+
+def test_timestream_call_all_literals() -> None:
+    with pytest.raises(ValueError, match="at least one non-literal"):
+        kd.Timestream._call("foo", 1, 2, 3)
