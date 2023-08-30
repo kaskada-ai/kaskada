@@ -120,7 +120,7 @@ jobs:
         if: matrix.target != 'arm64'
         run: |
           WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-${{ matrix.wheel_suffix }}.whl"
-          echo "WHEEL=${WHEEL}"
+          echo "WHEEL:${WHEEL}"
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
@@ -183,7 +183,7 @@ jobs:
           source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
           WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-win_amd64.whl"
-          echo "WHEEL=${WHEEL}"
+          echo "WHEEL:${WHEEL}"
           pip install ${WHEEL} --force-reinstall
           echo "::endgroup::"
           echo "::group::Test Python 3.11"
@@ -246,7 +246,7 @@ jobs:
         if: matrix.target == 'x86_64'
         run: |
           WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-manylinux_2_28_${{ matrix.target }}.whl"
-          echo "WHEEL=${WHEEL}"
+          echo "WHEEL:${WHEEL}"
           for V in 3.8 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V

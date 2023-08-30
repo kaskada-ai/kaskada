@@ -110,8 +110,9 @@ jobs:
         run: |
           pip install tomlkit
           VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
-          echo "WHEEL=dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_x86_64.whl"
+          WHEEL=dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_x86_64.whl
           echo "WHEEL: ${WHEEL}"
+          echo "WHEEL=${WHEEL}" >> $GITHUB_ENV
       - name: pytest and mypy
         # This installs the kaskada package using the wheel.
         # This ensures that we don't accidentally install the version from pypi.
