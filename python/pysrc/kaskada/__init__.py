@@ -1,14 +1,14 @@
 """Kaskada query builder and local execution engine."""
 from __future__ import annotations
 
+from . import destinations
 from . import plot
+from . import results
 from . import sources
 from . import windows
-from ._execution import ExecutionOptions
-from ._result import Result
 from ._session import init_session
 from ._timestream import Arg
-from ._timestream import Literal
+from ._timestream import LiteralValue
 from ._timestream import Timestream
 from ._timestream import record
 from .udf import udf
@@ -16,12 +16,12 @@ from .udf import udf
 
 __all__ = [
     "Arg",
-    "ExecutionOptions",
+    "destinations",
     "init_session",
-    "Literal",
+    "LiteralValue",
     "plot",
     "record",
-    "Result",
+    "results",
     "sources",
     "Timestream",
     "udf",

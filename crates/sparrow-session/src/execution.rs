@@ -1,4 +1,5 @@
 use arrow_array::RecordBatch;
+use arrow_schema::SchemaRef;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryStreamExt};
@@ -15,6 +16,7 @@ pub struct Execution {
     status: Status,
     /// Stop signal. Send `true` to stop execution.
     stop_signal_rx: tokio::sync::watch::Sender<bool>,
+    pub schema: SchemaRef,
 }
 
 enum Status {
@@ -29,6 +31,7 @@ impl Execution {
         output_rx: tokio::sync::mpsc::Receiver<RecordBatch>,
         progress: BoxStream<'static, error_stack::Result<ExecuteResponse, Error>>,
         stop_signal_rx: tokio::sync::watch::Sender<bool>,
+        schema: SchemaRef,
     ) -> Self {
         let output = tokio_stream::wrappers::ReceiverStream::new(output_rx);
         let status = Status::Running(Box::pin(async move {
@@ -42,6 +45,7 @@ impl Execution {
             output,
             status,
             stop_signal_rx,
+            schema,
         }
     }
 

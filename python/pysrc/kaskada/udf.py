@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 
 from . import _ffi
-from ._timestream import Literal
+from ._timestream import Arg
 from ._timestream import Timestream
 
 
@@ -23,7 +23,7 @@ class Udf:
         """Create a UDF with the given signature."""
         self._ffi = _ffi.Udf(signature, func)
 
-    def __call__(self, *args: Timestream | Literal) -> Timestream:
+    def __call__(self, *args: Arg) -> Timestream:
         """Apply the UDF to the given arguments."""
         return Timestream._call(self._ffi, *args)
 

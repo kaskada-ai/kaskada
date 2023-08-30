@@ -2,7 +2,7 @@ use hashbrown::HashMap;
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use arrow_schema::SchemaRef;
+use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
@@ -362,6 +362,11 @@ impl Session {
         let primary_grouping = primary_group_info.name().to_owned();
         let primary_grouping_key_type = primary_group_info.key_type();
 
+        // Hacky. Ideally, we'd determine the schema from the created execution plan.
+        // Currently, this isn't easily available. Instead, we create this from the
+        // columns we know we're producing.
+        let schema = result_schema(expr, primary_grouping_key_type)?;
+
         // First, extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
         let expr = self.dfg.extract_simplest(expr.0.value());
@@ -375,7 +380,6 @@ impl Session {
             .into_report()
             .change_context(Error::Compile)?;
 
-        // TODO: Run the egraph simplifications.
         // TODO: Incremental?
         // TODO: Slicing?
         let plan = sparrow_compiler::plan::extract_plan_proto(
@@ -429,7 +433,13 @@ impl Session {
             .map_err(|e| e.change_context(Error::Execute))
             .boxed();
 
-        Ok(Execution::new(rt, output_rx, progress, stop_signal_tx))
+        Ok(Execution::new(
+            rt,
+            output_rx,
+            progress,
+            stop_signal_tx,
+            schema,
+        ))
     }
 }
 
@@ -467,6 +477,25 @@ impl ExecutionOptions {
 
         options
     }
+}
+
+fn result_schema(expr: &Expr, key_type: &DataType) -> error_stack::Result<SchemaRef, Error> {
+    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::Internal)? else {
+        error_stack::bail!(Error::Internal)
+    };
+
+    let fields: Fields = super::table::KEY_FIELDS
+        .iter()
+        .cloned()
+        .chain(std::iter::once(Arc::new(Field::new(
+            "_key",
+            key_type.clone(),
+            true,
+        ))))
+        .chain(fields.iter().cloned())
+        .collect();
+    let schema = Schema::new(fields);
+    Ok(Arc::new(schema))
 }
 
 #[cfg(test)]

@@ -80,22 +80,9 @@ def _data_to_dataframe(data: Union[kd.Timestream, pd.DataFrame]) -> pd.DataFrame
     if isinstance(data, pd.DataFrame):
         return data
     elif isinstance(data, kd.Timestream):
-        return data.run().to_pandas()
+        return data.to_pandas()
     else:
         raise ValueError(f"data must be a Timestream or a DataFrame, was {type(data)}")
-
-
-def _data_to_pyarrow(
-    data: Union[kd.Timestream, pa.RecordBatch, pa.Table]
-) -> Union[pa.RecordBatch, pa.Table]:
-    if isinstance(data, kd.Timestream):
-        return data.run().to_pyarrow()
-    elif isinstance(data, pa.RecordBatch) or isinstance(data, pa.Table):
-        return data
-    else:
-        raise ValueError(
-            f"data must be a Timestream, RecordBatch, or Table, was {type(data)}"
-        )
 
 
 @pytest.fixture
