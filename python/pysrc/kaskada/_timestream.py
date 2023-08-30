@@ -29,12 +29,10 @@ from ._result import Result
 Literal: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
 #: A Timestream or literal which can be used as an argument to a Timestream operation.
-Arg: TypeAlias = Union["Timestream", Literal]
+Arg: TypeAlias = Union["Timestream", Callable[["Timestream"], "Timestream"], Literal]
 
 
-def _augment_error(
-    args: Sequence[Union[Timestream, Literal]], e: Exception
-) -> Exception:
+def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""
     if sys.version_info >= (3, 11):
         # If we can add notes to the exception, indicate the types.
@@ -45,6 +43,24 @@ def _augment_error(
             else:
                 e.add_note(f"Arg[{n}]: Literal {arg} ({type(arg)})")
     return e
+
+
+def _extract_arg(
+    arg: Arg, input: Optional[Timestream], session: _ffi.Session
+) -> _ffi.Expr:
+    """Extract the FFI expression from an argument."""
+    if callable(arg):
+        if input is None:
+            raise ValueError(
+                "Cannot use a callable argument without an input Timestream"
+            )
+        else:
+            arg = arg(input)
+
+    if isinstance(arg, Timestream):
+        return arg._ffi_expr
+    else:
+        return Timestream._literal(arg, session)._ffi_expr
 
 
 class Timestream(object):
@@ -68,13 +84,17 @@ class Timestream(object):
     @staticmethod
     def _call(
         func: Union[str, _ffi.Udf],
-        *args: Union[Timestream, Literal],
+        *args: Arg,
+        input: Optional[Timestream] = None,
         session: Optional[_ffi.Session] = None,
     ) -> Timestream:
         """Construct a new Timestream by calling the given function.
 
         Args:
             func: Name of the function to apply.
+            input: The input to use for any "deferred" arguments.
+              If `None`, then any arguments that require a `Timestream` argument
+              will produce an error.
             *args: List of arguments to the expression.
             session: FFI Session to create the expression in.
               If unspecified, will infer from the arguments.
@@ -88,18 +108,31 @@ class Timestream(object):
             TypeError: If the argument types are invalid for the given function.
             ValueError: If the argument values are invalid for the given function.
         """
+        # Determine the session. This is unfortunately necessary for creating literals
+        # and other expressions.
         if session is None:
-            session = next(
-                arg._ffi_expr.session() for arg in args if isinstance(arg, Timestream)
-            )
-
-        def make_arg(arg: Union[Timestream, Literal]) -> _ffi.Expr:
-            if isinstance(arg, Timestream):
-                return arg._ffi_expr
+            if input is None:
+                # If there is no input, then at least one of the arguments must be a
+                # Timestream. Specifically, we shouldn't have all literals, nor should
+                # we have all Callables that produce Timestreams.
+                try:
+                    session = next(
+                        arg._ffi_expr.session()
+                        for arg in args
+                        if isinstance(arg, Timestream)
+                    )
+                except StopIteration as e:
+                    raise ValueError(
+                        "Cannot determine session from only literal arguments. "
+                        "Please provide a session explicitly or use at least one non-literal."
+                    ) from e
             else:
-                return Timestream._literal(arg, session)._ffi_expr
+                # If there is a session, it is possible (but unlikely) that all arguments
+                # are Callables. To handle this, we need to determine the session from the
+                # input.
+                session = input._ffi_expr.session()
 
-        ffi_args = [make_arg(arg) for arg in args]
+        ffi_args = [_extract_arg(arg, input=input, session=session) for arg in args]
         try:
             if isinstance(func, str):
                 return Timestream(
@@ -133,8 +166,8 @@ class Timestream(object):
     def pipe(
         self,
         func: Union[Callable[..., Timestream], Tuple[Callable[..., Timestream], str]],
-        *args: Union[Timestream, Literal],
-        **kwargs: Union[Timestream, Literal],
+        *args: Arg,
+        **kwargs: Arg,
     ) -> Timestream:
         """Apply chainable functions that produce Timestreams.
 
@@ -204,38 +237,36 @@ class Timestream(object):
             seconds = Timestream._call(
                 "seconds", int(rhs.total_seconds()), session=session
             )
-            return Timestream._call("add_time", seconds, self)
+            return Timestream._call("add_time", seconds, self, input=self)
         else:
-            return Timestream._call("add", self, rhs)
+            return Timestream._call("add", self, rhs, input=self)
 
-    def __add__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __add__(self, rhs: Arg) -> Timestream:
         """Implement `self + rhs`."""
         return self.add(rhs)
 
-    def __radd__(self, lhs: Union[Timestream, Literal]) -> Timestream:
+    def __radd__(self, lhs: Arg) -> Timestream:
         """Implement `lhs + self`."""
+        if callable(lhs):
+            lhs = lhs(self)
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.add(self)
 
     def ceil(self) -> Timestream:
         """Return a Timestream rounding self up to the next largest integer."""
-        return Timestream._call("ceil", self)
+        return Timestream._call("ceil", self, input=self)
 
-    def clamp(
-        self,
-        min: Union[Timestream, Literal, None] = None,
-        max: Union[Timestream, Literal, None] = None,
-    ) -> Timestream:
+    def clamp(self, min: Arg = None, max: Arg = None) -> Timestream:
         """Return a Timestream from `self` clamped between `min` and `max`.
 
         Args:
             min: The literal value to set as the lower bound.
             max: The literal value to set as the upper bound.
         """
-        return Timestream._call("clamp", self, min, max)
+        return Timestream._call("clamp", self, min, max, input=self)
 
-    def sub(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def sub(self, rhs: Arg) -> Timestream:
         """Return a Timestream subtracting `rhs` from this.
 
         Args:
@@ -244,14 +275,16 @@ class Timestream(object):
         Notes:
             You can also write `a.sub(b)` as `a - b`.
         """
-        return Timestream._call("sub", self, rhs)
+        return Timestream._call("sub", self, rhs, input=self)
 
-    def __sub__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __sub__(self, rhs: Arg) -> Timestream:
         """Implement `self - rhs`."""
         return self.sub(rhs)
 
-    def __rsub__(self, lhs: Union[Timestream, Literal]) -> Timestream:
+    def __rsub__(self, lhs: Arg) -> Timestream:
         """Implement `lhs - self`."""
+        if callable(lhs):
+            lhs = lhs(self)
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.sub(self)
@@ -264,7 +297,7 @@ class Timestream(object):
         """Return a Timestream of self rounded down to the nearest integer."""
         return Timestream._call("floor", self)
 
-    def mul(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def mul(self, rhs: Arg) -> Timestream:
         """Return a Timestream multiplying this and `rhs`.
 
         Args:
@@ -273,27 +306,29 @@ class Timestream(object):
         Notes:
             You can also write `a.mul(b)` as `a * b`.
         """
-        return Timestream._call("mul", self, rhs)
+        return Timestream._call("mul", self, rhs, input=self)
 
-    def __mul__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __mul__(self, rhs: Arg) -> Timestream:
         """Implement `self * rhs`."""
         return self.mul(rhs)
 
-    def __rmul__(self, lhs: Union[Timestream, Literal]) -> Timestream:
+    def __rmul__(self, lhs: Arg) -> Timestream:
         """Implement `lhs * self`."""
+        if callable(lhs):
+            lhs = lhs(self)
         if not isinstance(lhs, Timestream):
             lhs = Timestream._literal(lhs, self._ffi_expr.session())
         return lhs.mul(self)
 
-    def powf(self, power: Union[Timestream, Literal]) -> Timestream:
+    def powf(self, power: Arg) -> Timestream:
         """Return a Timestream raising `self` to the power of `power`.
 
         Args:
             power: The Timestream or literal value to raise `self` to.
         """
-        return Timestream._call("powf", self, power)
+        return Timestream._call("powf", self, power, input=self)
 
-    def div(self, divisor: Union[Timestream, Literal]) -> Timestream:
+    def div(self, divisor: Arg) -> Timestream:
         """Return a Timestream by dividing this and `divisor`.
 
         Args:
@@ -302,19 +337,21 @@ class Timestream(object):
         Notes:
             You can also write `a.div(b)` as `a / b`.
         """
-        return Timestream._call("div", self, divisor)
+        return Timestream._call("div", self, divisor, input=self)
 
-    def __truediv__(self, divisor: Union[Timestream, Literal]) -> Timestream:
+    def __truediv__(self, divisor: Arg) -> Timestream:
         """Implement `self / divisor`."""
         return self.div(divisor)
 
-    def __rtruediv__(self, dividend: Union[Timestream, Literal]) -> Timestream:
+    def __rtruediv__(self, dividend: Arg) -> Timestream:
         """Implement `dividend / self`."""
+        if callable(dividend):
+            dividend = dividend(self)
         if not isinstance(dividend, Timestream):
             dividend = Timestream._literal(dividend, self._ffi_expr.session())
         return dividend.div(self)
 
-    def lt(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def lt(self, rhs: Arg) -> Timestream:
         """Return a Timestream that is true if this is less than `rhs`.
 
         Args:
@@ -323,13 +360,13 @@ class Timestream(object):
         Notes:
             You can also write `a.lt(b)` as `a < b`.
         """
-        return Timestream._call("lt", self, rhs)
+        return Timestream._call("lt", self, rhs, input=self)
 
-    def __lt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __lt__(self, rhs: Arg) -> Timestream:
         """Implement `self < rhs`."""
         return self.lt(rhs)
 
-    def le(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def le(self, rhs: Arg) -> Timestream:
         """Return a Timestream that is true if this is less than or equal to `rhs`.
 
         Args:
@@ -338,13 +375,13 @@ class Timestream(object):
         Notes:
             You can also write `a.le(b)` as `a <= b`.
         """
-        return Timestream._call("lte", self, rhs)
+        return Timestream._call("lte", self, rhs, input=self)
 
-    def __le__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __le__(self, rhs: Arg) -> Timestream:
         """Implement `self <= rhs`."""
         return self.le(rhs)
 
-    def gt(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def gt(self, rhs: Arg) -> Timestream:
         """Return a Timestream that is true if this is greater than `rhs`.
 
         Args:
@@ -353,13 +390,13 @@ class Timestream(object):
         Notes:
             You can also write `a.gt(b)` as `a > b`.
         """
-        return Timestream._call("gt", self, rhs)
+        return Timestream._call("gt", self, rhs, input=self)
 
-    def __gt__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __gt__(self, rhs: Arg) -> Timestream:
         """Implement `self > rhs`."""
         return self.gt(rhs)
 
-    def ge(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def ge(self, rhs: Arg) -> Timestream:
         """Return a TimeStream that is true if this is greater than or equal to `rhs`.
 
         Args:
@@ -368,33 +405,33 @@ class Timestream(object):
         Notes:
             You can also write `a.ge(b)` as `a >= b`.
         """
-        return Timestream._call("gte", self, rhs)
+        return Timestream._call("gte", self, rhs, input=self)
 
-    def __ge__(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def __ge__(self, rhs: Arg) -> Timestream:
         """Implement `self >= rhs`."""
         return self.ge(rhs)
 
-    def and_(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def and_(self, rhs: Arg) -> Timestream:
         """Return the logical conjunction of this Timestream and `rhs`.
 
         Args:
             rhs: The Timestream or literal value to conjoin with.
         """
-        return Timestream._call("logical_and", self, rhs)
+        return Timestream._call("logical_and", self, rhs, input=self)
 
-    def or_(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def or_(self, rhs: Arg) -> Timestream:
         """Return the logical disjunction of this Timestream and `rhs`.
 
         Args:
             rhs: The Timestream or literal value to disjoin with.
         """
-        return Timestream._call("logical_or", self, rhs)
+        return Timestream._call("logical_or", self, rhs, input=self)
 
     def not_(self) -> Timestream:
         """Return the logical negation of this Timestream."""
         return Timestream._call("not", self)
 
-    def eq(self, other: Union[Timestream, Literal]) -> Timestream:
+    def eq(self, other: Arg) -> Timestream:
         """Return a Timestream that is true if this is equal to `other`.
 
         Args:
@@ -403,9 +440,9 @@ class Timestream(object):
         Note:
             Equality is *not* available as `a == b`.
         """
-        return Timestream._call("eq", self, other)
+        return Timestream._call("eq", self, other, input=self)
 
-    def ne(self, other: Union[Timestream, Literal]) -> Timestream:
+    def ne(self, other: Arg) -> Timestream:
         """Return a Timestream that is true if this is not equal to `other`.
 
         Args:
@@ -414,7 +451,7 @@ class Timestream(object):
         Note:
             Inequality is *not* available as `a != b`.
         """
-        return Timestream._call("neq", self, other)
+        return Timestream._call("neq", self, other, input=self)
 
     def __eq__(self, other: object) -> bool:
         """Warn when Timestreams are compared using `==`."""
@@ -432,7 +469,7 @@ class Timestream(object):
         )
         return super().__ne__(other)
 
-    def index(self, key: Union[Timestream, Literal]) -> Timestream:
+    def index(self, key: Arg) -> Timestream:
         """Return a Timestream indexing into the elements of `self`.
 
         If the Timestream contains lists, the key should be an integer index.
@@ -453,13 +490,13 @@ class Timestream(object):
         """
         data_type = self.data_type
         if isinstance(data_type, pa.MapType):
-            return Timestream._call("get", key, self)
+            return Timestream._call("get", key, self, input=self)
         elif isinstance(data_type, pa.ListType):
-            return Timestream._call("index", key, self)
+            return Timestream._call("index", key, self, input=self)
         else:
             raise TypeError(f"Cannot index into {data_type}")
 
-    def __getitem__(self, key: Union[Timestream, Literal]) -> Timestream:
+    def __getitem__(self, key: Arg) -> Timestream:
         """Implement `self[key]` using `index`.
 
         See Also:
@@ -501,7 +538,10 @@ class Timestream(object):
         return Timestream._call("remove_fields", self, *args)
 
     def extend(
-        self, fields: Mapping[str, Arg] | Callable[[Timestream], Mapping[str, Arg]]
+        self,
+        fields: Timestream
+        | Mapping[str, Arg]
+        | Callable[[Timestream], Timestream | Mapping[str, Arg]],
     ) -> Timestream:
         """Return a Timestream containing fields from `self` and `fields`.
 
@@ -515,8 +555,9 @@ class Timestream(object):
         # in order to do the extension.
         if callable(fields):
             fields = fields(self)
-        extension = record(fields)
-        return Timestream._call("extend_record", extension, self)
+        if not isinstance(fields, Timestream):
+            fields = record(fields)
+        return Timestream._call("extend_record", fields, self, input=self)
 
     def neg(self) -> Timestream:
         """Return a Timestream from the numeric negation of self."""
@@ -530,7 +571,7 @@ class Timestream(object):
         """Return a boolean Timestream containing `true` when `self` is not `null`."""
         return Timestream._call("is_valid", self)
 
-    def filter(self, condition: Timestream) -> Timestream:
+    def filter(self, condition: Arg) -> Timestream:
         """Return a Timestream containing only the points where `condition` is `true`.
 
         Args:
@@ -582,21 +623,21 @@ class Timestream(object):
         # hack to support structs/lists (as collect supports lists)
         return self.collect(max=n + 1, min=n + 1)[0]
 
-    def if_(self, condition: Union[Timestream, Literal]) -> Timestream:
+    def if_(self, condition: Arg) -> Timestream:
         """Return a `Timestream` from `self` at points where `condition` is `true`, and `null` otherwise.
 
         Args:
             condition: The condition to check.
         """
-        return Timestream._call("if", condition, self)
+        return Timestream._call("if", condition, self, input=self)
 
-    def null_if(self, condition: Union[Timestream, Literal]) -> Timestream:
+    def null_if(self, condition: Arg) -> Timestream:
         """Return a `Timestream` from `self` at points where `condition` is not `false`, and `null` otherwise.
 
         Args:
             condition: The condition to check.
         """
-        return Timestream._call("null_if", condition, self)
+        return Timestream._call("null_if", condition, self, input=self)
 
     def length(self) -> Timestream:
         """Return a Timestream containing the length of `self`.
@@ -611,7 +652,7 @@ class Timestream(object):
         else:
             raise TypeError(f"length not supported for {self.data_type}")
 
-    def with_key(self, key: Timestream, grouping: Optional[str] = None) -> Timestream:
+    def with_key(self, key: Arg, grouping: Optional[str] = None) -> Timestream:
         """Return a Timestream with a new grouping by `key`.
 
         Args:
@@ -619,9 +660,9 @@ class Timestream(object):
             grouping: A string literal naming the new grouping. If no `grouping` is specified,
               one will be computed from the type of the `key`.
         """
-        return Timestream._call("with_key", key, self, grouping)
+        return Timestream._call("with_key", key, self, grouping, input=self)
 
-    def lookup(self, key: Union[Timestream, Literal]) -> Timestream:
+    def lookup(self, key: Arg) -> Timestream:
         """Return a Timestream looking up the value of `self` for each `key`.
 
         For each non-`null` point in the `key` timestream, returns the value
@@ -632,11 +673,9 @@ class Timestream(object):
         Args:
             key: The foreign key to lookup. This must match the type of the keys in `self`.
         """
-        return Timestream._call("lookup", key, self)
+        return Timestream._call("lookup", key, self, input=self)
 
-    def coalesce(
-        self, arg: Union[Timestream, Literal], *args: Union[Timestream, Literal]
-    ) -> Timestream:
+    def coalesce(self, arg: Arg, *args: Arg) -> Timestream:
         """Return a Timestream containing the first non-null point from self and the arguments.
 
         Args:
@@ -647,9 +686,9 @@ class Timestream(object):
             Timestream containing the first non-null value from each point.
             If all values are null, then returns null.
         """
-        return Timestream._call("coalesce", self, arg, *args)
+        return Timestream._call("coalesce", self, arg, *args, input=self)
 
-    def shift_to(self, time: Union[Timestream, datetime]) -> Timestream:
+    def shift_to(self, time: Arg) -> Timestream:
         """Return a Timestream shifting each point forward to `time`.
 
         If multiple values are shifted to the same time, they will be emitted in
@@ -669,9 +708,9 @@ class Timestream(object):
             # return Timestream._call("shift_to", time_ns, self)
             raise NotImplementedError("shift_to with datetime literal unsupported")
         else:
-            return Timestream._call("shift_to", time, self)
+            return Timestream._call("shift_to", time, self, input=self)
 
-    def shift_by(self, delta: Union[Timestream, timedelta]) -> Timestream:
+    def shift_by(self, delta: Arg) -> Timestream:
         """Return a Timestream shifting each point forward by the `delta`.
 
         If multiple values are shifted to the same time, they will be emitted in
@@ -685,11 +724,11 @@ class Timestream(object):
             seconds = Timestream._call(
                 "seconds", int(delta.total_seconds()), session=session
             )
-            return Timestream._call("shift_by", seconds, self)
+            return Timestream._call("shift_by", seconds, self, input=self)
         else:
-            return Timestream._call("shift_by", delta, self)
+            return Timestream._call("shift_by", delta, self, input=self)
 
-    def shift_until(self, predicate: Timestream) -> Timestream:
+    def shift_until(self, predicate: Arg) -> Timestream:
         """Return a Timestream shifting each point forward to the next time `predicate` is true.
 
         Note that if the `predicate` evaluates to true at the same time as `self`,
@@ -701,7 +740,7 @@ class Timestream(object):
         Args:
             predicate: The predicate to determine whether to emit shifted rows.
         """
-        return Timestream._call("shift_until", predicate, self)
+        return Timestream._call("shift_until", predicate, self, input=self)
 
     def sum(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
         """Return a Timestream summing the values in the `window`.
@@ -819,7 +858,7 @@ class Timestream(object):
         """
         return Timestream._call("else", other, self)
 
-    def seconds_since(self, time: Union[Timestream, Literal]) -> Timestream:
+    def seconds_since(self, time: Arg) -> Timestream:
         """Return a Timestream containing seconds between `time` and `self`.
 
         If `self.time()` is greater than `time`, the result will be positive.
@@ -858,7 +897,7 @@ class Timestream(object):
         """Flatten a list of lists to a list of values."""
         return Timestream._call("flatten", self)
 
-    def union(self, other: Timestream) -> Timestream:
+    def union(self, other: Arg) -> Timestream:
         """Union the lists in this timestream with the lists in the other Timestream.
 
         This corresponds to a pair-wise union within each row of the timestreams.
@@ -866,7 +905,7 @@ class Timestream(object):
         Args:
             other: The Timestream of lists to union with.
         """
-        return Timestream._call("union", self, other)
+        return Timestream._call("union", self, other, input=self)
 
     def record(self, fields: Callable[[Timestream], Mapping[str, Arg]]) -> Timestream:
         """Return a record Timestream from fields computed from this timestream.
