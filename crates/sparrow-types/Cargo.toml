@@ -1,0 +1,26 @@
+[package]
+name = "sparrow-types"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Type-signatures, inference and checking for Kaskada.
+"""
+
+[dependencies]
+arrow-schema.workspace = true
+derive_more.workspace = true
+enum-as-inner.workspace = true
+enum-map.workspace = true
+error-stack.workspace = true
+hashbrown.workspace = true
+itertools.workspace = true
+regex.workspace = true
+static_init.workspace = true
+
+[dev-dependencies]
+
+[lib]
+doctest = false
