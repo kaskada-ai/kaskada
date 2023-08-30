@@ -28,13 +28,13 @@ impl Ord for dyn Udf {
 
 impl Hash for dyn Udf {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.signature().hash(state);
+        self.uuid().hash(state);
     }
 }
 
 impl PartialEq for dyn Udf {
     fn eq(&self, other: &Self) -> bool {
-        self.signature() == other.signature()
+        self.uuid() == other.uuid()
     }
 }
 
