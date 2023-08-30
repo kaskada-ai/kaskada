@@ -121,7 +121,7 @@ class Timestream(object):
                         for arg in args
                         if isinstance(arg, Timestream)
                     )
-                except StopIteration e:
+                except StopIteration as e:
                     raise ValueError(
                         "Cannot determine session from only literal arguments. "
                         "Please provide a session explicitly or use at least one non-literal."
