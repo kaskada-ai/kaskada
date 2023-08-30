@@ -108,8 +108,8 @@ jobs:
       - name: Determine Version
         if: github.event_name != 'release'
         run: |
-          pip install tomlkit
-          VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
+          pip install tomlkit packaging
+          VERSION=$(python ../scripts/version.py get --normalize pyproject.toml project.version)
           WHEEL=dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_x86_64.whl
           echo "WHEEL: ${WHEEL}"
           echo "WHEEL=${WHEEL}" >> $GITHUB_ENV

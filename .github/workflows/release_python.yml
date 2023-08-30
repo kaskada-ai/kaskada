@@ -53,14 +53,16 @@ jobs:
       - name: Determine version (current)
         if: github.event_name != 'release'
         run: |
-          pip install tomlkit
-          VERSION=$(python ../scripts/get_version.py pyproject.toml project.version)
+          pip install tomlkit packaging
+          VERSION=$(python ../scripts/version.py get --normalize pyproject.toml project.version)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Determine version (release)
         if: github.event_name == 'release'
         run: |
           echo "GITHUB_REF=${GITHUB_REF}"
           VERSION=${GITHUB_REF#refs/tags/v}
+          pip install tomlkit packaging
+          VERSION=$(python ../scripts/version.py normalize $VERSION)
           echo "VERSION=${VERSION}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Set version
@@ -105,8 +107,8 @@ jobs:
       - name: Set Version (For Release)
         if: github.event_name == 'release'
         run: |
-          pip install tomlkit
-          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+          pip install tomlkit packaging
+          python ../scripts/version.py set ${{ needs.version.outputs.version }} \
             pyproject.toml:project.version \
             pyproject.toml:tool.poetry.version \
             Cargo.toml:package.version
@@ -165,8 +167,8 @@ jobs:
       - name: Set Version (For Release)
         if: github.event_name == 'release'
         run: |
-            pip install tomlkit
-            python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+            pip install tomlkit packaging
+            python ../scripts/version.py set ${{ needs.version.outputs.version }} \
               pyproject.toml:project.version \
               pyproject.toml:tool.poetry.version \
               Cargo.toml:package.version
@@ -225,8 +227,8 @@ jobs:
       - name: Set Version (For Release)
         if: github.event_name == 'release'
         run: |
-          pip install tomlkit
-          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+          pip install tomlkit packaging
+          python ../scripts/version.py set ${{ needs.version.outputs.version }} \
             pyproject.toml:project.version \
             pyproject.toml:tool.poetry.version \
             Cargo.toml:package.version
@@ -279,8 +281,8 @@ jobs:
       - name: Set Version (For Release)
         if: github.event_name == 'release'
         run: |
-          pip install tomlkit
-          python ../scripts/set_versions.py ${{ needs.version.outputs.version }} \
+          pip install tomlkit packaging
+          python ../scripts/version.py set ${{ needs.version.outputs.version }} \
             pyproject.toml:project.version \
             pyproject.toml:tool.poetry.version \
             Cargo.toml:package.version
