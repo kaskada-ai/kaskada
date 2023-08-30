@@ -163,6 +163,8 @@ fn can_implicitly_cast(from: &DataType, to: &DataType) -> bool {
         (Float64, Float64) => true,
         // Other promotions that we allow implicitly.
         (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
+        (Utf8, LargeUtf8) => true,
+        (Timestamp(_, _), Timestamp(TimeUnit::Nanosecond, None)) => true,
         // Other promotions must be explicitly requested.
         (_, _) => false,
     }
