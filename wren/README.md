@@ -1,6 +1,6 @@
 # Wren
 
-Wren is the API layer between external client libraries, and Compute.  It also manages table schema & metadata.
+Wren is the API layer between external client libraries, and Compute.  It also manages table schema and metadata.
 
 ## Building
 
