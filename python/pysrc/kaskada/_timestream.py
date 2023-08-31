@@ -993,8 +993,8 @@ class Timestream(object):
         Returns:
             Each point contains the value from `self` if `self`
             is greater than `rhs`, otherwise it contains `rhs`.
-            If if one input is `NaN` or `null`, then the other
-            input will be returned.
+            If any input is `null` or `NaN`, then that will be
+            the result.
 
         See Also:
             This returns the greatest of two values. See the
@@ -1012,8 +1012,8 @@ class Timestream(object):
         Returns:
             Each point contains the value from `self` if `self`
             is less than `rhs`, otherwise it contains `rhs`.
-            If if one input is `NaN` or `null`, then the other
-            input will be returned.
+            If any input is `null` or `NaN`, then that will be
+            the result.
 
         See Also:
             This returns the least of two values. See the
