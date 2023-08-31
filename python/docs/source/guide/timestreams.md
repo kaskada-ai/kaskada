@@ -13,9 +13,13 @@ Kaskada is built on the concept of a _Timestream_.
 Each Timestream is ordered by _time_ and partitioned by _entity_.
 This makes it easy to focus on events happening over time and how aggregations change.
 
+% The input for this needs to be hidden, not removed. It seems that plotly won't
+% render the right height otherwise (possibly because it's not attached to the DOM?).
+% We could see if this worked better using a different library such as `bokeh` or if
+% there were better options to pass to plotly to avoid the problem.
 ```{code-cell}
 ---
-tags: [remove-input]
+tags: [hide-input]
 ---
 import kaskada as kd
 kd.init_session()
@@ -32,7 +36,7 @@ data = "\n".join(
 multi_entity = kd.sources.CsvString(data, time_column="time", key_column="key")
 
 kd.plot.render(
-    kd.plot.Plot(multi_entity.col("m"))
+    kd.plot.Plot(multi_entity.col("m"), name="m")
 )
 ```
 
@@ -50,5 +54,5 @@ For example, the result of aggregating a timestream produces a continuous stream
 tags: [remove-input]
 ---
 kd.plot.render(
-    kd.plot.Plot(multi_entity.col("m").sum())
+    kd.plot.Plot(multi_entity.col("m").sum(), name="sum(m)")
 )
