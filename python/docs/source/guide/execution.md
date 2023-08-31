@@ -81,10 +81,11 @@ Similarly, when producing a history, Kaskada can use any persisted state before 
 
 ## Destinations
 
-The {py:class}`kaskada.Result` class provides a variety of ways of retrieving the results within Python.
-These include Pandas, PyArrow and Python dictionaries, as well as iterators and async iterators over the same.
+The methods {py:func}`Timestream.preview<kaskada.Timestream.preview>` and {py:func}`Timestream.to_pandas<kaskada.Timestream.to_pandas>` provide the results of a query in a Pandas DataFrame for easy visualization and consumption within the Python process.
+
+The {py:func}`Timestream.run_iter<kaskada.Timestream.run_iter>` methods provides synchronous and asynchronous iterators over the results in a variety of formats including Pandas DataFrames, PyArrow RecordBatches, and rows as Python dictionaries.
 This allows you to run the entire retrieve-evaluate-respond loop within a single Python process.
 
-```{todo}
-Expose and document additional destinations such as Parquet, Kafka, Pulsar, etc.
-```
+The {py:func}`Timestream.write<kaskada.Timestream.write>` function allows you to specify a destination from {py:mod}`kaskada.destinations` for results.
+This supports both `once` and `live` queries
+See the reference on [destinations](../reference/destinations.md) for more on the supported destinations.
