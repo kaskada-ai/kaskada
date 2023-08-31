@@ -10,6 +10,7 @@ project = "kaskada"
 author = "Kaskada Contributors"
 copyright = "2023, Kaskada Contributors"
 extensions = [
+    "ablog",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
@@ -37,7 +38,26 @@ html_js_files = [
 html_sidebars = {
     # No primary (left) sidebar on the landing page.
     "index.md": [],
-    "**": ["sidebar-nav-bs"]
+    # Blog sidebars
+    # https://ablog.readthedocs.io/manual/ablog-configuration-options/#blog-sidebars
+    "blog/*": [
+        # Information about the post.
+        "ablog/postcard.html",
+        # 5 most recent posts
+        "ablog/recentposts.html",
+        # Tag cloud and links.
+        "ablog/tagcloud.html",
+        # Categories -- we just use tags for now.
+        #"ablog/categories.html",
+        # Show all authors on the sidebar.
+        #"ablog/authors.html",
+        # Show all languages on the sidebar.
+        #"ablog/languages.html",
+        # Show all locations on the sidebar.
+        #"ablog/locations.html",
+        "ablog/archives.html",
+    ],
+    "[!blog]*/*": ["sidebar-nav-bs"]
 }
 
 html_theme_options: Dict[str, Any] = {
@@ -149,3 +169,12 @@ typehints_document_rtype = False
 typehints_defaults = "comma"
 
 suppress_warnings = ["mystnb.unknown_mime_type"]
+
+blog_path = "blog"
+blog_authors = {
+    "ben": ("Ben Chambers", "https://github.com/bjchambers"),
+    "ryan": ("Ryan Michael", "https://github.com/kerinin"),
+}
+post_date_format = "%Y-%b-%d"
+post_date_format_short = "%Y-%b-%d"
+post_show_prev_next = False

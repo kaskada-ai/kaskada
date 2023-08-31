@@ -88,7 +88,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: |
-            3.8
             3.9
             3.10
             3.11
@@ -117,7 +116,7 @@ jobs:
         # This installs the kaskada package using the wheel.
         # This ensures that we don't accidentally install the version from pypi.
         run: |
-          for V in 3.8 3.9 3.10 3.11; do
+          for V in 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry env info

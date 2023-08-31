@@ -113,4 +113,5 @@ Check out the [Quick Start](./guide/quickstart.md) now!
 guide/index
 examples/index
 reference/index
+blog/index
 ```
