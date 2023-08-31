@@ -305,8 +305,9 @@ class Timestream(object):
         """Return a Timestream containing the hash of the input.
 
         Notes:
-            Unlike many functions which return `null` if an input is `null`,
-              `hash` will never return `null`.
+            This will only return `null` when interpolated at points where
+            the input is not defined. At other points, it will return the
+            hash of `null`, which is `0` (not `null`).
         """
         return Timestream._call("hash", self)
 
@@ -816,6 +817,12 @@ class Timestream(object):
 
         Args:
             window: The window to use for the aggregation. Defaults to the entire Timestream.
+
+        See Also:
+            This returns the the maximum of values in a
+            column up to and including the current row. See the
+            comparison :func:`greatest` to get the greatest value
+            between Timestreams at each point.
         """
         return _aggregation("max", self, window)
 
@@ -826,6 +833,12 @@ class Timestream(object):
 
         Args:
             window: The window to use for the aggregation. Defaults to the entire Timestream.
+
+        See Also:
+            This returns the the minimum of values in a
+            column up to and including the current row. See the
+            comparison :func:`least` to get the least value
+            between Timestreams at each point.
         """
         return _aggregation("min", self, window)
 
@@ -949,76 +962,63 @@ class Timestream(object):
 
         Returns:
             A Timestream of the same type as `self`. The result contains `null`
-              if the value was `null` at that position. Otherwise, it contains
-              the result of rounding the value to the nearest integer.
+            if the value was `null` at that point. Otherwise, it contains
+            the result of rounding the value to the nearest integer.
 
         Notes:
             This method may be applied to any numeric type. For anything other
-              than `float32` and `float64` it has no affect since the values
-              are already integers.
+            than `float32` and `float64` it has no affect since the values
+            are already integers.
 
         See Also:
-            `ceil` and `floor`
+            :func:`ceil`
+            :func:`floor`
         """
         return Timestream._call("round", self)
 
     def sqrt(self) -> Timestream:
-        """Return a Timestream with the square root of all values.
-
-        Returns:
-            A Timestream of type `float64`. The result contains `null`
-              if the value was `null` at that row. Otherwise the row
-              contains the square root the value.
-        """
+        """Return a Timestream with the square root of all values."""
         return Timestream._call("sqrt", self)
 
     def upper(self) -> Timestream:
         """Return a Timestream with all values converted to upper case."""
         return Timestream._call("upper", self)
 
-    def zip_max(self, rhs: Union[Timestream, Literal]) -> Timestream:
-        """Return a Timestream with the maximum of `self` and `rhs`
+    def greatest(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Return a Timestream with the greatest value of `self` and `rhs` at each point.
 
         Args:
             rhs: The Timestream or literal value to compare to this.
 
         Returns:
-            A numeric Timestream of the promoted type. Each row
-              contains the value from `self` if `self` is greater
-              than `rhs`, otherwise it contains `rhs`. If `self` or
-              `rhs` is `NaN` or `null`, then `rhs` will be returned.
-
-        Notes:
-            Both `self` and `rhs` are promoted to a compatible ordered
-              type following the docs:data-model#numeric-type-coercion-table[numeric type coercion rules].
+            Each point contains the value from `self` if `self`
+            is greater than `rhs`, otherwise it contains `rhs`.
+            If if one input is `NaN` or `null`, then the other
+            input will be returned.
 
         See Also:
-            This returns the maximum of two values. See the
-              aggregation `max` for the maximum of values in
-              a column up to and including the current row.
+            This returns the greatest of two values. See the
+            aggregation :func:`max` for the maximum of values in
+            a column up to and including the current row.
         """
         return Timestream._call("zip_max", self, rhs)
 
-    def zip_min(self, rhs: Union[Timestream, Literal]) -> Timestream:
-        """Return a Timestream with the minimum of `self` and `rhs`
+    def least(self, rhs: Union[Timestream, Literal]) -> Timestream:
+        """Return a Timestream with the least value of `self` and `rhs` at each point.
 
         Args:
             rhs: The Timestream or literal value to compare to this.
 
         Returns:
-            A numeric Timestream of the promoted type. Each row
-              contains the value from `self` if `self` is less than
-              `rhs`, otherwise it contains `rhs`. If `self` or `rhs`
-              is `NaN` or `null`, then `rhs` will be returned.
-
-        Notes:
-            Both `self` and `rhs` are promoted to a compatible ordered
-              type following the docs:data-model#numeric-type-coercion-table[numeric type coercion rules].
+            Each point contains the value from `self` if `self`
+            is less than `rhs`, otherwise it contains `rhs`.
+            If if one input is `NaN` or `null`, then the other
+            input will be returned.
 
         See Also:
-            This returns the minimum of two values. See the
-              aggregation `min` for the minimum of values in
-              a column up to and including the current row.
+            This returns the least of two values. See the
+            aggregation :func:`min` for the minimum of values in
+            a column up to and including the current row.
         """
         return Timestream._call("zip_min", self, rhs)
 

@@ -22,6 +22,8 @@ See the notes on the specific functions for more information.
     Timestream.exp
     Timestream.floor
     Timestream.powf
+    Timestream.round
+    Timestream.sqrt
     Timestream.sub
     Timestream.mul
     Timestream.div
