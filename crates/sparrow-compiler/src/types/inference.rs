@@ -489,6 +489,20 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
         (Null, other) => Some(other.clone()),
         (other, Null) => Some(other),
 
+        // Duration types can cast to more granular duration types
+        // s -> any
+        // ms -> us,ns
+        // us -> ns
+        // nanosecond is omitted, as the catch all should find that lhs == rhs
+        (Duration(TimeUnit::Second), other @ Duration(_)) => Some(other.clone()),
+        (
+            Duration(TimeUnit::Millisecond),
+            other @ Duration(TimeUnit::Microsecond) | other @ Duration(TimeUnit::Nanosecond),
+        ) => Some(other.clone()),
+        (Duration(TimeUnit::Microsecond), other @ Duration(TimeUnit::Nanosecond)) => {
+            Some(other.clone())
+        }
+
         // Catch all
         (lhs, rhs) if &lhs == rhs => Some(lhs),
 

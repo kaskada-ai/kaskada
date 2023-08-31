@@ -81,7 +81,7 @@ class Timestream(object):
         """Construct a Timestream for a literal value."""
         if isinstance(value, datetime):
             raise TypeError("Cannot create a literal Timestream from a datetime")
- 
+
         if isinstance(value, timedelta):
             # The smallest unit stored in timedelta is us
             us = value / timedelta(microseconds=1)

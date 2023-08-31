@@ -1,7 +1,7 @@
 from datetime import timedelta
-import pyarrow as pa
 
 import kaskada as kd
+import pyarrow as pa
 import pytest
 
 
@@ -75,7 +75,16 @@ def test_comparing_timedeltas(source, golden) -> None:
     seconds_since = time.seconds_since_previous()
     td = timedelta(seconds=1)
     golden.jsonl(
-        kd.record(({"seconds_since": seconds_since.cast(pa.int64()), "is_1_s": seconds_since.cast(pa.duration('ns')).eq(td)}))
+        kd.record(
+            (
+                {
+                    "seconds_since": seconds_since.cast(pa.int64()),
+                    "eq_1s": seconds_since.eq(td),
+                    "gt_1s": seconds_since.gt(td),
+                    "ge_1s": seconds_since.ge(td),
+                    "lt_1s": seconds_since.lt(td),
+                    "le_1s": seconds_since.le(td),
+                }
+            )
+        )
     )
-
-
