@@ -17,7 +17,7 @@ class History:
 
     #: Only return points less than or equal to this time.
     #: If not set, the current time will be used.
-    up_to: Optional[datetime] = None
+    until: Optional[datetime] = None
 
 
 @dataclass
