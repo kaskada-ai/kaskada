@@ -46,7 +46,7 @@ inventory::submit!(&REGISTRATION);
 /// This is hard-coded for now, but could easily be made configurable as a parameter
 /// to the table. This simple hueristic is a good start, but we can improve on this
 /// by statistically modeling event behavior and adapting the watermark accordingly.
-const BOUNDED_LATENESS_NS: i64 = 1_000_000_000;
+const BOUNDED_LATENESS_NS: i64 = 500_000_000;
 
 /// Create a stream that continually reads messages from a stream.
 pub(crate) async fn stream_reader(

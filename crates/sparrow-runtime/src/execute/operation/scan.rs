@@ -68,6 +68,7 @@ impl Operation for ScanOperation {
                 .create_input(batch?)
                 .into_report()
                 .change_context(Error::PreprocessNextInput)?;
+            tracing::debug!("Executing next batch: {:?}", input);
 
             // Send progress update
             if self

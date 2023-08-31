@@ -110,6 +110,8 @@ pub(super) fn write(
             };
 
 
+            tracing::debug!("Writing out batch: {:?}", batch);
+
             if batch.num_rows() > max_batch_size {
                 for start in (0..batch.num_rows()).step_by(max_batch_size) {
                     let end = (start + max_batch_size).min(batch.num_rows());
