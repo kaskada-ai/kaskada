@@ -1,8 +1,7 @@
 """Sphinx configuration."""
 import sys
 from pathlib import Path
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 
 sys.path.append(str(Path(".").resolve()))

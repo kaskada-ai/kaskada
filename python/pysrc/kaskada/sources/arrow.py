@@ -10,8 +10,7 @@ import pyarrow.csv
 import pyarrow.json
 import pyarrow.parquet
 
-from .source import Source
-from .source import TimeUnit
+from .source import Source, TimeUnit
 
 
 class Pandas(Source):

@@ -1,7 +1,4 @@
-from typing import Callable
-from typing import List
-from typing import Optional
-from typing import Sequence
+from typing import Callable, List, Optional, Sequence
 
 import pyarrow as pa
 
