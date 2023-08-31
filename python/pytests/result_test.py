@@ -1,4 +1,7 @@
+from typing import AsyncIterator, Iterator
+
 import kaskada as kd
+import pandas as pd
 import pytest
 
 
@@ -19,7 +22,7 @@ def source_int64() -> kd.sources.CsvString:
 
 
 def test_iter_pandas(golden, source_int64) -> None:
-    batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas()
+    batches = source_int64.run_iter(row_limit=4, max_batch_size=2)
 
     # 4 rows, max 2 per batch = 2 batches
     golden.jsonl(next(batches))
@@ -29,7 +32,7 @@ def test_iter_pandas(golden, source_int64) -> None:
 
 
 def test_iter_rows(golden, source_int64) -> None:
-    results = source_int64.run(row_limit=2).iter_rows()
+    results: Iterator[dict] = source_int64.run_iter("row", row_limit=2)
     assert next(results)["m"] == 5
     assert next(results)["m"] == 24
     with pytest.raises(StopIteration):
@@ -38,7 +41,9 @@ def test_iter_rows(golden, source_int64) -> None:
 
 @pytest.mark.asyncio
 async def test_iter_pandas_async(golden, source_int64) -> None:
-    batches = source_int64.run(row_limit=4, max_batch_size=2).iter_pandas_async()
+    batches: AsyncIterator[pd.DataFrame] = source_int64.run_iter(
+        row_limit=4, max_batch_size=2
+    )
 
     # 4 rows, max 2 per batch = 2 batches.
 
@@ -52,7 +57,7 @@ async def test_iter_pandas_async(golden, source_int64) -> None:
 
 
 @pytest.mark.asyncio
-async def test_iter_pandas_async_materialize(golden, source_int64) -> None:
+async def test_iter_pandas_async_live(golden, source_int64) -> None:
     data2 = "\n".join(
         [
             "time,key,m,n",
@@ -65,16 +70,15 @@ async def test_iter_pandas_async_materialize(golden, source_int64) -> None:
         ]
     )
 
-    execution = source_int64.run(materialize=True)
-    batches = execution.iter_pandas_async()
+    execution = source_int64.run_iter(mode="live")
 
     # Await the first batch.
-    golden.jsonl(await batches.__anext__())
+    golden.jsonl(await execution.__anext__())
 
     # Add data and await the second batch.
     source_int64.add_string(data2)
-    golden.jsonl(await batches.__anext__())
+    golden.jsonl(await execution.__anext__())
 
     execution.stop()
     with pytest.raises(StopAsyncIteration):
-        print(await batches.__anext__())
+        print(await execution.__anext__())

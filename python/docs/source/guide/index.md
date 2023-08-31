@@ -30,7 +30,7 @@ data = t.sources.Parquet.from_file(
     time = "time",
     key = "user")
 # Get the count of events associated with each user over time, as a dataframe.
-data.count().run().to_pandas()
+data.count().to_pandas()
 ```
 
 ```{toctree}

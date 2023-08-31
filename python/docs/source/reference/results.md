@@ -1,10 +1,13 @@
 # Results
 
+These classes allow configuring the results to be produced.
+
 ```{eval-rst}
-.. currentmodule:: kaskada
+.. currentmodule:: kaskada.results
 
 .. autosummary::
    :toctree: apidocs/
 
-    Result
+    History
+    Snapshot
 ```

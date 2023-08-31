@@ -42,7 +42,7 @@ content = "\n".join(
     ]
 )
 source = kd.sources.CsvString(content, time_column="time", key_column="key")
-source.select("m", "n").extend({"sum_m": source.col("m").sum() }).run().to_pandas()
+source.select("m", "n").extend({"sum_m": source.col("m").sum() }).to_pandas()
 ```
 
 ## Next Steps

@@ -53,7 +53,7 @@ def render(
     color_map = {}
 
     for row, plot in enumerate(args, 1):
-        data = plot.stream.run().to_pandas()
+        data = plot.stream.to_pandas()
         name = plot.name or f"Result {row}"
 
         for key in data["_key"].unique():

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use arrow::datatypes::SchemaRef;
 use arrow::pyarrow::ToPyArrow;
 use futures::TryFutureExt;
 use pyo3::prelude::*;
@@ -13,12 +14,15 @@ use crate::error::{ErrorContext, IntoError, Result};
 #[derive(Clone)]
 pub(crate) struct Execution {
     execution: Arc<Mutex<Option<RustExecution>>>,
+    schema: SchemaRef,
 }
 
 impl Execution {
     pub(crate) fn new(execution: RustExecution) -> Self {
+        let schema = execution.schema.clone();
         Self {
             execution: Arc::new(Mutex::new(Some(execution))),
+            schema,
         }
     }
 }
@@ -97,6 +101,10 @@ impl Execution {
                 }
             })
         })
+    }
+
+    fn schema(&self, py: Python<'_>) -> Result<PyObject> {
+        Ok(self.schema.to_pyarrow(py)?)
     }
 
     fn stop(&mut self) -> Result<()> {

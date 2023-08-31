@@ -80,7 +80,7 @@ conversations = ( messages
 )
 
 # Handle each conversation as it occurs
-async for row in conversations.run(materialize=True).iter_rows_async():
+async for row in conversations.run_iter(mode='live'):
 
     # Use a pre-trained model to identify interested users
     prompt = "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in row["result"]])
@@ -126,5 +126,7 @@ guide/index
 reference/timestream/index
 reference/windows
 reference/sources
+reference/destinations
 reference/results
+reference/execution
 ```

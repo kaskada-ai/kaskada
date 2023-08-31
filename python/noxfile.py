@@ -41,10 +41,10 @@ def fix_lint(session: nox.Session) -> None:
     """Automatically fix lint issues."""
     args = session.posargs or ["pysrc", "pytests", "docs/source"]
     install(session, groups=["lint"], root=False)
-    session.run("black", *args)
     session.run("autoflake", "--in-place", "--remove-all-unused-imports", "--recursive", *args)
     session.run("isort", "--filter-files", *args)
     session.run("pyupgrade", "--py38-plus")
+    session.run("black", *args)
 
 
 @nox.session(python=python_versions[0])

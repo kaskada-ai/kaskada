@@ -5,7 +5,18 @@ from __future__ import annotations
 import sys
 import warnings
 from datetime import datetime, timedelta
-from typing import Callable, List, Mapping, Optional, Sequence, Tuple, Union, final
+from typing import (
+    Callable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    final,
+    overload,
+)
 
 import kaskada as kd
 import kaskada._ffi as _ffi
@@ -13,15 +24,16 @@ import pandas as pd
 import pyarrow as pa
 from typing_extensions import TypeAlias
 
-from ._execution import ExecutionOptions
-from ._result import Result
+from ._execution import Execution, ResultIterator, _ExecutionOptions
 
 
 #: A literal value that can be used as an argument to a Timestream operation.
-Literal: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
+LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
 #: A Timestream or literal which can be used as an argument to a Timestream operation.
-Arg: TypeAlias = Union["Timestream", Callable[["Timestream"], "Timestream"], Literal]
+Arg: TypeAlias = Union[
+    "Timestream", Callable[["Timestream"], "Timestream"], LiteralValue
+]
 
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
@@ -65,7 +77,7 @@ class Timestream(object):
         self._ffi_expr = ffi
 
     @staticmethod
-    def _literal(value: Literal, session: _ffi.Session) -> Timestream:
+    def _literal(value: LiteralValue, session: _ffi.Session) -> Timestream:
         """Construct a Timestream for a literal value."""
         if isinstance(value, timedelta):
             raise TypeError("Cannot create a literal Timestream from a timedelta")
@@ -911,54 +923,175 @@ class Timestream(object):
         """
         return record(fields(self))
 
-    def preview(self, limit: int = 100) -> pd.DataFrame:
-        """Return the first N rows of the result as a Pandas DataFrame.
-
-        This makes it easy to preview the content of the Timestream.
+    def preview(
+        self,
+        limit: int = 10,
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+    ) -> pd.DataFrame:
+        """Preview the points in this TimeStream as a DataFrame.
 
         Args:
-            limit: Maximum number of rows to print.
+            limit: The number of points to preview.
+            results: The results to produce. Defaults to `Histroy()` producing all points.
+        """
+        return self.to_pandas(results, row_limit=limit)
+
+    def to_pandas(
+        self,
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        *,
+        row_limit: Optional[int] = None,
+    ) -> pd.DataFrame:
+        """Execute the TimeStream with the given options and return a DataFrame.
+
+        Args:
+            results: The results to produce in the DataFrame. Defaults to `History()` producing all points.
+            row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
+            max_batch_size: The maximum number of rows to return in each batch.
+              Defaults to `None` for no limit.
+
+        See Also:
+            - :func:`preview`: For quick peeks at the contents of a TimeStream during development.
+            - :func:`write`: For writing results to supported destinations without passing through
+              Pandas.
+            - :func:`run_iter`: For non-blocking (iterator or async iterator) execution.
+        """
+        execution = self._execute(results, row_limit=row_limit)
+        batches = execution.collect_pyarrow()
+        table = pa.Table.from_batches(batches, schema=execution.schema())
+        table = table.drop_columns(["_subsort", "_key_hash"])
+        return table.to_pandas()
+
+    def write(
+        self,
+        destination: kd.destinations.Destination,
+        mode: Literal["once", "live"] = "once",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+    ) -> Execution:
+        """Execute the TimeStream writing to the given destination.
+
+        Args:
+            destination: The destination to write to.
+            mode: The execution mode to use. Defaults to `'once'` to produce the results
+              from the currently available data. Use `'live'` to start a standing query
+              that continues to process new data until stopped.
+            results: The results to produce. Defaults to `Histroy()` producing all points.
 
         Returns:
-            The Pandas DataFrame containing the first `limit` points.
+            An `ExecutionProgress` which allows iterating (synchronously or asynchronously)
+            over the progress information, as well as cancelling the query if it is no longer
+            needed.
         """
-        return self.run(row_limit=limit).to_pandas()
+        raise NotImplementedError
 
-    def run(
+    @overload
+    def run_iter(
         self,
+        kind: Literal["pandas"],
+        *,
+        mode: Literal["once", "live"] = "once",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        row_limit: Optional[int] = None,
+        max_batch_size: Optional[int] = None,
+    ) -> ResultIterator[pd.DataFrame]:
+        ...
+
+    @overload
+    def run_iter(
+        self,
+        kind: Literal["pyarrow"],
+        *,
+        mode: Literal["once", "live"] = "once",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        row_limit: Optional[int] = None,
+        max_batch_size: Optional[int] = None,
+    ) -> ResultIterator[pa.RecordBatch]:
+        ...
+
+    @overload
+    def run_iter(
+        self,
+        kind: Literal["row"],
+        *,
+        mode: Literal["once", "live"] = "once",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        row_limit: Optional[int] = None,
+        max_batch_size: Optional[int] = None,
+    ) -> ResultIterator[dict]:
+        ...
+
+    def run_iter(
+        self,
+        kind: Literal["pandas", "pyarrow", "row"] = "pandas",
+        *,
+        mode: Literal["once", "live"] = "once",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        row_limit: Optional[int] = None,
+        max_batch_size: Optional[int] = None,
+    ) -> Union[
+        ResultIterator[pd.DataFrame],
+        ResultIterator[pa.RecordBatch],
+        ResultIterator[dict],
+    ]:
+        """Execute the TimeStream producing an iterator over the results.
+
+        Args:
+            kind: The kind of iterator to produce. Defaults to `pandas`.
+            mode: The execution mode to use. Defaults to `'once'` to produce the results
+              from the currently available data. Use `'live'` to start a standing query
+              that continues to process new data until stopped.
+            results: The results to produce. Defaults to `Histroy()` producing all points.
+            row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
+            max_batch_size: The maximum number of rows to return in each batch.
+              Defaults to `None` for no limit.
+
+        Returns:
+            Iterator over data of the corresponding kind. The `QueryIterator` allows
+            cancelling the query or materialization as well as iterating.
+
+        See Also:
+            - :func:`write`: To write the results directly to a
+              :class:`Destination<kaskada.destinations.Destination>`.
+        """
+        execution = self._execute(
+            results, mode=mode, row_limit=row_limit, max_batch_size=max_batch_size
+        )
+        if kind == "pandas":
+            return ResultIterator(execution, lambda table: iter((table.to_pandas(),)))
+        elif kind == "pyarrow":
+            return ResultIterator(execution, lambda table: table.to_batches())
+        elif kind == "row":
+            return ResultIterator(execution, lambda table: iter(table.to_pylist()))
+
+        raise AssertionError(f"Unhandled kind {kind}")
+
+    def _execute(
+        self,
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]],
         *,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
-        materialize: bool = False,
-    ) -> Result:
-        """Run the Timestream.
-
-        Args:
-            row_limit: The maximum number of rows to return.
-              If not specified all rows are returned.
-            max_batch_size: The maximum number of rows to return in each batch.
-              If not specified the default is used.
-            materialize: If true, the execution will be a continuous materialization.
-
-        Returns:
-            The `Result` object to use for accessing the results.
-        """
+        mode: Literal["once", "live"] = "once",
+    ) -> _ffi.Execution:
+        """Execute the timestream and return the FFI handle for the execution."""
         expr = self
         if not pa.types.is_struct(self.data_type):
             # The execution engine requires a struct, so wrap this in a record.
             expr = record({"result": self})
-        options = ExecutionOptions(
-            row_limit=row_limit, max_batch_size=max_batch_size, materialize=materialize
+
+        options = _ExecutionOptions(
+            row_limit=row_limit,
+            max_batch_size=max_batch_size,
+            materialize=mode == "live",
         )
-        execution = expr._ffi_expr.execute(options)
-        return Result(execution)
+        return expr._ffi_expr.execute(options)
 
 
 def _aggregation(
     op: str,
     input: Timestream,
     window: Optional[kd.windows.Window],
-    *args: Union[Timestream, Literal],
+    *args: Union[Timestream, LiteralValue],
 ) -> Timestream:
     """Return the aggregation `op` with the given `input`, `window` and `args`.
 
