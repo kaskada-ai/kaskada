@@ -1,3 +1,12 @@
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+  disply_name: Python 3
+mystnb:
+  execution_mode: cache
+---
+
 # Entities and Grouping
 
 Entities organize data for use in feature engineering.
@@ -50,9 +59,47 @@ Entities provide an implicit grouping for the aggregation.
 When we write `sum(Purchases.amount)` it is an aggregation that returns the sum of purchases made _by each entity_.
 This is helpful since the _feature vector_ for an entity will depend only on events related to that entity.
 
-```{todo}
-Example of grouped streams and aggregation
+% The input for this needs to be hidden, not removed. It seems that plotly won't
+% render the right height otherwise (possibly because it's not attached to the DOM?).
+% We could see if this worked better using a different library such as `bokeh` or if
+% there were better options to pass to plotly to avoid the problem.
+```{code-cell}
+---
+tags: [hide-input]
+---
+import kaskada as kd
+kd.init_session()
+data = "\n".join(
+    [
+        "time,key,m",
+        "1996-12-19T16:39:57,A,5",
+        "1996-12-19T17:42:57,B,8",
+        "1996-12-20T16:39:59,A,17",
+        "1996-12-23T12:18:57,B,6",
+        "1996-12-23T16:40:01,A,12",
+    ]
+)
+multi_entity = kd.sources.CsvString(data, time_column="time", key_column="key")
+
+kd.plot.render(
+    kd.plot.Plot(multi_entity.col("m"), name="m"),
+    kd.plot.Plot(multi_entity.col("m").sum(), name="sum(m)")
+)
 ```
+
+
+## Changing Keys
+
+The key associated with each point may be changed using {py:meth}`kaskada.Timestream.with_key`.
+For example, given a stream of purchases associated with each user, we could create a Timestream associated with the purchased item:
+
+```{code-block} python
+:caption: Using with-key to associate purchases with items
+purchases_by_user.with_key(purchases_by_user.col("item_id"))
+```
+
+This is particularly useful with the ability to [lookup](joins.md#explicit-lookups) values from associated with other keys.
+For instance, we could re-key purchases as shown above to count the total spent on each item (across all users) and then lookup that information for each user's purchases.
 
 ## Joining
 

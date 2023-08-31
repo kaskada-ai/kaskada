@@ -19,7 +19,13 @@ Aggregations may be configured to operate in a specific time window by providing
 If no window is specified, the aggregation is over all rows for the entity, up to and including the current time.
 If a window is provided, the result of an aggregation is the result for that entity in the current window up to and including the current time.
 Aggregations produce cumulative results up to each point in time, so the result at a given point in time may represent an incomplete window.
-The current window is often incomplete.
+
+```{code-block} python
+:caption: Cumulative aggregation since the start of the day.
+Purchases.sum(window = kd.windows.Since.daily())
+```
+
+The [windows reference](../reference/windows.md) has information on the supported kinds of windows.
 
 ## Repeated Aggregation
 
@@ -29,6 +35,7 @@ The result of the first aggregation is the same — a sequence of timestamped da
 Applying an additional aggregation simply aggregates over those times.
 We can compute the maximum of the average purchase amounts.
 
-```
+```{code-block} python
+:caption: Repeated aggregation computing the maximum of the average purchases.
 Purchases.col("amount").mean().max()
 ```
