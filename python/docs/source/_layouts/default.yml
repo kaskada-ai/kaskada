@@ -15,7 +15,7 @@ layers:
       image: "_static/kaskada-negative.svg"
   # the layer for the page's title
   - size: { width: 920, height: 300 }
-    offset: { x: 60, y: 150 }
+    offset: { x: 60, y: 180 }
     typography:
       content: >-
         #% if page.meta.title -%#
