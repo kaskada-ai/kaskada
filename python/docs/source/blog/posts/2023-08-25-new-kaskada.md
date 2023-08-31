@@ -4,6 +4,7 @@ date: 2023-08-25
 author: ryan
 tags: releases
 excerpt: 2
+description: Embedded in Python for accessible Real-Time AI
 ---
 
 # Introducing the New Kaskada

@@ -21,6 +21,7 @@ extensions = [
     "myst_nb",
     "sphinx_copybutton",
     "sphinx_autodoc_typehints",  # must be after napoleon
+    "sphinx_social_cards",
     "_extensions.gallery_directive",
 ]
 autodoc_typehints = "description"
@@ -178,3 +179,13 @@ blog_authors = {
 post_date_format = "%Y-%b-%d"
 post_date_format_short = "%Y-%b-%d"
 post_show_prev_next = False
+
+# Generate social cards for blog posts
+social_cards = {
+    "site_url": "https://kaskada.io/kaskada",
+    "description": "Kaskada: Real-Time AI without the fuss.",
+    "cards_layout_dir": ["_layouts"],
+    "cards_layout_options": {
+        "background_color": "#26364a",
+    }
+}

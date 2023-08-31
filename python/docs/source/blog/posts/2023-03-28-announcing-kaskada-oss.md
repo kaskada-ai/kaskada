@@ -4,6 +4,7 @@ author: ben
 date: 2023-03-28
 tags: releases
 excerpt: 1
+description: From Startup to Open Source Project
 ---
 
 # Announcing Kaskada OSS
