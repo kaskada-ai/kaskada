@@ -3,7 +3,6 @@ from typing import Union
 
 import kaskada as kd
 import pandas as pd
-import pyarrow as pa
 import pytest
 from kaskada import init_session
 

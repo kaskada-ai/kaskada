@@ -1,7 +1,10 @@
+from typing import AsyncIterator
+from typing import Iterator
+
 import kaskada as kd
-import pytest
-from typing import AsyncIterator, Iterator
 import pandas as pd
+import pytest
+
 
 @pytest.fixture
 def source_int64() -> kd.sources.CsvString:
@@ -39,7 +42,9 @@ def test_iter_rows(golden, source_int64) -> None:
 
 @pytest.mark.asyncio
 async def test_iter_pandas_async(golden, source_int64) -> None:
-    batches: AsyncIterator[pd.DataFrame] = source_int64.run_iter(row_limit=4, max_batch_size=2)
+    batches: AsyncIterator[pd.DataFrame] = source_int64.run_iter(
+        row_limit=4, max_batch_size=2
+    )
 
     # 4 rows, max 2 per batch = 2 batches.
 
@@ -66,7 +71,7 @@ async def test_iter_pandas_async_live(golden, source_int64) -> None:
         ]
     )
 
-    execution = source_int64.run_iter(mode='live')
+    execution = source_int64.run_iter(mode="live")
 
     # Await the first batch.
     golden.jsonl(await execution.__anext__())

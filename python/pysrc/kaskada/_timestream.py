@@ -8,6 +8,7 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Callable
 from typing import List
+from typing import Literal
 from typing import Mapping
 from typing import Optional
 from typing import Sequence
@@ -15,7 +16,6 @@ from typing import Tuple
 from typing import Union
 from typing import final
 from typing import overload
-from typing import Literal
 
 import kaskada as kd
 import kaskada._ffi as _ffi
@@ -23,14 +23,18 @@ import pandas as pd
 import pyarrow as pa
 from typing_extensions import TypeAlias
 
-from ._execution import _ExecutionOptions, ResultIterator, Execution
+from ._execution import Execution
+from ._execution import ResultIterator
+from ._execution import _ExecutionOptions
 
 
 #: A literal value that can be used as an argument to a Timestream operation.
 LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
 #: A Timestream or literal which can be used as an argument to a Timestream operation.
-Arg: TypeAlias = Union["Timestream", Callable[["Timestream"], "Timestream"], LiteralValue]
+Arg: TypeAlias = Union[
+    "Timestream", Callable[["Timestream"], "Timestream"], LiteralValue
+]
 
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
@@ -920,9 +924,11 @@ class Timestream(object):
         """
         return record(fields(self))
 
-    def preview(self,
+    def preview(
+        self,
         limit: int = 10,
-        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None) -> pd.DataFrame:
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+    ) -> pd.DataFrame:
         """Preview the points in this TimeStream as a DataFrame.
 
         Args:
@@ -931,7 +937,8 @@ class Timestream(object):
         """
         return self.to_pandas(results, row_limit=limit)
 
-    def to_pandas(self,
+    def to_pandas(
+        self,
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         *,
         row_limit: Optional[int] = None,
@@ -954,10 +961,12 @@ class Timestream(object):
         table = table.drop_columns(["_subsort", "_key_hash"])
         return table.to_pandas()
 
-    def write(self,
+    def write(
+        self,
         destination: kd.destinations.Destination,
-        mode: Literal['once', 'live'] = 'once',
-        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None) -> Execution:
+        mode: Literal["once", "live"] = "once",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+    ) -> Execution:
         """Execute the TimeStream writing to the given destination.
 
         Args:
@@ -975,37 +984,54 @@ class Timestream(object):
         raise NotImplementedError
 
     @overload
-    def run_iter(self, kind: Literal['pandas'],
+    def run_iter(
+        self,
+        kind: Literal["pandas"],
         *,
-        mode: Literal['once', 'live'] = 'once',
+        mode: Literal["once", "live"] = "once",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
-    ) -> ResultIterator[pd.DataFrame]: ...
+    ) -> ResultIterator[pd.DataFrame]:
+        ...
+
     @overload
-    def run_iter(self, kind: Literal['pyarrow'],
+    def run_iter(
+        self,
+        kind: Literal["pyarrow"],
         *,
-        mode: Literal['once', 'live'] = 'once',
+        mode: Literal["once", "live"] = "once",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
-    ) -> ResultIterator[pa.RecordBatch]: ...
+    ) -> ResultIterator[pa.RecordBatch]:
+        ...
+
     @overload
-    def run_iter(self, kind: Literal['row'],
+    def run_iter(
+        self,
+        kind: Literal["row"],
         *,
-        mode: Literal['once', 'live'] = 'once',
+        mode: Literal["once", "live"] = "once",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
-    ) -> ResultIterator[dict]: ...
-    def run_iter(self,
-        kind: Literal['pandas', 'pyarrow', 'row'] = 'pandas',
+    ) -> ResultIterator[dict]:
+        ...
+
+    def run_iter(
+        self,
+        kind: Literal["pandas", "pyarrow", "row"] = "pandas",
         *,
-        mode: Literal['once', 'live'] = 'once',
+        mode: Literal["once", "live"] = "once",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
-    ) -> Union[ResultIterator[pd.DataFrame], ResultIterator[pa.RecordBatch], ResultIterator[dict]]:
+    ) -> Union[
+        ResultIterator[pd.DataFrame],
+        ResultIterator[pa.RecordBatch],
+        ResultIterator[dict],
+    ]:
         """Execute the TimeStream producing an iterator over the results.
 
         Args:
@@ -1024,25 +1050,27 @@ class Timestream(object):
         See Also:
             write: To write the results directly to a `kaskada.destinations.Destination`.
         """
-        execution = self._execute(results, mode=mode, row_limit = row_limit, max_batch_size=max_batch_size)
-        if kind == 'pandas':
+        execution = self._execute(
+            results, mode=mode, row_limit=row_limit, max_batch_size=max_batch_size
+        )
+        if kind == "pandas":
             return ResultIterator(execution, lambda table: iter((table.to_pandas(),)))
-        elif kind == 'pyarrow':
+        elif kind == "pyarrow":
             return ResultIterator(execution, lambda table: table.to_batches())
-        elif kind == 'row':
+        elif kind == "row":
             return ResultIterator(execution, lambda table: iter(table.to_pylist()))
 
-        raise AssertionError(f'Unhandled kind {kind}')
+        raise AssertionError(f"Unhandled kind {kind}")
 
-    def _execute(self,
+    def _execute(
+        self,
         results: Optional[Union[kd.results.History, kd.results.Snapshot]],
         *,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
-        mode: Literal['once', 'live'] = 'once',
+        mode: Literal["once", "live"] = "once",
     ) -> _ffi.Execution:
-        """Execute the timestream and return the FFI handle for the execution.
-        """
+        """Execute the timestream and return the FFI handle for the execution."""
         expr = self
         if not pa.types.is_struct(self.data_type):
             # The execution engine requires a struct, so wrap this in a record.
@@ -1051,7 +1079,7 @@ class Timestream(object):
         options = _ExecutionOptions(
             row_limit=row_limit,
             max_batch_size=max_batch_size,
-            materialize=mode == 'live',
+            materialize=mode == "live",
         )
         return expr._ffi_expr.execute(options)
 

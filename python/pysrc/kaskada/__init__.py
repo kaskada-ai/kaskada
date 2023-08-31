@@ -6,6 +6,8 @@ from . import plot
 from . import results
 from . import sources
 from . import windows
+from ._execution import Execution
+from ._execution import ResultIterator
 from ._session import init_session
 from ._timestream import Arg
 from ._timestream import LiteralValue
@@ -17,10 +19,12 @@ from .udf import udf
 __all__ = [
     "Arg",
     "destinations",
+    "Execution",
     "init_session",
     "LiteralValue",
     "plot",
     "record",
+    "ResultIterator"
     "results",
     "sources",
     "Timestream",

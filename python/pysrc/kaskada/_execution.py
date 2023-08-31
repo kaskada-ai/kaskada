@@ -1,10 +1,17 @@
 from dataclasses import dataclass
-from typing import Optional, Callable, TypeVar, Generic, Iterator, AsyncIterator
-from . import _ffi
+from typing import AsyncIterator
+from typing import Callable
+from typing import Iterator
+from typing import Optional
+from typing import TypeVar
 
 import pyarrow as pa
 
-T = TypeVar('T')
+from . import _ffi
+
+
+T = TypeVar("T")
+
 
 @dataclass
 class _ExecutionOptions:
@@ -21,8 +28,10 @@ class _ExecutionOptions:
     max_batch_size: Optional[int] = None
     materialize: bool = False
 
+
 class Execution:
     """Represents an execution of a TimeStream."""
+
     def __init__(self, ffi_execution: _ffi.Execution) -> None:
         """Create the execution for a given FFI call."""
         self._ffi_execution = ffi_execution
@@ -34,12 +43,15 @@ class Execution:
         """
         self._ffi_execution.stop()
 
+
 class ResultIterator(Execution, Iterator[T], AsyncIterator[T]):
     """Return an iterator over results from the TimeStream."""
+
     _items: Iterator[T]
 
-    def __init__(self, ffi_execution: _ffi.Execution,
-        f: Callable[[pa.Table], Iterator[T]]) -> None:
+    def __init__(
+        self, ffi_execution: _ffi.Execution, f: Callable[[pa.Table], Iterator[T]]
+    ) -> None:
         """Create the execution for a given FFI call."""
         super().__init__(ffi_execution)
         self._f = f
