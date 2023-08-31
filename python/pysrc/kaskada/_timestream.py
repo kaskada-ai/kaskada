@@ -79,11 +79,19 @@ class Timestream(object):
     @staticmethod
     def _literal(value: LiteralValue, session: _ffi.Session) -> Timestream:
         """Construct a Timestream for a literal value."""
-        if isinstance(value, timedelta):
-            raise TypeError("Cannot create a literal Timestream from a timedelta")
-        elif isinstance(value, datetime):
+        if isinstance(value, datetime):
             raise TypeError("Cannot create a literal Timestream from a datetime")
-        return Timestream(_ffi.Expr.literal(session, value))
+ 
+        if isinstance(value, timedelta):
+            # The smallest unit stored in timedelta is us
+            us = value / timedelta(microseconds=1)
+            # Get the seconds as an integer
+            seconds = int(us / 1_000_000)
+            # Get the leftover nanoseconds
+            nanoseconds = int((us % 1_000_000) * 1_000)
+            return Timestream(_ffi.Expr.literal_datetime(session, seconds, nanoseconds))
+        else:
+            return Timestream(_ffi.Expr.literal(session, value))
 
     @staticmethod
     def _call(

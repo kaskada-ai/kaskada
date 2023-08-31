@@ -64,3 +64,14 @@ def test_time_add_seconds(source, golden) -> None:
     golden.jsonl(
         kd.record({"time": time, "time_plus_seconds": time + timedelta(seconds=5)})
     )
+
+
+def test_comparing_timedeltas(source, golden) -> None:
+    time = source.col("time")
+    seconds_since = time.seconds_since_previous()
+    td = timedelta(seconds=1)
+    golden.jsonl(
+        kd.record(({"time": time, "seconds_since": seconds_since, "is_1_s": seconds_since.eq(td)}))
+    )
+
+

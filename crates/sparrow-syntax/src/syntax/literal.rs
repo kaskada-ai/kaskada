@@ -22,6 +22,8 @@ pub enum LiteralValue {
     /// loss of precision we retain the original string.
     Number(String),
     String(String),
+    /// Time in s, nanos
+    Timedelta(i64, i64),
 }
 
 impl std::fmt::Display for LiteralValue {
@@ -32,6 +34,7 @@ impl std::fmt::Display for LiteralValue {
             LiteralValue::False => write!(f, "false"),
             LiteralValue::Number(n) => write!(f, "{n}"),
             LiteralValue::String(s) => write!(f, "{s}"),
+            LiteralValue::Timedelta(s, ns) => write!(f, "s:{s},ns:{ns}"),
         }
     }
 }
@@ -63,6 +66,20 @@ impl LiteralValue {
                 }
             }
             LiteralValue::String(s) => Ok(ScalarValue::Utf8(Some(s.clone()))),
+            LiteralValue::Timedelta(s, ns) => {
+                // Timedeltas are going to be represented as `DataType::Duration(ns)`
+                // so manually convert the seconds to nanos then add the remainder
+                let (s_to_ns, overflow_mul) = (*s).overflowing_mul(1e9 as i64);
+                let (duration_nanos, overflow_add) = s_to_ns.overflowing_add(*ns);
+                if overflow_mul || overflow_add {
+                    anyhow::bail!("Overflow converting seconds to nanoseconds")
+                }
+
+                Ok(ScalarValue::Duration(
+                    Some(duration_nanos),
+                    TimeUnit::Nanosecond,
+                ))
+            }
         }
     }
 

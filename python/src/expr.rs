@@ -6,7 +6,8 @@ use arrow::datatypes::DataType;
 use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use sparrow_session::{Expr as RustExpr, Literal, Session as RustSession};
+
+use sparrow_session::{Expr as RustExpr, Literal as RustLiteral, Session as RustSession};
 
 /// Kaskada expression node.
 #[derive(Clone)]
@@ -74,12 +75,12 @@ impl Expr {
 
     #[staticmethod]
     #[pyo3(signature = (session, value))]
-    fn literal(session: Session, value: Option<Arg>) -> PyResult<Self> {
+    fn literal(session: Session, value: Option<Literal>) -> PyResult<Self> {
         let mut rust_session = session.rust_session()?;
 
         let rust_expr = match value {
             None => rust_session
-                .add_literal(Literal::Null)
+                .add_literal(RustLiteral::Null)
                 .map_err(|_| PyRuntimeError::new_err("unable to create null literal"))?,
             Some(arg) => {
                 arg.into_ast_dfg_ref(&mut rust_session)
@@ -87,6 +88,19 @@ impl Expr {
                     .map_err(|_| PyRuntimeError::new_err("unable to create argument"))?
             }
         };
+        std::mem::drop(rust_session);
+        Ok(Self { rust_expr, session })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (session, s, ns))]
+    fn literal_datetime(session: Session, s: i64, ns: i64) -> PyResult<Self> {
+        let mut rust_session = session.rust_session()?;
+
+        let rust_expr = rust_session
+            .add_literal(RustLiteral::Timedelta(s, ns))
+            .map_err(|_| PyRuntimeError::new_err("unable to create timedelta"))?;
+
         std::mem::drop(rust_session);
         Ok(Self { rust_expr, session })
     }
@@ -134,27 +148,25 @@ impl Expr {
 }
 
 #[derive(FromPyObject)]
-enum Arg {
-    Expr(Expr),
-    LiteralBool(bool),
-    LiteralUInt(u64),
-    LiteralInt(i64),
-    LiteralFloat(f64),
-    LiteralString(String),
+enum Literal {
+    Bool(bool),
+    UInt(u64),
+    Int(i64),
+    Float(f64),
+    String(String),
 }
 
-impl Arg {
+impl Literal {
     fn into_ast_dfg_ref(
         self,
         session: &mut RustSession,
     ) -> error_stack::Result<RustExpr, sparrow_session::Error> {
         match self {
-            Self::Expr(e) => Ok(e.rust_expr.clone()),
-            Self::LiteralBool(b) => session.add_literal(Literal::Bool(b)),
-            Self::LiteralUInt(n) => session.add_literal(Literal::UInt64(n)),
-            Self::LiteralInt(n) => session.add_literal(Literal::Int64(n)),
-            Self::LiteralFloat(n) => session.add_literal(Literal::Float64(n)),
-            Self::LiteralString(s) => session.add_literal(Literal::String(s)),
+            Self::Bool(b) => session.add_literal(RustLiteral::Bool(b)),
+            Self::UInt(n) => session.add_literal(RustLiteral::UInt64(n)),
+            Self::Int(n) => session.add_literal(RustLiteral::Int64(n)),
+            Self::Float(n) => session.add_literal(RustLiteral::Float64(n)),
+            Self::String(s) => session.add_literal(RustLiteral::String(s)),
         }
     }
 }
