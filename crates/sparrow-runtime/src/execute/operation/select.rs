@@ -99,6 +99,7 @@ impl SelectOperation {
                     .filter(unfiltered_column.as_ref())
                     .context("filter for select operation")
             })?;
+        tracing::debug!("Select Output: {:?}", output);
         Ok(output)
     }
 }

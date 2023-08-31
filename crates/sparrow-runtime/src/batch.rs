@@ -51,6 +51,7 @@ impl Batch {
         );
 
         let key_triples = KeyTriples::try_from(&data)?;
+        tracing::debug!("created batch with: {:?}", key_triples);
         Self::try_new_with_bounds(
             data,
             key_triples.first().context("First key triple")?,

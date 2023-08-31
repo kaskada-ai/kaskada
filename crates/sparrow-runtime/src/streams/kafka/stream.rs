@@ -33,6 +33,7 @@ pub fn execution_stream(
         let mut reader = KafkaReader::new(kafka_avro_schema, raw_schema, projected_schema, consumer);
         loop {
             if let Some(next) = reader.next_result_async().await? {
+                tracing::debug!("yielded batch size {:?}", next);
                 yield next
             } else {
                 // Keep looping - this may happen if we timed out trying to read from the stream
@@ -101,6 +102,7 @@ impl KafkaReader {
                         }
                     }
                 }
+                let _ = self.consumer.consume_messageset(ms);
             }
         }
         tracing::debug!("read {} messages", avro_values.len());

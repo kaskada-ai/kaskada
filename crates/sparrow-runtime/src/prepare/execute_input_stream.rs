@@ -292,6 +292,7 @@ pub async fn prepare_input<'a>(
                     None
                 }
             };
+            tracing::debug!("Prepared record batch: {:?}", record_batch);
             yield record_batch
         }
 
