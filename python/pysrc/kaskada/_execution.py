@@ -1,9 +1,5 @@
 from dataclasses import dataclass
-from typing import AsyncIterator
-from typing import Callable
-from typing import Iterator
-from typing import Optional
-from typing import TypeVar
+from typing import AsyncIterator, Callable, Iterator, Optional, TypeVar
 
 import pyarrow as pa
 

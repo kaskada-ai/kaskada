@@ -4,18 +4,10 @@ from __future__ import annotations
 
 import sys
 import warnings
-from datetime import datetime
-from datetime import timedelta
-from typing import Callable
-from typing import List
-from typing import Literal
-from typing import Mapping
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
-from typing import Union
-from typing import final
-from typing import overload
+from datetime import datetime, timedelta
+from typing import (
+    Callable, List, Literal, Mapping, Optional, Sequence, Tuple, Union, final,
+    overload,)
 
 import kaskada as kd
 import kaskada._ffi as _ffi
@@ -23,9 +15,7 @@ import pandas as pd
 import pyarrow as pa
 from typing_extensions import TypeAlias
 
-from ._execution import Execution
-from ._execution import ResultIterator
-from ._execution import _ExecutionOptions
+from ._execution import Execution, ResultIterator, _ExecutionOptions
 
 
 #: A literal value that can be used as an argument to a Timestream operation.
