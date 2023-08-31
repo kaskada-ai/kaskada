@@ -14,7 +14,7 @@ mystnb:
 # Tour of Kaskada
 
 This provides an overview of the key features in Kaskada that enable feature engineering on event-based data.
-The [Quick Start](quickstart) has details on how you can quickly get started running Kaskada queries.
+The [Quick Start](./quickstart.md) has details on how you can quickly get started running Kaskada queries.
 For a more complete explanation, see the User Guide.
 
 This tour uses Kaskada and Plotly to render the illustrations.
@@ -61,11 +61,11 @@ kd.plot.render(
 )
 ```
 
-The User Guide has [more details on aggregation](guide/aggregation.md), including how to use windows to control which events are aggregated.
+The User Guide has [more details on aggregation](./aggregation.md), including how to use windows to control which events are aggregated.
 
 ## Discrete and Continuous
 We say that events (and values derived from them) are _discrete_ because they occur at specific in time.
-and the results of the aggregation are [_continuous_](guide/timestreams.md#continuity).
+and the results of the aggregation are [_continuous_](./timestreams.md#continuity).
 In the example, after the purchase with amount 13 the sum was 20.
 And it _continued_ to be 20 at every point in time until the next purchase was made, with amount 4.
 A continuous value is inclusive of the event that causes the value to change and exclusive of the next change.
@@ -88,7 +88,7 @@ The idea of grouped streams as separate, per-entity streams is often useful for 
 Add example of multiple entity aggregation.
 ```
 
-The User Guide has [more details on grouping](guide/entities.md), including how to change the grouping of a Timestream.
+The User Guide has [more details on grouping](./entities.md), including how to change the grouping of a Timestream.
 
 ## History and Snapshots
 
@@ -120,4 +120,4 @@ For instance, `sum(Purchases, window=hourly(), cumulative=false)` will produce t
 With the purchases in the previous example, this would mean that at 9:00 AM an event is produced containing the amount of the purchase at 8:45 AM, and at 10:00 AM an event is produced containing the sum of the purchases at 9:15 AM and 9:25 AM.
 A window must be specified when using a non-cumulative aggregation.
 
-The User Guide [on Aggregation](guide/aggregation.md#windowing) has more information on windowing.
+The section on [Aggregation](./aggregation.md#windowing) has more information on windowing.

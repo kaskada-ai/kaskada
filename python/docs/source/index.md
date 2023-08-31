@@ -34,7 +34,7 @@ sd_hide_title: true
 Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python..
 Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you can load data, process it, train and serve models all in the same place.
 
-There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](quickstart).
+There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](./guide/quickstart.md).
 
 
 ## Built for scale and reliability
@@ -104,28 +104,13 @@ For more details, check out the [BeepGPT Github project](https://github.com/kask
 ## Get Started
 
 Getting started with Kaskda is a `pip install kaskada` away.
-Check out the [Quick Start](quickstart) now!
+Check out the [Quick Start](./guide/quickstart.md) now!
 
 ```{toctree}
 :hidden:
 :maxdepth: 3
 
-quickstart
-why
-tour
-examples/index
 guide/index
-```
-
-```{toctree}
-:caption: Reference
-:hidden:
-:maxdepth: 3
-
-reference/timestream/index
-reference/windows
-reference/sources
-reference/destinations
-reference/results
-reference/execution
+examples/index
+reference/index
 ```

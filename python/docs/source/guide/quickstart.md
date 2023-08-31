@@ -20,7 +20,7 @@ This uses `kaskdaa>=0.6.0-a.0` to ensure the pre-release version is installed.
 pip install kaskada>=0.6.0-a.0
 ```
 
-See the [User Guide](./guide/installation.md) to learn more about installing Kaskada.
+See the section on [installation](./installation.md) to learn more about installing Kaskada.
 
 ## Write a query
 
@@ -44,7 +44,3 @@ content = "\n".join(
 source = kd.sources.CsvString(content, time_column="time", key_column="key")
 source.select("m", "n").extend({"sum_m": source.col("m").sum() }).to_pandas()
 ```
-
-## Next Steps
-See the [User Guide](./guide/index.md) to learn more about Kaskada.
-Among other things, it includes information on other kinds of [sources](./guide/sources.md), writing queries over [Timestreams](./guide/timestreams.md), [aggregations and windowing](./guide/aggregation.md) and [execution](./guide/execution.md).
