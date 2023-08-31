@@ -1,7 +1,7 @@
 """Kaskada query builder and local execution engine."""
 from __future__ import annotations
 
-from . import destinations, plot, results, sources, windows
+from . import destinations, plot, sources, windows
 from ._execution import Execution, ResultIterator
 from ._session import init_session
 from ._timestream import Arg, LiteralValue, Timestream, record
@@ -16,7 +16,7 @@ __all__ = [
     "LiteralValue",
     "plot",
     "record",
-    "ResultIterator"
+    "ResultIterator",
     "results",
     "sources",
     "Timestream",

@@ -6,8 +6,17 @@ import sys
 import warnings
 from datetime import datetime, timedelta
 from typing import (
-    Callable, List, Literal, Mapping, Optional, Sequence, Tuple, Union, final,
-    overload,)
+    Callable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    final,
+    overload,
+)
 
 import kaskada as kd
 import kaskada._ffi as _ffi
@@ -938,12 +947,14 @@ class Timestream(object):
         Args:
             results: The results to produce in the DataFrame. Defaults to `History()` producing all points.
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
-            max_batch_size: The maximum number of rows to return in each batch. Defaults to `None` for no limit.
-        See also:
-            preview: For quick peeks at the contents of a TimeStream during development.
-            write: For writing results to supported destinations without passing through
+            max_batch_size: The maximum number of rows to return in each batch.
+              Defaults to `None` for no limit.
+
+        See Also:
+            - :func:`preview`: For quick peeks at the contents of a TimeStream during development.
+            - :func:`write`: For writing results to supported destinations without passing through
               Pandas.
-            run_iter: For non-blocking (iterator or async iterator) execution.
+            - :func:`run_iter`: For non-blocking (iterator or async iterator) execution.
         """
         execution = self._execute(results, row_limit=row_limit)
         batches = execution.collect_pyarrow()
@@ -1031,14 +1042,16 @@ class Timestream(object):
               that continues to process new data until stopped.
             results: The results to produce. Defaults to `Histroy()` producing all points.
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
-            max_batch_size: The maximum number of rows to return in each batch. Defaults to `None` for no limit.
+            max_batch_size: The maximum number of rows to return in each batch.
+              Defaults to `None` for no limit.
 
         Returns:
             Iterator over data of the corresponding kind. The `QueryIterator` allows
             cancelling the query or materialization as well as iterating.
 
         See Also:
-            write: To write the results directly to a `kaskada.destinations.Destination`.
+            - :func:`write`: To write the results directly to a
+              :class:`Destination<kaskada.destinations.Destination>`.
         """
         execution = self._execute(
             results, mode=mode, row_limit=row_limit, max_batch_size=max_batch_size

@@ -138,7 +138,6 @@ fail_under = 100
 
 [tool.isort]
 profile = "black"
-multi_line_output = 4
 combine_star = true
 lines_after_imports = 2
 

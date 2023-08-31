@@ -7,5 +7,7 @@
    :toctree: ../apidocs/
 
     Timestream.preview
-    Timestream.run
+    Timestream.to_pandas
+    Timestream.run_iter
+    Timestream.write
 ```

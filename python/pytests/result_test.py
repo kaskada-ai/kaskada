@@ -1,5 +1,4 @@
-from typing import AsyncIterator
-from typing import Iterator
+from typing import AsyncIterator, Iterator
 
 import kaskada as kd
 import pandas as pd

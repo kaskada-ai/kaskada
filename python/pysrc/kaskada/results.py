@@ -1,9 +1,8 @@
+"""Control which points and entities are output."""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
-
-
-"""Specify which results are desired."""
 
 
 @dataclass

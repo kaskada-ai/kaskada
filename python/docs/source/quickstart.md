@@ -29,5 +29,5 @@ content = "\n".join(
     ]
 )
 source = kd.sources.CsvString(content, time_column="time", key_column="key")
-source.run().to_pandas()
+source.to_pandas()
 ```

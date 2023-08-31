@@ -41,7 +41,7 @@ class Execution:
 
 
 class ResultIterator(Execution, Iterator[T], AsyncIterator[T]):
-    """Return an iterator over results from the TimeStream."""
+    """An iterator over results from the TimeStream."""
 
     _items: Iterator[T]
 
@@ -54,12 +54,15 @@ class ResultIterator(Execution, Iterator[T], AsyncIterator[T]):
         self._items = iter(())
 
     def __iter__(self):
+        """Return a synchronous iterator over results."""
         return self
 
     def __aiter__(self):
+        """Return an asynchronous iterator over results."""
         return self
 
     def __next__(self) -> T:
+        """Return the next item synchronously."""
         try:
             return next(self._items)
         except StopIteration:
@@ -81,6 +84,7 @@ class ResultIterator(Execution, Iterator[T], AsyncIterator[T]):
                 continue
 
     async def __anext__(self) -> T:
+        """Return the next item asynchronously."""
         try:
             return next(self._items)
         except StopIteration:
