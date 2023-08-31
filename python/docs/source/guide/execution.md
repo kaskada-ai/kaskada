@@ -1,11 +1,11 @@
 # Execution
 
-A Timestream may be executed and written to a [destination](#destinations) in a variety of ways.
+A [Timestream](./timestreams.md) may be executed and written to a [destination](#destinations) in a variety of ways.
 The things to consider when deciding how to execute the Timestream are:
 
 1. Whether you want the _history_ of points or the _snapshot_ of values for each entity at a given time.
-2. Whether you want to run a single _query_ or start a _materialization_.
-3. Whether you want to limit the output to points/rows that have changed since a given time.
+2. Whether you want to run a query _once_ or start a _live_ process continually materializing.
+3. Whether you want to limit the output to points in a specific time range (for history) or entities that have changed since a specific time (for snapshots).
 4. Whether you want to stop at a given point in time.
 
 [State](#state) can be used to provide fault-tolerance and allow incremental processing of only new events.
