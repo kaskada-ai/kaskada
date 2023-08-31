@@ -497,7 +497,7 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
         (Duration(TimeUnit::Second), other @ Duration(_)) => Some(other.clone()),
         (
             Duration(TimeUnit::Millisecond),
-            other @ Duration(TimeUnit::Microsecond) | other @ Duration(TimeUnit::Nanosecond),
+            other @ Duration(TimeUnit::Microsecond | TimeUnit::Nanosecond),
         ) => Some(other.clone()),
         (Duration(TimeUnit::Microsecond), other @ Duration(TimeUnit::Nanosecond)) => {
             Some(other.clone())

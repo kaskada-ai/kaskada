@@ -53,6 +53,14 @@ impl CastEvaluator {
             // Support casting from a duration to a duration with a more granular time unit
             // However, arrow doesn't currently support this directly, so this hacks it a bit.
             (DataType::Duration(TimeUnit::Second), DataType::Duration(_)) => true,
+            (
+                DataType::Duration(TimeUnit::Millisecond),
+                DataType::Duration(TimeUnit::Microsecond | TimeUnit::Nanosecond),
+            ) => true,
+            (
+                DataType::Duration(TimeUnit::Microsecond),
+                DataType::Duration(TimeUnit::Nanosecond),
+            ) => true,
             _ => false,
         }
     }
