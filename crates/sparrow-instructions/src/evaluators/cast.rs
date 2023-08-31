@@ -6,8 +6,12 @@ use std::sync::Arc;
 
 use crate::ValueRef;
 use anyhow::anyhow;
-use arrow::array::{ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray};
+use arrow::array::{
+    ArrayRef, AsArray, DurationMillisecondArray, DurationSecondArray, Int32Array, Int64Array,
+    IntervalDayTimeArray, IntervalYearMonthArray,
+};
 use arrow::datatypes::DataType;
+use arrow_schema::TimeUnit;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_kernels::time::i64_to_two_i32;
 use sparrow_syntax::FenlType;
@@ -46,6 +50,9 @@ impl CastEvaluator {
                 ),
                 ty,
             ) if CastEvaluator::is_supported_interval_cast(ty) => true,
+            // Support casting from a duration to a duration with a more granular time unit
+            // However, arrow doesn't currently support this directly, so this hacks it a bit.
+            (DataType::Duration(TimeUnit::Second), DataType::Duration(_)) => true,
             _ => false,
         }
     }
@@ -88,6 +95,34 @@ impl CastEvaluator {
                     "Unsupported input type for 'cast': {:?}",
                     input.data_type()
                 )),
+            },
+            // Arrow does not support casting directly from duration to duration types, but it does
+            // support casting to the underlying data type (int64) then back to any duration type.
+            // This hacks that cast by doing the multiplication manually then casting back to the
+            // desired type.
+            (DataType::Duration(TimeUnit::Second), to_type @ DataType::Duration(tu)) => match tu {
+                TimeUnit::Millisecond => {
+                    let input: &DurationSecondArray = input.as_primitive();
+                    let input: Int64Array =
+                        arrow::compute::kernels::arity::unary(input, |n| n * 1000);
+                    let result = arrow::compute::cast(&input, to_type)?;
+                    Ok(Arc::new(result))
+                }
+                TimeUnit::Microsecond => {
+                    let input: &DurationSecondArray = input.as_primitive();
+                    let input: Int64Array =
+                        arrow::compute::kernels::arity::unary(input, |n| n * 1_000_000);
+                    let result = arrow::compute::cast(&input, to_type)?;
+                    Ok(Arc::new(result))
+                }
+                TimeUnit::Nanosecond => {
+                    let input: &DurationSecondArray = input.as_primitive();
+                    let input: Int64Array =
+                        arrow::compute::kernels::arity::unary(input, |n| n * 1_000_000_000);
+                    let result = arrow::compute::cast(&input, to_type)?;
+                    Ok(Arc::new(result))
+                }
+                _ => panic!("unexpected cast from duration('s') to {:?}", tu),
             },
             _ => arrow::compute::cast(input, to).map_err(|e| e.into()),
         }

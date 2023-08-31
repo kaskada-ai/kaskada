@@ -1,4 +1,5 @@
 from datetime import timedelta
+import pyarrow as pa
 
 import kaskada as kd
 import pytest
@@ -13,6 +14,9 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:39:58,B,24,3",
             "1996-12-19T16:39:59,A,17,6",
             "1997-01-18T16:40:00,A,,9",
+            "1997-01-18T16:40:01,A,3,9",
+            "1997-01-18T16:40:03,A,9,1",
+            "1997-01-18T16:40:04,A,5,",
         ]
     )
     return kd.sources.CsvString(content, time_column="time", key_column="key")
@@ -71,7 +75,7 @@ def test_comparing_timedeltas(source, golden) -> None:
     seconds_since = time.seconds_since_previous()
     td = timedelta(seconds=1)
     golden.jsonl(
-        kd.record(({"time": time, "seconds_since": seconds_since, "is_1_s": seconds_since.eq(td)}))
+        kd.record(({"seconds_since": seconds_since.cast(pa.int64()), "is_1_s": seconds_since.cast(pa.duration('ns')).eq(td)}))
     )
 
 
