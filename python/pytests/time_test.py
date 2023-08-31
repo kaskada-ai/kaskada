@@ -70,7 +70,7 @@ def test_time_add_seconds(source, golden) -> None:
     )
 
 
-def test_comparing_timedeltas(source, golden) -> None:
+def test_compare_literal_datetime(source, golden) -> None:
     time = source.col("time")
     seconds_since = time.seconds_since_previous()
     td = timedelta(seconds=1)

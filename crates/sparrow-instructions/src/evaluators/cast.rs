@@ -7,8 +7,8 @@ use std::sync::Arc;
 use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::{
-    ArrayRef, AsArray, DurationMillisecondArray, DurationSecondArray, Int32Array, Int64Array,
-    IntervalDayTimeArray, IntervalYearMonthArray,
+    ArrayRef, AsArray, DurationSecondArray, Int32Array, Int64Array, IntervalDayTimeArray,
+    IntervalYearMonthArray,
 };
 use arrow::datatypes::DataType;
 use arrow_schema::TimeUnit;

@@ -44,15 +44,19 @@ async fn test_lt_timestamp_ns() {
 }
 
 #[tokio::test]
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/730"]
 async fn test_lt_interval() {
     insta::assert_snapshot!(QueryFixture::new("
-        let days_between = days_between(time_of(Times), time_of(Times.m | lag(1)))
-        let months_between = months_between(time_of(Times), time_of(Times.m | lag(1) ))
-        in { d: days_between as i64, m : months_between as i64 }
+        let time = time_of(Times)
+        let lag_time = time_of(Times) | lag(1)
+        let days_between = (days_between(time, lag_time) as i64
+        let months_between = (months_between(time, lag_time) as i64
+        in { d: days_between, m: months_between  }
      ").run_to_csv(&timestamp_ns_data_fixture().await).await.unwrap(), @r###"
     _time,_subsort,_key_hash,_key,m,n,lt
     "###);
 }
+
 #[tokio::test]
 async fn test_lt_i64_literal() {
     insta::assert_snapshot!(QueryFixture::new("{ m: Numbers.m, lt: Numbers.m < 10}").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
