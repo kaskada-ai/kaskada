@@ -27,8 +27,10 @@ class GoldenFixture(object):
         """Golden test against newline-delimited JSON file (json-lines)."""
         df = _data_to_dataframe(data)
         filename = self._filename("jsonl")
+        print(f"Results: {df}, {filename}")
 
         if self._save:
+            print("Saving")
             df.to_json(
                 filename,
                 orient="records",
@@ -45,6 +47,10 @@ class GoldenFixture(object):
             date_unit="ns",
         )
 
+        if golden.empty and df.empty:
+            # For some reason, even when specifying the dtypes, reading an empty
+            # json produces no columns.
+            return
         pd.testing.assert_frame_equal(df, golden, check_datetimelike_compat=True)
 
     def parquet(self, data: Union[kd.Timestream, pd.DataFrame]) -> None:

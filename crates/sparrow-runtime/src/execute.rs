@@ -118,8 +118,16 @@ impl ExecutionOptions {
         self.changed_since_time = changed_since;
     }
 
+    pub fn set_changed_since_s(&mut self, seconds: i64) {
+        self.changed_since_time = Timestamp { seconds, nanos: 0 };
+    }
+
     pub fn set_final_at_time(&mut self, final_at_time: Timestamp) {
         self.final_at_time = Some(final_at_time);
+    }
+
+    pub fn set_final_at_time_s(&mut self, seconds: i64) {
+        self.changed_since_time = Timestamp { seconds, nanos: 0 };
     }
 
     async fn compute_store(

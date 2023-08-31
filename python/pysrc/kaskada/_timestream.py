@@ -1084,6 +1084,24 @@ class Timestream(object):
             max_batch_size=max_batch_size,
             materialize=mode == "live",
         )
+
+        if results is None:
+            results = kd.results.History()
+
+        if isinstance(results, kd.results.History):
+            options.results = 'history'
+            if results.since is not None:
+                options.changed_since = int(results.since.timestamp())
+            if results.until is not None:
+                options.final_at = int(results.until.timestamp())
+        elif isinstance(results, kd.results.Snapshot):
+            options.results = 'snapshot'
+            if results.changed_since is not None:
+                options.changed_since = int(results.changed_since.timestamp())
+            if results.at is not None:
+                options.final_at = int(results.at.timestamp())
+        else:
+            raise AssertionError(f"Unhandled results type {results!r}")
         return expr._ffi_expr.execute(options)
 
 

@@ -109,7 +109,7 @@ impl Expr {
     }
 
     fn execute(&self, options: Option<&PyAny>) -> Result<Execution> {
-        let session = self.session.rust_session()?;
+        let mut session = self.session.rust_session()?;
         let options = extract_options(options)?;
         let execution = session.execute(&self.rust_expr, options)?;
         Ok(Execution::new(execution))
@@ -167,11 +167,28 @@ fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::Execution
             let row_limit = pyo3::intern!(py, "row_limit");
             let max_batch_size = pyo3::intern!(py, "max_batch_size");
             let materialize = pyo3::intern!(py, "materialize");
+            let changed_since_time = pyo3::intern!(py, "changed_since");
+            let final_at_time = pyo3::intern!(py, "final_at");
+            let results = pyo3::intern!(py, "results");
+
+            let results: &str = options.getattr(results)?.extract()?;
+            let results = match results {
+                "history" => sparrow_session::Results::History,
+                "snapshot" => sparrow_session::Results::Snapshot,
+                invalid => {
+                    return Err(
+                        PyValueError::new_err(format!("invalid results '{invalid}'")).into(),
+                    )
+                }
+            };
 
             Ok(sparrow_session::ExecutionOptions {
                 row_limit: options.getattr(row_limit)?.extract()?,
                 max_batch_size: options.getattr(max_batch_size)?.extract()?,
                 materialize: options.getattr(materialize)?.extract()?,
+                results,
+                changed_since_time_s: options.getattr(changed_since_time)?.extract()?,
+                final_at_time_s: options.getattr(final_at_time)?.extract()?,
             })
         }
     }

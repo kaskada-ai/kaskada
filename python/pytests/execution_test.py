@@ -3,6 +3,7 @@ from typing import AsyncIterator, Iterator
 import kaskada as kd
 import pandas as pd
 import pytest
+from datetime import datetime
 
 
 @pytest.fixture
@@ -82,3 +83,19 @@ async def test_iter_pandas_async_live(golden, source_int64) -> None:
     execution.stop()
     with pytest.raises(StopAsyncIteration):
         print(await execution.__anext__())
+
+
+def test_snapshot(golden, source_int64) -> None:
+    query = source_int64.col("m").sum()
+    golden.jsonl(query.to_pandas(kd.results.Snapshot()))
+    golden.jsonl(query.to_pandas(kd.results.Snapshot(changed_since=datetime.fromisoformat("1996-12-19T16:39:59Z"))))
+    golden.jsonl(query.to_pandas(kd.results.Snapshot(at=datetime.fromisoformat("1996-12-20T12:00:00Z"))))
+
+def test_history(golden, source_int64) -> None:
+    query = source_int64.col("m").sum()
+    golden.jsonl(query.to_pandas(kd.results.History()))
+    golden.jsonl(query.to_pandas(kd.results.History(since=datetime.fromisoformat("1996-12-19T16:39:59Z"))))
+    golden.jsonl(query.to_pandas(kd.results.History(until=datetime.fromisoformat("1996-12-20T12:00:00Z"))))
+    golden.jsonl(query.to_pandas(kd.results.History(
+        since=datetime.fromisoformat("1996-12-19T16:39:59Z"),
+        until=datetime.fromisoformat("1996-12-20T12:00:00Z"))))
