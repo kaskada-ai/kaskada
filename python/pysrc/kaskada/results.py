@@ -12,8 +12,8 @@ class History:
     #: If set, only returns points after this time.
     #:
     #: Setting this allows incremental execution to use a checkpoint
-    #: from a time before the `changed_since` time.
-    changed_since: Optional[datetime] = None
+    #: from a time before the `since` time.
+    since: Optional[datetime] = None
 
     #: Only return points less than or equal to this time.
     #: If not set, the current time will be used.
