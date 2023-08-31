@@ -24,7 +24,6 @@ import pyarrow as pa
 from typing_extensions import TypeAlias
 
 from ._execution import _ExecutionOptions, ResultIterator, Execution
-from ._result import Result
 
 
 #: A literal value that can be used as an argument to a Timestream operation.
