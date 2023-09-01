@@ -1089,13 +1089,13 @@ class Timestream(object):
             results = kd.results.History()
 
         if isinstance(results, kd.results.History):
-            options.results = 'history'
+            options.results = "history"
             if results.since is not None:
                 options.changed_since = int(results.since.timestamp())
             if results.until is not None:
                 options.final_at = int(results.until.timestamp())
         elif isinstance(results, kd.results.Snapshot):
-            options.results = 'snapshot'
+            options.results = "snapshot"
             if results.changed_since is not None:
                 options.changed_since = int(results.changed_since.timestamp())
             if results.at is not None:
