@@ -169,7 +169,7 @@ impl ExpressionExecutor {
                         LateBoundValue::from_i32(late_bound).context("late bound value")?;
                     let literal = late_bindings[late_bound]
                         .as_ref()
-                        .context("missing late bound value")?
+                        .with_context(|| format!("missing late bound value {late_bound:?}"))?
                         .clone();
 
                     anyhow::ensure!(
