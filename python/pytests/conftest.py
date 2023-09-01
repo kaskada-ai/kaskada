@@ -27,10 +27,8 @@ class GoldenFixture(object):
         """Golden test against newline-delimited JSON file (json-lines)."""
         df = _data_to_dataframe(data)
         filename = self._filename("jsonl")
-        print(f"Results: {df}, {filename}")
 
         if self._save:
-            print("Saving")
             df.to_json(
                 filename,
                 orient="records",

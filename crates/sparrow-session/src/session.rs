@@ -49,13 +49,13 @@ pub struct ExecutionOptions {
     pub max_batch_size: Option<usize>,
     /// Whether to run execute as a materialization or not.
     pub materialize: bool,
-    // History or Snapshot results.
+    /// History or Snapshot results.
     pub results: Results,
     /// The changed since time. This is the minimum timestamp of changes to events.
     /// For historic queries, this limits the output points.
     /// For snapshot queries, this limits the set of entities that are considered changed.
     pub changed_since_time_s: Option<i64>,
-    /// The final at time. This ist he maximum timestamp output.
+    /// The final at time. This is the maximum timestamp output.
     /// For historic queries, this limits the output points.
     /// For snapshot queries, this determines the time at which the snapshot is produced.
     pub final_at_time_s: Option<i64>,
