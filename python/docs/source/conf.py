@@ -49,16 +49,16 @@ html_sidebars = {
         # Tag cloud and links.
         "ablog/tagcloud.html",
         # Categories -- we just use tags for now.
-        #"ablog/categories.html",
+        # "ablog/categories.html",
         # Show all authors on the sidebar.
-        #"ablog/authors.html",
+        # "ablog/authors.html",
         # Show all languages on the sidebar.
-        #"ablog/languages.html",
+        # "ablog/languages.html",
         # Show all locations on the sidebar.
-        #"ablog/locations.html",
+        # "ablog/locations.html",
         "ablog/archives.html",
     ],
-    "[!blog]*/*": ["sidebar-nav-bs"]
+    "[!blog]*/*": ["sidebar-nav-bs"],
 }
 
 html_theme_options: Dict[str, Any] = {
@@ -77,40 +77,32 @@ html_theme_options: Dict[str, Any] = {
             "icon": "fa-brands fa-slack",
         },
     ],
-
     # Setup edit buttons
     # See https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/source-buttons.html
     "use_edit_page_button": True,
-
     # Include indices.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/indices.html
     "primary_sidebar_end": ["indices.html"],
-
     # Provide an announcement at the top.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/announcements.html#
     "announcement": (
         "This describes the next version of Kaskada. "
         "It is currently available as an alpha release."
     ),
-
     # Branding / logos.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/branding.html
     "logo": {
         "image_light": "_static/kaskada-positive.svg",
         "image_dark": "_static/kaskada-negative.svg",
     },
-
     # Setup analytics.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/analytics.html
     "analytics": {
         "google_analytics_id": "G-HR9E2E6TG4",
     },
-
-
     # TODO: Version switcher.
     # This would require hosting multiple versions of the docs.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
-
 }
 
 templates_path = ["_templates"]
@@ -187,5 +179,5 @@ social_cards = {
     "cards_layout_dir": ["_layouts"],
     "cards_layout_options": {
         "background_color": "#26364a",
-    }
+    },
 }
