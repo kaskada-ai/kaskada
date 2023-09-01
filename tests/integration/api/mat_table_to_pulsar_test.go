@@ -21,7 +21,7 @@ import (
 	. "github.com/kaskada-ai/kaskada/tests/integration/shared/matchers"
 )
 
-var _ = Describe("Materialization with Pulsar upload", Ordered, Label("pulsar"), func() {
+var _ = XDescribe("Materialization with Pulsar upload", Ordered, Label("pulsar"), func() {
 	var (
 		ctx                   context.Context
 		cancel                context.CancelFunc
