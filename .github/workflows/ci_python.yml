@@ -134,6 +134,7 @@ jobs:
           done
       - name: Build docs
         run: |
+          sudo apt install -y libegl1
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
