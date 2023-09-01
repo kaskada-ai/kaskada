@@ -132,9 +132,14 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
+      - name: Setup QT
+        # Needed by sphinx-social-cards.
+        # https://github.com/2bndy5/sphinx-social-cards/blob/main/.github/workflows/build.yml#L54
+        run: |
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0
+          echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
       - name: Build docs
         run: |
-          sudo apt install -y libegl1 libxcb-xinerama0
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
