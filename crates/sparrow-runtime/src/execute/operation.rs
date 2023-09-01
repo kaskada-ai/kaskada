@@ -42,14 +42,16 @@ use chrono::NaiveDateTime;
 use enum_map::EnumMap;
 use error_stack::{IntoReport, IntoReportCompat, Report, Result, ResultExt};
 use futures::Future;
+use hashbrown::HashMap;
 use prost_wkt_types::Timestamp;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_api::kaskada::v1alpha::{operation_plan, ComputePlan, LateBoundValue, OperationPlan};
 use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_compiler::DataContext;
-use sparrow_instructions::ComputeStore;
+use sparrow_instructions::{ComputeStore, Udf};
 use tokio::task::JoinHandle;
 use tracing::Instrument;
+use uuid::Uuid;
 
 use self::final_tick::FinalTickOperation;
 use self::input_batch::InputBatch;
@@ -103,6 +105,8 @@ pub(crate) struct OperationContext {
     ///
     /// Derived from the ExecutionOptions,
     pub materialize: bool,
+    /// Mapping of uuid to user-defined functions.
+    pub udfs: HashMap<Uuid, Arc<dyn Udf>>,
 }
 
 impl OperationContext {
@@ -187,10 +191,14 @@ impl OperationExecutor {
 
         let operation_label = operator.label();
 
-        let mut expression_executor =
-            ExpressionExecutor::try_new(operation_label, operation.expressions, late_bindings)
-                .into_report()
-                .change_context(Error::internal_msg("unable to create executor"))?;
+        let mut expression_executor = ExpressionExecutor::try_new(
+            operation_label,
+            operation.expressions,
+            late_bindings,
+            &context.udfs,
+        )
+        .into_report()
+        .change_context(Error::internal_msg("unable to create executor"))?;
 
         debug_assert_eq!(operator.input_len(), input_channels.len());
 

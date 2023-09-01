@@ -7,9 +7,13 @@ html_theme.sidebar_secondary.remove:
 ```{eval-rst}
 .. currentmodule:: kaskada
 
-.. autoclass:: kaskada.Literal
 .. autoclass:: kaskada.Timestream
     :exclude-members: __init__
+
+    .. autoproperty:: data_type
+
+.. autoclass:: kaskada.Arg
+.. autoclass:: kaskada.LiteralValue
 ```
 
 ```{toctree}

@@ -26,8 +26,8 @@ def test_read_csv(golden) -> None:
     )
     source = kd.sources.CsvString(
         content1,
-        time_column_name="time",
-        key_column_name="key",
+        time_column="time",
+        key_column="key",
     )
     golden.jsonl(source)
 

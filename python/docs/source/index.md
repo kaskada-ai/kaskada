@@ -1,9 +1,14 @@
 ---
 hide-toc: true
 html_theme.sidebar_secondary.remove: true
+sd_hide_title: true
 ---
+
+# Real-Time AI without the fuss.
+
 <div class="px-4 py-5 my-5 text-center">
-    <img class="d-block mx-auto mb-4" src="_static/kaskada.svg" alt="" width="auto">
+    <img class="d-block mx-auto mb-4 only-light" src="_static/kaskada-positive.svg" alt="" width="50%">
+    <img class="d-block mx-auto mb-4 only-dark" src="_static/kaskada-negative.svg" alt="" width="50%">
     <h1 class="display-5 fw-bold">Real-Time AI without the fuss.</h1>
     <div class="col-lg-7 mx-auto">
       <p class="lead mb-4">Kaskada is a next-generation streaming engine that connects AI models to real-time & historical data.
@@ -11,7 +16,7 @@ html_theme.sidebar_secondary.remove: true
     </div>
 </div>
 
-# Kaskada completes the Real-Time AI stack, providing...
+## Kaskada completes the Real-Time AI stack, providing...
 
 ```{gallery-grid}
 :grid-columns: 1 2 2 3
@@ -58,8 +63,8 @@ kd.init_session()
 messages = kd.sources.PyList(
     rows = pyarrow.parquet.read_table("./messages.parquet")
         .to_pylist(),
-    time_column_name = "ts",
-    key_column_name = "channel",
+    time_column = "ts",
+    key_column = "channel",
 )
 
 # Send each Slack message to Kaskada
@@ -75,7 +80,7 @@ conversations = ( messages
 )
 
 # Handle each conversation as it occurs
-async for row in conversations.run(materialize=True).iter_rows_async():
+async for row in conversations.run_iter(mode='live'):
 
     # Use a pre-trained model to identify interested users
     prompt = "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in row["result"]])
@@ -121,5 +126,7 @@ guide/index
 reference/timestream/index
 reference/windows
 reference/sources
+reference/destinations
 reference/results
+reference/execution
 ```

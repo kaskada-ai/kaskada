@@ -11,6 +11,7 @@ The Sparrow session builder.
 
 [dependencies]
 arrow-array.workspace = true
+hashbrown.workspace = true
 arrow-schema.workspace = true
 arrow-select.workspace = true
 derive_more.workspace = true

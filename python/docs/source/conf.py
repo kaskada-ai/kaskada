@@ -1,8 +1,7 @@
 """Sphinx configuration."""
 import sys
 from pathlib import Path
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 
 sys.path.append(str(Path(".").resolve()))
@@ -20,6 +19,7 @@ extensions = [
     # "myst_parser",
     "myst_nb",
     "sphinx_copybutton",
+    "sphinx_autodoc_typehints",  # must be after napoleon
     "_extensions.gallery_directive",
 ]
 autodoc_typehints = "description"
@@ -65,6 +65,9 @@ html_theme_options: Dict[str, Any] = {
     "primary_sidebar_end": ["indices.html"],
     "show_toc_level": 2,
     "show_nav_level": 2,
+    "analytics": {
+        "google_analytics_id": "G-HR9E2E6TG4",
+    },
 }
 
 templates_path = ["_templates"]
@@ -75,9 +78,6 @@ html_context = {
     "github_repo": "kaskada",
     "github_version": "main",
     "doc_path": "kaskada/docs/source",
-    "analytics": {
-        "google_analytics_id": "G-HR9E2E6TG4",
-    },
 }
 
 intersphinx_mapping: Dict[str, Any] = {
@@ -101,6 +101,7 @@ myst_enable_extensions = [
     "deflist",
     "smartquotes",
     "replacements",
+    "linkify",
 ]
 myst_heading_anchors = 3
 
@@ -110,6 +111,7 @@ myst_heading_anchors = 3
 # Automatically extract typehints when specified and place them in
 # descriptions of the relevant function/method.
 autodoc_typehints = "description"
+autodoc_type_aliases = {"kaskada.Arg": "kaskada.Arg"}
 
 # Don't show class signature with the class' name.
 autodoc_class_signature = "separated"
@@ -117,5 +119,10 @@ autodoc_class_signature = "separated"
 autosummary_generate = True
 
 napoleon_preprocess_types = True
+napoleon_attr_annotations = True
+napoleon_use_rtype = False
+typehints_use_rtype = False
+typehints_document_rtype = False
+typehints_defaults = "comma"
 
 suppress_warnings = ["mystnb.unknown_mime_type"]

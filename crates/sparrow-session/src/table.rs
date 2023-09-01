@@ -85,7 +85,7 @@ impl Table {
 }
 
 #[static_init::dynamic]
-static KEY_FIELDS: Vec<arrow_schema::FieldRef> = vec![
+pub(super) static KEY_FIELDS: Vec<arrow_schema::FieldRef> = vec![
     Arc::new(Field::new(
         "_time",
         arrow_array::types::TimestampNanosecondType::DATA_TYPE,

@@ -8,6 +8,8 @@ For instance, `a.add(b)` may be written as `a + b`.
 See the notes on the specific functions for more information.
 ```
 
+## Arithmetic Methods
+
 ```{eval-rst}
 .. currentmodule:: kaskada
 
@@ -15,6 +17,11 @@ See the notes on the specific functions for more information.
    :toctree: ../apidocs/
 
     Timestream.add
+    Timestream.ceil
+    Timestream.clamp
+    Timestream.exp
+    Timestream.floor
+    Timestream.powf
     Timestream.sub
     Timestream.mul
     Timestream.div

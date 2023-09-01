@@ -10,6 +10,8 @@ See the notes on the specific functions for more information.
 To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *not* overloaded.
 ```
 
+## Comparison Methods
+
 ```{eval-rst}
 .. currentmodule:: kaskada
 

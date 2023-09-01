@@ -31,9 +31,7 @@ def check_lint(session: nox.Session) -> None:
     session.run("flake8", *args)
     session.run("isort", "--filter-files", "--check-only", *args)
 
-    # Only do darglint and pydocstyle on pysrc (source)
-    session.run("darglint", "pysrc")
-    session.run("pydocstyle", "--convention=numpy", "pysrc")
+    session.run("pydocstyle", "--convention=google", "pysrc")
     # No way to run this as a check.
     # session.run("pyupgrade", "--py38-plus")
 
@@ -43,10 +41,10 @@ def fix_lint(session: nox.Session) -> None:
     """Automatically fix lint issues."""
     args = session.posargs or ["pysrc", "pytests", "docs/source"]
     install(session, groups=["lint"], root=False)
-    session.run("black", *args)
     session.run("autoflake", "--in-place", "--remove-all-unused-imports", "--recursive", *args)
     session.run("isort", "--filter-files", *args)
     session.run("pyupgrade", "--py38-plus")
+    session.run("black", *args)
 
 
 @nox.session(python=python_versions[0])

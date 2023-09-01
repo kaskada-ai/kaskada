@@ -7,10 +7,11 @@
    :toctree: ../apidocs/
 
     Timestream.cast
-    Timestream.data_type
+    Timestream.coalesce
     Timestream.else_
     Timestream.filter
     Timestream.if_
     Timestream.lag
     Timestream.null_if
+    Timestream.pipe
 ```

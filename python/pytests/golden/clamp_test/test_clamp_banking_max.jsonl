@@ -1,0 +1,6 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","current_balance":5.0,"clamped_balance":5.0}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","current_balance":6.0,"clamped_balance":6.0}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","current_balance":7.0,"clamped_balance":7.0}
+{"_time":"1996-12-19T16:40:00.000000000","_key":"A","current_balance":8.0,"clamped_balance":8.0}
+{"_time":"1996-12-19T16:40:01.000000000","_key":"A","current_balance":9.0,"clamped_balance":9.0}
+{"_time":"1996-12-19T16:40:02.000000000","_key":"A","current_balance":10.0,"clamped_balance":10.0}

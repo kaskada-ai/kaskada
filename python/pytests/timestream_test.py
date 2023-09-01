@@ -15,7 +15,7 @@ def source1() -> kd.sources.Source:
             pa.field("y", pa.int32()),
         ]
     )
-    return kd.sources.Source(schema, time_column_name="time", key_column_name="key")
+    return kd.sources.Source(schema, time_column="time", key_column="key")
 
 
 def test_field_ref(source1) -> None:
@@ -122,9 +122,7 @@ def test_timestream_preview(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
-        content, time_column_name="time", key_column_name="key"
-    )
+    source = kd.sources.CsvString(content, time_column="time", key_column="key")
 
     golden.jsonl(source.preview(limit=4))
 
@@ -141,9 +139,7 @@ def test_timestream_run_non_record(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
-        content, time_column_name="time", key_column_name="key"
-    )
+    source = kd.sources.CsvString(content, time_column="time", key_column="key")
     golden.jsonl(source.col("m"))
 
 
@@ -159,7 +155,10 @@ def test_timestream_cast(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
-        content, time_column_name="time", key_column_name="key"
-    )
+    source = kd.sources.CsvString(content, time_column="time", key_column="key")
     golden.jsonl(source.col("time").cast(pa.timestamp("ns")))
+
+
+def test_timestream_call_all_literals() -> None:
+    with pytest.raises(ValueError, match="at least one non-literal"):
+        kd.Timestream._call("foo", 1, 2, 3)

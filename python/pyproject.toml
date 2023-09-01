@@ -1,6 +1,6 @@
 [project]
 name = "kaskada"
-version = "0.6.0-a.1"
+version = "0.6.0-a.2"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.8.1,<4.0"
 classifiers = [
@@ -23,7 +23,7 @@ plot = [
 name = "kaskada"
 description = "Kaskada query builder and local execution engine."
 authors = []
-version = "0.6.0-a.1"
+version = "0.6.0-a.2"
 
 [tool.poetry.dependencies]
 # Dependencies to install for using the project.
@@ -48,8 +48,7 @@ nox = "2023.4.22"
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-black = ">=21.10b0"
-darglint = ">=1.8.1"
+black = { version = ">=21.10b0", extras = ["jupyter"] }
 flake8 = ">=4.0.1"
 flake8-bugbear = ">=21.9.2"
 flake8-rst-docstrings = ">=0.2.5"
@@ -81,6 +80,7 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 sphinx = ">=6.0.0"
 sphinx-autobuild = ">=2021.3.14"
+sphinx-autodoc-typehints = ">=1.23.0"
 sphinx-book-theme = "^1.0.1"
 sphinx-copybutton = "^0.5.2"
 sphinx-design = "^0.5.0"
@@ -90,6 +90,7 @@ myst-parser = {version = ">=0.16.1"}
 # https://github.com/executablebooks/MyST-NB/issues/530
 myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
 plotly = {version = "^5.16.1"}
+linkify-it-py = "^2.0.2"
 
 [tool.poetry.group.test]
 # Dependencies for testing
@@ -138,7 +139,7 @@ fail_under = 100
 
 [tool.isort]
 profile = "black"
-force_single_line = true
+combine_star = true
 lines_after_imports = 2
 
 [tool.mypy]

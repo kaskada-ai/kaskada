@@ -210,7 +210,7 @@ impl TryFrom<&arrow::datatypes::DataType> for DataType {
                 // [DataType::Map] is represented as a list of structs with two fields: `key` and `value`
                 let arrow::datatypes::DataType::Struct(fields) = s.data_type() else {
                     // unexpected - maps should always contain a struct
-                    return Err(ConversionError::new_unsupported(s.data_type().clone()))
+                    return Err(ConversionError::new_unsupported(s.data_type().clone()));
                 };
 
                 debug_assert!(fields.len() == 2, "expect two fields in map");

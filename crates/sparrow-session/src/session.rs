@@ -1,8 +1,8 @@
+use hashbrown::HashMap;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use arrow_schema::SchemaRef;
+use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
@@ -25,6 +25,13 @@ pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
     key_hash_inverse: HashMap<GroupId, Arc<ThreadSafeKeyHashInverse>>,
+    /// Keeps track of the uuid mapping.
+    ///
+    /// We currently do not serialize the `dyn Udf` into the plan, and instead
+    /// directly use this local mapping to look up the udf from the serialized
+    /// uuid. Once we run on multiple machines, we'll have to serialize/pickle the
+    /// udf as well.
+    udfs: HashMap<Uuid, Arc<dyn Udf>>,
 }
 
 #[derive(Default)]
@@ -226,6 +233,16 @@ impl Session {
                     }
                 };
 
+                if function.is_tick() {
+                    assert_eq!(args.len(), 1);
+                    let input = &args[0].0;
+                    let tick_behavior = function.tick_behavior().expect("tick behavior");
+                    let tick = sparrow_compiler::add_tick(&mut self.dfg, tick_behavior, input)
+                        .into_report()
+                        .change_context(Error::Compile)?;
+                    return Ok(Expr(tick));
+                }
+
                 // TODO: Make this a proper error (not an assertion).
                 let signature = function.internal_signature();
                 signature.assert_valid_argument_count(args.len());
@@ -281,12 +298,11 @@ impl Session {
     ///
     /// This bypasses much of the plumbing of the [ExprOp] required due to our construction
     /// of the AST.
-    #[allow(unused)]
-    fn add_udf_to_dfg(
+    pub fn add_udf_to_dfg(
         &mut self,
         udf: Arc<dyn Udf>,
         args: Vec<Expr>,
-    ) -> error_stack::Result<AstDfgRef, Error> {
+    ) -> error_stack::Result<Expr, Error> {
         let signature = udf.signature();
         let arg_names = signature.arg_names().to_owned();
         signature.assert_valid_argument_count(args.len());
@@ -324,7 +340,8 @@ impl Session {
                 .collect();
             Err(Error::Errors(errors))?
         } else {
-            Ok(result)
+            self.udfs.insert(*udf.uuid(), udf.clone());
+            Ok(Expr(result))
         }
     }
 
@@ -345,6 +362,11 @@ impl Session {
         let primary_grouping = primary_group_info.name().to_owned();
         let primary_grouping_key_type = primary_group_info.key_type();
 
+        // Hacky. Ideally, we'd determine the schema from the created execution plan.
+        // Currently, this isn't easily available. Instead, we create this from the
+        // columns we know we're producing.
+        let schema = result_schema(expr, primary_grouping_key_type)?;
+
         // First, extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
         let expr = self.dfg.extract_simplest(expr.0.value());
@@ -358,7 +380,6 @@ impl Session {
             .into_report()
             .change_context(Error::Compile)?;
 
-        // TODO: Run the egraph simplifications.
         // TODO: Incremental?
         // TODO: Slicing?
         let plan = sparrow_compiler::plan::extract_plan_proto(
@@ -406,12 +427,19 @@ impl Session {
                 data_context,
                 options,
                 Some(key_hash_inverse),
+                self.udfs.clone(),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))
             .boxed();
 
-        Ok(Execution::new(rt, output_rx, progress, stop_signal_tx))
+        Ok(Execution::new(
+            rt,
+            output_rx,
+            progress,
+            stop_signal_tx,
+            schema,
+        ))
     }
 }
 
@@ -449,6 +477,25 @@ impl ExecutionOptions {
 
         options
     }
+}
+
+fn result_schema(expr: &Expr, key_type: &DataType) -> error_stack::Result<SchemaRef, Error> {
+    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::Internal)? else {
+        error_stack::bail!(Error::Internal)
+    };
+
+    let fields: Fields = super::table::KEY_FIELDS
+        .iter()
+        .cloned()
+        .chain(std::iter::once(Arc::new(Field::new(
+            "_key",
+            key_type.clone(),
+            true,
+        ))))
+        .chain(fields.iter().cloned())
+        .collect();
+    let schema = Schema::new(fields);
+    Ok(Arc::new(schema))
 }
 
 #[cfg(test)]

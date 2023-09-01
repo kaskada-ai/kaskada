@@ -9,10 +9,23 @@ mystnb:
 
 # Quick Start
 
-```{todo}
+This shows the bare minimum needed to get started with Kaskada.
 
-Write the quick start.
+## Install
+
+Install the latest version.
+This uses `kaskdaa>=0.6.0-a.0` to ensure the pre-release version is installed.
+
 ```
+pip install kaskada>=0.6.0-a.0
+```
+
+See the [User Guide](./guide/installation.md) to learn more about installing Kaskada.
+
+## Write a query
+
+The following Python code imports the Kaskada library, creates a session, and loads some CSV data.
+It then runs a query to produce a Pandas DataFrame.
 
 ```{code-cell}
 import kaskada as kd
@@ -28,6 +41,10 @@ content = "\n".join(
         "1996-12-19T16:40:02,A,,",
     ]
 )
-source = kd.sources.CsvString(content, time_column_name="time", key_column_name="key")
-source.run().to_pandas()
+source = kd.sources.CsvString(content, time_column="time", key_column="key")
+source.select("m", "n").extend({"sum_m": source.col("m").sum() }).to_pandas()
 ```
+
+## Next Steps
+See the [User Guide](./guide/index.md) to learn more about Kaskada.
+Among other things, it includes information on other kinds of [sources](./guide/sources.md), writing queries over [Timestreams](./guide/timestreams.md), [aggregations and windowing](./guide/aggregation.md) and [execution](./guide/execution.md).

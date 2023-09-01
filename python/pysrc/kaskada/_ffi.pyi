@@ -1,16 +1,14 @@
-from typing import List
-from typing import Optional
-from typing import Sequence
+from typing import Callable, List, Optional, Sequence
 
 import pyarrow as pa
 
-from ._execution import ExecutionOptions
-from .udf import Udf
+from ._execution import _ExecutionOptions
 
 class Session:
     def __init__(self) -> None: ...
 
 class Execution(object):
+    def schema(self) -> pa.Schema: ...
     def collect_pyarrow(self) -> List[pa.RecordBatch]: ...
     def next_pyarrow(self) -> Optional[pa.RecordBatch]: ...
     def stop(self) -> None: ...
@@ -24,6 +22,12 @@ class Expr:
         args: Sequence[Expr],
     ) -> Expr: ...
     @staticmethod
+    def call_udf(
+        session: Session,
+        udf: Udf,
+        args: Sequence[Expr],
+    ) -> Expr: ...
+    @staticmethod
     def literal(
         session: Session,
         value: int | float | str | None,
@@ -32,23 +36,24 @@ class Expr:
     def data_type(self) -> pa.DataType: ...
     def is_continuous(self) -> bool: ...
     def session(self) -> Session: ...
-    def execute(self, options: Optional[ExecutionOptions] = None) -> Execution: ...
+    def execute(self, options: Optional[_ExecutionOptions] = None) -> Execution: ...
     def grouping(self) -> Optional[str]: ...
-
-def call_udf(udf: Udf, result_type: pa.DataType, *args: pa.Array) -> pa.Array: ...
 
 class Table(Expr):
     def __init__(
         self,
         session: Session,
         name: str,
-        time_column_name: str,
-        key_column_name: str,
+        time_column: str,
+        key_column: str,
         schema: pa.Schema,
-        subsort_column_name: Optional[str],
+        subsort_column: Optional[str],
         grouping_name: Optional[str],
         time_unit: Optional[str],
     ) -> None: ...
     @property
     def name(self) -> str: ...
     def add_pyarrow(self, data: pa.RecordBatch) -> None: ...
+
+class Udf(object):
+    def __init__(self, result_ty: str, result_fn: Callable[..., pa.Array]) -> None: ...

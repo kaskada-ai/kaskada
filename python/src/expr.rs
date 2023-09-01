@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::execution::Execution;
 use crate::session::Session;
+use crate::udf::Udf;
 use arrow::datatypes::DataType;
 use arrow::pyarrow::{FromPyArrow, ToPyArrow};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -31,8 +32,35 @@ impl Expr {
 
         let mut rust_session = session.rust_session()?;
         let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
-        // TODO: - Support adding a UDF here.
         let rust_expr = match rust_session.add_expr(&operation, args) {
+            Ok(node) => node,
+            Err(e) => {
+                // DO NOT SUBMIT: Better error handling.
+                return Err(PyValueError::new_err(e.to_string()));
+            }
+        };
+        std::mem::drop(rust_session);
+
+        Ok(Self { rust_expr, session })
+    }
+
+    /// Create a new udf.
+    ///
+    /// This creates a new expression based on the `udf` and `args` provided.
+    #[staticmethod]
+    #[pyo3(signature = (session, udf, args))]
+    fn call_udf(session: Session, udf: Udf, args: Vec<Expr>) -> PyResult<Self> {
+        let sparrow_udf = udf.0;
+        if !args.iter().all(|e| e.session() == session) {
+            return Err(PyValueError::new_err(
+                "all arguments must be in the same session",
+            ));
+        }
+
+        let mut rust_session = session.rust_session()?;
+        let args: Vec<_> = args.into_iter().map(|e| e.rust_expr).collect();
+
+        let rust_expr = match rust_session.add_udf_to_dfg(sparrow_udf.clone(), args) {
             Ok(node) => node,
             Err(e) => {
                 // DO NOT SUBMIT: Better error handling.
