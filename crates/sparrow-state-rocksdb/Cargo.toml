@@ -1,0 +1,20 @@
+[package]
+name = "sparrow-state"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Interfaces for state storage.
+"""
+
+[dependencies]
+derive_more.workspace = true
+error-stack.workspace = true
+sparrow-state = { path = "../sparrow-state" }
+
+[dev-dependencies]
+
+[lib]
+doctest = false
