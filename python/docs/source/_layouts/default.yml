@@ -1,0 +1,46 @@
+layers:
+  # the base layer for the background
+  - background:
+      color: "#26364a"
+      image: >-
+        #% if page.meta.card_image -%#
+        '{{ page.meta.card_image }}'
+        #%- elif layout.background_image -%#
+        '{{ layout.background_image }}'
+        #%- endif %#
+  # the layer for the logo image
+  - size: { width: 300, height: 83 }
+    offset: { x: 60, y: 60 }
+    icon:
+      image: "_static/kaskada-negative.svg"
+  # the layer for the page's title
+  - size: { width: 920, height: 300 }
+    offset: { x: 60, y: 180 }
+    typography:
+      content: >-
+        #% if page.meta.title -%#
+        '{{ page.meta.title }}'
+        #%- elif page.title -%#
+        '{{ page.title }}'
+        #%- endif %#
+      line:
+        # height: 0.85
+        amount: 3
+      font:
+        weight: 500
+      color: white
+  # the layer for the site's (or page's) description
+  - offset: { x: 60, y: 480 }
+    size: { width: 1080, height: 90 }
+    typography:
+      content: >-
+        #% if page.meta and page.meta.description -%#
+        '{{ page.meta.description }}'
+        #%- else -%#
+        '{{ config.site_description }}'
+        #%- endif %#
+      line:
+        height: 0.87
+        amount: 2
+      align: start bottom
+      color: white

@@ -37,6 +37,9 @@ data.count().to_pandas()
 :hidden:
 :maxdepth: 2
 
+quickstart
+tour
+why
 installation
 timestreams
 data_types

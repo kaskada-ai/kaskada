@@ -9,7 +9,7 @@ from typing import Iterator
 import nox
 
 package = "kaskada"
-python_versions = ["3.11", "3.10", "3.9", "3.8"]
+python_versions = ["3.11", "3.10", "3.9"]
 nox.needs_version = ">= 2021.6.6"
 nox.options.sessions = (
     "check-lint",
@@ -117,7 +117,10 @@ def xdoctest(session: nox.Session) -> None:
 @nox.session(name="docs-build", python=python_versions[0])
 def docs_build(session: nox.Session) -> None:
     """Build the documentation."""
-    args = session.posargs or ["docs/source", "docs/_build", "-j", "auto", "-W"]
+    # ablog doesn't currently indicate whether it supports parallel reads,
+    # leading to a warning.
+    # when possible, add `"-j", "auto",` to do parallel builds (and in CI).
+    args = session.posargs or ["docs/source", "docs/_build", "-W"]
     if not session.posargs and "FORCE_COLOR" in os.environ:
         args.insert(0, "--color")
 

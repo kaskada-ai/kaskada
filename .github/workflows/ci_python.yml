@@ -88,7 +88,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: |
-            3.8
             3.9
             3.10
             3.11
@@ -117,7 +116,7 @@ jobs:
         # This installs the kaskada package using the wheel.
         # This ensures that we don't accidentally install the version from pypi.
         run: |
-          for V in 3.8 3.9 3.10 3.11; do
+          for V in 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
             poetry env use $V
             poetry env info
@@ -133,14 +132,22 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
-      - name: Build docs
+      - name: Setup QT
+        # Needed by sphinx-social-cards.
+        # https://github.com/2bndy5/sphinx-social-cards/blob/main/.github/workflows/build.yml#L54
         run: |
-          sudo apt install -y libegl1
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0
+          echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
+      - name: Build docs
+        # ablog doesn't currently indicate whether it supports parallel reads,
+        # leading to a warning.
+        # when possible, add `"-j", "auto",` to do parallel builds (and in nox).
+        run: |
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
           pip install ${WHEEL} --force-reinstall
-          sphinx-build docs/source docs/_build -j auto -W
+          sphinx-build docs/source docs/_build -W # -j auto
           deactivate
       - name: Upload docs
         uses: actions/upload-pages-artifact@v2
