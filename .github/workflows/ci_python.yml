@@ -139,12 +139,15 @@ jobs:
           sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0
           echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
       - name: Build docs
+        # ablog doesn't currently indicate whether it supports parallel reads,
+        # leading to a warning.
+        # when possible, add `"-j", "auto",` to do parallel builds (and in nox).
         run: |
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
           poetry install --with=docs
           pip install ${WHEEL} --force-reinstall
-          sphinx-build docs/source docs/_build -j auto -W
+          sphinx-build docs/source docs/_build -W # -j auto
           deactivate
       - name: Upload docs
         uses: actions/upload-pages-artifact@v2
