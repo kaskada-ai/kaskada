@@ -91,13 +91,13 @@ def test_snapshot(golden, source_int64) -> None:
     golden.jsonl(
         query.to_pandas(
             kd.results.Snapshot(
-                changed_since=datetime.fromisoformat("1996-12-19T16:39:59Z")
+                changed_since=datetime.fromisoformat("1996-12-19T16:39:59+00:00")
             )
         )
     )
     golden.jsonl(
         query.to_pandas(
-            kd.results.Snapshot(at=datetime.fromisoformat("1996-12-20T12:00:00Z"))
+            kd.results.Snapshot(at=datetime.fromisoformat("1996-12-20T12:00:00+00:00"))
         )
     )
 
@@ -107,19 +107,19 @@ def test_history(golden, source_int64) -> None:
     golden.jsonl(query.to_pandas(kd.results.History()))
     golden.jsonl(
         query.to_pandas(
-            kd.results.History(since=datetime.fromisoformat("1996-12-19T16:39:59Z"))
+            kd.results.History(since=datetime.fromisoformat("1996-12-19T16:39:59+00:00"))
         )
     )
     golden.jsonl(
         query.to_pandas(
-            kd.results.History(until=datetime.fromisoformat("1996-12-20T12:00:00Z"))
+            kd.results.History(until=datetime.fromisoformat("1996-12-20T12:00:00+00:00"))
         )
     )
     golden.jsonl(
         query.to_pandas(
             kd.results.History(
-                since=datetime.fromisoformat("1996-12-19T16:39:59Z"),
-                until=datetime.fromisoformat("1996-12-20T12:00:00Z"),
+                since=datetime.fromisoformat("1996-12-19T16:39:59+00:00"),
+                until=datetime.fromisoformat("1996-12-20T12:00:00+00:00"),
             )
         )
     )
