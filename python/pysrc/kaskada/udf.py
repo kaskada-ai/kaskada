@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 
 from . import _ffi
-from .timestream import Arg, Timestream
+from ._timestream import Arg, Timestream
 
 
 # TODO: Allow functions to return `pd.DataFrame` for struct arrays.
