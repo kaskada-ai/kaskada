@@ -136,7 +136,7 @@ def docs_build(session: nox.Session) -> None:
 @nox.session(python=python_versions[0])
 def docs(session: nox.Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
-    args = ["--open-browser", "docs/source", "docs/_build", "-j", "auto", "--ignore", "*/apidocs/*"]
+    args = ["--open-browser", "docs/source", "docs/_build", "-j", "auto", "--ignore", "*/apidocs/*", "--watch", "pysrc/kaskada"]
     install(session, groups=["typecheck", "docs"])
 
     build_dir = Path("docs", "_build")

@@ -19,13 +19,15 @@ See the notes on the specific functions for more information.
     Timestream.add
     Timestream.ceil
     Timestream.clamp
+    Timestream.div
     Timestream.exp
     Timestream.floor
+    Timestream.greatest
+    Timestream.least
+    Timestream.mul
+    Timestream.neg
     Timestream.powf
     Timestream.round
     Timestream.sqrt
     Timestream.sub
-    Timestream.mul
-    Timestream.div
-    Timestream.neg
 ```

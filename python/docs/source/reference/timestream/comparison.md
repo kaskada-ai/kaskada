@@ -21,9 +21,7 @@ To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *no
     Timestream.eq
     Timestream.ge
     Timestream.gt
-    Timestream.greatest
     Timestream.le
-    Timestream.least
     Timestream.lt
     Timestream.ne
     Timestream.is_null

@@ -819,9 +819,8 @@ class Timestream(object):
             window: The window to use for the aggregation. Defaults to the entire Timestream.
 
         See Also:
-            This returns the the maximum of values in a
-            column up to and including the current row. See the
-            comparison :func:`greatest` to get the greatest value
+            This returns the maximum of values in a column. See
+            :func:`greatest` to get the maximum value
             between Timestreams at each point.
         """
         return _aggregation("max", self, window)
@@ -835,9 +834,8 @@ class Timestream(object):
             window: The window to use for the aggregation. Defaults to the entire Timestream.
 
         See Also:
-            This returns the the minimum of values in a
-            column up to and including the current row. See the
-            comparison :func:`least` to get the least value
+            This returns the minimum of values in a column. See
+            :func:`least` to get the minimum value
             between Timestreams at each point.
         """
         return _aggregation("min", self, window)
@@ -971,8 +969,8 @@ class Timestream(object):
             are already integers.
 
         See Also:
-            :func:`ceil`
-            :func:`floor`
+            - :func:`ceil`
+            - :func:`floor`
         """
         return Timestream._call("round", self)
 
@@ -985,7 +983,7 @@ class Timestream(object):
         return Timestream._call("upper", self)
 
     def greatest(self, rhs: Union[Timestream, Literal]) -> Timestream:
-        """Return a Timestream with the greatest value of `self` and `rhs` at each point.
+        """Return a Timestream with the maximum value of `self` and `rhs` at each point.
 
         Args:
             rhs: The Timestream or literal value to compare to this.
@@ -997,14 +995,14 @@ class Timestream(object):
             the result.
 
         See Also:
-            This returns the greatest of two values. See the
-            aggregation :func:`max` for the maximum of values in
-            a column up to and including the current row.
+            This returns the greatest of two values. See
+            :func:`max` for the maximum of values in
+            a column.
         """
         return Timestream._call("zip_max", self, rhs)
 
     def least(self, rhs: Union[Timestream, Literal]) -> Timestream:
-        """Return a Timestream with the least value of `self` and `rhs` at each point.
+        """Return a Timestream with the minimum value of `self` and `rhs` at each point.
 
         Args:
             rhs: The Timestream or literal value to compare to this.
@@ -1016,9 +1014,9 @@ class Timestream(object):
             the result.
 
         See Also:
-            This returns the least of two values. See the
-            aggregation :func:`min` for the minimum of values in
-            a column up to and including the current row.
+            This returns the least of two values. See
+            :func:`min` for the minimum of values in
+            a column.
         """
         return Timestream._call("zip_min", self, rhs)
 
