@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 
 import pyarrow as pa
 
-from . import Timestream, Arg
+from . import Arg, Timestream
+
 
 def shift_by(self, delta: Arg) -> Timestream:
     """Return a Timestream shifting each point forward by the `delta`.
@@ -23,6 +24,7 @@ def shift_by(self, delta: Arg) -> Timestream:
         return Timestream._call("shift_by", seconds, self, input=self)
     else:
         return Timestream._call("shift_by", delta, self, input=self)
+
 
 def shift_to(self, time: Arg) -> Timestream:
     """Return a Timestream shifting each point forward to `time`.
@@ -46,6 +48,7 @@ def shift_to(self, time: Arg) -> Timestream:
     else:
         return Timestream._call("shift_to", time, self, input=self)
 
+
 def shift_until(self, predicate: Arg) -> Timestream:
     """Return a Timestream shifting each point forward to the next time `predicate` is true.
 
@@ -60,9 +63,11 @@ def shift_until(self, predicate: Arg) -> Timestream:
     """
     return Timestream._call("shift_until", predicate, self, input=self)
 
+
 def time(self) -> Timestream:
     """Return a Timestream containing the time of each point."""
     return Timestream._call("time_of", self)
+
 
 def seconds_since(self, time: Arg) -> Timestream:
     """Return a Timestream containing seconds between `time` and `self`.
@@ -83,6 +88,7 @@ def seconds_since(self, time: Arg) -> Timestream:
         return Timestream._call("seconds_between", nanos, self)
     else:
         return Timestream._call("seconds_between", time, self)
+
 
 def seconds_since_previous(self, n: int = 1) -> Timestream:
     """Return a Timestream containing seconds between `self` and the time `n` points ago.

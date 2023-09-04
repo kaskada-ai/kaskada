@@ -1,16 +1,9 @@
 from __future__ import annotations
 
-import sys, warnings
+import sys
+import warnings
 from datetime import datetime, timedelta
-from typing import (
-    Callable,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Callable, List, Literal, Mapping, Optional, Sequence, Union
 
 import kaskada as kd
 import kaskada._ffi as _ffi
@@ -18,6 +11,7 @@ import pyarrow as pa
 from typing_extensions import TypeAlias
 
 from .._execution import _ExecutionOptions
+
 
 class Timestream(object):
     """A `Timestream` represents a computation producing a Timestream."""
@@ -27,7 +21,6 @@ class Timestream(object):
     def __init__(self, ffi: _ffi.Expr) -> None:
         """Create a new expression."""
         self._ffi_expr = ffi
-
 
     @staticmethod
     def _literal(value: LiteralValue, session: _ffi.Session) -> Timestream:
@@ -156,6 +149,7 @@ class Timestream(object):
         )
         return expr._ffi_expr.execute(options)
 
+
 def record(fields: Mapping[str, Arg]) -> Timestream:
     """Return a record Timestream from the given fields.
 
@@ -171,6 +165,7 @@ def record(fields: Mapping[str, Arg]) -> Timestream:
     args: List[Arg] = list(itertools.chain(*fields.items()))
     return Timestream._call("record", *args)
 
+
 #: A literal value that can be used as an argument to a Timestream operation.
 LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
@@ -178,6 +173,7 @@ LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datet
 Arg: TypeAlias = Union[
     "Timestream", Callable[["Timestream"], "Timestream"], LiteralValue
 ]
+
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:
     """Augment an error with information about the arguments."""

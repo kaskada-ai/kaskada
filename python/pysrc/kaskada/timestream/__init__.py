@@ -2,21 +2,79 @@
 
 from __future__ import annotations
 
-from ._timestream import Timestream, Arg, LiteralValue, record, Literal
-
-from ._aggregation import collect, count, count_if, first, last, max, mean, min, stddev, sum, variance
-from ._arithmetic import add, __add__, __radd__, ceil, clamp, div, __truediv__, __rtruediv__, exp, floor, greatest, least, mul, __mul__, __rmul__, neg, powf, round, sqrt, sub, __sub__, __rsub__
-from ._collection import __getitem__, flatten, index, length, union
-from ._comparison import eq, ge, __ge__, gt,__gt__, le, __le__, lt, __lt__, ne, is_not_null, is_null
-from ._execution import preview, to_pandas, run_iter, write
+# after Timestream is initialized, add all the methods
+from ._aggregation import (
+    collect,
+    count,
+    count_if,
+    first,
+    last,
+    max,
+    mean,
+    min,
+    stddev,
+    sum,
+    variance,
+)
+from ._arithmetic import (
+    add,
+    add__,
+    addr__,
+    ceil,
+    clamp,
+    div,
+    div__,
+    divr__,
+    exp,
+    floor,
+    greatest,
+    least,
+    mul,
+    mul__,
+    mulr__,
+    neg,
+    powf,
+    round,
+    sqrt,
+    sub,
+    sub__,
+    subr__,
+)
+from ._collection import flatten, getitem__, index, length, union
+from ._comparison import (
+    eq,
+    ge,
+    ge__,
+    gt,
+    gt__,
+    is_not_null,
+    is_null,
+    le,
+    le__,
+    lt,
+    lt__,
+    ne,
+)
+from ._execution import preview, run_iter, to_pandas, write
 from ._grouping import lookup, with_key
-from ._logical import and_, or_, not_
+from ._logical import and_, not_, or_
 from ._misc import cast, coalesce, else_, filter, hash, if_, lag, null_if, pipe
-from ._records import col, extend, _record, remove, select
+from ._records import _record, col, extend, remove, select
 from ._string import lower, upper
-from ._time import shift_by, shift_to, shift_until, time, seconds_since, seconds_since_previous
+from ._time import (
+    seconds_since,
+    seconds_since_previous,
+    shift_by,
+    shift_to,
+    shift_until,
+    time,
+)
 
-### aggregation
+# this must be imported first to avoid circular imports
+from ._timestream import Timestream
+
+
+# aggregation
 Timestream.collect = collect
 Timestream.count = count
 Timestream.count_if = count_if
@@ -29,67 +87,67 @@ Timestream.stddev = stddev
 Timestream.sum = sum
 Timestream.variance = variance
 
-### arithmetic
+# arithmetic
 Timestream.add = add
-Timestream.__add__ = __add__
-Timestream.__radd__ = __radd__
+Timestream.__add__ = add__
+Timestream.__radd__ = addr__
 Timestream.ceil = ceil
 Timestream.clamp = clamp
 Timestream.div = div
-Timestream.__truediv__ = __truediv__
-Timestream.__rtruediv__ = __rtruediv__
+Timestream.__truediv__ = div__
+Timestream.__rtruediv__ = divr__
 Timestream.exp = exp
 Timestream.floor = floor
 Timestream.greatest = greatest
 Timestream.least = least
 Timestream.mul = mul
-Timestream.__mul__ = __mul__
-Timestream.__rmul__ = __rmul__
+Timestream.__mul__ = mul__
+Timestream.__rmul__ = mulr__
 Timestream.neg = neg
 Timestream.powf = powf
 Timestream.round = round
 Timestream.sqrt = sqrt
 Timestream.sub = sub
-Timestream.__sub__ = __sub__
-Timestream.__rsub__ = __rsub__
+Timestream.__sub__ = sub__
+Timestream.__rsub__ = subr__
 
-### collection
-Timestream.__getitem__ = __getitem__
+# collection
+Timestream.__getitem__ = getitem__
 Timestream.flatten = flatten
 Timestream.index = index
 Timestream.length = length
 Timestream.union = union
 
-### comparison
+# comparison
 Timestream.eq = eq
 Timestream.ge = ge
-Timestream.__ge__ = __ge__
+Timestream.__ge__ = ge__
 Timestream.gt = gt
-Timestream.__gt__ = __gt__
+Timestream.__gt__ = gt__
 Timestream.le = le
-Timestream.__le__ = __le__
+Timestream.__le__ = le__
 Timestream.lt = lt
-Timestream.__lt__ = __lt__
+Timestream.__lt__ = lt__
 Timestream.ne = ne
 Timestream.is_not_null = is_not_null
 Timestream.is_null = is_null
 
-### execution
+# execution
 Timestream.preview = preview
 Timestream.to_pandas = to_pandas
 Timestream.run_iter = run_iter
 Timestream.write = write
 
-### grouping
+# grouping
 Timestream.lookup = lookup
 Timestream.with_key = with_key
 
-### logical
+# logical
 Timestream.and_ = and_
 Timestream.or_ = or_
 Timestream.not_ = not_
 
-### misc
+# misc
 Timestream.cast = cast
 Timestream.coalesce = coalesce
 Timestream.else_ = else_
@@ -100,18 +158,18 @@ Timestream.lag = lag
 Timestream.null_if = null_if
 Timestream.pipe = pipe
 
-### records
+# records
 Timestream.col = col
 Timestream.extend = extend
 Timestream.record = _record
 Timestream.remove = remove
 Timestream.select = select
 
-### string
+# string
 Timestream.lower = lower
 Timestream.upper = upper
 
-### time
+# time
 Timestream.shift_by = shift_by
 Timestream.shift_to = shift_to
 Timestream.shift_until = shift_until

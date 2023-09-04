@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import (
-    Callable,
-    Mapping,
-)
+from typing import Callable, Mapping
 
 import pyarrow as pa
 
-from . import Timestream, Arg, record
+from . import Arg, Timestream, record
+
 
 def col(self, name: str) -> Timestream:
     """Return a Timestream accessing the named column or field of `self`.
@@ -25,6 +23,7 @@ def col(self, name: str) -> Timestream:
         raise TypeError(
             f"Cannot access column {name!r} of non-record type '{data_type}'"  # noqa : B907
         )
+
 
 def extend(
     self,
@@ -61,6 +60,7 @@ def _record(self, fields: Callable[[Timestream], Mapping[str, Arg]]) -> Timestre
     """
     return record(fields(self))
 
+
 def remove(self, *args: str) -> Timestream:
     """Return a Timestream removing the given fields from `self`.
 
@@ -68,6 +68,7 @@ def remove(self, *args: str) -> Timestream:
         *args: The field names to remove.
     """
     return Timestream._call("remove_fields", self, *args)
+
 
 def select(self, *args: str) -> Timestream:
     """Return a Timestream selecting the given fields from `self`.

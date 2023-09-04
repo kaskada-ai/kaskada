@@ -1,13 +1,4 @@
 {
     "rust-analyzer.cargo.features": "all",
     "editor.formatOnSave": true,
-    "cSpell.words": [
-        "fieldref",
-        "nanos",
-        "powf",
-        "pyarrow",
-        "subsort",
-        "Timestream",
-        "Timestreams"
-    ],
 }

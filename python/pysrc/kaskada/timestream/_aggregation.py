@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import (
-    Optional,
-    Union,
-)
-
-from . import Timestream, LiteralValue, record
+from typing import Optional, Union
 
 import kaskada as kd
 import pyarrow as pa
+
+from . import LiteralValue, Timestream, record
+
 
 def _aggregation(
     op: str,
@@ -64,6 +62,7 @@ def _aggregation(
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 
+
 def collect(
     self,
     *,
@@ -95,6 +94,7 @@ def collect(
     else:
         return _aggregation("collect", self, window, max, min)
 
+
 def count(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the count value in the `window`.
 
@@ -104,6 +104,7 @@ def count(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         window: The window to use for the aggregation. Defaults to the entire Timestream.
     """
     return _aggregation("count", self, window)
+
 
 def count_if(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the count of `true` values in `window`.
@@ -115,6 +116,7 @@ def count_if(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """
     return _aggregation("count_if", self, window)
 
+
 def first(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the first value in the `window`.
 
@@ -125,6 +127,7 @@ def first(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
     """
     return _aggregation("first", self, window)
 
+
 def last(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the last value in the `window`.
 
@@ -134,6 +137,7 @@ def last(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         window: The window to use for the aggregation. Defaults to the entire Timestream.
     """
     return _aggregation("last", self, window)
+
 
 def max(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the max value in the `window`.
@@ -150,6 +154,7 @@ def max(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """
     return _aggregation("max", self, window)
 
+
 def mean(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the mean value in the `window`.
 
@@ -159,6 +164,7 @@ def mean(self, window: Optional[kd.windows.Window] = None) -> Timestream:
         window: The window to use for the aggregation. Defaults to the entire Timestream.
     """
     return _aggregation("mean", self, window)
+
 
 def min(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the min value in the `window`.
@@ -175,6 +181,7 @@ def min(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """
     return _aggregation("min", self, window)
 
+
 def stddev(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the standard deviation in the `window`.
 
@@ -185,6 +192,7 @@ def stddev(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """
     return _aggregation("stddev", self, window)
 
+
 def sum(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream summing the values in the `window`.
 
@@ -194,6 +202,7 @@ def sum(self, *, window: Optional[kd.windows.Window] = None) -> Timestream:
         window: The window to use for the aggregation. Defaults to the entire Timestream.
     """
     return _aggregation("sum", self, window)
+
 
 def variance(self, window: Optional[kd.windows.Window] = None) -> Timestream:
     """Return a Timestream containing the variance in the `window`.

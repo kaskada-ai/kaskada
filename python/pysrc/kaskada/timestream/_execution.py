@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    Literal,
-    Optional,
-    Union,
-    overload,
-)
+from typing import Literal, Optional, Union, overload
 
 import kaskada as kd
 import pandas as pd
@@ -13,18 +8,20 @@ import pyarrow as pa
 
 from .._execution import Execution, ResultIterator
 
-def preview(
-        self,
-        limit: int = 10,
-        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
-    ) -> pd.DataFrame:
-        """Preview the points in this TimeStream as a DataFrame.
 
-        Args:
-            limit: The number of points to preview.
-            results: The results to produce. Defaults to `History()` producing all points.
-        """
-        return self.to_pandas(results, row_limit=limit)
+def preview(
+    self,
+    limit: int = 10,
+    results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+) -> pd.DataFrame:
+    """Preview the points in this TimeStream as a DataFrame.
+
+    Args:
+        limit: The number of points to preview.
+        results: The results to produce. Defaults to `History()` producing all points.
+    """
+    return self.to_pandas(results, row_limit=limit)
+
 
 def to_pandas(
     self,
@@ -65,6 +62,7 @@ def run_iter(
 ) -> ResultIterator[pd.DataFrame]:
     ...
 
+
 @overload
 def run_iter(
     self,
@@ -77,6 +75,7 @@ def run_iter(
 ) -> ResultIterator[pa.RecordBatch]:
     ...
 
+
 @overload
 def run_iter(
     self,
@@ -88,6 +87,7 @@ def run_iter(
     max_batch_size: Optional[int] = None,
 ) -> ResultIterator[dict]:
     ...
+
 
 def run_iter(
     self,
@@ -133,6 +133,7 @@ def run_iter(
         return ResultIterator(execution, lambda table: iter(table.to_pylist()))
 
     raise AssertionError(f"Unhandled kind {kind}")
+
 
 def write(
     self,

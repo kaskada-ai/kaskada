@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import pyarrow as pa
 
-from . import Timestream, Arg
+from . import Arg, Timestream
 
-def __getitem__(self, key: Arg) -> Timestream:
+
+def getitem__(self, key: Arg) -> Timestream:
     """Implement `self[key]` using `index`.
 
     See Also:
@@ -12,9 +13,11 @@ def __getitem__(self, key: Arg) -> Timestream:
     """
     return self.index(key)
 
+
 def flatten(self) -> Timestream:
     """Flatten a list of lists to a list of values."""
     return Timestream._call("flatten", self)
+
 
 def index(self, key: Arg) -> Timestream:
     """Return a Timestream indexing into the elements of `self`.
@@ -43,6 +46,7 @@ def index(self, key: Arg) -> Timestream:
     else:
         raise TypeError(f"Cannot index into {data_type}")
 
+
 def length(self) -> Timestream:
     """Return a Timestream containing the length of `self`.
 
@@ -55,6 +59,7 @@ def length(self) -> Timestream:
         return Timestream._call("list_len", self)
     else:
         raise TypeError(f"length not supported for {self.data_type}")
+
 
 def union(self, other: Arg) -> Timestream:
     """Union the lists in this timestream with the lists in the other Timestream.

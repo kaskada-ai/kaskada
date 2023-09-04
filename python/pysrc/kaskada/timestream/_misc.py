@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from typing import (
-    Callable,
-    Tuple,
-    Union,
-    final,
-)
+from typing import Callable, Tuple, Union, final
 
 import pyarrow as pa
 
-from . import Timestream, Arg
+from . import Arg, Timestream
+
 
 def cast(self, data_type: pa.DataType) -> Timestream:
     """Return this Timestream cast to the given data type.
@@ -18,6 +14,7 @@ def cast(self, data_type: pa.DataType) -> Timestream:
         data_type: The DataType to cast to.
     """
     return Timestream(self._ffi_expr.cast(data_type))
+
 
 def coalesce(self, arg: Arg, *args: Arg) -> Timestream:
     """Return a Timestream containing the first non-null point from self and the arguments.
@@ -41,6 +38,7 @@ def else_(self, other: Timestream) -> Timestream:
     """
     return Timestream._call("else", other, self)
 
+
 def filter(self, condition: Arg) -> Timestream:
     """Return a Timestream containing only the points where `condition` is `true`.
 
@@ -48,6 +46,7 @@ def filter(self, condition: Arg) -> Timestream:
         condition: The condition to filter on.
     """
     return Timestream._call("when", condition, self)
+
 
 def hash(self) -> Timestream:
     """Return a Timestream containing the hash of the input.
@@ -59,6 +58,7 @@ def hash(self) -> Timestream:
     """
     return Timestream._call("hash", self)
 
+
 def if_(self, condition: Arg) -> Timestream:
     """Return a `Timestream` from `self` at points where `condition` is `true`, and `null` otherwise.
 
@@ -66,6 +66,7 @@ def if_(self, condition: Arg) -> Timestream:
         condition: The condition to check.
     """
     return Timestream._call("if", condition, self, input=self)
+
 
 def lag(self, n: int) -> Timestream:
     """Return a Timestream containing the value `n` points before each point.
@@ -76,6 +77,7 @@ def lag(self, n: int) -> Timestream:
     # hack to support structs/lists (as collect supports lists)
     return self.collect(max=n + 1, min=n + 1)[0]
 
+
 def null_if(self, condition: Arg) -> Timestream:
     """Return a `Timestream` from `self` at points where `condition` is not `false`, and `null` otherwise.
 
@@ -83,6 +85,7 @@ def null_if(self, condition: Arg) -> Timestream:
         condition: The condition to check.
     """
     return Timestream._call("null_if", condition, self, input=self)
+
 
 @final
 def pipe(

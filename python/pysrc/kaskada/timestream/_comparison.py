@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from . import Timestream, Arg
+from . import Arg, Timestream
+
 
 def eq(self, other: Arg) -> Timestream:
     """Return a Timestream that is true if this is equal to `other`.
@@ -13,6 +14,7 @@ def eq(self, other: Arg) -> Timestream:
     """
     return Timestream._call("eq", self, other, input=self)
 
+
 def ge(self, rhs: Arg) -> Timestream:
     """Return a TimeStream that is true if this is greater than or equal to `rhs`.
 
@@ -24,7 +26,8 @@ def ge(self, rhs: Arg) -> Timestream:
     """
     return Timestream._call("gte", self, rhs, input=self)
 
-def __ge__(self, rhs: Arg) -> Timestream:
+
+def ge__(self, rhs: Arg) -> Timestream:
     """Implement `self >= rhs`."""
     return self.ge(rhs)
 
@@ -40,9 +43,11 @@ def gt(self, rhs: Arg) -> Timestream:
     """
     return Timestream._call("gt", self, rhs, input=self)
 
-def __gt__(self, rhs: Arg) -> Timestream:
+
+def gt__(self, rhs: Arg) -> Timestream:
     """Implement `self > rhs`."""
     return self.gt(rhs)
+
 
 def le(self, rhs: Arg) -> Timestream:
     """Return a Timestream that is true if this is less than or equal to `rhs`.
@@ -55,9 +60,11 @@ def le(self, rhs: Arg) -> Timestream:
     """
     return Timestream._call("lte", self, rhs, input=self)
 
-def __le__(self, rhs: Arg) -> Timestream:
+
+def le__(self, rhs: Arg) -> Timestream:
     """Implement `self <= rhs`."""
     return self.le(rhs)
+
 
 def lt(self, rhs: Arg) -> Timestream:
     """Return a Timestream that is true if this is less than `rhs`.
@@ -70,9 +77,11 @@ def lt(self, rhs: Arg) -> Timestream:
     """
     return Timestream._call("lt", self, rhs, input=self)
 
-def __lt__(self, rhs: Arg) -> Timestream:
+
+def lt__(self, rhs: Arg) -> Timestream:
     """Implement `self < rhs`."""
     return self.lt(rhs)
+
 
 def ne(self, other: Arg) -> Timestream:
     """Return a Timestream that is true if this is not equal to `other`.
@@ -85,9 +94,11 @@ def ne(self, other: Arg) -> Timestream:
     """
     return Timestream._call("neq", self, other, input=self)
 
+
 def is_not_null(self) -> Timestream:
     """Return a boolean Timestream containing `true` when `self` is not `null`."""
     return Timestream._call("is_valid", self)
+
 
 def is_null(self) -> Timestream:
     """Return a boolean Timestream containing `true` when `self` is `null`."""
