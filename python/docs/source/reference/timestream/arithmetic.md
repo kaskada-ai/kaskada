@@ -11,7 +11,7 @@ See the notes on the specific functions for more information.
 ## Arithmetic Methods
 
 ```{eval-rst}
-.. currentmodule:: kaskada
+.. currentmodule:: kaskada.timestream
 
 .. autosummary::
    :toctree: ../apidocs/

@@ -1,7 +1,7 @@
 # String
 
 ```{eval-rst}
-.. currentmodule:: kaskada
+.. currentmodule:: kaskada.timestream
 
 .. autosummary::
    :toctree: ../apidocs/

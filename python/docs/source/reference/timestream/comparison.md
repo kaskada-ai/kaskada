@@ -13,7 +13,7 @@ To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *no
 ## Comparison Methods
 
 ```{eval-rst}
-.. currentmodule:: kaskada
+.. currentmodule:: kaskada.timestream
 
 .. autosummary::
    :toctree: ../apidocs/

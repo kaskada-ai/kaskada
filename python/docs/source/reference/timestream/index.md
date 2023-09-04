@@ -5,15 +5,15 @@ html_theme.sidebar_secondary.remove:
 # Timestream
 
 ```{eval-rst}
-.. currentmodule:: kaskada
+.. currentmodule:: kaskada.timestream
 
-.. autoclass:: kaskada.Timestream
+.. autoclass:: Timestream
     :exclude-members: __init__
 
     .. autoproperty:: data_type
 
-.. autoclass:: kaskada.Arg
-.. autoclass:: kaskada.LiteralValue
+.. autoclass:: Arg
+.. autoclass:: LiteralValue
 ```
 
 ```{toctree}
