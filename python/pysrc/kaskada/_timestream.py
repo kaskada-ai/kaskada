@@ -947,14 +947,6 @@ class Timestream(object):
         """
         return record(fields(self))
 
-<<<<<<< HEAD
-    def preview(
-        self,
-        limit: int = 10,
-        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
-    ) -> pd.DataFrame:
-        """Preview the points in this TimeStream as a DataFrame.
-=======
     def round(self) -> Timestream:
         """Return a Timestream with all values rounded to the nearest integer.
 
@@ -1020,11 +1012,12 @@ class Timestream(object):
         """
         return Timestream._call("zip_min", self, rhs)
 
-    def preview(self, limit: int = 100) -> pd.DataFrame:
-        """Return the first N rows of the result as a Pandas DataFrame.
-
-        This makes it easy to preview the content of the Timestream.
->>>>>>> 4f3e84d3 (implemented numerous existing operations)
+    def preview(
+        self,
+        limit: int = 10,
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+    ) -> pd.DataFrame:
+        """Preview the points in this TimeStream as a DataFrame.
 
         Args:
             limit: The number of points to preview.
