@@ -974,7 +974,7 @@ class Timestream(object):
         """Return a Timestream with all values converted to upper case."""
         return Timestream._call("upper", self)
 
-    def greatest(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def greatest(self, rhs: Arg) -> Timestream:
         """Return a Timestream with the maximum value of `self` and `rhs` at each point.
 
         Args:
@@ -993,7 +993,7 @@ class Timestream(object):
         """
         return Timestream._call("zip_max", self, rhs)
 
-    def least(self, rhs: Union[Timestream, Literal]) -> Timestream:
+    def least(self, rhs: Arg) -> Timestream:
         """Return a Timestream with the minimum value of `self` and `rhs` at each point.
 
         Args:
