@@ -5,7 +5,7 @@ Timestreams allow each point to contain a collection -- a `list` or `map` -- of 
 ## Collection Methods
 
 ```{eval-rst}
-.. currentmodule:: kaskada.timestream
+.. currentmodule:: kaskada._timestream
 
 .. autosummary::
    :toctree: ../apidocs/

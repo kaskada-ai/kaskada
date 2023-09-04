@@ -5,7 +5,7 @@ html_theme.sidebar_secondary.remove:
 # Timestream
 
 ```{eval-rst}
-.. currentmodule:: kaskada.timestream
+.. currentmodule:: kaskada._timestream
 
 .. autoclass:: Timestream
     :exclude-members: __init__

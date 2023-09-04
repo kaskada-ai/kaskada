@@ -9,7 +9,7 @@ It is important to remember that aggregations are partitioned by entity and wind
 ## Aggregation Methods
 
 ```{eval-rst}
-.. currentmodule:: kaskada.timestream
+.. currentmodule:: kaskada._timestream
 
 .. autosummary::
    :toctree: ../apidocs/

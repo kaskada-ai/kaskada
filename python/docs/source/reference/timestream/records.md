@@ -5,7 +5,7 @@ Record operations create, extract or manipulate Timestreams of records.
 ## Record Methods
 
 ```{eval-rst}
-.. currentmodule:: kaskada.timestream
+.. currentmodule:: kaskada._timestream
 
 .. autosummary::
    :toctree: ../apidocs/
