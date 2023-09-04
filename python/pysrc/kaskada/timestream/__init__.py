@@ -2,77 +2,21 @@
 
 from __future__ import annotations
 
-# after Timestream is initialized, add all the methods
-from ._aggregation import (
-    collect,
-    count,
-    count_if,
-    first,
-    last,
-    max,
-    mean,
-    min,
-    stddev,
-    sum,
-    variance,
-)
-from ._arithmetic import (
-    add,
-    add__,
-    addr__,
-    ceil,
-    clamp,
-    div,
-    div__,
-    divr__,
-    exp,
-    floor,
-    greatest,
-    least,
-    mul,
-    mul__,
-    mulr__,
-    neg,
-    powf,
-    round,
-    sqrt,
-    sub,
-    sub__,
-    subr__,
-)
-from ._collection import flatten, getitem__, index, length, union
-from ._comparison import (
-    eq,
-    ge,
-    ge__,
-    gt,
-    gt__,
-    is_not_null,
-    is_null,
-    le,
-    le__,
-    lt,
-    lt__,
-    ne,
-)
-from ._execution import preview, run_iter, to_pandas, write
-from ._grouping import lookup, with_key
-from ._logical import and_, not_, or_
-from ._misc import cast, coalesce, else_, filter, hash, if_, lag, null_if, pipe
-from ._records import _record, col, extend, remove, select
-from ._string import lower, upper
-from ._time import (
-    seconds_since,
-    seconds_since_previous,
-    shift_by,
-    shift_to,
-    shift_until,
-    time,
-)
-
 # this must be imported first to avoid circular imports
-from ._timestream import Timestream
+from ._timestream import Timestream, Arg, LiteralValue, record, Literal
 
+# after Timestream is initialized, add all the methods
+from ._aggregation import collect, count, count_if, first, last, max, mean, min, stddev, sum, variance
+from ._arithmetic import add, add__, addr__, ceil, clamp, div, div__, divr__, exp, floor, greatest, least, mul, mul__, mulr__, neg, powf, round, sqrt, sub, sub__, subr__
+from ._collection import getitem__, flatten, index, length, union
+from ._comparison import eq, ge, ge__, gt, gt__, le, le__, lt, lt__, ne, is_not_null, is_null
+from ._execution import preview, to_pandas, run_iter, write
+from ._grouping import lookup, with_key
+from ._logical import and_, or_, not_
+from ._misc import cast, coalesce, else_, filter, hash, if_, lag, null_if, pipe
+from ._records import col, extend, _record, remove, select
+from ._string import lower, upper
+from ._time import shift_by, shift_to, shift_until, time, seconds_since, seconds_since_previous
 
 # aggregation
 Timestream.collect = collect

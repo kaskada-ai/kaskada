@@ -5,3 +5,4 @@ max-line-length = 100
 max-complexity = 10
 rst-roles = class,const,func,meth,mod,ref
 rst-directives = deprecated
+exclude = pysrc/kaskada/timestream/__init__.py
