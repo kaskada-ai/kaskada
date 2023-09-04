@@ -301,6 +301,20 @@ class Timestream(object):
         """Return a Timestream of self rounded down to the nearest integer."""
         return Timestream._call("floor", self)
 
+    def hash(self) -> Timestream:
+        """Return a Timestream containing the hash of the input.
+
+        Notes:
+            This will only return `null` when interpolated at points where
+            the input is not defined. At other points, it will return the
+            hash of `null`, which is `0` (not `null`).
+        """
+        return Timestream._call("hash", self)
+
+    def lower(self) -> Timestream:
+        """Return a Timestream with all values converted to lower case."""
+        return Timestream._call("lower", self)
+
     def mul(self, rhs: Arg) -> Timestream:
         """Return a Timestream multiplying this and `rhs`.
 
@@ -803,6 +817,11 @@ class Timestream(object):
 
         Args:
             window: The window to use for the aggregation. Defaults to the entire Timestream.
+
+        See Also:
+            This returns the maximum of values in a column. See
+            :func:`greatest` to get the maximum value
+            between Timestreams at each point.
         """
         return _aggregation("max", self, window)
 
@@ -813,6 +832,11 @@ class Timestream(object):
 
         Args:
             window: The window to use for the aggregation. Defaults to the entire Timestream.
+
+        See Also:
+            This returns the minimum of values in a column. See
+            :func:`least` to get the minimum value
+            between Timestreams at each point.
         """
         return _aggregation("min", self, window)
 
@@ -922,6 +946,71 @@ class Timestream(object):
               timestreams.
         """
         return record(fields(self))
+
+    def round(self) -> Timestream:
+        """Return a Timestream with all values rounded to the nearest integer.
+
+        Returns:
+            A Timestream of the same type as `self`. The result contains `null`
+            if the value was `null` at that point. Otherwise, it contains
+            the result of rounding the value to the nearest integer.
+
+        Notes:
+            This method may be applied to any numeric type. For anything other
+            than `float32` and `float64` it has no affect since the values
+            are already integers.
+
+        See Also:
+            - :func:`ceil`
+            - :func:`floor`
+        """
+        return Timestream._call("round", self)
+
+    def sqrt(self) -> Timestream:
+        """Return a Timestream with the square root of all values."""
+        return Timestream._call("sqrt", self)
+
+    def upper(self) -> Timestream:
+        """Return a Timestream with all values converted to upper case."""
+        return Timestream._call("upper", self)
+
+    def greatest(self, rhs: Arg) -> Timestream:
+        """Return a Timestream with the maximum value of `self` and `rhs` at each point.
+
+        Args:
+            rhs: The Timestream or literal value to compare to this.
+
+        Returns:
+            Each point contains the value from `self` if `self`
+            is greater than `rhs`, otherwise it contains `rhs`.
+            If any input is `null` or `NaN`, then that will be
+            the result.
+
+        See Also:
+            This returns the greatest of two values. See
+            :func:`max` for the maximum of values in
+            a column.
+        """
+        return Timestream._call("zip_max", self, rhs)
+
+    def least(self, rhs: Arg) -> Timestream:
+        """Return a Timestream with the minimum value of `self` and `rhs` at each point.
+
+        Args:
+            rhs: The Timestream or literal value to compare to this.
+
+        Returns:
+            Each point contains the value from `self` if `self`
+            is less than `rhs`, otherwise it contains `rhs`.
+            If any input is `null` or `NaN`, then that will be
+            the result.
+
+        See Also:
+            This returns the least of two values. See
+            :func:`min` for the minimum of values in
+            a column.
+        """
+        return Timestream._call("zip_min", self, rhs)
 
     def preview(
         self,

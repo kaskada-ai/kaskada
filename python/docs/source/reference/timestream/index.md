@@ -28,5 +28,6 @@ grouping
 logical
 misc
 records
+string
 time
 ```
