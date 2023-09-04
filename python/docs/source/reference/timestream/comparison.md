@@ -24,6 +24,6 @@ To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *no
     Timestream.le
     Timestream.lt
     Timestream.ne
-    Timestream.is_null
     Timestream.is_not_null
+    Timestream.is_null
 ```

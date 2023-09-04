@@ -6,7 +6,7 @@ import pyarrow as pa
 from typing_extensions import TypeAlias
 
 from .._session import _get_session
-from .._timestream import Timestream
+from ..timestream import Timestream
 
 
 _TABLE_NUM: int = 0

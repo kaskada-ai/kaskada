@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Callable
 
-from ._timestream import Timestream
+from .timestream import Timestream
 
 
 @dataclass(frozen=True)

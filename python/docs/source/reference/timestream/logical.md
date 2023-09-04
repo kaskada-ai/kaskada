@@ -7,6 +7,6 @@
    :toctree: ../apidocs/
 
     Timestream.and_
-    Timestream.or_
     Timestream.not_
+    Timestream.or_
 ```

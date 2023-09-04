@@ -4,7 +4,7 @@ from __future__ import annotations
 from . import destinations, plot, sources, windows
 from ._execution import Execution, ResultIterator
 from ._session import init_session
-from ._timestream import Arg, LiteralValue, Timestream, record
+from .timestream import Arg, LiteralValue, Timestream, record
 from .udf import udf
 
 

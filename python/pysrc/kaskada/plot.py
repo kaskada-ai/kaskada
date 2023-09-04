@@ -20,7 +20,7 @@ import itertools
 from dataclasses import dataclass
 from typing import Optional
 
-from ._timestream import Timestream
+from .timestream import Timestream
 
 
 @dataclass
