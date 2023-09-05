@@ -18,7 +18,7 @@ def get_value_from_toml(file_path: str, toml_path: str | List[str]) -> str:
     return str(temp)  # Convert value to string in case it's a number or boolean
 
 
-def update_version_in_data(data: Dict, version: str, toml_paths: List[str]) -> None:
+def set_version_in_data(data: Dict, version: str, toml_paths: List[str]) -> None:
     """Update the version number in a data dictionary (parsed TOML) at multiple paths."""
     for path in toml_paths:
         temp = data
@@ -28,9 +28,9 @@ def update_version_in_data(data: Dict, version: str, toml_paths: List[str]) -> N
         temp[path[-1]] = version
 
 
-def update_versions(entries: List[str], version: str) -> None:
+def set_versions(entries: List[str], version: str) -> None:
     """Update the version number in the given entries."""
-        # Dictionary to hold the paths for each file
+    # Dictionary to hold the paths for each file
     file_paths_dict = defaultdict(list)
 
     for entry in entries:
@@ -48,7 +48,7 @@ def update_versions(entries: List[str], version: str) -> None:
         with open(file_path, 'r') as f:
             data = tomlkit.parse(f.read())
 
-        update_version_in_data(data, version, paths)
+        set_version_in_data(data, version, paths)
 
         with open(file_path, 'w') as f:
             f.write(dumps(data))
@@ -85,7 +85,7 @@ def main() -> None:
             version = normalize_version(version)
         print(version)
     elif args.command == "set":
-        update_versions(args.entries, args.version)
+        set_versions(args.entries, args.version)
     elif args.command == "normalize":
         print(normalize_version(args.version))
     else:
