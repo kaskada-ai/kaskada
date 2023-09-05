@@ -54,7 +54,7 @@ jobs:
         if: github.event_name != 'release'
         run: |
           pip install tomlkit packaging
-          VERSION=$(python ../scripts/version.py get --normalize pyproject.toml project.version)
+          VERSION=$(python ../scripts/version.py get pyproject.toml project.version)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Determine version (release)
         if: github.event_name == 'release'
@@ -62,7 +62,6 @@ jobs:
           echo "GITHUB_REF=${GITHUB_REF}"
           VERSION=${GITHUB_REF#refs/tags/v}
           pip install tomlkit packaging
-          VERSION=$(python ../scripts/version.py normalize $VERSION)
           echo "VERSION=${VERSION}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Set version
@@ -120,7 +119,8 @@ jobs:
       - name: pytest and mypy
         if: matrix.target != 'arm64'
         run: |
-          WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-${{ matrix.wheel_suffix }}.whl"
+          VERSION=$(python ../scripts/version.py normalize ${{ needs.version.outputs.version }})
+          WHEEL="dist/kaskada-${VERSION}-cp38-abi3-${{ matrix.wheel_suffix }}.whl"
           echo "WHEEL:${WHEEL}"
           for V in 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
@@ -183,7 +183,8 @@ jobs:
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
-          WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-win_amd64.whl"
+          VERSION=$(python ../scripts/version.py normalize ${{ needs.version.outputs.version }})
+          WHEEL="dist/kaskada-${VERSION}-cp38-abi3-win_amd64.whl"
           echo "WHEEL:${WHEEL}"
           pip install ${WHEEL} --force-reinstall
           echo "::endgroup::"
@@ -245,7 +246,8 @@ jobs:
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
-          WHEEL="dist/kaskada-${{ needs.version.outputs.version }}-cp38-abi3-manylinux_2_28_${{ matrix.target }}.whl"
+          VERSION=$(python ../scripts/version.py normalize ${{ needs.version.outputs.version }})
+          WHEEL="dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_${{ matrix.target }}.whl"
           echo "WHEEL:${WHEEL}"
           for V in 3.9 3.10 3.11; do
             echo "::group::Install for Python $V"
