@@ -98,7 +98,10 @@ impl Expr {
         let mut rust_session = session.rust_session()?;
 
         let rust_expr = rust_session
-            .add_literal(RustLiteral::Timedelta(s, ns))
+            .add_literal(RustLiteral::Timedelta {
+                seconds: s,
+                nanos: ns,
+            })
             .map_err(|_| PyRuntimeError::new_err("unable to create timedelta"))?;
 
         std::mem::drop(rust_session);
