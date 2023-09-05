@@ -3788,6 +3788,7 @@ version = "0.11.0"
 dependencies = [
  "anyhow",
  "arrow",
+ "arrow-arith",
  "arrow-schema",
  "bincode",
  "bit-set",

@@ -55,7 +55,7 @@ impl Session {
             Literal::Int64(n) => LiteralValue::Number(n.to_string()),
             Literal::UInt64(n) => LiteralValue::Number(n.to_string()),
             Literal::Float64(n) => LiteralValue::Number(n.to_string()),
-            Literal::Timedelta(s, ns) => LiteralValue::Timedelta(s, ns),
+            Literal::Timedelta { seconds, nanos } => LiteralValue::Timedelta { seconds, nanos },
         };
         self.add_to_dfg(
             ExprOp::Literal(Located::builder(literal_value)),
