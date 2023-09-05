@@ -33,7 +33,7 @@ class Expr:
         value: int | float | str | None,
     ) -> Expr: ...
     @staticmethod
-    def literal_datetime(
+    def literal_timedelta(
         session: Session,
         s: int,
         ns: int,

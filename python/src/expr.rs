@@ -94,7 +94,7 @@ impl Expr {
 
     #[staticmethod]
     #[pyo3(signature = (session, s, ns))]
-    fn literal_datetime(session: Session, s: i64, ns: i64) -> PyResult<Self> {
+    fn literal_timedelta(session: Session, s: i64, ns: i64) -> PyResult<Self> {
         let mut rust_session = session.rust_session()?;
 
         let rust_expr = rust_session

@@ -489,19 +489,8 @@ fn least_upper_bound_data_type(a: DataType, b: &DataType) -> Option<DataType> {
         (Null, other) => Some(other.clone()),
         (other, Null) => Some(other),
 
-        // Duration types can cast to more granular duration types
-        // s -> any
-        // ms -> us,ns
-        // us -> ns
-        // nanosecond is omitted, as the catch all should find that lhs == rhs
-        (Duration(TimeUnit::Second), other @ Duration(_)) => Some(other.clone()),
-        (
-            Duration(TimeUnit::Millisecond),
-            other @ Duration(TimeUnit::Microsecond | TimeUnit::Nanosecond),
-        ) => Some(other.clone()),
-        (Duration(TimeUnit::Microsecond), other @ Duration(TimeUnit::Nanosecond)) => {
-            Some(other.clone())
-        }
+        // Duration types cast to the more granular TimeUnit
+        (Duration(unit1), Duration(unit2)) => Some(Duration(std::cmp::max(unit1, unit2.clone()))),
 
         // Catch all
         (lhs, rhs) if &lhs == rhs => Some(lhs),
@@ -668,6 +657,10 @@ fn can_implicitly_cast(from: &DataType, to: &DataType) -> bool {
         (Utf8, Timestamp(TimeUnit::Nanosecond, None)) => true,
         (Utf8, LargeUtf8) => true,
         (Timestamp(_, _), Timestamp(TimeUnit::Nanosecond, None)) => true,
+        // More granular time units are "greater than" less granular time units,
+        // so we can implicitly cast from a more granular time unit to a lesser one
+        // by checking if the latter is greater than the former
+        (Duration(tu1), Duration(tu2)) => tu2 > tu1,
         // Other promotions must be explicitly requested.
         (_, _) => false,
     }

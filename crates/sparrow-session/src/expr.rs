@@ -29,6 +29,5 @@ pub enum Literal {
     Int64(i64),
     UInt64(u64),
     Float64(f64),
-    /// time in s, nanos
-    Timedelta(i64, i64),
+    Timedelta { seconds: i64, nanos: i64 },
 }

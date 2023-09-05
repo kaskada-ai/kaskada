@@ -22,8 +22,10 @@ pub enum LiteralValue {
     /// loss of precision we retain the original string.
     Number(String),
     String(String),
-    /// Time in s, nanos
-    Timedelta(i64, i64),
+    Timedelta {
+        seconds: i64,
+        nanos: i64,
+    },
 }
 
 impl std::fmt::Display for LiteralValue {
