@@ -73,7 +73,7 @@ def test_time_add_seconds(source, golden) -> None:
 def test_compare_literal_timedelta(source, golden) -> None:
     time = source.col("time")
     seconds_since = time.seconds_since_previous()
-    td = timedelta(seconds=1)
+    td = timedelta(milliseconds=1000)
     golden.jsonl(
         kd.record(
             (
