@@ -6,8 +6,11 @@ use std::sync::Arc;
 
 use crate::ValueRef;
 use anyhow::anyhow;
-use arrow::array::{ArrayRef, Int32Array, IntervalDayTimeArray, IntervalYearMonthArray};
+use arrow::array::{
+    Array, ArrayRef, AsArray, Int32Array, Int64Array, IntervalDayTimeArray, IntervalYearMonthArray,
+};
 use arrow::datatypes::DataType;
+use arrow_schema::TimeUnit;
 use sparrow_arrow::downcast::downcast_primitive_array;
 use sparrow_kernels::time::i64_to_two_i32;
 use sparrow_syntax::FenlType;
@@ -46,6 +49,11 @@ impl CastEvaluator {
                 ),
                 ty,
             ) if CastEvaluator::is_supported_interval_cast(ty) => true,
+            // Support explicit casting from a duration to a duration. Note that this means
+            // that casting to a less granular unit will lose precision.
+            //
+            // Arrow doesn't currently support this directly, so this hacks it a bit.
+            (DataType::Duration(_), DataType::Duration(_)) => true,
             _ => false,
         }
     }
@@ -89,9 +97,42 @@ impl CastEvaluator {
                     input.data_type()
                 )),
             },
+            // Arrow does not support casting directly from duration to duration types, but it does
+            // support casting to the underlying data type (int64) then back to any duration type.
+            // This hacks that cast by doing the multiplication manually then casting back to the
+            // desired type.
+            (DataType::Duration(tu1), DataType::Duration(tu2)) => {
+                cast_duration(input.as_ref(), tu1, tu2)
+            }
             _ => arrow::compute::cast(input, to).map_err(|e| e.into()),
         }
     }
+}
+
+fn time_unit_nanos(unit: &TimeUnit) -> i64 {
+    match unit {
+        TimeUnit::Second => 1_000_000_000,
+        TimeUnit::Millisecond => 1_000_000,
+        TimeUnit::Microsecond => 1_000,
+        TimeUnit::Nanosecond => 1,
+    }
+}
+
+fn cast_duration(input: &dyn Array, from: &TimeUnit, to: &TimeUnit) -> anyhow::Result<ArrayRef> {
+    let input: ArrayRef = arrow::compute::cast(input, &DataType::Int64)?;
+    let input: &Int64Array = input.as_primitive();
+
+    let from_nanos = time_unit_nanos(from);
+    let to_nanos = time_unit_nanos(to);
+
+    let result = if from_nanos < to_nanos {
+        arrow_arith::arithmetic::multiply_scalar(input, to_nanos / from_nanos)?
+    } else {
+        arrow_arith::arithmetic::divide_scalar(input, from_nanos / to_nanos)?
+    };
+
+    let result = arrow::compute::cast(&result, &DataType::Duration(to.clone()))?;
+    Ok(result)
 }
 
 impl Evaluator for CastEvaluator {

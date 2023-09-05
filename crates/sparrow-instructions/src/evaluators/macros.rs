@@ -180,6 +180,24 @@ macro_rules! create_ordered_evaluator {
             DataType::Timestamp(TimeUnit::Nanosecond, None) => {
                 $evaluator::<$aggf<TimestampNanosecondType>>::try_new($info)
             }
+            DataType::Duration(TimeUnit::Second) => {
+                $evaluator::<$aggf<DurationSecondType>>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Millisecond) => {
+                $evaluator::<$aggf<DurationMillisecondType>>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Microsecond) => {
+                $evaluator::<$aggf<DurationMicrosecondType>>::try_new($info)
+            }
+            DataType::Duration(TimeUnit::Nanosecond) => {
+                $evaluator::<$aggf<DurationNanosecondType>>::try_new($info)
+            }
+            DataType::Interval(IntervalUnit::DayTime) => {
+                $evaluator::<$aggf<IntervalDayTimeType>>::try_new($info)
+            }
+            DataType::Interval(IntervalUnit::YearMonth) => {
+                $evaluator::<$aggf<IntervalYearMonthType>>::try_new($info)
+            }
             unsupported_type => {
                 // This macro should only be used on `ordered` numeric types.
                 Err(anyhow::anyhow!(format!(

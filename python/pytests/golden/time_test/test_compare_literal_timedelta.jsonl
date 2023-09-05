@@ -1,0 +1,7 @@
+{"_time":"1996-12-19T16:39:57.000000000","_key":"A","seconds_since":null,"eq_1s":null,"gt_1s":null,"ge_1s":null,"lt_1s":null,"le_1s":null}
+{"_time":"1996-12-19T16:39:58.000000000","_key":"B","seconds_since":null,"eq_1s":null,"gt_1s":null,"ge_1s":null,"lt_1s":null,"le_1s":null}
+{"_time":"1996-12-19T16:39:59.000000000","_key":"A","seconds_since":2.0,"eq_1s":false,"gt_1s":false,"ge_1s":false,"lt_1s":true,"le_1s":true}
+{"_time":"1997-01-18T16:40:00.000000000","_key":"A","seconds_since":2592001.0,"eq_1s":false,"gt_1s":false,"ge_1s":false,"lt_1s":true,"le_1s":true}
+{"_time":"1997-01-18T16:40:01.000000000","_key":"A","seconds_since":1.0,"eq_1s":false,"gt_1s":false,"ge_1s":false,"lt_1s":true,"le_1s":true}
+{"_time":"1997-01-18T16:40:03.000000000","_key":"A","seconds_since":2.0,"eq_1s":false,"gt_1s":false,"ge_1s":false,"lt_1s":true,"le_1s":true}
+{"_time":"1997-01-18T16:40:04.000000000","_key":"A","seconds_since":1.0,"eq_1s":false,"gt_1s":false,"ge_1s":false,"lt_1s":true,"le_1s":true}

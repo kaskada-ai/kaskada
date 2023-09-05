@@ -4458,6 +4458,7 @@ dependencies = [
  "anyhow",
  "approx 0.5.1",
  "arrow",
+ "arrow-arith",
  "arrow-schema",
  "bincode",
  "bit-set",
