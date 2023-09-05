@@ -1,7 +1,8 @@
 import tomlkit
 import argparse
-from typing import Dict
-from typing import List
+from collections import defaultdict
+from tomlkit import dumps
+from typing import Dict, List
 from packaging.version import parse
 
 def get_value_from_toml(file_path: str, toml_path: str | List[str]) -> str:
@@ -32,7 +33,7 @@ def update_versions(entries: List[str], version: str) -> None:
         # Dictionary to hold the paths for each file
     file_paths_dict = defaultdict(list)
 
-    for entry in args.entries:
+    for entry in entries:
         parts = entry.split(":")
         if len(parts) != 2:
             print(f"Invalid entry format: {entry}")
@@ -47,7 +48,7 @@ def update_versions(entries: List[str], version: str) -> None:
         with open(file_path, 'r') as f:
             data = tomlkit.parse(f.read())
 
-        update_version_in_data(data, args.version, paths)
+        update_version_in_data(data, version, paths)
 
         with open(file_path, 'w') as f:
             f.write(dumps(data))
@@ -84,7 +85,7 @@ def main() -> None:
             version = normalize_version(version)
         print(version)
     elif args.command == "set":
-        set_version(args.toml_file, args.key, args.version)
+        update_versions(args.entries, args.version)
     elif args.command == "normalize":
         print(normalize_version(args.version))
     else:
