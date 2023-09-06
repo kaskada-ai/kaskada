@@ -45,6 +45,10 @@ class GoldenFixture(object):
             date_unit="ns",
         )
 
+        if golden.empty and df.empty:
+            # For some reason, even when specifying the dtypes, reading an empty
+            # json produces no columns.
+            return
         pd.testing.assert_frame_equal(df, golden, check_datetimelike_compat=True)
 
     def parquet(self, data: Union[kd.Timestream, pd.DataFrame]) -> None:

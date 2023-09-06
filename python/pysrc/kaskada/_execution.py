@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AsyncIterator, Callable, Iterator, Optional, TypeVar
+from typing import AsyncIterator, Callable, Iterator, Literal, Optional, TypeVar
 
 import pyarrow as pa
 
@@ -11,18 +11,32 @@ T = TypeVar("T")
 
 @dataclass
 class _ExecutionOptions:
-    """Execution options passed to the FFI layer.
+    """Execution options passed to the FFI layer."""
 
-    Attributes:
-        row_limit: The maximum number of rows to return. If not specified, all rows are returned.
-        max_batch_size: The maximum batch size to use when returning results.
-          If not specified, the default batch size will be used.
-        materialize: If true, the query will be a continuous materialization.
-    """
-
+    #: The maximum number of rows to return.
+    #: If not specified, all rows are returned.
     row_limit: Optional[int] = None
+
+    #: The maximum batch size to use when returning results.
+    #: If not specified, the default batch size will be used.
     max_batch_size: Optional[int] = None
+
+    #: If true, the query will be a continuous materialization.
     materialize: bool = False
+
+    #: The type of results to return.
+    results: Literal["history", "snapshot"] = "history"
+
+    #: The earliest time of changes to include in the results.
+    #: For history, this limits the points output.
+    #: For snapshots, this limits the entities that are output.
+    changed_since: Optional[int] = None
+
+    #: The last time to process.
+    #: If not set, defaults to the current time.
+    #: For history, this limits the points output.
+    #: For snapshots, this determines when the snapshot is produced.
+    final_at: Optional[int] = None
 
 
 class Execution:

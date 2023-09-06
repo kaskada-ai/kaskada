@@ -35,6 +35,13 @@ pub struct Session {
 }
 
 #[derive(Default)]
+pub enum Results {
+    #[default]
+    History,
+    Snapshot,
+}
+
+#[derive(Default)]
 pub struct ExecutionOptions {
     /// The maximum number of rows to return.
     pub row_limit: Option<usize>,
@@ -42,6 +49,16 @@ pub struct ExecutionOptions {
     pub max_batch_size: Option<usize>,
     /// Whether to run execute as a materialization or not.
     pub materialize: bool,
+    /// History or Snapshot results.
+    pub results: Results,
+    /// The changed since time. This is the minimum timestamp of changes to events.
+    /// For historic queries, this limits the output points.
+    /// For snapshot queries, this limits the set of entities that are considered changed.
+    pub changed_since_time_s: Option<i64>,
+    /// The final at time. This is the maximum timestamp output.
+    /// For historic queries, this limits the output points.
+    /// For snapshot queries, this determines the time at which the snapshot is produced.
+    pub final_at_time_s: Option<i64>,
 }
 
 /// Adds a table to the session.
@@ -346,31 +363,49 @@ impl Session {
         }
     }
 
+    /// Execute the query.
+    ///
+    /// It is unnfortunate this requires `&mut self` instead of `&self`. It relates to the
+    /// fact that the decorations may require mutating the DFG, which in turn requires
+    /// mutability. In practice, the decorations shouldn't mutate the DFG and/or that
+    /// shouldn't require mutating the session.
     pub fn execute(
-        &self,
-        expr: &Expr,
+        &mut self,
+        query: &Expr,
         options: ExecutionOptions,
     ) -> error_stack::Result<Execution, Error> {
         // TODO: Decorations?
-        let group_id = expr
+        let group_id = query
             .0
             .grouping()
             .expect("query to be grouped (non-literal)");
-        let primary_group_info = self
-            .data_context
-            .group_info(group_id)
-            .expect("missing group info");
-        let primary_grouping = primary_group_info.name().to_owned();
-        let primary_grouping_key_type = primary_group_info.key_type();
 
-        // Hacky. Ideally, we'd determine the schema from the created execution plan.
-        // Currently, this isn't easily available. Instead, we create this from the
-        // columns we know we're producing.
-        let schema = result_schema(expr, primary_grouping_key_type)?;
+        let per_entity_behavior = match options.results {
+            Results::History => PerEntityBehavior::All,
+            Results::Snapshot if options.final_at_time_s.is_some() => {
+                PerEntityBehavior::FinalAtTime
+            }
+            Results::Snapshot => PerEntityBehavior::Final,
+        };
 
-        // First, extract the necessary subset of the DFG as an expression.
+        // Apply decorations as necessary for the per-entity behavior.
+        let feature_set = FeatureSet::default();
+        let mut diagnostics = DiagnosticCollector::new(&feature_set);
+        let expr = sparrow_compiler::decorate(
+            &mut self.data_context,
+            &mut self.dfg,
+            &mut diagnostics,
+            true,
+            query.0.clone(),
+            per_entity_behavior,
+        )
+        .into_report()
+        .change_context(Error::Compile)?;
+        error_stack::ensure!(diagnostics.num_errors() == 0, Error::Internal);
+
+        // Extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
-        let expr = self.dfg.extract_simplest(expr.0.value());
+        let expr = self.dfg.extract_simplest(expr);
         let expr = expr
             .simplify(&CompilerOptions {
                 ..CompilerOptions::default()
@@ -381,13 +416,24 @@ impl Session {
             .into_report()
             .change_context(Error::Compile)?;
 
+        let primary_group_info = self
+            .data_context
+            .group_info(group_id)
+            .expect("missing group info");
+        let primary_grouping = primary_group_info.name().to_owned();
+        let primary_grouping_key_type = primary_group_info.key_type();
+
+        // Hacky. Ideally, we'd determine the schema from the created execution plan.
+        // Currently, this isn't easily available. Instead, we create this from the
+        // columns we know we're producing.
+        let schema = result_schema(query, primary_grouping_key_type)?;
+
         // TODO: Incremental?
         // TODO: Slicing?
         let plan = sparrow_compiler::plan::extract_plan_proto(
             &self.data_context,
             expr,
-            // TODO: Configure per-entity behavior.
-            PerEntityBehavior::Final,
+            per_entity_behavior,
             primary_grouping,
             primary_grouping_key_type,
         )
@@ -474,6 +520,13 @@ impl ExecutionOptions {
             options.limits = Some(Limits {
                 preview_rows: row_limit as i64,
             });
+        }
+
+        if let Some(changed_since) = self.changed_since_time_s {
+            options.set_changed_since_s(changed_since);
+        }
+        if let Some(final_at_time) = self.final_at_time_s {
+            options.set_final_at_time_s(final_at_time);
         }
 
         options

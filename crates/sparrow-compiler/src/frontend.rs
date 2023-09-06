@@ -165,72 +165,14 @@ impl FrontendOutput {
             false
         };
 
-        // Decorate the expression as needed for the query_type.
-        let result_node = match options.per_entity_behavior {
-            _ if !executable => {
-                // Don't decorate incomplete or otherwise non-executable expressions.
-                // We don't produce executable plans for incomplete expressions.
-                query.value()
-            }
-            PerEntityBehavior::All => {
-                dfg.enter_env();
-                dfg.bind("result", query);
-                let time_node = create_changed_since_time_node(&mut dfg)?;
-                dfg.bind("__changed_since_time__", time_node);
-
-                let decorated = add_decoration(
-                    data_context,
-                    &mut diagnostics,
-                    &mut dfg,
-                    CHANGED_SINCE_DECORATION,
-                )?;
-                dfg.exit_env();
-                decorated.value()
-            }
-            PerEntityBehavior::Final => {
-                dfg.enter_env();
-                dfg.bind("result", query);
-
-                // Treat FINAL queries as changed_since_time of 0
-                let time_node = create_changed_since_time_node(&mut dfg)?;
-                dfg.bind("__changed_since_time__", time_node);
-
-                let decorated = add_decoration(
-                    data_context,
-                    &mut diagnostics,
-                    &mut dfg,
-                    FINAL_QUERY_DECORATION,
-                )?;
-                dfg.exit_env();
-                decorated.value()
-            }
-            PerEntityBehavior::FinalAtTime => {
-                dfg.enter_env();
-                dfg.bind("result", query);
-
-                // Treat FINAL queries as changed_since_time of 0
-                let time_node = create_changed_since_time_node(&mut dfg)?;
-                dfg.bind("__changed_since_time__", time_node);
-
-                let time_node = create_final_at_time_time_node(&mut dfg)?;
-                dfg.bind("__final_at_time__", time_node);
-
-                // 1. If the final query time is provided then use it as the query final time in
-                // the special decorator 2. Use the same per entity behavior
-                // final for all of them
-                let decorated = add_decoration(
-                    data_context,
-                    &mut diagnostics,
-                    &mut dfg,
-                    FINAL_QUERY_AT_TIME_DECORATION,
-                )?;
-                dfg.exit_env();
-                decorated.value()
-            }
-            PerEntityBehavior::Unspecified => {
-                anyhow::bail!("Unspecified per entity behavior")
-            }
-        };
+        let result_node = decorate(
+            data_context,
+            &mut dfg,
+            &mut diagnostics,
+            executable,
+            query,
+            options.per_entity_behavior,
+        )?;
 
         // Create the basic analysis information.
         let num_errors = diagnostics.num_errors();
@@ -317,6 +259,71 @@ impl FrontendOutput {
             analysis,
             expr: dfg,
         })
+    }
+}
+
+pub fn decorate(
+    data_context: &mut DataContext,
+    dfg: &mut Dfg,
+    diagnostics: &mut DiagnosticCollector<'_>,
+    executable: bool,
+    query: AstDfgRef,
+    per_entity_behavior: PerEntityBehavior,
+) -> anyhow::Result<egg::Id> {
+    match per_entity_behavior {
+        _ if !executable => {
+            // Don't decorate incomplete or otherwise non-executable expressions.
+            // We don't produce executable plans for incomplete expressions.
+            Ok(query.value())
+        }
+        PerEntityBehavior::All => {
+            dfg.enter_env();
+            dfg.bind("result", query);
+            let time_node = create_changed_since_time_node(dfg)?;
+            dfg.bind("__changed_since_time__", time_node);
+            let decorated =
+                add_decoration(data_context, diagnostics, dfg, CHANGED_SINCE_DECORATION)?;
+            dfg.exit_env();
+            Ok(decorated.value())
+        }
+        PerEntityBehavior::Final => {
+            dfg.enter_env();
+            dfg.bind("result", query);
+
+            // Treat FINAL queries as changed_since_time of 0
+            let time_node = create_changed_since_time_node(dfg)?;
+            dfg.bind("__changed_since_time__", time_node);
+
+            let decorated = add_decoration(data_context, diagnostics, dfg, FINAL_QUERY_DECORATION)?;
+            dfg.exit_env();
+            Ok(decorated.value())
+        }
+        PerEntityBehavior::FinalAtTime => {
+            dfg.enter_env();
+            dfg.bind("result", query);
+
+            // Treat FINAL queries as changed_since_time of 0
+            let time_node = create_changed_since_time_node(dfg)?;
+            dfg.bind("__changed_since_time__", time_node);
+
+            let time_node = create_final_at_time_time_node(dfg)?;
+            dfg.bind("__final_at_time__", time_node);
+
+            // 1. If the final query time is provided then use it as the query final time in
+            // the special decorator 2. Use the same per entity behavior
+            // final for all of them
+            let decorated = add_decoration(
+                data_context,
+                diagnostics,
+                dfg,
+                FINAL_QUERY_AT_TIME_DECORATION,
+            )?;
+            dfg.exit_env();
+            Ok(decorated.value())
+        }
+        PerEntityBehavior::Unspecified => {
+            anyhow::bail!("Unspecified per entity behavior")
+        }
     }
 }
 
