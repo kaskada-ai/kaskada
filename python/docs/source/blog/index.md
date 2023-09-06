@@ -3,8 +3,7 @@
 ```{eval-rst}
 .. postlist::
     :list-style: circle
-    :format: {title}
+    :format: {date} - {title}
     :excerpts:
-    :sort:
     :expand: Read more ...
 ```

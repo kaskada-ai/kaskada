@@ -41,7 +41,7 @@ html_sidebars = {
     "index.md": [],
     # Blog sidebars
     # https://ablog.readthedocs.io/manual/ablog-configuration-options/#blog-sidebars
-    "blog/*": [
+    "blog/**": [
         # Information about the post.
         "ablog/postcard.html",
         # 5 most recent posts
@@ -103,6 +103,7 @@ html_theme_options: Dict[str, Any] = {
     # TODO: Version switcher.
     # This would require hosting multiple versions of the docs.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
+
 }
 
 templates_path = ["_templates"]
