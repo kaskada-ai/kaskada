@@ -79,8 +79,8 @@ jobs:
         include:
           - target: x86_64
             wheel_suffix: macosx_11_0_x86_64
-          - target: arm64
-            wheel_suffix: macosx_11_0_arm64
+          # - target: arm64
+          #   wheel_suffix: macosx_11_0_arm64
           - target: universal2
             wheel_suffix: macosx_11_0_x86_64.macosx_11_0_arm64.macosx_11_0_universal2
     steps:
