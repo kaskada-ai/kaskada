@@ -328,4 +328,4 @@ jobs:
         # the latest version.
         run: |
           gh release edit ${{ github.ref_name }} \
-            --draft=false --discussion-category=Announcements"
+            --draft=false --discussion-category "Announcements"
