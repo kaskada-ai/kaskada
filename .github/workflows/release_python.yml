@@ -119,6 +119,7 @@ jobs:
       - name: pytest and mypy
         if: matrix.target != 'arm64'
         run: |
+          pip install tomlkit packaging
           VERSION=$(python ../scripts/version.py normalize ${{ needs.version.outputs.version }})
           WHEEL="dist/kaskada-${VERSION}-cp38-abi3-${{ matrix.wheel_suffix }}.whl"
           echo "WHEEL:${WHEEL}"
@@ -183,6 +184,7 @@ jobs:
           echo "::group::Install for Python 3.11"
           source $(poetry env info --path)\\Scripts\\activate
           poetry install --only=test --only=typecheck
+          pip install tomlkit packaging
           VERSION=$(python ../scripts/version.py normalize ${{ needs.version.outputs.version }})
           WHEEL="dist/kaskada-${VERSION}-cp38-abi3-win_amd64.whl"
           echo "WHEEL:${WHEEL}"
@@ -246,6 +248,7 @@ jobs:
       - name: pytest and mypy (Linux x86_64)
         if: matrix.target == 'x86_64'
         run: |
+          pip install tomlkit packaging
           VERSION=$(python ../scripts/version.py normalize ${{ needs.version.outputs.version }})
           WHEEL="dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_${{ matrix.target }}.whl"
           echo "WHEEL:${WHEEL}"
