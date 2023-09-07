@@ -52,6 +52,26 @@ fn w_value(backend: &SledStateBackend, keys: &[u64]) {
     backend.clear_all().unwrap();
 }
 
+fn batch_w_value(backend: &SledStateBackend, keys: &[u64]) {
+    let mut sum = 0;
+    let mut batch = sled::Batch::default();
+    let mut state_key = StateKey {
+        key_hash: 0,
+        operation_id: 1,
+        step_id: 2,
+    };
+    for key in keys {
+        state_key.key_hash = *key;
+        sum += *key;
+        backend
+            .batch_value_put(&state_key, Some(&sum), &mut batch)
+            .unwrap();
+    }
+
+    backend.flush_batch(batch).unwrap();
+    backend.clear_all().unwrap();
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     let tempdir = tempfile::tempdir().unwrap();
     let state_backend = SledStateBackend::open(tempdir.path()).unwrap();
@@ -64,6 +84,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
     group.bench_with_input("w_i64", &input, |b, keys| {
         b.iter(|| w_value(&state_backend, keys))
+    });
+    group.bench_with_input("batch_w_i64", &input, |b, keys| {
+        b.iter(|| batch_w_value(&state_backend, keys))
     });
 }
 

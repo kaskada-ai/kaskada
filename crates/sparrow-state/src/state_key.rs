@@ -2,6 +2,8 @@
 pub struct StateKey {
     /// Key hash of the entity associated with this state.
     pub key_hash: u64,
+    /// ID of the partition containing the entity.
+    pub partition_id: u8,
     /// Operation ID in the execution plan for this state.
     pub operation_id: u8,
     /// Expression ID in the operation for this state.
@@ -9,9 +11,10 @@ pub struct StateKey {
 }
 
 impl StateKey {
-    pub fn new(key_hash: u64, operation_id: u8, step_id: u8) -> Self {
+    pub fn new(key_hash: u64, partition_id: u8, operation_id: u8, step_id: u8) -> Self {
         StateKey {
             key_hash,
+            partition_id,
             operation_id,
             step_id,
         }

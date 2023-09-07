@@ -23,9 +23,35 @@ impl SledStateBackend {
 
         Ok(Arc::new(backend))
     }
-}
 
-impl StateBackend for SledStateBackend {
+    pub fn flush_batch(&self, batch: sled::Batch) -> error_stack::Result<(), Error> {
+        self.db
+            .apply_batch(batch)
+            .into_report()
+            .change_context(Error::Backend("flush"))?;
+        Ok(())
+    }
+
+    pub fn batch_value_put<T: serde::Serialize>(
+        &self,
+        key: &sparrow_state::StateKey,
+        value: Option<&T>,
+        batch: &mut sled::Batch,
+    ) -> error_stack::Result<(), Error> {
+        match value {
+            None => {
+                batch.remove(key.as_ref());
+            }
+            Some(value) => {
+                let value = bincode::serialize(value)
+                    .into_report()
+                    .change_context_lazy(|| Error::Serialize(key.clone()))?;
+                batch.insert(key.as_ref(), value);
+            }
+        }
+        Ok(())
+    }
+
     fn clear_all(&self) -> error_stack::Result<(), Error> {
         self.db
             .clear()
@@ -37,15 +63,11 @@ impl StateBackend for SledStateBackend {
         &self,
         key: &sparrow_state::StateKey,
     ) -> error_stack::Result<Option<T>, Error> {
-        // Sled fails with an "unexpected end of file" when empty.
-        if self.db.is_empty() {
-            return Ok(None);
-        }
-
-        let value =
-            self.db.get(key).into_report().change_context_lazy(|| {
-                Error::Backend(sparrow_state::Operation::Get, key.clone())
-            })?;
+        let value = self
+            .db
+            .get(key)
+            .into_report()
+            .change_context_lazy(|| Error::BackendKey("get", key.clone()))?;
 
         match value {
             Some(value) => {
@@ -65,9 +87,10 @@ impl StateBackend for SledStateBackend {
     ) -> error_stack::Result<(), Error> {
         match value {
             None => {
-                self.db.remove(key).into_report().change_context_lazy(|| {
-                    Error::Backend(sparrow_state::Operation::Get, key.clone())
-                })?;
+                self.db
+                    .remove(key)
+                    .into_report()
+                    .change_context_lazy(|| Error::BackendKey("put", key.clone()))?;
             }
             Some(value) => {
                 let value = bincode::serialize(value)
@@ -76,9 +99,7 @@ impl StateBackend for SledStateBackend {
                 self.db
                     .insert(key, value)
                     .into_report()
-                    .change_context_lazy(|| {
-                        Error::Backend(sparrow_state::Operation::Get, key.clone())
-                    })?;
+                    .change_context_lazy(|| Error::BackendKey("put", key.clone()))?;
             }
         }
         Ok(())
