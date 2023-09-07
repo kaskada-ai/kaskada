@@ -10,6 +10,10 @@
 
 //! Interface and utilities for state management.
 
-mod state_store;
+mod error;
+mod state_backend;
+mod state_key;
 
-pub use state_store::*;
+pub use error::*;
+pub use state_backend::*;
+pub use state_key::*;

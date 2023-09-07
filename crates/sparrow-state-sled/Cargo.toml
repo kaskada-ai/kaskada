@@ -1,5 +1,5 @@
 [package]
-name = "sparrow-state"
+name = "sparrow-state-sled"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -10,11 +10,20 @@ Interfaces for state storage.
 """
 
 [dependencies]
+bincode.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 sparrow-state = { path = "../sparrow-state" }
+serde.workspace = true
+sled = "^0.34.7"
 
 [dev-dependencies]
+criterion.workspace = true
+tempfile.workspace = true
 
 [lib]
 doctest = false
+
+[[bench]]
+name = "bench_state_sled"
+harness = false

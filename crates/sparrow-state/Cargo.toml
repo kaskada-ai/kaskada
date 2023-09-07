@@ -13,6 +13,7 @@ Interfaces for state storage.
 derive_more.workspace = true
 error-stack.workspace = true
 moka.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 
