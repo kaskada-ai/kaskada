@@ -156,6 +156,9 @@ impl ScanOperation {
                 ))?,
         );
 
+        // TODO: FRAZ TableInfo hacks in the InMemory batches here, then bypasses the
+        // other table info /c compute table stuff. to return early.
+
         if let Some(in_memory) = &table_info.in_memory {
             // Hacky. When doing the Python-builder, use the in-memory batch.
             // Ideally, this would be merged with the contents of the file.

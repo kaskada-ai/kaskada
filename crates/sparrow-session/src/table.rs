@@ -5,7 +5,8 @@ use arrow_array::types::ArrowPrimitiveType;
 use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::ResultExt;
-use sparrow_api::kaskada::v1alpha::PreparedFile;
+use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
+use sparrow_api::kaskada::v1alpha::{compute_table, PreparedFile};
 use sparrow_compiler::TableInfo;
 use sparrow_merge::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
@@ -19,7 +20,7 @@ pub struct Table {
     in_memory_batches: Arc<InMemoryBatches>,
     key_column: usize,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
-    files: Vec<PreparedFile>,
+    files: Arc<Vec<compute_table::FileSet>>,
     // TODO: FRAZ: How is tableinfo created?
     // Answer:  DataContext.add_table (ComputeTable holds the filesets)
     // ComputeTable is created via session.add_table(). With no filesets nor source
@@ -56,6 +57,15 @@ impl Table {
         let in_memory_batches = Arc::new(InMemoryBatches::new(queryable, prepared_schema.clone()));
         table_info.in_memory = Some(in_memory_batches.clone());
 
+        let prepared_files: Vec<PreparedFile> = Vec::new();
+        // The table info here should be empty. We create with empty source and empty filesets.
+        // TODO: Slicing
+        let file_set = Arc::new(compute_table::FileSet {
+            slice_plan: None,
+            prepared_files: prepared_files.clone(),
+        });
+        table_info.file_sets = Some(file_set.clone());
+
         // TODO: FRAZ - Preparer can hold the ObjectStRegistry. Needs it, to read parquet files.
         let preparer = Preparer::new(
             // table_info.config().time_column_name.clone(),
@@ -77,13 +87,7 @@ impl Table {
             in_memory_batches,
             key_hash_inverse,
             key_column: key_column + KEY_FIELDS.len(),
-            // TODO: this currently flattens all filesets (though some may correspond to a specific slice)
-            files: table_info
-                .file_sets()
-                .into_iter()
-                .map(|fs| fs.prepared_files)
-                .flatten()
-                .collect(),
+            files: file_set,
         })
     }
 
@@ -120,6 +124,7 @@ impl Table {
         self.files.push(prepared);
 
         // TODO: Also add files to the session's table info?
+        // could pass in session to add_parquet method, then mutate datacontext.table info from there?
 
         Ok(())
     }

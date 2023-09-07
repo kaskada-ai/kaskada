@@ -314,7 +314,11 @@ pub struct TableInfo {
     ///
     /// Each file set corresponds to the files for the table with a specific
     /// slice configuration.
-    file_sets: Vec<compute_table::FileSet>,
+    /// TODO: FRAZ I do need to update these -- if that's how scan is reading them.
+    /// Inmemorybatches is mutating them in the session/table and seeing those changes
+    /// reflected here (and taht's how scan reads them).
+    /// // TODO: Should be an option?
+    pub file_sets: Arc<Vec<compute_table::FileSet>>,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,
 }
@@ -337,7 +341,7 @@ impl TableInfo {
             group_id,
             schema,
             config,
-            file_sets,
+            file_sets: Arc::new(file_sets),
             in_memory: None,
         })
     }
