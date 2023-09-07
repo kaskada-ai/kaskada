@@ -53,6 +53,7 @@ class Table(Expr):
         time_column: str,
         key_column: str,
         schema: pa.Schema,
+        retained: bool,
         subsort_column: Optional[str],
         grouping_name: Optional[str],
         time_unit: Optional[str],

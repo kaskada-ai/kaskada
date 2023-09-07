@@ -20,6 +20,7 @@ impl error_stack::Context for Error {}
 /// Struct for managing in-memory batches.
 #[derive(Debug)]
 pub struct InMemoryBatches {
+    retained: bool,
     pub schema: SchemaRef,
     current: RwLock<(usize, RecordBatch)>,
     updates: tokio::sync::broadcast::Sender<(usize, RecordBatch)>,
@@ -29,10 +30,11 @@ pub struct InMemoryBatches {
 }
 
 impl InMemoryBatches {
-    pub fn new(schema: SchemaRef) -> Self {
+    pub fn new(retained: bool, schema: SchemaRef) -> Self {
         let (updates, _subscriber) = tokio::sync::broadcast::channel(10);
         let merged = RecordBatch::new_empty(schema.clone());
         Self {
+            retained,
             schema,
             current: RwLock::new((0, merged)),
             updates,
@@ -53,7 +55,9 @@ impl InMemoryBatches {
             let (version, old) = &*write;
             let version = *version;
 
-            let merged = if old.num_rows() == 0 {
+            let merged = if !self.retained {
+                old.clone()
+            } else if old.num_rows() == 0 {
                 batch.clone()
             } else {
                 homogeneous_merge(&self.schema, vec![old.clone(), batch.clone()])
