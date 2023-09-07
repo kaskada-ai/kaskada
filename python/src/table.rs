@@ -76,4 +76,10 @@ impl Table {
             })
         })?)
     }
+
+    fn add_parquet(&mut self, path: &str) -> Result<()> {
+        // TODO: This is an async function. Is that possible?
+        self.rust_table.add_parquet(path)?;
+        Ok(())
+    }
 }

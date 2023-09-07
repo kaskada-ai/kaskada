@@ -422,6 +422,7 @@ class Parquet(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
+
         super().__init__(
             schema=schema,
             time_column=time_column,
@@ -483,3 +484,4 @@ class Parquet(Source):
         )
         for batch in table.to_batches():
             await self._ffi_table.add_pyarrow(batch)
+        # self._ffi_table.add_parquet(path)

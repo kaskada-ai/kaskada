@@ -1,4 +1,5 @@
 use hashbrown::HashMap;
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -32,6 +33,7 @@ pub struct Session {
     /// uuid. Once we run on multiple machines, we'll have to serialize/pickle the
     /// udf as well.
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
+    object_store_registry: Arc<ObjectStoreRegistry>,
 }
 
 #[derive(Default)]
@@ -97,6 +99,13 @@ impl Session {
         let schema_proto = sparrow_api::kaskada::v1alpha::Schema::try_from(schema.as_ref())
             .into_report()
             .change_context_lazy(|| Error::SchemaForTable(name.to_owned()))?;
+
+        // TODO: FRAZ: add_table
+        // 1. Prepare files
+        // 2. Pass in file_sets
+        // Maybe not necessary..could just say "add files" in python
+        // 3. Slicing?
+        // 4. Source??
         let table = ComputeTable {
             config: Some(TableConfig {
                 name: name.to_owned(),
@@ -152,6 +161,7 @@ impl Session {
             expr,
             queryable,
             time_unit,
+            self.object_store_registry.clone(),
         )
     }
 
@@ -458,6 +468,7 @@ impl Session {
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
 
         let destination = Destination::Channel(output_tx);
+        // TODO: FRAZ - Is this empty? How is data context used in session?
         let data_context = self.data_context.clone();
 
         let (stop_signal_tx, stop_signal_rx) = tokio::sync::watch::channel(false);
@@ -483,6 +494,7 @@ impl Session {
                 options,
                 Some(key_hash_inverse),
                 self.udfs.clone(),
+                self.object_store_registry.clone(),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))

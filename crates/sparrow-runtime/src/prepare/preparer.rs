@@ -6,7 +6,14 @@ use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, DataType, SchemaRef, TimestampNanosecondType};
 use arrow::record_batch::RecordBatch;
 use arrow_array::Array;
-use error_stack::{IntoReport, ResultExt};
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
+use sparrow_api::kaskada::v1alpha::{PreparedFile, Source, SourceData, TableConfig};
+
+use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
+
+use super::prepared_batches;
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -24,37 +31,65 @@ pub enum Error {
     SortingBatch,
     #[display(fmt = "unrecognized time unit")]
     UnrecognizedTimeUnit(String),
+    #[display(fmt = "invalid url '{_0:?}'")]
+    InvalidUrl(String),
+    #[display(fmt = "internal error")]
+    Internal,
 }
 
 impl error_stack::Context for Error {}
 
 pub struct Preparer {
     prepared_schema: SchemaRef,
-    time_column_name: String,
-    subsort_column_name: Option<String>,
+    // time_column_name: String,
+    // subsort_column_name: Option<String>,
+    // key_column_name: String,
+    table_config: Arc<TableConfig>,
     next_subsort: AtomicU64,
-    key_column_name: String,
     time_multiplier: Option<i64>,
+    object_stores: Arc<ObjectStoreRegistry>,
 }
 
 impl Preparer {
     /// Create a new prepare produce data with the given schema.
+    // pub fn new(
+    //     time_column_name: String,
+    //     subsort_column_name: Option<String>,
+    //     key_column_name: String,
+    //     prepared_schema: SchemaRef,
+    //     prepare_hash: u64,
+    //     time_unit: Option<&str>,
+    //     object_stores: Arc<ObjectStoreRegistry>,
+    // ) -> error_stack::Result<Self, Error> {
+    //     let time_multiplier = time_multiplier(time_unit)?;
+    //     Ok(Self {
+    //         prepared_schema,
+    //         time_column_name,
+    //         subsort_column_name,
+    //         next_subsort: prepare_hash,
+    //         key_column_name,
+    //         time_multiplier,
+    //         object_stores,
+    //     })
+    // }
+
     pub fn new(
-        time_column_name: String,
-        subsort_column_name: Option<String>,
-        key_column_name: String,
+        table_config: Arc<TableConfig>,
         prepared_schema: SchemaRef,
         prepare_hash: u64,
         time_unit: Option<&str>,
+        object_stores: Arc<ObjectStoreRegistry>,
     ) -> error_stack::Result<Self, Error> {
         let time_multiplier = time_multiplier(time_unit)?;
         Ok(Self {
             prepared_schema,
-            time_column_name,
-            subsort_column_name,
+            // time_column_name,
+            // subsort_column_name,
+            // key_column_name,
+            table_config,
             next_subsort: prepare_hash.into(),
-            key_column_name,
             time_multiplier,
+            object_stores,
         })
     }
 
@@ -62,17 +97,99 @@ impl Preparer {
         self.prepared_schema.clone()
     }
 
+    /// Prepare a parquet file.
+    /// todo; docs
+    pub async fn prepare_parquet(
+        &mut self,
+        path: &str,
+    ) -> error_stack::Result<Vec<PreparedFile>, Error> {
+        // TODO:
+        // * Support Slicing
+
+        // TODO: What is the output url?
+        // in wren it is prepared/prep_<version_id>/<sliceplanhash>/file_id (a uuid)/
+        // file_id is persisted in wren. Don't know if that matters.
+        let output_path_prefix = "file://prepared/";
+        let output_file_prefix = "part";
+
+        let output_url = ObjectStoreUrl::from_str(output_path_prefix)
+            .change_context_lazy(|| Error::InvalidUrl(path.to_owned()))?;
+
+        let object_store = self
+            .object_stores
+            .object_store(&output_url)
+            .change_context(Error::Internal)?;
+
+        let path = PathBuf::from(path);
+        let source_data = SourceData {
+            source: Some(
+                SourceData::try_from_local(&path)
+                    .into_report()
+                    .change_context(Error::Internal)?,
+            ),
+        };
+
+        let mut prepare_stream =
+            prepared_batches(&self.object_stores, &source_data, &self.table_config, &None)
+                .await
+                .change_context(Error::Internal)?
+                .enumerate();
+
+        let mut prepared_files = Vec::new();
+        let mut uploads = FuturesUnordered::new();
+        while let Some((n, next)) = prepare_stream.next().await {
+            let (data, metadata) = next.change_context(Error::Internal)?;
+
+            let data_url = output_url
+                .join(&format!("{output_file_prefix}-{n}.parquet"))
+                .change_context(Error::Internal)?;
+            let metadata_url = output_url
+                .join(&format!("{output_file_prefix}-{n}-metadata.parquet"))
+                .change_context(Error::Internal)?;
+
+            // Create the prepared file via PreparedMetadata.
+            // TODO: We could probably do this directly, eliminating the PreparedMetadata struct.
+            let prepared_file: PreparedFile = PreparedMetadata::try_from_data(
+                data_url.to_string(),
+                &data,
+                metadata_url.to_string(),
+            )
+            .into_report()
+            .change_context(Error::Internal)?
+            .try_into()
+            .change_context(Error::Internal)?;
+            prepared_files.push(prepared_file);
+
+            uploads.push(write_parquet(data, data_url, object_store.clone()));
+            uploads.push(write_parquet(metadata, metadata_url, object_store.clone()));
+        }
+
+        // Wait for the uploads.
+        while let Some(upload) = uploads.try_next().await? {
+            tracing::info!("Finished uploading {upload}");
+        }
+
+        Ok(prepared_files)
+    }
+
     /// Prepare a batch of data.
     ///
     /// - This computes and adds the key columns.
     /// - This sorts the batch by time, subsort and key hash.
     /// - This adds or casts columns as needed.
-    pub fn prepare_batch(&self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
-        let time = get_required_column(&batch, &self.time_column_name)?;
+    ///
+    /// Self is mutated as necessary to ensure the `subsort` column is increasing, if
+    /// it is added.
+    pub fn prepare_batch(&mut self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
+        let time_column_name = self.table_config.time_column_name;
+        let subsort_column_name = self.table_config.subsort_column_name;
+        let key_column_name = self.table_config.group_column_name;
+
+        let time = get_required_column(&batch, &time_column_name)?;
         let time = cast_to_timestamp(time, self.time_multiplier)?;
 
         let num_rows = batch.num_rows();
-        let subsort = if let Some(subsort_column_name) = self.subsort_column_name.as_ref() {
+        let subsort = if let Some(subsort_column_name) = subsort_column_name.as_ref() {
             let subsort = get_required_column(&batch, subsort_column_name)?;
             arrow::compute::cast(time.as_ref(), &DataType::UInt64)
                 .into_report()
@@ -85,7 +202,7 @@ impl Preparer {
             Arc::new(subsort)
         };
 
-        let key = get_required_column(&batch, &self.key_column_name)?;
+        let key = get_required_column(&batch, &key_column_name)?;
         let key_hash =
             sparrow_arrow::hash::hash(key.as_ref()).change_context(Error::HashingKeyArray)?;
         let key_hash: ArrayRef = Arc::new(key_hash);
