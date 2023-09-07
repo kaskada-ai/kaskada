@@ -83,6 +83,10 @@ class PyDict(Source):
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             retained: Whether added rows should be retained for queries.
+              If True, rows (both provided to the constructor and added later) will be retained
+              for interactive queries. If False, rows will be discarded after being sent to any
+              running materializations. Consider setting this to False when the source will only
+              be used for materialization to avoid unnecessary memory usage.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
