@@ -23,6 +23,7 @@ arrow-ord = { version = "43.0.0" }
 arrow-schema = { version = "43.0.0", features = ["serde"] }
 arrow-select = { version = "43.0.0" }
 arrow-string = { version = "43.0.0" }
+async-broadcast = "0.5.1"
 async-once-cell = "0.5.3"
 async-stream = "0.3.4"
 async-trait = "0.1.68"
