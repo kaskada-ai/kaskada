@@ -2,6 +2,7 @@ import kaskada as kd
 import pyarrow as pa
 import pytest
 
+
 def test_read_pydict(golden) -> None:
     source = kd.sources.PyDict(
         [{"time": "1996-12-19T16:39:57", "user": "A", "m": 5, "n": 10}],
@@ -76,6 +77,7 @@ def test_read_pydict_empty() -> None:
     assert result.empty
     assert list(result.columns) == ["_time", "_key", "time", "user", "x"]
     assert result["x"].dtype == "int64"
+
 
 @pytest.mark.asyncio
 async def test_read_pydict_empty_live(golden) -> None:
