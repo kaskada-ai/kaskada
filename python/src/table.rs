@@ -22,7 +22,7 @@ pub(crate) struct Table {
 impl Table {
     /// Create a new table.
     #[new]
-    #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit))]
+    #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit, source))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         session: Session,
@@ -34,6 +34,7 @@ impl Table {
         subsort_column: Option<&str>,
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
+        source: Option<&str>,
     ) -> Result<Self> {
         let raw_schema = Arc::new(schema.0);
 
@@ -46,6 +47,7 @@ impl Table {
             key_column,
             grouping_name,
             time_unit,
+            source,
         )?;
 
         let table = Table { name, rust_table: Arc::new(rust_table), session };

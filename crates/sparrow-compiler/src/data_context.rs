@@ -314,10 +314,8 @@ pub struct TableInfo {
     ///
     /// Each file set corresponds to the files for the table with a specific
     /// slice configuration.
-    /// TODO: FRAZ I do need to update these -- if that's how scan is reading them.
-    /// Inmemorybatches is mutating them in the session/table and seeing those changes
-    /// reflected here (and taht's how scan reads them).
-    /// // TODO: Should be an option?
+    /// TODO: Make optional?
+    /// wrap both these in a Source class?
     pub file_sets: Arc<Vec<compute_table::FileSet>>,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,

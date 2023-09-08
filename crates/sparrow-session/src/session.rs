@@ -94,6 +94,7 @@ impl Session {
         key_column_name: &str,
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
+        source: Option<&str>,
     ) -> error_stack::Result<Table, Error> {
         let uuid = Uuid::new_v4();
         let schema_proto = sparrow_api::kaskada::v1alpha::Schema::try_from(schema.as_ref())
@@ -162,6 +163,7 @@ impl Session {
             queryable,
             time_unit,
             self.object_store_registry.clone(),
+            source,
         )
     }
 
@@ -603,6 +605,7 @@ mod tests {
                 None,
                 "key",
                 Some("user"),
+                None,
                 None,
             )
             .unwrap();

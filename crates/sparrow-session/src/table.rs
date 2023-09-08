@@ -17,10 +17,11 @@ use crate::{Error, Expr};
 pub struct Table {
     pub expr: Expr,
     preparer: Preparer,
-    in_memory_batches: Arc<InMemoryBatches>,
+    // in_memory_batches: Arc<InMemoryBatches>,
     key_column: usize,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
-    files: Arc<Vec<compute_table::FileSet>>,
+    // files: Arc<Vec<compute_table::FileSet>>,
+    source: Source,
     // TODO: FRAZ: How is tableinfo created?
     // Answer:  DataContext.add_table (ComputeTable holds the filesets)
     // ComputeTable is created via session.add_table(). With no filesets nor source
@@ -34,6 +35,11 @@ pub struct Table {
     // Batch, Paths, Streams, per type?
 }
 
+enum Source {
+    InMemoryBatches(Arc<InMemoryBatches>),
+    Parquet(Arc<Vec<compute_table::FileSet>>),
+}
+
 impl Table {
     pub(crate) fn new(
         table_info: &mut TableInfo,
@@ -43,6 +49,7 @@ impl Table {
         queryable: bool,
         time_unit: Option<&str>,
         object_stores: Arc<ObjectStoreRegistry>,
+        source: Option<&str>,
     ) -> error_stack::Result<Self, Error> {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
@@ -52,25 +59,23 @@ impl Table {
         let prepared_schema = Arc::new(Schema::new(prepared_fields));
         let prepare_hash = 0;
 
-        assert!(table_info.in_memory.is_none());
+        // Filesets and in_memory should initially be empty.
+        // From python, we create the table with no inputs, then add data.
+        // TODO: Make these a single "Source" type in TableInfo?
+        error_stack::ensure!(table_info.file_sets().is_empty());
+        error_stack::ensure!(table_info.in_memory.is_none());
 
-        let in_memory_batches = Arc::new(InMemoryBatches::new(queryable, prepared_schema.clone()));
-        table_info.in_memory = Some(in_memory_batches.clone());
-
-        let prepared_files: Vec<PreparedFile> = Vec::new();
-        // The table info here should be empty. We create with empty source and empty filesets.
         // TODO: Slicing
         let file_set = Arc::new(compute_table::FileSet {
             slice_plan: None,
-            prepared_files: prepared_files.clone(),
+            prepared_files: vec![],
         });
+
+        // Clone into the table_info, so that any modifications to our
+        // original reference are reflected within the table_info.
         table_info.file_sets = Some(file_set.clone());
 
-        // TODO: FRAZ - Preparer can hold the ObjectStRegistry. Needs it, to read parquet files.
         let preparer = Preparer::new(
-            // table_info.config().time_column_name.clone(),
-            // table_info.config().subsort_column_name.clone(),
-            // table_info.config().group_column_name.clone(),
             table_info.config().clone(),
             prepared_schema,
             prepare_hash,
@@ -81,13 +86,29 @@ impl Table {
             name: table_info.name().to_owned(),
         })?;
 
+        // TODO: FRAZ NExt steps:
+        // 1. Async thing -- look in exeuction.rs and copy that pyarrow async method
+        // in my table.rs add_parquet file
+        // 2. See how Scan is reading in_memory and skipping normal execution, and emulate that
+        //    for parquet files
+        // 3. Differentiate sources to ensure we can't add_data for parquet tables
+        //    or add_parquet for inmemorybatch tables?
+        // 4. Other shit?
+
+        let source = match source {
+            Some("parquet") => Source::Parquet(Arc::new(vec![])),
+            _ => Source::InMemoryBatches(Arc::new(InMemoryBatches::new(
+                querable, // TODO: fraz
+                prepared_schema.clone(),
+            ))),
+        };
+
         Ok(Self {
             expr,
             preparer,
-            in_memory_batches,
             key_hash_inverse,
             key_column: key_column + KEY_FIELDS.len(),
-            files: file_set,
+            source,
         })
     }
 
@@ -96,6 +117,11 @@ impl Table {
     }
 
     pub async fn add_data(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+        let source = match self.source {
+            Source::InMemoryBatches(in_memory) => in_memory,
+            other => error_stack::bail!("expected in memory data source, saw {}", other),
+        };
+
         let prepared = self
             .preparer
             .prepare_batch(batch)
@@ -108,7 +134,7 @@ impl Table {
             .await
             .change_context(Error::Prepare)?;
 
-        self.in_memory_batches
+        source
             .add_batch(prepared)
             .await
             .change_context(Error::Prepare)?;
@@ -116,15 +142,21 @@ impl Table {
     }
 
     pub async fn add_parquet(&mut self, path: &str) -> error_stack::Result<(), Error> {
+        let source = match self.source {
+            Source::Parquet(file_sets) => file_sets,
+            other => error_stack::bail!("expected parquet data source, saw {}", other),
+        };
+
         let prepared = self
             .preparer
             .prepare_parquet(path)
             .await
             .change_context(Error::Prepare)?;
-        self.files.push(prepared);
 
-        // TODO: Also add files to the session's table info?
-        // could pass in session to add_parquet method, then mutate datacontext.table info from there?
+        source.push(FileSet {
+            slice_plan: None,
+            prepared_files: prepared,
+        });
 
         Ok(())
     }

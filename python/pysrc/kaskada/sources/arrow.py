@@ -430,6 +430,7 @@ class Parquet(Source):
             subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
+            source="parquet"
         )
 
     @staticmethod
