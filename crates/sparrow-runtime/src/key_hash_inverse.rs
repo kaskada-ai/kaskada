@@ -131,14 +131,17 @@ impl KeyHashInverse {
         let in_memory = data_context
             .tables_for_grouping(primary_grouping)
             .flat_map(|table| {
-                table.in_memory.as_ref().map(|batch| {
-                    let batch = batch.current();
-                    let keys = batch
-                        .column_by_name(&table.config().group_column_name)
-                        .unwrap();
-                    let key_hashes = batch.columns()[2].clone();
-                    (keys.clone(), key_hashes.clone())
-                })
+                table
+                    .in_memory
+                    .as_ref()
+                    .and_then(|in_memroy| in_memroy.current())
+                    .map(|batch| {
+                        let keys = batch
+                            .column_by_name(&table.config().group_column_name)
+                            .unwrap();
+                        let key_hashes = batch.columns()[2].clone();
+                        (keys.clone(), key_hashes.clone())
+                    })
             });
         for (keys, key_hashes) in in_memory {
             self.add(keys.as_ref(), key_hashes.as_primitive())

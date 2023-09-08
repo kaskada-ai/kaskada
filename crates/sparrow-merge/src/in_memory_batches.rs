@@ -111,7 +111,9 @@ impl InMemoryBatches {
 
         async_stream::try_stream! {
             tracing::info!("Starting subscriber with version {version}");
-            yield merged;
+            if merged.num_rows() > 0 {
+                yield merged;
+            }
 
             loop {
                 match recv.recv().await {
@@ -137,7 +139,12 @@ impl InMemoryBatches {
     }
 
     /// Retrieve the current in-memory batch.
-    pub fn current(&self) -> RecordBatch {
-        self.current.read().unwrap().batch.clone()
+    pub fn current(&self) -> Option<RecordBatch> {
+        let batch = self.current.read().unwrap().batch.clone();
+        if batch.num_rows() == 0 {
+            None
+        } else {
+            Some(batch)
+        }
     }
 }

@@ -1,6 +1,6 @@
 import kaskada as kd
 import pyarrow as pa
-
+import pytest
 
 def test_read_pydict(golden) -> None:
     source = kd.sources.PyDict(
@@ -57,7 +57,7 @@ def test_read_pydict_ignore_column(golden) -> None:
     golden.jsonl(source)
 
 
-def test_read_pydict_empty(golden) -> None:
+def test_read_pydict_empty() -> None:
     source = kd.sources.PyDict(
         rows=[],
         schema=pa.schema(
@@ -76,3 +76,26 @@ def test_read_pydict_empty(golden) -> None:
     assert result.empty
     assert list(result.columns) == ["_time", "_key", "time", "user", "x"]
     assert result["x"].dtype == "int64"
+
+@pytest.mark.asyncio
+async def test_read_pydict_empty_live(golden) -> None:
+    source = kd.sources.PyDict(
+        rows=[],
+        schema=pa.schema(
+            [
+                ("time", pa.string()),
+                ("user", pa.string()),
+                ("x", pa.int64()),
+            ]
+        ),
+        time_column="time",
+        key_column="user",
+    )
+
+    execution = source.run_iter(mode="live")
+    source.add_rows({"time": "1996-12-19T16:39:57Z", "user": "A", "x": 5})
+    golden.jsonl(await execution.__anext__())
+
+    execution.stop()
+    with pytest.raises(StopAsyncIteration):
+        print(await execution.__anext__())
