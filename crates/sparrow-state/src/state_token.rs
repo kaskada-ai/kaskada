@@ -1,6 +1,8 @@
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 
+use crate::StateBackend;
+
 pub struct Keys {
     pub operation_id: u8,
     pub unique_key_hashes: Vec<u64>,
@@ -31,4 +33,16 @@ impl Keys {
             key_indices,
         }
     }
+}
+
+trait StateToken {
+    /// The in-memory representation of the state token.
+    type InMemory;
+
+    fn read(&self, backend: &dyn StateBackend) -> error_stack::Result<Self::InMemory, Error>;
+    fn write(
+        &self,
+        backend: &dyn StateBackend,
+        value: Self::InMemory,
+    ) -> error_stack::Result<(), Error>;
 }
