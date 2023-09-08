@@ -14,6 +14,7 @@ mod error;
 mod state_backend;
 mod state_key;
 mod state_store;
+mod state_token;
 
 pub use error::*;
 pub use state_backend::*;
