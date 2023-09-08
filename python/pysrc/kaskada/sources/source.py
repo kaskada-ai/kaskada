@@ -68,7 +68,7 @@ class Source(Timestream):
             grouping_name,
             time_unit,
         )
-        super().__init__(ffi_table)
+        super().__init__(ffi_table.expr())
         self._schema = schema
         self._ffi_table = ffi_table
 

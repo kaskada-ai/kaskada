@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use arrow::array::{ArrayRef, UInt64Array};
@@ -31,7 +32,7 @@ pub struct Preparer {
     prepared_schema: SchemaRef,
     time_column_name: String,
     subsort_column_name: Option<String>,
-    next_subsort: u64,
+    next_subsort: AtomicU64,
     key_column_name: String,
     time_multiplier: Option<i64>,
 }
@@ -51,7 +52,7 @@ impl Preparer {
             prepared_schema,
             time_column_name,
             subsort_column_name,
-            next_subsort: prepare_hash,
+            next_subsort: prepare_hash.into(),
             key_column_name,
             time_multiplier,
         })
@@ -66,10 +67,7 @@ impl Preparer {
     /// - This computes and adds the key columns.
     /// - This sorts the batch by time, subsort and key hash.
     /// - This adds or casts columns as needed.
-    ///
-    /// Self is mutated as necessary to ensure the `subsort` column is increasing, if
-    /// it is added.
-    pub fn prepare_batch(&mut self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
+    pub fn prepare_batch(&self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
         let time = get_required_column(&batch, &self.time_column_name)?;
         let time = cast_to_timestamp(time, self.time_multiplier)?;
 
@@ -80,8 +78,10 @@ impl Preparer {
                 .into_report()
                 .change_context_lazy(|| Error::ConvertSubsort(subsort.data_type().clone()))?
         } else {
-            let subsort: UInt64Array = (self.next_subsort..).take(num_rows).collect();
-            self.next_subsort += num_rows as u64;
+            let subsort_start = self
+                .next_subsort
+                .fetch_add(num_rows as u64, Ordering::SeqCst);
+            let subsort: UInt64Array = (subsort_start..).take(num_rows).collect();
             Arc::new(subsort)
         };
 

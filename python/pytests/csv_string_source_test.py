@@ -1,7 +1,8 @@
 import kaskada as kd
+import pytest
 
-
-def test_read_csv(golden) -> None:
+@pytest.mark.asyncio
+async def test_read_csv(golden) -> None:
     content1 = "\n".join(
         [
             "time,key,m,n",
@@ -24,12 +25,12 @@ def test_read_csv(golden) -> None:
             "1996-12-19T17:40:02,A,,",
         ]
     )
-    source = kd.sources.CsvString(
+    source = await kd.sources.CsvString.create(
         content1,
         time_column="time",
         key_column="key",
     )
     golden.jsonl(source)
 
-    source.add_string(content2)
+    await source.add_string(content2)
     golden.jsonl(source)

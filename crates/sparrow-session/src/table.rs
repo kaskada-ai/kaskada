@@ -66,7 +66,7 @@ impl Table {
         self.preparer.schema()
     }
 
-    pub fn add_data(&mut self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+    pub async fn add_data(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
         let prepared = self
             .preparer
             .prepare_batch(batch)
@@ -75,11 +75,13 @@ impl Table {
         let key_hashes = prepared.column(2).as_primitive();
         let keys = prepared.column(self.key_column);
         self.key_hash_inverse
-            .blocking_add(keys.as_ref(), key_hashes)
+            .add(keys.as_ref(), key_hashes)
+            .await
             .change_context(Error::Prepare)?;
 
         self.in_memory_batches
             .add_batch(prepared)
+            .await
             .change_context(Error::Prepare)?;
         Ok(())
     }
