@@ -103,7 +103,6 @@ html_theme_options: Dict[str, Any] = {
     # TODO: Version switcher.
     # This would require hosting multiple versions of the docs.
     # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
-
 }
 
 templates_path = ["_templates"]

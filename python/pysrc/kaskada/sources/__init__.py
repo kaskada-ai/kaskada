@@ -1,6 +1,6 @@
 """Sources of data for Kaskada queries."""
-from .arrow import CsvString, JsonlString, Pandas, Parquet, PyList
+from .arrow import CsvString, JsonlString, Pandas, Parquet, PyDict
 from .source import Source
 
 
-__all__ = ["Source", "CsvString", "Pandas", "JsonlString", "PyList", "Parquet"]
+__all__ = ["Source", "CsvString", "Pandas", "JsonlString", "PyDict", "Parquet"]

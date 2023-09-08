@@ -2,7 +2,7 @@ import kaskada as kd
 
 
 def test_flatten(golden) -> None:
-    source = kd.sources.PyList(
+    source = kd.sources.PyDict(
         [
             {"time": "1996-12-19T16:39:57", "user": "A", "m": [[5]]},
             {"time": "1996-12-19T17:39:57", "user": "A", "m": []},

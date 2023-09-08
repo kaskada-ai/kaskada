@@ -194,12 +194,16 @@ impl ScanOperation {
                     .boxed()
             } else {
                 let batch = in_memory.current();
-                futures::stream::once(async move {
-                    Batch::try_new_from_batch(batch)
-                        .into_report()
-                        .change_context(Error::internal_msg("invalid input"))
-                })
-                .boxed()
+                if batch.num_rows() != 0 {
+                    futures::stream::once(async move {
+                        Batch::try_new_from_batch(batch)
+                            .into_report()
+                            .change_context(Error::internal_msg("invalid input"))
+                    })
+                    .boxed()
+                } else {
+                    futures::stream::empty().boxed()
+                }
             };
             return Ok(Box::new(Self {
                 projected_schema,
