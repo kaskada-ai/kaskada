@@ -89,7 +89,9 @@ class Timestream(object):
             seconds = int(us / 1_000_000)
             # Get the leftover nanoseconds
             nanoseconds = int((us % 1_000_000) * 1_000)
-            return Timestream(_ffi.Expr.literal_timedelta(session, seconds, nanoseconds))
+            return Timestream(
+                _ffi.Expr.literal_timedelta(session, seconds, nanoseconds)
+            )
         else:
             return Timestream(_ffi.Expr.literal(session, value))
 

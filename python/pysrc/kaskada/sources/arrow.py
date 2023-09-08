@@ -99,7 +99,7 @@ class PyDict(Source):
         if schema is None:
             schema = pa.Table.from_pylist(rows).schema
         super().__init__(
-            retained = retained,
+            retained=retained,
             schema=schema,
             time_column=time_column,
             key_column=key_column,
