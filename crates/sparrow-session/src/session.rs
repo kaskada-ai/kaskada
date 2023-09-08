@@ -583,7 +583,16 @@ mod tests {
             Field::new("b", DataType::Int64, true),
         ]));
         let table = session
-            .add_table("table", schema, "time", None, "key", Some("user"), None)
+            .add_table(
+                "table",
+                schema,
+                "time",
+                true,
+                None,
+                "key",
+                Some("user"),
+                None,
+            )
             .unwrap();
 
         let field_name = session
