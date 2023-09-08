@@ -12,5 +12,5 @@
         JsonlString
         Pandas
         Parquet
-        PyList
+        PyDict
 ```

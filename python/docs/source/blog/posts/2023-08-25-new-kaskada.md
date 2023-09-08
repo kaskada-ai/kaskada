@@ -1,6 +1,6 @@
 ---
 blogpost: true
-date: 2023-08-25
+date: 2023-Aug-25
 author: ryan
 tags: releases
 excerpt: 2

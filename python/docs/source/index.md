@@ -59,7 +59,7 @@ import kaskada as kd
 kd.init_session()
 
 # Bootstrap from historical data
-messages = kd.sources.PyList(
+messages = kd.sources.PyDict(
     rows = pyarrow.parquet.read_table("./messages.parquet")
         .to_pylist(),
     time_column = "ts",

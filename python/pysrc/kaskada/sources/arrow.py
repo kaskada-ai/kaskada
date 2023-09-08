@@ -61,7 +61,7 @@ class Pandas(Source):
             self._ffi_table.add_pyarrow(batch)
 
 
-class PyList(Source):
+class PyDict(Source):
     """Source reading data from lists of dicts."""
 
     def __init__(
@@ -70,6 +70,7 @@ class PyList(Source):
         *,
         time_column: str,
         key_column: str,
+        retained: bool = True,
         subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
@@ -81,6 +82,11 @@ class PyList(Source):
             rows: One or more rows represented as dicts.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
+            retained: Whether added rows should be retained for queries.
+              If True, rows (both provided to the constructor and added later) will be retained
+              for interactive queries. If False, rows will be discarded after being sent to any
+              running materializations. Consider setting this to False when the source will only
+              be used for materialization to avoid unnecessary memory usage.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
@@ -93,6 +99,7 @@ class PyList(Source):
         if schema is None:
             schema = pa.Table.from_pylist(rows).schema
         super().__init__(
+            retained=retained,
             schema=schema,
             time_column=time_column,
             key_column=key_column,

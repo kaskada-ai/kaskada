@@ -87,6 +87,7 @@ impl Session {
         name: &str,
         schema: SchemaRef,
         time_column_name: &str,
+        retained: bool,
         subsort_column_name: Option<&str>,
         key_column_name: &str,
         grouping_name: Option<&str>,
@@ -144,7 +145,14 @@ impl Session {
             })
             .clone();
 
-        Table::new(table_info, key_hash_inverse, key_column, expr, time_unit)
+        Table::new(
+            table_info,
+            key_hash_inverse,
+            key_column,
+            expr,
+            retained,
+            time_unit,
+        )
     }
 
     pub fn add_cast(
@@ -575,7 +583,16 @@ mod tests {
             Field::new("b", DataType::Int64, true),
         ]));
         let table = session
-            .add_table("table", schema, "time", None, "key", Some("user"), None)
+            .add_table(
+                "table",
+                schema,
+                "time",
+                true,
+                None,
+                "key",
+                Some("user"),
+                None,
+            )
             .unwrap();
 
         let field_name = session

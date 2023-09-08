@@ -1,8 +1,9 @@
 import kaskada as kd
+import pyarrow as pa
 
 
-def test_read_pylist(golden) -> None:
-    source = kd.sources.PyList(
+def test_read_pydict(golden) -> None:
+    source = kd.sources.PyDict(
         [{"time": "1996-12-19T16:39:57", "user": "A", "m": 5, "n": 10}],
         time_column="time",
         key_column="user",
@@ -21,8 +22,8 @@ def test_read_pylist(golden) -> None:
     golden.jsonl(source)
 
 
-def test_read_pylist_lists(golden) -> None:
-    source = kd.sources.PyList(
+def test_read_pydict_lists(golden) -> None:
+    source = kd.sources.PyDict(
         [{"time": "1996-12-19T16:39:57", "user": "A", "m": [5, 10], "n": 10}],
         time_column="time",
         key_column="user",
@@ -38,9 +39,9 @@ def test_read_pylist_lists(golden) -> None:
     golden.jsonl(source)
 
 
-def test_read_pylist_ignore_column(golden) -> None:
+def test_read_pydict_ignore_column(golden) -> None:
     # Schema is determined from first row, and doesn't contain an "m" column.
-    source = kd.sources.PyList(
+    source = kd.sources.PyDict(
         [{"time": "1996-12-19T16:39:57", "user": "A", "n": 10}],
         time_column="time",
         key_column="user",
@@ -54,3 +55,24 @@ def test_read_pylist_ignore_column(golden) -> None:
         ]
     )
     golden.jsonl(source)
+
+
+def test_read_pydict_empty(golden) -> None:
+    source = kd.sources.PyDict(
+        rows=[],
+        schema=pa.schema(
+            [
+                ("time", pa.timestamp("ns")),
+                ("user", pa.string()),
+                ("x", pa.int64()),
+            ]
+        ),
+        time_column="time",
+        key_column="user",
+    )
+
+    result = source.preview()
+
+    assert result.empty
+    assert list(result.columns) == ["_time", "_key", "time", "user", "x"]
+    assert result["x"].dtype == "int64"

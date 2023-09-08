@@ -41,7 +41,7 @@ html_sidebars = {
     "index.md": [],
     # Blog sidebars
     # https://ablog.readthedocs.io/manual/ablog-configuration-options/#blog-sidebars
-    "blog/*": [
+    "blog/**": [
         # Information about the post.
         "ablog/postcard.html",
         # 5 most recent posts

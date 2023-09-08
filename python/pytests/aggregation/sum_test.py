@@ -19,8 +19,8 @@ def source() -> kd.sources.CsvString:
 
 
 @pytest.fixture(scope="module")
-def source_spread_across_days() -> kd.sources.PyList:
-    return kd.sources.PyList(
+def source_spread_across_days() -> kd.sources.PyDict:
+    return kd.sources.PyDict(
         rows=[
             {"time": "2021-01-01T00:00:00", "key": "A", "m": 1, "n": 2},
             {"time": "2021-01-01T01:10:01", "key": "A", "m": 3, "n": 4},

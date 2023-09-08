@@ -6,16 +6,17 @@ from aiohttp import web
 
 async def main():
     kd.init_session()
-    
+
     start = time.time()
     requestmap = dict()
 
-    # Initialize event source with historical data
-    events = kd.sources.PyList(
+    # Initialize event source with schema from historical data.
+    events = kd.sources.PyDict(
         rows = [{"ts": start, "user": "user_1", "request_id": "12345678-1234-5678-1234-567812345678"}],
         time_column = "ts",
         key_column = "user",
-        time_unit = "s"
+        time_unit = "s",
+        retained=False,
     )
 
     # Compute features over events
@@ -32,11 +33,11 @@ async def main():
     async def handle_http(req: web.Request) -> web.Response:
         data = await req.json()
 
-        # Add the current time to the event 
+        # Add the current time to the event
         data["ts"] = time.time()
 
         # Create a future so the aggregated result can be returned in the API response
-        request_id = str(uuid.uuid4()) 
+        request_id = str(uuid.uuid4())
         requestmap[request_id] = asyncio.Future()
         data["request_id"] = request_id
 
@@ -59,7 +60,7 @@ async def main():
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', 8080)
     await site.start()
-    
+
 
     # Handle each conversation as it occurs
     print(f"Waiting for events...")
@@ -80,7 +81,7 @@ async def main():
             fut.set_result(row["response"])
 
         except Exception as e:
-            print(f"Failed to handle live event from Kaskada: {e}") 
+            print(f"Failed to handle live event from Kaskada: {e}")
 
     # Wait for web server to terminate gracefully
     await runner.cleanup()

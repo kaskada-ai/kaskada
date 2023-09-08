@@ -20,21 +20,53 @@ impl error_stack::Context for Error {}
 /// Struct for managing in-memory batches.
 #[derive(Debug)]
 pub struct InMemoryBatches {
-    pub schema: SchemaRef,
-    current: RwLock<(usize, RecordBatch)>,
+    retained: bool,
+    current: RwLock<Current>,
     updates: tokio::sync::broadcast::Sender<(usize, RecordBatch)>,
     /// A subscriber that is never used -- it exists only to keep the sender
     /// alive.
     _subscriber: tokio::sync::broadcast::Receiver<(usize, RecordBatch)>,
 }
 
-impl InMemoryBatches {
+#[derive(Debug)]
+struct Current {
+    schema: SchemaRef,
+    version: usize,
+    batch: RecordBatch,
+}
+
+impl Current {
     pub fn new(schema: SchemaRef) -> Self {
-        let (updates, _subscriber) = tokio::sync::broadcast::channel(10);
-        let merged = RecordBatch::new_empty(schema.clone());
+        let batch = RecordBatch::new_empty(schema.clone());
         Self {
             schema,
-            current: RwLock::new((0, merged)),
+            version: 0,
+            batch,
+        }
+    }
+
+    pub fn add_batch(&mut self, batch: &RecordBatch) -> error_stack::Result<(), Error> {
+        if self.batch.num_rows() == 0 {
+            self.batch = batch.clone();
+        } else {
+            // This assumes that cloning the old batch is cheap.
+            // If it isn't, we could replace it with an empty batch (`std::mem::replace`),
+            // put it in an option, or allow `homogeneous_merge` to take `&RecordBatch`.
+            self.batch = homogeneous_merge(&self.schema, vec![self.batch.clone(), batch.clone()])
+                .into_report()
+                .change_context(Error::Add)?;
+        }
+        Ok(())
+    }
+}
+
+impl InMemoryBatches {
+    pub fn new(retained: bool, schema: SchemaRef) -> Self {
+        let (updates, _subscriber) = tokio::sync::broadcast::channel(10);
+        let current = RwLock::new(Current::new(schema.clone()));
+        Self {
+            retained,
+            current,
             updates,
             _subscriber,
         }
@@ -50,19 +82,11 @@ impl InMemoryBatches {
 
         let new_version = {
             let mut write = self.current.write().map_err(|_| Error::Add)?;
-            let (version, old) = &*write;
-            let version = *version;
-
-            let merged = if old.num_rows() == 0 {
-                batch.clone()
-            } else {
-                homogeneous_merge(&self.schema, vec![old.clone(), batch.clone()])
-                    .into_report()
-                    .change_context(Error::Add)?
-            };
-
-            *write = (version + 1, merged);
-            version + 1
+            if self.retained {
+                write.add_batch(&batch)?;
+            }
+            write.version += 1;
+            write.version
         };
 
         self.updates
@@ -79,7 +103,10 @@ impl InMemoryBatches {
     pub fn subscribe(
         &self,
     ) -> impl Stream<Item = error_stack::Result<RecordBatch, Error>> + 'static {
-        let (mut version, merged) = self.current.read().unwrap().clone();
+        let (mut version, merged) = {
+            let read = self.current.read().unwrap();
+            (read.version, read.batch.clone())
+        };
         let mut recv = self.updates.subscribe();
 
         async_stream::try_stream! {
@@ -111,6 +138,6 @@ impl InMemoryBatches {
 
     /// Retrieve the current in-memory batch.
     pub fn current(&self) -> RecordBatch {
-        self.current.read().unwrap().1.clone()
+        self.current.read().unwrap().batch.clone()
     }
 }
