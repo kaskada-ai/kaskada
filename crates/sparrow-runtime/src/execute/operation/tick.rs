@@ -857,7 +857,7 @@ mod tests {
 
         let mut operation = default_tick_operation(TickBehavior::Hourly, input_stream);
 
-        let times = vec![
+        let times = [
             NaiveDateTime::from_timestamp_opt(1, 0).unwrap(),
             NaiveDateTime::from_timestamp_opt(2, 0).unwrap(),
             NaiveDateTime::from_timestamp_opt(3, 0).unwrap(),

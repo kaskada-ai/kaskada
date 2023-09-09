@@ -747,7 +747,7 @@ mod tests {
 
     #[test]
     fn test_split_at() {
-        let times = vec![0, 1, 2, 3, 4, 5, 10];
+        let times = [0, 1, 2, 3, 4, 5, 10];
         let times = TimestampNanosecondArray::from_iter_values(times.iter().copied());
         let batch = Batch::test_batch(times, 0, 0);
         let keyed_batch = KeyedBatch::try_new(batch).unwrap();
@@ -758,7 +758,7 @@ mod tests {
         };
         let result = keyed_batch.split_at(&split).unwrap();
 
-        let expected_times = vec![0, 1, 2, 3];
+        let expected_times = [0, 1, 2, 3];
         let expected_times =
             TimestampNanosecondArray::from_iter_values(expected_times.iter().copied());
         let actual_times: &TimestampNanosecondArray =

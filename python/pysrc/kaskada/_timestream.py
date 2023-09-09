@@ -1086,7 +1086,7 @@ class Timestream(object):
     @overload
     def run_iter(
         self,
-        kind: Literal["pandas"],
+        kind: Literal["pandas"] = "pandas",
         *,
         mode: Literal["once", "live"] = "once",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
