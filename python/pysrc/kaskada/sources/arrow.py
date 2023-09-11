@@ -87,7 +87,8 @@ class Pandas(Source):
             key_column=key_column,
             subsort_column=subsort_column,
             grouping_name=grouping_name,
-            time_unit=time_unit)
+            time_unit=time_unit,
+        )
         
         await source.add_data(dataframe)
         return source
@@ -96,7 +97,7 @@ class Pandas(Source):
         """Add data to the source."""
         table = pa.Table.from_pandas(data, self._schema, preserve_index=False)
         for batch in table.to_batches():
-            self._ffi_table.add_pyarrow(batch)
+            await self._ffi_table.add_pyarrow(batch)
 
 
 class PyDict(Source):
@@ -187,8 +188,8 @@ class PyDict(Source):
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
-        if rows:
-            await source.add_rows(rows)
+
+        await source.add_rows(rows)
         return source
 
     async def add_rows(self, rows: dict | list[dict]) -> None:
@@ -389,7 +390,7 @@ class JsonlString(Source):
             json_string = BytesIO(json_string.encode("utf-8"))
         batches = pa.json.read_json(json_string, parse_options=self._parse_options)
         for batch in batches.to_batches():
-            self._ffi_table.add_pyarrow(batch)
+            await self._ffi_table.add_pyarrow(batch)
 
 
 class Parquet(Source):
@@ -480,4 +481,4 @@ class Parquet(Source):
             schema=self._schema,
         )
         for batch in table.to_batches():
-            self._ffi_table.add_pyarrow(batch)
+            await self._ffi_table.add_pyarrow(batch)
