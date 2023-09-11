@@ -12,7 +12,7 @@ async def main():
     requestmap = dict()
 
     # Initialize event source with schema from historical data.
-    events = await kd.sources.PyDict.create(
+    events = kd.sources.PyDict(
         schema=pa.schema([
             pa.field("ts", pa.float64()),
             pa.field("user", pa.string()),
