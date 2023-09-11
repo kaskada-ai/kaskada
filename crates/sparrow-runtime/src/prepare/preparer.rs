@@ -8,12 +8,14 @@ use arrow::record_batch::RecordBatch;
 use arrow_array::Array;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::{PreparedFile, Source, SourceData, TableConfig};
+use uuid::Uuid;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
+use crate::PreparedMetadata;
 
-use super::prepared_batches;
+use super::{prepared_batches, write_parquet};
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -52,27 +54,6 @@ pub struct Preparer {
 
 impl Preparer {
     /// Create a new prepare produce data with the given schema.
-    // pub fn new(
-    //     time_column_name: String,
-    //     subsort_column_name: Option<String>,
-    //     key_column_name: String,
-    //     prepared_schema: SchemaRef,
-    //     prepare_hash: u64,
-    //     time_unit: Option<&str>,
-    //     object_stores: Arc<ObjectStoreRegistry>,
-    // ) -> error_stack::Result<Self, Error> {
-    //     let time_multiplier = time_multiplier(time_unit)?;
-    //     Ok(Self {
-    //         prepared_schema,
-    //         time_column_name,
-    //         subsort_column_name,
-    //         next_subsort: prepare_hash,
-    //         key_column_name,
-    //         time_multiplier,
-    //         object_stores,
-    //     })
-    // }
-
     pub fn new(
         table_config: Arc<TableConfig>,
         prepared_schema: SchemaRef,
@@ -100,19 +81,19 @@ impl Preparer {
     /// Prepare a parquet file.
     /// todo; docs
     pub async fn prepare_parquet(
-        &mut self,
+        &self,
         path: &str,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
-        // TODO:
-        // * Support Slicing
+        // TODO: Support Slicing
 
-        // TODO: What is the output url?
+        // TODO: Output URL
         // in wren it is prepared/prep_<version_id>/<sliceplanhash>/file_id (a uuid)/
         // file_id is persisted in wren. Don't know if that matters.
-        let output_path_prefix = "file://prepared/";
+        let uuid = Uuid::new_v4();
+        let output_path_prefix = format!("file://prepared/{uuid}/");
         let output_file_prefix = "part";
 
-        let output_url = ObjectStoreUrl::from_str(output_path_prefix)
+        let output_url = ObjectStoreUrl::from_str(&output_path_prefix)
             .change_context_lazy(|| Error::InvalidUrl(path.to_owned()))?;
 
         let object_store = self
@@ -129,6 +110,7 @@ impl Preparer {
             ),
         };
 
+        // TODO: Slicing
         let mut prepare_stream =
             prepared_batches(&self.object_stores, &source_data, &self.table_config, &None)
                 .await
@@ -165,7 +147,7 @@ impl Preparer {
         }
 
         // Wait for the uploads.
-        while let Some(upload) = uploads.try_next().await? {
+        while let Some(upload) = uploads.try_next().await.change_context(Error::Internal)? {
             tracing::info!("Finished uploading {upload}");
         }
 
@@ -181,9 +163,9 @@ impl Preparer {
     /// Self is mutated as necessary to ensure the `subsort` column is increasing, if
     /// it is added.
     pub fn prepare_batch(&mut self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
-        let time_column_name = self.table_config.time_column_name;
-        let subsort_column_name = self.table_config.subsort_column_name;
-        let key_column_name = self.table_config.group_column_name;
+        let time_column_name = self.table_config.time_column_name.clone();
+        let subsort_column_name = self.table_config.subsort_column_name.clone();
+        let key_column_name = self.table_config.group_column_name.clone();
 
         let time = get_required_column(&batch, &time_column_name)?;
         let time = cast_to_timestamp(time, self.time_multiplier)?;

@@ -485,4 +485,4 @@ class Parquet(Source):
         )
         for batch in table.to_batches():
             await self._ffi_table.add_pyarrow(batch)
-        # self._ffi_table.add_parquet(path)
+        # await self._ffi_table.add_parquet(path)

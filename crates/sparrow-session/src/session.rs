@@ -421,7 +421,7 @@ impl Session {
         )
         .into_report()
         .change_context(Error::Compile)?;
-        error_stack::ensure!(diagnostics.num_errors() == 0, Error::Internal);
+        error_stack::ensure!(diagnostics.num_errors() == 0, Error::internal());
 
         // Extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
@@ -556,8 +556,8 @@ impl ExecutionOptions {
 }
 
 fn result_schema(expr: &Expr, key_type: &DataType) -> error_stack::Result<SchemaRef, Error> {
-    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::Internal)? else {
-        error_stack::bail!(Error::Internal)
+    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::internal())? else {
+        error_stack::bail!(Error::internal())
     };
 
     let fields: Fields = super::table::KEY_FIELDS

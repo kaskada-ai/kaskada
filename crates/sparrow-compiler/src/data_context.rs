@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
+use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_api::kaskada::v1alpha::{compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
@@ -303,6 +305,28 @@ pub struct GroupInfo {
     key_type: DataType,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct ConcurrentFileSets {
+    file_sets: Arc<Mutex<Vec<compute_table::FileSet>>>,
+}
+
+impl ConcurrentFileSets {
+    pub fn new(file_sets: Vec<compute_table::FileSet>) -> Self {
+        Self {
+            file_sets: Arc::new(Mutex::new(file_sets)),
+        }
+    }
+    pub fn push(&mut self, file_set: compute_table::FileSet) {
+        self.file_sets.lock().unwrap().push(file_set);
+    }
+
+    // TODO: Cloning is bad, but since it's locked behind a mutex, it's necessary.
+    // Can we do better?
+    pub fn get(&self) -> Vec<compute_table::FileSet> {
+        self.file_sets.lock().unwrap().clone()
+    }
+}
+
 /// Information about tables.
 #[derive(Debug, Clone)]
 pub struct TableInfo {
@@ -316,7 +340,7 @@ pub struct TableInfo {
     /// slice configuration.
     /// TODO: Make optional?
     /// wrap both these in a Source class?
-    pub file_sets: Arc<Vec<compute_table::FileSet>>,
+    pub file_sets: ConcurrentFileSets,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,
 }
@@ -339,7 +363,7 @@ impl TableInfo {
             group_id,
             schema,
             config,
-            file_sets: Arc::new(file_sets),
+            file_sets: ConcurrentFileSets::new(file_sets),
             in_memory: None,
         })
     }
@@ -368,17 +392,18 @@ impl TableInfo {
         &self.config
     }
 
-    pub fn file_sets(&self) -> &[compute_table::FileSet] {
-        &self.file_sets
+    pub fn file_sets(&self) -> Vec<compute_table::FileSet> {
+        self.file_sets.get()
     }
 
     pub fn prepared_files_for_slice(
         &self,
         requested_slice: &Option<Slice>,
-    ) -> anyhow::Result<&[PreparedFile]> {
+    ) -> anyhow::Result<Vec<PreparedFile>> {
         let file_set = self
             .file_sets
-            .iter()
+            .get()
+            .into_iter()
             .find(|set| {
                 set.slice_plan
                     .iter()
@@ -393,11 +418,12 @@ impl TableInfo {
                 )
             })?;
 
-        Ok(&file_set.prepared_files)
+        Ok(file_set.prepared_files)
     }
 
     pub fn metadata_for_files(&self) -> Vec<String> {
         self.file_sets
+            .get()
             .iter()
             .flat_map(|set| {
                 set.prepared_files

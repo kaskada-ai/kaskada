@@ -7,7 +7,7 @@ use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::ResultExt;
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
 use sparrow_api::kaskada::v1alpha::{compute_table, PreparedFile};
-use sparrow_compiler::TableInfo;
+use sparrow_compiler::{ConcurrentFileSets, TableInfo};
 use sparrow_merge::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
 use sparrow_runtime::{key_hash_inverse::ThreadSafeKeyHashInverse, stores::ObjectStoreRegistry};
@@ -35,9 +35,10 @@ pub struct Table {
     // Batch, Paths, Streams, per type?
 }
 
+#[derive(Debug)]
 enum Source {
     InMemoryBatches(Arc<InMemoryBatches>),
-    Parquet(Arc<Vec<compute_table::FileSet>>),
+    Parquet(ConcurrentFileSets),
 }
 
 impl Table {
@@ -62,22 +63,19 @@ impl Table {
         // Filesets and in_memory should initially be empty.
         // From python, we create the table with no inputs, then add data.
         // TODO: Make these a single "Source" type in TableInfo?
-        error_stack::ensure!(table_info.file_sets().is_empty());
-        error_stack::ensure!(table_info.in_memory.is_none());
+        error_stack::ensure!(table_info.file_sets().is_empty(), Error::internal());
+        error_stack::ensure!(table_info.in_memory.is_none(), Error::internal());
 
         // TODO: Slicing
-        let file_set = Arc::new(compute_table::FileSet {
-            slice_plan: None,
-            prepared_files: vec![],
-        });
+        let concurrent_file_sets = ConcurrentFileSets::default();
 
         // Clone into the table_info, so that any modifications to our
         // original reference are reflected within the table_info.
-        table_info.file_sets = Some(file_set.clone());
+        table_info.file_sets = concurrent_file_sets.clone();
 
         let preparer = Preparer::new(
             table_info.config().clone(),
-            prepared_schema,
+            prepared_schema.clone(),
             prepare_hash,
             time_unit,
             object_stores,
@@ -91,16 +89,11 @@ impl Table {
         // in my table.rs add_parquet file
         // 2. See how Scan is reading in_memory and skipping normal execution, and emulate that
         //    for parquet files
-        // 3. Differentiate sources to ensure we can't add_data for parquet tables
-        //    or add_parquet for inmemorybatch tables?
-        // 4. Other shit?
 
+        // TODO: Support other sources
         let source = match source {
-            Some("parquet") => Source::Parquet(Arc::new(vec![])),
-            _ => Source::InMemoryBatches(Arc::new(InMemoryBatches::new(
-                querable, // TODO: fraz
-                prepared_schema.clone(),
-            ))),
+            Some("parquet") => Source::Parquet(concurrent_file_sets),
+            _ => Source::InMemoryBatches(Arc::new(InMemoryBatches::new(prepared_schema))),
         };
 
         Ok(Self {
@@ -116,10 +109,13 @@ impl Table {
         self.preparer.schema()
     }
 
-    pub async fn add_data(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
-        let source = match self.source {
-            Source::InMemoryBatches(in_memory) => in_memory,
-            other => error_stack::bail!("expected in memory data source, saw {}", other),
+    pub async fn add_data(&mut self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+        let source = match &self.source {
+            Source::InMemoryBatches(in_memory) => in_memory.clone(),
+            other => error_stack::bail!(Error::internal_msg(format!(
+                "expected in-memory data source, saw {:?}",
+                other
+            ))),
         };
 
         let prepared = self
@@ -141,15 +137,18 @@ impl Table {
         Ok(())
     }
 
-    pub async fn add_parquet(&mut self, path: &str) -> error_stack::Result<(), Error> {
-        let source = match self.source {
-            Source::Parquet(file_sets) => file_sets,
-            other => error_stack::bail!("expected parquet data source, saw {}", other),
+    pub async fn add_parquet(&self, path: String) -> error_stack::Result<(), Error> {
+        let mut source = match &self.source {
+            Source::Parquet(file_sets) => file_sets.clone(),
+            other => error_stack::bail!(Error::internal_msg(format!(
+                "expected parquet data source, saw {:?}",
+                other
+            ))),
         };
 
         let prepared = self
             .preparer
-            .prepare_parquet(path)
+            .prepare_parquet(&path)
             .await
             .change_context(Error::Prepare)?;
 

@@ -9,6 +9,7 @@ use sparrow_session::Table as RustTable;
 use crate::error::Result;
 use crate::expr::Expr;
 use crate::session::Session;
+use tokio::sync::{Mutex, MutexGuard, OwnedMutexGuard};
 
 #[pyclass]
 pub(crate) struct Table {
@@ -79,9 +80,22 @@ impl Table {
         })?)
     }
 
-    fn add_parquet(&mut self, path: &str) -> Result<()> {
-        // TODO: This is an async function. Is that possible?
-        self.rust_table.add_parquet(path)?;
+    // fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> PyResult<&'py PyAny> {
+    //     pyo3_asyncio::tokio::future_into_py(py, async move {
+    //         self.rust_table.add_parquet(path).await.unwrap();
+    //         Python::with_gil(|py| {
+    //             Ok(py.None())
+    //         })
+    //     })
+    // }
+
+    fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> PyResult<()> {
+        let rust_table = self.rust_table.clone();
+        pyo3_asyncio::tokio::future_into_py(py, async move {
+            rust_table.add_parquet(path).await.unwrap();
+            Python::with_gil(|py| Ok(py.None()))
+        })?;
+    
         Ok(())
     }
 }
