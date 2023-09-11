@@ -89,8 +89,8 @@ class Pandas(Source):
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
-        
-        await source.add_data(dataframe)
+        if dataframe: 
+            await source.add_data(dataframe)
         return source
 
     async def add_data(self, data: pd.DataFrame) -> None:
@@ -188,8 +188,8 @@ class PyDict(Source):
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
-
-        await source.add_rows(rows)
+        if rows:
+            await source.add_rows(rows)
         return source
 
     async def add_rows(self, rows: dict | list[dict]) -> None:
@@ -286,7 +286,8 @@ class CsvString(Source):
             grouping_name=grouping_name,
             time_unit=time_unit)
         
-        await source.add_string(csv_string)
+        if csv_string:
+            await source.add_string(csv_string)
         return source
 
     async def add_string(self, csv_string: str | BytesIO) -> None:
@@ -380,7 +381,8 @@ class JsonlString(Source):
             time_unit=time_unit,
         )
 
-        await source.add_string(json_string)
+        if json_string:
+            await source.add_string(json_string)
         return source
 
 
@@ -470,7 +472,8 @@ class Parquet(Source):
             grouping_name=grouping_name,
             time_unit=time_unit)
         
-        await source.add_file(path)
+        if path:
+            await source.add_file(path)
         return source
 
 
