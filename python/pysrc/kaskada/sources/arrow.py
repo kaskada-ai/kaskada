@@ -88,7 +88,8 @@ class Pandas(Source):
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
-        if dataframe:
+
+        if dataframe is not None:
             await source.add_data(dataframe)
         return source
 
