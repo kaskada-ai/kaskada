@@ -156,3 +156,4 @@ show_error_context = true
 testpaths = [
     "pytests",
 ]
+asyncio_mode = "auto"
