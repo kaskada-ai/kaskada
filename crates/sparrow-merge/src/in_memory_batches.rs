@@ -2,7 +2,7 @@ use std::sync::RwLock;
 
 use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReportCompat, ResultExt};
 use futures::Stream;
 
 use crate::old::homogeneous_merge;
