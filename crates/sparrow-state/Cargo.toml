@@ -10,6 +10,8 @@ Interfaces for state storage.
 """
 
 [dependencies]
+bitvec.workspace = true
+bytes.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 hashbrown.workspace = true

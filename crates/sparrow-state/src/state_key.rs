@@ -1,22 +1,19 @@
 #[derive(Debug, Clone)]
 pub struct StateKey {
+    /// Operation ID in the execution plan for this state.
+    pub operation_id: u16,
+    /// Index of the state within the operation.
+    pub state_index: u16,
     /// Key hash of the entity associated with this state.
     pub key_hash: u64,
-    /// ID of the partition containing the entity.
-    pub partition_id: u8,
-    /// Operation ID in the execution plan for this state.
-    pub operation_id: u8,
-    /// Expression ID in the operation for this state.
-    pub step_id: u8,
 }
 
 impl StateKey {
-    pub fn new(key_hash: u64, partition_id: u8, operation_id: u8, step_id: u8) -> Self {
-        StateKey {
-            key_hash,
-            partition_id,
+    pub fn new(operation_id: u16, state_index: u16, key_hash: u64) -> Self {
+        Self {
             operation_id,
-            step_id,
+            state_index,
+            key_hash,
         }
     }
 }

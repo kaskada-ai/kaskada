@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use sparrow_state::{Keys, PrimitiveState, PrimitiveToken, StateBackend, StateKey};
-use sparrow_state_sled::SledStateBackend;
+use sparrow_state_rocksdb::RocksdbStateBackend;
 
 fn setup_entity_keys() -> Keys {
     let mut keys = Vec::new();
@@ -14,7 +14,7 @@ fn setup_entity_keys() -> Keys {
     Keys::new(47, &keys)
 }
 
-fn rw_value(backend: &SledStateBackend, keys: &Keys) {
+fn rw_value(backend: &RocksdbStateBackend, keys: &Keys) {
     let token: PrimitiveToken<i64> = PrimitiveToken::new(16);
     let state = sparrow_state::read(&token, keys, backend).unwrap();
 
@@ -24,7 +24,7 @@ fn rw_value(backend: &SledStateBackend, keys: &Keys) {
     // backend.clear_all().unwrap();
 }
 
-fn w_value(backend: &SledStateBackend, keys: &Keys) {
+fn w_value(backend: &RocksdbStateBackend, keys: &Keys) {
     let token: PrimitiveToken<i64> = PrimitiveToken::new(16);
     let mut state: PrimitiveState<i64> = PrimitiveState::empty(keys);
     for key in &keys.key_indices {
@@ -38,10 +38,10 @@ fn w_value(backend: &SledStateBackend, keys: &Keys) {
 
 fn criterion_benchmark(c: &mut Criterion) {
     let tempdir = tempfile::tempdir().unwrap();
-    let state_backend = SledStateBackend::open(tempdir.path()).unwrap();
+    let state_backend = RocksdbStateBackend::open(tempdir.path()).unwrap();
 
     let input = setup_entity_keys();
-    let mut group = c.benchmark_group("Sled");
+    let mut group = c.benchmark_group("RocksDB");
     let group = group.throughput(criterion::Throughput::Elements(
         input.num_key_hashes() as u64,
         // input.num_rows() as u64,

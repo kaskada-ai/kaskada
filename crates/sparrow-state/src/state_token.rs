@@ -1,48 +1,32 @@
-use hashbrown::hash_map::Entry;
-use hashbrown::HashMap;
+use crate::{Error, Keys, ReadState, StateWriter, WriteState};
 
-use crate::StateBackend;
+pub trait StateToken {
+    type State;
 
-pub struct Keys {
-    pub operation_id: u8,
-    pub unique_key_hashes: Vec<u64>,
-    pub key_indices: Vec<usize>,
+    /// Return the index of this state token.
+    fn state_index(&self) -> u16;
 }
 
-impl Keys {
-    pub fn new(operation_id: u8, key_hashes: &[u64]) -> Self {
-        let mut keys: HashMap<u64, usize> = HashMap::with_capacity(key_hashes.len());
-        let mut key_indices = Vec::with_capacity(key_hashes.len());
-        let mut unique_key_hashes = Vec::with_capacity(key_hashes.len());
-        for key_hash in key_hashes {
-            let key_index = match keys.entry(*key_hash) {
-                Entry::Occupied(occupied) => *occupied.get(),
-                Entry::Vacant(vacant) => {
-                    let key_index = unique_key_hashes.len();
-                    unique_key_hashes.push(*key_hash);
-                    vacant.insert(key_index);
-                    key_index
-                }
-            };
-            key_indices.push(key_index)
-        }
-        unique_key_hashes.shrink_to_fit();
-        Self {
-            operation_id,
-            unique_key_hashes,
-            key_indices,
-        }
-    }
+pub fn read<T>(
+    token: &T,
+    keys: &Keys,
+    backend: &dyn ReadState<T::State>,
+) -> error_stack::Result<T::State, Error>
+where
+    T: StateToken,
+{
+    backend.read(token.state_index(), keys)
 }
 
-trait StateToken {
-    /// The in-memory representation of the state token.
-    type InMemory;
-
-    fn read(&self, backend: &dyn StateBackend) -> error_stack::Result<Self::InMemory, Error>;
-    fn write(
-        &self,
-        backend: &dyn StateBackend,
-        value: Self::InMemory,
-    ) -> error_stack::Result<(), Error>;
+pub fn write<T>(
+    token: &T,
+    keys: &Keys,
+    writer: &mut dyn StateWriter,
+    value: T::State,
+) -> error_stack::Result<(), Error>
+where
+    T: StateToken,
+    dyn StateWriter: WriteState<T::State>,
+{
+    writer.write(token.state_index(), keys, value)
 }

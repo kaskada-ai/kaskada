@@ -1,5 +1,5 @@
 [package]
-name = "sparrow-state-sled"
+name = "sparrow-state-rocksdb"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -15,7 +15,7 @@ derive_more.workspace = true
 error-stack.workspace = true
 sparrow-state = { path = "../sparrow-state" }
 serde.workspace = true
-sled = "^0.34.7"
+rocksdb.workspace = true
 speedy = "0.8.6"
 
 [dev-dependencies]
@@ -26,5 +26,5 @@ tempfile.workspace = true
 doctest = false
 
 [[bench]]
-name = "bench_state_sled"
+name = "bench_state_rocksdb"
 harness = false

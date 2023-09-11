@@ -6,14 +6,12 @@ pub enum Error {
     CreateBackend,
     #[display(fmt = "failed to clear all")]
     ClearAll,
-    #[display(fmt = "failed to perform '{_0}' on backend for key {_1:?}")]
-    BackendKey(&'static str, StateKey),
     #[display(fmt = "failed to perform '{_0}' on backend")]
     Backend(&'static str),
-    #[display(fmt = "failed to serialize value for key {_0:?}")]
-    Serialize(StateKey),
-    #[display(fmt = "failed to deserialize value for key {_0:?}")]
-    Deserialize(StateKey),
+    #[display(fmt = "failed to serialize value")]
+    Serialize,
+    #[display(fmt = "failed to deserialize value")]
+    Deserialize,
 }
 
 impl error_stack::Context for Error {}

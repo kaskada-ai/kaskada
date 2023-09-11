@@ -1,12 +1,131 @@
+use speedy::{Readable, Writable};
+use std::borrow::Cow;
+use std::cell::RefCell;
 use std::sync::Arc;
 
 use error_stack::{IntoReport, ResultExt};
-use sparrow_state::{DbPath, Error, StateBackend};
+use sparrow_state::{
+    DbPath, Error, Keys, PrimitiveState, ReadState, StateBackend, StateKey, StateWriter, WriteState,
+};
 
 pub struct SledStateBackend {
     db: sled::Db,
     /// Sled tree holding list items.
     items: sled::Tree,
+}
+
+impl StateBackend for SledStateBackend {
+    fn clear_all(&self) -> error_stack::Result<(), Error> {
+        self.db
+            .clear()
+            .into_report()
+            .change_context(Error::ClearAll)
+    }
+
+    fn writer(&self) -> error_stack::Result<Box<dyn sparrow_state::StateWriter>, Error> {
+        Ok(Box::new(SledStateBatch {
+            db: self.db.clone(),
+            batch: Default::default(),
+        }))
+    }
+}
+
+impl WriteState<PrimitiveState<i64>> for SledStateBatch {
+    fn write(
+        &mut self,
+        state_index: u16,
+        keys: &Keys,
+        value: PrimitiveState<i64>,
+    ) -> error_stack::Result<(), Error> {
+        debug_assert_eq!(keys.num_key_hashes(), value.len());
+
+        let mut key = StateKey {
+            operation_id: keys.operation_id,
+            state_index,
+            key_hash: 0,
+        };
+
+        for (key_hash, (non_null, value)) in keys.unique_key_hashes.iter().zip(value.values2()) {
+            key.key_hash = *key_hash;
+
+            if non_null {
+                let value = value
+                    .write_to_vec()
+                    .into_report()
+                    .change_context(Error::Serialize)?;
+                self.batch.insert(key.as_ref(), value);
+            } else {
+                self.batch.remove(key.as_ref());
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl ReadState<PrimitiveState<i64>> for SledStateBackend {
+    fn read(
+        &self,
+        state_index: u16,
+        keys: &Keys,
+    ) -> error_stack::Result<PrimitiveState<i64>, Error> {
+        let mut state = PrimitiveState::with_capacity(keys.num_key_hashes());
+        for key in keys.state_keys(state_index) {
+            let value = self
+                .db
+                .get(key)
+                .into_report()
+                .change_context_lazy(|| Error::Backend("get"))?;
+
+            match value {
+                Some(value) => {
+                    let value: i64 = i64::read_from_buffer(value.as_ref())
+                        .into_report()
+                        .change_context(Error::Deserialize)?;
+                    state.push_some(value);
+                }
+                None => {
+                    state.push_none();
+                }
+            }
+        }
+
+        Ok(state)
+    }
+}
+
+impl ReadState<PrimitiveState<f64>> for SledStateBackend {
+    fn read(
+        &self,
+        state_index: u16,
+        keys: &Keys,
+    ) -> error_stack::Result<PrimitiveState<f64>, Error> {
+        todo!()
+    }
+}
+
+impl WriteState<PrimitiveState<f64>> for SledStateBatch {
+    fn write(
+        &mut self,
+        state_index: u16,
+        keys: &Keys,
+        value: PrimitiveState<f64>,
+    ) -> error_stack::Result<(), Error> {
+        todo!()
+    }
+}
+pub struct SledStateBatch {
+    db: sled::Db,
+    batch: sled::Batch,
+}
+
+impl StateWriter for SledStateBatch {
+    fn finish(self) -> error_stack::Result<(), Error> {
+        self.db
+            .apply_batch(self.batch)
+            .into_report()
+            .change_context(Error::Backend("finish batch"))
+    }
 }
 
 impl SledStateBackend {
@@ -22,121 +141,5 @@ impl SledStateBackend {
         let backend = SledStateBackend { db, items };
 
         Ok(Arc::new(backend))
-    }
-
-    pub fn flush_batch(&self, batch: sled::Batch) -> error_stack::Result<(), Error> {
-        self.db
-            .apply_batch(batch)
-            .into_report()
-            .change_context(Error::Backend("flush"))?;
-        Ok(())
-    }
-
-    pub fn batch_value_put<T: serde::Serialize>(
-        &self,
-        key: &sparrow_state::StateKey,
-        value: Option<&T>,
-        batch: &mut sled::Batch,
-    ) -> error_stack::Result<(), Error> {
-        match value {
-            None => {
-                batch.remove(key.as_ref());
-            }
-            Some(value) => {
-                let value = bincode::serialize(value)
-                    .into_report()
-                    .change_context_lazy(|| Error::Serialize(key.clone()))?;
-                batch.insert(key.as_ref(), value);
-            }
-        }
-        Ok(())
-    }
-
-    fn clear_all(&self) -> error_stack::Result<(), Error> {
-        self.db
-            .clear()
-            .into_report()
-            .change_context(Error::ClearAll)
-    }
-
-    fn value_get<T: serde::de::DeserializeOwned>(
-        &self,
-        key: &sparrow_state::StateKey,
-    ) -> error_stack::Result<Option<T>, Error> {
-        let value = self
-            .db
-            .get(key)
-            .into_report()
-            .change_context_lazy(|| Error::BackendKey("get", key.clone()))?;
-
-        match value {
-            Some(value) => {
-                let value: T = bincode::deserialize(value.as_ref())
-                    .into_report()
-                    .change_context_lazy(|| Error::Deserialize(key.clone()))?;
-                Ok(Some(value))
-            }
-            None => Ok(None),
-        }
-    }
-
-    fn value_put<T: serde::Serialize>(
-        &self,
-        key: &sparrow_state::StateKey,
-        value: Option<&T>,
-    ) -> error_stack::Result<(), Error> {
-        match value {
-            None => {
-                self.db
-                    .remove(key)
-                    .into_report()
-                    .change_context_lazy(|| Error::BackendKey("put", key.clone()))?;
-            }
-            Some(value) => {
-                let value = bincode::serialize(value)
-                    .into_report()
-                    .change_context_lazy(|| Error::Serialize(key.clone()))?;
-                self.db
-                    .insert(key, value)
-                    .into_report()
-                    .change_context_lazy(|| Error::BackendKey("put", key.clone()))?;
-            }
-        }
-        Ok(())
-    }
-
-    fn list_get<T>(
-        &self,
-        key: &sparrow_state::StateKey,
-    ) -> error_stack::Result<Option<Vec<T>>, Error> {
-        todo!()
-    }
-
-    fn list_clear(&self, key: &sparrow_state::StateKey) -> error_stack::Result<(), Error> {
-        todo!()
-    }
-
-    fn list_push<'a, T: 'a>(
-        &'a self,
-        key: &sparrow_state::StateKey,
-        items: impl Iterator<Item = &'a T>,
-    ) -> error_stack::Result<(), Error> {
-        todo!()
-    }
-
-    fn list_pop_n(
-        &self,
-        key: &sparrow_state::StateKey,
-        n: usize,
-    ) -> error_stack::Result<(), Error> {
-        todo!()
-    }
-
-    fn list_shrink(
-        &self,
-        key: &sparrow_state::StateKey,
-        len: usize,
-    ) -> error_stack::Result<(), Error> {
-        todo!()
     }
 }
