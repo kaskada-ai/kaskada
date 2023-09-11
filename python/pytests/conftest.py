@@ -4,12 +4,21 @@ from typing import Union
 import kaskada as kd
 import pandas as pd
 import pytest
+import asyncio
 from kaskada import init_session
 
 
 @pytest.fixture(autouse=True, scope="session")
 def session() -> None:
     init_session()
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
 
 
 def pytest_addoption(parser: pytest.Parser):

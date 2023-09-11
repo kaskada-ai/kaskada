@@ -80,6 +80,7 @@ class PyDict(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
+            schema: The schema to use. If not provided, it will be inferred from the input.
             retained: Whether added rows should be retained for queries.
               If True, rows (both provided to the constructor and added later) will be retained
               for interactive queries. If False, rows will be discarded after being sent to any
@@ -87,7 +88,6 @@ class PyDict(Source):
               be used for materialization to avoid unnecessary memory usage.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
-            schema: The schema to use. If not provided, it will be inferred from the input.
             grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
@@ -163,16 +163,16 @@ class PyDict(Source):
 
 
 # TODO: We should be able to go straight from CSV to PyArrow, but
-# currently that has some problems with timestamp hadling.
+# currently that has some problems with timestamp handling.
 class CsvString(Source):
     """Source reading data from CSV strings using Pandas."""
 
     def __init__(
         self,
         *,
-        schema: pa.Schema,
         time_column: str,
         key_column: str,
+        schema: pa.Schema,
         subsort_column: Optional[str] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
@@ -182,9 +182,9 @@ class CsvString(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
+            schema: The schema to use. If not provided, it will be inferred from the input.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
-            schema: The schema to use. If not provided, it will be inferred from the input.
             grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
@@ -209,10 +209,10 @@ class CsvString(Source):
     async def create(
         csv_string: Optional[str | BytesIO] = None,
         *,
-        schema: Optional[pa.Schema] = None,
         time_column: str,
         key_column: str,
         subsort_column: Optional[str] = None,
+        schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
         ) -> CsvString:
