@@ -12,16 +12,16 @@ async def main():
     requestmap = dict()
 
     # Initialize event source with schema from historical data.
-    events = kd.sources.PyDict(
-        rows = [],
-        schema = pa.schema([
+    events = await kd.sources.PyDict.create(
+        rows=[{"ts": start, "user": "user_1", "request_id": "12345678-1234-5678-1234-567812345678"}],
+        schema=pa.schema([
             pa.field("ts", pa.float64()),
             pa.field("user", pa.string()),
             pa.field("request_id", pa.string()),
         ]),
-        time_column = "ts",
-        key_column = "user",
-        time_unit = "s",
+        time_column="ts",
+        key_column="user",
+        time_unit="s",
         retained=False,
     )
 
