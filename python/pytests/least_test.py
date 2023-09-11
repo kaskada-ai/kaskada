@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,a,b",
@@ -14,10 +14,10 @@ def source() -> kd.sources.CsvString:
             "2021-01-05T00:00:00,A,2,5.4",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 
 
-def test_least(source, golden) -> None:
+async def test_least(source, golden) -> None:
     a = source.col("a")
     b = source.col("b")
     golden.jsonl(kd.record({"a": a, "b": b, "a_least_b": a.least(b)}))

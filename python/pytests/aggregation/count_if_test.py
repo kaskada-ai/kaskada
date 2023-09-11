@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def count_if_source() -> kd.sources.CsvString:
+async def count_if_source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n,is_valid",
@@ -17,10 +17,10 @@ def count_if_source() -> kd.sources.CsvString:
             "1996-12-19T16:40:04,B,30,1,true",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 
 
-def test_count_if_unwindowed(count_if_source, golden) -> None:
+async def test_count_if_unwindowed(count_if_source, golden) -> None:
     is_valid = count_if_source.col("is_valid")
     m = count_if_source.col("m")
     golden.jsonl(
@@ -34,7 +34,7 @@ def test_count_if_unwindowed(count_if_source, golden) -> None:
     )
 
 
-def test_count_if_windowed(count_if_source, golden) -> None:
+async def test_count_if_windowed(count_if_source, golden) -> None:
     is_valid = count_if_source.col("is_valid")
     m = count_if_source.col("m")
     golden.jsonl(
@@ -48,7 +48,7 @@ def test_count_if_windowed(count_if_source, golden) -> None:
     )
 
 
-def test_count_if_since_true(count_if_source, golden) -> None:
+async def test_count_if_since_true(count_if_source, golden) -> None:
     is_valid = count_if_source.col("is_valid")
     m = count_if_source.col("m")
     golden.jsonl(

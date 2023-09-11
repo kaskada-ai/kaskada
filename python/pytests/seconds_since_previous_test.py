@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n,t",
@@ -16,10 +16,10 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,,1996-12-19T16:43:02",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 
 
-def test_seconds_since_previous(golden, source) -> None:
+async def test_seconds_since_previous(golden, source) -> None:
     t = source.col("time")
     golden.jsonl(
         kd.record(

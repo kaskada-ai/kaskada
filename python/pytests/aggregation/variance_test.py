@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -15,10 +15,10 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 
 
-def test_variance_unwindowed(source, golden) -> None:
+async def test_variance_unwindowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -28,7 +28,7 @@ def test_variance_unwindowed(source, golden) -> None:
     )
 
 
-def test_variance_windowed(source, golden) -> None:
+async def test_variance_windowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -43,7 +43,7 @@ def test_variance_windowed(source, golden) -> None:
     )
 
 
-def test_variance_since_true(source, golden) -> None:
+async def test_variance_since_true(source, golden) -> None:
     # `since(True)` should be the same as unwindowed, so equals the original vaule.
     m_variance_since_true = kd.record(
         {

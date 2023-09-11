@@ -1,9 +1,9 @@
 import kaskada as kd
 
 
-def test_union(golden) -> None:
-    source = kd.sources.PyDict(
-        [
+async def test_union(golden) -> None:
+    source = await kd.sources.PyDict.create(
+        rows=[
             {"time": "1996-12-19T16:39:57", "user": "A", "m": [5], "n": []},
             {"time": "1996-12-19T17:39:57", "user": "A", "m": [], "n": [5, 6]},
             {"time": "1996-12-19T18:39:57", "user": "A", "m": [None]},

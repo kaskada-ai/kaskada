@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -15,13 +15,13 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 
 
 @pytest.fixture(scope="module")
-def source_spread_across_days() -> kd.sources.PyDict:
-    return kd.sources.PyDict(
-        rows=[
+async def source_spread_across_days() -> kd.sources.PyDict:
+    return await kd.sources.PyDict.create(
+        [
             {"time": "2021-01-01T00:00:00", "key": "A", "m": 1, "n": 2},
             {"time": "2021-01-01T01:10:01", "key": "A", "m": 3, "n": 4},
             {"time": "2021-01-01T02:20:02", "key": "A", "m": 5, "n": 6},
@@ -35,13 +35,13 @@ def source_spread_across_days() -> kd.sources.PyDict:
     )
 
 
-def test_sum_unwindowed(source, golden) -> None:
+async def test_sum_unwindowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kd.record({"m": m, "sum_m": m.sum(), "n": n, "sum_n": n.sum()}))
 
 
-def test_sum_windowed(source, golden) -> None:
+async def test_sum_windowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -56,7 +56,7 @@ def test_sum_windowed(source, golden) -> None:
     )
 
 
-def test_sum_since_true(source, golden) -> None:
+async def test_sum_since_true(source, golden) -> None:
     # `since(True)` should be the same as unwindowed, so equals the original vaule.
     m_sum_since_true = kd.record(
         {
@@ -67,7 +67,7 @@ def test_sum_since_true(source, golden) -> None:
     golden.jsonl(m_sum_since_true)
 
 
-def test_sum_since_hourly(source_spread_across_days, golden) -> None:
+async def test_sum_since_hourly(source_spread_across_days, golden) -> None:
     golden.jsonl(
         source_spread_across_days.col("m").sum(window=kd.windows.Since.hourly())
     )

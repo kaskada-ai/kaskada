@@ -18,7 +18,41 @@ class Pandas(Source):
 
     def __init__(
         self,
-        dataframe: pd.DataFrame,
+        *,
+        time_column: str,
+        key_column: str,
+        schema: pa.Schema,
+        subsort_column: Optional[str] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
+    ) -> None:
+        """Create a source reading Pandas DataFrames.
+
+        Args:
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            schema: The schema to use. 
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
+        """
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
+    
+
+    @staticmethod
+    async def create(
+        dataframe: Optional[pd.DataFrame] = None,
         *,
         time_column: str,
         key_column: str,
@@ -26,7 +60,7 @@ class Pandas(Source):
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
-    ) -> None:
+        ) -> Pandas:
         """Create a source reading Pandas DataFrames.
 
         Args:
@@ -43,18 +77,22 @@ class Pandas(Source):
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
+            if dataframe is None:
+                raise ValueError("Must provide schema or dataframe")
             schema = pa.Schema.from_pandas(dataframe)
-        super().__init__(
+
+        source = Pandas(
             schema=schema,
             time_column=time_column,
             key_column=key_column,
             subsort_column=subsort_column,
             grouping_name=grouping_name,
-            time_unit=time_unit,
-        )
-        self.add_data(dataframe)
+            time_unit=time_unit)
+        
+        await source.add_data(dataframe)
+        return source
 
-    def add_data(self, data: pd.DataFrame) -> None:
+    async def add_data(self, data: pd.DataFrame) -> None:
         """Add data to the source."""
         table = pa.Table.from_pandas(data, self._schema, preserve_index=False)
         for batch in table.to_batches():
@@ -80,7 +118,7 @@ class PyDict(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
-            schema: The schema to use. If not provided, it will be inferred from the input.
+            schema: The schema to use. 
             retained: Whether added rows should be retained for queries.
               If True, rows (both provided to the constructor and added later) will be retained
               for interactive queries. If False, rows will be discarded after being sent to any
@@ -108,11 +146,11 @@ class PyDict(Source):
 
     @staticmethod
     async def create(
+        rows: Optional[dict | list[dict]] = None,
         *,
         time_column: str,
         key_column: str,
         retained: bool = True,
-        rows: Optional[dict | list[dict]] = None,
         subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
@@ -182,7 +220,7 @@ class CsvString(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
-            schema: The schema to use. If not provided, it will be inferred from the input.
+            schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
@@ -238,6 +276,7 @@ class CsvString(Source):
                 raise ValueError("Must provide schema or csv_string")
             schema = pa.csv.read_csv(csv_string).schema
             csv_string.seek(0)
+
         source = CsvString(
             schema=schema,
             time_column=time_column,
@@ -245,6 +284,7 @@ class CsvString(Source):
             subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit)
+        
         await source.add_string(csv_string)
         return source
 
@@ -262,16 +302,51 @@ class JsonlString(Source):
 
     def __init__(
         self,
-        json_string: str | BytesIO,
+        *,
+        time_column: str,
+        key_column: str,
+        schema: pa.Schema,
+        subsort_column: Optional[str] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
+    ) -> None:
+        """Create a JSON String Source.
+
+        Args:
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            schema: The schema to use. 
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
+        """
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
+        self._parse_options = pyarrow.json.ParseOptions(explicit_schema=schema)
+
+
+    @staticmethod
+    async def create(
+        json_string: Optional[str | BytesIO] = None,
         *,
         time_column: str,
         key_column: str,
         subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: Optional[TimeUnit] = None,
-    ) -> None:
-        """Create a JSON String Source.
+        time_unit: Optional[TimeUnit] = None
+        ) -> JsonlString:
+        """Create a source reading from JSON strings.
 
         Args:
             json_string: The line-delimited JSON string to start from.
@@ -286,24 +361,29 @@ class JsonlString(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
+
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
         if schema is None:
+            if json_string is None:
+                raise ValueError("Must provide schema or JSON")
             schema = pa.json.read_json(json_string).schema
             json_string.seek(0)
-        super().__init__(
-            schema=schema,
+            
+        source = JsonlString(
             time_column=time_column,
             key_column=key_column,
             subsort_column=subsort_column,
+            schema=schema,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
 
-        self._parse_options = pyarrow.json.ParseOptions(explicit_schema=schema)
-        self.add_string(json_string)
+        await source.add_string(json_string)
+        return source
 
-    def add_string(self, json_string: str | BytesIO) -> None:
+
+    async def add_string(self, json_string: str | BytesIO) -> None:
         """Add data to the source."""
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
@@ -317,7 +397,6 @@ class Parquet(Source):
 
     def __init__(
         self,
-        path: str,
         *,
         time_column: str,
         key_column: str,
@@ -329,21 +408,18 @@ class Parquet(Source):
         """Create a Parquet source.
 
         Args:
-            path: The path to the Parquet file to add.
             dataframe: The DataFrame to start from.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
-            schema: The schema to use. If not provided, it will be inferred from the input.
+            schema: The schema to use.
             grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
-        if schema is None:
-            schema = pa.parquet.read_schema(path)
         super().__init__(
             schema=schema,
             time_column=time_column,
@@ -353,9 +429,51 @@ class Parquet(Source):
             time_unit=time_unit,
         )
 
-        self.add_file(path)
 
-    def add_file(self, path: str) -> None:
+    @staticmethod
+    async def create(
+        path: Optional[str] = None,
+        *,
+        time_column: str,
+        key_column: str,
+        schema: Optional[pa.Schema] = None,
+        subsort_column: Optional[str] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
+        ) -> Parquet:
+        """Create a Parquet source.
+
+        Args:
+            path: The path to the Parquet file to add.
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
+        """
+        if schema is None:
+            if path is None:
+                raise ValueError("Must provide schema or path to parquet file")
+            schema = pa.parquet.read_schema(path)
+
+        source = Parquet(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit)
+        
+        await source.add_file(path)
+        return source
+
+
+    async def add_file(self, path: str) -> None:
         """Add data to the source."""
         table = pa.parquet.read_table(
             path,

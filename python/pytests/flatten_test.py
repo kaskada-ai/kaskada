@@ -1,9 +1,9 @@
 import kaskada as kd
 
 
-def test_flatten(golden) -> None:
-    source = kd.sources.PyDict(
-        [
+async def test_flatten(golden) -> None:
+    source = await kd.sources.PyDict.create(
+        rows=[
             {"time": "1996-12-19T16:39:57", "user": "A", "m": [[5]]},
             {"time": "1996-12-19T17:39:57", "user": "A", "m": []},
             {"time": "1996-12-19T18:39:57", "user": "A", "m": [None]},

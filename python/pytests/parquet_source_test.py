@@ -1,13 +1,13 @@
 import kaskada as kd
 
 
-def test_read_parquet(golden) -> None:
-    source = kd.sources.Parquet(
+async def test_read_parquet(golden) -> None:
+    source = await kd.sources.Parquet.create(
         "../testdata/purchases/purchases_part1.parquet",
         time_column="purchase_time",
         key_column="customer_id",
     )
     golden.jsonl(source)
 
-    source.add_file("../testdata/purchases/purchases_part2.parquet")
+    await source.add_file("../testdata/purchases/purchases_part2.parquet")
     golden.jsonl(source)

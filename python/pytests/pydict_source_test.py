@@ -3,15 +3,15 @@ import pyarrow as pa
 import pytest
 
 
-def test_read_pydict(golden) -> None:
-    source = kd.sources.PyDict(
-        [{"time": "1996-12-19T16:39:57", "user": "A", "m": 5, "n": 10}],
+async def test_read_pydict(golden) -> None:
+    source = await kd.sources.PyDict.create(
+        rows=[{"time": "1996-12-19T16:39:57", "user": "A", "m": 5, "n": 10}],
         time_column="time",
         key_column="user",
     )
     golden.jsonl(source)
 
-    source.add_rows(
+    await source.add_rows(
         [
             {"time": "1996-12-19T16:40:57", "user": "A", "m": 8, "n": 10},
             {"time": "1996-12-19T16:41:57", "user": "B", "m": 5},
@@ -19,19 +19,19 @@ def test_read_pydict(golden) -> None:
     )
 
     golden.jsonl(source)
-    source.add_rows({"time": "1996-12-19T16:42:57", "user": "A", "m": 8, "n": 10})
+    await source.add_rows({"time": "1996-12-19T16:42:57", "user": "A", "m": 8, "n": 10})
     golden.jsonl(source)
 
 
-def test_read_pydict_lists(golden) -> None:
-    source = kd.sources.PyDict(
-        [{"time": "1996-12-19T16:39:57", "user": "A", "m": [5, 10], "n": 10}],
+async def test_read_pydict_lists(golden) -> None:
+    source = await kd.sources.PyDict.create(
+        rows=[{"time": "1996-12-19T16:39:57", "user": "A", "m": [5, 10], "n": 10}],
         time_column="time",
         key_column="user",
     )
     golden.jsonl(source)
 
-    source.add_rows(
+    await source.add_rows(
         [
             {"time": "1996-12-19T16:40:57", "user": "A", "m": [], "n": 10},
             {"time": "1996-12-19T16:41:57", "user": "A", "n": 10},
@@ -40,16 +40,16 @@ def test_read_pydict_lists(golden) -> None:
     golden.jsonl(source)
 
 
-def test_read_pydict_ignore_column(golden) -> None:
+async def test_read_pydict_ignore_column(golden) -> None:
     # Schema is determined from first row, and doesn't contain an "m" column.
-    source = kd.sources.PyDict(
-        [{"time": "1996-12-19T16:39:57", "user": "A", "n": 10}],
+    source = await kd.sources.PyDict.create(
+        rows=[{"time": "1996-12-19T16:39:57", "user": "A", "n": 10}],
         time_column="time",
         key_column="user",
     )
     golden.jsonl(source)
 
-    source.add_rows(
+    await source.add_rows(
         [
             {"time": "1996-12-19T16:40:57", "user": "A", "m": 83, "n": 10},
             {"time": "1996-12-19T16:41:57", "user": "A", "m": 12},
@@ -58,9 +58,8 @@ def test_read_pydict_ignore_column(golden) -> None:
     golden.jsonl(source)
 
 
-def test_read_pydict_empty() -> None:
+async def test_read_pydict_empty() -> None:
     source = kd.sources.PyDict(
-        rows=[],
         schema=pa.schema(
             [
                 ("time", pa.timestamp("ns")),
@@ -79,10 +78,8 @@ def test_read_pydict_empty() -> None:
     assert result["x"].dtype == "int64"
 
 
-@pytest.mark.asyncio
 async def test_read_pydict_empty_live(golden) -> None:
     source = kd.sources.PyDict(
-        rows=[],
         schema=pa.schema(
             [
                 ("time", pa.string()),
@@ -95,7 +92,7 @@ async def test_read_pydict_empty_live(golden) -> None:
     )
 
     execution = source.run_iter(mode="live")
-    source.add_rows({"time": "1996-12-19T16:39:57Z", "user": "A", "x": 5})
+    await source.add_rows({"time": "1996-12-19T16:39:57Z", "user": "A", "x": 5})
     golden.jsonl(await execution.__anext__())
 
     execution.stop()
