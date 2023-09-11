@@ -363,7 +363,6 @@ class JsonlString(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
-
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
         if schema is None:
