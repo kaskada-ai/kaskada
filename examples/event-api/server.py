@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import json, asyncio, time, uuid, asyncio
+import pyarrow as pa
 import kaskada as kd
 from aiohttp import web
 
@@ -12,7 +13,12 @@ async def main():
 
     # Initialize event source with schema from historical data.
     events = kd.sources.PyDict(
-        rows = [{"ts": start, "user": "user_1", "request_id": "12345678-1234-5678-1234-567812345678"}],
+        rows = [],
+        schema = pa.schema([
+            pa.field("ts", pa.float64()),
+            pa.field("user", pa.string()),
+            pa.field("request_id", pa.string()),
+        ]),
         time_column = "ts",
         key_column = "user",
         time_unit = "s",
@@ -29,6 +35,7 @@ async def main():
         "ts": events.col("ts"),
     }))
 
+
     # Receive JSON messages in real-time
     async def handle_http(req: web.Request) -> web.Response:
         data = await req.json()
@@ -37,20 +44,18 @@ async def main():
         data["ts"] = time.time()
 
         # Create a future so the aggregated result can be returned in the API response
-        request_id = str(uuid.uuid4())
-        requestmap[request_id] = asyncio.Future()
+        request_id = str(uuid.uuid4()) 
+        fut = asyncio.Future()
+        requestmap[request_id] = fut
         data["request_id"] = request_id
 
         # Send the event to Kaskada to be processed as a stream
-        print(f"Got data: {data}")
         events.add_rows(data)
 
         # Wait for the response to be completed by the Kaskada handler
-        print(f"Waiting for response")
-        resp = await requestmap[request_id]
+        resp = await fut
 
         # Return result as the response body
-        print(f"Sending response: {resp}")
         return web.Response(text = json.dumps(resp))
 
     # Setup the async web server
@@ -63,14 +68,11 @@ async def main():
 
 
     # Handle each conversation as it occurs
-    print(f"Waiting for events...")
-    async for row in output.run(materialize=True).iter_rows_async():
+    async for row in output.run_iter(kind='row', mode='live'):
         try:
             # Ignore historical rows
             if row["ts"] <= start:
                 continue
-
-            print(f"Recieved from K*: {row}")
 
             request_id = row["request_id"]
             fut = requestmap.pop(request_id, None)
@@ -81,7 +83,7 @@ async def main():
             fut.set_result(row["response"])
 
         except Exception as e:
-            print(f"Failed to handle live event from Kaskada: {e}")
+            print(f"Failed to handle live event from Kaskada: {e}") 
 
     # Wait for web server to terminate gracefully
     await runner.cleanup()
