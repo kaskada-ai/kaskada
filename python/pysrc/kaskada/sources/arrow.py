@@ -109,7 +109,7 @@ class PyDict(Source):
         time_column: str,
         key_column: str,
         schema: pa.Schema,
-        retained: bool = True,
+        queryable: bool = True,
         subsort_column: Optional[str] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
@@ -120,8 +120,8 @@ class PyDict(Source):
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use.
-            retained: Whether added rows should be retained for queries.
-              If True, rows (both provided to the constructor and added later) will be retained
+            queryable: Whether added rows will be available for running queries.
+              If True, rows (both provided to the constructor and added later) will be available
               for interactive queries. If False, rows will be discarded after being sent to any
               running materializations. Consider setting this to False when the source will only
               be used for materialization to avoid unnecessary memory usage.
@@ -134,7 +134,7 @@ class PyDict(Source):
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
         super().__init__(
-            retained=retained,
+            queryable=queryable,
             schema=schema,
             time_column=time_column,
             key_column=key_column,
@@ -151,7 +151,7 @@ class PyDict(Source):
         *,
         time_column: str,
         key_column: str,
-        retained: bool = True,
+        queryable: bool = True,
         subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
@@ -162,8 +162,8 @@ class PyDict(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
-            retained: Whether added rows should be retained for queries.
-              If True, rows (both provided to the constructor and added later) will be retained
+            queryable: Whether added rows will be available for running queries.
+              If True, rows (both provided to the constructor and added later) will be available
               for interactive queries. If False, rows will be discarded after being sent to any
               running materializations. Consider setting this to False when the source will only
               be used for materialization to avoid unnecessary memory usage.
@@ -183,7 +183,7 @@ class PyDict(Source):
         source = PyDict(
             time_column=time_column,
             key_column=key_column,
-            retained=retained,
+            queryable=queryable,
             subsort_column=subsort_column,
             schema=schema,
             grouping_name=grouping_name,

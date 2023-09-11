@@ -53,7 +53,7 @@ class Table:
         time_column: str,
         key_column: str,
         schema: pa.Schema,
-        retained: bool,
+        queryable: bool,
         subsort_column: Optional[str],
         grouping_name: Optional[str],
         time_unit: Optional[str],

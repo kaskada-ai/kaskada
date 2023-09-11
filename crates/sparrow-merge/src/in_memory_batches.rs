@@ -20,7 +20,10 @@ impl error_stack::Context for Error {}
 /// Struct for managing in-memory batches.
 #[derive(Debug)]
 pub struct InMemoryBatches {
-    retained: bool,
+    /// Whether rows added will be available for interactive queries.
+    /// If False, rows will be discarded after being sent to any active
+    /// materializations.
+    queryable: bool,
     current: RwLock<Current>,
     sender: async_broadcast::Sender<(usize, RecordBatch)>,
     /// A subscriber that is never used -- it exists only to keep the sender
@@ -61,7 +64,7 @@ impl Current {
 }
 
 impl InMemoryBatches {
-    pub fn new(retained: bool, schema: SchemaRef) -> Self {
+    pub fn new(queryable: bool, schema: SchemaRef) -> Self {
         let (mut sender, receiver) = async_broadcast::broadcast(10);
 
         // Don't wait for a receiver. If no-one receives, `send` will fail.
@@ -69,7 +72,7 @@ impl InMemoryBatches {
 
         let current = RwLock::new(Current::new(schema.clone()));
         Self {
-            retained,
+            queryable,
             current,
             sender,
             _receiver: receiver.deactivate(),
@@ -86,7 +89,7 @@ impl InMemoryBatches {
 
         let new_version = {
             let mut write = self.current.write().map_err(|_| Error::Add)?;
-            if self.retained {
+            if self.queryable {
                 write.add_batch(&batch)?;
             }
             write.version += 1;

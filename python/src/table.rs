@@ -22,7 +22,7 @@ pub(crate) struct Table {
 impl Table {
     /// Create a new table.
     #[new]
-    #[pyo3(signature = (session, name, time_column, key_column, schema, retained, subsort_column, grouping_name, time_unit))]
+    #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         session: Session,
@@ -30,7 +30,7 @@ impl Table {
         time_column: &str,
         key_column: &str,
         schema: PyArrowType<Schema>,
-        retained: bool,
+        queryable: bool,
         subsort_column: Option<&str>,
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
@@ -41,7 +41,7 @@ impl Table {
             &name,
             raw_schema,
             time_column,
-            retained,
+            queryable,
             subsort_column,
             key_column,
             grouping_name,

@@ -87,7 +87,7 @@ impl Session {
         name: &str,
         schema: SchemaRef,
         time_column_name: &str,
-        retained: bool,
+        queryable: bool,
         subsort_column_name: Option<&str>,
         key_column_name: &str,
         grouping_name: Option<&str>,
@@ -150,7 +150,7 @@ impl Session {
             key_hash_inverse,
             key_column,
             expr,
-            retained,
+            queryable,
             time_unit,
         )
     }

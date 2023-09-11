@@ -13,6 +13,7 @@ def session() -> None:
     init_session()
 
 
+# sets up a single, session-scoped async event loop.
 @pytest.fixture(scope="session")
 def event_loop():
     policy = asyncio.get_event_loop_policy()
