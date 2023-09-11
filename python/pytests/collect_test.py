@@ -2,7 +2,6 @@ from datetime import timedelta
 
 import kaskada as kd
 import pytest
-import pytest_asyncio
 
 
 @pytest.fixture(scope="module")
@@ -19,7 +18,10 @@ async def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:04,A,,,f,",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
+
 
 async def test_collect_basic(source, golden) -> None:
     m = source.col("m")
@@ -30,7 +32,7 @@ async def test_collect_basic(source, golden) -> None:
                 "m": m,
                 "collect_m": m.collect(max=None),
                 "n": n,
-                "collect_n": n.collect(max=None)
+                "collect_n": n.collect(max=None),
             }
         )
     )

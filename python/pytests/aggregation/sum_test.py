@@ -15,7 +15,9 @@ async def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 @pytest.fixture(scope="module")

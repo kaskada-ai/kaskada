@@ -1,10 +1,10 @@
+import asyncio
 import os
 from typing import Union
 
 import kaskada as kd
 import pandas as pd
 import pytest
-import asyncio
 from kaskada import init_session
 
 

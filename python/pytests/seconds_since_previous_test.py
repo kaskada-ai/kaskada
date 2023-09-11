@@ -16,7 +16,9 @@ async def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,,1996-12-19T16:43:02",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_seconds_since_previous(golden, source) -> None:

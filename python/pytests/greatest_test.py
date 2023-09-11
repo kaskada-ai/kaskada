@@ -14,7 +14,9 @@ async def source() -> kd.sources.CsvString:
             "2021-01-05T00:00:00,A,2,5.4",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_greatest(source, golden) -> None:

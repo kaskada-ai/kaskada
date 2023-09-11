@@ -1,6 +1,7 @@
 import kaskada as kd
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_read_csv(golden) -> None:
     content1 = "\n".join(

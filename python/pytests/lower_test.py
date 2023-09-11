@@ -15,7 +15,9 @@ async def source() -> kd.sources.CsvString:
             "2021-01-04T00:00:00,Ryan,hi",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_lower(source, golden) -> None:

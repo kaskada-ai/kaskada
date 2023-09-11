@@ -122,9 +122,12 @@ async def test_timestream_preview(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    source = await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
     golden.jsonl(source.preview(limit=4))
+
 
 async def test_timestream_run_non_record(golden) -> None:
     content = "\n".join(
@@ -138,7 +141,9 @@ async def test_timestream_run_non_record(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    source = await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
     golden.jsonl(source.col("m"))
 
 
@@ -154,7 +159,9 @@ async def test_timestream_cast(golden) -> None:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    source = await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    source = await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
     golden.jsonl(source.col("time").cast(pa.timestamp("ns")))
 
 

@@ -15,7 +15,9 @@ async def key_source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,WA",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -31,7 +33,9 @@ async def foreign_source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,WA,,",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_lookup(key_source, foreign_source, golden) -> None:

@@ -31,7 +31,7 @@ class Pandas(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
-            schema: The schema to use. 
+            schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
@@ -48,7 +48,6 @@ class Pandas(Source):
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
-    
 
     @staticmethod
     async def create(
@@ -60,7 +59,7 @@ class Pandas(Source):
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
-        ) -> Pandas:
+    ) -> Pandas:
         """Create a source reading Pandas DataFrames.
 
         Args:
@@ -89,7 +88,7 @@ class Pandas(Source):
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
-        if dataframe: 
+        if dataframe:
             await source.add_data(dataframe)
         return source
 
@@ -119,7 +118,7 @@ class PyDict(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
-            schema: The schema to use. 
+            schema: The schema to use.
             retained: Whether added rows should be retained for queries.
               If True, rows (both provided to the constructor and added later) will be retained
               for interactive queries. If False, rows will be discarded after being sent to any
@@ -155,7 +154,8 @@ class PyDict(Source):
         subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: Optional[TimeUnit] = None) -> PyDict:
+        time_unit: Optional[TimeUnit] = None,
+    ) -> PyDict:
         """Create a source reading from rows represented as dicts.
 
         Args:
@@ -254,7 +254,7 @@ class CsvString(Source):
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
-        ) -> CsvString:
+    ) -> CsvString:
         """Create a CSV String Source with data.
 
         Args:
@@ -284,8 +284,9 @@ class CsvString(Source):
             key_column=key_column,
             subsort_column=subsort_column,
             grouping_name=grouping_name,
-            time_unit=time_unit)
-        
+            time_unit=time_unit,
+        )
+
         if csv_string:
             await source.add_string(csv_string)
         return source
@@ -317,7 +318,7 @@ class JsonlString(Source):
         Args:
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
-            schema: The schema to use. 
+            schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
@@ -336,7 +337,6 @@ class JsonlString(Source):
         )
         self._parse_options = pyarrow.json.ParseOptions(explicit_schema=schema)
 
-
     @staticmethod
     async def create(
         json_string: Optional[str | BytesIO] = None,
@@ -346,8 +346,8 @@ class JsonlString(Source):
         subsort_column: Optional[str] = None,
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
-        time_unit: Optional[TimeUnit] = None
-        ) -> JsonlString:
+        time_unit: Optional[TimeUnit] = None,
+    ) -> JsonlString:
         """Create a source reading from JSON strings.
 
         Args:
@@ -371,7 +371,7 @@ class JsonlString(Source):
                 raise ValueError("Must provide schema or JSON")
             schema = pa.json.read_json(json_string).schema
             json_string.seek(0)
-            
+
         source = JsonlString(
             time_column=time_column,
             key_column=key_column,
@@ -384,7 +384,6 @@ class JsonlString(Source):
         if json_string:
             await source.add_string(json_string)
         return source
-
 
     async def add_string(self, json_string: str | BytesIO) -> None:
         """Add data to the source."""
@@ -432,7 +431,6 @@ class Parquet(Source):
             time_unit=time_unit,
         )
 
-
     @staticmethod
     async def create(
         path: Optional[str] = None,
@@ -443,7 +441,7 @@ class Parquet(Source):
         subsort_column: Optional[str] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
-        ) -> Parquet:
+    ) -> Parquet:
         """Create a Parquet source.
 
         Args:
@@ -470,12 +468,12 @@ class Parquet(Source):
             key_column=key_column,
             subsort_column=subsort_column,
             grouping_name=grouping_name,
-            time_unit=time_unit)
-        
+            time_unit=time_unit,
+        )
+
         if path:
             await source.add_file(path)
         return source
-
 
     async def add_file(self, path: str) -> None:
         """Add data to the source."""

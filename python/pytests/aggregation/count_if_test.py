@@ -17,7 +17,9 @@ async def count_if_source() -> kd.sources.CsvString:
             "1996-12-19T16:40:04,B,30,1,true",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_count_if_unwindowed(count_if_source, golden) -> None:

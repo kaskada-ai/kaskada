@@ -15,7 +15,9 @@ async def source_int64() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_math_int64(golden, source_int64) -> None:

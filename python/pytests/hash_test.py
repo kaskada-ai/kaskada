@@ -15,7 +15,9 @@ async def string_source() -> kd.sources.CsvString:
             "2021-01-04T00:00:00,Ryan,earth,",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_hash_string(string_source, golden) -> None:
@@ -36,7 +38,9 @@ async def integer_source() -> kd.sources.CsvString:
             "2021-01-04T00:00:00,Ryan,9,",
         ]
     )
-    return await kd.sources.CsvString.create(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 async def test_hash_integer(integer_source, golden) -> None:
