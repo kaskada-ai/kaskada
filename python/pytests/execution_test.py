@@ -42,7 +42,6 @@ async def test_iter_rows(golden, source_int64) -> None:
         next(results)
 
 
-@pytest.mark.skip("hanging?")
 async def test_iter_pandas_async(golden, source_int64) -> None:
     batches: AsyncIterator[pd.DataFrame] = source_int64.run_iter(
         row_limit=4, max_batch_size=2
@@ -59,7 +58,6 @@ async def test_iter_pandas_async(golden, source_int64) -> None:
         await batches.__anext__()
 
 
-@pytest.mark.skip("hanging?")
 async def test_iter_pandas_async_live(golden, source_int64) -> None:
     data2 = "\n".join(
         [
@@ -79,7 +77,7 @@ async def test_iter_pandas_async_live(golden, source_int64) -> None:
     golden.jsonl(await execution.__anext__())
 
     # Add data and await the second batch.
-    source_int64.add_string(data2)
+    await source_int64.add_string(data2)
     golden.jsonl(await execution.__anext__())
 
     execution.stop()
