@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -15,11 +15,13 @@ def source() -> kd.sources.CsvString:
             "1997-01-18T16:40:00,A,,9",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
 @pytest.mark.skip(reason="shift to literal not supported")
-def test_shift_to_datetime(source, golden) -> None:
+async def test_shift_to_datetime(source, golden) -> None:
     time = source.col("time")
     shift_to_datetime = datetime(1996, 12, 25, 0, 0, 0)
     golden.jsonl(
@@ -29,7 +31,7 @@ def test_shift_to_datetime(source, golden) -> None:
     )
 
 
-def test_shift_to_column(source, golden) -> None:
+async def test_shift_to_column(source, golden) -> None:
     time = source.col("time")
     shift_by_timedelta = timedelta(seconds=10)
     golden.jsonl(

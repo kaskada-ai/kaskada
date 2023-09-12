@@ -26,7 +26,7 @@ impl Table {
         key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
         key_column: usize,
         expr: Expr,
-        retained: bool,
+        queryable: bool,
         time_unit: Option<&str>,
     ) -> error_stack::Result<Self, Error> {
         let prepared_fields: Fields = KEY_FIELDS
@@ -38,7 +38,7 @@ impl Table {
         let prepare_hash = 0;
 
         assert!(table_info.in_memory.is_none());
-        let in_memory_batches = Arc::new(InMemoryBatches::new(retained, prepared_schema.clone()));
+        let in_memory_batches = Arc::new(InMemoryBatches::new(queryable, prepared_schema.clone()));
         table_info.in_memory = Some(in_memory_batches.clone());
 
         let preparer = Preparer::new(
@@ -66,7 +66,7 @@ impl Table {
         self.preparer.schema()
     }
 
-    pub fn add_data(&mut self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+    pub async fn add_data(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
         let prepared = self
             .preparer
             .prepare_batch(batch)
@@ -75,11 +75,13 @@ impl Table {
         let key_hashes = prepared.column(2).as_primitive();
         let keys = prepared.column(self.key_column);
         self.key_hash_inverse
-            .blocking_add(keys.as_ref(), key_hashes)
+            .add(keys.as_ref(), key_hashes)
+            .await
             .change_context(Error::Prepare)?;
 
         self.in_memory_batches
             .add_batch(prepared)
+            .await
             .change_context(Error::Prepare)?;
         Ok(())
     }

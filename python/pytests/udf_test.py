@@ -27,7 +27,7 @@ def test_docstring() -> None:
 
 
 @pytest.fixture
-def source_int64() -> kd.sources.CsvString:
+async def source_int64() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -39,16 +39,18 @@ def source_int64() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
-def test_add_udf_direct(golden, source_int64) -> None:
+async def test_add_udf_direct(golden, source_int64) -> None:
     m = source_int64.col("m")
     n = source_int64.col("n")
     golden.jsonl(kd.record({"m": m, "n": n, "add": add(m, n), "add_x2": add_x2(m, n)}))
 
 
-def test_add_udf_pipe(golden, source_int64) -> None:
+async def test_add_udf_pipe(golden, source_int64) -> None:
     m = source_int64.col("m")
     n = source_int64.col("n")
     golden.jsonl(
@@ -69,7 +71,7 @@ def test_add_udf_pipe(golden, source_int64) -> None:
 # A bug existed where the UDF was hashing the signature rather than
 # the uuid, so the DFG was equating two different UDFs with the
 # same signature and using the first definition.
-def test_add_udf_redefined_inline(golden, source_int64) -> None:
+async def test_add_udf_redefined_inline(golden, source_int64) -> None:
     m = source_int64.col("m")
     n = source_int64.col("n")
 

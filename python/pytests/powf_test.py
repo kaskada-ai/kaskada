@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n",
@@ -15,10 +15,12 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,6",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
-def test_powf_unwindowed(source, golden) -> None:
+async def test_powf_unwindowed(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kd.record({"m": m, "powf": m.powf(n)}))

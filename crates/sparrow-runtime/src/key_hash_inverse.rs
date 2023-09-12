@@ -324,27 +324,6 @@ impl ThreadSafeKeyHashInverse {
         }
     }
 
-    pub fn blocking_add(
-        &self,
-        keys: &dyn Array,
-        key_hashes: &UInt64Array,
-    ) -> error_stack::Result<(), Error> {
-        error_stack::ensure!(
-            keys.len() == key_hashes.len(),
-            Error::MismatchedLengths {
-                keys: keys.len(),
-                key_hashes: key_hashes.len()
-            }
-        );
-        let has_new_keys = self.key_map.blocking_read().has_new_keys(key_hashes);
-
-        if has_new_keys {
-            self.key_map.blocking_write().add(keys, key_hashes)
-        } else {
-            Ok(())
-        }
-    }
-
     /// Stores the KeyHashInverse to the compute store.
     ///
     /// This method is thread-safe and acquires the read-lock.

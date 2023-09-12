@@ -28,6 +28,7 @@ The following Python code imports the Kaskada library, creates a session, and lo
 It then runs a query to produce a Pandas DataFrame.
 
 ```{code-cell}
+import asyncio
 import kaskada as kd
 kd.init_session()
 content = "\n".join(
@@ -41,6 +42,6 @@ content = "\n".join(
         "1996-12-19T16:40:02,A,,",
     ]
 )
-source = kd.sources.CsvString(content, time_column="time", key_column="key")
+source = await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 source.select("m", "n").extend({"sum_m": source.col("m").sum() }).to_pandas()
 ```

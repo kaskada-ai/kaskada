@@ -13,15 +13,14 @@ async def main():
 
     # Initialize event source with schema from historical data.
     events = kd.sources.PyDict(
-        rows = [],
-        schema = pa.schema([
+        schema=pa.schema([
             pa.field("ts", pa.float64()),
             pa.field("user", pa.string()),
             pa.field("request_id", pa.string()),
         ]),
-        time_column = "ts",
-        key_column = "user",
-        time_unit = "s",
+        time_column="ts",
+        key_column="user",
+        time_unit="s",
         retained=False,
     )
 
