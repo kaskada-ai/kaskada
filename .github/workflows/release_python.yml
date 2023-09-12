@@ -329,3 +329,5 @@ jobs:
         run: |
           gh release edit ${{ github.ref_name }} \
             --draft=false --discussion-category "Announcements"
+        env:
+          GH_TOKEN: ${{ github.token }}
