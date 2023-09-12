@@ -51,13 +51,20 @@ impl Table {
             source,
         )?;
 
-        let table = Table { name, rust_table: Arc::new(rust_table), session };
+        let table = Table {
+            name,
+            rust_table: Arc::new(rust_table),
+            session,
+        };
         Ok(table)
     }
 
     fn expr(&self) -> Expr {
         let rust_expr = self.rust_table.expr.clone();
-        Expr { rust_expr, session: self.session.clone() }
+        Expr {
+            rust_expr,
+            session: self.session.clone(),
+        }
     }
 
     /// Add PyArrow data to the given table.
@@ -80,22 +87,14 @@ impl Table {
         })?)
     }
 
-    // fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> PyResult<&'py PyAny> {
-    //     pyo3_asyncio::tokio::future_into_py(py, async move {
-    //         self.rust_table.add_parquet(path).await.unwrap();
-    //         Python::with_gil(|py| {
-    //             Ok(py.None())
-    //         })
-    //     })
-    // }
-
-    fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> PyResult<()> {
+    fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> Result<&'py PyAny> {
         let rust_table = self.rust_table.clone();
-        pyo3_asyncio::tokio::future_into_py(py, async move {
-            rust_table.add_parquet(path).await.unwrap();
-            Python::with_gil(|py| Ok(py.None()))
-        })?;
-    
-        Ok(())
+        Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
+            let result = rust_table.add_parquet(path).await;
+            Python::with_gil(|py| {
+                result.unwrap();
+                Ok(py.None())
+            })
+        })?)
     }
 }

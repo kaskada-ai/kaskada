@@ -479,10 +479,4 @@ class Parquet(Source):
 
     async def add_file(self, path: str) -> None:
         """Add data to the source."""
-        table = pa.parquet.read_table(
-            path,
-            schema=self._schema,
-        )
-        for batch in table.to_batches():
-            await self._ffi_table.add_pyarrow(batch)
-        # await self._ffi_table.add_parquet(path)
+        await self._ffi_table.add_parquet(path)

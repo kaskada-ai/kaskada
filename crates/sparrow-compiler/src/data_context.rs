@@ -325,6 +325,10 @@ impl ConcurrentFileSets {
     pub fn get(&self) -> Vec<compute_table::FileSet> {
         self.file_sets.lock().unwrap().clone()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.file_sets.lock().unwrap().is_empty()
+    }
 }
 
 /// Information about tables.

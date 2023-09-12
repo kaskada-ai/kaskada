@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -162,7 +164,7 @@ impl Preparer {
     ///
     /// Self is mutated as necessary to ensure the `subsort` column is increasing, if
     /// it is added.
-    pub fn prepare_batch(&mut self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
+    pub fn prepare_batch(&self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
         let time_column_name = self.table_config.time_column_name.clone();
         let subsort_column_name = self.table_config.subsort_column_name.clone();
         let key_column_name = self.table_config.group_column_name.clone();

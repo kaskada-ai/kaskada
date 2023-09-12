@@ -17,22 +17,13 @@ use crate::{Error, Expr};
 pub struct Table {
     pub expr: Expr,
     preparer: Preparer,
-    // in_memory_batches: Arc<InMemoryBatches>,
     key_column: usize,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
-    // files: Arc<Vec<compute_table::FileSet>>,
     source: Source,
     // TODO: FRAZ: How is tableinfo created?
     // Answer:  DataContext.add_table (ComputeTable holds the filesets)
     // ComputeTable is created via session.add_table(). With no filesets nor source
     // Make sure new files are added to compute table?
-
-    // TODO: Need to pass in the Source Type, so we can check that
-    // when we call add_data, or add_parquet on the `Table` in python, we're
-    // adding the correct data type to the source
-
-    // TODO: Wrap the in_memory_batches and files in a `Source` type?
-    // Batch, Paths, Streams, per type?
 }
 
 #[derive(Debug)]
@@ -60,18 +51,35 @@ impl Table {
         let prepared_schema = Arc::new(Schema::new(prepared_fields));
         let prepare_hash = 0;
 
-        // Filesets and in_memory should initially be empty.
+        // filesets and in_memory_batches should initially be empty.
         // From python, we create the table with no inputs, then add data.
-        // TODO: Make these a single "Source" type in TableInfo?
-        error_stack::ensure!(table_info.file_sets().is_empty(), Error::internal());
+        error_stack::ensure!(table_info.file_sets.is_empty(), Error::internal());
         error_stack::ensure!(table_info.in_memory.is_none(), Error::internal());
 
-        // TODO: Slicing
-        let concurrent_file_sets = ConcurrentFileSets::default();
+        // TODO: Support other sources
+        // TODO: Ideally, both the file_sets and in_memory_batches are
+        // optional in table_info, or wrapped by a shared source.
+        let source = match source {
+            Some("parquet") => {
+                let concurrent_file_sets = ConcurrentFileSets::default();
 
-        // Clone into the table_info, so that any modifications to our
-        // original reference are reflected within the table_info.
-        table_info.file_sets = concurrent_file_sets.clone();
+                // Clone into the table_info, so that any modifications to our
+                // original reference are reflected within the table_info.
+                table_info.file_sets = concurrent_file_sets.clone();
+
+                Source::Parquet(concurrent_file_sets)
+            }
+            _ => {
+                let in_memory_batches =
+                    Arc::new(InMemoryBatches::new(queryable, prepared_schema.clone()));
+
+                // Clone into the table_info, so that any modifications to our
+                // original reference are reflected within the table_info.
+                table_info.in_memory = Some(in_memory_batches.clone());
+
+                Source::InMemoryBatches(in_memory_batches)
+            }
+        };
 
         let preparer = Preparer::new(
             table_info.config().clone(),
@@ -83,18 +91,6 @@ impl Table {
         .change_context_lazy(|| Error::CreateTable {
             name: table_info.name().to_owned(),
         })?;
-
-        // TODO: FRAZ NExt steps:
-        // 1. Async thing -- look in exeuction.rs and copy that pyarrow async method
-        // in my table.rs add_parquet file
-        // 2. See how Scan is reading in_memory and skipping normal execution, and emulate that
-        //    for parquet files
-
-        // TODO: Support other sources
-        let source = match source {
-            Some("parquet") => Source::Parquet(concurrent_file_sets),
-            _ => Source::InMemoryBatches(Arc::new(InMemoryBatches::new(prepared_schema))),
-        };
 
         Ok(Self {
             expr,
@@ -109,7 +105,7 @@ impl Table {
         self.preparer.schema()
     }
 
-    pub async fn add_data(&mut self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+    pub async fn add_data(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
         let source = match &self.source {
             Source::InMemoryBatches(in_memory) => in_memory.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
@@ -152,6 +148,7 @@ impl Table {
             .await
             .change_context(Error::Prepare)?;
 
+        // TODO: Slicing
         source.push(FileSet {
             slice_plan: None,
             prepared_files: prepared,

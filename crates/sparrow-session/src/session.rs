@@ -468,9 +468,8 @@ impl Session {
             .into_report()
             .change_context(Error::Execute)?;
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
-
         let destination = Destination::Channel(output_tx);
-        // TODO: FRAZ - Is this empty? How is data context used in session?
+
         let data_context = self.data_context.clone();
 
         let (stop_signal_tx, stop_signal_rx) = tokio::sync::watch::channel(false);
