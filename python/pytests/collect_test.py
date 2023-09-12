@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n,s,b",
@@ -18,10 +18,12 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:04,A,,,f,",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
-def test_collect_basic(source, golden) -> None:
+async def test_collect_basic(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -36,7 +38,7 @@ def test_collect_basic(source, golden) -> None:
     )
 
 
-def test_collect_with_max(source, golden) -> None:
+async def test_collect_with_max(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -51,7 +53,7 @@ def test_collect_with_max(source, golden) -> None:
     )
 
 
-def test_collect_with_min(source, golden) -> None:
+async def test_collect_with_min(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -66,7 +68,7 @@ def test_collect_with_min(source, golden) -> None:
     )
 
 
-def test_collect_with_min_and_max(source, golden) -> None:
+async def test_collect_with_min_and_max(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(
@@ -81,7 +83,7 @@ def test_collect_with_min_and_max(source, golden) -> None:
     )
 
 
-def test_collect_since_window(source, golden) -> None:
+async def test_collect_since_window(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kd.record(
@@ -90,7 +92,7 @@ def test_collect_since_window(source, golden) -> None:
     )
 
 
-def test_collect_i64_trailing_window_1s(source, golden) -> None:
+async def test_collect_i64_trailing_window_1s(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kd.record(
@@ -104,7 +106,7 @@ def test_collect_i64_trailing_window_1s(source, golden) -> None:
     )
 
 
-def test_collect_i64_trailing_window_3s(source, golden) -> None:
+async def test_collect_i64_trailing_window_3s(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kd.record(
@@ -118,7 +120,7 @@ def test_collect_i64_trailing_window_3s(source, golden) -> None:
     )
 
 
-def test_collect_i64_trailing_window_3s_with_max(source, golden) -> None:
+async def test_collect_i64_trailing_window_3s_with_max(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kd.record(
@@ -132,7 +134,7 @@ def test_collect_i64_trailing_window_3s_with_max(source, golden) -> None:
     )
 
 
-def test_collect_i64_trailing_window_3s_with_min(source, golden) -> None:
+async def test_collect_i64_trailing_window_3s_with_min(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kd.record(
@@ -146,7 +148,7 @@ def test_collect_i64_trailing_window_3s_with_min(source, golden) -> None:
     )
 
 
-def test_collect_string_trailing_window_1s(source, golden) -> None:
+async def test_collect_string_trailing_window_1s(source, golden) -> None:
     s = source.col("s")
     golden.jsonl(
         kd.record(
@@ -160,7 +162,7 @@ def test_collect_string_trailing_window_1s(source, golden) -> None:
     )
 
 
-def test_collect_string_trailing_window_3s(source, golden) -> None:
+async def test_collect_string_trailing_window_3s(source, golden) -> None:
     s = source.col("s")
     golden.jsonl(
         kd.record(
@@ -174,7 +176,7 @@ def test_collect_string_trailing_window_3s(source, golden) -> None:
     )
 
 
-def test_collect_string_trailing_window_3s_with_max(source, golden) -> None:
+async def test_collect_string_trailing_window_3s_with_max(source, golden) -> None:
     s = source.col("s")
     golden.jsonl(
         kd.record(
@@ -188,7 +190,7 @@ def test_collect_string_trailing_window_3s_with_max(source, golden) -> None:
     )
 
 
-def test_collect_string_trailing_window_3s_with_min(source, golden) -> None:
+async def test_collect_string_trailing_window_3s_with_min(source, golden) -> None:
     s = source.col("s")
     golden.jsonl(
         kd.record(
@@ -202,7 +204,7 @@ def test_collect_string_trailing_window_3s_with_min(source, golden) -> None:
     )
 
 
-def test_collect_bool_trailing_window_1s(source, golden) -> None:
+async def test_collect_bool_trailing_window_1s(source, golden) -> None:
     b = source.col("b")
     golden.jsonl(
         kd.record(
@@ -216,7 +218,7 @@ def test_collect_bool_trailing_window_1s(source, golden) -> None:
     )
 
 
-def test_collect_bool_trailing_window_3s(source, golden) -> None:
+async def test_collect_bool_trailing_window_3s(source, golden) -> None:
     b = source.col("b")
     golden.jsonl(
         kd.record(
@@ -230,7 +232,7 @@ def test_collect_bool_trailing_window_3s(source, golden) -> None:
     )
 
 
-def test_collect_bool_trailing_window_3s_with_max(source, golden) -> None:
+async def test_collect_bool_trailing_window_3s_with_max(source, golden) -> None:
     b = source.col("b")
     golden.jsonl(
         kd.record(
@@ -244,7 +246,7 @@ def test_collect_bool_trailing_window_3s_with_max(source, golden) -> None:
     )
 
 
-def test_collect_bool_trailing_window_3s_with_min(source, golden) -> None:
+async def test_collect_bool_trailing_window_3s_with_min(source, golden) -> None:
     b = source.col("b")
     golden.jsonl(
         kd.record(
@@ -262,7 +264,7 @@ def test_collect_bool_trailing_window_3s_with_min(source, golden) -> None:
 # date-time like fields nested within a list. So we expand things out.
 #
 # TODO: Improve the golden testing so this isn't necessary.
-def test_collect_struct_trailing_window_1s(source, golden) -> None:
+async def test_collect_struct_trailing_window_1s(source, golden) -> None:
     collect = source.collect(max=None, window=kd.windows.Trailing(timedelta(seconds=1)))
     golden.jsonl(
         kd.record(
@@ -277,7 +279,7 @@ def test_collect_struct_trailing_window_1s(source, golden) -> None:
     )
 
 
-def test_collect_struct_trailing_window_3s(source, golden) -> None:
+async def test_collect_struct_trailing_window_3s(source, golden) -> None:
     collect = source.collect(max=None, window=kd.windows.Trailing(timedelta(seconds=3)))
     golden.jsonl(
         kd.record(
@@ -292,7 +294,7 @@ def test_collect_struct_trailing_window_3s(source, golden) -> None:
     )
 
 
-def test_collect_struct_trailing_window_3s_with_max(source, golden) -> None:
+async def test_collect_struct_trailing_window_3s_with_max(source, golden) -> None:
     collect = source.collect(max=2, window=kd.windows.Trailing(timedelta(seconds=3)))
     golden.jsonl(
         kd.record(
@@ -307,7 +309,7 @@ def test_collect_struct_trailing_window_3s_with_max(source, golden) -> None:
     )
 
 
-def test_collect_struct_trailing_window_3s_with_min(source, golden) -> None:
+async def test_collect_struct_trailing_window_3s_with_min(source, golden) -> None:
     collect = source.collect(
         min=3, max=None, window=kd.windows.Trailing(timedelta(seconds=3))
     )
@@ -324,19 +326,19 @@ def test_collect_struct_trailing_window_3s_with_min(source, golden) -> None:
     )
 
 
-def test_collect_records(source, golden) -> None:
+async def test_collect_records(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kd.record({"m": m, "n": n}).collect(max=None))
 
 
-def test_collect_records_field_ref(source, golden) -> None:
+async def test_collect_records_field_ref(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     golden.jsonl(kd.record({"m": m, "n": n}).collect(max=None).col("m"))
 
 
-def test_collect_lists(source, golden) -> None:
+async def test_collect_lists(source, golden) -> None:
     m = source.col("m")
     golden.jsonl(
         kd.record(

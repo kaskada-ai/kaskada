@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def source() -> kd.sources.CsvString:
+async def source() -> kd.sources.CsvString:
     content = "\n".join(
         [
             "time,key,m,n,default",
@@ -15,10 +15,12 @@ def source() -> kd.sources.CsvString:
             "1996-12-19T16:40:02,A,,,-1",
         ]
     )
-    return kd.sources.CsvString(content, time_column="time", key_column="key")
+    return await kd.sources.CsvString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
-def test_else_(source, golden) -> None:
+async def test_else_(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
     default = source.col("default")
@@ -39,17 +41,19 @@ def test_else_(source, golden) -> None:
 
 
 @pytest.fixture(scope="module")
-def record_source() -> kd.sources.JsonlString:
+async def record_source() -> kd.sources.JsonlString:
     content = "\n".join(
         [
             """{"time":"1996-12-19T16:39:57","key":"A","override": {"test":"override_val"}}""",
             """{"time":"1996-12-19T16:39:58","key":"A","default_record":{"test":"default"}}""",
         ]
     )
-    return kd.sources.JsonlString(content, time_column="time", key_column="key")
+    return await kd.sources.JsonlString.create(
+        content, time_column="time", key_column="key"
+    )
 
 
-def test_else_debug(record_source, golden) -> None:
+async def test_else_debug(record_source, golden) -> None:
     default_record = record_source.col("default_record")
     override_column = record_source.col("override")
     golden.jsonl(

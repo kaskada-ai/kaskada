@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Union
 
@@ -10,6 +11,15 @@ from kaskada import init_session
 @pytest.fixture(autouse=True, scope="session")
 def session() -> None:
     init_session()
+
+
+# sets up a single, session-scoped async event loop.
+@pytest.fixture(scope="session")
+def event_loop():
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
 
 
 def pytest_addoption(parser: pytest.Parser):

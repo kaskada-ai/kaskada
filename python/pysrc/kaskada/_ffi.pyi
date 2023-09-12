@@ -45,7 +45,7 @@ class Expr:
     def execute(self, options: Optional[_ExecutionOptions] = None) -> Execution: ...
     def grouping(self) -> Optional[str]: ...
 
-class Table(Expr):
+class Table:
     def __init__(
         self,
         session: Session,
@@ -53,14 +53,15 @@ class Table(Expr):
         time_column: str,
         key_column: str,
         schema: pa.Schema,
-        retained: bool,
+        queryable: bool,
         subsort_column: Optional[str],
         grouping_name: Optional[str],
         time_unit: Optional[str],
     ) -> None: ...
     @property
     def name(self) -> str: ...
-    def add_pyarrow(self, data: pa.RecordBatch) -> None: ...
+    async def add_pyarrow(self, data: pa.RecordBatch) -> None: ...
+    def expr(self) -> Expr: ...
 
 class Udf(object):
     def __init__(self, result_ty: str, result_fn: Callable[..., pa.Array]) -> None: ...

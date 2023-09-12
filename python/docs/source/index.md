@@ -55,11 +55,12 @@ Kaskada was built by core contributors to [Apache Beam](https://beam.apache.org/
 The core of BeepGPT's real-time processing requires only a few lines of code using Kaskada:
 
 ```python
+import asyncio
 import kaskada as kd
 kd.init_session()
 
 # Bootstrap from historical data
-messages = kd.sources.PyDict(
+messages = await kd.sources.PyDict.create(
     rows = pyarrow.parquet.read_table("./messages.parquet")
         .to_pylist(),
     time_column = "ts",

@@ -25,7 +25,7 @@ class Source(Timestream):
         schema: pa.Schema,
         time_column: str,
         key_column: str,
-        retained: bool = True,
+        queryable: bool = True,
         subsort_column: Optional[str] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
@@ -63,12 +63,12 @@ class Source(Timestream):
             time_column,
             key_column,
             schema,
-            retained,
+            queryable,
             subsort_column,
             grouping_name,
             time_unit,
         )
-        super().__init__(ffi_table)
+        super().__init__(ffi_table.expr())
         self._schema = schema
         self._ffi_table = ffi_table
 

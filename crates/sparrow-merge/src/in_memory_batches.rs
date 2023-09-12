@@ -2,7 +2,7 @@ use std::sync::RwLock;
 
 use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
+use error_stack::{IntoReportCompat, ResultExt};
 use futures::Stream;
 
 use crate::old::homogeneous_merge;
@@ -20,12 +20,15 @@ impl error_stack::Context for Error {}
 /// Struct for managing in-memory batches.
 #[derive(Debug)]
 pub struct InMemoryBatches {
-    retained: bool,
+    /// Whether rows added will be available for interactive queries.
+    /// If False, rows will be discarded after being sent to any active
+    /// materializations.
+    queryable: bool,
     current: RwLock<Current>,
-    updates: tokio::sync::broadcast::Sender<(usize, RecordBatch)>,
+    sender: async_broadcast::Sender<(usize, RecordBatch)>,
     /// A subscriber that is never used -- it exists only to keep the sender
     /// alive.
-    _subscriber: tokio::sync::broadcast::Receiver<(usize, RecordBatch)>,
+    _receiver: async_broadcast::InactiveReceiver<(usize, RecordBatch)>,
 }
 
 #[derive(Debug)]
@@ -61,38 +64,43 @@ impl Current {
 }
 
 impl InMemoryBatches {
-    pub fn new(retained: bool, schema: SchemaRef) -> Self {
-        let (updates, _subscriber) = tokio::sync::broadcast::channel(10);
+    pub fn new(queryable: bool, schema: SchemaRef) -> Self {
+        let (mut sender, receiver) = async_broadcast::broadcast(10);
+
+        // Don't wait for a receiver. If no-one receives, `send` will fail.
+        sender.set_await_active(false);
+
         let current = RwLock::new(Current::new(schema.clone()));
         Self {
-            retained,
+            queryable,
             current,
-            updates,
-            _subscriber,
+            sender,
+            _receiver: receiver.deactivate(),
         }
     }
 
     /// Add a batch, merging it into the in-memory version.
     ///
     /// Publishes the new batch to the subscribers.
-    pub fn add_batch(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+    pub async fn add_batch(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
         if batch.num_rows() == 0 {
             return Ok(());
         }
 
         let new_version = {
             let mut write = self.current.write().map_err(|_| Error::Add)?;
-            if self.retained {
+            if self.queryable {
                 write.add_batch(&batch)?;
             }
             write.version += 1;
             write.version
         };
 
-        self.updates
-            .send((new_version, batch))
-            .into_report()
-            .change_context(Error::Add)?;
+        let send_result = self.sender.broadcast((new_version, batch)).await;
+        if send_result.is_err() {
+            assert!(!self.sender.is_closed());
+            tracing::info!("No-one subscribed for new batch");
+        }
         Ok(())
     }
 
@@ -107,7 +115,7 @@ impl InMemoryBatches {
             let read = self.current.read().unwrap();
             (read.version, read.batch.clone())
         };
-        let mut recv = self.updates.subscribe();
+        let mut recv = self.sender.new_receiver();
 
         async_stream::try_stream! {
             tracing::info!("Starting subscriber with version {version}");
@@ -126,11 +134,11 @@ impl InMemoryBatches {
                             tracing::warn!("Ignoring old version {recv_version}");
                         }
                     }
-                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    Err(async_broadcast::RecvError::Closed) => {
                         tracing::info!("Sender closed.");
                         break;
                     },
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                    Err(async_broadcast::RecvError::Overflowed(_)) => {
                         Err(Error::ReceiverLagged)?;
                     }
                 }

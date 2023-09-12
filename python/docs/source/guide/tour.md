@@ -24,6 +24,7 @@ The initial setup / data is below.
 ---
 tags: [hide-cell]
 ---
+import asyncio
 import kaskada as kd
 kd.init_session()
 single_entity = "\n".join(
@@ -36,7 +37,7 @@ single_entity = "\n".join(
         "1996-12-24T16:40:02,A,,",
     ]
 )
-single_entity = kd.sources.CsvString(single_entity, time_column="time", key_column="key")
+single_entity = await kd.sources.CsvString.create(single_entity, time_column="time", key_column="key")
 ```
 
 ## Events and Aggregations
