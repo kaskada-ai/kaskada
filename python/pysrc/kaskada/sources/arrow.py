@@ -4,6 +4,7 @@ from __future__ import annotations
 from io import BytesIO
 from typing import Optional
 
+import os
 import pandas as pd
 import pyarrow as pa
 import pyarrow.csv
@@ -402,20 +403,19 @@ class Parquet(Source):
         *,
         time_column: str,
         key_column: str,
+        schema: Optional[pa.Schema],
         subsort_column: Optional[str] = None,
-        schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
     ) -> None:
         """Create a Parquet source.
 
         Args:
-            dataframe: The DataFrame to start from.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
+            schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
               If not provided, the subsort will be assigned by the system.
-            schema: The schema to use.
             grouping_name: The name of the group associated with each key.
               This is used to ensure implicit joins are only performed between data grouped
               by the same entity.
@@ -447,7 +447,8 @@ class Parquet(Source):
         """Create a Parquet source.
 
         Args:
-            path: The path to the Parquet file to add.
+            path: The path to the Parquet file to add. This can be relative to the current
+              working directory or an absolute path (prefixed by '/').
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use. If not provided, it will be inferred from the input.
@@ -479,4 +480,8 @@ class Parquet(Source):
 
     async def add_file(self, path: str) -> None:
         """Add data to the source."""
+        if not path.startswith("/"):
+            path = os.getcwd() + "/" + path
+
+        print("New path: " + path)
         await self._ffi_table.add_parquet(path)

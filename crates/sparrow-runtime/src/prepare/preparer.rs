@@ -86,11 +86,14 @@ impl Preparer {
         &self,
         path: &str,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
+        println!("Prepare parquet path: {:?}", path);
+
         // TODO: Support Slicing
 
         // TODO: Output URL
         // in wren it is prepared/prep_<version_id>/<sliceplanhash>/file_id (a uuid)/
         // file_id is persisted in wren. Don't know if that matters.
+        // TODO: This needs to be in the relative directory here..so like kaskada/.cache/prepared?
         let uuid = Uuid::new_v4();
         let output_path_prefix = format!("file://prepared/{uuid}/");
         let output_file_prefix = "part";
@@ -111,6 +114,7 @@ impl Preparer {
                     .change_context(Error::Internal)?,
             ),
         };
+        println!("Source data: {:?}", source_data);
 
         // TODO: Slicing
         let mut prepare_stream =

@@ -47,6 +47,7 @@ pub async fn prepared_batches<'a>(
             source_data::Source::ParquetPath(source) => {
                 let url = ObjectStoreUrl::from_str(source)
                     .change_context(Error::InvalidUrl(source.to_owned()))?;
+                println!("URL {:?}", url);
                 let file = ParquetFile::try_new(object_stores, url, None)
                     .await
                     .change_context(Error::CreateReader)?;

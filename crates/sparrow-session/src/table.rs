@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use arrow_array::cast::AsArray;
@@ -134,6 +135,8 @@ impl Table {
     }
 
     pub async fn add_parquet(&self, path: String) -> error_stack::Result<(), Error> {
+        println!("Path: {:?}", path);
+
         let mut source = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
