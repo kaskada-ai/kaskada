@@ -156,8 +156,19 @@ impl ScanOperation {
                 ))?,
         );
 
-        // TODO: FRAZ TableInfo hacks in the InMemory batches here, then bypasses the
-        // other table info /c compute table stuff. to return early.
+        // Figure out the projected columns from the table schema.
+        //
+        // TODO: Can we clean anything up by changing the table reader API
+        // to accept the desired table schema?
+        let projected_columns = Some(
+            scan_operation
+                .schema
+                .expect("already reported missing schema")
+                .fields
+                .into_iter()
+                .map(|field| field.name)
+                .collect(),
+        );
 
         if let Some(in_memory) = &table_info.in_memory {
             // Hacky. When doing the Python-builder, use the in-memory batch.
@@ -211,21 +222,56 @@ impl ScanOperation {
                 key_hash_index: KeyHashIndex::default(),
                 progress_updates_tx: context.progress_updates_tx.clone(),
             }));
-        }
+        } else if !table_info.file_sets.is_empty() {
+            // Also hacky. When using the python-builder, use the table info's
+            // concurrent file sets rather than look into the `Source`.
+            // Ideally, we don't support both paths.
+            let file_sets = table_info.file_sets_clone();
 
-        // Figure out the projected columns from the table schema.
-        //
-        // TODO: Can we clean anything up by changing the table reader API
-        // to accept the desired table schema?
-        let projected_columns = Some(
-            scan_operation
-                .schema
-                .expect("already reported missing schema")
-                .fields
-                .into_iter()
-                .map(|field| field.name)
-                .collect(),
-        );
+            // Only one file set since we don't support slicing yet
+            error_stack::ensure!(
+                file_sets.len() == 1,
+                Error::internal_msg("expected one file set")
+            );
+            assert!(requested_slice.is_none());
+
+            let prepared_files = &file_sets
+                .get(0)
+                .ok_or(Error::internal_msg("expected file set"))?
+                .prepared_files;
+
+            // Send initial progress information.
+            let total_num_rows = prepared_files
+                .iter()
+                .map(|file| file.num_rows as usize)
+                .sum();
+            context
+                .progress_updates_tx
+                .try_send(ProgressUpdate::InputMetadata { total_num_rows })
+                .into_report()
+                .change_context(Error::internal())?;
+
+            let input_stream = table_reader(
+                &context.object_stores,
+                table_info,
+                &requested_slice,
+                projected_columns,
+                FlightRecorder::disabled(),
+                context.max_event_in_snapshot,
+                context.output_at_time,
+            )
+            .await
+            .change_context(Error::internal_msg("failed to create table reader"))?
+            .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+            .boxed();
+
+            return Ok(Box::new(Self {
+                projected_schema,
+                input_stream,
+                key_hash_index: KeyHashIndex::default(),
+                progress_updates_tx: context.progress_updates_tx.clone(),
+            }));
+        }
 
         // Scans can read from tables (files) or streams.
         let backing_source = match table_info.config().source.as_ref() {
@@ -341,6 +387,8 @@ impl ScanOperation {
                 .map(|(field, array)| (field.clone(), array.clone()))
                 .collect::<Vec<_>>(),
         ));
+
+        println!("FRAZ - updating key hash inverse");
 
         let grouping = self
             .key_hash_index

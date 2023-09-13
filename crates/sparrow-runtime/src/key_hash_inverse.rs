@@ -97,6 +97,7 @@ impl KeyHashInverse {
         primary_grouping: GroupId,
         registry: &ObjectStoreRegistry,
     ) -> error_stack::Result<(), Error> {
+        println!("FRAZ adding key hash inverse from data context");
         let metadata_files = data_context
             .tables_for_grouping(primary_grouping)
             .flat_map(|table| table.metadata_for_files());
@@ -148,6 +149,8 @@ impl KeyHashInverse {
                 .change_context(Error::ReadingMetadata)
                 .unwrap();
         }
+
+        // TODO: FRAZ - need to do this when restoring key hash inverse
 
         Ok(())
     }

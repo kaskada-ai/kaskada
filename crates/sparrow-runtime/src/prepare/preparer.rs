@@ -90,12 +90,21 @@ impl Preparer {
 
         // TODO: Support Slicing
 
-        // TODO: Output URL
         // in wren it is prepared/prep_<version_id>/<sliceplanhash>/file_id (a uuid)/
         // file_id is persisted in wren. Don't know if that matters.
-        // TODO: This needs to be in the relative directory here..so like kaskada/.cache/prepared?
+
+        // TODO: Prepared version?
+        // Prepared files are stored in the following format:
+        // file:///<cwd>/tables/<table_uuid>/prepared/<prepare_version>/<uuid>/part-<n>.parquet
+        let cur_dir = std::env::current_dir().expect("current dir");
+        let cur_dir = cur_dir.to_string_lossy();
+
+        let prepare_version = 0;
         let uuid = Uuid::new_v4();
-        let output_path_prefix = format!("file://prepared/{uuid}/");
+        let output_path_prefix = format!(
+            "file:///{}/tables/{}/prepare/{prepare_version}/{uuid}/",
+            cur_dir, self.table_config.uuid
+        );
         let output_file_prefix = "part";
 
         let output_url = ObjectStoreUrl::from_str(&output_path_prefix)

@@ -101,12 +101,6 @@ impl Session {
             .into_report()
             .change_context_lazy(|| Error::SchemaForTable(name.to_owned()))?;
 
-        // TODO: FRAZ: add_table
-        // 1. Prepare files
-        // 2. Pass in file_sets
-        // Maybe not necessary..could just say "add files" in python
-        // 3. Slicing?
-        // 4. Source??
         let table = ComputeTable {
             config: Some(TableConfig {
                 name: name.to_owned(),
@@ -385,7 +379,7 @@ impl Session {
 
     /// Execute the query.
     ///
-    /// It is unnfortunate this requires `&mut self` instead of `&self`. It relates to the
+    /// It is unfortunate this requires `&mut self` instead of `&self`. It relates to the
     /// fact that the decorations may require mutating the DFG, which in turn requires
     /// mutability. In practice, the decorations shouldn't mutate the DFG and/or that
     /// shouldn't require mutating the session.
@@ -493,7 +487,8 @@ impl Session {
                 destination,
                 data_context,
                 options,
-                Some(key_hash_inverse),
+                None,
+                // Some(key_hash_inverse),
                 self.udfs.clone(),
                 self.object_store_registry.clone(),
             ))

@@ -248,8 +248,6 @@ pub async fn execute_new(
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
     object_stores: Arc<ObjectStoreRegistry>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
-    let object_stores = Arc::new(ObjectStoreRegistry::default());
-
     let plan_hash = hash_compute_plan_proto(&plan);
 
     let compute_store = options

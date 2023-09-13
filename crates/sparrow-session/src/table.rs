@@ -137,7 +137,7 @@ impl Table {
     pub async fn add_parquet(&self, path: String) -> error_stack::Result<(), Error> {
         println!("Path: {:?}", path);
 
-        let mut source = match &self.source {
+        let mut concurrent_file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
                 "expected parquet data source, saw {:?}",
@@ -152,10 +152,7 @@ impl Table {
             .change_context(Error::Prepare)?;
 
         // TODO: Slicing
-        source.push(FileSet {
-            slice_plan: None,
-            prepared_files: prepared,
-        });
+        concurrent_file_sets.append(None, prepared);
 
         Ok(())
     }

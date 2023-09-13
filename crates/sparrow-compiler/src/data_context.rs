@@ -6,7 +6,7 @@ use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
 use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
-use sparrow_api::kaskada::v1alpha::{compute_table, ComputeTable, PreparedFile, TableConfig};
+use sparrow_api::kaskada::v1alpha::{self, compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
 use sparrow_instructions::{GroupId, TableId};
 use sparrow_merge::InMemoryBatches;
@@ -316,13 +316,31 @@ impl ConcurrentFileSets {
             file_sets: Arc::new(Mutex::new(file_sets)),
         }
     }
+
     pub fn push(&mut self, file_set: compute_table::FileSet) {
         self.file_sets.lock().unwrap().push(file_set);
     }
 
+    pub fn append(&mut self, slice_plan: Option<v1alpha::SlicePlan>, prepared: Vec<PreparedFile>) {
+        let mut file_sets = self.file_sets.lock().unwrap();
+
+        let file_set = file_sets
+            .iter_mut()
+            .find(|set| set.slice_plan == slice_plan);
+
+        if let Some(file_set) = file_set {
+            file_set.prepared_files.extend(prepared);
+        } else {
+            file_sets.push(compute_table::FileSet {
+                slice_plan,
+                prepared_files: prepared,
+            });
+        }
+    }
+
     // TODO: Cloning is bad, but since it's locked behind a mutex, it's necessary.
     // Can we do better?
-    pub fn get(&self) -> Vec<compute_table::FileSet> {
+    pub fn get_clone(&self) -> Vec<compute_table::FileSet> {
         self.file_sets.lock().unwrap().clone()
     }
 
@@ -396,8 +414,8 @@ impl TableInfo {
         &self.config
     }
 
-    pub fn file_sets(&self) -> Vec<compute_table::FileSet> {
-        self.file_sets.get()
+    pub fn file_sets_clone(&self) -> Vec<compute_table::FileSet> {
+        self.file_sets.get_clone()
     }
 
     pub fn prepared_files_for_slice(
@@ -406,7 +424,7 @@ impl TableInfo {
     ) -> anyhow::Result<Vec<PreparedFile>> {
         let file_set = self
             .file_sets
-            .get()
+            .get_clone()
             .into_iter()
             .find(|set| {
                 set.slice_plan
@@ -427,7 +445,7 @@ impl TableInfo {
 
     pub fn metadata_for_files(&self) -> Vec<String> {
         self.file_sets
-            .get()
+            .get_clone()
             .iter()
             .flat_map(|set| {
                 set.prepared_files
