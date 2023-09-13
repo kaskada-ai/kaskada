@@ -18,6 +18,32 @@ pub struct Signature {
     pub(super) variadic: bool,
 }
 
+impl<'a> serde::de::Deserialize<'a> for Signature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'a>,
+    {
+        deserializer.deserialize_str(SignatureDeserializer)
+    }
+}
+
+struct SignatureDeserializer;
+
+impl<'a> serde::de::Visitor<'a> for SignatureDeserializer {
+    type Value = Signature;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("a function signature")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Signature::parse(v).map_err(|e| E::custom(format!("{:?}", e)))
+    }
+}
+
 /// A type-parameter within a signature.
 #[derive(Debug, PartialEq, Eq)]
 pub(super) struct TypeParameter {

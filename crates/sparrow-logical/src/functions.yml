@@ -1,0 +1,6 @@
+- name: add
+  signature: "<T: number>(x: T, y: T) -> T"
+- name: sub
+  signature: "<T: number>(x: T, y: T) -> T"
+- name: eq
+  signature: "<T: any>(x: T, y: T) -> bool"

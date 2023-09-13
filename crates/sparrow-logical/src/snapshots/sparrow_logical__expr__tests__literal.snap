@@ -1,0 +1,15 @@
+---
+source: crates/sparrow-logical/src/expr.rs
+expression: literal
+---
+Expr {
+    name: "literal",
+    literal_args: [
+        String(
+            "hello",
+        ),
+    ],
+    args: [],
+    result_type: Utf8,
+    grouping: Literal,
+}
