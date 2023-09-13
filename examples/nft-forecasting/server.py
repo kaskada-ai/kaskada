@@ -6,6 +6,10 @@ import kaskada as kd
 import pyarrow as pa
 import pandas as pd
 from sklearn import preprocessing
+from atproto.firehose import AsyncFirehoseSubscribeReposClient, parse_subscribe_repos_message
+from atproto import CAR, AtUri, models
+from atproto.xrpc_client.models import get_or_create, ids, is_record_type
+
 
 from web3 import Web3
 from websockets import connect
@@ -29,6 +33,8 @@ request_string_1155 = json.dumps({"jsonrpc":"2.0", "id":1, "method":"eth_subscri
 async def main():
     kd.init_session()
 
+    at_client = AsyncFirehoseSubscribeReposClient()
+
     transfers = kd.sources.PyDict(
         rows = [],
         schema = pa.schema([
@@ -45,7 +51,7 @@ async def main():
         time_unit = "us",
     )
 
-    async def receive_events():
+    async def receive_transfers():
         async with connect(infura_ws_url) as ws:
             await ws.send(request_string_1155)
             subscription_response = await ws.recv()
@@ -67,6 +73,19 @@ async def main():
                     "Quantity": "1", # This protocol doesn't support quantity
                 })
 
+    async def receive_at(message) -> None:
+        commit = parse_subscribe_repos_message(message)
+
+        commit = parse_subscribe_repos_message(message)
+        if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
+            return 
+
+        ops = _get_ops_by_type(commit)
+        for post in ops['posts']['created']:
+            post_msg = post['record'].text
+            post_langs = post['record'].langs
+            print(f'New post in the network! Langs: {post_langs}. Text: {post_msg}')
+
     async def receive_outputs():
         mean_buyer_price = transfers.col("Price").with_key(transfers.col("ToAddress")).mean()
 
@@ -80,7 +99,57 @@ async def main():
         async for row in features.run_iter(kind="row", mode="live"):
             print(f"Got outputs: {row}")
 
-    await asyncio.gather(receive_events(), receive_outputs())
+    #await asyncio.gather(receive_transfers(), at_client.start(receive_at), receive_outputs())
+    await at_client.start(receive_at)
+
+# From https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
+def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901
+    operation_by_type = {
+        'posts': {'created': [], 'deleted': []},
+        'reposts': {'created': [], 'deleted': []},
+        'likes': {'created': [], 'deleted': []},
+        'follows': {'created': [], 'deleted': []},
+    }
+
+    car = CAR.from_bytes(commit.blocks)
+    for op in commit.ops:
+        uri = AtUri.from_str(f'at://{commit.repo}/{op.path}')
+
+        if op.action == 'update':
+            # not supported yet
+            continue
+
+        if op.action == 'create':
+            if not op.cid:
+                continue
+
+            create_info = {'uri': str(uri), 'cid': str(op.cid), 'author': commit.repo}
+
+            record_raw_data = car.blocks.get(op.cid)
+            if not record_raw_data:
+                continue
+
+            record = get_or_create(record_raw_data, strict=False)
+            if uri.collection == ids.AppBskyFeedLike and is_record_type(record, ids.AppBskyFeedLike):
+                operation_by_type['likes']['created'].append({'record': record, **create_info})
+            elif uri.collection == ids.AppBskyFeedPost and is_record_type(record, ids.AppBskyFeedPost):
+                operation_by_type['posts']['created'].append({'record': record, **create_info})
+            elif uri.collection == ids.AppBskyFeedRepost and is_record_type(record, ids.AppBskyFeedRepost):
+                operation_by_type['reposts']['created'].append({'record': record, **create_info})
+            elif uri.collection == ids.AppBskyGraphFollow and is_record_type(record, ids.AppBskyGraphFollow):
+                operation_by_type['follows']['created'].append({'record': record, **create_info})
+
+        if op.action == 'delete':
+            if uri.collection == ids.AppBskyFeedLike:
+                operation_by_type['likes']['deleted'].append({'uri': str(uri)})
+            elif uri.collection == ids.AppBskyFeedPost:
+                operation_by_type['posts']['deleted'].append({'uri': str(uri)})
+            elif uri.collection == ids.AppBskyFeedRepost:
+                operation_by_type['reposts']['deleted'].append({'uri': str(uri)})
+            elif uri.collection == ids.AppBskyGraphFollow:
+                operation_by_type['follows']['deleted'].append({'uri': str(uri)})
+
+    return operation_by_type
 
 if __name__ == "__main__":
    asyncio.run(main())
