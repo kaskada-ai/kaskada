@@ -22,13 +22,13 @@ In comparison to a timeseries which often contains simple values (e.g., numeric 
 Getting started with Timestreams is as simple as `pip` installing the Python library, loading some data and running a query.
 
 ```python
-import timestreams as t
+import kaskada as kd
 
 # Read data from a Parquet file.
-data = t.sources.Parquet.from_file(
-    "path_to_file.parquet",
-    time = "time",
-    key = "user")
+data = kd.sources.Parquet(
+    path = "path_to_file.parquet",
+    time_column = "time",
+    key_column = "user")
 # Get the count of events associated with each user over time, as a dataframe.
 data.count().to_pandas()
 ```
