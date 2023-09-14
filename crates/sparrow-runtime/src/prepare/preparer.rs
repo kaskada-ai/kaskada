@@ -111,7 +111,7 @@ impl Preparer {
 
         let source_data = SourceData {
             source: Some(
-                SourceData::try_from_local(&path)
+                SourceData::try_from_local(path)
                     .into_report()
                     .change_context(Error::Internal)?,
             ),

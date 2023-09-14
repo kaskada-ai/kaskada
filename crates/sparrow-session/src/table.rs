@@ -33,6 +33,7 @@ enum Source {
 }
 
 impl Table {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         table_info: &mut TableInfo,
         key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
@@ -144,7 +145,7 @@ impl Table {
 
         let prepared = self
             .preparer
-            .prepare_parquet(&path)
+            .prepare_parquet(path)
             .await
             .change_context(Error::Prepare)?;
 
@@ -159,7 +160,7 @@ impl Table {
     /// Given prepared metadata files, update the key hash inverse.
     async fn update_key_hash_inverse(
         &self,
-        prepared: &Vec<v1alpha::PreparedFile>,
+        prepared: &[v1alpha::PreparedFile],
     ) -> error_stack::Result<(), Error> {
         let metadata_paths: Vec<_> = prepared.iter().map(|p| p.metadata_path.clone()).collect();
         let mut metadata_streams = Vec::new();
