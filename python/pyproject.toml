@@ -34,7 +34,6 @@ python = ">=3.9,<4.0"
 pyarrow = "^12.0.1"
 typing-extensions = "^4.7.1"
 plotly = {version = "^5.16.1", optional = true}
-flake8 = "^6.1.0"
 
 [tool.poetry.extras]
 plot = ["plotly"]
