@@ -375,7 +375,7 @@ mod tests {
     use arrow::datatypes::{Float64Type, Int64Type};
 
     use super::*;
-    use crate::{FirstPrimitive, LastPrimitive, Max, Mean, Sum};
+    use crate::{Max, Mean, Sum};
 
     #[test]
     fn test_sum_f64() {
@@ -650,105 +650,6 @@ mod tests {
                 Some(2.0),
                 Some((2.0 + 5.0) / 2.0)
             ])
-        );
-    }
-
-    #[test]
-    fn test_last_f64() {
-        let entity_indices = UInt32Array::from(vec![0, 1, 2, 1, 1]);
-        let input: ArrayRef = Arc::new(Float64Array::from(vec![
-            Some(1.0),
-            Some(2.0),
-            None,
-            None,
-            Some(3.0),
-        ]));
-        let mut accum = Vec::new();
-
-        let output = ArrowAggEvaluator::<LastPrimitive<Float64Type>>::aggregate(
-            &mut accum,
-            3,
-            &entity_indices,
-            &input,
-        )
-        .unwrap();
-
-        let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
-        assert_eq!(
-            output,
-            &Float64Array::from(vec![Some(1.0), Some(2.0), None, Some(2.0), Some(3.0)])
-        );
-
-        let entity_indices = UInt32Array::from(vec![0, 1, 2, 1, 1]);
-        let input: ArrayRef = Arc::new(Float64Array::from(vec![
-            None,
-            Some(4.0),
-            Some(5.0),
-            None,
-            None,
-        ]));
-        let output = ArrowAggEvaluator::<LastPrimitive<Float64Type>>::aggregate(
-            &mut accum,
-            3,
-            &entity_indices,
-            &input,
-        )
-        .unwrap();
-
-        let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
-        assert_eq!(
-            output,
-            &Float64Array::from(vec![Some(1.0), Some(4.0), Some(5.0), Some(4.0), Some(4.0)])
-        );
-    }
-
-    #[test]
-    fn test_first_f64() {
-        let entity_indices = UInt32Array::from(vec![0, 1, 2, 1, 1]);
-        let input: ArrayRef = Arc::new(Float64Array::from(vec![
-            Some(1.0),
-            Some(2.0),
-            None,
-            None,
-            Some(3.0),
-        ]));
-        let mut accum = Vec::new();
-
-        let output = ArrowAggEvaluator::<FirstPrimitive<Float64Type>>::aggregate(
-            &mut accum,
-            3,
-            &entity_indices,
-            &input,
-        )
-        .unwrap();
-
-        let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
-
-        assert_eq!(
-            output,
-            &Float64Array::from(vec![Some(1.0), Some(2.0), None, Some(2.0), Some(2.0)])
-        );
-
-        let entity_indices = UInt32Array::from(vec![0, 1, 2, 1, 1]);
-        let input: ArrayRef = Arc::new(Float64Array::from(vec![
-            None,
-            Some(4.0),
-            Some(5.0),
-            None,
-            None,
-        ]));
-        let output = ArrowAggEvaluator::<FirstPrimitive<Float64Type>>::aggregate(
-            &mut accum,
-            3,
-            &entity_indices,
-            &input,
-        )
-        .unwrap();
-
-        let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
-        assert_eq!(
-            output,
-            &Float64Array::from(vec![Some(1.0), Some(2.0), Some(5.0), Some(2.0), Some(2.0)])
         );
     }
 }

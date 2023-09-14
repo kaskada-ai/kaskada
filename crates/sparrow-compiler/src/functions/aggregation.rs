@@ -1,7 +1,5 @@
-use anyhow::Context;
-
 use crate::functions::time_domain_check::TimeDomainCheck;
-use crate::functions::{Implementation, Pushdown, Registry};
+use crate::functions::{Implementation, Registry};
 
 /// The `is_new` pattern used for basic aggregations.
 const AGGREGATION_IS_NEW: &str = "(logical_or ?window_is_new ?input_is_new)";
@@ -124,39 +122,11 @@ pub(super) fn register(registry: &mut Registry) {
         .with_dfg_signature(
             "last<T: any>(input: T, window: bool = null, duration: i64 = null) -> T",
         )
-        .with_implementation(Implementation::Pushdown(Box::new(
-            Pushdown::try_new(
-                0,
-                &format!(
-                    "(last ({}) ({}) ({}))",
-                    "transform (if ?is_new ?input_value) (merge_join ?op ?window_op)",
-                    "?window_value",
-                    "?duration_value"
-                ),
-                // The per-field pattern produces the last value of the field.
-                // The outer if and last is handling the case where the latest *record*
-                // contained a null value for the field, by only using the last value of
-                // the field if the record is new and valid and the input field is valid in
-                // that record.
-                &format!(
-                    "(if (last ({}) ({}) ({})) ?recurse_on_input_field)",
-                    "transform (if (logical_and ?is_new (is_valid ?input_record)) (is_valid \
-                     ?input_field)) (merge_join ?op ?window_op)",
-                    "?window_value",
-                    "?duration_value"
-                ),
-                // The result pattern treats the resulting record as `null` if there haven't
-                // been any new non-null records observed. Eg., requires the count to be > 0.
-                &format!(
-                    "(if (gt (count_if ({}) ({}) ({})) 0u32) ?result_record)",
-                    "transform (logical_and ?is_new (is_valid ?input_record)) (merge_join ?op \
-                     ?window_op)",
-                    "?window_value",
-                    "?duration_value"
-                ),
-            )
-            .context("last")
-            .unwrap(),
+        .with_implementation(Implementation::new_pattern(&format!(
+            "(last ({}) ({}) ({}))",
+            "transform (if ?input_is_new ?input_value) (merge_join ?input_op ?window_op)",
+            "?window_value",
+            "?duration_value"
         )))
         .with_is_new(Implementation::new_pattern(AGGREGATION_IS_NEW))
         .with_time_domain_check(TimeDomainCheck::Aggregation);
@@ -166,39 +136,11 @@ pub(super) fn register(registry: &mut Registry) {
         .with_dfg_signature(
             "first<T: any>(input: T, window: bool = null, duration: i64 = null) -> T",
         )
-        .with_implementation(Implementation::Pushdown(Box::new(
-            Pushdown::try_new(
-                0,
-                &format!(
-                    "(first({}) ({}) ({}))",
-                    "transform (if ?is_new ?input_value) (merge_join ?op ?window_op)",
-                    "?window_value",
-                    "?duration_value"
-                ),
-                // The per-field pattern produces the last value of the field.
-                // The outer if and last is handling the case where the latest *record*
-                // contained a null value for the field, by only using the last value of
-                // the field if the record is new and valid and the input field is valid in
-                // that record.
-                &format!(
-                    "(if (first ({}) ({}) ({})) ?recurse_on_input_field)",
-                    "transform (if (logical_and ?is_new (is_valid ?input_record)) (is_valid \
-                     ?input_field)) (merge_join ?op ?window_op)",
-                    "?window_value",
-                    "?duration_value"
-                ),
-                // The result pattern treats the resulting record as `null` if there haven't
-                // been any new non-null records observed. Eg., requires the count to be > 0.
-                &format!(
-                    "(if (gt (count_if ({}) ({}) ({})) 0u32) ?result_record)",
-                    "transform (logical_and ?is_new (is_valid ?input_record)) (merge_join ?op \
-                     ?window_op)",
-                    "?window_value",
-                    "?duration_value"
-                ),
-            )
-            .context("first")
-            .unwrap(),
+        .with_implementation(Implementation::new_pattern(&format!(
+            "(first ({}) ({}) ({}))",
+            "transform (if ?input_is_new ?input_value) (merge_join ?input_op ?window_op)",
+            "?window_value",
+            "?duration_value"
         )))
         .with_is_new(Implementation::new_pattern(AGGREGATION_IS_NEW))
         .with_time_domain_check(TimeDomainCheck::Aggregation);

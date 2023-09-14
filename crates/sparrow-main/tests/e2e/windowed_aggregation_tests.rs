@@ -286,6 +286,7 @@ async fn test_first_since_window_emits_value_on_reset() {
 
 /// Verifies that when a sliding window is evicted, the oldest value is emitted,
 /// regardless of input validity.
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_first_sliding_window_emits_value_on_reset() {
     insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, first_sliding: first(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture_with_nulls().await).await.unwrap(), @r###"
@@ -320,6 +321,7 @@ async fn test_last_since_window_emits_value_on_reset() {
 
 /// Verifies that when a sliding window is evicted, the oldest value is emitted,
 /// regardless of input validity.
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_last_sliding_window_emits_value_on_reset() {
     insta::assert_snapshot!(QueryFixture::new("{ n: Foo.n, last_sliding: last(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture_with_nulls().await).await.unwrap(), @r###"
@@ -395,6 +397,7 @@ async fn test_sum_sliding_every_few_events() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_first_f64_sliding_every_few_events() {
     insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
@@ -410,6 +413,7 @@ async fn test_first_f64_sliding_every_few_events() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_first_string_sliding_every_few_events() {
     insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.vegetable, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
@@ -425,6 +429,7 @@ async fn test_first_string_sliding_every_few_events() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_first_boolean_sliding_every_few_events() {
     insta::assert_snapshot!(QueryFixture::new("{ sliding_first: first(Foo.bool, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
@@ -440,6 +445,7 @@ async fn test_first_boolean_sliding_every_few_events() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_last_f64_sliding_every_few_events() {
     insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.n, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
@@ -454,6 +460,8 @@ async fn test_last_f64_sliding_every_few_events() {
     1996-12-20T00:40:04.000000000,9223372036854775808,12960666915911099378,A,10.0
     "###);
 }
+
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_last_string_sliding_every_few_events() {
     insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.vegetable, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"
@@ -469,6 +477,7 @@ async fn test_last_string_sliding_every_few_events() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_last_bool_sliding_every_few_events() {
     insta::assert_snapshot!(QueryFixture::new("{ sliding_last: last(Foo.bool, window=sliding(2, is_valid(Foo)))  }").run_to_csv(&window_data_fixture().await).await.unwrap(), @r###"

@@ -220,19 +220,7 @@ fn create_simple_evaluator(
         InstOp::Exp => {
             create_float_evaluator!(&info.args[0].data_type, ExpEvaluator, info)
         }
-        InstOp::First => {
-            create_typed_evaluator!(
-                &info.args[0].data_type,
-                ArrowAggEvaluator,
-                UnsupportedEvaluator,
-                FirstListEvaluator,
-                FirstMapEvaluator,
-                FirstBooleanEvaluator,
-                FirstStringEvaluator,
-                FirstPrimitive,
-                info
-            )
-        }
+        InstOp::First => aggregation::FirstEvaluator::try_new(info),
         InstOp::Flatten => FlattenEvaluator::try_new(info),
         InstOp::Floor => FloorEvaluator::try_new(info),
         InstOp::Get => GetEvaluator::try_new(info),
@@ -272,19 +260,7 @@ fn create_simple_evaluator(
         // rely on simplification for conversion.
         InstOp::Json => anyhow::bail!("No evaluator defined for json function"),
         InstOp::JsonField => JsonFieldEvaluator::try_new(info),
-        InstOp::Last => {
-            create_typed_evaluator!(
-                &info.args[0].data_type,
-                ArrowAggEvaluator,
-                UnsupportedEvaluator,
-                LastListEvaluator,
-                LastMapEvaluator,
-                LastBooleanEvaluator,
-                LastStringEvaluator,
-                LastPrimitive,
-                info
-            )
-        }
+        InstOp::Last => aggregation::LastEvaluator::try_new(info),
         InstOp::Len => LenEvaluator::try_new(info),
         InstOp::ListLen => ListLenEvaluator::try_new(info),
         InstOp::LogicalAnd => LogicalAndKleeneEvaluator::try_new(info),
