@@ -14,10 +14,10 @@ This shows the bare minimum needed to get started with Kaskada.
 ## Install
 
 Install the latest version.
-This uses `kaskdaa>=0.6.0-a.0` to ensure the pre-release version is installed.
+This uses `kaskada>=0.6.0-a.3` to ensure the pre-release version is installed.
 
 ```
-pip install kaskada>=0.6.0-a.0
+pip install kaskada>=0.6.0-a.3
 ```
 
 See the section on [installation](./installation.md) to learn more about installing Kaskada.
