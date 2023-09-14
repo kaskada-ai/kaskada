@@ -1,10 +1,10 @@
 ---
-blogpost: true
-author: ben
+author: Ben Chambers
 date: 2023-Mar-28
-tags: releases
-excerpt: 1
-description: From Startup to Open Source Project
+categories:
+ - releases
+title: Announcing Kaskada OSS
+subtitle: From Startup to Open Source Project
 ---
 
 # Announcing Kaskada OSS

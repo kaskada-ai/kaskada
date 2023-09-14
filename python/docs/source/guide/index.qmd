@@ -1,4 +1,13 @@
-# User Guide
+---
+title: "User Guide"
+toc: false
+tbl-colwidths: [30, 70]
+anchor-sections: false
+listing:
+  id: reference-links
+  template: ../_ejs/links.ejs
+  contents: ./guide.yml
+---
 
 Understanding and reacting to the world in real-time requires understanding what is happening _now_ in the context of what happened in the past.
 You need the ability to understand if what just happened is unusual, how it relates to what happened previously, and how it relates to other things that are happening at the same time.
@@ -31,21 +40,4 @@ data = kd.sources.Parquet(
     key_column = "user")
 # Get the count of events associated with each user over time, as a dataframe.
 data.count().to_pandas()
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 2
-
-quickstart
-tour
-why
-installation
-timestreams
-data_types
-entities
-aggregation
-joins
-sources
-execution
 ```

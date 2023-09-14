@@ -1,12 +1,3 @@
----
-file_format: mystnb
-kernelspec:
-  name: python3
-  display_name: Python 3
-mystnb:
-  execution_mode: cache
----
-
 # Quick Start
 
 This shows the bare minimum needed to get started with Kaskada.
@@ -27,7 +18,7 @@ See the section on [installation](./installation.md) to learn more about install
 The following Python code imports the Kaskada library, creates a session, and loads some CSV data.
 It then runs a query to produce a Pandas DataFrame.
 
-```{code-cell}
+```
 import asyncio
 import kaskada as kd
 kd.init_session()

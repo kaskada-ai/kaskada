@@ -10,12 +10,10 @@ The things to consider when deciding how to execute the Timestream are:
 
 [State](#state) can be used to provide fault-tolerance and allow incremental processing of only new events.
 
-```{admonition} Preview during development
-:class: tip
-
+::: {.callout-note title=Preview during development}
 While developing queries, it is often useful to view a few rows from the result.
 Using {py:meth}`kaskada.Timestream.preview` you can retrieve a small set of rows from the result set as a Pandas DataFrame.
-```
+:::
 
 ## History vs. Snapshot
 
@@ -27,10 +25,11 @@ Executing a Timestream for a snapshot produces a value for each entity at a spec
 This means that each entity appears at-most once in the results.
 This is useful for maintaining a feature store based on the latest values.
 
-```{todo}
+::: {.callout-note title=Todo}
 Expose the configuration for snapshots.
 See https://github.com/kaskada-ai/kaskada/issues/719
-```
+:::
+
 
 ## Query vs. Materialize
 Every Timestream may be executed as a single query or used to start a materialization.
@@ -48,10 +47,10 @@ This allows incrementally outputting the entire history to some external store, 
 For a snapshot query, only entities that have changed after this time are included in the output.
 This reduces the amount of data written when the past snapshot is already present in the destination.
 
-```{todo}
+::: {.callout-note title=Todo}
 Expose the configuration for changed since.
 See https://github.com/kaskada-ai/kaskada/issues/719
-```
+:::
 
 ## Up To
 
@@ -60,15 +59,15 @@ Configuring the _up to time_ lets you control the maximum points output (and in 
 For a historic query, only points occurring before or at the up to time are included in the output.
 For a snapshot query, this corresponds to the time at which the snapshot will be taken.
 
-```{note}
+::: {.callout-note title=Todo}
 Currently when not specified, the up to time is determined from the maximum event present in the data.
 We have plans to change this to a parameter to `run` defaulting to the current time.
-```
+:::
 
-```{todo}
+::: {.callout-note title=Todo}
 Expose the configuration for up-to.
 See https://github.com/kaskada-ai/kaskada/issues/719
-```
+:::
 
 ## State
 
