@@ -1,5 +1,2 @@
-_build
-.jupyter_cache
-jupyter_execute
-source/reference/apidocs
-source/iframe_figures
+/.quarto/
+/_site/

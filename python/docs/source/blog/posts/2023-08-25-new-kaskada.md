@@ -1,13 +1,11 @@
 ---
-blogpost: true
 date: 2023-Aug-25
-author: ryan
-tags: releases
-excerpt: 2
-description: Embedded in Python for accessible Real-Time AI
+author: Ryan Michael
+categories:
+ - releases
+title: Introducing the New Kaskada
+subtitle: Embedded in Python for accessible Real-Time AI
 ---
-
-# Introducing the New Kaskada
 
 We started Kaskada with the goal of simplifying the real-time AI/ML lifecycle, and in the past year AI has exploded in usefulness and accessibility. Generative models and Large Language Models (LLMs) have revolutionized how we approach AI. Their accessibility and incredible capabilities have made AI more valuable than it has ever been and democratized the practice of AI.
 

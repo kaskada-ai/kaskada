@@ -1,12 +1,3 @@
----
-file_format: mystnb
-kernelspec:
-  name: python3
-  display_name: Python 3
-mystnb:
-  execution_mode: cache
----
-
 % Level: Beginner
 % Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
 % Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
@@ -20,7 +11,7 @@ For a more complete explanation, see the User Guide.
 This tour uses Kaskada and Plotly to render the illustrations.
 The initial setup / data is below.
 
-```{code-cell}
+```
 ---
 tags: [hide-cell]
 ---
@@ -52,7 +43,7 @@ A natural question to ask about the purchases is the total--or `sum`--of all pur
 This is accomplished by _aggregating_ the events.
 The results of an aggregation change over time as additional events occur.
 
-```{code-cell}
+```
 ---
 tags: [remove-input]
 ---
@@ -85,9 +76,9 @@ One way to understand this grouping is as a separate stream associated with each
 The stream of purchases for each user may be shown separately, as we do here, or it may be pictured flattened into a single stream keyed by user.
 The idea of grouped streams as separate, per-entity streams is often useful for understanding the behavior of Kaskada Timestreams.
 
-```{todo}
+::: {.callout-note title=Todo}
 Add example of multiple entity aggregation.
-```
+:::
 
 The User Guide has [more details on grouping](./entities.md), including how to change the grouping of a Timestream.
 
@@ -107,9 +98,9 @@ This would filter out points from the history, or limit the snapshot to only tho
 
 ## Windowed Aggregation
 
-```{todo}
+::: {.callout-note title=Todo}
 Update to reflect actual syntax. Include example.
-```
+:::
 
 In addition to the default behavior of aggregating over all events up to a given time, aggregations may be performed over specific windows.
 For example, `hourly()` describes periodic windows of an hour.

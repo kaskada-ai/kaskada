@@ -1,12 +1,3 @@
----
-file_format: mystnb
-kernelspec:
-  name: python3
-  disply_name: Python 3
-mystnb:
-  execution_mode: cache
----
-
 # Timestreams
 
 Kaskada is built on the concept of a _Timestream_.
@@ -17,7 +8,7 @@ This makes it easy to focus on events happening over time and how aggregations c
 % render the right height otherwise (possibly because it's not attached to the DOM?).
 % We could see if this worked better using a different library such as `bokeh` or if
 % there were better options to pass to plotly to avoid the problem.
-```{code-cell}
+```
 ---
 tags: [hide-input]
 ---
@@ -50,7 +41,7 @@ While a discrete timestream contains values at specific points in time, a contin
 
 For example, the result of aggregating a timestream produces a continuous stream that changes on each non-`null` input.
 
-```{code-cell}
+```
 ---
 tags: [remove-input]
 ---

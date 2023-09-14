@@ -1,0 +1,13 @@
+---
+title: Blog
+listing:
+  contents: posts
+  sort: "date desc"
+  type: default
+  categories: true
+  sort-ui: true
+  filter-ui: true
+  fields: [image, date, author, title, reading-time, categories]
+page-layout: full
+title-block-banner: true
+---

@@ -1,0 +1,20 @@
+/* css styles */
+
+.navbar-brand-logo img {
+    height: 100%;
+    max-width: 100%;
+    width: auto;
+    vertical-align: middle;
+}
+
+nav {
+    box-shadow: 0 0.125rem 0.25rem 0 var(--bs-gray-400);
+}
+
+body.quarto-light .only-dark {
+    display: none !important;
+}
+
+body.quarto-dark .only-light {
+    display: none !important;
+}
