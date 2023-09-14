@@ -61,7 +61,7 @@ Now we just need to kick it all off by calling `asyncio.gather` on the two handl
 :start-after: "[start_run]"
 :end-before: "[end_run]"
 :language: python
-:lineenos:
+:linenos:
 :lineno-match:
 :dedent: 4
 ```

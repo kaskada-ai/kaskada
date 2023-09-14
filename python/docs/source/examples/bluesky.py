@@ -5,13 +5,15 @@
 # This script demonstrates the use of Kaskada to consume and compute over
 # the BlueSky firehose.
 
-import asyncio, time
+import asyncio
+import time
 import kaskada as kd
 import pyarrow as pa
 
 from atproto.firehose import AsyncFirehoseSubscribeReposClient, parse_subscribe_repos_message
 from atproto import CAR, AtUri, models
 from atproto.xrpc_client.models import get_or_create, ids, is_record_type
+
 
 async def main():
     # Initialize the Kaskada session so we can use it for stream processing
@@ -28,8 +30,8 @@ async def main():
     #
     # We'll push events into this source as they arrive in real-time.
     posts = kd.sources.PyDict(
-        rows = [],
-        schema = pa.schema([
+        rows=[],
+        schema=pa.schema([
             pa.field("record", pa.struct([
                 pa.field("created_at", pa.string()),
                 pa.field("text", pa.string()),
@@ -46,12 +48,11 @@ async def main():
             pa.field("author", pa.string()),
             pa.field("ts", pa.float64()),
         ]),
-        time_column = "ts",
-        key_column = "author",
-        time_unit = "s",
+        time_column="ts",
+        key_column="author",
+        time_unit="s",
     )
     # [end_setup]
-
 
     # [start_incoming]
     # Handler for newly-arrived messages from BlueSky.
@@ -99,7 +100,7 @@ async def main():
     # [end_run]
 
 # Copied from https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
-def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901
+def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901, E302
     operation_by_type = {
         'posts': {'created': [], 'deleted': []},
         'reposts': {'created': [], 'deleted': []},
@@ -147,5 +148,6 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict
 
     return operation_by_type
 
+
 if __name__ == "__main__":
-   asyncio.run(main())
+    asyncio.run(main())
