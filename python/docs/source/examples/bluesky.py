@@ -17,12 +17,13 @@ async def main():
     # Initialize the Kaskada session so we can use it for stream processing
     kd.init_session()
 
-    # Create the BlueSky (At protocol) client. 
+    # Create the BlueSky (At protocol) client.
     # The firehose doesn't (currently) require authentication.
     at_client = AsyncFirehoseSubscribeReposClient()
 
+    # [start_setup]
     # Setup the data source.
-    # This defintes (most of) the schema of the events we'll receive, 
+    # This defintes (most of) the schema of the events we'll receive,
     # and tells Kaskada which fields to use for time and initial entity.
     #
     # We'll push events into this source as they arrive in real-time.
@@ -49,13 +50,16 @@ async def main():
         key_column = "author",
         time_unit = "s",
     )
+    # [end_setup]
 
+
+    # [start_incoming]
     # Handler for newly-arrived messages from BlueSky.
     async def receive_at(message) -> None:
         # Extract the contents of the message and bail if it's not a "commit"
         commit = parse_subscribe_repos_message(message)
         if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
-            return 
+            return
 
         # Get the operations included in the message
         ops = _get_ops_by_type(commit)
@@ -73,21 +77,26 @@ async def main():
                 "uri": new_post["uri"],
                 "cid": new_post["cid"],
                 "author": new_post["author"],
-                "ts": time.time(), 
+                "ts": time.time(),
             })
+    # [end_incoming]
 
+    # [start_result]
     # Handler for values emitted by Kaskada.
     async def receive_outputs():
-        
-        # We'll perfrom a very simple aggregation - key by language and count.
+
+        # We'll perform a very simple aggregation - key by language and count.
         posts_by_first_lang = posts.with_key(posts.col("record").col("langs").index(0))
 
         # Consume outputs as they're generated and print to STDOUT.
         async for row in posts_by_first_lang.count().run_iter(kind="row", mode="live"):
             print(f"{row['_key']} has posted {row['result']} times since startup")
+    # [end_result]
 
+    # [start_run]
     # Kickoff the two async processes concurrently.
     await asyncio.gather(at_client.start(receive_at), receive_outputs())
+    # [end_run]
 
 # Copied from https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
 def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901
