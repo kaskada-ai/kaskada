@@ -279,8 +279,6 @@ impl ScanOperation {
             _ => error_stack::bail!(Error::Internal("expected source")),
         };
 
-        println!("Backing source: {:?}", backing_source);
-
         let input_stream = match backing_source {
             v1alpha::source::Source::Kaskada(_) => {
                 // Send initial progress information.
@@ -387,8 +385,6 @@ impl ScanOperation {
                 .map(|(field, array)| (field.clone(), array.clone()))
                 .collect::<Vec<_>>(),
         ));
-
-        println!("FRAZ - updating key hash inverse");
 
         let grouping = self
             .key_hash_index

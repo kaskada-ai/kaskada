@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -11,7 +10,7 @@ use arrow_array::Array;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
-use sparrow_api::kaskada::v1alpha::{PreparedFile, Source, SourceData, TableConfig};
+use sparrow_api::kaskada::v1alpha::{PreparedFile, SourceData, TableConfig};
 use uuid::Uuid;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
@@ -43,11 +42,11 @@ pub enum Error {
 
 impl error_stack::Context for Error {}
 
+/// The current prepare version
+const PREPARE_VERSION: i64 = 0;
+
 pub struct Preparer {
     prepared_schema: SchemaRef,
-    // time_column_name: String,
-    // subsort_column_name: Option<String>,
-    // key_column_name: String,
     table_config: Arc<TableConfig>,
     next_subsort: AtomicU64,
     time_multiplier: Option<i64>,
@@ -66,9 +65,6 @@ impl Preparer {
         let time_multiplier = time_multiplier(time_unit)?;
         Ok(Self {
             prepared_schema,
-            // time_column_name,
-            // subsort_column_name,
-            // key_column_name,
             table_config,
             next_subsort: prepare_hash.into(),
             time_multiplier,
@@ -81,41 +77,38 @@ impl Preparer {
     }
 
     /// Prepare a parquet file.
-    /// todo; docs
+    ///
+    /// - This computes and adds the key columns.
+    /// - This sorts the files by time, subsort and key hash.
+    /// - This adds or casts columns as needed.
+    /// - This produces multiple parts if the input file is large.
+    /// - This produces metadata files alongside data files.
     pub async fn prepare_parquet(
         &self,
-        path: &str,
+        path: &std::path::Path,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
-        println!("Prepare parquet path: {:?}", path);
-
         // TODO: Support Slicing
 
-        // in wren it is prepared/prep_<version_id>/<sliceplanhash>/file_id (a uuid)/
-        // file_id is persisted in wren. Don't know if that matters.
-
-        // TODO: Prepared version?
         // Prepared files are stored in the following format:
         // file:///<cwd>/tables/<table_uuid>/prepared/<prepare_version>/<uuid>/part-<n>.parquet
         let cur_dir = std::env::current_dir().expect("current dir");
         let cur_dir = cur_dir.to_string_lossy();
 
-        let prepare_version = 0;
         let uuid = Uuid::new_v4();
         let output_path_prefix = format!(
-            "file:///{}/tables/{}/prepare/{prepare_version}/{uuid}/",
+            "file:///{}/tables/{}/prepare/{PREPARE_VERSION}/{uuid}/",
             cur_dir, self.table_config.uuid
         );
         let output_file_prefix = "part";
 
         let output_url = ObjectStoreUrl::from_str(&output_path_prefix)
-            .change_context_lazy(|| Error::InvalidUrl(path.to_owned()))?;
+            .change_context_lazy(|| Error::InvalidUrl(path.to_string_lossy().to_string()))?;
 
         let object_store = self
             .object_stores
             .object_store(&output_url)
             .change_context(Error::Internal)?;
 
-        let path = PathBuf::from(path);
         let source_data = SourceData {
             source: Some(
                 SourceData::try_from_local(&path)
@@ -123,7 +116,6 @@ impl Preparer {
                     .change_context(Error::Internal)?,
             ),
         };
-        println!("Source data: {:?}", source_data);
 
         // TODO: Slicing
         let mut prepare_stream =
@@ -174,9 +166,6 @@ impl Preparer {
     /// - This computes and adds the key columns.
     /// - This sorts the batch by time, subsort and key hash.
     /// - This adds or casts columns as needed.
-    ///
-    /// Self is mutated as necessary to ensure the `subsort` column is increasing, if
-    /// it is added.
     pub fn prepare_batch(&self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
         let time_column_name = self.table_config.time_column_name.clone();
         let subsort_column_name = self.table_config.subsort_column_name.clone();

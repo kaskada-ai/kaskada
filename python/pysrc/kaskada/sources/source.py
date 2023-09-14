@@ -58,14 +58,6 @@ class Source(Timestream):
         name = f"table{_TABLE_NUM}"
         _TABLE_NUM += 1
 
-#TODO: FRAZ - tables are created here. 
-#If I don't pass in a `Source` here, the `ComputeTable` will 
-# be created with no Source, or fileset. Does that matter? What role does the ComputeTable
-# play after creation? it's used to create the `TableInfo`, but only contributes the TableConfig
-# and file_sets to the tableinfo. 
-# InMemory on the TableInfo is set to none by default.
-# InMemory is set manually when calling `session/Table::new()`
-# 
         ffi_table = _ffi.Table(
             _get_session(),
             name,

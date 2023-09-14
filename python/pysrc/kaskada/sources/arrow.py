@@ -1,10 +1,10 @@
 """Provide sources based on PyArrow, including Pandas and CSV."""
 from __future__ import annotations
 
+import os
 from io import BytesIO
 from typing import Optional
 
-import os
 import pandas as pd
 import pyarrow as pa
 import pyarrow.csv
@@ -430,7 +430,7 @@ class Parquet(Source):
             subsort_column=subsort_column,
             grouping_name=grouping_name,
             time_unit=time_unit,
-            source="parquet"
+            source="parquet",
         )
 
     @staticmethod

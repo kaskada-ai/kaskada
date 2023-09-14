@@ -1,10 +1,8 @@
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
-use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_api::kaskada::v1alpha::{self, compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
@@ -305,6 +303,8 @@ pub struct GroupInfo {
     key_type: DataType,
 }
 
+/// Concurrent file sets allows us to update the file sets from the
+/// python library and see updates reflected within the data context.
 #[derive(Debug, Default, Clone)]
 pub struct ConcurrentFileSets {
     file_sets: Arc<Mutex<Vec<compute_table::FileSet>>>,
@@ -360,8 +360,10 @@ pub struct TableInfo {
     ///
     /// Each file set corresponds to the files for the table with a specific
     /// slice configuration.
-    /// TODO: Make optional?
-    /// wrap both these in a Source class?
+    ///
+    /// TODO: A lot of existing code assumes this is a non-optional field, so
+    /// leaving this as is for now in the assumption that it'll change rapidly
+    /// once we slowly migrate off the fenl compilation path.
     pub file_sets: ConcurrentFileSets,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,

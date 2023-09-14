@@ -9,7 +9,6 @@ use sparrow_session::Table as RustTable;
 use crate::error::Result;
 use crate::expr::Expr;
 use crate::session::Session;
-use tokio::sync::{Mutex, MutexGuard, OwnedMutexGuard};
 
 #[pyclass]
 pub(crate) struct Table {
@@ -90,6 +89,7 @@ impl Table {
     fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> Result<&'py PyAny> {
         let rust_table = self.rust_table.clone();
         Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
+            let path = std::path::Path::new(&path);
             let result = rust_table.add_parquet(path).await;
             Python::with_gil(|py| {
                 result.unwrap();

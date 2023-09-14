@@ -161,7 +161,6 @@ impl std::fmt::Display for PlanHash {
 
 impl SourceData {
     pub fn try_from_local(path: &std::path::Path) -> anyhow::Result<source_data::Source> {
-        println!("SourceData path from local: {:?}", path);
         let path = match path.extension().and_then(|ext| ext.to_str()) {
             Some("parquet") => {
                 source_data::Source::ParquetPath(format!("file://{}", path.display()))

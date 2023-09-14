@@ -149,8 +149,6 @@ impl KeyHashInverse {
                 .unwrap();
         }
 
-        // TODO: FRAZ - need to do this when restoring key hash inverse
-
         Ok(())
     }
 

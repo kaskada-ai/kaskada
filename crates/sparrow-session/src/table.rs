@@ -57,8 +57,7 @@ impl Table {
         error_stack::ensure!(table_info.in_memory.is_none(), Error::internal());
 
         // TODO: Support other sources
-        // TODO: Ideally, both the file_sets and in_memory_batches are
-        // optional in table_info, or wrapped by a shared source.
+        // TODO: Source might be an enum, for safety and clarity
         let source = match source {
             Some("parquet") => {
                 let concurrent_file_sets = ConcurrentFileSets::default();
@@ -134,7 +133,7 @@ impl Table {
         Ok(())
     }
 
-    pub async fn add_parquet(&self, path: String) -> error_stack::Result<(), Error> {
+    pub async fn add_parquet(&self, path: &std::path::Path) -> error_stack::Result<(), Error> {
         let mut concurrent_file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
