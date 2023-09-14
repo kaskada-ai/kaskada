@@ -9,6 +9,12 @@ pub enum Error {
     SchemaForTable(String),
     #[display(fmt = "invalid expression")]
     Invalid,
+    #[display(fmt = "invalid url: {_0}")]
+    InvalidUrl(String),
+    #[display(fmt = "error opening file: {_0}")]
+    OpeningFile(String),
+    #[display(fmt = "error reading file")]
+    ReadingFile,
     #[display(fmt = "no function named '{name}'; nearest matches are: {nearest}")]
     NoSuchFunction {
         name: String,

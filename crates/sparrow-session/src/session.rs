@@ -487,8 +487,7 @@ impl Session {
                 destination,
                 data_context,
                 options,
-                None,
-                // Some(key_hash_inverse),
+                Some(key_hash_inverse),
                 self.udfs.clone(),
                 self.object_store_registry.clone(),
             ))

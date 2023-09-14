@@ -1,16 +1,18 @@
-use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow_array::cast::AsArray;
 use arrow_array::types::ArrowPrimitiveType;
-use arrow_array::RecordBatch;
+use arrow_array::{RecordBatch, UInt64Array};
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::ResultExt;
-use sparrow_api::kaskada::v1alpha::compute_table::FileSet;
-use sparrow_api::kaskada::v1alpha::{compute_table, PreparedFile};
+use futures::TryStreamExt;
+use sparrow_api::kaskada::v1alpha;
 use sparrow_compiler::{ConcurrentFileSets, TableInfo};
 use sparrow_merge::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
+use sparrow_runtime::stores::ObjectStoreUrl;
+use sparrow_runtime::ParquetFile;
 use sparrow_runtime::{key_hash_inverse::ThreadSafeKeyHashInverse, stores::ObjectStoreRegistry};
 
 use crate::{Error, Expr};
@@ -21,10 +23,7 @@ pub struct Table {
     key_column: usize,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     source: Source,
-    // TODO: FRAZ: How is tableinfo created?
-    // Answer:  DataContext.add_table (ComputeTable holds the filesets)
-    // ComputeTable is created via session.add_table(). With no filesets nor source
-    // Make sure new files are added to compute table?
+    registry: Arc<ObjectStoreRegistry>,
 }
 
 #[derive(Debug)]
@@ -87,7 +86,7 @@ impl Table {
             prepared_schema.clone(),
             prepare_hash,
             time_unit,
-            object_stores,
+            object_stores.clone(),
         )
         .change_context_lazy(|| Error::CreateTable {
             name: table_info.name().to_owned(),
@@ -99,6 +98,7 @@ impl Table {
             key_hash_inverse,
             key_column: key_column + KEY_FIELDS.len(),
             source,
+            registry: object_stores,
         })
     }
 
@@ -135,8 +135,6 @@ impl Table {
     }
 
     pub async fn add_parquet(&self, path: String) -> error_stack::Result<(), Error> {
-        println!("Path: {:?}", path);
-
         let mut concurrent_file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
@@ -151,8 +149,44 @@ impl Table {
             .await
             .change_context(Error::Prepare)?;
 
+        self.update_key_hash_inverse(&prepared).await?;
+
         // TODO: Slicing
         concurrent_file_sets.append(None, prepared);
+
+        Ok(())
+    }
+
+    /// Given prepared metadata files, update the key hash inverse.
+    async fn update_key_hash_inverse(
+        &self,
+        prepared: &Vec<v1alpha::PreparedFile>,
+    ) -> error_stack::Result<(), Error> {
+        let metadata_paths: Vec<_> = prepared.iter().map(|p| p.metadata_path.clone()).collect();
+        let mut metadata_streams = Vec::new();
+        for file in metadata_paths {
+            let url =
+                ObjectStoreUrl::from_str(&file).change_context(Error::InvalidUrl(file.clone()))?;
+            let parquet_file = ParquetFile::try_new(&self.registry, url, None)
+                .await
+                .change_context(Error::OpeningFile(file.clone()))?;
+            let stream = parquet_file
+                .read_stream(None, None)
+                .await
+                .change_context(Error::OpeningFile(file.clone()))?;
+            metadata_streams.push(stream);
+        }
+        let mut stream = futures::stream::select_all(metadata_streams)
+            .map_err(|e| e.change_context(Error::ReadingFile));
+        while let Some(batch) = stream.try_next().await? {
+            let hash_col = batch.column(0);
+            let hash_col: &UInt64Array = hash_col.as_primitive();
+            let entity_key_col = batch.column(1);
+            self.key_hash_inverse
+                .add(entity_key_col.as_ref(), hash_col)
+                .await
+                .change_context(Error::ReadingFile)?;
+        }
 
         Ok(())
     }
