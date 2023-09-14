@@ -222,10 +222,18 @@ impl ScanOperation {
                 key_hash_index: KeyHashIndex::default(),
                 progress_updates_tx: context.progress_updates_tx.clone(),
             }));
-        } else if !table_info.file_sets.is_empty() {
-            // Also hacky. When using the python-builder, use the table info's
-            // concurrent file sets rather than look into the `Source`.
-            // Ideally, we don't support both paths.
+        }
+
+        let table_source = table_info.config().source.as_ref();
+
+        // Also hacky. When using the python-builder, use the table info's
+        // concurrent file sets rather than look into the `Source`. However,
+        // since the existing path uses the file sets as well, we need to check
+        // that the source isn't set (which only happens when going through the
+        // python builder).
+        //
+        // Ideally, we don't support both paths.
+        if table_source.is_none() && !table_info.file_sets.is_empty() {
             let file_sets = table_info.file_sets_clone();
 
             // Only one file set since we don't support slicing yet
@@ -274,7 +282,7 @@ impl ScanOperation {
         }
 
         // Scans can read from tables (files) or streams.
-        let backing_source = match table_info.config().source.as_ref() {
+        let backing_source = match table_source {
             Some(v1alpha::Source { source }) => source.as_ref().expect("source"),
             _ => error_stack::bail!(Error::Internal("expected source")),
         };
