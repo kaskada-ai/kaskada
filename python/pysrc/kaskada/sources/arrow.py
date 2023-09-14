@@ -422,7 +422,6 @@ class Parquet(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
-
         super().__init__(
             schema=schema,
             time_column=time_column,
