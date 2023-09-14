@@ -167,10 +167,12 @@ blog_path = "blog"
 blog_authors = {
     "ben": ("Ben Chambers", "https://github.com/bjchambers"),
     "ryan": ("Ryan Michael", "https://github.com/kerinin"),
+    "eric": ("Eric Pinzur", "https://github.com/epinzur"),
 }
 post_date_format = "%Y-%b-%d"
 post_date_format_short = "%Y-%b-%d"
 post_show_prev_next = False
+blog_post_pattern = ["blog/posts/*.rst", "blog/posts/*.md", "blog/posts/*.ipynb"]
 
 # Generate social cards for blog posts
 social_cards = {

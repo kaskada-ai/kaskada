@@ -4,7 +4,7 @@
 **/.*.pending-snap
 /crates/sparrow-main/tests/test-output
 /crates/sparrow-main/test-storage
-!/.vscode
+.vscode
 
 # ignore notice files copied to the wren folder during local builds
 wren/NOTICE
