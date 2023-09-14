@@ -5,9 +5,7 @@ Bluesky uses a distributed protocol name the [AT Protocol](https://atproto.com/)
 
 In this example, we'll show how you can receive and process the firehose using Kaskada.
 
-You can see the full example in the file [bluesky.py](./bluesky.py)
-
-Othre [bluesky.py](https://github.com/kaskada-ai/kaskada/blob/main/python/docs/source/examples/bluesky.py).
+You can see the full example in the file [bluesky.py](https://github.com/kaskada-ai/kaskada/blob/main/python/docs/source/examples/bluesky.py).
 
 ## Setup the event data source
 
