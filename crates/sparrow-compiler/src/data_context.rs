@@ -303,14 +303,17 @@ pub struct GroupInfo {
     key_type: DataType,
 }
 
-/// Concurrent file sets allows us to update the file sets from the
+/// Concurrent file sets that allows us to update the file sets from the
 /// python library and see updates reflected within the data context.
+///
+/// Each file set corresponds to a set of prepared files for a specific
+/// slice.
 #[derive(Debug, Default, Clone)]
-pub struct ConcurrentFileSets {
+pub struct FileSets {
     file_sets: Arc<Mutex<Vec<compute_table::FileSet>>>,
 }
 
-impl ConcurrentFileSets {
+impl FileSets {
     pub fn new(file_sets: Vec<compute_table::FileSet>) -> Self {
         Self {
             file_sets: Arc::new(Mutex::new(file_sets)),
@@ -338,8 +341,8 @@ impl ConcurrentFileSets {
         }
     }
 
-    // TODO: Cloning is bad, but since it's locked behind a mutex, it's necessary.
-    // Can we do better?
+    // Note: Cloning is expensive here. Likely would be better to
+    // clone-on-write then replace the file sets with the updated one.
     pub fn get_clone(&self) -> Vec<compute_table::FileSet> {
         self.file_sets.lock().unwrap().clone()
     }
@@ -364,7 +367,7 @@ pub struct TableInfo {
     /// TODO: A lot of existing code assumes this is a non-optional field, so
     /// leaving this as is for now in the assumption that it'll change rapidly
     /// once we slowly migrate off the fenl compilation path.
-    pub file_sets: ConcurrentFileSets,
+    pub file_sets: FileSets,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,
 }
@@ -387,7 +390,7 @@ impl TableInfo {
             group_id,
             schema,
             config,
-            file_sets: ConcurrentFileSets::new(file_sets),
+            file_sets: FileSets::new(file_sets),
             in_memory: None,
         })
     }

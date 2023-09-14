@@ -8,7 +8,7 @@ use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
 use error_stack::ResultExt;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha;
-use sparrow_compiler::{ConcurrentFileSets, TableInfo};
+use sparrow_compiler::{FileSets, TableInfo};
 use sparrow_merge::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
 use sparrow_runtime::stores::ObjectStoreUrl;
@@ -29,7 +29,7 @@ pub struct Table {
 #[derive(Debug)]
 enum Source {
     InMemoryBatches(Arc<InMemoryBatches>),
-    Parquet(ConcurrentFileSets),
+    Parquet(FileSets),
 }
 
 impl Table {
@@ -61,7 +61,7 @@ impl Table {
         // TODO: Source might be an enum, for safety and clarity
         let source = match source {
             Some("parquet") => {
-                let concurrent_file_sets = ConcurrentFileSets::default();
+                let concurrent_file_sets = FileSets::default();
 
                 // Clone into the table_info, so that any modifications to our
                 // original reference are reflected within the table_info.

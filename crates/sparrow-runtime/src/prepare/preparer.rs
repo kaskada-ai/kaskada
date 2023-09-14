@@ -118,6 +118,7 @@ impl Preparer {
         };
 
         // TODO: Slicing
+        // TODO: Opportunity to concatenate batches to reduce the number of prepared files.
         let mut prepare_stream =
             prepared_batches(&self.object_stores, &source_data, &self.table_config, &None)
                 .await
