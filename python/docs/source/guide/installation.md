@@ -5,7 +5,7 @@ We suggest using 3.11 or newer, since that provides more precise error locations
 
 ```{code-block} bash
 :caption: Installing Kaskada
-pip install kaskada>=0.6.0-a.0
+pip install kaskada>=0.6.0-a.3
 ```
 
 ```{warning}
