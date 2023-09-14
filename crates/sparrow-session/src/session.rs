@@ -549,7 +549,7 @@ impl ExecutionOptions {
 }
 
 fn result_schema(expr: &Expr, key_type: &DataType) -> error_stack::Result<SchemaRef, Error> {
-    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::internal())? 
+    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::internal())?
     else {
         error_stack::bail!(Error::internal())
     };
