@@ -42,6 +42,6 @@ content = "\n".join(
         "1996-12-19T16:40:02,A,,",
     ]
 )
-source = await kd.sources.CsvString(content, time_column="time", key_column="key")
+source = await kd.sources.CsvString.create(content, time_column="time", key_column="key")
 source.select("m", "n").extend({"sum_m": source.col("m").sum() }).to_pandas()
 ```

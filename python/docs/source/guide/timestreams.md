@@ -34,7 +34,7 @@ data = "\n".join(
         "1996-12-23T16:40:01,A,12",
     ]
 )
-multi_entity = await kd.sources.CsvString(data, time_column="time", key_column="key")
+multi_entity = await kd.sources.CsvString.create(data, time_column="time", key_column="key")
 
 kd.plot.render(
     kd.plot.Plot(multi_entity.col("m"), name="m")

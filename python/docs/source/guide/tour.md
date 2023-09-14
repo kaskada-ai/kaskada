@@ -37,7 +37,7 @@ single_entity = "\n".join(
         "1996-12-24T16:40:02,A,,",
     ]
 )
-single_entity = await kd.sources.CsvString(single_entity, time_column="time", key_column="key")
+single_entity = await kd.sources.CsvString.create(single_entity, time_column="time", key_column="key")
 ```
 
 ## Events and Aggregations
