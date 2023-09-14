@@ -4,6 +4,9 @@ project:
   preview:
     port: 4200
 
+# tell quarto to read the generated sidebar
+metadata-files:
+  - _sidebar.yml
 
 website:
   favicon: "source/_static/favicon.png"
@@ -18,7 +21,7 @@ website:
         text: User Guide
       - href: source/examples/index.qmd
         text: Examples
-      - href: source/reference/index.qmd
+      - href: reference/index.qmd
         text: API
       - href: source/blog/index.qmd
         text: Blog
@@ -46,3 +49,4 @@ format:
     link-external-icon: true
     link-external-newwindow: true
     link-external-filter: '^(?:http:|https:)\/\/kaskada\.io\/'
+
