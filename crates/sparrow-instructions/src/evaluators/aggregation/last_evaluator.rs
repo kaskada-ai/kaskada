@@ -5,7 +5,7 @@ use crate::{
 };
 use arrow::array::{Array, ArrayRef, BooleanArray, PrimitiveArray, UInt32Array};
 
-/// Evaluator for the `First` instruction.
+/// Evaluator for the `Last` instruction.
 pub struct LastEvaluator {
     args: AggregationArgs<ValueRef>,
     token: ArrayRefAccumToken,
