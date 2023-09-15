@@ -1,4 +1,6 @@
-# Execution
+---
+title: Execution
+---
 
 A [Timestream](./timestreams.qmd) may be executed and written to a [destination](#destinations) in a variety of ways.
 The things to consider when deciding how to execute the Timestream are:

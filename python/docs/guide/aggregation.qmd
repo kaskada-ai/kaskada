@@ -1,4 +1,6 @@
-# Aggregation
+---
+title: Aggregations
+---
 
 Aggregations are _cumulative_, _grouped_, and _windowed_.
 

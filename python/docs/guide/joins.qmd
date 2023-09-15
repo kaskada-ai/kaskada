@@ -1,4 +1,6 @@
-# Joins
+---
+title: Joins
+---
 
 It is often necessary to use multiple Timestreams to define a query.
 Understanding user behavior requires considering their activity across a variety of event streams.

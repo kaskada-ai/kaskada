@@ -1,4 +1,6 @@
-# Entities and Grouping
+---
+title: Entities and Grouping
+---
 
 Entities organize data for use in feature engineering.
 They describe the particular objects that a prediction will be made for.

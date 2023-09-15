@@ -2,6 +2,22 @@
 format:
   html:
     toc: false
+    css:
+      - design-style.css
+
+listing:
+  - id: cards
+    template: _card.ejs
+    contents:
+      - name: "{{< fa timeline >}}Real-time Aggregation"
+        icon: timeline
+        content: Precompute model inputs from streaming data with robust data connectors, transformations & aggregations.
+      - name: Event Detection
+        icon: binoculars
+        content: Trigger pro-active AI behaviors by identifying important activities, as they happen.
+      - name: History Replay
+        icon: backward
+        content: Backtest and fine-tune from historical data using per-example time travel and point-in-time joins.
 ---
 
 ::::: {.px-4 .py-5 .my-5 .text-center}
@@ -15,16 +31,8 @@ format:
 
 ## Kaskada completes the Real-Time AI stack, providing...
 
-```{gallery-grid}
-:grid-columns: 1 2 2 3
-
-- header: "{fas}`timeline;pst-color-primary` Real-time Aggregation"
-  content: "Precompute model inputs from streaming data with robust data connectors, transformations & aggregations."
-- header: "{fas}`binoculars;pst-color-primary` Event Detection"
-  content: "Trigger pro-active AI behaviors by identifying important activities, as they happen."
-- header: "{fas}`backward;pst-color-primary` History Replay"
-  content: "Backtest and fine-tune from historical data using per-example time travel and point-in-time joins."
-```
+::: {#cards .column-page}
+:::
 
 
 ## Real-time AI in minutes
@@ -32,7 +40,7 @@ format:
 Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python..
 Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you can load data, process it, train and serve models all in the same place.
 
-There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](./guide/quickstart.md).
+There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](./guide/quickstart.qmd).
 
 
 ## Built for scale and reliability
@@ -81,7 +89,7 @@ conversations = ( messages
 async for row in conversations.run_iter(mode='live'):
 
     # Use a pre-trained model to identify interested users
-    prompt = "\n\n".join([f' {msg["user"]} --> {msg["text"]} ' for msg in row["result"]])
+    prompt = "\n\n".join([f'{msg["user"]} --> {msg["text"]}' for msg in row["result"]])
     res = openai.Completion.create(
         model="davinci:ft-personal:coversation-users-full-kaskada-2023-08-05-14-25-30",
         prompt=prompt + "\n\n###\n\n",
@@ -103,4 +111,4 @@ For more details, check out the [BeepGPT Github project](https://github.com/kask
 ## Get Started
 
 Getting started with Kaskda is a `pip install kaskada` away.
-Check out the [Quick Start](./guide/quickstart.md) now!
+Check out the [Quick Start](./guide/quickstart.qmd) now!

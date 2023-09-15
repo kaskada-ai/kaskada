@@ -1,4 +1,6 @@
-# Quick Start
+---
+title: Quick Start
+---
 
 This shows the bare minimum needed to get started with Kaskada.
 
