@@ -11,7 +11,7 @@ This uses `kaskada>=0.6.0-a.3` to ensure the pre-release version is installed.
 pip install kaskada>=0.6.0-a.3
 ```
 
-See the section on [installation](./installation.md) to learn more about installing Kaskada.
+See the section on [installation](./installation.qmd) to learn more about installing Kaskada.
 
 ## Write a query
 

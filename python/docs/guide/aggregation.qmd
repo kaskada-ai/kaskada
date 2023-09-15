@@ -9,7 +9,7 @@ Grouped
 : They reflect the values for each entity separately.
 
 Windowed
-: They reflect the values within a specific [window](../reference/windows.md).
+: They reflect the values within a specific [window](../reference/windows.qmd).
 
 While most functions operate on specific points in the Timestream, aggregation functions operate on many points.
 Generally, the result of an aggregation represents the result for each key up to and including the current time.
@@ -25,7 +25,7 @@ Aggregations produce cumulative results up to each point in time, so the result 
 Purchases.sum(window = kd.windows.Since.daily())
 ```
 
-The [windows reference](../reference/windows.md) has information on the supported kinds of windows.
+The [windows reference](../reference/windows.qmd) has information on the supported kinds of windows.
 
 ## Repeated Aggregation
 

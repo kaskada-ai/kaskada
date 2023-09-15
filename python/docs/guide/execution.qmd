@@ -1,6 +1,6 @@
 # Execution
 
-A [Timestream](./timestreams.md) may be executed and written to a [destination](#destinations) in a variety of ways.
+A [Timestream](./timestreams.qmd) may be executed and written to a [destination](#destinations) in a variety of ways.
 The things to consider when deciding how to execute the Timestream are:
 
 1. Whether you want the _history_ of points or the _snapshot_ of values for each entity at a given time.
@@ -87,4 +87,4 @@ This allows you to run the entire retrieve-evaluate-respond loop within a single
 
 The {py:func}`Timestream.write<kaskada.Timestream.write>` function allows you to specify a destination from {py:mod}`kaskada.destinations` for results.
 This supports both `once` and `live` queries
-See the reference on [destinations](../reference/destinations.md) for more on the supported destinations.
+See the reference on [destinations](../reference/destinations.qmd) for more on the supported destinations.

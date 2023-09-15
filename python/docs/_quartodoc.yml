@@ -2,9 +2,11 @@ quartodoc:
   title: API
   dir: reference
   out_index: index.qmd
-  parser: sphinx #one of “google”, “sphinx”, and “numpy”.
+  parser: google #one of “google”, “sphinx”, and “numpy”.
   # the name used to import the package
   package: kaskada
+  renderer:
+    style: _renderer.py
 
   # write sidebar data to this file
   sidebar: _sidebar.yml
@@ -177,7 +179,7 @@ quartodoc:
         - Trailing
     - title: Sources
       options:
-        children: separate
+        children: embedded
       package: kaskada.sources
       contents:
         - Source

@@ -27,7 +27,7 @@ These challenges have made it difficult for all but the largest companies with t
 
 ## Welcome to the New Kaskada
 
-We originally built Kaskada as a managed service. Earlier this year, we [released Kaskada as an open-source, self-managed service](./2023-03-28-announcing-kaskada-oss.md), simplifying data onboarding and allowing Kaskada to be deployed anywhere.
+We originally built Kaskada as a managed service. Earlier this year, we [released Kaskada as an open-source, self-managed service](./2023-03-28-announcing-kaskada-oss.qmd), simplifying data onboarding and allowing Kaskada to be deployed anywhere.
 
 Today, we take the next step in improving Kaskada’s usability by providing its core compute engine as an embedded Python library. Because Kaskada is written in Rust, we’re able to leverage the excellent [PyO3](https://pyo3.rs/) project to compile Python-native bindings for our compute engine and support Python-defined UDF’s. Additionally, Kaskada is built using [Apache Arrow](https://arrow.apache.org/), which allows zero-copy data transfers between Kaskada and other Python libraries such as [Pandas](https://pandas.pydata.org/), allowing you to operate on your data in-place.
 
