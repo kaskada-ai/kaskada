@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
@@ -310,19 +310,56 @@ pub struct GroupInfo {
 /// slice.
 #[derive(Debug, Default)]
 pub struct FileSets {
-    pub file_sets: Mutex<Vec<compute_table::FileSet>>,
+    file_sets: parking_lot::Mutex<Vec<compute_table::FileSet>>,
 }
 
 impl FileSets {
     pub fn new(file_sets: Vec<compute_table::FileSet>) -> Self {
         Self {
-            file_sets: Mutex::new(file_sets),
+            file_sets: parking_lot::Mutex::new(file_sets),
         }
+    }
+
+    pub fn prepared_files(
+        &self,
+        requested_slice: &Option<v1alpha::slice_plan::Slice>,
+    ) -> anyhow::Result<parking_lot::MappedMutexGuard<'_, Vec<PreparedFile>>> {
+        Ok(parking_lot::MutexGuard::map(self.file_sets.lock(), |fs| {
+            let file_set = fs
+                .iter_mut()
+                .find(|set| {
+                    set.slice_plan
+                        .iter()
+                        .all(|slice| &slice.slice == requested_slice)
+                })
+                .unwrap();
+            // .with_context(|| {
+            //     context_code!(
+            //         tonic::Code::InvalidArgument,
+            //         "Table '{}' missing file set with requested slice {:?}",
+            //         "asdf",
+            //         requested_slice
+            //     )
+            // }).unwrap();
+            &mut file_set.prepared_files
+        }))
+    }
+
+    pub fn metadata_for_files(&self) -> Vec<String> {
+        self.file_sets
+            .lock()
+            .iter()
+            .flat_map(|set| {
+                set.prepared_files
+                    .iter()
+                    .map(|file| file.metadata_path.clone())
+            })
+            .collect()
     }
 
     /// Appends the prepared files to the fileset corresponding to the given slice_plan.
     pub fn append(&self, slice_plan: Option<v1alpha::SlicePlan>, prepared: Vec<PreparedFile>) {
-        let mut file_sets = self.file_sets.lock().unwrap();
+        let mut file_sets = self.file_sets.lock();
 
         let file_set = file_sets
             .iter_mut()
@@ -338,14 +375,8 @@ impl FileSets {
         }
     }
 
-    // Note: Cloning is expensive here. Likely would be better to
-    // clone-on-write then replace the file sets with the updated one.
-    pub fn get_clone(&self) -> Vec<compute_table::FileSet> {
-        self.file_sets.lock().unwrap().clone()
-    }
-
     pub fn is_empty(&self) -> bool {
-        self.file_sets.lock().unwrap().is_empty()
+        self.file_sets.lock().is_empty()
     }
 }
 
@@ -416,45 +447,15 @@ impl TableInfo {
         &self.config
     }
 
-    pub fn file_sets_clone(&self) -> Vec<compute_table::FileSet> {
-        self.file_sets.get_clone()
-    }
-
     pub fn prepared_files_for_slice(
         &self,
         requested_slice: &Option<Slice>,
-    ) -> anyhow::Result<Vec<PreparedFile>> {
-        let file_set = self
-            .file_sets
-            .get_clone()
-            .into_iter()
-            .find(|set| {
-                set.slice_plan
-                    .iter()
-                    .all(|slice| &slice.slice == requested_slice)
-            })
-            .with_context(|| {
-                context_code!(
-                    tonic::Code::InvalidArgument,
-                    "Table '{}' missing file set with requested slice {:?}",
-                    self.name(),
-                    requested_slice
-                )
-            })?;
-
-        Ok(file_set.prepared_files)
+    ) -> anyhow::Result<parking_lot::MappedMutexGuard<'_, Vec<PreparedFile>>> {
+        self.file_sets.prepared_files(requested_slice)
     }
 
     pub fn metadata_for_files(&self) -> Vec<String> {
-        self.file_sets
-            .get_clone()
-            .iter()
-            .flat_map(|set| {
-                set.prepared_files
-                    .iter()
-                    .map(|file| file.metadata_path.clone())
-            })
-            .collect()
+        self.file_sets.metadata_for_files()
     }
 
     pub fn dfg_node(&self, dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {

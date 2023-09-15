@@ -234,19 +234,11 @@ impl ScanOperation {
         //
         // Ideally, we don't support both paths.
         if table_source.is_none() && !table_info.file_sets.is_empty() {
-            let file_sets = table_info.file_sets_clone();
-
-            // Only one file set since we don't support slicing yet
-            error_stack::ensure!(
-                file_sets.len() == 1,
-                Error::internal_msg("expected one file set")
-            );
-            assert!(requested_slice.is_none());
-
-            let prepared_files = &file_sets
-                .get(0)
-                .ok_or(Error::internal_msg("expected file set"))?
-                .prepared_files;
+            let prepared_files = table_info
+                .file_sets
+                .prepared_files(&None)
+                .into_report()
+                .change_context(Error::Internal("failed to get prepared files"))?;
 
             // Send initial progress information.
             let total_num_rows = prepared_files

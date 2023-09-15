@@ -202,7 +202,7 @@ fn select_prepared_files(
         .into_report()
         .change_context(Error::SelectPreparedFiles)?;
     let mut selected_files = Vec::with_capacity(prepared_files.len());
-    for prepared_file in prepared_files {
+    for prepared_file in prepared_files.iter() {
         let min_event_time = prepared_file
             .min_event_time()
             .change_context(Error::SelectPreparedFiles)?;
