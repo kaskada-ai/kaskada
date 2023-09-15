@@ -234,22 +234,24 @@ impl ScanOperation {
         //
         // Ideally, we don't support both paths.
         if table_source.is_none() && !table_info.file_sets.is_empty() {
-            let prepared_files = table_info
-                .file_sets
-                .prepared_files(&None)
-                .into_report()
-                .change_context(Error::Internal("failed to get prepared files"))?;
+            {
+                let prepared_files = table_info
+                    .file_sets
+                    .prepared_files(&None)
+                    .into_report()
+                    .change_context(Error::Internal("failed to get prepared files"))?;
 
-            // Send initial progress information.
-            let total_num_rows = prepared_files
-                .iter()
-                .map(|file| file.num_rows as usize)
-                .sum();
-            context
-                .progress_updates_tx
-                .try_send(ProgressUpdate::InputMetadata { total_num_rows })
-                .into_report()
-                .change_context(Error::internal())?;
+                // Send initial progress information.
+                let total_num_rows = prepared_files
+                    .iter()
+                    .map(|file| file.num_rows as usize)
+                    .sum();
+                context
+                    .progress_updates_tx
+                    .try_send(ProgressUpdate::InputMetadata { total_num_rows })
+                    .into_report()
+                    .change_context(Error::internal())?;
+            }
 
             let input_stream = table_reader(
                 &context.object_stores,
