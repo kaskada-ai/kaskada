@@ -308,23 +308,20 @@ pub struct GroupInfo {
 ///
 /// Each file set corresponds to a set of prepared files for a specific
 /// slice.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct FileSets {
-    file_sets: Arc<Mutex<Vec<compute_table::FileSet>>>,
+    pub file_sets: Mutex<Vec<compute_table::FileSet>>,
 }
 
 impl FileSets {
     pub fn new(file_sets: Vec<compute_table::FileSet>) -> Self {
         Self {
-            file_sets: Arc::new(Mutex::new(file_sets)),
+            file_sets: Mutex::new(file_sets),
         }
     }
 
-    pub fn push(&mut self, file_set: compute_table::FileSet) {
-        self.file_sets.lock().unwrap().push(file_set);
-    }
-
-    pub fn append(&mut self, slice_plan: Option<v1alpha::SlicePlan>, prepared: Vec<PreparedFile>) {
+    /// Appends the prepared files to the fileset corresponding to the given slice_plan.
+    pub fn append(&self, slice_plan: Option<v1alpha::SlicePlan>, prepared: Vec<PreparedFile>) {
         let mut file_sets = self.file_sets.lock().unwrap();
 
         let file_set = file_sets
@@ -367,7 +364,7 @@ pub struct TableInfo {
     /// TODO: A lot of existing code assumes this is a non-optional field, so
     /// leaving this as is for now in the assumption that it'll change rapidly
     /// once we slowly migrate off the fenl compilation path.
-    pub file_sets: FileSets,
+    pub file_sets: Arc<FileSets>,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,
 }
@@ -390,7 +387,7 @@ impl TableInfo {
             group_id,
             schema,
             config,
-            file_sets: FileSets::new(file_sets),
+            file_sets: Arc::new(FileSets::new(file_sets)),
             in_memory: None,
         })
     }

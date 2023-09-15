@@ -29,7 +29,7 @@ pub struct Table {
 #[derive(Debug)]
 enum Source {
     InMemoryBatches(Arc<InMemoryBatches>),
-    Parquet(FileSets),
+    Parquet(Arc<FileSets>),
 }
 
 impl Table {
@@ -61,7 +61,7 @@ impl Table {
         // TODO: Source might be an enum, for safety and clarity
         let source = match source {
             Some("parquet") => {
-                let concurrent_file_sets = FileSets::default();
+                let concurrent_file_sets = Arc::new(FileSets::default());
 
                 // Clone into the table_info, so that any modifications to our
                 // original reference are reflected within the table_info.
@@ -135,7 +135,7 @@ impl Table {
     }
 
     pub async fn add_parquet(&self, path: &std::path::Path) -> error_stack::Result<(), Error> {
-        let mut concurrent_file_sets = match &self.source {
+        let file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
                 "expected parquet data source, saw {:?}",
@@ -152,7 +152,7 @@ impl Table {
         self.update_key_hash_inverse(&prepared).await?;
 
         // TODO: Slicing
-        concurrent_file_sets.append(None, prepared);
+        file_sets.append(None, prepared);
 
         Ok(())
     }
