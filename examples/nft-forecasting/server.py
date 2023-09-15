@@ -13,6 +13,7 @@ from atproto.xrpc_client.models import get_or_create, ids, is_record_type
 
 from web3 import Web3
 from websockets import connect
+from web3.exceptions import ContractLogicError
 import argparse
 
 parser = argparse.ArgumentParser(description='Predict NFT prices')
@@ -27,8 +28,22 @@ infura_http_url = f"https://mainnet.infura.io/v3/{args.key}"
 
 web3 = Web3(Web3.HTTPProvider(infura_http_url))
 
+# TODO: TransferBatch also...
 options1155 = {'topics': [Web3.keccak(text='TransferSingle(address,address,address,uint256,uint256)').hex()]}
 request_string_1155 = json.dumps({"jsonrpc":"2.0", "id":1, "method":"eth_subscribe", "params":["logs", options1155]})
+standard_erc1155_abi = [
+    {
+        "constant": True,
+        "inputs": [
+            {"name": "_id", "type": "uint256"}
+        ],
+        "name": "uri",
+        "outputs": [
+            {"name": "", "type": "string"}
+        ],
+        "type": "function"
+    }
+]
 
 async def main():
     kd.init_session()
@@ -36,7 +51,7 @@ async def main():
     at_client = AsyncFirehoseSubscribeReposClient()
 
     transfers = kd.sources.PyDict(
-        rows = [],
+        #rows = [],
         schema = pa.schema([
             pa.field("BlockTimestamp", pa.int64()),
             pa.field("TokenAddress", pa.string()),
@@ -57,13 +72,25 @@ async def main():
             subscription_response = await ws.recv()
             print(subscription_response)
             while True:
-                message = await asyncio.wait_for(ws.recv(), timeout=60)
+                message = await asyncio.wait_for(ws.recv(), timeout=120)
                 event = json.loads(message)
-
                 result = event['params']['result']
+
+                token_address = result["address"] 
+                token_id = int(result['data'][:66], 16)
+                contract_address = Web3.to_checksum_address(token_address)
+                contract = web3.eth.contract(address=contract_address, abi=standard_erc1155_abi)
+                try:
+                    metadata_uri = contract.functions.uri(token_id).call()
+                except ContractLogicError:
+                    print("contract reverted")
+                    continue
+
+                print(f"contract uri: {metadata_uri}")
+
                 # block = int(result['blockNumber'], 16)
                 # tx_hash = result['transactionHash']
-                transfers.add_rows({
+                await transfers.add_rows({
                     "BlockTimestamp": time.time(),
                     "TokenAddress": str(result["address"]),
                     "TokenID": str(int(result['data'][:66], 16)),
@@ -100,7 +127,8 @@ async def main():
             print(f"Got outputs: {row}")
 
     #await asyncio.gather(receive_transfers(), at_client.start(receive_at), receive_outputs())
-    await at_client.start(receive_at)
+    #await at_client.start(receive_at)
+    await receive_transfers()
 
 # From https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
 def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901
