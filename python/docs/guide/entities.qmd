@@ -90,11 +90,11 @@ For example, given a stream of purchases associated with each user, we could cre
 purchases_by_user.with_key(purchases_by_user.col("item_id"))
 ```
 
-This is particularly useful with the ability to [lookup](joins.md#explicit-lookups) values from associated with other keys.
+This is particularly useful with the ability to [lookup](joins.qmd#explicit-lookups) values from associated with other keys.
 For instance, we could re-key purchases as shown above to count the total spent on each item (across all users) and then lookup that information for each user's purchases.
 
 ## Joining
 
 Joining with the same entity happens automatically.
 Joining with other entities (and even other kinds of entities) is done using `lookup`.
-See [Joins](joins.md) for more information.
+See [Joins](joins.qmd) for more information.

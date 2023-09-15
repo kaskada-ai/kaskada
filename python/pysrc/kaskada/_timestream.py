@@ -111,12 +111,12 @@ class Timestream(object):
         Args:
             func: Name of the function to apply.
             input: The input to use for any "deferred" arguments.
-              If `None`, then any arguments that require a `Timestream` argument
-              will produce an error.
+                If `None`, then any arguments that require a `Timestream` argument
+                will produce an error.
             *args: List of arguments to the expression.
             session: FFI Session to create the expression in.
-              If unspecified, will infer from the arguments.
-              Will fail if all arguments are literals and the session is not provided.
+                If unspecified, will infer from the arguments.
+                Will fail if all arguments are literals and the session is not provided.
 
         Returns:
             Timestream representing the result of the function applied to the arguments.
@@ -191,8 +191,8 @@ class Timestream(object):
 
         Args:
             func: Function to apply to this Timestream.
-              Alternatively a `(func, keyword)` tuple where `keyword` is a string
-              indicating the keyword of `func` that expects the Timestream.
+                Alternatively a `(func, keyword)` tuple where `keyword` is a string
+                indicating the keyword of `func` that expects the Timestream.
             *args: Positional arguments passed into ``func``.
             **kwargs: A dictionary of keyword arguments passed into ``func``.
 
@@ -201,7 +201,7 @@ class Timestream(object):
 
         Raises:
             ValueError: When using `self` with a specific `keyword` if the `keyword` also
-              appears on in the `kwargs`.
+                appears on in the `kwargs`.
 
         Notes:
             Use ``.pipe`` when chaining together functions that expect Timestreams.
@@ -654,11 +654,11 @@ class Timestream(object):
 
         Args:
             max: The maximum number of values to collect.
-              If `None` all values are collected.
+                If `None` all values are collected.
             min: The minimum number of values to collect before producing a value.
-              Defaults to 0.
+                Defaults to 0.
             window: The window to use for the aggregation. If not specified,
-              the entire Timestream is used.
+                the entire Timestream is used.
 
         Returns:
             A Timestream containing the list of collected elements at each point.
@@ -720,7 +720,7 @@ class Timestream(object):
         Args:
             key: The new key to use for the grouping.
             grouping: A string literal naming the new grouping. If no `grouping` is specified,
-              one will be computed from the type of the `key`.
+                one will be computed from the type of the `key`.
         """
         return Timestream._call("with_key", key, self, grouping, input=self)
 
@@ -955,9 +955,9 @@ class Timestream(object):
 
         Args:
             n: The number of points to look back. For example, `n=1` refers to
-              the previous point.
+                the previous point.
 
-              Defaults to 1 (the previous point).
+                Defaults to 1 (the previous point).
         """
         time_of_current = Timestream._call("time_of", self).cast(pa.int64())
         time_of_previous = Timestream._call("time_of", self).lag(n).cast(pa.int64())
@@ -987,7 +987,7 @@ class Timestream(object):
 
         See Also:
             kaskada.record: Function for creating a record from one or more
-              timestreams.
+                timestreams.
         """
         return record(fields(self))
 
@@ -1080,13 +1080,11 @@ class Timestream(object):
         Args:
             results: The results to produce in the DataFrame. Defaults to `History()` producing all points.
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
-            max_batch_size: The maximum number of rows to return in each batch.
-              Defaults to `None` for no limit.
 
         See Also:
             - :func:`preview`: For quick peeks at the contents of a TimeStream during development.
             - :func:`write`: For writing results to supported destinations without passing through
-              Pandas.
+                  Pandas.
             - :func:`run_iter`: For non-blocking (iterator or async iterator) execution.
         """
         execution = self._execute(results, row_limit=row_limit)
@@ -1106,9 +1104,9 @@ class Timestream(object):
         Args:
             destination: The destination to write to.
             mode: The execution mode to use. Defaults to `'once'` to produce the results
-              from the currently available data. Use `'live'` to start a standing query
-              that continues to process new data until stopped.
-            results: The results to produce. Defaults to `History()` producing all points.
+                from the currently available data. Use `'live'` to start a standing query
+                that continues to process new data until stopped.
+            results: The results to produce. Defaults to `Histroy()` producing all points.
 
         Returns:
             An `ExecutionProgress` which allows iterating (synchronously or asynchronously)
@@ -1171,12 +1169,12 @@ class Timestream(object):
         Args:
             kind: The kind of iterator to produce. Defaults to `pandas`.
             mode: The execution mode to use. Defaults to `'once'` to produce the results
-              from the currently available data. Use `'live'` to start a standing query
-              that continues to process new data until stopped.
-            results: The results to produce. Defaults to `History()` producing all points.
+                from the currently available data. Use `'live'` to start a standing query
+                that continues to process new data until stopped.
+            results: The results to produce. Defaults to `Histroy()` producing all points.
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
             max_batch_size: The maximum number of rows to return in each batch.
-              Defaults to `None` for no limit.
+                Defaults to `None` for no limit.
 
         Returns:
             Iterator over data of the corresponding kind. The `QueryIterator` allows
@@ -1270,10 +1268,10 @@ def _aggregation(
     """Return the aggregation `op` with the given `input`, `window` and `args`.
 
     Args:
-    op: The operation to create.
-    input: The input to the aggregation.
-    window: The window to use for the aggregation.
-    *args: Additional arguments to provide after `input` and before the flattened window.
+        op: The operation to create.
+        input: The input to the aggregation.
+        window: The window to use for the aggregation.
+        *args: Additional arguments to provide after `input` and before the flattened window.
 
     Raises:
         NotImplementedError: If the window is not a known type.
@@ -1338,7 +1336,7 @@ def record(fields: Mapping[str, Arg]) -> Timestream:
 
     See Also:
         Timestream.record: Method for creating a record from fields computed from
-          a timestream.
+            a timestream.
     """
     import itertools
 

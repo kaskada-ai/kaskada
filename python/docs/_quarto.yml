@@ -9,21 +9,21 @@ metadata-files:
   - _sidebar.yml
 
 website:
-  favicon: "source/_static/favicon.png"
+  favicon: "_static/favicon.png"
   google-analytics: G-HR9E2E6TG4
   navbar:
     background: white
-    logo: source/_static/kaskada-negative.svg
+    logo: _static/kaskada-negative.svg
     logo-alt: "Kaskada logo."
     title: false
     left:
-      - href: source/guide/index.qmd
+      - href: guide/index.qmd
         text: User Guide
-      - href: source/examples/index.qmd
+      - href: examples/index.qmd
         text: Examples
       - href: reference/index.qmd
         text: API
-      - href: source/blog/index.qmd
+      - href: blog/index.qmd
         text: Blog
     right:
       - icon: slack
