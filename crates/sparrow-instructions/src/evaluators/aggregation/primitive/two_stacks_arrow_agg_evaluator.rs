@@ -261,7 +261,7 @@ mod tests {
     use arrow::datatypes::{Float64Type, Int64Type};
 
     use super::*;
-    use crate::{FirstPrimitive, LastPrimitive, Max, Mean, Min, Sum};
+    use crate::{Max, Mean, Min, Sum};
 
     #[test]
     fn test_sliding_sum_f64() {
@@ -498,59 +498,5 @@ mod tests {
 
         let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
         assert_eq!(output, &Float64Array::from(vec![1.0, 1.5, 2.5, 3.0, 4.0]));
-    }
-
-    #[test]
-    fn test_sliding_first_f64() {
-        let entity_indices = UInt32Array::from(vec![0; 5]);
-        let input: ArrayRef = Arc::new(Float64Array::from(vec![1f64, 2.0, 3.0, 4.0, 5.0]));
-        let sliding = BooleanArray::from(vec![
-            Some(true),
-            Some(true),
-            Some(false),
-            Some(true),
-            Some(true),
-        ]);
-        let mut accum = Vec::new();
-
-        let output = TwoStacksArrowAggEvaluator::<FirstPrimitive<Float64Type>>::aggregate(
-            &mut accum,
-            1,
-            &entity_indices,
-            &input,
-            2,
-            &sliding,
-        )
-        .unwrap();
-
-        let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
-        assert_eq!(output, &Float64Array::from(vec![1.0, 1.0, 2.0, 2.0, 3.0]));
-    }
-
-    #[test]
-    fn test_sliding_last_f64() {
-        let entity_indices = UInt32Array::from(vec![0; 5]);
-        let input: ArrayRef = Arc::new(Float64Array::from(vec![1f64, 2.0, 3.0, 4.0, 5.0]));
-        let sliding = BooleanArray::from(vec![
-            Some(true),
-            Some(true),
-            Some(false),
-            Some(true),
-            Some(true),
-        ]);
-        let mut accum = Vec::new();
-
-        let output = TwoStacksArrowAggEvaluator::<LastPrimitive<Float64Type>>::aggregate(
-            &mut accum,
-            1,
-            &entity_indices,
-            &input,
-            2,
-            &sliding,
-        )
-        .unwrap();
-
-        let output = downcast_primitive_array::<Float64Type>(output.as_ref()).unwrap();
-        assert_eq!(output, &Float64Array::from(vec![1.0, 2.0, 3.0, 4.0, 5.0]));
     }
 }

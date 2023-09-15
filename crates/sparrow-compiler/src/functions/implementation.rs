@@ -1,18 +1,18 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
-use egg::{Id, Var};
+use egg::Id;
 use itertools::izip;
 use once_cell::sync::OnceCell;
 use smallvec::smallvec;
 use sparrow_api::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
 use sparrow_instructions::InstOp;
-use sparrow_syntax::{Expr, FeatureSetPart, FenlType, Located, ResolvedExpr, WindowBehavior};
+use sparrow_syntax::{Expr, FeatureSetPart, Located, ResolvedExpr, WindowBehavior};
 
 use crate::ast_to_dfg::ast_to_dfg;
 use crate::dfg::{Dfg, DfgPattern, Operation, StepKind};
 use crate::frontend::resolve_arguments::resolve_recursive;
-use crate::functions::{Function, Pushdown};
+use crate::functions::Function;
 use crate::{is_any_new, AstDfgRef, DataContext, DiagnosticCollector};
 
 /// Enum describing how a function is implemented.
@@ -26,9 +26,6 @@ pub(super) enum Implementation {
     Window(WindowBehavior),
     /// The function should be expanded using the given pattern.
     Pattern(DfgPattern),
-    /// The function should be expanded on primitive fields using the given
-    /// pushdown.
-    Pushdown(Box<Pushdown>),
     /// The function should be rewritten as the given fenl expression.
     ///
     /// This differs from `Rewrite` in that this expression uses fenl syntax and
@@ -139,37 +136,6 @@ impl Implementation {
                 dfg.exit_env();
 
                 Ok(result.value())
-            }
-            Implementation::Pushdown(pushdown) => {
-                // To avoid accidents, we don't include the "driving" argument in the
-                // substitution. Specifically, the "input" to the pushdown will
-                // be changed at each recursion.
-                let mut subst =
-                    function.create_subst_from_args(dfg, args, Some(pushdown.pushdown_on()));
-
-                let pushdown_on = &args[pushdown.pushdown_on()];
-                // Add an `is_new` that indicates whether the argument being pushed down on
-                // was new. We can't access the `is_new` of individual components.
-                subst.insert(
-                    Var::from_str("?is_new").context("Failed to parse ?is_new")?,
-                    pushdown_on.is_new(),
-                );
-                subst.insert(
-                    Var::from_str("?op").context("Failed to parse ?op")?,
-                    dfg.operation(pushdown_on.value()),
-                );
-
-                match pushdown_on.value_type() {
-                    FenlType::Concrete(data_type) => {
-                        pushdown.pushdown(dfg, &subst, pushdown_on.value(), data_type)
-                    }
-                    FenlType::Error => Ok(dfg.error_node().value()),
-                    non_concrete => Err(anyhow!(
-                        "Unable to pushdown '{}' on non-concrete type {}",
-                        function.name(),
-                        non_concrete
-                    )),
-                }
             }
             Implementation::AnyInputIsNew => Ok(is_any_new(dfg, args)?),
         }

@@ -48,23 +48,54 @@ operations:
       - arguments: []
         result_type:
           kind:
-            Primitive: 1
-        output: false
-        operator:
-          Literal:
-            literal: ~
-      - arguments: []
-        result_type:
-          kind:
             Primitive: 14
         output: false
         operator:
           Literal:
             literal:
               Utf8: amount
+      - arguments: []
+        result_type:
+          kind:
+            Primitive: 1
+        output: false
+        operator:
+          Literal:
+            literal: ~
       - arguments:
           - 0
           - 3
+          - 3
+        result_type:
+          kind:
+            Struct:
+              fields:
+                - name: sender
+                  data_type:
+                    kind:
+                      Primitive: 10
+                  nullable: true
+                - name: amount
+                  data_type:
+                    kind:
+                      Primitive: 13
+                  nullable: true
+                - name: receiver
+                  data_type:
+                    kind:
+                      Primitive: 10
+                  nullable: true
+                - name: store
+                  data_type:
+                    kind:
+                      Primitive: 10
+                  nullable: true
+        output: false
+        operator:
+          Instruction: first
+      - arguments:
+          - 4
+          - 2
         result_type:
           kind:
             Primitive: 13
@@ -72,99 +103,8 @@ operations:
         operator:
           Instruction: field_ref
       - arguments:
-          - 4
           - 2
-          - 2
-        result_type:
-          kind:
-            Primitive: 13
-        output: false
-        operator:
-          Instruction: first
-      - arguments:
-          - 4
-        result_type:
-          kind:
-            Primitive: 2
-        output: false
-        operator:
-          Instruction: is_valid
-      - arguments:
-          - 0
-        result_type:
-          kind:
-            Primitive: 2
-        output: false
-        operator:
-          Instruction: is_valid
-      - arguments:
-          - 7
-          - 6
-        result_type:
-          kind:
-            Primitive: 2
-        output: false
-        operator:
-          Instruction: if
-      - arguments:
-          - 8
-          - 2
-          - 2
-        result_type:
-          kind:
-            Primitive: 2
-        output: false
-        operator:
-          Instruction: first
-      - arguments:
-          - 9
           - 5
-        result_type:
-          kind:
-            Primitive: 13
-        output: false
-        operator:
-          Instruction: if
-      - arguments: []
-        result_type:
-          kind:
-            Primitive: 9
-        output: false
-        operator:
-          Literal:
-            literal:
-              Uint32: 0
-      - arguments:
-          - 7
-          - 2
-          - 2
-        result_type:
-          kind:
-            Primitive: 9
-        output: false
-        operator:
-          Instruction: count_if
-      - arguments:
-          - 12
-          - 11
-        result_type:
-          kind:
-            Primitive: 2
-        output: false
-        operator:
-          Instruction: gt
-      - arguments:
-          - 13
-          - 10
-        result_type:
-          kind:
-            Primitive: 13
-        output: false
-        operator:
-          Instruction: if
-      - arguments:
-          - 3
-          - 14
         result_type:
           kind:
             Struct:
@@ -178,7 +118,7 @@ operations:
         operator:
           Instruction: record
       - arguments:
-          - 15
+          - 6
         result_type:
           kind:
             Primitive: 24
@@ -186,7 +126,7 @@ operations:
         operator:
           Instruction: time_of
       - arguments:
-          - 16
+          - 7
           - 1
         result_type:
           kind:
@@ -242,7 +182,7 @@ operations:
             input_column: 3
             interpolation: 2
             column:
-              ProducerExpression: 15
+              ProducerExpression: 6
     operator:
       Select:
         input: 0
@@ -251,7 +191,7 @@ operations:
           input_column: 4
           interpolation: 1
           column:
-            ProducerExpression: 17
+            ProducerExpression: 8
 primary_grouping: account
 primary_grouping_key_type:
   kind:

@@ -9,7 +9,6 @@ mod implementation;
 mod json;
 mod logical;
 mod math;
-mod pushdown;
 mod registry;
 mod string;
 mod time;
@@ -18,7 +17,6 @@ mod window;
 
 pub use function::*;
 use implementation::*;
-pub(crate) use pushdown::*;
 pub use registry::*;
 pub use time_domain_check::*;
 

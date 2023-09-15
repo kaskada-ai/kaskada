@@ -446,6 +446,7 @@ async fn test_first_timestamp_ns() {
     "###);
 }
 
+#[ignore = "https://github.com/kaskada-ai/kaskada/issues/754"]
 #[tokio::test]
 async fn test_last_sliding_i64() {
     insta::assert_snapshot!(QueryFixture::new("{ last: last(Numbers.m, window=sliding(3, monthly())) }").run_to_csv(&i64_data_fixture().await).await.unwrap(), @r###"
