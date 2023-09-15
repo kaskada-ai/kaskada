@@ -1,4 +1,6 @@
-# Why Kaskada?
+---
+title: Why Kaskada?
+---
 
 Kaskada is a library for executing temporal queries over event-based data.
 An "event" can be any fact about the world associated with a time.

@@ -1,4 +1,6 @@
-# Timestreams
+---
+title: Timestreams
+---
 
 Kaskada is built on the concept of a _Timestream_.
 Each Timestream is ordered by _time_ and partitioned by _entity_.

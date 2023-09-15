@@ -9,7 +9,7 @@ quartodoc:
     style: _renderer.py
 
   # write sidebar data to this file
-  sidebar: _sidebar.yml
+  sidebar: reference/_metadata.yml
 
   sections:
     - title: Timestream

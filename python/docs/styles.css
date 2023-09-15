@@ -1,13 +1,14 @@
 /* css styles */
 
 .navbar-brand-logo img {
-    height: 100%;
     max-width: 100%;
     width: auto;
+    height: 36px;
+    max-height: 36px;
     vertical-align: middle;
 }
 
-nav {
+body.quarto-light nav.navbar {
     box-shadow: 0 0.125rem 0.25rem 0 var(--bs-gray-400);
 }
 
@@ -17,4 +18,35 @@ body.quarto-light .only-dark {
 
 body.quarto-dark .only-light {
     display: none !important;
+}
+
+.announcement {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.5rem 12.5%;
+    position: relative;
+    text-align: center;
+    width: 100%;
+}
+
+body.quarto-light .announcement {
+    background-color: rgb(208, 231, 233);
+}
+
+body.quarto-dark .announcement {
+    background-color: rgb(73, 73, 110);
+}
+
+h2 {
+    border-bottom: none;
+}
+
+body.quarto-dark .sd-card {
+    border: 1px solid white;
+}
+
+body.quarto-dark .sd-card-header {
+    border-bottom: 1px solid white;
 }

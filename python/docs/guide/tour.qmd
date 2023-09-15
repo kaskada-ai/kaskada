@@ -1,8 +1,10 @@
-% Level: Beginner
-% Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
-% Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
+---
+title: Tour of Kaskada
+---
 
-# Tour of Kaskada
+- Level: Beginner
+- Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
+- Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
 
 This provides an overview of the key features in Kaskada that enable feature engineering on event-based data.
 The [Quick Start](./quickstart.qmd) has details on how you can quickly get started running Kaskada queries.

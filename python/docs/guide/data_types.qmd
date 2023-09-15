@@ -1,4 +1,6 @@
-# Data Types
+---
+title: Data Types
+---
 
 Kaskada operates on typed Timestreams.
 Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated [PyArrow data type](https://arrow.apache.org/docs/python/api/datatypes.html) returned by {py:attr}`kaskada.Timestream.data_type`.

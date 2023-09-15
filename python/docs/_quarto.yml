@@ -4,16 +4,13 @@ project:
   preview:
     port: 4200
 
-# tell quarto to read the generated sidebar
-metadata-files:
-  - _sidebar.yml
-
 website:
   favicon: "_static/favicon.png"
   google-analytics: G-HR9E2E6TG4
+  page-navigation: true
   navbar:
-    background: white
-    logo: _static/kaskada-negative.svg
+    background: primary
+    logo: "_static/kaskada-negative.svg"
     logo-alt: "Kaskada logo."
     title: false
     left:
@@ -30,12 +27,35 @@ website:
         href: https://join.slack.com/t/kaskada-hq/shared_invite/zt-1t1lms085-bqs2jtGO2TYr9kuuam~c9w
       - icon: github
         href: https://github.com/kaskada-ai/kaskada
+  sidebar:
+  - title: User Guide
+    style: docked
+    contents:
+      - guide/index.qmd
+      - guide/quickstart.qmd
+      - guide/tour.qmd
+      - guide/why.qmd
+      - guide/installation.qmd
+      - guide/timestreams.qmd
+      - guide/data_types.qmd
+      - guide/entities.qmd
+      - guide/aggregation.qmd
+      - guide/joins.qmd
+      - guide/sources.qmd
+      - guide/execution.qmd
+  - title: Examples
+    contents:
+      - examples/index.qmd
+      - examples/time_centric.ipynb
+
   page-footer:
     border: true
     left: "© Copyright 2023, Kaskada Contributors."
   repo-url: https://github.com/kaskada-ai/kaskada/
   repo-subdir: python/source
-  repo-actions: "edit"
+  repo-actions:
+    - edit
+    - source
   site-url: https://kaskada.io/kaskada
   title: Kaskada
 
@@ -43,8 +63,11 @@ format:
   html:
     theme:
       light: flatly
-      dark: darkly
-    css: styles.css
+      dark: darkly #vapor
+    css:
+      - styles.css
+      - design-style.css
+    include-in-header: _announcement.html
     toc: true
     link-external-icon: true
     link-external-newwindow: true

@@ -1,4 +1,6 @@
-# Installation
+---
+title: Installation
+---
 
 To install Kaskada, you need to be using Python >= 3.8.
 We suggest using 3.11 or newer, since that provides more precise error locations.
