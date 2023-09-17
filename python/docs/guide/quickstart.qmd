@@ -20,7 +20,7 @@ See the section on [installation](./installation.qmd) to learn more about instal
 The following Python code imports the Kaskada library, creates a session, and loads some CSV data.
 It then runs a query to produce a Pandas DataFrame.
 
-```
+```{python}
 import asyncio
 import kaskada as kd
 kd.init_session()

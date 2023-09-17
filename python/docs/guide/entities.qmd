@@ -28,22 +28,15 @@ For example, using `Vancouver` to identify cities would lead to ambiguity betwee
 In these cases, you'd likely use some other identifier for instances.
 Others may be useful, such as using the airport code.
 
-:::{list-table} Example Entities and corresponding keys.
-:header-rows: 1
+| Example Entity | Example Entity Instance |
+|-|-|
+|Houses|1600 Pennsylvania Avenue|
+|Airports|SEA|
+|Customers|John Doe|
+|City|Vancouver|
+|State|Washington|
 
-* - Example Entity
-  - Example Entity Instance
-* - Houses
-  - 1600 Pennsylvania Avenue
-* - Airports
-  - SEA
-* - Customers
-  - John Doe
-* - City
-  - Vancouver
-* - State
-  - Washington
-:::
+: Example Entities and corresponding keys.
 
 ## Entities and Aggregation
 
@@ -52,14 +45,16 @@ Entities provide an implicit grouping for the aggregation.
 When we write `sum(Purchases.amount)` it is an aggregation that returns the sum of purchases made _by each entity_.
 This is helpful since the _feature vector_ for an entity will depend only on events related to that entity.
 
+<!---
 % The input for this needs to be hidden, not removed. It seems that plotly won't
 % render the right height otherwise (possibly because it's not attached to the DOM?).
 % We could see if this worked better using a different library such as `bokeh` or if
 % there were better options to pass to plotly to avoid the problem.
-```
----
-tags: [hide-input]
----
+--->
+
+```{python}
+#| code-fold: true
+
 import asyncio
 import kaskada as kd
 kd.init_session()
@@ -84,11 +79,10 @@ kd.plot.render(
 
 ## Changing Keys
 
-The key associated with each point may be changed using {py:meth}`kaskada.Timestream.with_key`.
+The key associated with each point may be changed using [`kaskada.Timestream.with_key`](../reference/Timestream.with_key.qmd).
 For example, given a stream of purchases associated with each user, we could create a Timestream associated with the purchased item:
 
-```python
-:caption: Using with-key to associate purchases with items
+```{.python filename="Using with-key to associate purchases with items"}
 purchases_by_user.with_key(purchases_by_user.col("item_id"))
 ```
 

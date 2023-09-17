@@ -50,3 +50,14 @@ body.quarto-dark .sd-card {
 body.quarto-dark .sd-card-header {
     border-bottom: 1px solid white;
 }
+
+th> :last-child,
+td> :last-child {
+    margin-bottom: 0px;
+}
+
+dd {
+    margin-bottom: 10px;
+    margin-left: 30px;
+    margin-top: 3px;
+}

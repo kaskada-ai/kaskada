@@ -1,9 +1,15 @@
 ---
 title: Data Types
+
+listing:
+  - id: types
+    template: _type_table.ejs
+    contents:
+      - scalar_types.yml
 ---
 
 Kaskada operates on typed Timestreams.
-Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated [PyArrow data type](https://arrow.apache.org/docs/python/api/datatypes.html) returned by {py:attr}`kaskada.Timestream.data_type`.
+Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated [PyArrow data type](https://arrow.apache.org/docs/python/api/datatypes.html) returned by [`kaskada.Timestream.data_type`](../reference/timestream_class.qmd#kaskada.Timestream.data_type).
 The set of supported types is based on the types supported by [Apache Arrow](https://arrow.apache.org/).
 
 Each `Timestream` contains points of the corresponding type.
@@ -20,49 +26,7 @@ An expression producing a record type is a stream that produces a value of the g
 
 Scalar types include booleans, numbers, strings, timestamps, durations and calendar intervals.
 
-:::{list-table} Scalar Types
-:widths: 1, 3
-:header-rows: 1
-
-- * Types
-  * Description
-- * `bool`
-  * Booleans represent true or false.
-
-    Examples: `true`, `false`.
-- * `u8`, `u16`, `u32`, `u64`
-  * Unsigned integer numbers of the specified bit width.
-
-    Examples: `0`, `1`, `1000`
-- * `i8`, `i16`, `i32`, `i64`
-  * Signed integer numbers of the specified bit width.
-
-    Examples: `0`, `1`, `-100`
-- * `f32`, `f64`
-  * Floating point numbers of the specified bit width.
-
-    Examples: `0`, `1`, `-100`, `1000`, `0.0`, `-1.0`, `-100837.631`.
-- * `str`
-  * Unicode strings.
-
-    Examples: `"hello", "hi 'bob'"`.
-
-- * `timestamp_s`, `timestamp_ms`, `timestamp_us`, `timestamp_ns`
-  * Points in time relative the Unix Epoch (00:00:00 UTC on January 1, 1970).
-    Time unit may be seconds (s), milliseconds (ms), microseconds (us) or nanoseconds (ns).
-
-    Examples: `1639595174 as timestamp_s`
-- *  `duration_s`, `duration_ms`, `duration_us`, `duration_ns`
-  * A duration of a fixed amount of a specific time unit.
-    Time unit may be seconds (s), milliseconds (ms), microseconds (us) or nanoseconds (ns).
-
-    Examples: `-100 as duration_ms`
-- * `interval_days`, `interval_months`
-  * A calendar interval corresponding to the given amount of the corresponding time.
-    The length of an interval depends on the point in time it is added to.
-    For instance, adding 1 `interval_month` to a timestamp will shift to the same day of the next month.
-
-    Examples: `1 as interval_days`, `-100 as interval_months`
+::: {#types}
 :::
 
 ## Record Types
