@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use arrow::datatypes::{DataType, SchemaRef};
 use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
-use sparrow_api::kaskada::v1alpha::{compute_table, ComputeTable, PreparedFile, TableConfig};
+use sparrow_api::kaskada::v1alpha::{self, compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
 use sparrow_instructions::{GroupId, TableId};
 use sparrow_merge::InMemoryBatches;
@@ -303,6 +303,79 @@ pub struct GroupInfo {
     key_type: DataType,
 }
 
+/// Concurrent file sets that allows us to update the file sets from the
+/// python library and see updates reflected within the data context.
+///
+/// Each file set corresponds to a set of prepared files for a specific
+/// slice.
+#[derive(Debug, Default)]
+pub struct FileSets {
+    file_sets: parking_lot::Mutex<Vec<compute_table::FileSet>>,
+}
+
+impl FileSets {
+    pub fn new(file_sets: Vec<compute_table::FileSet>) -> Self {
+        Self {
+            file_sets: parking_lot::Mutex::new(file_sets),
+        }
+    }
+
+    pub fn prepared_files(
+        &self,
+        requested_slice: &Option<v1alpha::slice_plan::Slice>,
+    ) -> anyhow::Result<parking_lot::MappedMutexGuard<'_, Vec<PreparedFile>>> {
+        parking_lot::MutexGuard::try_map(self.file_sets.lock(), |fs| {
+            let file_set = fs.iter_mut().find(|set| {
+                set.slice_plan
+                    .iter()
+                    .all(|slice| &slice.slice == requested_slice)
+            });
+            file_set.map(|f| &mut f.prepared_files)
+        })
+        .map_err(|_| {
+            anyhow::anyhow!(context_code!(
+                tonic::Code::InvalidArgument,
+                "Table missing file set with requested slice {:?}",
+                requested_slice
+            ))
+        })
+    }
+
+    pub fn metadata_for_files(&self) -> Vec<String> {
+        self.file_sets
+            .lock()
+            .iter()
+            .flat_map(|set| {
+                set.prepared_files
+                    .iter()
+                    .map(|file| file.metadata_path.clone())
+            })
+            .collect()
+    }
+
+    /// Appends the prepared files to the fileset corresponding to the given slice_plan.
+    pub fn append(&self, slice_plan: Option<v1alpha::SlicePlan>, prepared: Vec<PreparedFile>) {
+        let mut file_sets = self.file_sets.lock();
+
+        let file_set = file_sets
+            .iter_mut()
+            .find(|set| set.slice_plan == slice_plan);
+
+        if let Some(file_set) = file_set {
+            file_set.prepared_files.extend(prepared);
+        } else {
+            file_sets.push(compute_table::FileSet {
+                slice_plan,
+                prepared_files: prepared,
+            });
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.file_sets.lock().is_empty()
+    }
+}
+
 /// Information about tables.
 #[derive(Debug, Clone)]
 pub struct TableInfo {
@@ -314,7 +387,11 @@ pub struct TableInfo {
     ///
     /// Each file set corresponds to the files for the table with a specific
     /// slice configuration.
-    file_sets: Vec<compute_table::FileSet>,
+    ///
+    /// TODO: A lot of existing code assumes this is a non-optional field, so
+    /// leaving this as is for now in the assumption that it'll change rapidly
+    /// once we slowly migrate off the fenl compilation path.
+    pub file_sets: Arc<FileSets>,
     /// An in-memory record batch for the contents of the table.
     pub in_memory: Option<Arc<InMemoryBatches>>,
 }
@@ -337,7 +414,7 @@ impl TableInfo {
             group_id,
             schema,
             config,
-            file_sets,
+            file_sets: Arc::new(FileSets::new(file_sets)),
             in_memory: None,
         })
     }
@@ -366,43 +443,15 @@ impl TableInfo {
         &self.config
     }
 
-    pub fn file_sets(&self) -> &[compute_table::FileSet] {
-        &self.file_sets
-    }
-
     pub fn prepared_files_for_slice(
         &self,
         requested_slice: &Option<Slice>,
-    ) -> anyhow::Result<&[PreparedFile]> {
-        let file_set = self
-            .file_sets
-            .iter()
-            .find(|set| {
-                set.slice_plan
-                    .iter()
-                    .all(|slice| &slice.slice == requested_slice)
-            })
-            .with_context(|| {
-                context_code!(
-                    tonic::Code::InvalidArgument,
-                    "Table '{}' missing file set with requested slice {:?}",
-                    self.name(),
-                    requested_slice
-                )
-            })?;
-
-        Ok(&file_set.prepared_files)
+    ) -> anyhow::Result<parking_lot::MappedMutexGuard<'_, Vec<PreparedFile>>> {
+        self.file_sets.prepared_files(requested_slice)
     }
 
     pub fn metadata_for_files(&self) -> Vec<String> {
-        self.file_sets
-            .iter()
-            .flat_map(|set| {
-                set.prepared_files
-                    .iter()
-                    .map(|file| file.metadata_path.clone())
-            })
-            .collect()
+        self.file_sets.metadata_for_files()
     }
 
     pub fn dfg_node(&self, dfg: &mut Dfg) -> anyhow::Result<AstDfgRef> {

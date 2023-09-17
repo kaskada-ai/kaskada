@@ -156,6 +156,20 @@ impl ScanOperation {
                 ))?,
         );
 
+        // Figure out the projected columns from the table schema.
+        //
+        // TODO: Can we clean anything up by changing the table reader API
+        // to accept the desired table schema?
+        let projected_columns = Some(
+            scan_operation
+                .schema
+                .expect("already reported missing schema")
+                .fields
+                .into_iter()
+                .map(|field| field.name)
+                .collect(),
+        );
+
         if let Some(in_memory) = &table_info.in_memory {
             // Hacky. When doing the Python-builder, use the in-memory batch.
             // Ideally, this would be merged with the contents of the file.
@@ -210,22 +224,59 @@ impl ScanOperation {
             }));
         }
 
-        // Figure out the projected columns from the table schema.
+        let table_source = table_info.config().source.as_ref();
+
+        // Also hacky. When using the python-builder, use the table info's
+        // concurrent file sets rather than look into the `Source`. However,
+        // since the existing path uses the file sets as well, we need to check
+        // that the source isn't set (which only happens when going through the
+        // python builder).
         //
-        // TODO: Can we clean anything up by changing the table reader API
-        // to accept the desired table schema?
-        let projected_columns = Some(
-            scan_operation
-                .schema
-                .expect("already reported missing schema")
-                .fields
-                .into_iter()
-                .map(|field| field.name)
-                .collect(),
-        );
+        // Ideally, we don't support both paths.
+        if table_source.is_none() && !table_info.file_sets.is_empty() {
+            {
+                let prepared_files = table_info
+                    .file_sets
+                    .prepared_files(&None)
+                    .into_report()
+                    .change_context(Error::Internal("failed to get prepared files"))?;
+
+                // Send initial progress information.
+                let total_num_rows = prepared_files
+                    .iter()
+                    .map(|file| file.num_rows as usize)
+                    .sum();
+                context
+                    .progress_updates_tx
+                    .try_send(ProgressUpdate::InputMetadata { total_num_rows })
+                    .into_report()
+                    .change_context(Error::internal())?;
+            }
+
+            let input_stream = table_reader(
+                &context.object_stores,
+                table_info,
+                &requested_slice,
+                projected_columns,
+                FlightRecorder::disabled(),
+                context.max_event_in_snapshot,
+                context.output_at_time,
+            )
+            .await
+            .change_context(Error::internal_msg("failed to create table reader"))?
+            .map_err(|e| e.change_context(Error::internal_msg("failed to read batch")))
+            .boxed();
+
+            return Ok(Box::new(Self {
+                projected_schema,
+                input_stream,
+                key_hash_index: KeyHashIndex::default(),
+                progress_updates_tx: context.progress_updates_tx.clone(),
+            }));
+        }
 
         // Scans can read from tables (files) or streams.
-        let backing_source = match table_info.config().source.as_ref() {
+        let backing_source = match table_source {
             Some(v1alpha::Source { source }) => source.as_ref().expect("source"),
             _ => error_stack::bail!(Error::Internal("expected source")),
         };

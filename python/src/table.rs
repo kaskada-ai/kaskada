@@ -22,7 +22,7 @@ pub(crate) struct Table {
 impl Table {
     /// Create a new table.
     #[new]
-    #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit))]
+    #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit, source))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         session: Session,
@@ -34,6 +34,7 @@ impl Table {
         subsort_column: Option<&str>,
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
+        source: Option<&str>,
     ) -> Result<Self> {
         let raw_schema = Arc::new(schema.0);
 
@@ -46,15 +47,23 @@ impl Table {
             key_column,
             grouping_name,
             time_unit,
+            source,
         )?;
 
-        let table = Table { name, rust_table: Arc::new(rust_table), session };
+        let table = Table {
+            name,
+            rust_table: Arc::new(rust_table),
+            session,
+        };
         Ok(table)
     }
 
     fn expr(&self) -> Expr {
         let rust_expr = self.rust_table.expr.clone();
-        Expr { rust_expr, session: self.session.clone() }
+        Expr {
+            rust_expr,
+            session: self.session.clone(),
+        }
     }
 
     /// Add PyArrow data to the given table.
@@ -70,6 +79,18 @@ impl Table {
         let rust_table = self.rust_table.clone();
         Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
             let result = rust_table.add_data(data).await;
+            Python::with_gil(|py| {
+                result.unwrap();
+                Ok(py.None())
+            })
+        })?)
+    }
+
+    fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> Result<&'py PyAny> {
+        let rust_table = self.rust_table.clone();
+        Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
+            let path = std::path::Path::new(&path);
+            let result = rust_table.add_parquet(path).await;
             Python::with_gil(|py| {
                 result.unwrap();
                 Ok(py.None())

@@ -69,6 +69,8 @@ pub async fn execute(
         ..ExecutionOptions::default()
     };
 
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
+
     execute_new(
         plan,
         destination,
@@ -76,6 +78,7 @@ pub async fn execute(
         options,
         None,
         HashMap::new(),
+        object_stores,
     )
     .await
 }
@@ -243,9 +246,8 @@ pub async fn execute_new(
     options: ExecutionOptions,
     key_hash_inverse: Option<Arc<ThreadSafeKeyHashInverse>>,
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
+    object_stores: Arc<ObjectStoreRegistry>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<ExecuteResponse, Error>>, Error> {
-    let object_stores = Arc::new(ObjectStoreRegistry::default());
-
     let plan_hash = hash_compute_plan_proto(&plan);
 
     let compute_store = options
@@ -353,6 +355,16 @@ pub async fn materialize(
 
     // TODO: Unimplemented feature - UDFs
     let udfs = HashMap::new();
+    let object_stores = Arc::new(ObjectStoreRegistry::default());
 
-    execute_new(plan, destination, data_context, options, None, udfs).await
+    execute_new(
+        plan,
+        destination,
+        data_context,
+        options,
+        None,
+        udfs,
+        object_stores,
+    )
+    .await
 }
