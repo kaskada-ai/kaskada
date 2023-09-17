@@ -324,25 +324,21 @@ impl FileSets {
         &self,
         requested_slice: &Option<v1alpha::slice_plan::Slice>,
     ) -> anyhow::Result<parking_lot::MappedMutexGuard<'_, Vec<PreparedFile>>> {
-        Ok(parking_lot::MutexGuard::map(self.file_sets.lock(), |fs| {
-            let file_set = fs
-                .iter_mut()
-                .find(|set| {
-                    set.slice_plan
-                        .iter()
-                        .all(|slice| &slice.slice == requested_slice)
-                })
-                .unwrap();
-            // .with_context(|| {
-            //     context_code!(
-            //         tonic::Code::InvalidArgument,
-            //         "Table '{}' missing file set with requested slice {:?}",
-            //         "asdf",
-            //         requested_slice
-            //     )
-            // }).unwrap();
-            &mut file_set.prepared_files
-        }))
+        parking_lot::MutexGuard::try_map(self.file_sets.lock(), |fs| {
+            let file_set = fs.iter_mut().find(|set| {
+                set.slice_plan
+                    .iter()
+                    .all(|slice| &slice.slice == requested_slice)
+            });
+            file_set.map(|f| &mut f.prepared_files)
+        })
+        .map_err(|_| {
+            anyhow::anyhow!(context_code!(
+                tonic::Code::InvalidArgument,
+                "Table missing file set with requested slice {:?}",
+                requested_slice
+            ))
+        })
     }
 
     pub fn metadata_for_files(&self) -> Vec<String> {
