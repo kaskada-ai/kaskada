@@ -42,9 +42,6 @@ pub enum Error {
 
 impl error_stack::Context for Error {}
 
-/// The current prepare version
-const PREPARE_VERSION: i64 = 0;
-
 pub struct Preparer {
     prepared_schema: SchemaRef,
     table_config: Arc<TableConfig>,
@@ -90,13 +87,13 @@ impl Preparer {
         // TODO: Support Slicing
 
         // Prepared files are stored in the following format:
-        // file:///<cwd>/tables/<table_uuid>/prepared/<prepare_version>/<uuid>/part-<n>.parquet
+        // file:///<cwd>/tables/<table_uuid>/prepared/<uuid>/part-<n>.parquet
         let cur_dir = std::env::current_dir().expect("current dir");
         let cur_dir = cur_dir.to_string_lossy();
 
         let uuid = Uuid::new_v4();
         let output_path_prefix = format!(
-            "file:///{}/tables/{}/prepare/{PREPARE_VERSION}/{uuid}/",
+            "file:///{}/tables/{}/prepare/{uuid}/",
             cur_dir, self.table_config.uuid
         );
         let output_file_prefix = "part";
