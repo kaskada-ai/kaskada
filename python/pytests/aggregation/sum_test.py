@@ -73,3 +73,15 @@ async def test_sum_since_hourly(source_spread_across_days, golden) -> None:
     golden.jsonl(
         source_spread_across_days.col("m").sum(window=kd.windows.Since.hourly())
     )
+
+
+async def test_sum_tumbling_hourly(source_spread_across_days, golden) -> None:
+    m = source_spread_across_days.col("m")
+    golden.jsonl(
+        kd.record({"tumbling_hourly": m.sum(window=kd.windows.Tumbling.hourly())})
+    )
+
+
+async def test_sum_tumbling_predicate(source_spread_across_days, golden) -> None:
+    m = source_spread_across_days.col("m")
+    golden.jsonl(kd.record({"f1": m.sum(window=kd.windows.Tumbling(m > 8))}))
