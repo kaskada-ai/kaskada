@@ -16,10 +16,16 @@ class Window(object):
 
 @dataclass(frozen=True)
 class Since(Window):
-    """Window since the last time a predicate was true.
+    """Since windows are a series of non-overlapping windows that reset each time
+    a predicate evaluates to true.
 
     Aggregations will contain all values starting from the last time the predicate
     evaluated to true (inclusive).
+
+    Aggregations will produce a new value for each input value and additionally when
+    the current window closes.
+
+    Since windows are analogous to Tumbling windows, aside from the output behavior.
     """
 
     #: The boolean Timestream to use as predicate for the window.
@@ -53,6 +59,52 @@ class Since(Window):
     def yearly() -> Since:
         """Return a window since the start of each year."""
         return Since(predicate=lambda domain: Timestream._call("yearly", domain))
+
+
+@dataclass(frozen=True)
+class Tumbling(Window):
+    """Tumbling windows are a series of non-overlapping windows that reset each time
+    a predicate evaluates to true.
+
+    Aggregations will contain all values starting from the last time the predicate
+    evaluated to true (inclusive).
+
+    Aggregations will produce only produce a value when the current window closes.
+
+    Tumbling windows are analogous to Since windows, aside from the output behavior.
+    """
+
+    #: The boolean Timestream to use as predicate for the window.
+    #: Each time the predicate evaluates to true the window will be cleared.
+    #:
+    #: The predicate may be a callable which returns the boolean Timestream, in
+    #: which case it is applied to the Timestream being aggregated.
+    predicate: Timestream | Callable[..., Timestream] | bool
+
+    @staticmethod
+    def minutely() -> Tumbling:
+        """Return a tumbling window that resets at the start of each minute."""
+        return Tumbling(predicate=lambda domain: Timestream._call("minutely", domain))
+
+    @staticmethod
+    def hourly() -> Tumbling:
+        """Return a tumbling window that resets at the start of each hour."""
+        return Tumbling(predicate=lambda domain: Timestream._call("hourly", domain))
+
+    @staticmethod
+    def daily() -> Tumbling:
+        """Return a tumbling window that resets at the start of each day."""
+        return Tumbling(predicate=lambda domain: Timestream._call("daily", domain))
+
+    @staticmethod
+    def monthly() -> Tumbling:
+        """Return a tumbling window that resets at the start of each month."""
+        return Tumbling(predicate=lambda domain: Timestream._call("monthly", domain))
+
+    @staticmethod
+    def yearly() -> Tumbling:
+        """Return a tumbling window that resets at the start of each year."""
+        return Tumbling(predicate=lambda domain: Timestream._call("yearly", domain))
 
 
 @dataclass(frozen=True)
