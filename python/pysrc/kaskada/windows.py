@@ -16,7 +16,7 @@ class Window(object):
 
 @dataclass(frozen=True)
 class Since(Window):
-    """Since windows are a series of non-overlapping windows that reset each time a predicate evaluates to true.
+    """A series of non-overlapping windows that reset each time a predicate evaluates to true.
 
     Aggregations will contain all values starting from the last time the predicate
     evaluated to true (inclusive).
@@ -62,7 +62,7 @@ class Since(Window):
 
 @dataclass(frozen=True)
 class Tumbling(Window):
-    """Tumbling windows are a series of non-overlapping windows that reset each time a predicate evaluates to true.
+    """A series of non-overlapping windows that reset each time a predicate evaluates to true.
 
     Aggregations will contain all values starting from the last time the predicate
     evaluated to true (inclusive).
@@ -107,7 +107,7 @@ class Tumbling(Window):
 
 @dataclass(frozen=True)
 class Sliding(Window):
-    """Sliding windows are a series of overlapping windows that reset each time a predicate evaluates to true.
+    """A series of overlapping windows that reset each time a predicate evaluates to true.
 
     The `duration` is the number of active windows at any given time.
 
