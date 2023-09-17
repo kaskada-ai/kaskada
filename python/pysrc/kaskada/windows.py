@@ -109,7 +109,13 @@ class Tumbling(Window):
 
 @dataclass(frozen=True)
 class Sliding(Window):
-    """Window for the last `duration` intervals of some `predicate`."""
+    """Sliding windows are a series of overlapping windows that reset each time
+    a predicate evaluates to true. The `duration` is the number of active windows
+    at any given time.
+
+    Aggregations will produce a new value for each input value and additionally when
+    the current window closes.
+    """
 
     #: The number of sliding intervals to use in the window.
     duration: int
