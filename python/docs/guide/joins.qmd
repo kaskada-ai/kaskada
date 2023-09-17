@@ -11,9 +11,7 @@ Both of these are accomplished by joining the Timestreams.
 Timestreams associated with the same kind of entity -- for instance, a user -- are automatically joined.
 This makes it easy to write queries that consider multiple event streams in a single query.
 
-```{code-block} python
-:caption: Joining two event streams to compute page-views per purchase
-
+```{.python filename="Joining two event streams to compute page-views per purchase"}
 page_views.count() / purchases.count()
 ```
 
@@ -30,7 +28,7 @@ For any input table that is continuous, the join is `as of` the time of the outp
 
 ## Explicit Lookups
 
-Values from associated with other entities may be retrieved using {py:meth}`kaskada.Timestream.lookup`.
+Values from associated with other entities may be retrieved using [`kaskada.Timestream.lookup`](../reference/Timestream.lookup.qmd).
 `left.lookup(right)` does a left-join, looking up the value from `right` for each computed key in `left`.
 
 Lookups are _temporally correct_ -- the value retrieved corresponds to the `right` value at the time the key occurred in `left`.

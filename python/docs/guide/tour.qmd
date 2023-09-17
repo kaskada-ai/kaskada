@@ -1,10 +1,11 @@
 ---
 title: Tour of Kaskada
 ---
-
-- Level: Beginner
-- Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
-- Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
+<!---
+% Level: Beginner
+% Goal: Overview of the key features of Kaskada focused on explaining *why* you want them.
+% Audience: Someone who has read the landing page and wants to understand what Kaskada can do for them.
+--->
 
 This provides an overview of the key features in Kaskada that enable feature engineering on event-based data.
 The [Quick Start](./quickstart.qmd) has details on how you can quickly get started running Kaskada queries.
@@ -13,10 +14,8 @@ For a more complete explanation, see the User Guide.
 This tour uses Kaskada and Plotly to render the illustrations.
 The initial setup / data is below.
 
-```
----
-tags: [hide-cell]
----
+```{python}
+#| code-fold: true
 import asyncio
 import kaskada as kd
 kd.init_session()
@@ -45,10 +44,10 @@ A natural question to ask about the purchases is the total--or `sum`--of all pur
 This is accomplished by _aggregating_ the events.
 The results of an aggregation change over time as additional events occur.
 
-```
----
-tags: [remove-input]
----
+```{python}
+#| echo: false
+#| warning: false
+
 kd.plot.render(
     kd.plot.Plot(single_entity.col("m"), name="m"),
     kd.plot.Plot(single_entity.col("m").sum(), name="sum of m")

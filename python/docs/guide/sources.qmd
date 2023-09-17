@@ -10,4 +10,4 @@ Each event from a source is associated with a specific time and entity key.
 These define how the resulting Timestream is ordered and grouped.
 Generally, the time and entity key are associated with a specific column from the source, using the `time_column` and `key_column` arguments.
 
-The [Sources Reference](../reference/sources.qmd) has more details on the supported sources.
+The [Sources Reference](../reference/index.qmd#sources) has more details on the supported sources.

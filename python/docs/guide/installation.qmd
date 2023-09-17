@@ -5,8 +5,7 @@ title: Installation
 To install Kaskada, you need to be using Python >= 3.8.
 We suggest using 3.11 or newer, since that provides more precise error locations.
 
-```bash
-:caption: Installing Kaskada
+```{.bash filename="Installing Kaskada"}
 pip install kaskada>=0.6.0-a.3
 ```
 
