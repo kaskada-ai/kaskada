@@ -13,6 +13,7 @@ import pyarrow as pa
 
 import asyncpraw
 
+
 async def main():
     # Initialize the Kaskada session so we can use it for stream processing
     kd.init_session()
@@ -46,7 +47,7 @@ async def main():
     # [end_setup]
 
     # [start_incoming]
-    # Handler to receive new comments as they're created 
+    # Handler to receive new comments as they're created
     async def receive_comments():
         # Creat the subreddit handle
         sr = await reddit.subreddit(os.getenv("SUBREDDIT", "all"))
@@ -61,7 +62,7 @@ async def main():
                 "submission_id": comment.submission.id,
                 "subreddit_id": comment.subreddit.display_name,
                 "ts": time.time(),
-            })  
+            })
     # [start_incoming]
 
     # [start_result]
