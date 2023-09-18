@@ -36,6 +36,8 @@ website:
     contents: guide
   - title: Examples
     contents: examples
+  - title: API
+    contents: reference
 
   page-footer:
     border: true
