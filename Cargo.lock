@@ -4302,9 +4302,24 @@ name = "sparrow-backend"
 version = "0.11.0"
 dependencies = [
  "arrow-schema",
+ "bitvec",
+ "derive_more",
+ "egg",
+ "enum-as-inner",
+ "error-stack",
+ "hashbrown 0.14.0",
  "index_vec",
+ "insta",
+ "itertools 0.11.0",
+ "rand 0.8.5",
+ "smallvec",
+ "sparrow-arrow",
  "sparrow-core",
+ "sparrow-expressions",
+ "sparrow-logical",
  "sparrow-physical",
+ "static_init",
+ "tracing",
  "uuid 1.4.1",
 ]
 

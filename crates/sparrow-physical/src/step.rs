@@ -50,6 +50,7 @@ pub struct Step {
 /// The kinds of steps that can occur in the physical plan.
 #[derive(
     Clone,
+    Copy,
     Debug,
     serde::Serialize,
     serde::Deserialize,

@@ -14,6 +14,14 @@
 //! It also performs optimizations on both the logical plans and the physical
 //! plans.
 
+mod compile;
+mod error;
+mod exprs;
+mod logical_to_physical;
+// mod mutable_plan;
+mod mutable_plan;
 mod pipeline_schedule;
 
+pub use compile::*;
+pub use error::*;
 pub use pipeline_schedule::*;
