@@ -1,6 +1,6 @@
 # Reddit Live Example
 
-In this example, we'll show how you can receive and process the firehose using Kaskada.
+In this example, we'll show how you can receive and process Reddit comments using Kaskada.
 
 You can see the full example in the file [reddit.py](https://github.com/kaskada-ai/kaskada/blob/main/python/docs/source/examples/reddit.py).
 
