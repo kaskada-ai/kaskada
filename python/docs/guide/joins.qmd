@@ -1,5 +1,6 @@
 ---
 title: Joins
+order: 9
 ---
 
 It is often necessary to use multiple Timestreams to define a query.

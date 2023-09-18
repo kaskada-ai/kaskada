@@ -26,7 +26,6 @@ async def main():
     # The firehose doesn't (currently) require authentication.
     at_client = AsyncFirehoseSubscribeReposClient()
 
-    # [start_setup]
     # Setup the data source.
     # This defintes (most of) the schema of the events we'll receive,
     # and tells Kaskada which fields to use for time and initial entity.
@@ -62,9 +61,7 @@ async def main():
         key_column="author",
         time_unit="s",
     )
-    # [end_setup]
 
-    # [start_incoming]
     # Handler for newly-arrived messages from BlueSky.
     async def receive_at(message) -> None:
         # Extract the contents of the message and bail if it's not a "commit"
@@ -82,19 +79,14 @@ async def main():
 
             # The parsing produces a hot mess of incompatible types, so we build
             # a dict from scratch to simplify.
-            posts.add_rows(
-                {
-                    "record": dict(new_post["record"]),
-                    "uri": new_post["uri"],
-                    "cid": new_post["cid"],
-                    "author": new_post["author"],
-                    "ts": time.time(),
-                }
-            )
+            posts.add_rows({
+                "record": dict(new_post["record"]),
+                "uri": new_post["uri"],
+                "cid": new_post["cid"],
+                "author": new_post["author"],
+                "ts": time.time(),
+            })
 
-    # [end_incoming]
-
-    # [start_result]
     # Handler for values emitted by Kaskada.
     async def receive_outputs():
         # We'll perform a very simple aggregation - key by language and count.
@@ -104,12 +96,8 @@ async def main():
         async for row in posts_by_first_lang.count().run_iter(kind="row", mode="live"):
             print(f"{row['_key']} has posted {row['result']} times since startup")
 
-    # [end_result]
-
-    # [start_run]
     # Kickoff the two async processes concurrently.
     await asyncio.gather(at_client.start(receive_at), receive_outputs())
-    # [end_run]
 
 
 # Copied from https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
