@@ -1,4 +1,5 @@
 use hashbrown::HashMap;
+use sparrow_runtime::stores::ObjectStoreRegistry;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -32,6 +33,7 @@ pub struct Session {
     /// uuid. Once we run on multiple machines, we'll have to serialize/pickle the
     /// udf as well.
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
+    object_store_registry: Arc<ObjectStoreRegistry>,
 }
 
 #[derive(Default)]
@@ -92,11 +94,13 @@ impl Session {
         key_column_name: &str,
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
+        source: Option<&str>,
     ) -> error_stack::Result<Table, Error> {
         let uuid = Uuid::new_v4();
         let schema_proto = sparrow_api::kaskada::v1alpha::Schema::try_from(schema.as_ref())
             .into_report()
             .change_context_lazy(|| Error::SchemaForTable(name.to_owned()))?;
+
         let table = ComputeTable {
             config: Some(TableConfig {
                 name: name.to_owned(),
@@ -152,6 +156,8 @@ impl Session {
             expr,
             queryable,
             time_unit,
+            self.object_store_registry.clone(),
+            source,
         )
     }
 
@@ -373,7 +379,7 @@ impl Session {
 
     /// Execute the query.
     ///
-    /// It is unnfortunate this requires `&mut self` instead of `&self`. It relates to the
+    /// It is unfortunate this requires `&mut self` instead of `&self`. It relates to the
     /// fact that the decorations may require mutating the DFG, which in turn requires
     /// mutability. In practice, the decorations shouldn't mutate the DFG and/or that
     /// shouldn't require mutating the session.
@@ -409,7 +415,7 @@ impl Session {
         )
         .into_report()
         .change_context(Error::Compile)?;
-        error_stack::ensure!(diagnostics.num_errors() == 0, Error::Internal);
+        error_stack::ensure!(diagnostics.num_errors() == 0, Error::internal());
 
         // Extract the necessary subset of the DFG as an expression.
         // This will allow us to operate without mutating things.
@@ -456,8 +462,8 @@ impl Session {
             .into_report()
             .change_context(Error::Execute)?;
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
-
         let destination = Destination::Channel(output_tx);
+
         let data_context = self.data_context.clone();
 
         let (stop_signal_tx, stop_signal_rx) = tokio::sync::watch::channel(false);
@@ -483,6 +489,7 @@ impl Session {
                 options,
                 Some(key_hash_inverse),
                 self.udfs.clone(),
+                self.object_store_registry.clone(),
             ))
             .change_context(Error::Execute)?
             .map_err(|e| e.change_context(Error::Execute))
@@ -542,8 +549,9 @@ impl ExecutionOptions {
 }
 
 fn result_schema(expr: &Expr, key_type: &DataType) -> error_stack::Result<SchemaRef, Error> {
-    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::Internal)? else {
-        error_stack::bail!(Error::Internal)
+    let DataType::Struct(fields) = expr.0.value_type().arrow_type().ok_or(Error::internal())?
+    else {
+        error_stack::bail!(Error::internal())
     };
 
     let fields: Fields = super::table::KEY_FIELDS
@@ -591,6 +599,7 @@ mod tests {
                 None,
                 "key",
                 Some("user"),
+                None,
                 None,
             )
             .unwrap();

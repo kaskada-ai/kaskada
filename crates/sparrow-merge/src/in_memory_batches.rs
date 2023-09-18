@@ -127,7 +127,7 @@ impl InMemoryBatches {
                 match recv.recv().await {
                     Ok((recv_version, batch)) => {
                         if version < recv_version {
-                            tracing::info!("Recevied version {recv_version}");
+                            tracing::info!("Received version {recv_version}");
                             yield batch;
                             version = recv_version;
                         } else {

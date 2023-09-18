@@ -23,7 +23,7 @@ const SINGLE_PART_UPLOAD_LIMIT_BYTES: u64 = 5_000_000;
 ///
 /// For now, the registry exists as a cache for the clients due to the overhead
 /// required to create the cache. The future goal for the registry is to
-/// control the number of possibile open connections.
+/// control the number of possible open connections.
 #[derive(Default, Debug)]
 pub struct ObjectStoreRegistry {
     object_stores: DashMap<ObjectStoreKey, Arc<dyn ObjectStore>>,

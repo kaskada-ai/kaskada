@@ -97,6 +97,10 @@ impl KeyHashInverse {
         primary_grouping: GroupId,
         registry: &ObjectStoreRegistry,
     ) -> error_stack::Result<(), Error> {
+        // TODO: Do we need to get all metadata files, or only ones for a specific slice?
+        // Investigate this -- it seems for a specific query we may only need to use
+        // the entities that are going to be a part of the query, which means only the
+        // entities for a specific slice.
         let metadata_files = data_context
             .tables_for_grouping(primary_grouping)
             .flat_map(|table| table.metadata_for_files());

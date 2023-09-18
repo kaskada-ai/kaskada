@@ -84,7 +84,7 @@ impl Execution {
     fn next_pyarrow_async<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
         let execution = self.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            // We can't use `?` here because it attempts ot acquire the GIL unexpectedly.
+            // We can't use `?` here because it attempts to acquire the GIL unexpectedly.
             let next = execution
                 .owned_execution()
                 .map_err(|e| e.into_error())
