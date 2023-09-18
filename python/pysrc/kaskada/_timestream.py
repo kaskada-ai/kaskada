@@ -866,8 +866,6 @@ class Timestream(object):
             This returns the maximum of values in a column. See
             :func:`greatest` to get the maximum value
             between Timestreams at each point.
-
-        Section: Aggregation
         """
         return _aggregation("max", self, window)
 

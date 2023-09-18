@@ -2,8 +2,7 @@ quartodoc:
   title: API
   dir: reference
   out_index: index.qmd
-  parser: google #one of “google”, “sphinx”, and “numpy”.
-  # the name used to import the package
+  parser: google
   package: kaskada
   renderer:
     style: _renderer.py
