@@ -482,5 +482,4 @@ class Parquet(Source):
         if not path.startswith("/"):
             path = os.getcwd() + "/" + path
 
-        print("New path: " + path)
         await self._ffi_table.add_parquet(path)
