@@ -1,5 +1,6 @@
 ---
 title: Entities and Grouping
+order: 7
 ---
 
 Entities organize data for use in feature engineering.

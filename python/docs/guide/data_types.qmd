@@ -1,11 +1,12 @@
 ---
 title: Data Types
+order: 6
 
 listing:
   - id: types
-    template: _type_table.ejs
+    template: data_types/_table.ejs
     contents:
-      - scalar_types.yml
+      - data_types.yml
 ---
 
 Kaskada operates on typed Timestreams.

@@ -447,7 +447,7 @@ class Parquet(Source):
 
         Args:
             path: The path to the Parquet file to add. This can be relative to the current
-              working directory or an absolute path (prefixed by '/').
+                working directory or an absolute path (prefixed by '/').
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use. If not provided, it will be inferred from the input.

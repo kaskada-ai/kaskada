@@ -1,6 +1,5 @@
 ---
 title: User Guide
-tbl-colwidths: [30, 70]
 ---
 
 Understanding and reacting to the world in real-time requires understanding what is happening _now_ in the context of what happened in the past.

@@ -1,5 +1,6 @@
 ---
 title: Timestreams
+order: 5
 ---
 
 Kaskada is built on the concept of a _Timestream_.

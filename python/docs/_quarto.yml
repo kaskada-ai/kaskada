@@ -4,6 +4,9 @@ project:
   preview:
     port: 4200
 
+metadata-files:
+  - reference/_sidebar.yml
+
 website:
   favicon: "_static/favicon.png"
   google-analytics: G-HR9E2E6TG4
@@ -30,23 +33,9 @@ website:
   sidebar:
   - title: User Guide
     style: docked
-    contents:
-      - guide/index.qmd
-      - guide/quickstart.qmd
-      - guide/tour.qmd
-      - guide/why.qmd
-      - guide/installation.qmd
-      - guide/timestreams.qmd
-      - guide/data_types.qmd
-      - guide/entities.qmd
-      - guide/aggregation.qmd
-      - guide/joins.qmd
-      - guide/sources.qmd
-      - guide/execution.qmd
+    contents: guide
   - title: Examples
-    contents:
-      - examples/index.qmd
-      - examples/time_centric.ipynb
+    contents: examples
 
   page-footer:
     border: true

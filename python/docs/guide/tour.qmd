@@ -1,5 +1,6 @@
 ---
 title: Tour of Kaskada
+order: 2
 ---
 <!---
 % Level: Beginner

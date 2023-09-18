@@ -1,4 +1,5 @@
-jupyter: python3
 execute:
   daemon: false
   warning: false
+
+jupyter: python3

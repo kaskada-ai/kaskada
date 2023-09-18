@@ -23,7 +23,6 @@ async def main():
     # The firehose doesn't (currently) require authentication.
     at_client = AsyncFirehoseSubscribeReposClient()
 
-    # [start_setup]
     # Setup the data source.
     # This defintes (most of) the schema of the events we'll receive,
     # and tells Kaskada which fields to use for time and initial entity.
@@ -52,9 +51,7 @@ async def main():
         key_column="author",
         time_unit="s",
     )
-    # [end_setup]
 
-    # [start_incoming]
     # Handler for newly-arrived messages from BlueSky.
     async def receive_at(message) -> None:
         # Extract the contents of the message and bail if it's not a "commit"
@@ -80,9 +77,7 @@ async def main():
                 "author": new_post["author"],
                 "ts": time.time(),
             })
-    # [end_incoming]
 
-    # [start_result]
     # Handler for values emitted by Kaskada.
     async def receive_outputs():
 
@@ -92,12 +87,9 @@ async def main():
         # Consume outputs as they're generated and print to STDOUT.
         async for row in posts_by_first_lang.count().run_iter(kind="row", mode="live"):
             print(f"{row['_key']} has posted {row['result']} times since startup")
-    # [end_result]
 
-    # [start_run]
     # Kickoff the two async processes concurrently.
     await asyncio.gather(at_client.start(receive_at), receive_outputs())
-    # [end_run]
 
 # Copied from https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
 def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901, E302

@@ -1,5 +1,6 @@
 ---
 title: Aggregations
+order: 8
 ---
 
 Aggregations are _cumulative_, _grouped_, and _windowed_.
