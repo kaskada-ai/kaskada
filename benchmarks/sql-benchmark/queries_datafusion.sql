@@ -1,15 +1,20 @@
-PRAGMA enable_profiling;
+-- Run with `datafusion-cli --data-path <directory>`.
+-- Then send these commands.
 
--- Temp directory is necessary for larger queries.
-PRAGMA temp_directory='tmp';
+-- Load the data.
+-- These tables weren't usable, so just used inline definitions.
+--
+-- CREATE EXTERNAL TABLE Purchases
+-- STORED AS parquet
+-- LOCATION 'purchases.parquet';
 
--- Set this to the input directory to use
--- PRAGMA file_search_path='6x_1';
+-- CREATE EXTERNAL TABLE Reviews
+-- STORED AS parquet
+-- LOCATION 'reviews.parquet';
 
---Load the data
-CREATE TABLE Purchases AS SELECT * FROM read_parquet('purchases.parquet');
-CREATE TABLE Reviews AS SELECT * FROM read_parquet('reviews.parquet');
-CREATE TABLE PageViews AS SELECT * FROM read_parquet('page_views.parquet');
+-- CREATE EXTERNAL TABLE PageViews
+-- STORED AS parquet
+-- LOCATION 'page_views.parquet';
 
 -- Aggregation / History
 COPY (SELECT
@@ -19,7 +24,7 @@ COPY (SELECT
     PARTITION BY user
     ORDER BY time
   )
-FROM Purchases) TO 'output/agg_history_duckdb.parquet';
+FROM 'purchases.parquet') TO 'output/agg_history_df.parquet';
 
 -- Aggregation / Snapshot
 COPY (SELECT
