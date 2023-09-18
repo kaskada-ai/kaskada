@@ -1,27 +1,29 @@
 [package]
-name = "sparrow-types"
+name = "sparrow-logical"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 description = """
-Type-signatures, inference and checking for Kaskada.
+Logical representation of Kaskada queries.
 """
 
 [dependencies]
 arrow-schema.workspace = true
 derive_more.workspace = true
-enum-as-inner.workspace = true
-enum-map.workspace = true
 error-stack.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
-regex.workspace = true
 serde.workspace = true
+sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-types = { path = "../sparrow-types" }
 static_init.workspace = true
+serde_yaml.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
+insta.workspace = true
 
 [lib]
 doctest = false

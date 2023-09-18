@@ -1,0 +1,53 @@
+---
+source: crates/sparrow-logical/src/expr.rs
+expression: field
+---
+Expr {
+    name: "fieldref",
+    literal_args: [],
+    args: [
+        Expr {
+            name: "source",
+            literal_args: [
+                Uuid(
+                    00000000-0000-002a-0000-000000000054,
+                ),
+            ],
+            args: [],
+            result_type: Struct(
+                [
+                    Field {
+                        name: "a",
+                        data_type: Int64,
+                        nullable: true,
+                        dict_id: 0,
+                        dict_is_ordered: false,
+                        metadata: {},
+                    },
+                    Field {
+                        name: "b",
+                        data_type: Float64,
+                        nullable: false,
+                        dict_id: 0,
+                        dict_is_ordered: false,
+                        metadata: {},
+                    },
+                ],
+            ),
+            grouping: Literal,
+        },
+        Expr {
+            name: "literal",
+            literal_args: [
+                String(
+                    "a",
+                ),
+            ],
+            args: [],
+            result_type: Utf8,
+            grouping: Literal,
+        },
+    ],
+    result_type: Int64,
+    grouping: Literal,
+}

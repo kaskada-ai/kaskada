@@ -4525,6 +4525,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-logical"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "insta",
+ "itertools 0.11.0",
+ "serde",
+ "serde_yaml",
+ "sparrow-arrow",
+ "sparrow-types",
+ "static_init",
+ "uuid 1.4.1",
+]
+
+[[package]]
 name = "sparrow-main"
 version = "0.11.0"
 dependencies = [
@@ -4878,6 +4896,7 @@ dependencies = [
  "hashbrown 0.14.0",
  "itertools 0.11.0",
  "regex",
+ "serde",
  "static_init",
 ]
 
