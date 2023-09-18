@@ -12,5 +12,6 @@ This demonstrates how to use Kaskada to connect in real-time and parse messages 
 :maxdepth: 2
 
 time_centric
+reddit
 bluesky
 ```
