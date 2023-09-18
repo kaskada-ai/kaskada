@@ -560,8 +560,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: ds.DocstringSectionAdmonition):
-        print(f'SectionAdmonition title: {el.title}')
-        return el.title
+        return el.value.description
 
     # unsupported parts ----
 
