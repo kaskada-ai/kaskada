@@ -1,30 +1,33 @@
 #!/usr/bin/env python
 
 import json, math, datetime, openai, os, pyarrow, asyncio, re, time
+import argparse
 from datetime import timezone
 import kaskada as kd
 import pyarrow as pa
 import pandas as pd
 from sklearn import preprocessing
-from atproto.firehose import AsyncFirehoseSubscribeReposClient, parse_subscribe_repos_message
-from atproto import CAR, AtUri, models
-from atproto.xrpc_client.models import get_or_create, ids, is_record_type
+import asyncpraw
 
 
 from web3 import Web3
 from websockets import connect
 from web3.exceptions import ContractLogicError
-import argparse
+
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 parser = argparse.ArgumentParser(description='Predict NFT prices')
 
-parser.add_argument('--key', help='Infura API key')
-parser.add_argument('--secret', help='Infura API secret')
+parser.add_argument('--infura-key', help='Infura API key')
+parser.add_argument('--infura-secret', help='Infura API secret')
+parser.add_argument('--reddit-client-id', help='Reddit Client ID')
+parser.add_argument('--reddit-client-secret', help='Reddit Client Secret')
+parser.add_argument('--reddit-user-agent', help='Reddit user agent', default='kaskada-demo')
 
 args = parser.parse_args()
 
-infura_ws_url = f"wss://mainnet.infura.io/ws/v3/{args.key}"
-infura_http_url = f"https://mainnet.infura.io/v3/{args.key}"
+infura_ws_url = f"wss://mainnet.infura.io/ws/v3/{args.infura_key}"
+infura_http_url = f"https://mainnet.infura.io/v3/{args.infura_key}"
 
 web3 = Web3(Web3.HTTPProvider(infura_http_url))
 
@@ -48,10 +51,13 @@ standard_erc1155_abi = [
 async def main():
     kd.init_session()
 
-    at_client = AsyncFirehoseSubscribeReposClient()
+    reddit = asyncpraw.Reddit(
+        client_id=args.reddit_client_id,
+        client_secret=args.reddit_client_secret,
+        user_agent=args.reddit_user_agent,
+    )
 
     transfers = kd.sources.PyDict(
-        #rows = [],
         schema = pa.schema([
             pa.field("BlockTimestamp", pa.int64()),
             pa.field("TokenAddress", pa.string()),
@@ -64,6 +70,20 @@ async def main():
         time_column = "BlockTimestamp",
         key_column = "TokenAddress",
         time_unit = "us",
+    )
+
+    comments = kd.sources.PyDict(
+        schema=pa.schema([
+            pa.field("author", pa.string()),
+            pa.field("body", pa.string()),
+            pa.field("permalink", pa.string()),
+            pa.field("submission_id", pa.string()),
+            pa.field("subreddit", pa.string()),
+            pa.field("ts", pa.float64()),
+        ]),
+        time_column="ts",
+        key_column="submission_id",
+        time_unit="s",
     )
 
     async def receive_transfers():
@@ -100,18 +120,25 @@ async def main():
                     "Quantity": "1", # This protocol doesn't support quantity
                 })
 
-    async def receive_at(message) -> None:
-        commit = parse_subscribe_repos_message(message)
+    async def receive_comments():
+        # Create the subreddit handles
+        subreddits = await asyncio.gather(*[reddit.subreddit(n) for n in ["NFT", "NFTsMarketplace"]])
 
-        commit = parse_subscribe_repos_message(message)
-        if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
-            return 
+        async def consume_comments(sr): 
+            # Consume the stream of new comments
+            async for comment in sr.stream.comments():
+                print(f"Adding comment {comment}")
+                # Add each comment to the Kaskada data source
+                await comments.add_rows({
+                    "author": comment.author.name,
+                    "body": comment.body,
+                    "permalink": comment.permalink,
+                    "submission_id": comment.submission.id,
+                    "subreddit_id": comment.subreddit.display_name,
+                    "ts": time.time(),
+                })  
 
-        ops = _get_ops_by_type(commit)
-        for post in ops['posts']['created']:
-            post_msg = post['record'].text
-            post_langs = post['record'].langs
-            print(f'New post in the network! Langs: {post_langs}. Text: {post_msg}')
+        await asyncio.gather(*[consume_comments(sr) for sr in subreddits])
 
     async def receive_outputs():
         mean_buyer_price = transfers.col("Price").with_key(transfers.col("ToAddress")).mean()
@@ -126,58 +153,24 @@ async def main():
         async for row in features.run_iter(kind="row", mode="live"):
             print(f"Got outputs: {row}")
 
-    #await asyncio.gather(receive_transfers(), at_client.start(receive_at), receive_outputs())
+    async def do_sentiment():
+        sid_obj = SentimentIntensityAnalyzer()
+
+        @kd.udf("f(post: string) -> f32")
+        def to_sentiment(post):
+            # Use the VADER algorithm to assess sentiment from -1 to +1 for each comment
+            return post.apply(lambda p: sid_obj.polarity_scores(p)["compound"] )
+
+        sentiment = comments.with_key(False).col("body").pipe(to_sentiment).mean(window=kd.windows.Since.minutely())
+
+        async for row in sentiment.run_iter(kind="row", mode="live"):
+            print(f"Got outputs: {row}")
+
+    #await asyncio.gather(receive_transfers(), receive_comments(), receive_outputs())
     #await at_client.start(receive_at)
-    await receive_transfers()
-
-# From https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
-def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> dict:  # noqa: C901
-    operation_by_type = {
-        'posts': {'created': [], 'deleted': []},
-        'reposts': {'created': [], 'deleted': []},
-        'likes': {'created': [], 'deleted': []},
-        'follows': {'created': [], 'deleted': []},
-    }
-
-    car = CAR.from_bytes(commit.blocks)
-    for op in commit.ops:
-        uri = AtUri.from_str(f'at://{commit.repo}/{op.path}')
-
-        if op.action == 'update':
-            # not supported yet
-            continue
-
-        if op.action == 'create':
-            if not op.cid:
-                continue
-
-            create_info = {'uri': str(uri), 'cid': str(op.cid), 'author': commit.repo}
-
-            record_raw_data = car.blocks.get(op.cid)
-            if not record_raw_data:
-                continue
-
-            record = get_or_create(record_raw_data, strict=False)
-            if uri.collection == ids.AppBskyFeedLike and is_record_type(record, ids.AppBskyFeedLike):
-                operation_by_type['likes']['created'].append({'record': record, **create_info})
-            elif uri.collection == ids.AppBskyFeedPost and is_record_type(record, ids.AppBskyFeedPost):
-                operation_by_type['posts']['created'].append({'record': record, **create_info})
-            elif uri.collection == ids.AppBskyFeedRepost and is_record_type(record, ids.AppBskyFeedRepost):
-                operation_by_type['reposts']['created'].append({'record': record, **create_info})
-            elif uri.collection == ids.AppBskyGraphFollow and is_record_type(record, ids.AppBskyGraphFollow):
-                operation_by_type['follows']['created'].append({'record': record, **create_info})
-
-        if op.action == 'delete':
-            if uri.collection == ids.AppBskyFeedLike:
-                operation_by_type['likes']['deleted'].append({'uri': str(uri)})
-            elif uri.collection == ids.AppBskyFeedPost:
-                operation_by_type['posts']['deleted'].append({'uri': str(uri)})
-            elif uri.collection == ids.AppBskyFeedRepost:
-                operation_by_type['reposts']['deleted'].append({'uri': str(uri)})
-            elif uri.collection == ids.AppBskyGraphFollow:
-                operation_by_type['follows']['deleted'].append({'uri': str(uri)})
-
-    return operation_by_type
+    #await receive_transfers()
+    #await receive_comments()
+    await asyncio.gather(receive_comments(), do_sentiment())
 
 if __name__ == "__main__":
    asyncio.run(main())
