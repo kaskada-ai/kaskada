@@ -63,7 +63,7 @@ async def main():
                 "subreddit_id": comment.subreddit.display_name,
                 "ts": time.time(),
             })
-    # [start_incoming]
+    # [end_incoming]
 
     # [start_result]
     # Handler for values emitted by Kaskada.
