@@ -16,15 +16,17 @@ class Window(object):
 
 @dataclass(frozen=True)
 class Since(Window):
-    """A series of non-overlapping windows that reset each time a predicate evaluates to true.
+    """Window producing cumulative values since a predicate.
 
-    Aggregations will contain all values starting from the last time the predicate
-    evaluated to true (inclusive).
+    "Since" windows are a series of non-overlapping windows producing cumulative values
+    since each time the predicate evaluates to true. Each window is inclusive of the time
+    it starts at and exclusive of the end time.
 
-    Aggregations will produce a new value for each input value and additionally when
-    the current window closes.
+    Args:
+        predicate: the condition used to determine when the window resets.
 
-    Since windows are analogous to Tumbling windows, aside from the output behavior.
+    Returns:
+        Window for aggregating cumulative values since the predicate.
     """
 
     #: The boolean Timestream to use as predicate for the window.
@@ -62,14 +64,17 @@ class Since(Window):
 
 @dataclass(frozen=True)
 class Tumbling(Window):
-    """A series of non-overlapping windows that reset each time a predicate evaluates to true.
+    """Window producing a single value at the time of a predicate.
 
-    Aggregations will contain all values starting from the last time the predicate
-    evaluated to true (inclusive).
+    "Tumbling" windows are a series of non-overlapping windows producing a single value
+    at the time the predicate evaluates to true. Each window is inclusive of the time
+    it starts at and exclusive of the end time.
 
-    Aggregations will produce only produce a value when the current window closes.
+    Args:
+        predicate: the condition used to determine when the window resets.
 
-    Tumbling windows are analogous to Since windows, aside from the output behavior.
+    Returns:
+        Window for aggregating cumulative values since the predicate.
     """
 
     #: The boolean Timestream to use as predicate for the window.
@@ -107,12 +112,22 @@ class Tumbling(Window):
 
 @dataclass(frozen=True)
 class Sliding(Window):
-    """A series of overlapping windows that reset each time a predicate evaluates to true.
+    """Overlapping windows producing the latest cumulative value since a predicate.
 
-    The `duration` is the number of active windows at any given time.
+    "Sliding" windows are a series of overlapping windows producing cumulative values
+    since each time the predicate evaluates to true. Each window is inclusive of the time
+    it starts at and exclusive of the end time.
 
-    Aggregations will produce a new value for each input value and additionally when
-    the current window closes.
+    If multiple windows exist, the value produced at any given time will be the cumulative
+    value in the most recently created window.
+
+    Args:
+        duration: the number of active windows at any given time.
+        predicate: the condition used to determine when the oldest window ends and a new
+          window starts.
+
+    Returns:
+        Overlapping windows for aggregating cumulative values since the predicate.
     """
 
     #: The number of sliding intervals to use in the window.
