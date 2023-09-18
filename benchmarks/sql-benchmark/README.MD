@@ -20,4 +20,4 @@ With the `enable_profiling` pragma each should report the execution time.
 
 ## DataFusion
 
-THe SQL statements aren't ready yet -- they run, but we haven't figured out how to write the results to Parquet to measure end-to-end time.
+The SQL statements aren't ready yet -- they run, but we haven't figured out how to write the results to Parquet to measure end-to-end time.
