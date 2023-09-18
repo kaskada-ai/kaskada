@@ -20,14 +20,14 @@ pub struct Expr {
     pub grouping: Grouping,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq, Ord, PartialOrd, Clone, enum_as_inner::EnumAsInner)]
 pub enum Literal {
     Null,
     Bool(bool),
     String(String),
     Int64(i64),
     UInt64(u64),
-    Float64(f64),
+    Float64(decorum::Total<f64>),
     Timedelta { seconds: i64, nanos: i64 },
     Uuid(Uuid),
 }
@@ -99,6 +99,10 @@ impl Expr {
             result_type,
             grouping: Grouping::Literal,
         }
+    }
+
+    pub fn new_literal_str(str: impl Into<String>) -> Self {
+        Self::new_literal(Literal::String(str.into()))
     }
 
     /// Create a new cast expression to the given type.
@@ -214,7 +218,7 @@ mod tests {
             "add".into(),
             vec![
                 a_i32.clone(),
-                Arc::new(Expr::new_literal(Literal::Float64(1.0))),
+                Arc::new(Expr::new_literal(Literal::Float64(1.0.into()))),
             ],
         )
         .unwrap();

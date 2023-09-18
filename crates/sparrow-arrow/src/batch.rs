@@ -1,10 +1,10 @@
 use arrow::error::ArrowError;
+use arrow_array::cast::AsArray;
 use arrow_array::types::{TimestampNanosecondType, UInt64Type};
 use arrow_array::{
     Array, ArrayRef, ArrowPrimitiveType, BooleanArray, RecordBatch, TimestampNanosecondArray,
     UInt64Array,
 };
-use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;
 
@@ -36,13 +36,9 @@ impl Batch {
 
     pub fn num_rows(&self) -> usize {
         match &self.data {
-            Some(data) => data.batch.num_rows(),
+            Some(data) => data.data.len(),
             None => 0,
         }
-    }
-
-    pub fn into_record_batch(self) -> Option<RecordBatch> {
-        self.data.map(|data| data.batch)
     }
 
     pub fn time(&self) -> Option<&TimestampNanosecondArray> {
@@ -66,11 +62,8 @@ impl Batch {
         self.data.as_ref().map(|info| info.max_present_time)
     }
 
-    pub fn record_batch(&self) -> Option<&RecordBatch> {
-        match &self.data {
-            Some(info) => Some(&info.batch),
-            None => None,
-        }
+    pub fn data(&self) -> Option<&ArrayRef> {
+        self.data.as_ref().map(|info| &info.data)
     }
 
     /// Create a new `Batch` containing the given batch data.
@@ -83,33 +76,33 @@ impl Batch {
     ///  (b) all rows in this batch or less than or equal to `up_to_time`
     ///  (c) all future rows are greater than `up_to_time`.
     pub fn new_with_data(
-        batch: RecordBatch,
+        data: ArrayRef,
         time: ArrayRef,
         subsort: ArrayRef,
         key_hash: ArrayRef,
         up_to_time: RowTime,
     ) -> Self {
-        debug_assert_eq!(batch.num_rows(), time.len());
-        debug_assert_eq!(batch.num_rows(), subsort.len());
-        debug_assert_eq!(batch.num_rows(), key_hash.len());
+        debug_assert_eq!(data.len(), time.len());
+        debug_assert_eq!(data.len(), subsort.len());
+        debug_assert_eq!(data.len(), key_hash.len());
         debug_assert_eq!(time.data_type(), &TimestampNanosecondType::DATA_TYPE);
         debug_assert_eq!(subsort.data_type(), &UInt64Type::DATA_TYPE);
         debug_assert_eq!(key_hash.data_type(), &UInt64Type::DATA_TYPE);
-        let data = if batch.num_rows() == 0 {
+        let data = if data.len() == 0 {
             None
         } else {
-            Some(BatchInfo::new(batch, time, subsort, key_hash))
+            Some(BatchInfo::new(data, time, subsort, key_hash))
         };
 
         Self { data, up_to_time }
     }
 
     /// Return a new `Batch` with the same time properties, but new data.
-    pub fn with_projection(&self, new_batch: RecordBatch) -> Self {
-        assert_eq!(new_batch.num_rows(), self.num_rows());
+    pub fn with_projection(&self, new_data: ArrayRef) -> Self {
+        assert_eq!(new_data.len(), self.num_rows());
         Self {
             data: self.data.as_ref().map(|data| BatchInfo {
-                batch: new_batch,
+                data: new_data,
                 time: data.time.clone(),
                 subsort: data.subsort.clone(),
                 key_hash: data.key_hash.clone(),
@@ -160,11 +153,7 @@ impl Batch {
         })
     }
 
-    pub fn concat(
-        schema: &SchemaRef,
-        batches: Vec<Batch>,
-        up_to_time: RowTime,
-    ) -> error_stack::Result<Batch, Error> {
+    pub fn concat(batches: Vec<Batch>, up_to_time: RowTime) -> error_stack::Result<Batch, Error> {
         // TODO: Add debug assertions for batch ordering?
         if batches.iter().all(|batch| batch.is_empty()) {
             return Ok(Batch::new_empty(up_to_time));
@@ -209,16 +198,17 @@ impl Batch {
             .change_context(Error::Internal)?;
 
         let batches: Vec<_> = batches
-            .into_iter()
-            .flat_map(|batch| batch.into_record_batch())
+            .iter()
+            .flat_map(|batch| batch.data())
+            .map(|data| data.as_ref())
             .collect();
-        let batch = arrow_select::concat::concat_batches(schema, &batches)
+        let data = arrow_select::concat::concat(&batches)
             .into_report()
             .change_context(Error::Internal)?;
 
         Ok(Self {
             data: Some(BatchInfo {
-                batch,
+                data,
                 time,
                 subsort,
                 key_hash,
@@ -232,8 +222,9 @@ impl Batch {
     pub fn take(&self, indices: &UInt64Array) -> error_stack::Result<Self, Error> {
         match &self.data {
             Some(info) => {
-                let batch =
-                    take_record_batch(&info.batch, indices).change_context(Error::Internal)?;
+                let data = arrow_select::take::take(info.data.as_ref(), indices, None)
+                    .into_report()
+                    .change_context(Error::Internal)?;
                 let time = arrow_select::take::take(info.time.as_ref(), indices, None)
                     .into_report()
                     .change_context(Error::Internal)?;
@@ -244,7 +235,7 @@ impl Batch {
                     .into_report()
                     .change_context(Error::Internal)?;
                 let info = BatchInfo {
-                    batch,
+                    data,
                     time,
                     subsort,
                     key_hash,
@@ -272,16 +263,8 @@ impl Batch {
                 let filter = arrow_select::filter::FilterBuilder::new(predicate)
                     .optimize()
                     .build();
-                let columns: Vec<_> = info
-                    .batch
-                    .columns()
-                    .iter()
-                    .map(|column| filter.filter(column))
-                    .try_collect()
-                    .into_report()
-                    .change_context(Error::Internal)?;
-
-                let batch = RecordBatch::try_new(info.batch.schema(), columns)
+                let data = filter
+                    .filter(&info.data)
                     .into_report()
                     .change_context(Error::Internal)?;
 
@@ -300,7 +283,7 @@ impl Batch {
                     .into_report()
                     .change_context(Error::Internal)?;
                 let info = BatchInfo {
-                    batch,
+                    data,
                     time,
                     subsort,
                     key_hash,
@@ -325,7 +308,7 @@ impl Batch {
         match &self.data {
             Some(info) => {
                 let info = BatchInfo {
-                    batch: info.batch.slice(offset, length),
+                    data: info.data.slice(offset, length),
                     time: info.time.slice(offset, length),
                     subsort: info.subsort.slice(offset, length),
                     key_hash: info.key_hash.slice(offset, length),
@@ -354,6 +337,8 @@ impl Batch {
     ) -> Self {
         use std::sync::Arc;
 
+        use arrow_array::StructArray;
+
         let time: TimestampNanosecondArray = time.into();
         let subsort: UInt64Array = (0..(time.len() as u64)).collect_vec().into();
         let key_hash: UInt64Array = key_hash.into();
@@ -362,12 +347,14 @@ impl Batch {
         let subsort: ArrayRef = Arc::new(subsort);
         let key_hash: ArrayRef = Arc::new(key_hash);
 
-        let batch =
-            RecordBatch::try_new(MINIMAL_SCHEMA.clone(), vec![time.clone(), key_hash.clone()])
-                .unwrap();
+        let data = Arc::new(StructArray::new(
+            MINIMAL_SCHEMA.fields().clone(),
+            vec![time.clone(), key_hash.clone()],
+            None,
+        ));
 
         Batch::new_with_data(
-            batch,
+            data,
             time,
             subsort,
             key_hash,
@@ -378,7 +365,7 @@ impl Batch {
 
 #[derive(Clone, Debug)]
 pub(crate) struct BatchInfo {
-    pub(crate) batch: RecordBatch,
+    pub(crate) data: ArrayRef,
     pub(crate) time: ArrayRef,
     pub(crate) subsort: ArrayRef,
     pub(crate) key_hash: ArrayRef,
@@ -388,7 +375,7 @@ pub(crate) struct BatchInfo {
 
 impl PartialEq for BatchInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.batch == other.batch
+        self.data.as_ref() == other.data.as_ref()
             && self.time.as_ref() == other.time.as_ref()
             && self.min_present_time == other.min_present_time
             && self.max_present_time == other.max_present_time
@@ -396,11 +383,11 @@ impl PartialEq for BatchInfo {
 }
 
 impl BatchInfo {
-    fn new(batch: RecordBatch, time: ArrayRef, subsort: ArrayRef, key_hash: ArrayRef) -> Self {
-        debug_assert_eq!(batch.num_rows(), time.len());
-        debug_assert_eq!(batch.num_rows(), subsort.len());
-        debug_assert_eq!(batch.num_rows(), key_hash.len());
-        debug_assert!(batch.num_rows() > 0);
+    fn new(data: ArrayRef, time: ArrayRef, subsort: ArrayRef, key_hash: ArrayRef) -> Self {
+        debug_assert_eq!(data.len(), time.len());
+        debug_assert_eq!(data.len(), subsort.len());
+        debug_assert_eq!(data.len(), key_hash.len());
+        debug_assert!(data.len() > 0);
         debug_assert_eq!(time.null_count(), 0);
 
         let time_column: &TimestampNanosecondArray =
@@ -417,7 +404,7 @@ impl BatchInfo {
             RowTime::from_timestamp_ns(time_column.values()[time_column.len() - 1]);
 
         Self {
-            batch,
+            data,
             time,
             subsort,
             key_hash,
@@ -439,13 +426,13 @@ impl BatchInfo {
         let slice_start = time_column
             .values()
             .partition_point(|time| RowTime::from_timestamp_ns(*time) <= time_inclusive);
-        let slice_len = self.batch.num_rows() - slice_start;
+        let slice_len = self.data.len() - slice_start;
 
         let max_result_time = RowTime::from_timestamp_ns(time_column.values()[slice_start - 1]);
         let min_self_time = RowTime::from_timestamp_ns(time_column.values()[slice_start]);
 
         let result = Self {
-            batch: self.batch.slice(0, slice_start),
+            data: self.data.slice(0, slice_start),
             time: self.time.slice(0, slice_start),
             subsort: self.subsort.slice(0, slice_start),
             key_hash: self.key_hash.slice(0, slice_start),
@@ -453,7 +440,7 @@ impl BatchInfo {
             max_present_time: max_result_time,
         };
 
-        self.batch = self.batch.slice(slice_start, slice_len);
+        self.data = self.data.slice(slice_start, slice_len);
         self.time = self.time.slice(slice_start, slice_len);
         self.key_hash = self.key_hash.slice(slice_start, slice_len);
         self.min_present_time = min_self_time;
@@ -482,20 +469,6 @@ pub enum Error {
 
 impl error_stack::Context for Error {}
 
-pub fn take_record_batch(
-    batch: &RecordBatch,
-    indices: &UInt64Array,
-) -> error_stack::Result<RecordBatch, ArrowError> {
-    // Produce batches based on indices
-    let columns = batch
-        .columns()
-        .iter()
-        .map(|c| arrow_select::take::take(c.as_ref(), indices, None).into_report())
-        .try_collect()?;
-
-    RecordBatch::try_new(batch.schema(), columns).into_report()
-}
-
 #[cfg(any(test, feature = "testing"))]
 #[static_init::dynamic]
 static MINIMAL_SCHEMA: arrow_schema::SchemaRef = {
@@ -517,7 +490,6 @@ mod tests {
 
     use crate::testing::arb_arrays::arb_batch;
     use crate::{Batch, RowTime};
-    use arrow_select::concat::concat_batches;
     use itertools::Itertools;
     use proptest::prelude::*;
 
@@ -546,18 +518,18 @@ mod tests {
                     prop_assert_eq!(remainder.up_to_time, original.up_to_time);
 
                     // create the concatenated result
-                    let concatenated = match (result.record_batch(), remainder.record_batch()) {
+                    let concatenated = match (result.data(), remainder.data()) {
                         (None, None) => unreachable!(),
                         (Some(a), None) => a.clone(),
                         (None, Some(b)) => b.clone(),
-                        (Some(a), Some(b)) => concat_batches(&a.schema(), &[a.clone(), b.clone()]).unwrap(),
+                        (Some(a), Some(b)) => arrow_select::concat::concat(&[a.as_ref(), b.as_ref()]).unwrap(),
                     };
-                    prop_assert_eq!(&concatenated, original.record_batch().unwrap());
+                    prop_assert_eq!(&concatenated, original.data().unwrap());
 
                     prop_assert!(result.data.is_some());
                     let result = result.data.unwrap();
 
-                    prop_assert_eq!(result.batch.num_rows(), result.time.len());
+                    prop_assert_eq!(result.data.len(), result.time.len());
                     prop_assert_eq!(result.time().values()[0], i64::from(result.min_present_time));
                     prop_assert_eq!(result.time().values()[result.time.len() - 1], i64::from(result.max_present_time));
 
@@ -568,7 +540,7 @@ mod tests {
                         prop_assert!(remainder.data.is_some());
                         let remainder = remainder.data.unwrap();
 
-                        prop_assert_eq!(remainder.batch.num_rows(), remainder.time.len());
+                        prop_assert_eq!(remainder.data.len(), remainder.time.len());
                         prop_assert_eq!(remainder.time().values()[0], i64::from(remainder.min_present_time));
                         prop_assert_eq!(remainder.time().values()[remainder.time.len() - 1], i64::from(remainder.max_present_time));
                     }

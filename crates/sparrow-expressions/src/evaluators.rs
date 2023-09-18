@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use arrow_array::types::ArrowPrimitiveType;
-use arrow_schema::{DataType, Schema};
+use arrow_schema::DataType;
 use hashbrown::HashMap;
 use index_vec::IndexVec;
 use itertools::Itertools;
@@ -14,10 +14,10 @@ use crate::Error;
 
 mod cast;
 mod coalesce;
-mod column;
 mod comparison;
 mod field_ref;
 mod hash;
+mod input;
 mod is_valid;
 mod json_field;
 mod literal;
@@ -51,7 +51,8 @@ struct EvaluatorFactory {
 inventory::collect!(EvaluatorFactory);
 
 pub struct StaticInfo<'a> {
-    input_schema: &'a Schema,
+    /// Type of the input that the expressions are run on.
+    input_type: &'a DataType,
     name: &'a Cow<'static, str>,
     literal_args: &'a [ScalarValue],
     args: Vec<&'a StaticArg<'a>>,
@@ -150,7 +151,7 @@ impl<'a> StaticInfo<'a> {
 
 /// Create the evaluators for the given expressions.
 pub(super) fn create_evaluators(
-    input_schema: &Schema,
+    input_type: &DataType,
     exprs: &[Expr],
 ) -> error_stack::Result<Vec<Box<dyn Evaluator>>, Error> {
     // Static information (index in expressions, type, etc.) for each expression in `exprs`.
@@ -162,7 +163,7 @@ pub(super) fn create_evaluators(
     for (index, expr) in exprs.iter().enumerate() {
         let args = expr.args.iter().map(|index| &expressions[*index]).collect();
         let info = StaticInfo {
-            input_schema,
+            input_type,
             name: &expr.name,
             literal_args: &expr.literal_args,
             args,
@@ -203,6 +204,13 @@ fn create_evaluator(info: StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluat
         error_stack::bail!(Error::NoEvaluator(info.name.clone()))
     };
     create(info)
+}
+
+/// Use the names of registered evaluators to intern the given name.
+///
+/// Returns `None` if no evaluator is registered for the given name.
+pub fn intern_name(name: &str) -> Option<&'static str> {
+    EVALUATORS.get_key_value(name).map(|(k, _)| *k)
 }
 
 #[cfg(test)]

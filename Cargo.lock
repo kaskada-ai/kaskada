@@ -4304,6 +4304,7 @@ dependencies = [
  "index_vec",
  "sparrow-core",
  "sparrow-physical",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -4432,6 +4433,7 @@ dependencies = [
  "sparrow-testing",
  "sparrow-transforms",
  "tokio",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -4529,7 +4531,9 @@ name = "sparrow-logical"
 version = "0.11.0"
 dependencies = [
  "arrow-schema",
+ "decorum",
  "derive_more",
+ "enum-as-inner",
  "error-stack",
  "hashbrown 0.14.0",
  "insta",
@@ -4655,6 +4659,7 @@ dependencies = [
  "serde_yaml",
  "sparrow-arrow",
  "strum_macros 0.25.2",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -5830,6 +5835,7 @@ checksum = "79daa5ed5740825c40b389c5e50312b9c86df53fccd33f281df655642b43869d"
 dependencies = [
  "getrandom 0.2.10",
  "rand 0.8.5",
+ "serde",
 ]
 
 [[package]]

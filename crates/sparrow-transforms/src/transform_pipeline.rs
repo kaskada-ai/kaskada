@@ -106,11 +106,11 @@ impl TransformPipeline {
             );
 
             let transform: Box<dyn Transform> = match &step.kind {
-                StepKind::Project { exprs } => Box::new(
+                StepKind::Project => Box::new(
                     crate::project::Project::try_new(
-                        &input_step.schema,
-                        exprs,
-                        step.schema.clone(),
+                        &input_step.data_type,
+                        &step.exprs,
+                        &step.data_type,
                     )
                     .change_context_lazy(|| Error::CreatingTransform {
                         kind: (&step.kind).into(),

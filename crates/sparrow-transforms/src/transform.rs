@@ -1,3 +1,4 @@
+use arrow_schema::DataType;
 use sparrow_arrow::Batch;
 
 #[derive(derive_more::Display, Debug)]
@@ -6,6 +7,14 @@ pub enum Error {
     CreateTransform(&'static str),
     #[display(fmt = "failed to execute {_0} transform")]
     ExecuteTransform(&'static str),
+    #[display(
+        fmt = "unexpected output type for {transform} transform: expected {expected:?} but got {actual:?}"
+    )]
+    MismatchedResultType {
+        transform: &'static str,
+        expected: DataType,
+        actual: DataType,
+    },
 }
 
 impl error_stack::Context for Error {}
