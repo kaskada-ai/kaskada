@@ -149,14 +149,14 @@ class LocalBuilder(Builder):
 
     manager_configs: Dict[str, Any]
     engine_configs: Dict[str, Any]
-    # The engine version to download, e.g., `engine@v1.2.3-beta.1`. Defaults to None to get latest release.
+    # The engine version to download, e.g., `engine@v1.2.3-beta.1`. Defaults to engine@v0.11.0
     _engine_version: Optional[str]
 
     def __init__(
         self,
         endpoint: str = kaskada.client.KASKADA_DEFAULT_ENDPOINT,
         is_secure: bool = kaskada.client.KASKADA_IS_SECURE,
-        engine_version: Optional[str] = None,
+        engine_version: Optional[str] = "engine@v0.11.0",
     ) -> None:
         super().__init__()
         self.manager_configs = {"-no-color": "1"}

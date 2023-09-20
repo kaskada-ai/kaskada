@@ -47,7 +47,7 @@ class ReleaseClient(object):
         download_path: Path,
         manager_bin_name: str,
         engine_bin_name: str,
-        engine_version: Optional[str] = None,
+        engine_version: Optional[str] = "engine@v0.11.0",
     ) -> LocalRelease:
         """Downloads the appropriate version of the kaskada-manager and kaskada-engine services.
 
@@ -55,7 +55,7 @@ class ReleaseClient(object):
             download_path (Path): The local download path
             manager_bin_name (str): The name of the manager binary to save in download path
             engine_bin_name (str): The name of the engine binary to save in download path
-            engine_version (Optional[str]): The engine version to download, e.g., engine@v<semantic-version>. Defaults to None for latest release.
+            engine_version (Optional[str]): The engine version to download, e.g., engine@v<semantic-version>. Defaults to engine@v0.11.0
 
         Raises:
             RuntimeError: unable to get release assets
@@ -75,6 +75,8 @@ class ReleaseClient(object):
 
         repo = self._github.get_repo(f"{self.ORGANIZATION}/{self.REPO_NAME}")
 
+        # we don't expect this code path any longer,
+        # since the default version is now set to a string
         if engine_version is None:
             downloaded_release = repo.get_latest_release()
             logger.info(f"Using latest release version: {downloaded_release.tag_name}")

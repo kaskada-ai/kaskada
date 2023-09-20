@@ -82,13 +82,15 @@ def test_local_builder_set_engine_version():
     version = "engine@v0.0.1-beta.1"
     builder = kaskada.api.session.LocalBuilder().engine_version(version)
     assert builder._engine_version == version
-    
+
+
 def test_local_builder_set_engine_version_throws():
     invalid_versions = ["0.0.1", "engine@0.0.1", "engine@v23", "manager@v1.1.1"]
-    
+
     for version in invalid_versions:
         with pytest.raises(ValueError):
             builder = kaskada.api.session.LocalBuilder().engine_version(version)
+
 
 def test_local_builder_set_path_sets_path():
     path = "my_path"
