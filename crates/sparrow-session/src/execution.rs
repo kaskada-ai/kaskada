@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
 use futures::stream::BoxStream;
@@ -9,8 +7,8 @@ use sparrow_api::kaskada::v1alpha::ExecuteResponse;
 use crate::Error;
 
 pub struct Execution {
-    /// Tokio runtime managing this execution.
-    pub rt: Arc<tokio::runtime::Runtime>,
+    /// Tokio handle managing this execution.
+    handle: tokio::runtime::Handle,
     /// Channel to receive output on.
     output: tokio_stream::wrappers::ReceiverStream<RecordBatch>,
     /// Future which resolves to the first error or None.
@@ -29,7 +27,7 @@ enum Status {
 
 impl Execution {
     pub(super) fn new(
-        rt: tokio::runtime::Runtime,
+        handle: tokio::runtime::Handle,
         output_rx: tokio::sync::mpsc::Receiver<RecordBatch>,
         progress: BoxStream<'static, error_stack::Result<ExecuteResponse, Error>>,
         stop_signal_rx: tokio::sync::watch::Sender<bool>,
@@ -39,7 +37,7 @@ impl Execution {
         let status = Status::Running(progress);
 
         Self {
-            rt: Arc::new(rt),
+            handle,
             output,
             status,
             stop_signal_rx,
@@ -97,7 +95,7 @@ impl Execution {
 
     pub fn next_blocking(&mut self) -> error_stack::Result<Option<RecordBatch>, Error> {
         self.is_done()?;
-        Ok(self.rt.block_on(self.output.next()))
+        Ok(self.handle.block_on(self.output.next()))
     }
 
     pub async fn collect_all(mut self) -> error_stack::Result<Vec<RecordBatch>, Error> {
@@ -140,7 +138,8 @@ impl Execution {
         // In order to check the running status, we have to enter the runtime regardless,
         // so there's no reason to check the status prior to entering the runtime
         // here.
-        self.rt.clone().block_on(self.collect_all())
+        let handle = self.handle.clone();
+        handle.block_on(self.collect_all())
     }
 }
 

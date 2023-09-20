@@ -21,7 +21,6 @@ use uuid::Uuid;
 use crate::execution::Execution;
 use crate::{Error, Expr, Literal, Table};
 
-#[derive(Default)]
 pub struct Session {
     data_context: DataContext,
     dfg: Dfg,
@@ -34,6 +33,20 @@ pub struct Session {
     /// udf as well.
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
     object_store_registry: Arc<ObjectStoreRegistry>,
+    rt: tokio::runtime::Runtime,
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self {
+            data_context: Default::default(),
+            dfg: Default::default(),
+            key_hash_inverse: Default::default(),
+            udfs: Default::default(),
+            object_store_registry: Default::default(),
+            rt: tokio::runtime::Runtime::new().expect("tokio runtime"),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -496,8 +509,9 @@ impl Session {
             .map_err(|e| e.change_context(Error::Execute))
             .boxed();
 
+        let handle = self.rt.handle().clone();
         Ok(Execution::new(
-            rt,
+            handle,
             output_rx,
             progress,
             stop_signal_tx,
