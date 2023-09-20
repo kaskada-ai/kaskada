@@ -19,8 +19,8 @@ class Since(Window):
     """Window producing cumulative values since a predicate.
 
     "Since" windows are a series of non-overlapping windows producing cumulative values
-    since each time the predicate evaluates to true. Each window is inclusive of the time
-    it starts at and exclusive of the end time.
+    since each time the predicate evaluates to true. Each window is exclusive of the time
+    it starts at and inclusive of the end time.
 
     Args:
         predicate: the condition used to determine when the window resets.
@@ -67,8 +67,16 @@ class Tumbling(Window):
     """Window producing a single value at each predicate.
 
     "Tumbling" windows are a series of non-overlapping windows that produce values
-    each time the predicate evaluates to true. Each window is inclusive of the time
-    it starts at and exclusive of the end time.
+    each time the predicate evaluates to true. Each window is exclusive of the time
+    it starts at and inclusive of the end time.
+
+    Note:
+        Like other systems, Kaskada treats tumbling windows as non-overlapping.
+        When one window ends the next starts.
+
+        Unlike other systems, tumbling windows do not need to be of a fixed size.
+        Instead, they may be determined by a fixed duration, a calendar duration (such as a "month"),
+        or even a predicate.
 
     Args:
         predicate: the condition used to determine when the window resets.
@@ -112,14 +120,11 @@ class Tumbling(Window):
 
 @dataclass(frozen=True)
 class Sliding(Window):
-    """Overlapping windows producing the latest cumulative value since a predicate.
+    """Overlapping windows producing the latest value at each predicate.
 
-    "Sliding" windows are a series of overlapping windows producing cumulative values
-    since each time the predicate evaluates to true. Each window is inclusive of the time
-    it starts at and exclusive of the end time.
-
-    If multiple windows exist, the value produced at any given time will be the cumulative
-    value in the most recently created window.
+    "Sliding" windows are a series of overlapping windows that produce values each
+    time the predicate evaluates to true. Each window is exclusive of the time
+    it starts at and inclusive of the end time.
 
     Args:
         duration: the number of active windows at any given time.
@@ -127,7 +132,7 @@ class Sliding(Window):
           window starts.
 
     Returns:
-        Overlapping windows for aggregating cumulative values since the predicate.
+        Overlapping windows for aggregating values.
     """
 
     #: The number of sliding intervals to use in the window.

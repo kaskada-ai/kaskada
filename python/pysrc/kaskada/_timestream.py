@@ -1232,8 +1232,10 @@ def _aggregation(
         predicate = window.predicate
         if callable(predicate):
             predicate = predicate(input)
-        # Sliding windows produce non-cumulative values, hence the filter at the end. 
-        return Timestream._call(op, input, *args, predicate, window.duration).filter(predicate)
+        # Sliding windows produce non-cumulative values, hence the filter at the end.
+        return Timestream._call(op, input, *args, predicate, window.duration).filter(
+            predicate
+        )
     elif isinstance(window, kd.windows.Trailing):
         if op != "collect":
             raise NotImplementedError(

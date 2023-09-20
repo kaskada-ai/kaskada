@@ -42,6 +42,7 @@ async def test_count_windowed(source, golden) -> None:
         )
     )
 
+
 async def test_count_sliding(source, golden) -> None:
     m = source.col("m")
     n = source.col("n")
