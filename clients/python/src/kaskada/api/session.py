@@ -28,6 +28,7 @@ KASKADA_ENGINE_BIN_NAME_DEFAULT = "kaskada-engine"
 
 KASKADA_DISABLE_DOWNLOAD_ENV = "KASKADA_DISABLE_DOWNLOAD"
 
+
 class Session:
     def __init__(
         self,

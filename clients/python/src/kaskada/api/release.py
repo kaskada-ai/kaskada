@@ -14,6 +14,7 @@ import kaskada.api.api_utils
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class LocalRelease(object):
     """Configuration details for a local release. Mostly used for binary paths."""
 
