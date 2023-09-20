@@ -570,8 +570,7 @@ pub fn add_to_dfg(
                         // If `expr` is None, we're running the Python builder code,
                         // which already flattened things.
                         //
-                        // Note that this won't define the `condition_input` for the
-                        // purposes of ticks.
+                        // For ticks, the `input` has already been bound as a python rewrite.
                         (args[1].clone(), args[2].clone())
                     }
                 };
@@ -599,8 +598,7 @@ pub fn add_to_dfg(
                         // If `expr` is None, we're running the Python builder code,
                         // which already flattened things.
                         //
-                        // Note that this won't define the `condition_input` for the
-                        // purposes of ticks.
+                        // For ticks, the `input` has already been bound as a python rewrite.
                         (args[3].clone(), args[4].clone())
                     }
                 };

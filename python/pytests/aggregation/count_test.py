@@ -42,6 +42,17 @@ async def test_count_windowed(source, golden) -> None:
         )
     )
 
+async def test_count_sliding(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(
+        kd.record(
+            {
+                "count_n": n.count(window=kd.windows.Sliding(2, m > 10)),
+            }
+        )
+    )
+
 
 async def test_count_since_true(source, golden) -> None:
     # `since(True)` should be the same as unwindowed, so equals to one whenever the value is non-null
