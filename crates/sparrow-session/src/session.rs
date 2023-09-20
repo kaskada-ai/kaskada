@@ -461,6 +461,7 @@ impl Session {
         let rt = tokio::runtime::Runtime::new()
             .into_report()
             .change_context(Error::Execute)?;
+
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
         let destination = Destination::Channel(output_tx);
 

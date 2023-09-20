@@ -109,7 +109,6 @@ pub(super) fn write(
                 batch
             };
 
-
             if batch.num_rows() > max_batch_size {
                 for start in (0..batch.num_rows()).step_by(max_batch_size) {
                     let end = (start + max_batch_size).min(batch.num_rows());
@@ -120,7 +119,6 @@ pub(super) fn write(
             } else {
                 yield post_process_batch(&sink_schema, batch, &key_hash_inverse).await;
             }
-
 
             if limit_rows && remaining == 0 {
                 break;
