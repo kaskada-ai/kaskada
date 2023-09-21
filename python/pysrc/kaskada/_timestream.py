@@ -321,6 +321,33 @@ class Timestream(object):
         """
         return Timestream._call("hash", self)
 
+    def is_valid(self) -> Timestream:
+        """Returns a Timestream containing `true` if input is `non-null`, otherwise `false`.
+
+        Notes:
+            Unlike many functions which return `null` if any of their
+            arguments are `null`, *is_valid()* will never return `null`.
+        """
+        return Timestream._call("is_valid", self)
+
+    def json(self) -> Timestream:
+        """Returns a Timestream containing an object deserialized from a json string.
+
+        Notes:
+            Warning `json()` is experimental functionality. You should expect the
+            behavior to potentially change in the future. Certain functionality,
+            such as nested types, are not yet supported.
+        """
+        return Timestream._call("json", self)
+
+    def len(self) -> Timestream:
+        """Return a Timestream with the length of input string.
+
+        Notes:
+            Returns `0` for an empty string and `null` for `null`
+        """
+        return Timestream._call("len", self)
+
     def lower(self) -> Timestream:
         """Return a Timestream with all values converted to lower case."""
         return Timestream._call("lower", self)
@@ -556,6 +583,26 @@ class Timestream(object):
             *args: The field names to select.
         """
         return Timestream._call("select_fields", self, *args)
+
+    def substring(self, start: Optional[int], end: Optional[int] = None) -> Timestream:
+        """Return a Timestream with a substring between the start and end indices.
+
+        Args:
+            start: The inclusive index to start at. `None` indicates the beginning
+                of the string. Negative indices count backwards from the end of
+                the string.
+            end: (optional) The exclusive index to end at. `None` indicates the
+                length of the string. Negative indices count backwards from the
+                end of the string.
+
+        Notes:
+            Returns the substring starting at `start` (inclusive) up to but not
+            including the `end`.
+
+            If the input is `null`, returns `null`. If `end` > `start` an empty
+            string is returned.
+        """
+        return Timestream._call("substring", self)
 
     def remove(self, *args: str) -> Timestream:
         """Return a Timestream removing the given fields from `self`.
