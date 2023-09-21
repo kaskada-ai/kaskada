@@ -50,9 +50,9 @@ async def test_sum_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "sum_m": m.sum(window=kd.windows.Since(m > 20)),
+                "since_sum_m": m.sum(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "sum_n": n.sum(window=kd.windows.Sliding(2, m > 10)),
+                "sliding_sum_n": n.sum(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )
@@ -63,7 +63,7 @@ async def test_sum_since_true(source, golden) -> None:
     m_sum_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_sum": source.col("m").sum(window=kd.windows.Since(True)),
+            "since_m_sum": source.col("m").sum(window=kd.windows.Since(True)),
         }
     )
     golden.jsonl(m_sum_since_true)

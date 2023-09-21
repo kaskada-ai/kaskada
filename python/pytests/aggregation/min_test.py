@@ -33,9 +33,9 @@ async def test_min_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "min_m": m.min(window=kd.windows.Since(m > 20)),
+                "since_min_m": m.min(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "min_n": n.min(window=kd.windows.Sliding(2, m > 10)),
+                "sliding_min_n": n.min(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )

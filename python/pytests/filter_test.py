@@ -37,3 +37,17 @@ async def test_filter(source, golden) -> None:
             }
         )
     )
+
+async def test_filter_n(source, golden) -> None:
+    n = source.col("n")
+    condition_n = n > 5
+    golden.jsonl(
+        kd.record(
+            {
+                "filter_n": n.if_(condition_n).filter(condition_n),
+            }
+        )
+    )
+
+
+

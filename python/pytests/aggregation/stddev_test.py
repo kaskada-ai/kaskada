@@ -35,9 +35,9 @@ async def test_stddev_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "stddev_m": m.stddev(window=kd.windows.Since(m > 20)),
+                "since_stddev_m": m.stddev(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "stddev_n": n.stddev(window=kd.windows.Sliding(2, m > 10)),
+                "sliding_stddev_n": n.stddev(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )
@@ -48,7 +48,7 @@ async def test_stddev_since_true(source, golden) -> None:
     m_stddev_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_stddev": source.col("m").stddev(window=kd.windows.Since(True)),
+            "since_m_stddev": source.col("m").stddev(window=kd.windows.Since(True)),
         }
     )
     golden.jsonl(m_stddev_since_true)

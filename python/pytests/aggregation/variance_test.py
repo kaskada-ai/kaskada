@@ -37,9 +37,9 @@ async def test_variance_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "variance_m": m.variance(window=kd.windows.Since(m > 20)),
+                "since_variance_m": m.variance(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "variance_n": n.variance(window=kd.windows.Sliding(2, m > 10)),
+                "sliding_variance_n": n.variance(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )
@@ -50,7 +50,7 @@ async def test_variance_since_true(source, golden) -> None:
     m_variance_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_variance": source.col("m").variance(window=kd.windows.Since(True)),
+            "since_m_variance": source.col("m").variance(window=kd.windows.Since(True)),
         }
     )
     golden.jsonl(m_variance_since_true)

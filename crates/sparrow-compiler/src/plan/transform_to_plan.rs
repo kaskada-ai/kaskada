@@ -115,7 +115,7 @@ impl<'a> TransformToPlan<'a> {
                 .get_expression_type(producing_operation_index, producing_expression_index)?
                 .clone();
 
-            let interpolation = plan_builder.interpolations.interpolation(value);
+            let interpolation = plan_builder.interpolations.interpolation(transform_id);
 
             let direct_input = self.get_direct_input(
                 plan_builder,
