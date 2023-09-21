@@ -70,6 +70,12 @@ class Tumbling(Window):
     each time the predicate evaluates to true. Each window is exclusive of the time
     it starts at and inclusive of the end time.
 
+    Args:
+        predicate: the condition used to determine when the window resets.
+
+    Returns:
+        Window for aggregating values since the predicate.
+
     Note:
         Like other systems, Kaskada treats tumbling windows as non-overlapping.
         When one window ends the next starts.
@@ -77,12 +83,6 @@ class Tumbling(Window):
         Unlike other systems, tumbling windows do not need to be of a fixed size.
         Instead, they may be determined by a fixed duration, a calendar duration (such as a "month"),
         or even a predicate.
-
-    Args:
-        predicate: the condition used to determine when the window resets.
-
-    Returns:
-        Window for aggregating cumulative values since the predicate.
     """
 
     #: The boolean Timestream to use as predicate for the window.
