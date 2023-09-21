@@ -39,13 +39,28 @@ async def test_filter(source, golden) -> None:
     )
 
 
-async def test_filter_n(source, golden) -> None:
+async def test_if_filter_n(source, golden) -> None:
     n = source.col("n")
     condition_n = n > 5
     golden.jsonl(
         kd.record(
             {
                 "filter_n": n.if_(condition_n).filter(condition_n),
+            }
+        )
+    )
+
+
+# Regression test for https://github.com/kaskada-ai/kaskada/issues/766
+async def test_filter_to_merge_preserves_interpolation(source, golden) -> None:
+    n = source.col("n")
+    predicate = n < 9
+    golden.jsonl(
+        kd.record(
+            {
+                "n": n,
+                "predicate": predicate,
+                "filter_sum": n.sum().filter(predicate)
             }
         )
     )
