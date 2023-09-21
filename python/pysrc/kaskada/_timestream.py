@@ -584,16 +584,16 @@ class Timestream(object):
         """
         return Timestream._call("select_fields", self, *args)
 
-    def substring(self, start: Optional[int], end: Optional[int] = None) -> Timestream:
+    def substring(self, start: Optional[int] = None, end: Optional[int] = None) -> Timestream:
         """Return a Timestream with a substring between the start and end indices.
 
         Args:
             start: The inclusive index to start at. `None` indicates the beginning
                 of the string. Negative indices count backwards from the end of
                 the string.
-            end: (optional) The exclusive index to end at. `None` indicates the
-                length of the string. Negative indices count backwards from the
-                end of the string.
+            end: The exclusive index to end at. `None` indicates the length of
+                the string. Negative indices count backwards from the end of
+                the string.
 
         Notes:
             Returns the substring starting at `start` (inclusive) up to but not
@@ -602,7 +602,7 @@ class Timestream(object):
             If the input is `null`, returns `null`. If `end` > `start` an empty
             string is returned.
         """
-        return Timestream._call("substring", self)
+        return Timestream._call("substring", self, start, end)
 
     def remove(self, *args: str) -> Timestream:
         """Return a Timestream removing the given fields from `self`.
