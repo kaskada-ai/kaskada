@@ -38,6 +38,7 @@ async def test_filter(source, golden) -> None:
         )
     )
 
+
 async def test_filter_n(source, golden) -> None:
     n = source.col("n")
     condition_n = n > 5
@@ -48,6 +49,3 @@ async def test_filter_n(source, golden) -> None:
             }
         )
     )
-
-
-
