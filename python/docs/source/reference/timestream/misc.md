@@ -12,7 +12,6 @@
     Timestream.filter
     Timestream.hash
     Timestream.if_
-    Timestream.is_valid
     Timestream.lag
     Timestream.null_if
     Timestream.pipe

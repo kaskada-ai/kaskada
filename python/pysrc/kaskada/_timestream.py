@@ -321,25 +321,6 @@ class Timestream(object):
         """
         return Timestream._call("hash", self)
 
-    def is_valid(self) -> Timestream:
-        """Returns a Timestream containing `true` if input is `non-null`, otherwise `false`.
-
-        Notes:
-            Unlike many functions which return `null` if any of their
-            arguments are `null`, *is_valid()* will never return `null`.
-        """
-        return Timestream._call("is_valid", self)
-
-    def json(self) -> Timestream:
-        """Returns a Timestream containing an object deserialized from a json string.
-
-        Notes:
-            Warning `json()` is experimental functionality. You should expect the
-            behavior to potentially change in the future. Certain functionality,
-            such as nested types, are not yet supported.
-        """
-        return Timestream._call("json", self)
-
     def len(self) -> Timestream:
         """Return a Timestream with the length of input string.
 

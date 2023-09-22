@@ -1,7 +1,0 @@
-{"_time":"1996-12-19T16:39:57.000000000","_key":"A","a":true,"is_valid":true}
-{"_time":"1996-12-19T16:39:58.000000000","_key":"B","a":false,"is_valid":true}
-{"_time":"1996-12-19T16:39:59.000000000","_key":"B","a":null,"is_valid":false}
-{"_time":"1996-12-19T16:40:00.000000000","_key":"B","a":true,"is_valid":true}
-{"_time":"1996-12-19T16:40:01.000000000","_key":"B","a":false,"is_valid":true}
-{"_time":"1996-12-19T16:40:02.000000000","_key":"B","a":false,"is_valid":true}
-{"_time":"1996-12-19T16:40:02.000000000","_key":"B","a":null,"is_valid":false}

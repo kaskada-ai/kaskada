@@ -6,7 +6,6 @@
 .. autosummary::
    :toctree: ../apidocs/
 
-    Timestream.json
     Timestream.len
     Timestream.lower
     Timestream.substring
