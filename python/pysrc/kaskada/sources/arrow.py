@@ -301,7 +301,11 @@ class CsvString(Source):
         """Add data to the source."""
         if isinstance(csv_string, str):
             csv_string = BytesIO(csv_string.encode("utf-8"))
-        content = pa.csv.read_csv(csv_string, convert_options=self._convert_options, parse_options=CsvString._parse_options)
+        content = pa.csv.read_csv(
+            csv_string,
+            convert_options=self._convert_options,
+            parse_options=CsvString._parse_options
+        )
         for batch in content.to_batches():
             await self._ffi_table.add_pyarrow(batch)
 
