@@ -246,6 +246,10 @@ class CsvString(Source):
             strings_can_be_null=True,
         )
 
+    _parse_options = pyarrow.csv.ParseOptions(
+        escape_char="\\",
+    )
+
     @staticmethod
     async def create(
         csv_string: Optional[str | BytesIO] = None,
@@ -277,7 +281,7 @@ class CsvString(Source):
         if schema is None:
             if csv_string is None:
                 raise ValueError("Must provide schema or csv_string")
-            schema = pa.csv.read_csv(csv_string).schema
+            schema = pa.csv.read_csv(csv_string, parse_options=CsvString._parse_options).schema
             csv_string.seek(0)
 
         source = CsvString(
@@ -297,7 +301,11 @@ class CsvString(Source):
         """Add data to the source."""
         if isinstance(csv_string, str):
             csv_string = BytesIO(csv_string.encode("utf-8"))
-        content = pa.csv.read_csv(csv_string, convert_options=self._convert_options)
+        content = pa.csv.read_csv(
+            csv_string,
+            convert_options=self._convert_options,
+            parse_options=CsvString._parse_options
+        )
         for batch in content.to_batches():
             await self._ffi_table.add_pyarrow(batch)
 
