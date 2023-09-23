@@ -110,7 +110,7 @@ pub(crate) async fn get_source_metadata(
 pub(crate) async fn get_pulsar_metadata(
     pc: &PulsarConfig,
 ) -> error_stack::Result<SourceMetadata, Error> {
-    let metadata = RawMetadata::try_from_pulsar_subscription(pc)
+    let metadata = RawMetadata::try_from_pulsar_config(pc)
         .await
         .attach_printable_lazy(|| format!("Pulsar Source: {:?}", pc))
         .change_context(Error::Schema(format!(
@@ -123,7 +123,7 @@ pub(crate) async fn get_pulsar_metadata(
 pub(crate) async fn get_kafka_metadata(
     kc: &KafkaConfig,
 ) -> error_stack::Result<SourceMetadata, Error> {
-    let metadata = RawMetadata::try_from_kafka_subscription(kc)
+    let metadata = RawMetadata::try_from_kafka_config(kc)
         .await
         .attach_printable_lazy(|| format!("Kafka Source: {:?}", kc))
         .change_context(Error::Schema(format!(

@@ -43,6 +43,7 @@ half.workspace = true
 hashbrown.workspace = true
 inventory.workspace = true
 itertools.workspace = true
+kafka.workspace = true
 lz4 = { workspace = true, optional = true }
 num-traits.workspace = true
 object_store.workspace = true
@@ -52,9 +53,10 @@ pin-project.workspace = true
 prost-wkt-types.workspace = true
 pulsar = { workspace = true, optional = true }
 reqwest.workspace = true
+schema_registry_converter.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
-serde.workspace = true
 sha2.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }

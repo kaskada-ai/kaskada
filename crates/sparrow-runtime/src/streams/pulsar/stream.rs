@@ -1,12 +1,11 @@
 use crate::prepare::Error;
-use arrow::datatypes::Schema;
+use crate::streams::{get_columns_to_read, AvroWrapper, DeserializeError, DeserializeErrorWrapper};
 use arrow::error::ArrowError;
 use arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
 use avro_rs::types::Value;
 use error_stack::{IntoReport, ResultExt};
 use futures::Stream;
 use futures_lite::stream::StreamExt;
-use hashbrown::HashSet;
 use pulsar::consumer::InitialPosition;
 
 use pulsar::{
@@ -19,11 +18,6 @@ use std::io::Cursor;
 
 use std::time::Duration;
 use tokio::time::timeout;
-
-pub struct AvroWrapper {
-    user_record: Value,
-    projected_record: Value,
-}
 
 /// Creates a pulsar stream to be used during execution in a long-lived process.
 ///
@@ -65,35 +59,6 @@ struct PulsarReader {
     require_ordered_publish_time: bool,
     should_include_publish_time: bool,
 }
-
-#[derive(Debug)]
-struct DeserializeErrorWrapper(error_stack::Report<DeserializeError>);
-
-impl std::fmt::Display for DeserializeErrorWrapper {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl std::error::Error for DeserializeErrorWrapper {}
-
-impl From<error_stack::Report<DeserializeError>> for DeserializeErrorWrapper {
-    fn from(error: error_stack::Report<DeserializeError>) -> Self {
-        DeserializeErrorWrapper(error)
-    }
-}
-
-#[derive(derive_more::Display, Debug)]
-pub enum DeserializeError {
-    #[display(fmt = "error reading Avro record")]
-    Avro,
-    #[display(fmt = "unsupported Avro value")]
-    UnsupportedType,
-    #[display(fmt = "internal error")]
-    InternalError,
-}
-
-impl error_stack::Context for DeserializeError {}
 
 impl DeserializeMessage for AvroWrapper {
     type Output = error_stack::Result<AvroWrapper, DeserializeError>;
@@ -341,23 +306,4 @@ pub async fn consumer(
         .change_context(Error::CreateReader)?;
 
     Ok(consumer)
-}
-
-/// Determine needed indices given a file schema and projected schema.
-fn get_columns_to_read(file_schema: &Schema, projected_schema: &Schema) -> Vec<usize> {
-    let needed_columns: HashSet<_> = projected_schema
-        .fields()
-        .iter()
-        .map(|field| field.name())
-        .collect();
-
-    let mut columns = Vec::with_capacity(3 + needed_columns.len());
-
-    for (index, column) in file_schema.fields().iter().enumerate() {
-        if needed_columns.contains(column.name()) {
-            columns.push(index)
-        }
-    }
-
-    columns
 }

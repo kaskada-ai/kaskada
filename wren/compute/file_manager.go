@@ -18,6 +18,9 @@ type FileManager interface {
 
 	// GetPulsarSchema returns the schema of the pulsar topic
 	GetPulsarSchema(ctx context.Context, pulsarConfig *v1alpha.PulsarConfig) (*v1alpha.Schema, error)
+
+	// GetKafkaSchema returns the schema of the kafka topic
+	GetKafkaSchema(ctx context.Context, kafkaConfig *v1alpha.KafkaConfig) (*v1alpha.Schema, error)
 }
 
 type fileManager struct {
@@ -58,6 +61,16 @@ func (m *fileManager) GetPulsarSchema(ctx context.Context, pulsarConfig *v1alpha
 	metadataReq := &v1alpha.GetMetadataRequest{
 		Source: &v1alpha.GetMetadataRequest_PulsarConfig{
 			PulsarConfig: pulsarConfig,
+		},
+	}
+
+	return m.getSchema(ctx, metadataReq)
+}
+
+func (m *fileManager) GetKafkaSchema(ctx context.Context, kafkaConfig *v1alpha.KafkaConfig) (*v1alpha.Schema, error) {
+	metadataReq := &v1alpha.GetMetadataRequest{
+		Source: &v1alpha.GetMetadataRequest_KafkaConfig{
+			KafkaConfig: kafkaConfig,
 		},
 	}
 

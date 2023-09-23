@@ -210,6 +210,7 @@ func (s *materializationService) createMaterialization(ctx context.Context, owne
 		case *v1alpha.Source_Kaskada:
 			newSourceType = materialization.SourceTypeFiles
 		case *v1alpha.Source_Pulsar:
+		case *v1alpha.Source_Kafka:
 			newSourceType = materialization.SourceTypeStreams
 		default:
 			log.Error().Msgf("unknown source type %T", table.Source.Source)

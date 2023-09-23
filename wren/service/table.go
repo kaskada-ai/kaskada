@@ -184,7 +184,20 @@ func (t *tableService) createTable(ctx context.Context, owner *ent.Owner, reques
 	case *v1alpha.Source_Pulsar: // if the table source is pulsar, validate the schema
 		streamSchema, err := t.fileManager.GetPulsarSchema(ctx, s.Pulsar.Config)
 		if err != nil {
-			subLogger.Error().Err(err).Msg("issue getting schema for file")
+			subLogger.Error().Err(err).Msg("issue getting schema for pulsar")
+			return nil, reMapSparrowError(ctx, err)
+		}
+
+		err = t.validateSchema(ctx, *newTable, streamSchema)
+		if err != nil {
+			return nil, err
+		}
+		newTable.MergedSchema = streamSchema
+	case *v1alpha.Source_Kafka:
+		subLogger.Log().Msgf("Kafka Source: %v", s)
+		streamSchema, err := t.fileManager.GetKafkaSchema(ctx, s.Kafka.Config)
+		if err != nil {
+			subLogger.Error().Err(err).Msg("issue getting schema for kafka")
 			return nil, reMapSparrowError(ctx, err)
 		}
 

@@ -18,6 +18,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
+	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.8.2
 )
 
 require (
@@ -44,6 +45,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
@@ -56,8 +58,8 @@ require (
 	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/snappy v0.0.3 // indirect
-	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/pprof v0.0.0-20211008130755-947d60d73cc0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0 // indirect

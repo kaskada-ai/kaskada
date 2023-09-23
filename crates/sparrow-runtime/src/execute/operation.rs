@@ -264,6 +264,8 @@ impl OperationExecutor {
             // We could attempt to determine whether we needed to execute sequentially...
             // but for now it is easier to just have the single path.
             'operation: while let Some(input) = recv.recv().await {
+                tracing::debug!("Input operation batch: {:?}", input);
+
                 #[cfg(debug_assertions)]
                 input
                     .validate_bounds()
@@ -286,6 +288,8 @@ impl OperationExecutor {
                     .execute(input)
                     .into_report()
                     .change_context(Error::internal())?;
+
+                tracing::debug!("Output operation batch: {:?}", output);
 
                 // For each batch produced by the operation, write it to each channel.
                 // We currently do this synchronously in the order channels subscribed.
