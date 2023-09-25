@@ -411,7 +411,7 @@ operations:
           Input:
             producing_operation: 5
             input_column: 3
-            interpolation: 2
+            interpolation: 1
             column:
               ProducerExpression: 5
     operator:

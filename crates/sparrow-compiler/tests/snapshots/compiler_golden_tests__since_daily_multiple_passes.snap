@@ -227,7 +227,7 @@ operations:
           Input:
             producing_operation: 2
             input_column: 4
-            interpolation: 2
+            interpolation: 1
             column:
               ProducerExpression: 4
       - arguments: []
@@ -388,7 +388,7 @@ operations:
           Input:
             producing_operation: 5
             input_column: 3
-            interpolation: 2
+            interpolation: 1
             column:
               ProducerExpression: 6
     operator:

@@ -35,8 +35,20 @@ async def test_count_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "count_m": m.count(window=kd.windows.Since(m > 20)),
+                "since_count_m": m.count(window=kd.windows.Since(m > 20)),
                 "n": n,
+                "sliding_count_n": n.count(window=kd.windows.Sliding(2, m > 10)),
+            }
+        )
+    )
+
+
+async def test_count_sliding(source, golden) -> None:
+    m = source.col("m")
+    n = source.col("n")
+    golden.jsonl(
+        kd.record(
+            {
                 "count_n": n.count(window=kd.windows.Sliding(2, m > 10)),
             }
         )
@@ -48,7 +60,7 @@ async def test_count_since_true(source, golden) -> None:
     m_sum_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_count": source.col("m").count(window=kd.windows.Since(True)),
+            "since_m": source.col("m").count(window=kd.windows.Since(True)),
         }
     )
     golden.jsonl(m_sum_since_true)

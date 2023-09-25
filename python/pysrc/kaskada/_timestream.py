@@ -1260,7 +1260,10 @@ def _aggregation(
         predicate = window.predicate
         if callable(predicate):
             predicate = predicate(input)
-        return Timestream._call(op, input, *args, predicate, window.duration)
+        # Sliding windows produce non-cumulative values, hence the filter at the end.
+        return Timestream._call(op, input, *args, predicate, window.duration).filter(
+            predicate
+        )
     elif isinstance(window, kd.windows.Trailing):
         if op != "collect":
             raise NotImplementedError(
@@ -1283,6 +1286,17 @@ def _aggregation(
         # `duration` has passed with no "real" inputs.
         merged_input = record({"input": input, "shift": input_shift}).col("input")
         return Timestream._call("collect", merged_input, *args, None, trailing_ns)
+    elif isinstance(window, kd.windows.Tumbling):
+        # Tumbling windows are analogous to Since windows, aside from output behavior.
+        # Tumbling windows only emit once per window. However, this behavior is not implemented
+        # in Sparrow yet, so we hack this by using a Since window with a filter applied afterwards
+        # with the same predicate. Note this hack is brittle, adds additional work with merging and filters,
+        # and generally is not how we want to handle new window behaviors.
+        predicate = window.predicate
+        if callable(predicate):
+            predicate = predicate(input)
+
+        return Timestream._call(op, input, *args, predicate, None).filter(predicate)
     else:
         raise NotImplementedError(f"Unknown window type {window!r}")
 

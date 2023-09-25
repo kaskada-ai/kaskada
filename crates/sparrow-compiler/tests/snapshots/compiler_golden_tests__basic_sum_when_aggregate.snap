@@ -169,7 +169,7 @@ operations:
           Input:
             producing_operation: 0
             input_column: 4
-            interpolation: 2
+            interpolation: 1
             column:
               ProducerExpression: 8
       - arguments:
@@ -214,7 +214,7 @@ operations:
           Input:
             producing_operation: 1
             input_column: 3
-            interpolation: 2
+            interpolation: 1
             column:
               ProducerExpression: 1
     operator:

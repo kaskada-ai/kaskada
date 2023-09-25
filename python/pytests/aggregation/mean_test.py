@@ -33,9 +33,9 @@ async def test_mean_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "mean_m": m.mean(window=kd.windows.Since(m > 20)),
+                "since_mean_m": m.mean(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "mean_n": n.mean(window=kd.windows.Sliding(2, m > 10)),
+                "sliding_mean_n": n.mean(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )
@@ -46,7 +46,7 @@ async def test_mean_since_true(source, golden) -> None:
     m_mean_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_mean": source.col("m").mean(window=kd.windows.Since(True)),
+            "since_m_mean": source.col("m").mean(window=kd.windows.Since(True)),
         }
     )
     golden.jsonl(m_mean_since_true)

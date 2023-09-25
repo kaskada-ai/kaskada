@@ -61,8 +61,18 @@ impl Interpolations {
                     // TimeOf should always produce a discrete value
                     Interpolation::Null
                 }
-                StepKind::Expression(_) => infer_interpolation(&node_interpolations, children),
-                StepKind::Transform => infer_interpolation(&node_interpolations, children),
+                StepKind::Expression(_) => {
+                    // Expressions skip the operations (last child) when inferring interpolation
+                    // as they occur after the operation is applied.
+                    infer_interpolation(&node_interpolations, &children[0..children.len() - 1])
+                }
+                StepKind::Transform => {
+                    // Transforms include the operation since they apply the operation to the input.
+                    // e.g. (transform value select_op) - if `value` is `as-of`, the
+                    // interpolation of the result is still `null` due to `select_op` being
+                    // `null`.
+                    infer_interpolation(&node_interpolations, children)
+                }
                 StepKind::Window(_) => {
                     anyhow::bail!("Window arguments should be flattened in the DFG")
                 }
@@ -87,7 +97,7 @@ fn infer_interpolation(
     node_interpolations: &[Interpolation],
     children: &[egg::Id],
 ) -> Interpolation {
-    let mut interpolations = children[0..children.len() - 1]
+    let mut interpolations = children
         .iter()
         .map(|child| node_interpolations[usize::from(*child)]);
     if interpolations.all(|i| i == Interpolation::AsOf) {

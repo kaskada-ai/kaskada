@@ -33,9 +33,9 @@ async def test_max_windowed(source, golden) -> None:
         kd.record(
             {
                 "m": m,
-                "max_m": m.max(window=kd.windows.Since(m > 20)),
+                "since_max_m": m.max(window=kd.windows.Since(m > 20)),
                 "n": n,
-                "max_n": n.max(window=kd.windows.Sliding(2, m > 10)),
+                "sliding_max_n": n.max(window=kd.windows.Sliding(2, m > 10)),
             }
         )
     )
@@ -46,7 +46,7 @@ async def test_max_since_true(source, golden) -> None:
     m_max_since_true = kd.record(
         {
             "m": source.col("m"),
-            "m_max": source.col("m").max(window=kd.windows.Since(True)),
+            "since_m_max": source.col("m").max(window=kd.windows.Since(True)),
         }
     )
     golden.jsonl(m_max_since_true)

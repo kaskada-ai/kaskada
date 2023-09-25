@@ -180,7 +180,7 @@ operations:
           Input:
             producing_operation: 0
             input_column: 3
-            interpolation: 2
+            interpolation: 1
             column:
               ProducerExpression: 6
     operator:

@@ -43,7 +43,7 @@ async def test_count_if_windowed(count_if_source, golden) -> None:
         kd.record(
             {
                 "is_valid": is_valid,
-                "count_if": is_valid.count_if(window=kd.windows.Since(m > 25)),
+                "since_count_if": is_valid.count_if(window=kd.windows.Since(m > 25)),
                 "m": m,
             }
         )
@@ -57,7 +57,7 @@ async def test_count_if_since_true(count_if_source, golden) -> None:
         kd.record(
             {
                 "is_valid": is_valid,
-                "count_if": is_valid.count_if(window=kd.windows.Since(True)),
+                "since_count_if": is_valid.count_if(window=kd.windows.Since(True)),
                 "m": m,
             }
         )
