@@ -324,10 +324,8 @@ jobs:
         # However, we set a default working-directory of `python` which is within the source.
         # To avoid problems, we explicitly set the working-directory to the root here.
         working-directory:
-        # TODO: Add `--latest` when we stop having the python client download
-        # the latest version.
         run: |
           gh release edit ${{ github.ref_name }} \
-            --draft=false --discussion-category "Announcements"
+            --draft=false --latest --discussion-category "Announcements"
         env:
           GH_TOKEN: ${{ github.token }}
