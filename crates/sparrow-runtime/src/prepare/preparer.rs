@@ -11,6 +11,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::{PreparedFile, SourceData, TableConfig};
+use sparrow_kernels::order_preserving_cast_to_u64;
 use uuid::Uuid;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
@@ -174,8 +175,8 @@ impl Preparer {
 
         let num_rows = batch.num_rows();
         let subsort = if let Some(subsort_column_name) = subsort_column_name.as_ref() {
-            let subsort = get_required_column(&batch, subsort_column_name)?;
-            arrow::compute::cast(subsort.as_ref(), &DataType::UInt64)
+            let subsort = get_required_column(&batch, &subsort_column_name)?;
+            order_preserving_cast_to_u64(subsort)
                 .into_report()
                 .change_context_lazy(|| Error::ConvertSubsort(subsort.data_type().clone()))?
         } else {
