@@ -514,8 +514,15 @@ impl ShiftToColumnOperation {
                 Err(not_found) => not_found,
             };
             let (prefix, suffix) = pending.split(split_length)?;
-            // TODO: What if suffix is empty?
-            self.pending = Some(suffix);
+
+            if suffix.len() == 0 {
+                // If the suffix is empty, set the pending batch to empty.
+                // This ensures that we won't try to send an empty batch if
+                // we flush the pending set on the next iteration.
+                self.pending = None;
+            } else {
+                self.pending = Some(suffix);
+            }
 
             // The subsort column can naively monotonically increase and preserve the
             // uniqueness invariant.
@@ -572,8 +579,8 @@ impl ShiftToColumnOperation {
                 // so we can output the pending batch. The next call to `try_next` should
                 // see that `computed.pending.take()` returns `None`, indicating there is
                 // nothing else.
-
                 let result = self.pending.take();
+
                 // Update the subsort column to be monotonically increasing from 0,
                 // to match the pattern of the merged results. We don't update the
                 // subsort column in the pending batch, as it helps keep the correct

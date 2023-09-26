@@ -20,6 +20,23 @@ async def source() -> kd.sources.CsvString:
     )
 
 
+@pytest.fixture(scope="module")
+async def filter_source() -> kd.sources.CsvString:
+    content = "\n".join(
+        [
+            "thread_ts,ts,channel",
+            "null,1691762610.0,Project",
+            "null,1691762620.0,Project",
+            "null,1691762630.0,Project",
+            "1691762650.0,1691762650.0,Project",
+            "1691762650.0,1691762660.0,Project",
+        ]
+    )
+    return await kd.sources.CsvString.create(
+        content, time_column="ts", key_column="channel", time_unit="s"
+    )
+
+
 async def test_shift_by_timedelta(source, golden) -> None:
     time = source.col("time")
     golden.jsonl(
@@ -55,3 +72,10 @@ async def test_shift_collect(source, golden) -> None:
             }
         )
     )
+
+
+# Regression test for https://github.com/kaskada-ai/kaskada/issues/726
+async def test_filter_to_shift(filter_source, golden) -> None:
+    messages = filter_source.filter(filter_source.col("thread_ts").is_null())
+    messages = messages.shift_by(timedelta(seconds=5))
+    golden.jsonl(messages)
