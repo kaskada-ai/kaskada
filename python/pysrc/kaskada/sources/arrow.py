@@ -1,7 +1,6 @@
 """Provide sources based on PyArrow, including Pandas and CSV."""
 from __future__ import annotations
 
-import os
 from io import BytesIO
 from typing import Optional
 
@@ -309,6 +308,7 @@ class CsvString(Source):
         for batch in content.to_batches():
             await self._ffi_table.add_pyarrow(batch)
 
+
 class JsonlFile(Source):
     """Source reading data from line-delimited JSON files using PyArrow."""
 
@@ -356,7 +356,7 @@ class JsonlFile(Source):
         schema: Optional[pa.Schema] = None,
         grouping_name: Optional[str] = None,
         time_unit: Optional[TimeUnit] = None,
-    ) -> JsonlString:
+    ) -> JsonlFile:
         """Create a source reading a line-delimited JSON file.
 
         Args:
@@ -395,11 +395,13 @@ class JsonlFile(Source):
 
     async def add_file(self, path: str) -> None:
         """Add data to the source."""
-        path = Source._get_absolute_path(path)
-
-        batches = pa.json.read_json(path, parse_options=self._parse_options)
+        batches = pa.json.read_json(
+            Source._get_absolute_path(path),
+            parse_options=self._parse_options
+        )
         for batch in batches.to_batches():
             await self._ffi_table.add_pyarrow(batch)
+
 
 class JsonlString(Source):
     """Source reading data from line-delimited JSON strings using PyArrow."""
@@ -558,7 +560,6 @@ class Parquet(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
-
         path = Source._get_absolute_path(path)
 
         if schema is None:
@@ -581,6 +582,4 @@ class Parquet(Source):
 
     async def add_file(self, path: str) -> None:
         """Add data to the source."""
-        path = Source._get_absolute_path(path)
-
-        await self._ffi_table.add_parquet(path)
+        await self._ffi_table.add_parquet(str(Source._get_absolute_path(path)))

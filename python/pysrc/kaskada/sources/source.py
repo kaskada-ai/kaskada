@@ -92,7 +92,7 @@ class Source(Timestream):
                 raise ValueError(f"Column: {field_name!r} must be non-nullable")
 
     @staticmethod
-    def _get_absolute_path(path: Optional[str]) -> str|None:
+    def _get_absolute_path(path: Optional[str]) -> Optional[str]:
         if path is None or path.startswith("/"):
             return path
         return os.getcwd() + "/" + path
