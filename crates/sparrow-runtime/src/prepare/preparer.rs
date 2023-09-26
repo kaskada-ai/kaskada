@@ -175,7 +175,7 @@ impl Preparer {
         let num_rows = batch.num_rows();
         let subsort = if let Some(subsort_column_name) = subsort_column_name.as_ref() {
             let subsort = get_required_column(&batch, subsort_column_name)?;
-            arrow::compute::cast(time.as_ref(), &DataType::UInt64)
+            arrow::compute::cast(subsort.as_ref(), &DataType::UInt64)
                 .into_report()
                 .change_context_lazy(|| Error::ConvertSubsort(subsort.data_type().clone()))?
         } else {
