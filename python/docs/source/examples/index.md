@@ -7,6 +7,8 @@ The [Reddit example](./reddit.md) shows how to read and aggregate live messages 
 The [Bluesky Firehose example](./bluesky.md) shows how to read and aggregate messages from the Bluesky firehose.
 This demonstrates how to use Kaskada to connect in real-time and parse messages as part of the query.
 
+The [De-Duplication](./deduplication.ipynb) shows how to use Kaskada to automatically de-duplicate data coming from multiple sources.
+
 ```{toctree}
 :hidden:
 :maxdepth: 2
@@ -14,4 +16,5 @@ This demonstrates how to use Kaskada to connect in real-time and parse messages 
 time_centric
 reddit
 bluesky
+deduplication
 ```
