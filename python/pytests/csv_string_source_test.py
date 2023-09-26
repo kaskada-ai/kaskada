@@ -36,6 +36,7 @@ async def test_read_csv(golden) -> None:
     await source.add_string(content2)
     golden.jsonl(source)
 
+
 @pytest.mark.asyncio
 async def test_read_csv_with_subsort(golden) -> None:
     content1 = "\n".join(

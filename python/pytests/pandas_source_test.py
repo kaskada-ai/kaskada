@@ -52,6 +52,7 @@ async def test_add_dataframe(golden) -> None:
     await table.add_data(df2)
     golden.jsonl(table)
 
+
 async def test_add_dataframe_with_subsort(golden) -> None:
     df1 = pd.DataFrame(
         {
@@ -61,7 +62,12 @@ async def test_add_dataframe_with_subsort(golden) -> None:
         }
     )
 
-    table = await kd.sources.Pandas.create(df1, time_column="time", key_column="key", subsort_column="subsort")
+    table = await kd.sources.Pandas.create(
+        df1,
+        time_column="time",
+        key_column="key",
+        subsort_column="subsort",
+    )
     golden.jsonl(table)
 
     df2 = pd.DataFrame(
@@ -73,4 +79,3 @@ async def test_add_dataframe_with_subsort(golden) -> None:
     )
     await table.add_data(df2)
     golden.jsonl(table)
-    
