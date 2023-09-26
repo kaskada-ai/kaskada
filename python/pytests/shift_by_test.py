@@ -75,7 +75,8 @@ async def test_shift_collect(source, golden) -> None:
 
 
 
+# Regression test for https://github.com/kaskada-ai/kaskada/issues/726
 async def test_filter_to_shift(filter_source, golden) -> None:
     messages = filter_source.filter(filter_source.col("thread_ts").is_null())
-    messages = messages.shift_by(timedelta(microseconds=0.001))
+    messages = messages.shift_by(timedelta(seconds=5))
     golden.jsonl(messages)
