@@ -1,5 +1,6 @@
 """Provide the base-class for Kaskada sources."""
 from typing import Literal, Optional
+import os
 
 import kaskada._ffi as _ffi
 import pyarrow as pa
@@ -89,3 +90,9 @@ class Source(Timestream):
                 raise KeyError(f"Column {field_name!r} does not exist")
             if field.nullable:
                 raise ValueError(f"Column: {field_name!r} must be non-nullable")
+
+    @staticmethod
+    def _get_absolute_path(path: Optional[str]) -> str|None:
+        if path is None or path.startswith("/"):
+            return path
+        return os.getcwd() + "/" + path

@@ -309,6 +309,97 @@ class CsvString(Source):
         for batch in content.to_batches():
             await self._ffi_table.add_pyarrow(batch)
 
+class JsonlFile(Source):
+    """Source reading data from line-delimited JSON files using PyArrow."""
+
+    def __init__(
+        self,
+        *,
+        time_column: str,
+        key_column: str,
+        schema: pa.Schema,
+        subsort_column: Optional[str] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
+    ) -> None:
+        """Create a line-delimited JSON File Source.
+
+        Args:
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            schema: The schema to use.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
+        """
+        super().__init__(
+            schema=schema,
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
+        self._parse_options = pyarrow.json.ParseOptions(explicit_schema=schema)
+
+    @staticmethod
+    async def create(
+        path: Optional[str] = None,
+        *,
+        time_column: str,
+        key_column: str,
+        subsort_column: Optional[str] = None,
+        schema: Optional[pa.Schema] = None,
+        grouping_name: Optional[str] = None,
+        time_unit: Optional[TimeUnit] = None,
+    ) -> JsonlString:
+        """Create a source reading a line-delimited JSON file.
+
+        Args:
+            path: The path to the line-delimited JSON file to add. This can be relative to
+              the current working directory or an absolute path (prefixed by '/').
+            time_column: The name of the column containing the time.
+            key_column: The name of the column containing the key.
+            subsort_column: The name of the column containing the subsort.
+              If not provided, the subsort will be assigned by the system.
+            schema: The schema to use. If not provided, it will be inferred from the input.
+            grouping_name: The name of the group associated with each key.
+              This is used to ensure implicit joins are only performed between data grouped
+              by the same entity.
+            time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
+              If not specified (and not specified in the data), nanosecond will be assumed.
+        """
+        path = Source._get_absolute_path(path)
+
+        if schema is None:
+            if path is None:
+                raise ValueError("Must provide schema or path to jsonl file")
+            schema = pa.json.read_json(path).schema
+
+        source = JsonlFile(
+            time_column=time_column,
+            key_column=key_column,
+            subsort_column=subsort_column,
+            schema=schema,
+            grouping_name=grouping_name,
+            time_unit=time_unit,
+        )
+
+        if path:
+            await source.add_file(path)
+        return source
+
+    async def add_file(self, path: str) -> None:
+        """Add data to the source."""
+        path = Source._get_absolute_path(path)
+
+        batches = pa.json.read_json(path, parse_options=self._parse_options)
+        for batch in batches.to_batches():
+            await self._ffi_table.add_pyarrow(batch)
 
 class JsonlString(Source):
     """Source reading data from line-delimited JSON strings using PyArrow."""
@@ -467,16 +558,19 @@ class Parquet(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
+
+        path = Source._get_absolute_path(path)
+
         if schema is None:
             if path is None:
                 raise ValueError("Must provide schema or path to parquet file")
             schema = pa.parquet.read_schema(path)
 
         source = Parquet(
-            schema=schema,
             time_column=time_column,
             key_column=key_column,
             subsort_column=subsort_column,
+            schema=schema,
             grouping_name=grouping_name,
             time_unit=time_unit,
         )
@@ -487,7 +581,6 @@ class Parquet(Source):
 
     async def add_file(self, path: str) -> None:
         """Add data to the source."""
-        if not path.startswith("/"):
-            path = os.getcwd() + "/" + path
+        path = Source._get_absolute_path(path)
 
         await self._ffi_table.add_parquet(path)

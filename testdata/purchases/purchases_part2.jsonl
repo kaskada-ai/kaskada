@@ -1,0 +1,5 @@
+{"id":"kk_005","purchase_time":1578268800000,"customer_id":"patrick","vendor_id":"krusty_krab","amount":2,"subsort_id":0}
+{"id":"wh_001","purchase_time":1578268800000,"customer_id":"spongebob","vendor_id":"weenie_hut","amount":7,"subsort_id":1}
+{"id":"cb_007","purchase_time":1578355200000,"customer_id":"spongebob","vendor_id":"chum_bucket","amount":34,"subsort_id":2}
+{"id":"wh_002","purchase_time":1578441600000,"customer_id":"karen","vendor_id":"weenie_hut","amount":8,"subsort_id":3}
+{"id":"kk_006","purchase_time":1578441600000,"customer_id":"patrick","vendor_id":"krusty_krab","amount":9,"subsort_id":4}

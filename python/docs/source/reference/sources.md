@@ -9,6 +9,7 @@
 
         Source
         CsvString
+        JsonlFile
         JsonlString
         Pandas
         Parquet

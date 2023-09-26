@@ -1,0 +1,10 @@
+{"id":"cb_001","purchase_time":1577836800000,"customer_id":"karen","vendor_id":"chum_bucket","amount":9,"subsort_id":0}
+{"id":"kk_001","purchase_time":1577836800000,"customer_id":"patrick","vendor_id":"krusty_krab","amount":3,"subsort_id":1}
+{"id":"cb_002","purchase_time":1577923200000,"customer_id":"karen","vendor_id":"chum_bucket","amount":2,"subsort_id":2}
+{"id":"kk_002","purchase_time":1577923200000,"customer_id":"patrick","vendor_id":"krusty_krab","amount":5,"subsort_id":3}
+{"id":"cb_003","purchase_time":1578009600000,"customer_id":"karen","vendor_id":"chum_bucket","amount":4,"subsort_id":4}
+{"id":"kk_003","purchase_time":1578009600000,"customer_id":"patrick","vendor_id":"krusty_krab","amount":12,"subsort_id":5}
+{"id":"cb_004","purchase_time":1578096000000,"customer_id":"patrick","vendor_id":"chum_bucket","amount":5000,"subsort_id":6}
+{"id":"cb_005","purchase_time":1578096000000,"customer_id":"karen","vendor_id":"chum_bucket","amount":3,"subsort_id":7}
+{"id":"cb_006","purchase_time":1578182400000,"customer_id":"karen","vendor_id":"chum_bucket","amount":5,"subsort_id":8}
+{"id":"kk_004","purchase_time":1578182400000,"customer_id":"patrick","vendor_id":"krusty_krab","amount":9,"subsort_id":9}
