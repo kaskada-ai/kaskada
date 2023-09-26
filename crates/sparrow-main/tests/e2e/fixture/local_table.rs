@@ -91,6 +91,7 @@ impl LocalTestTable {
                 source_data,
                 &self.config,
                 &None,
+                None,
             )
             .await
             .map_err(|e| e.into_error())?;

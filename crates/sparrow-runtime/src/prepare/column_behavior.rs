@@ -4,6 +4,7 @@ use arrow::{
     datatypes::{DataType, Field, SchemaRef},
     record_batch::RecordBatch,
 };
+use arrow_array::types::{Float64Type, Int64Type};
 use sparrow_core::context_code;
 
 use std::sync::Arc;
@@ -24,8 +25,15 @@ pub enum ColumnBehavior {
     /// Cast the given column to the given data type.
     Cast {
         index: usize,
+        /// Certain types can't cast directly to the desired type,
+        /// so we need to cast to an intermediate type first.
+        ///
+        /// e.g. f64 must cast to i64 before going to timestamp_nanos
+        intermediate_types: Option<Vec<DataType>>,
         data_type: DataType,
         nullable: bool,
+        /// Allows specifying time unit for timestamp cast.
+        time_multiplier: Option<i64>,
     },
     /// Perform an "order preserving" cast from a primitive number to u64.
     OrderPreservingCastToU64 { index: usize, nullable: bool },
@@ -54,6 +62,8 @@ impl ColumnBehavior {
     pub fn try_new_cast(
         source_schema: &SchemaRef,
         source_name: &str,
+        time_multiplier: Option<i64>,
+        intermediate_types: Option<Vec<DataType>>,
         to_type: &DataType,
         nullable: bool,
     ) -> anyhow::Result<Self> {
@@ -76,22 +86,56 @@ impl ColumnBehavior {
             (DataType::Timestamp(_from_unit_, Some(_)), DataType::Timestamp(to_unit, None)) => {
                 Ok(Self::Cast {
                     index: source_index,
+                    intermediate_types: None,
                     data_type: DataType::Timestamp(to_unit.clone(), None),
                     nullable,
+                    time_multiplier,
                 })
             }
             (from, to) if arrow::compute::can_cast_types(from, to) => Ok(Self::Cast {
                 index: source_index,
+                intermediate_types,
                 data_type: to_type.clone(),
                 nullable,
+                time_multiplier,
             }),
-            (_, _) => Err(anyhow!(
-                "Expected column '{}' to be castable to {:?}, but {:?} was not",
-                source_field.name(),
-                to_type,
-                source_field.data_type(),
-            )
-            .context(tonic::Code::Internal)),
+            (from, to) => {
+                if let Some(intermediate_types) = intermediate_types {
+                    // Sometimes we need to cast to intermediate types to get to our
+                    // desired type.
+                    let mut from = from;
+                    let to_types = intermediate_types.iter().chain(std::iter::once(to));
+                    for to_type in to_types {
+                        if arrow::compute::can_cast_types(from, to_type) {
+                            from = to_type;
+                        } else {
+                            return Err(anyhow!(
+                                "Expected column '{}' to be castable to {:?}, but {:?} was not",
+                                source_field.name(),
+                                to,
+                                source_field.data_type(),
+                            )
+                            .context(tonic::Code::Internal));
+                        }
+                    }
+
+                    Ok(Self::Cast {
+                        index: source_index,
+                        intermediate_types: Some(intermediate_types),
+                        data_type: to_type.clone(),
+                        nullable,
+                        time_multiplier,
+                    })
+                } else {
+                    Err(anyhow!(
+                        "Expected column '{}' to be castable to {:?}, but {:?} was not",
+                        source_field.name(),
+                        to,
+                        source_field.data_type(),
+                    )
+                    .context(tonic::Code::Internal))
+                }
+            }
         }
     }
 
@@ -122,8 +166,10 @@ impl ColumnBehavior {
             }),
             DataType::UInt8 | DataType::UInt16 | DataType::UInt32 => Ok(Self::Cast {
                 index: source_index,
+                intermediate_types: None,
                 data_type: DataType::UInt64,
                 nullable: false,
+                time_multiplier: None,
             }),
 
             DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
@@ -197,8 +243,10 @@ impl ColumnBehavior {
                 (DataType::Timestamp(_, Some(_)), DataType::Timestamp(to_unit, None)) => {
                     Ok(Self::Cast {
                         index: column,
+                        intermediate_types: None,
                         data_type: DataType::Timestamp(to_unit.clone(), None),
                         nullable: true,
+                        time_multiplier: None,
                     })
                 }
                 (source_type, expected_type) if source_type == expected_type => {
@@ -232,8 +280,10 @@ impl ColumnBehavior {
         let result = match self {
             ColumnBehavior::Cast {
                 index,
+                intermediate_types,
                 data_type,
                 nullable,
+                time_multiplier,
             } => {
                 let column = batch.column(*index);
                 error_stack::ensure!(
@@ -243,7 +293,22 @@ impl ColumnBehavior {
                         null_count: column.null_count()
                     }
                 );
-                arrow::compute::cast(column, data_type)
+
+                let column = scale_to_time_multiplier(column, *time_multiplier)?;
+
+                let column = if let Some(intermediate_types) = intermediate_types {
+                    let mut column = column.clone();
+                    for intermediate_type in intermediate_types {
+                        column = arrow::compute::cast(&column, intermediate_type)
+                            .into_report()
+                            .change_context(Error::PreparingColumn)?;
+                    }
+                    column
+                } else {
+                    column.clone()
+                };
+
+                arrow::compute::cast(&column, data_type)
                     .into_report()
                     .change_context(Error::PreparingColumn)?
             }
@@ -308,6 +373,52 @@ impl ColumnBehavior {
             }
         };
         Ok(result)
+    }
+}
+
+/// Converts to the expected time unit using the time multiplier.
+fn scale_to_time_multiplier(
+    time: &ArrayRef,
+    time_multiplier: Option<i64>,
+) -> error_stack::Result<ArrayRef, Error> {
+    if let Some(time_multiplier) = time_multiplier {
+        let error = || Error::ConvertTime(time.data_type().clone());
+        match time.data_type() {
+            DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64 => {
+                let time = arrow::compute::cast(&time, &DataType::Int64)
+                    .into_report()
+                    .change_context_lazy(error)?;
+                Ok(
+                    arrow::compute::multiply_scalar_dyn::<Int64Type>(
+                        time.as_ref(),
+                        time_multiplier,
+                    )
+                    .into_report()
+                    .change_context_lazy(error)?,
+                )
+            }
+            DataType::Float16 | DataType::Float32 | DataType::Float64 => {
+                let time = arrow::compute::cast(&time, &DataType::Float64)
+                    .into_report()
+                    .change_context_lazy(error)?;
+                Ok(arrow::compute::multiply_scalar_dyn::<Float64Type>(
+                    time.as_ref(),
+                    time_multiplier as f64,
+                )
+                .into_report()
+                .change_context_lazy(error)?)
+            }
+            _ => Ok(time.clone()),
+        }
+    } else {
+        Ok(time.clone())
     }
 }
 

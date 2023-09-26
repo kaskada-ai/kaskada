@@ -6,6 +6,7 @@ use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, SchemaRef, TimestampNanosecondType, UInt64Type};
 use arrow::error::ArrowError;
 use arrow::record_batch::RecordBatch;
+use arrow_array::types::Int64Type;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::BoxStream;
 use futures::StreamExt;
@@ -64,6 +65,7 @@ pub async fn prepare_input<'a>(
     slice: Option<&slice_plan::Slice>,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     bounded_lateness: i64,
+    time_multiplier: Option<i64>,
 ) -> anyhow::Result<BoxStream<'a, error_stack::Result<Option<RecordBatch>, Error>>> {
     // This is a "hacky" way of adding the 3 key columns. We may just want
     // to manually do that (as part of deprecating `TableSchema`)?
@@ -75,6 +77,8 @@ pub async fn prepare_input<'a>(
     columns.push(ColumnBehavior::try_new_cast(
         &raw_schema,
         &config.time_column_name,
+        time_multiplier,
+        Some(vec![Int64Type::DATA_TYPE]),
         &TimestampNanosecondType::DATA_TYPE,
         false,
     )?);
@@ -390,6 +394,7 @@ mod tests {
             None,
             key_hash_inverse.clone(),
             5,
+            None,
         )
         .await
         .unwrap();
@@ -439,6 +444,7 @@ mod tests {
             None,
             key_hash_inverse.clone(),
             5,
+            None,
         )
         .await
         .unwrap();
@@ -489,6 +495,7 @@ mod tests {
             None,
             key_hash_inverse.clone(),
             5,
+            None,
         )
         .await
         .unwrap();

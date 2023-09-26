@@ -1,3 +1,4 @@
+use arrow::datatypes::DataType;
 use url::Url;
 
 #[derive(derive_more::Display, Debug)]
@@ -33,6 +34,8 @@ pub enum Error {
     DownloadingObject,
     #[display(fmt = "invalid url: {_0}")]
     InvalidUrl(String),
+    #[display(fmt = "failed to convert time column from type {_0:?} to timestamp_ns")]
+    ConvertTime(DataType),
 }
 
 impl error_stack::Context for Error {}

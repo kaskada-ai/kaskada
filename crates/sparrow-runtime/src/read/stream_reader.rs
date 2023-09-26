@@ -113,6 +113,8 @@ pub(crate) async fn stream_reader(
         requested_slice,
         context.key_hash_inverse.clone(),
         bounded_lateness,
+        // TODO: Support time multiplier
+        None,
     )
     .await
     .into_report()

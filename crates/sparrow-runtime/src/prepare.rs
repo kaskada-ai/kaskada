@@ -39,6 +39,7 @@ pub async fn prepared_batches<'a>(
     source_data: &SourceData,
     config: &'a TableConfig,
     slice: &'a Option<slice_plan::Slice>,
+    time_multiplier: Option<i64>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     let prepare_iter = match source_data.source.as_ref() {
@@ -73,6 +74,7 @@ pub async fn prepared_batches<'a>(
                     raw_metadata,
                     prepare_hash,
                     slice,
+                    time_multiplier,
                 )
                 .await
                 .into_report()
@@ -141,9 +143,10 @@ pub async fn prepare_file(
         .object_store(&output_url)
         .change_context(Error::Internal)?;
 
-    let mut prepare_stream = prepared_batches(object_stores, source_data, table_config, slice)
-        .await?
-        .enumerate();
+    let mut prepare_stream =
+        prepared_batches(object_stores, source_data, table_config, slice, None)
+            .await?
+            .enumerate();
 
     let mut prepared_files = Vec::new();
     let mut uploads = FuturesUnordered::new();
@@ -271,7 +274,8 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
         .map(|batch| batch.into_report().change_context(Error::ReadingBatch))
         .boxed();
 
-    prepare_input_stream::prepare_input(reader, config, raw_metadata, prepare_hash, slice)
+    // TODO: Support time multiplier
+    prepare_input_stream::prepare_input(reader, config, raw_metadata, prepare_hash, slice, None)
         .await
         .into_report()
         .change_context(Error::CreateReader)
@@ -369,6 +373,7 @@ mod tests {
             &source_data,
             &table_config,
             &None,
+            None,
         )
         .await
         .unwrap()
@@ -404,6 +409,7 @@ mod tests {
             &source_data,
             &table_config,
             &None,
+            None,
         )
         .await
         .unwrap()
@@ -466,6 +472,7 @@ mod tests {
             &source_data,
             &table_config,
             &slice,
+            None,
         )
         .await
         .unwrap()
@@ -506,6 +513,7 @@ mod tests {
             &source_data,
             &table_config,
             slice,
+            None,
         )
         .await
         .unwrap()
