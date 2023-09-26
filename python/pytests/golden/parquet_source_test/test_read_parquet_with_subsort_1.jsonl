@@ -1,0 +1,15 @@
+{"_time":"2020-01-01T00:00:00.000000000","_key":"karen","id":"cb_001","purchase_time":"2020-01-01T00:00:00.000000000","customer_id":"karen","vendor_id":"chum_bucket","amount":9,"subsort_id":0}
+{"_time":"2020-01-01T00:00:00.000000000","_key":"patrick","id":"kk_001","purchase_time":"2020-01-01T00:00:00.000000000","customer_id":"patrick","vendor_id":"krusty_krab","amount":3,"subsort_id":1}
+{"_time":"2020-01-02T00:00:00.000000000","_key":"karen","id":"cb_002","purchase_time":"2020-01-02T00:00:00.000000000","customer_id":"karen","vendor_id":"chum_bucket","amount":2,"subsort_id":2}
+{"_time":"2020-01-02T00:00:00.000000000","_key":"patrick","id":"kk_002","purchase_time":"2020-01-02T00:00:00.000000000","customer_id":"patrick","vendor_id":"krusty_krab","amount":5,"subsort_id":3}
+{"_time":"2020-01-03T00:00:00.000000000","_key":"karen","id":"cb_003","purchase_time":"2020-01-03T00:00:00.000000000","customer_id":"karen","vendor_id":"chum_bucket","amount":4,"subsort_id":4}
+{"_time":"2020-01-03T00:00:00.000000000","_key":"patrick","id":"kk_003","purchase_time":"2020-01-03T00:00:00.000000000","customer_id":"patrick","vendor_id":"krusty_krab","amount":12,"subsort_id":5}
+{"_time":"2020-01-04T00:00:00.000000000","_key":"patrick","id":"cb_004","purchase_time":"2020-01-04T00:00:00.000000000","customer_id":"patrick","vendor_id":"chum_bucket","amount":5000,"subsort_id":6}
+{"_time":"2020-01-04T00:00:00.000000000","_key":"karen","id":"cb_005","purchase_time":"2020-01-04T00:00:00.000000000","customer_id":"karen","vendor_id":"chum_bucket","amount":3,"subsort_id":7}
+{"_time":"2020-01-05T00:00:00.000000000","_key":"karen","id":"cb_006","purchase_time":"2020-01-05T00:00:00.000000000","customer_id":"karen","vendor_id":"chum_bucket","amount":5,"subsort_id":8}
+{"_time":"2020-01-05T00:00:00.000000000","_key":"patrick","id":"kk_004","purchase_time":"2020-01-05T00:00:00.000000000","customer_id":"patrick","vendor_id":"krusty_krab","amount":9,"subsort_id":9}
+{"_time":"2020-01-06T00:00:00.000000000","_key":"patrick","id":"kk_005","purchase_time":"2020-01-06T00:00:00.000000000","customer_id":"patrick","vendor_id":"krusty_krab","amount":2,"subsort_id":0}
+{"_time":"2020-01-06T00:00:00.000000000","_key":"spongebob","id":"wh_001","purchase_time":"2020-01-06T00:00:00.000000000","customer_id":"spongebob","vendor_id":"weenie_hut","amount":7,"subsort_id":1}
+{"_time":"2020-01-07T00:00:00.000000000","_key":"spongebob","id":"cb_007","purchase_time":"2020-01-07T00:00:00.000000000","customer_id":"spongebob","vendor_id":"chum_bucket","amount":34,"subsort_id":2}
+{"_time":"2020-01-08T00:00:00.000000000","_key":"karen","id":"wh_002","purchase_time":"2020-01-08T00:00:00.000000000","customer_id":"karen","vendor_id":"weenie_hut","amount":8,"subsort_id":3}
+{"_time":"2020-01-08T00:00:00.000000000","_key":"patrick","id":"kk_006","purchase_time":"2020-01-08T00:00:00.000000000","customer_id":"patrick","vendor_id":"krusty_krab","amount":9,"subsort_id":4}
