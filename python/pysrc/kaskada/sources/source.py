@@ -1,6 +1,6 @@
 """Provide the base-class for Kaskada sources."""
-from typing import Literal, Optional
 import os
+from typing import Literal, Optional
 
 import kaskada._ffi as _ffi
 import pyarrow as pa

@@ -2,17 +2,17 @@ use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
-use futures::{StreamExt, TryStreamExt};
+use futures::StreamExt;
 use sparrow_api::kaskada::v1alpha::ExecuteResponse;
 
 use crate::Error;
 
 pub struct Execution {
-    /// Tokio runtme managing this execution.
-    rt: tokio::runtime::Runtime,
+    /// Tokio handle managing this execution.
+    handle: tokio::runtime::Handle,
     /// Channel to receive output on.
     output: tokio_stream::wrappers::ReceiverStream<RecordBatch>,
-    /// Future which resolves to the first error or  None.
+    // Future that resolves to the first error, if one occurred.
     status: Status,
     /// Stop signal. Send `true` to stop execution.
     stop_signal_rx: tokio::sync::watch::Sender<bool>,
@@ -27,21 +27,31 @@ enum Status {
 
 impl Execution {
     pub(super) fn new(
-        rt: tokio::runtime::Runtime,
+        handle: tokio::runtime::Handle,
         output_rx: tokio::sync::mpsc::Receiver<RecordBatch>,
         progress: BoxStream<'static, error_stack::Result<ExecuteResponse, Error>>,
         stop_signal_rx: tokio::sync::watch::Sender<bool>,
         schema: SchemaRef,
     ) -> Self {
         let output = tokio_stream::wrappers::ReceiverStream::new(output_rx);
+
+        // Constructs a futures that resolves to the first error, if one occurred.
         let status = Status::Running(Box::pin(async move {
-            let mut progress = progress;
-            while (progress.try_next().await?).is_some() {}
-            Ok(())
+            let mut errors = progress
+                .filter_map(|result| {
+                    futures::future::ready(if let Err(e) = result { Some(e) } else { None })
+                })
+                .boxed();
+            let first_error = errors.next().await;
+            if let Some(first_error) = first_error {
+                Err(first_error)
+            } else {
+                Ok(())
+            }
         }));
 
         Self {
-            rt,
+            handle,
             output,
             status,
             stop_signal_rx,
@@ -56,12 +66,12 @@ impl Execution {
     /// status (and return) accordingly.
     fn is_done(&mut self) -> error_stack::Result<(), Error> {
         let result = match &mut self.status {
-            Status::Running(future) => {
+            Status::Running(progress) => {
                 // Based on the implementation of `FutureExt::now_or_never`:
                 let noop_waker = futures::task::noop_waker();
                 let mut cx = std::task::Context::from_waker(&noop_waker);
 
-                match future.as_mut().poll(&mut cx) {
+                match progress.as_mut().poll(&mut cx) {
                     std::task::Poll::Ready(x) => x,
                     _ => return Ok(()),
                 }
@@ -99,29 +109,36 @@ impl Execution {
 
     pub fn next_blocking(&mut self) -> error_stack::Result<Option<RecordBatch>, Error> {
         self.is_done()?;
-        Ok(self.rt.block_on(self.output.next()))
+        Ok(self.handle.block_on(self.output.next()))
     }
 
     pub async fn collect_all(self) -> error_stack::Result<Vec<RecordBatch>, Error> {
-        // TODO: For large outputs, we likely need to drain the output while waiting for the future.
-        match self.status {
-            Status::Running(future) => future.await?,
+        let progress = match self.status {
+            Status::Running(progress) => progress,
             Status::Failed => error_stack::bail!(Error::ExecutionFailed),
-            _ => {}
+            Status::Completed => {
+                // If the progress channel has completed without error, we know that the output channel
+                // hasn't filled up, so we can go ahead and collect the output
+                return Ok(self.output.collect().await);
+            }
         };
 
-        Ok(self.output.collect().await)
+        let output = self.output.collect::<Vec<_>>();
+
+        let (first_error, output) = futures::join!(progress, output);
+        if let Err(e) = first_error {
+            Err(e)
+        } else {
+            Ok(output)
+        }
     }
 
     pub fn collect_all_blocking(self) -> error_stack::Result<Vec<RecordBatch>, Error> {
-        // TODO: For large outputs, we likely need to drain the output while waiting for the future.
-        match self.status {
-            Status::Running(future) => self.rt.block_on(future)?,
-            Status::Failed => error_stack::bail!(Error::ExecutionFailed),
-            _ => {}
-        };
-
-        Ok(self.rt.block_on(self.output.collect()))
+        // In order to check the running status, we have to enter the runtime regardless,
+        // so there's no reason to check the status prior to entering the runtime
+        // here.
+        let handle = self.handle.clone();
+        handle.block_on(self.collect_all())
     }
 }
 

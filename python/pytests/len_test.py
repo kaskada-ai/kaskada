@@ -22,10 +22,4 @@ async def source() -> kd.sources.CsvString:
 
 async def test_len(source, golden) -> None:
     s = source.col("s")
-    golden.jsonl(
-        kd.record(
-            {
-                "len": s.len()
-            }
-        )
-    )
+    golden.jsonl(kd.record({"len": s.len()}))
