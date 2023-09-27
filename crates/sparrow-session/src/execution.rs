@@ -98,8 +98,8 @@ impl Execution {
         Ok(self.handle.block_on(self.output.next()))
     }
 
-    pub async fn collect_all(mut self) -> error_stack::Result<Vec<RecordBatch>, Error> {
-        let mut progress = match self.status {
+    pub async fn collect_all(self) -> error_stack::Result<Vec<RecordBatch>, Error> {
+        let progress = match self.status {
             Status::Running(progress) => progress,
             Status::Failed => error_stack::bail!(Error::ExecutionFailed),
             Status::Completed => {
@@ -109,26 +109,22 @@ impl Execution {
             }
         };
 
+        let mut progress = progress.fuse();
+        let mut output = self.output.fuse();
+
         let mut outputs = Vec::new();
         loop {
-            tokio::select! {
-                // Poll futures in the order listed.
-                biased;
-
-                progress = progress.next() => {
-                    if let Some(execute_response) = progress {
-                        // Propagate errors
-                        let _ = execute_response?;
-                    }
+            futures::select! {
+                progress = progress.select_next_some() => {
+                    // Propagate errors
+                    let _ = progress?;
                 }
-                batch = self.output.next() => {
-                    if let Some(batch) = batch {
-                        outputs.push(batch);
-                    } else {
-                        // Output stream is empty, break out and return
-                        break;
-                    }
-                },
+                batch = output.select_next_some() => {
+                    outputs.push(batch);
+                }
+                complete => {
+                    break
+                }
             }
         }
         Ok(outputs)

@@ -467,14 +467,6 @@ impl Session {
         .into_report()
         .change_context(Error::Compile)?;
 
-        // Switch to the Tokio async pool. This seems gross.
-        // Create the runtime.
-        //
-        // TODO: Figure out how to asynchronously pass results back to Python?
-        let rt = tokio::runtime::Runtime::new()
-            .into_report()
-            .change_context(Error::Execute)?;
-
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
         let destination = Destination::Channel(output_tx);
 
@@ -495,7 +487,8 @@ impl Session {
             });
 
         // Hacky. Use the existing execution logic. This weird things with downloading checkpoints, etc.
-        let progress = rt
+        let progress = self
+            .rt
             .block_on(sparrow_runtime::execute::execute_new(
                 plan,
                 destination,
