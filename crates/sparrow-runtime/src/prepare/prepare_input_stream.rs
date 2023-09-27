@@ -51,6 +51,7 @@ pub async fn prepare_input<'a>(
 
     let mut metadata = PrepareMetadata::new(entity_key_column.data_type().clone());
     let next_subsort = AtomicU64::new(prepare_hash);
+
     Ok(async_stream::try_stream! {
         while let Some(Ok(batch)) = reader.next().await {
             // 1. Slicing may reduce the number of entities to operate and sort on.

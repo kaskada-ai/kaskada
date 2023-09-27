@@ -80,6 +80,7 @@ pub async fn prepare_input<'a>(
         slice,
     )?;
 
+    let next_subsort = AtomicU64::new(prepare_hash);
     Ok(async_stream::try_stream! {
         let mut input_buffer = InputBuffer::new();
         while let Some(unfiltered_batch) = reader.next().await {
@@ -153,7 +154,6 @@ pub async fn prepare_input<'a>(
             let record_batch = slice_preparer.slice_batch(record_batch)?;
 
             // 3. Prepare the batch
-            let next_subsort = AtomicU64::new(prepare_hash);
             let record_batch = prepare_batch(&record_batch, &config, prepared_schema.clone(), &next_subsort, None).unwrap();
 
             // 4. Update the key inverse
