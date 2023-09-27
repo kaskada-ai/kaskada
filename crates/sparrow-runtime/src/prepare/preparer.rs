@@ -11,7 +11,6 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::{PreparedFile, SourceData, TableConfig};
-use sparrow_kernels::order_preserving_cast_to_u64;
 use uuid::Uuid;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
