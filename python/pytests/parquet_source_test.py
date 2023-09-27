@@ -28,7 +28,7 @@ async def test_read_parquet_with_subsort(golden) -> None:
 
 # Verifies that we drain the output and progress channels correctly.
 #
-# When the parquet file contains more rows than 
+# When the parquet file contains more rows than
 # (CHANNEL_SIZE / MAX_BATCH_SIZE), the channels previously filled
 # up, causing the sender to block. This test verifies that the
 # channels correctly drain, allowing the sender to continue.
@@ -46,4 +46,3 @@ async def test_large_parquet_file(golden) -> None:
     # file is still processed
     predicate = user.eq("5fec83d4-f5c6-4943-ab05-2b6760330daf").and_(amount.gt(490))
     golden.jsonl(source.filter(predicate))
-

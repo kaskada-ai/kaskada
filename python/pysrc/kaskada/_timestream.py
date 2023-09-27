@@ -565,7 +565,9 @@ class Timestream(object):
         """
         return Timestream._call("select_fields", self, *args)
 
-    def substring(self, start: Optional[int] = None, end: Optional[int] = None) -> Timestream:
+    def substring(
+        self, start: Optional[int] = None, end: Optional[int] = None
+    ) -> Timestream:
         """Return a Timestream with a substring between the start and end indices.
 
         Args:

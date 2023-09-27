@@ -3,4 +3,12 @@ from .arrow import CsvString, JsonlFile, JsonlString, Pandas, Parquet, PyDict
 from .source import Source
 
 
-__all__ = ["Source", "CsvString", "Pandas", "JsonlFile", "JsonlString", "PyDict", "Parquet"]
+__all__ = [
+    "Source",
+    "CsvString",
+    "Pandas",
+    "JsonlFile",
+    "JsonlString",
+    "PyDict",
+    "Parquet",
+]
