@@ -109,25 +109,20 @@ impl Execution {
             }
         };
 
-        let mut progress = progress.fuse();
-        let mut output = self.output.fuse();
+        let mut errors = progress
+            .filter_map(|result| {
+                futures::future::ready(if let Err(e) = result { Some(e) } else { None })
+            })
+            .boxed();
+        let first_error = errors.next();
+        let output = self.output.collect::<Vec<_>>();
 
-        let mut outputs = Vec::new();
-        loop {
-            futures::select! {
-                progress = progress.select_next_some() => {
-                    // Propagate errors
-                    let _ = progress?;
-                }
-                batch = output.select_next_some() => {
-                    outputs.push(batch);
-                }
-                complete => {
-                    break
-                }
-            }
+        let (first_error, output) = futures::join!(first_error, output);
+        if let Some(e) = first_error {
+            Err(e)
+        } else {
+            Ok(output)
         }
-        Ok(outputs)
     }
 
     pub fn collect_all_blocking(self) -> error_stack::Result<Vec<RecordBatch>, Error> {
