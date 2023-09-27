@@ -9,7 +9,7 @@ use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use sparrow_api::kaskada::v1alpha::execute_request::Limits;
 use sparrow_api::kaskada::v1alpha::{
-    ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
+    ComputePlan, ComputeTable, FeatureSet, PerEntityBehavior, TableConfig, TableMetadata,
 };
 use sparrow_compiler::{AstDfgRef, CompilerOptions, DataContext, Dfg, DiagnosticCollector};
 use sparrow_instructions::{GroupId, Udf};
@@ -43,6 +43,13 @@ pub enum Results {
     Snapshot,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum QueryPlanKind {
+    InitialDfg,
+    FinalDfg,
+    FinalPlan,
+}
+
 #[derive(Default)]
 pub struct ExecutionOptions {
     /// The maximum number of rows to return.
@@ -61,6 +68,16 @@ pub struct ExecutionOptions {
     /// For historic queries, this limits the output points.
     /// For snapshot queries, this determines the time at which the snapshot is produced.
     pub final_at_time_s: Option<i64>,
+}
+
+impl ExecutionOptions {
+    pub fn per_entity_behavior(&self) -> PerEntityBehavior {
+        match self.results {
+            Results::History => PerEntityBehavior::All,
+            Results::Snapshot if self.final_at_time_s.is_some() => PerEntityBehavior::FinalAtTime,
+            Results::Snapshot => PerEntityBehavior::Final,
+        }
+    }
 }
 
 /// Adds a table to the session.
@@ -377,6 +394,76 @@ impl Session {
         }
     }
 
+    /// Create the initial DFG.
+    ///
+    /// It is unfortunate this requires `&mut self` instead of `&self`. It relates to the
+    /// fact that the decorations may require mutating the DFG, which in turn requires
+    /// mutability. In practice, the decorations shouldn't mutate the DFG and/or that
+    /// shouldn't require mutating the session.
+    fn compile_initial_dfg(
+        &mut self,
+        query: &Expr,
+        options: &ExecutionOptions,
+    ) -> error_stack::Result<sparrow_compiler::DfgExpr, Error> {
+        // Apply decorations as necessary for the per-entity behavior.
+        let feature_set = FeatureSet::default();
+        let mut diagnostics = DiagnosticCollector::new(&feature_set);
+        let expr = sparrow_compiler::decorate(
+            &mut self.data_context,
+            &mut self.dfg,
+            &mut diagnostics,
+            true,
+            query.0.clone(),
+            options.per_entity_behavior(),
+        )
+        .into_report()
+        .change_context(Error::Compile)?;
+        error_stack::ensure!(diagnostics.num_errors() == 0, Error::internal());
+
+        // Extract the necessary subset of the DFG as an expression.
+        // This will allow us to operate without mutating things.
+        Ok(self.dfg.extract_simplest(expr))
+    }
+
+    fn optimize_dfg(
+        &self,
+        dfg: sparrow_compiler::DfgExpr,
+    ) -> error_stack::Result<sparrow_compiler::DfgExpr, Error> {
+        let dgg = dfg
+            .simplify(&CompilerOptions {
+                ..CompilerOptions::default()
+            })
+            .into_report()
+            .change_context(Error::Compile)?;
+        let dfg = sparrow_compiler::remove_useless_transforms(dgg)
+            .into_report()
+            .change_context(Error::Compile)?;
+        Ok(dfg)
+    }
+
+    fn extract_plan(
+        &self,
+        primary_group_info: &sparrow_compiler::GroupInfo,
+        dfg: sparrow_compiler::DfgExpr,
+        options: &ExecutionOptions,
+    ) -> error_stack::Result<ComputePlan, Error> {
+        let primary_grouping = primary_group_info.name().to_owned();
+        let primary_grouping_key_type = primary_group_info.key_type();
+
+        // TODO: Incremental?
+        // TODO: Slicing?
+        let plan = sparrow_compiler::plan::extract_plan_proto(
+            &self.data_context,
+            dfg,
+            options.per_entity_behavior(),
+            primary_grouping,
+            primary_grouping_key_type,
+        )
+        .into_report()
+        .change_context(Error::Compile)?;
+        Ok(plan)
+    }
+
     /// Execute the query.
     ///
     /// It is unfortunate this requires `&mut self` instead of `&self`. It relates to the
@@ -388,71 +475,25 @@ impl Session {
         query: &Expr,
         options: ExecutionOptions,
     ) -> error_stack::Result<Execution, Error> {
-        // TODO: Decorations?
+        let expr = self.compile_initial_dfg(query, &options)?;
+        let expr = self.optimize_dfg(expr)?;
+
         let group_id = query
             .0
             .grouping()
             .expect("query to be grouped (non-literal)");
 
-        let per_entity_behavior = match options.results {
-            Results::History => PerEntityBehavior::All,
-            Results::Snapshot if options.final_at_time_s.is_some() => {
-                PerEntityBehavior::FinalAtTime
-            }
-            Results::Snapshot => PerEntityBehavior::Final,
-        };
-
-        // Apply decorations as necessary for the per-entity behavior.
-        let feature_set = FeatureSet::default();
-        let mut diagnostics = DiagnosticCollector::new(&feature_set);
-        let expr = sparrow_compiler::decorate(
-            &mut self.data_context,
-            &mut self.dfg,
-            &mut diagnostics,
-            true,
-            query.0.clone(),
-            per_entity_behavior,
-        )
-        .into_report()
-        .change_context(Error::Compile)?;
-        error_stack::ensure!(diagnostics.num_errors() == 0, Error::internal());
-
-        // Extract the necessary subset of the DFG as an expression.
-        // This will allow us to operate without mutating things.
-        let expr = self.dfg.extract_simplest(expr);
-        let expr = expr
-            .simplify(&CompilerOptions {
-                ..CompilerOptions::default()
-            })
-            .into_report()
-            .change_context(Error::Compile)?;
-        let expr = sparrow_compiler::remove_useless_transforms(expr)
-            .into_report()
-            .change_context(Error::Compile)?;
-
         let primary_group_info = self
             .data_context
             .group_info(group_id)
             .expect("missing group info");
-        let primary_grouping = primary_group_info.name().to_owned();
-        let primary_grouping_key_type = primary_group_info.key_type();
+
+        let plan = self.extract_plan(primary_group_info, expr, &options)?;
 
         // Hacky. Ideally, we'd determine the schema from the created execution plan.
         // Currently, this isn't easily available. Instead, we create this from the
         // columns we know we're producing.
-        let schema = result_schema(query, primary_grouping_key_type)?;
-
-        // TODO: Incremental?
-        // TODO: Slicing?
-        let plan = sparrow_compiler::plan::extract_plan_proto(
-            &self.data_context,
-            expr,
-            per_entity_behavior,
-            primary_grouping,
-            primary_grouping_key_type,
-        )
-        .into_report()
-        .change_context(Error::Compile)?;
+        let schema = result_schema(query, primary_group_info.key_type())?;
 
         // Switch to the Tokio async pool. This seems gross.
         // Create the runtime.
@@ -476,7 +517,7 @@ impl Session {
             .cloned()
             .unwrap_or_else(|| {
                 Arc::new(ThreadSafeKeyHashInverse::from_data_type(
-                    primary_grouping_key_type,
+                    primary_group_info.key_type(),
                 ))
             });
 
@@ -502,6 +543,49 @@ impl Session {
             stop_signal_tx,
             schema,
         ))
+    }
+
+    pub fn plan(
+        &mut self,
+        kind: QueryPlanKind,
+        query: &Expr,
+        options: ExecutionOptions,
+    ) -> error_stack::Result<String, Error> {
+        match kind {
+            QueryPlanKind::InitialDfg => {
+                let expr = self.compile_initial_dfg(query, &options)?;
+                expr.dot_string()
+                    .into_report()
+                    .change_context(Error::Compile)
+            }
+            QueryPlanKind::FinalDfg => {
+                let expr = self.compile_initial_dfg(query, &options)?;
+                let expr = self.optimize_dfg(expr)?;
+                expr.dot_string()
+                    .into_report()
+                    .change_context(Error::Compile)
+            }
+            QueryPlanKind::FinalPlan => {
+                let expr = self.compile_initial_dfg(query, &options)?;
+                let expr = self.optimize_dfg(expr)?;
+                let group_id = query
+                    .0
+                    .grouping()
+                    .expect("query to be grouped (non-literal)");
+
+                let primary_group_info = self
+                    .data_context
+                    .group_info(group_id)
+                    .expect("missing group info");
+
+                let plan = self.extract_plan(primary_group_info, expr, &options)?;
+                let mut bytes = Vec::new();
+                plan.write_to_graphviz(&mut bytes)
+                    .into_report()
+                    .change_context(Error::Compile)?;
+                Ok(String::from_utf8(bytes).expect("utf8"))
+            }
+        }
     }
 }
 

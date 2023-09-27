@@ -280,7 +280,9 @@ class CsvString(Source):
         if schema is None:
             if csv_string is None:
                 raise ValueError("Must provide schema or csv_string")
-            schema = pa.csv.read_csv(csv_string, parse_options=CsvString._parse_options).schema
+            schema = pa.csv.read_csv(
+                csv_string, parse_options=CsvString._parse_options
+            ).schema
             csv_string.seek(0)
 
         source = CsvString(
@@ -303,7 +305,7 @@ class CsvString(Source):
         content = pa.csv.read_csv(
             csv_string,
             convert_options=self._convert_options,
-            parse_options=CsvString._parse_options
+            parse_options=CsvString._parse_options,
         )
         for batch in content.to_batches():
             await self._ffi_table.add_pyarrow(batch)
@@ -396,8 +398,7 @@ class JsonlFile(Source):
     async def add_file(self, path: str) -> None:
         """Add data to the source."""
         batches = pa.json.read_json(
-            Source._get_absolute_path(path),
-            parse_options=self._parse_options
+            Source._get_absolute_path(path), parse_options=self._parse_options
         )
         for batch in batches.to_batches():
             await self._ffi_table.add_pyarrow(batch)

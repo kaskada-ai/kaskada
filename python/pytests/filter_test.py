@@ -57,10 +57,6 @@ async def test_filter_to_merge_preserves_interpolation(source, golden) -> None:
     predicate = n < 9
     golden.jsonl(
         kd.record(
-            {
-                "n": n,
-                "predicate": predicate,
-                "filter_sum": n.sum().filter(predicate)
-            }
+            {"n": n, "predicate": predicate, "filter_sum": n.sum().filter(predicate)}
         )
     )

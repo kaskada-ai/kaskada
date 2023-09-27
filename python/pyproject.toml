@@ -17,6 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 plot = [
   "plotly >= 5.0.0, < 6.0.0",
+  "pydot >= 1.4.2, < 2.0.0",
 ]
 
 [tool.poetry]
@@ -34,6 +35,7 @@ python = ">=3.9,<4.0"
 pyarrow = "^12.0.1"
 typing-extensions = "^4.7.1"
 plotly = {version = "^5.16.1", optional = true}
+pydot = { version = "^1.4.2", optional = true }
 
 [tool.poetry.extras]
 plot = ["plotly"]

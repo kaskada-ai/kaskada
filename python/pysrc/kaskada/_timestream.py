@@ -565,7 +565,9 @@ class Timestream(object):
         """
         return Timestream._call("select_fields", self, *args)
 
-    def substring(self, start: Optional[int] = None, end: Optional[int] = None) -> Timestream:
+    def substring(
+        self, start: Optional[int] = None, end: Optional[int] = None
+    ) -> Timestream:
         """Return a Timestream with a substring between the start and end indices.
 
         Args:
@@ -1192,6 +1194,69 @@ class Timestream(object):
 
         raise AssertionError(f"Unhandled kind {kind}")
 
+    def plan(
+        self,
+        kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        format: Literal["dot", "svg", "svg_str"] = "svg",
+        mode: Literal["once", "live"] = "once",
+    ) -> Union[str, "IPython.display.SVG"]:
+        """Return GraphViz representation of the DFG execution plan.
+
+        This is intended for understanding how a given Timestream query will
+        be executed. It does not guarantee that the same query will always
+        be executed the same way.
+
+        Args:
+            results: The results to produce. Defaults to `History()` producing all points.
+            kind: The kind of plan to produce.
+            format: Specify how the output should be returned.
+              If `dot`, the GraphViz `dot` format is returned as a string.
+              If `svg_str`, the GraphViz is rendered to an SVG string.
+              If `svg`, the GraphViz is rendered to an SVG image.
+            mode: The execution mode to use. Defaults to `'once'` to produce the results
+              from the currently available data. Use `'live'` to start a standing query
+              that continues to process new data until stopped.
+        Returns:
+            A GraphViz representation of the execution plan.
+            Specific representation depends on the `format` argument.
+
+        Raises:
+            ValueError if the `kind` is not recognized or the `format` is not supported.
+        """
+        expr = self
+        if not pa.types.is_struct(self.data_type):
+            # The execution engine requires a struct, so wrap this in a record.
+            expr = record({"result": self})
+
+        options = _ExecutionOptions.create(
+            results, row_limit=None, max_batch_size=None, mode=mode
+        )
+
+        dot = expr._ffi_expr.plan(kind, options)
+        if format == "dot":
+            return dot
+
+        svg_str = ""
+        try:
+            import pydot
+            svg_str = pydot.graph_from_dot_data(dot)[0].create_svg()
+        except ImportError:
+            raise ValueError(
+                "pydot is required for SVG output (kind 'svg_str' or 'svg')"
+            ) from None
+        if format == "svg_str":
+            return svg_str
+
+        if format != "svg":
+            raise ValueError(f"unrecognized format {format!r}")
+        try:
+            from IPython.display import SVG
+
+            return SVG(svg_str)
+        except ImportError:
+            raise ValueError("IPython is required for SVG output (kind 'svg')") from None
+
     def _execute(
         self,
         results: Optional[Union[kd.results.History, kd.results.Snapshot]],
@@ -1206,29 +1271,7 @@ class Timestream(object):
             # The execution engine requires a struct, so wrap this in a record.
             expr = record({"result": self})
 
-        options = _ExecutionOptions(
-            row_limit=row_limit,
-            max_batch_size=max_batch_size,
-            materialize=mode == "live",
-        )
-
-        if results is None:
-            results = kd.results.History()
-
-        if isinstance(results, kd.results.History):
-            options.results = "history"
-            if results.since is not None:
-                options.changed_since = int(results.since.timestamp())
-            if results.until is not None:
-                options.final_at = int(results.until.timestamp())
-        elif isinstance(results, kd.results.Snapshot):
-            options.results = "snapshot"
-            if results.changed_since is not None:
-                options.changed_since = int(results.changed_since.timestamp())
-            if results.at is not None:
-                options.final_at = int(results.at.timestamp())
-        else:
-            raise AssertionError(f"Unhandled results type {results!r}")
+        options = _ExecutionOptions.create(results, row_limit, max_batch_size, mode)
         return expr._ffi_expr.execute(options)
 
 

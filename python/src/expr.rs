@@ -148,6 +148,21 @@ impl Expr {
     fn grouping(&self) -> Option<String> {
         self.rust_expr.grouping()
     }
+
+    fn plan(&self, kind: &str, options: Option<&PyAny>) -> Result<String> {
+        let mut session = self.session.rust_session()?;
+        let options = extract_options(options)?;
+        let kind = match kind {
+            "initial_dfg" => sparrow_session::QueryPlanKind::InitialDfg,
+            "final_dfg" => sparrow_session::QueryPlanKind::FinalDfg,
+            "final_plan" => sparrow_session::QueryPlanKind::FinalPlan,
+            _ => {
+                return Err(PyValueError::new_err(format!("unsupported plan kind '{kind}'")).into())
+            }
+        };
+
+        Ok(session.plan(kind, &self.rust_expr, options)?)
+    }
 }
 
 #[derive(FromPyObject)]

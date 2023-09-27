@@ -31,6 +31,7 @@ async def test_read_csv(golden) -> None:
         time_column="time",
         key_column="key",
     )
+    assert(plan == "")
     golden.jsonl(source)
 
     await source.add_string(content2)
