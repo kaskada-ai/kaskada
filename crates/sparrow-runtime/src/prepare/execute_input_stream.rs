@@ -154,11 +154,11 @@ pub async fn prepare_input<'a>(
 
             // 3. Prepare the batch
             let next_subsort = AtomicU64::new(prepare_hash);
-            let prepared_batch = prepare_batch(&record_batch, &config, prepared_schema.clone(), &next_subsort, None).unwrap();
+            let record_batch = prepare_batch(&record_batch, &config, prepared_schema.clone(), &next_subsort, None).unwrap();
 
             // 4. Update the key inverse
-            let key_hash_column = prepared_batch.column(2);
-            let key_column = prepared_batch.column(entity_column_index + 3);
+            let key_hash_column = record_batch.column(2);
+            let key_column = record_batch.column(entity_column_index + 3);
             update_key_inverse(key_column, key_hash_column, key_hash_inverse.clone()).await?;
 
             // 5. After preparing the batch, concatenate the leftovers from the previous batch
