@@ -1,7 +1,8 @@
 use arrow_array::RecordBatch;
 use arrow_schema::SchemaRef;
+use futures::future::BoxFuture;
 use futures::stream::BoxStream;
-use futures::{StreamExt, TryStreamExt};
+use futures::StreamExt;
 use sparrow_api::kaskada::v1alpha::ExecuteResponse;
 
 use crate::Error;
@@ -11,7 +12,7 @@ pub struct Execution {
     handle: tokio::runtime::Handle,
     /// Channel to receive output on.
     output: tokio_stream::wrappers::ReceiverStream<RecordBatch>,
-    /// Future which resolves to the first error or None.
+    // Future that resolves to the first error, if one occurred.
     status: Status,
     /// Stop signal. Send `true` to stop execution.
     stop_signal_rx: tokio::sync::watch::Sender<bool>,
@@ -19,8 +20,7 @@ pub struct Execution {
 }
 
 enum Status {
-    // Running(BoxFuture<'static, error_stack::Result<(), Error>>),
-    Running(BoxStream<'static, error_stack::Result<ExecuteResponse, Error>>),
+    Running(BoxFuture<'static, error_stack::Result<(), Error>>),
     Failed,
     Completed,
 }
@@ -34,7 +34,21 @@ impl Execution {
         schema: SchemaRef,
     ) -> Self {
         let output = tokio_stream::wrappers::ReceiverStream::new(output_rx);
-        let status = Status::Running(progress);
+
+        // Constructs a futures that resolves to the first error, if one occurred.
+        let status = Status::Running(Box::pin(async move {
+            let mut errors = progress
+                .filter_map(|result| {
+                    futures::future::ready(if let Err(e) = result { Some(e) } else { None })
+                })
+                .boxed();
+            let first_error = errors.next().await;
+            if let Some(first_error) = first_error {
+                Err(first_error)
+            } else {
+                Ok(())
+            }
+        }));
 
         Self {
             handle,
@@ -57,8 +71,8 @@ impl Execution {
                 let noop_waker = futures::task::noop_waker();
                 let mut cx = std::task::Context::from_waker(&noop_waker);
 
-                match progress.try_poll_next_unpin(&mut cx) {
-                    std::task::Poll::Ready(Some(x)) => x,
+                match progress.as_mut().poll(&mut cx) {
+                    std::task::Poll::Ready(x) => x,
                     _ => return Ok(()),
                 }
             }
@@ -109,16 +123,10 @@ impl Execution {
             }
         };
 
-        let mut errors = progress
-            .filter_map(|result| {
-                futures::future::ready(if let Err(e) = result { Some(e) } else { None })
-            })
-            .boxed();
-        let first_error = errors.next();
         let output = self.output.collect::<Vec<_>>();
 
-        let (first_error, output) = futures::join!(first_error, output);
-        if let Some(e) = first_error {
+        let (first_error, output) = futures::join!(progress, output);
+        if let Err(e) = first_error {
             Err(e)
         } else {
             Ok(output)
