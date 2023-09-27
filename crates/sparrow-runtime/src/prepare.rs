@@ -11,7 +11,6 @@ use sparrow_api::kaskada::v1alpha::{
     slice_plan, source_data, PreparedFile, SourceData, TableConfig,
 };
 
-mod column_behavior;
 mod error;
 pub(crate) mod execute_input_stream;
 mod prepare_input_stream;
