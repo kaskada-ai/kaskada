@@ -11,18 +11,18 @@ license = "Apache-2.0"
 ahash = "0.8.3"
 anyhow = { version = "1.0.70", features = ["backtrace"] }
 approx = "0.5.1"
-arrow = { version = "43.0.0" }
-arrow-arith = { version = "43.0.0" }
-arrow-array = { version = "43.0.0" }
-arrow-buffer = { version = "43.0.0" }
-arrow-cast = { version = "43.0.0" }
-arrow-csv = { version = "43.0.0" }
-arrow-data = { version = "43.0.0" }
-arrow-json = { version = "43.0.0" }
-arrow-ord = { version = "43.0.0" }
-arrow-schema = { version = "43.0.0", features = ["serde"] }
-arrow-select = { version = "43.0.0" }
-arrow-string = { version = "43.0.0" }
+arrow = { version = "47.0.0" }
+arrow-arith = { version = "47.0.0" }
+arrow-array = { version = "47.0.0" }
+arrow-buffer = { version = "47.0.0" }
+arrow-cast = { version = "47.0.0" }
+arrow-csv = { version = "47.0.0" }
+arrow-data = { version = "47.0.0" }
+arrow-json = { version = "47.0.0" }
+arrow-ord = { version = "47.0.0" }
+arrow-schema = { version = "47.0.0", features = ["serde"] }
+arrow-select = { version = "47.0.0" }
+arrow-string = { version = "47.0.0" }
 async-broadcast = "0.5.1"
 async-once-cell = "0.5.3"
 async-stream = "0.3.4"
@@ -78,7 +78,7 @@ opentelemetry = { version = "0.19.0", features = ["rt-tokio"] }
 opentelemetry-otlp = "0.12.0"
 owning_ref = "0.4.1"
 parking_lot = { version = "0.12.1" }
-parquet = { version = "43.0.0", features = ["async"] }
+parquet = { version = "47.0.0", features = ["async"] }
 parse-display = "0.8.0"
 pin-project = "1.0.12"
 postcard = { version = "1.0.4", features = ["use-std"] }

@@ -248,8 +248,9 @@ impl ScalarValue {
     /// Create a scalar value for timestamp nanoseconds in the given timezone.
     pub fn timestamp(seconds: i64, nanos: i32, tz: Option<Arc<str>>) -> Self {
         let nanos = chrono::NaiveDateTime::from_timestamp_opt(seconds, nanos as u32)
-            .expect("timestamp overflow")
-            .timestamp_nanos();
+            .expect("timestamp doesn't overflow")
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow");
 
         Self::Timestamp(Box::new(ScalarTimestamp {
             value: Some(nanos),

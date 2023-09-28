@@ -107,7 +107,9 @@ pub(super) fn create(
             let timestamp =
                 NaiveDateTime::from_timestamp_opt(timestamp.seconds, timestamp.nanos as u32)
                     .ok_or_else(|| invalid_operation!("invalid literal timestamp"))?;
-            let timestamp = timestamp.timestamp_nanos();
+            let timestamp = timestamp
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow");
             ShiftToLiteralOperation::try_new(timestamp, incoming_stream, helper)
                 .into_report()
                 .change_context(Error::internal_msg("failed to create operation"))
@@ -328,6 +330,7 @@ impl ShiftToColumnOperation {
         // 2. `incoming_times` does not contain any `null` value.
         // 3. if `shifted_times` is null, it will be seen as a backward
         //    shift (since it is less than `incoming` and filtered out).
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let is_forward_shift = arrow::compute::kernels::comparison::lt_eq(
             incoming_times_primitive,
             shifted_times_primitive,

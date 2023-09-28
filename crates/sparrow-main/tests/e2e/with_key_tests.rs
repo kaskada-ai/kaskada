@@ -106,7 +106,7 @@ async fn test_with_key_i64_parquet_output() {
             .run_to_parquet_hash(&with_key_data_fixture().await)
             .await
             .unwrap(),
-        @"693FC33EDA127F2CF6E896E4424B28FAEBF07C56205F014FA2E303F9"
+        @"E3AF45D3D094E9A54F1410CC93190D10290363D75F9C33C06C7162F5"
     )
 }
 

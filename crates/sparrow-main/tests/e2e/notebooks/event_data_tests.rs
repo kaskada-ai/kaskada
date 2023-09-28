@@ -38,7 +38,7 @@ async fn test_initial_query() {
 
     // Regression test for a take on a null array
     assert_eq!(no_simplifier, simplifier);
-    insta::assert_snapshot!(no_simplifier, @"CDEE886652EA1E2D00DEEBABB69BA127029600B931509CFB097A2D55");
+    insta::assert_snapshot!(no_simplifier, @"9BA7713F41907C9DB4105CDF8C854D5CD9F7C4B215922640354A3A9E");
 }
 
 const EVENTS: &str = indoc! {"
@@ -248,7 +248,7 @@ async fn test_multiple_distinct_partitions() {
 
     insta::assert_snapshot!(
         hash,
-        @"ABED6CADF1ABD5F2F3E10888E4365F32835D3A401E36F269C743E8D9"
+        @"4A0B30BC114271D47445F10F35A83ECFE4A9FAC0CF5370CA2423E852"
     );
 }
 

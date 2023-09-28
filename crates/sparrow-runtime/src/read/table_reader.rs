@@ -90,11 +90,13 @@ pub async fn table_reader(
         let min_event_time = prepared_file
             .min_event_time()
             .change_context(Error::Internal)?
-            .timestamp_nanos();
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow");
         let max_event_time = prepared_file
             .max_event_time()
             .change_context(Error::Internal)?
-            .timestamp_nanos();
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow");
 
         info!(
             "Skipping to time {} for data file {:?} for index {}",
@@ -373,7 +375,9 @@ impl ActiveInput {
             match upper_bound_opt {
                 Some(upper_bound) => {
                     let times = next.times().into_report().change_context(Error::Internal)?;
-                    let ts_nanos = upper_bound.timestamp_nanos();
+                    let ts_nanos = upper_bound
+                        .timestamp_nanos_opt()
+                        .expect("timestamp doesn't overflow");
 
                     // Slice the data such that all data is less than or equal to the upper bound
                     let length = match times.binary_search(&ts_nanos) {

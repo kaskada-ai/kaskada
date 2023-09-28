@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::ValueRef;
-use arrow::array::ArrayRef;
 use arrow::datatypes::{ArrowNativeTypeOp, ArrowNumericType};
+use arrow_array::ArrayRef;
 use sparrow_arrow::scalar_value::NativeFromScalar;
 
 mod clamp;
@@ -20,144 +20,117 @@ pub(super) use min_max::*;
 pub(super) use powf::*;
 pub(super) use round::*;
 
-use crate::evaluators::{Evaluator, RuntimeInfo};
+use crate::evaluators::{check_numeric, Evaluator, RuntimeInfo};
 use crate::{EvaluatorFactory, StaticInfo};
 
 /// Evaluator for unary negation.
-pub(super) struct NegEvaluator<T: ArrowNumericType>
-where
-    T::Native: std::ops::Neg<Output = T::Native>,
-{
+pub(super) struct NegEvaluator {
     input: ValueRef,
-    // Use the type parameter and indicate it is invariant.
-    _phantom: PhantomData<fn(T) -> T>,
 }
 
-impl<T> Evaluator for NegEvaluator<T>
-where
-    T: ArrowNumericType,
-    T::Native: ArrowNativeTypeOp + std::ops::Neg<Output = T::Native>,
-{
+impl Evaluator for NegEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let input = info.value(&self.input)?.primitive_array()?;
-        let result = arrow::compute::negate::<T>(input.as_ref())?;
+        let input = info.value(&self.input)?.array_ref()?;
+        let result = arrow_arith::numeric::neg_wrapping(input.as_ref())?;
         Ok(Arc::new(result))
     }
 }
 
-impl<T> EvaluatorFactory for NegEvaluator<T>
-where
-    T: ArrowNumericType,
-    T::Native: ArrowNativeTypeOp + std::ops::Neg<Output = T::Native>,
-{
+impl EvaluatorFactory for NegEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        check_numeric("neg", info.args[0].data_type())?;
         let input = info.unpack_argument()?;
-        Ok(Box::new(Self {
-            input,
-            _phantom: PhantomData,
-        }))
+        Ok(Box::new(Self { input }))
     }
 }
 
 /// Evaluator for addition.
-pub(super) struct AddEvaluator<T: ArrowNumericType> {
+pub(super) struct AddEvaluator {
     lhs: ValueRef,
     rhs: ValueRef,
-    // Use the type parameter and indicate it is invariant.
-    _phantom: PhantomData<fn(T) -> T>,
 }
 
-impl<T: ArrowNumericType> Evaluator for AddEvaluator<T>
-where
-    T::Native: ArrowNativeTypeOp,
-{
+impl Evaluator for AddEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let lhs = info.value(&self.lhs)?.primitive_array()?;
-        let rhs = info.value(&self.rhs)?.primitive_array()?;
-        let result = arrow::compute::add::<T>(lhs.as_ref(), rhs.as_ref())?;
+        let lhs = info.value(&self.lhs)?.array_ref()?;
+        let rhs = info.value(&self.rhs)?.array_ref()?;
+        let result = arrow_arith::numeric::add_wrapping(&lhs, &rhs)?;
         Ok(Arc::new(result))
     }
 }
 
-impl<T: ArrowNumericType> EvaluatorFactory for AddEvaluator<T>
-where
-    T::Native: ArrowNativeTypeOp,
-{
+impl EvaluatorFactory for AddEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        let lhs = info.args[0].data_type();
+        let rhs = info.args[1].data_type();
+        anyhow::ensure!(
+            lhs == rhs,
+            "Argument typess for add must match, but got {lhs:?} and {rhs:?}"
+        );
+        check_numeric("add", lhs)?;
+
         let (lhs, rhs) = info.unpack_arguments()?;
-        Ok(Box::new(Self {
-            lhs,
-            rhs,
-            _phantom: PhantomData,
-        }))
+        Ok(Box::new(Self { lhs, rhs }))
     }
 }
 
 /// Evaluator for subtraction.
-pub(super) struct SubEvaluator<T: ArrowNumericType> {
+pub(super) struct SubEvaluator {
     lhs: ValueRef,
     rhs: ValueRef,
-    // Use the type parameter and indicate it is invariant.
-    _phantom: PhantomData<fn(T) -> T>,
 }
 
-impl<T: ArrowNumericType> Evaluator for SubEvaluator<T>
-where
-    T::Native: ArrowNativeTypeOp,
-{
+impl Evaluator for SubEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let lhs = info.value(&self.lhs)?.primitive_array()?;
-        let rhs = info.value(&self.rhs)?.primitive_array()?;
-        let result = arrow::compute::subtract::<T>(lhs.as_ref(), rhs.as_ref())?;
+        let lhs = info.value(&self.lhs)?.array_ref()?;
+        let rhs = info.value(&self.rhs)?.array_ref()?;
+        let result = arrow_arith::numeric::sub(&lhs, &rhs)?;
         Ok(Arc::new(result))
     }
 }
 
-impl<T: ArrowNumericType> EvaluatorFactory for SubEvaluator<T>
-where
-    T::Native: ArrowNativeTypeOp,
-{
+impl EvaluatorFactory for SubEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        let lhs = info.args[0].data_type();
+        let rhs = info.args[1].data_type();
+        anyhow::ensure!(
+            lhs == rhs,
+            "Argument typess for sub must match, but got {lhs:?} and {rhs:?}"
+        );
+        check_numeric("sub", lhs)?;
+
         let (lhs, rhs) = info.unpack_arguments()?;
-        Ok(Box::new(Self {
-            lhs,
-            rhs,
-            _phantom: PhantomData,
-        }))
+        Ok(Box::new(Self { lhs, rhs }))
     }
 }
 
 /// Evaluator for multiplication.
-pub(super) struct MulEvaluator<T: ArrowNumericType> {
+pub(super) struct MulEvaluator {
     lhs: ValueRef,
     rhs: ValueRef,
-    // Use the type parameter and indicate it is invariant.
-    _phantom: PhantomData<fn(T) -> T>,
 }
 
-impl<T: ArrowNumericType> Evaluator for MulEvaluator<T>
-where
-    T::Native: ArrowNativeTypeOp,
-{
+impl Evaluator for MulEvaluator {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let lhs = info.value(&self.lhs)?.primitive_array()?;
-        let rhs = info.value(&self.rhs)?.primitive_array()?;
-        let result = arrow::compute::multiply::<T>(lhs.as_ref(), rhs.as_ref())?;
+        let lhs = info.value(&self.lhs)?.array_ref()?;
+        let rhs = info.value(&self.rhs)?.array_ref()?;
+        let result = arrow_arith::numeric::mul(&lhs, &rhs)?;
         Ok(Arc::new(result))
     }
 }
 
-impl<T: ArrowNumericType> EvaluatorFactory for MulEvaluator<T>
-where
-    T::Native: ArrowNativeTypeOp,
-{
+impl EvaluatorFactory for MulEvaluator {
     fn try_new(info: StaticInfo<'_>) -> anyhow::Result<Box<dyn Evaluator>> {
+        let lhs = info.args[0].data_type();
+        let rhs = info.args[1].data_type();
+        anyhow::ensure!(
+            lhs == rhs,
+            "Argument typess for mul must match, but got {lhs:?} and {rhs:?}"
+        );
+        check_numeric("mul", lhs)?;
+
         let (lhs, rhs) = info.unpack_arguments()?;
-        Ok(Box::new(Self {
-            lhs,
-            rhs,
-            _phantom: PhantomData,
-        }))
+        Ok(Box::new(Self { lhs, rhs }))
     }
 }
 
@@ -179,12 +152,16 @@ where
     T: NativeFromScalar,
 {
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
-        let lhs = info.value(&self.lhs)?.primitive_array()?;
+        let lhs = info.value(&self.lhs)?.array_ref()?;
         let rhs = info.value(&self.rhs)?;
         let result = match rhs.try_primitive_literal::<T>() {
             Ok(Some(rhs)) if !rhs.is_zero() => {
                 // Division by a literal
-                Arc::new(arrow::compute::divide_scalar(lhs.as_ref(), rhs)?)
+                let rhs: arrow_array::PrimitiveArray<T> =
+                    arrow_array::PrimitiveArray::from_value(rhs, 1);
+                let rhs = arrow_array::Scalar::new(&rhs);
+                let result = arrow_arith::numeric::div(&lhs, &rhs)?;
+                Arc::new(result)
             }
             Ok(None | Some(_)) => {
                 // TODO: Simplification opportunity
@@ -194,9 +171,10 @@ where
 
             Err(_) => {
                 // Division by a non-literal.
-                // Null out cases where the rhs is zero.
-                let rhs = rhs.primitive_array()?;
-                Arc::new(arrow::compute::divide_opt::<T>(lhs.as_ref(), rhs.as_ref())?)
+                // TODO: Null out cases where the rhs is zero.
+                let rhs = rhs.array_ref()?;
+                let result = arrow_arith::numeric::div(&lhs, &rhs)?;
+                Arc::new(result)
             }
         };
 

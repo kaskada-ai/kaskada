@@ -6,7 +6,7 @@ use arrow::array::{ArrayRef, UInt64Array};
 use arrow::compute::SortColumn;
 use arrow::datatypes::{ArrowPrimitiveType, DataType, SchemaRef, TimestampNanosecondType};
 use arrow::record_batch::RecordBatch;
-use arrow_array::Array;
+use arrow_array::{Array, Float64Array, Int64Array, Scalar};
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
@@ -46,7 +46,7 @@ pub struct Preparer {
     prepared_schema: SchemaRef,
     table_config: Arc<TableConfig>,
     next_subsort: AtomicU64,
-    time_multiplier: Option<i64>,
+    time_multiplier: Option<Box<dyn arrow_array::Datum + Send + Sync>>,
     object_stores: Arc<ObjectStoreRegistry>,
 }
 
@@ -59,7 +59,14 @@ impl Preparer {
         time_unit: Option<&str>,
         object_stores: Arc<ObjectStoreRegistry>,
     ) -> error_stack::Result<Self, Error> {
-        let time_multiplier = time_multiplier(time_unit)?;
+        let time_type = prepared_schema
+            .field_with_name(&table_config.time_column_name)
+            .into_report()
+            .change_context_lazy(|| {
+                Error::BatchMissingRequiredColumn(table_config.time_column_name.clone())
+            })?
+            .data_type();
+        let time_multiplier = time_multiplier(time_type, time_unit)?;
         Ok(Self {
             prepared_schema,
             table_config,
@@ -170,7 +177,7 @@ impl Preparer {
             &self.table_config,
             self.prepared_schema.clone(),
             &self.next_subsort,
-            self.time_multiplier,
+            self.time_multiplier.as_ref().map(|b| b.as_ref()),
         )
     }
 }
@@ -180,7 +187,7 @@ pub fn prepare_batch(
     table_config: &TableConfig,
     prepared_schema: SchemaRef,
     next_subsort: &AtomicU64,
-    time_multiplier: Option<i64>,
+    time_multiplier: Option<&(dyn arrow_array::Datum + Send + Sync)>,
 ) -> error_stack::Result<RecordBatch, Error> {
     let time_column_name = table_config.time_column_name.clone();
     let subsort_column_name = table_config.subsort_column_name.clone();
@@ -261,19 +268,51 @@ fn get_required_column<'a>(
         .ok_or_else(|| error_stack::report!(Error::BatchMissingRequiredColumn(name.to_owned())))
 }
 
-fn time_multiplier(time_unit: Option<&str>) -> error_stack::Result<Option<i64>, Error> {
-    match time_unit.unwrap_or("ns") {
-        "ns" => Ok(None),
-        "us" => Ok(Some(1_000)),
-        "ms" => Ok(Some(1_000_000)),
-        "s" => Ok(Some(1_000_000_000)),
+fn time_multiplier(
+    time_type: &DataType,
+    time_unit: Option<&str>,
+) -> error_stack::Result<Option<Box<dyn arrow_array::Datum + Send + Sync>>, Error> {
+    let multiplier = match time_unit.unwrap_or("ns") {
+        "ns" => return Ok(None),
+        "us" => 1_000,
+        "ms" => 1_000_000,
+        "s" => 1_000_000_000,
         unrecognized => error_stack::bail!(Error::UnrecognizedTimeUnit(unrecognized.to_owned())),
+    };
+
+    match time_type {
+        DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Int64 => {
+            // We'll multiply the i64 values, so create that kind of scalar.
+            Ok(Some(Box::new(Scalar::new(Int64Array::from_value(
+                multiplier, 1,
+            )))))
+        }
+        DataType::Utf8 | DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
+            Ok(None)
+        }
+        DataType::Float16 | DataType::Float32 | DataType::Float64 => {
+            // We'll multiply the f64 values, so create that kind of scalar.
+            Ok(Some(Box::new(Scalar::new(Float64Array::from_value(
+                multiplier as f64,
+                1,
+            )))))
+        }
+        other => {
+            error_stack::bail!(Error::ConvertTime(other.clone()))
+        }
     }
 }
 
 fn cast_to_timestamp(
     time: &ArrayRef,
-    time_multiplier: Option<i64>,
+    time_multiplier: Option<&(dyn arrow_array::Datum + Send + Sync)>,
 ) -> error_stack::Result<ArrayRef, Error> {
     match time.data_type() {
         DataType::UInt8
@@ -287,10 +326,7 @@ fn cast_to_timestamp(
             numeric_to_timestamp::<arrow_array::types::Int64Type>(time.as_ref(), time_multiplier)
         }
         DataType::Float16 | DataType::Float32 | DataType::Float64 => {
-            numeric_to_timestamp::<arrow_array::types::Float64Type>(
-                time.as_ref(),
-                time_multiplier.map(|m| m as f64),
-            )
+            numeric_to_timestamp::<arrow_array::types::Float64Type>(time.as_ref(), time_multiplier)
         }
         DataType::Utf8 | DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
             arrow::compute::cast(time.as_ref(), &TimestampNanosecondType::DATA_TYPE)
@@ -305,7 +341,7 @@ fn cast_to_timestamp(
 
 fn numeric_to_timestamp<T: arrow_array::ArrowNumericType>(
     raw: &dyn Array,
-    time_multiplier: Option<T::Native>,
+    time_multiplier: Option<&(dyn arrow_array::Datum + Send + Sync)>,
 ) -> error_stack::Result<ArrayRef, Error> {
     let error = || Error::ConvertTime(raw.data_type().clone());
 
@@ -317,7 +353,7 @@ fn numeric_to_timestamp<T: arrow_array::ArrowNumericType>(
     // Perform the multiplication on the `T::DATA_TYPE`.
     // Do this before conversion to int64 so we don't lose f64 precision.
     let time = if let Some(time_multiplier) = time_multiplier {
-        arrow::compute::multiply_scalar_dyn::<T>(time.as_ref(), time_multiplier)
+        arrow_arith::numeric::mul(&time, time_multiplier)
             .into_report()
             .change_context_lazy(error)?
     } else {

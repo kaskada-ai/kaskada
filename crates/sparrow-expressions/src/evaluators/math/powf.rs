@@ -71,7 +71,7 @@ where
     T: ArrowNumericType,
     T::Native: num::pow::Pow<T::Native, Output = T::Native>,
 {
-    let result = arrow_arith::arithmetic::math_op(base, exp, |b, e| b.pow(e))
+    let result = arrow_arith::arity::binary(base, exp, |b, e| b.pow(e))
         .into_report()
         .change_context(Error::ExprEvaluation)?;
     Ok(result)

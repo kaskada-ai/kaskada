@@ -131,8 +131,8 @@ impl std::cmp::Ord for PendingMerge {
 #[cfg(test)]
 mod tests {
 
-    use arrow_array::RecordBatch;
     use arrow_array::UInt8Array;
+    use arrow_array::{RecordBatch, Scalar};
     use proptest::prelude::*;
     use sparrow_core::TableSchema;
 
@@ -196,7 +196,9 @@ mod tests {
         let split_array = UInt8Array::from(split);
         let inputs: Vec<_> = (0..inputs)
             .map(|n| {
-                let filter = arrow_ord::comparison::eq_scalar(&split_array, n).unwrap();
+                let filter =
+                    arrow_ord::cmp::eq(&split_array, &Scalar::new(UInt8Array::from_value(n, 1)))
+                        .unwrap();
                 arrow_select::filter::filter_record_batch(&merged, &filter).unwrap()
             })
             .collect();

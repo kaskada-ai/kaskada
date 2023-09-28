@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use crate::ValueRef;
 use arrow::array::{ArrayRef, PrimitiveArray};
-use arrow::compute::math_op;
 use arrow::datatypes::{ArrowNativeTypeOp, ArrowNumericType};
 
 use crate::{Evaluator, EvaluatorFactory, RuntimeInfo, StaticInfo};
@@ -90,7 +89,8 @@ where
     T: ArrowNumericType,
     T::Native: ArrowNativeTypeOp,
 {
-    let result = math_op(left, right, |a, b| if a < b { a } else { b })?;
+    let result: PrimitiveArray<T> =
+        arrow_arith::arity::binary(left, right, |a, b| if a < b { a } else { b })?;
     Ok(Arc::new(result))
 }
 
@@ -110,6 +110,7 @@ where
     T: ArrowNumericType,
     T::Native: ArrowNativeTypeOp,
 {
-    let result = math_op(left, right, |a, b| if a > b { a } else { b })?;
+    let result: PrimitiveArray<T> =
+        arrow_arith::arity::binary(left, right, |a, b| if a > b { a } else { b })?;
     Ok(Arc::new(result))
 }

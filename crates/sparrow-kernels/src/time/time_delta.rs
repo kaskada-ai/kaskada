@@ -131,7 +131,11 @@ where
                 // See function TODO -- this assumes UTC.
                 if let Some(naive) = timestamp_ns_to_datetime(nanoseconds) {
                     let naive = Delta::add_to(naive, delta);
-                    result.append_value(naive.timestamp_nanos());
+                    result.append_value(
+                        naive
+                            .timestamp_nanos_opt()
+                            .expect("timestamp doesn't overflow"),
+                    );
                 } else {
                     result.append_null();
                 }

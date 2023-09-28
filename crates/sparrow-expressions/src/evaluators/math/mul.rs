@@ -24,7 +24,7 @@ impl<T: ArrowNumericType> Evaluator for MulEvaluator<T> {
     fn evaluate(&self, info: &WorkArea<'_>) -> error_stack::Result<ArrayRef, Error> {
         let lhs = info.expression(self.lhs);
         let rhs = info.expression(self.rhs);
-        let result = arrow_arith::arithmetic::multiply(lhs, rhs)
+        let result = arrow_arith::numeric::mul_wrapping(lhs, rhs)
             .into_report()
             .change_context(Error::ExprEvaluation)?;
         Ok(Arc::new(result))

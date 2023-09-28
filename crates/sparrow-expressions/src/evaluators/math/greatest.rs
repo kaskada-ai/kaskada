@@ -58,7 +58,7 @@ where
     T: ArrowNumericType,
     T::Native: ArrowNativeTypeOp,
 {
-    arrow_arith::arithmetic::math_op(left, right, |a, b| if a > b { a } else { b })
+    arrow_arith::arity::binary(left, right, |a, b| if a > b { a } else { b })
         .into_report()
         .change_context(Error::ExprEvaluation)
 }
