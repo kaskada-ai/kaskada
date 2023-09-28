@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -17,8 +18,7 @@ use sparrow_core::TableSchema;
 use crate::key_hash_inverse::ThreadSafeKeyHashInverse;
 use crate::prepare::slice_preparer::SlicePreparer;
 use crate::prepare::Error;
-
-use super::column_behavior::ColumnBehavior;
+use crate::preparer::prepare_batch;
 
 /// Struct to store logic for handling late data with a watermark and
 /// bounded lateness.
@@ -70,39 +70,6 @@ pub async fn prepare_input<'a>(
     let prepared_schema = TableSchema::try_from_data_schema(projected_schema.clone())?;
     let prepared_schema = prepared_schema.schema_ref().clone();
 
-    // Add column behaviors for each of the 3 key columns.
-    let mut columns = Vec::with_capacity(prepared_schema.fields().len());
-    columns.push(ColumnBehavior::try_new_cast(
-        &raw_schema,
-        &config.time_column_name,
-        &TimestampNanosecondType::DATA_TYPE,
-        false,
-    )?);
-    if let Some(subsort_column_name) = &config.subsort_column_name {
-        columns.push(ColumnBehavior::try_new_subsort(
-            &raw_schema,
-            subsort_column_name,
-        )?);
-    } else {
-        columns.push(ColumnBehavior::try_default_subsort(prepare_hash)?);
-    }
-
-    columns.push(ColumnBehavior::try_new_entity_key(
-        &raw_schema,
-        &config.group_column_name,
-        false,
-    )?);
-
-    // Add column behaviors for each column.  This means we include the key columns
-    // redundantly, but cleaning that up is a big refactor.
-    // See https://github.com/riptano/kaskada/issues/90
-    for field in projected_schema.fields() {
-        columns.push(ColumnBehavior::try_cast_or_reference_or_null(
-            &raw_schema,
-            field,
-        )?);
-    }
-
     // we've already checked that the group column exists so we can just unwrap it here
     let (entity_column_index, entity_key_column) = raw_schema
         .column_with_name(&config.group_column_name)
@@ -113,6 +80,7 @@ pub async fn prepare_input<'a>(
         slice,
     )?;
 
+    let next_subsort = AtomicU64::new(prepare_hash);
     Ok(async_stream::try_stream! {
         let mut input_buffer = InputBuffer::new();
         while let Some(unfiltered_batch) = reader.next().await {
@@ -185,21 +153,13 @@ pub async fn prepare_input<'a>(
             // 2. Slicing may reduce the number of entities to operate and sort on.
             let record_batch = slice_preparer.slice_batch(record_batch)?;
 
-            // 3. Prepare each of the columns by getting the column behavior result
-            let mut prepared_columns: Vec<ArrayRef> = Vec::new();
-            for c in columns.iter_mut() {
-                let result = c.get_result(&record_batch).await?;
-                prepared_columns.push(result);
-            }
+            // 3. Prepare the batch
+            let record_batch = prepare_batch(&record_batch, &config, prepared_schema.clone(), &next_subsort, None).unwrap();
 
-            // 4. Update the key hash mappings
-            let key_column = record_batch.column(entity_column_index);
-            let key_hashes = prepared_columns.get(2).expect("key column");
-            update_key_inverse(key_column, key_hashes, key_hash_inverse.clone()).await?;
-
-            let record_batch = RecordBatch::try_new(prepared_schema.clone(), prepared_columns)
-                .into_report()
-                .change_context(Error::PreparingColumn)?;
+            // 4. Update the key inverse
+            let key_hash_column = record_batch.column(2);
+            let key_column = record_batch.column(entity_column_index + 3);
+            update_key_inverse(key_column, key_hash_column, key_hash_inverse.clone()).await?;
 
             // 5. After preparing the batch, concatenate the leftovers from the previous batch
             // Note this is done after slicing, since the leftovers were already sliced.

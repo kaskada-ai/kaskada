@@ -165,77 +165,91 @@ impl Preparer {
     /// - This sorts the batch by time, subsort and key hash.
     /// - This adds or casts columns as needed.
     pub fn prepare_batch(&self, batch: RecordBatch) -> error_stack::Result<RecordBatch, Error> {
-        let time_column_name = self.table_config.time_column_name.clone();
-        let subsort_column_name = self.table_config.subsort_column_name.clone();
-        let key_column_name = self.table_config.group_column_name.clone();
-
-        let time = get_required_column(&batch, &time_column_name)?;
-        let time = cast_to_timestamp(time, self.time_multiplier)?;
-
-        let num_rows = batch.num_rows();
-        let subsort = if let Some(subsort_column_name) = subsort_column_name.as_ref() {
-            let subsort = get_required_column(&batch, subsort_column_name)?;
-            arrow::compute::cast(subsort.as_ref(), &DataType::UInt64)
-                .into_report()
-                .change_context_lazy(|| Error::ConvertSubsort(subsort.data_type().clone()))?
-        } else {
-            let subsort_start = self
-                .next_subsort
-                .fetch_add(num_rows as u64, Ordering::SeqCst);
-            let subsort: UInt64Array = (subsort_start..).take(num_rows).collect();
-            Arc::new(subsort)
-        };
-
-        let key = get_required_column(&batch, &key_column_name)?;
-        let key_hash =
-            sparrow_arrow::hash::hash(key.as_ref()).change_context(Error::HashingKeyArray)?;
-        let key_hash: ArrayRef = Arc::new(key_hash);
-
-        let mut columns = Vec::with_capacity(self.prepared_schema.fields().len());
-
-        let indices = arrow::compute::lexsort_to_indices(
-            &[
-                SortColumn {
-                    values: time.clone(),
-                    options: None,
-                },
-                SortColumn {
-                    values: subsort.clone(),
-                    options: None,
-                },
-                SortColumn {
-                    values: key_hash.clone(),
-                    options: None,
-                },
-            ],
-            None,
+        prepare_batch(
+            &batch,
+            &self.table_config,
+            self.prepared_schema.clone(),
+            &self.next_subsort,
+            self.time_multiplier,
         )
-        .into_report()
-        .change_context(Error::SortingBatch)?;
-
-        let sort = |array: &ArrayRef| {
-            arrow::compute::take(array.as_ref(), &indices, None)
-                .into_report()
-                .change_context(Error::SortingBatch)
-        };
-        columns.push(sort(&time)?);
-        columns.push(sort(&subsort)?);
-        columns.push(sort(&key_hash)?);
-
-        // TODO: Slicing?
-        for field in self.prepared_schema.fields().iter().skip(3) {
-            let column = if let Some(column) = batch.column_by_name(field.name()) {
-                sort(column)?
-            } else {
-                arrow::array::new_null_array(field.data_type(), num_rows)
-            };
-            columns.push(column)
-        }
-        let prepared = RecordBatch::try_new(self.prepared_schema.clone(), columns)
-            .into_report()
-            .change_context(Error::CreatingBatch)?;
-        Ok(prepared)
     }
+}
+
+pub fn prepare_batch(
+    batch: &RecordBatch,
+    table_config: &TableConfig,
+    prepared_schema: SchemaRef,
+    next_subsort: &AtomicU64,
+    time_multiplier: Option<i64>,
+) -> error_stack::Result<RecordBatch, Error> {
+    let time_column_name = table_config.time_column_name.clone();
+    let subsort_column_name = table_config.subsort_column_name.clone();
+    let key_column_name = table_config.group_column_name.clone();
+
+    let time = get_required_column(batch, &time_column_name)?;
+    let time = cast_to_timestamp(time, time_multiplier)?;
+
+    let num_rows = batch.num_rows();
+    let subsort = if let Some(subsort_column_name) = subsort_column_name.as_ref() {
+        let subsort = get_required_column(batch, subsort_column_name)?;
+        arrow::compute::cast(subsort.as_ref(), &DataType::UInt64)
+            .into_report()
+            .change_context_lazy(|| Error::ConvertSubsort(subsort.data_type().clone()))?
+    } else {
+        let subsort_start = next_subsort.fetch_add(num_rows as u64, Ordering::SeqCst);
+        let subsort: UInt64Array = (subsort_start..).take(num_rows).collect();
+        Arc::new(subsort)
+    };
+
+    let key = get_required_column(batch, &key_column_name)?;
+    let key_hash =
+        sparrow_arrow::hash::hash(key.as_ref()).change_context(Error::HashingKeyArray)?;
+    let key_hash: ArrayRef = Arc::new(key_hash);
+
+    let mut columns = Vec::with_capacity(prepared_schema.fields().len());
+
+    let indices = arrow::compute::lexsort_to_indices(
+        &[
+            SortColumn {
+                values: time.clone(),
+                options: None,
+            },
+            SortColumn {
+                values: subsort.clone(),
+                options: None,
+            },
+            SortColumn {
+                values: key_hash.clone(),
+                options: None,
+            },
+        ],
+        None,
+    )
+    .into_report()
+    .change_context(Error::SortingBatch)?;
+
+    let sort = |array: &ArrayRef| {
+        arrow::compute::take(array.as_ref(), &indices, None)
+            .into_report()
+            .change_context(Error::SortingBatch)
+    };
+    columns.push(sort(&time)?);
+    columns.push(sort(&subsort)?);
+    columns.push(sort(&key_hash)?);
+
+    // TODO: Slicing?
+    for field in prepared_schema.fields().iter().skip(3) {
+        let column = if let Some(column) = batch.column_by_name(field.name()) {
+            sort(column)?
+        } else {
+            arrow::array::new_null_array(field.data_type(), num_rows)
+        };
+        columns.push(column)
+    }
+    let prepared = RecordBatch::try_new(prepared_schema.clone(), columns)
+        .into_report()
+        .change_context(Error::CreatingBatch)?;
+    Ok(prepared)
 }
 
 fn get_required_column<'a>(
