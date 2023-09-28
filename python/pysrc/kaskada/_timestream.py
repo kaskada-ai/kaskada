@@ -1194,14 +1194,14 @@ class Timestream(object):
 
         raise AssertionError(f"Unhandled kind {kind}")
 
-    def plan(
+    def explain(
         self,
         kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         format: Literal["dot", "svg", "svg_str"] = "svg",
         mode: Literal["once", "live"] = "once",
     ) -> Union[str, "IPython.display.SVG"]:
-        """Return GraphViz representation of the DFG execution plan.
+        """Return an explanation of this Timestream will be executed.
 
         This is intended for understanding how a given Timestream query will
         be executed. It does not guarantee that the same query will always
@@ -1218,11 +1218,15 @@ class Timestream(object):
               from the currently available data. Use `'live'` to start a standing query
               that continues to process new data until stopped.
         Returns:
-            A GraphViz representation of the execution plan.
+            A GraphViz representation of the execution plan as a string, SVG string, or SVG.
             Specific representation depends on the `format` argument.
 
         Raises:
             ValueError if the `kind` is not recognized or the `format` is not supported.
+
+        Caution:
+            This method is intended for debugging and development purposes only.
+            The API may change in the future.
         """
         expr = self
         if not pa.types.is_struct(self.data_type):

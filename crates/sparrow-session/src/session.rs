@@ -44,7 +44,7 @@ pub enum Results {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum QueryPlanKind {
+pub enum ExplanationKind {
     InitialDfg,
     FinalDfg,
     FinalPlan,
@@ -429,13 +429,13 @@ impl Session {
         &self,
         dfg: sparrow_compiler::DfgExpr,
     ) -> error_stack::Result<sparrow_compiler::DfgExpr, Error> {
-        let dgg = dfg
+        let dfg = dfg
             .simplify(&CompilerOptions {
                 ..CompilerOptions::default()
             })
             .into_report()
             .change_context(Error::Compile)?;
-        let dfg = sparrow_compiler::remove_useless_transforms(dgg)
+        let dfg = sparrow_compiler::remove_useless_transforms(dfg)
             .into_report()
             .change_context(Error::Compile)?;
         Ok(dfg)
@@ -545,27 +545,27 @@ impl Session {
         ))
     }
 
-    pub fn plan(
+    pub fn explain(
         &mut self,
-        kind: QueryPlanKind,
+        kind: ExplanationKind,
         query: &Expr,
         options: ExecutionOptions,
     ) -> error_stack::Result<String, Error> {
         match kind {
-            QueryPlanKind::InitialDfg => {
+            ExplanationKind::InitialDfg => {
                 let expr = self.compile_initial_dfg(query, &options)?;
                 expr.dot_string()
                     .into_report()
                     .change_context(Error::Compile)
             }
-            QueryPlanKind::FinalDfg => {
+            ExplanationKind::FinalDfg => {
                 let expr = self.compile_initial_dfg(query, &options)?;
                 let expr = self.optimize_dfg(expr)?;
                 expr.dot_string()
                     .into_report()
                     .change_context(Error::Compile)
             }
-            QueryPlanKind::FinalPlan => {
+            ExplanationKind::FinalPlan => {
                 let expr = self.compile_initial_dfg(query, &options)?;
                 let expr = self.optimize_dfg(expr)?;
                 let group_id = query
