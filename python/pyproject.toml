@@ -91,7 +91,7 @@ myst-parser = {version = ">=0.16.1"}
 # Use myst-nb from git since the currently released version (0.17.2) pins
 # Sphinx to < 6. Once a new release occurs we can upgrade to `0.18.0` or newer.
 # https://github.com/executablebooks/MyST-NB/issues/530
-myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
+myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "59854c270deb76f297f228477be5d5088babd143" }
 plotly = {version = "^5.16.1"}
 linkify-it-py = "^2.0.2"
 pydata-sphinx-theme = "^0.13.3"

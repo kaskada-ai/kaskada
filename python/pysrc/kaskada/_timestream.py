@@ -1235,11 +1235,14 @@ class Timestream(object):
         dot = expr._ffi_expr.plan(kind, options)
         try:
             import graphviz
-            dot = graphviz.Source(dot, engine='dot')
+
+            dot = graphviz.Source(dot, engine="dot")
             return dot
         except ImportError:
             raise ValueError(
-                "explain requires `graphviz` python package. install it directly or re-install `kaskada[explain]` to enable the optional dependency") from None
+                "`explain` requires `graphviz` python package: "
+                "install it using pip (or install `kaskada[explain]`)"
+            ) from None
 
     def _execute(
         self,
