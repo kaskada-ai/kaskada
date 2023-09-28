@@ -1198,9 +1198,8 @@ class Timestream(object):
         self,
         kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
-        format: Literal["dot", "svg", "svg_str"] = "svg",
         mode: Literal["once", "live"] = "once",
-    ) -> Union[str, "IPython.display.SVG"]:
+    ) -> Union[str, "graphviz.Source"]:
         """Return an explanation of this Timestream will be executed.
 
         This is intended for understanding how a given Timestream query will
@@ -1210,10 +1209,6 @@ class Timestream(object):
         Args:
             results: The results to produce. Defaults to `History()` producing all points.
             kind: The kind of plan to produce.
-            format: Specify how the output should be returned.
-              If `dot`, the GraphViz `dot` format is returned as a string.
-              If `svg_str`, the GraphViz is rendered to an SVG string.
-              If `svg`, the GraphViz is rendered to an SVG image.
             mode: The execution mode to use. Defaults to `'once'` to produce the results
               from the currently available data. Use `'live'` to start a standing query
               that continues to process new data until stopped.
@@ -1238,28 +1233,13 @@ class Timestream(object):
         )
 
         dot = expr._ffi_expr.plan(kind, options)
-        if format == "dot":
-            return dot
-
-        svg_str = ""
         try:
-            import pydot
-            svg_str = pydot.graph_from_dot_data(dot)[0].create_svg()
+            import graphviz
+            dot = graphviz.Source(dot, engine='dot')
+            return dot
         except ImportError:
             raise ValueError(
-                "pydot is required for SVG output (kind 'svg_str' or 'svg')"
-            ) from None
-        if format == "svg_str":
-            return svg_str
-
-        if format != "svg":
-            raise ValueError(f"unrecognized format {format!r}")
-        try:
-            from IPython.display import SVG
-
-            return SVG(svg_str)
-        except ImportError:
-            raise ValueError("IPython is required for SVG output (kind 'svg')") from None
+                "explain requires `graphviz` python package. install it directly or re-install `kaskada[explain]` to enable the optional dependency") from None
 
     def _execute(
         self,
