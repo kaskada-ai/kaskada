@@ -17,6 +17,8 @@ dependencies = [
 [project.optional-dependencies]
 plot = [
   "plotly >= 5.0.0, < 6.0.0",
+]
+explain = [
   "pydot >= 1.4.2, < 2.0.0",
 ]
 
