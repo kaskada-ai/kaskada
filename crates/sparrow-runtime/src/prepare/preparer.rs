@@ -18,7 +18,10 @@ use crate::PreparedMetadata;
 
 use super::{prepared_batches, write_parquet};
 
-const KASKADA_PATH: &str = ".cache/kaskada";
+/// For now, this is a temporary location for the prepared files.
+/// In the future, we'll want to move this path to a managed cache
+/// so we can reuse state.
+const KASKADA_PATH: &str = "kaskada";
 const PREPARED_FILE_PREFIX: &str = "part";
 
 #[derive(derive_more::Display, Debug)]
@@ -96,7 +99,7 @@ impl Preparer {
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
         // TODO: Support Slicing
 
-        let output_path_prefix = self.prepared_output_prefix()?;
+        let output_path_prefix = self.prepared_output_prefix();
         let output_url = ObjectStoreUrl::from_str(&output_path_prefix)
             .change_context_lazy(|| Error::InvalidUrl(output_path_prefix))?;
 
@@ -178,19 +181,16 @@ impl Preparer {
         )
     }
     // Prepared files are stored in the following format:
-    // file:///<home_dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/part-<n>.parquet
-    pub fn prepared_output_prefix(&self) -> error_stack::Result<String, Error> {
+    // file:///<temp_dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/part-<n>.parquet
+    pub fn prepared_output_prefix(&self) -> String {
         let uuid = Uuid::new_v4();
-        let home_dir = dirs::home_dir();
-        if let Some(home_dir) = home_dir.map(|p| p.display().to_string()) {
-            Ok(format!(
-                "file:///{}/{}/tables/{}/prepare/{uuid}/",
-                home_dir, KASKADA_PATH, self.table_config.uuid
-            ))
-        } else {
-            tracing::error!("Failed to get home directory");
-            error_stack::bail!(Error::Internal)
-        }
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+        format!(
+            "file:///{}/{}/tables/{}/prepare/{uuid}/",
+            temp_dir.path().display(),
+            KASKADA_PATH,
+            self.table_config.uuid
+        )
     }
 }
 
