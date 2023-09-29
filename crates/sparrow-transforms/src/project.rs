@@ -1,6 +1,5 @@
-
-use arrow_schema::{DataType};
-use error_stack::{ResultExt};
+use arrow_schema::DataType;
+use error_stack::ResultExt;
 use sparrow_arrow::Batch;
 
 use sparrow_expressions::ExpressionExecutor;
