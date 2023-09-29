@@ -1,6 +1,6 @@
-use arrow_array::RecordBatch;
-use arrow_schema::{DataType, SchemaRef};
-use error_stack::{IntoReport, ResultExt};
+
+use arrow_schema::{DataType};
+use error_stack::{ResultExt};
 use sparrow_arrow::Batch;
 
 use sparrow_expressions::ExpressionExecutor;
