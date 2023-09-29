@@ -40,6 +40,10 @@ impl DfgExpr {
         self.expr.as_ref().len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.expr.as_ref().is_empty()
+    }
+
     pub(super) fn add(&mut self, node: DfgLang) -> Id {
         self.expr.add(node)
     }
