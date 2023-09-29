@@ -1,6 +1,9 @@
-from dataclasses import dataclass
-from typing import AsyncIterator, Callable, Iterator, Literal, Optional, TypeVar
+from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import AsyncIterator, Callable, Iterator, Literal, Optional, TypeVar, Union
+
+import kaskada as kd
 import pyarrow as pa
 
 from . import _ffi
@@ -37,6 +40,39 @@ class _ExecutionOptions:
     #: For history, this limits the points output.
     #: For snapshots, this determines when the snapshot is produced.
     final_at: Optional[int] = None
+
+    @staticmethod
+    def create(
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]],
+        row_limit: Optional[int],
+        max_batch_size: Optional[int],
+        mode: Literal["once", "live"] = "once",
+    ) -> _ExecutionOptions:
+        """Create execution options."""
+        options = _ExecutionOptions(
+            row_limit=row_limit,
+            max_batch_size=max_batch_size,
+            materialize=mode == "live",
+        )
+
+        if results is None:
+            results = kd.results.History()
+
+        if isinstance(results, kd.results.History):
+            options.results = "history"
+            if results.since is not None:
+                options.changed_since = int(results.since.timestamp())
+            if results.until is not None:
+                options.final_at = int(results.until.timestamp())
+        elif isinstance(results, kd.results.Snapshot):
+            options.results = "snapshot"
+            if results.changed_since is not None:
+                options.changed_since = int(results.changed_since.timestamp())
+            if results.at is not None:
+                options.final_at = int(results.at.timestamp())
+        else:
+            raise AssertionError(f"Unhandled results type {results!r}")
+        return options
 
 
 class Execution:

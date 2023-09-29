@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, List, Literal, Optional, Sequence
 
 import pyarrow as pa
 
@@ -44,6 +44,11 @@ class Expr:
     def session(self) -> Session: ...
     def execute(self, options: Optional[_ExecutionOptions] = None) -> Execution: ...
     def grouping(self) -> Optional[str]: ...
+    def explain(
+        self,
+        kind: Literal["initial_dfg", "final_dfg", "final_plan"],
+        options: Optional[_ExecutionOptions],
+    ) -> str: ...
 
 class Table:
     def __init__(
