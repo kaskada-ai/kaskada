@@ -1,9 +1,6 @@
-use arrow::error::ArrowError;
-use arrow_array::cast::AsArray;
 use arrow_array::types::{TimestampNanosecondType, UInt64Type};
 use arrow_array::{
-    Array, ArrayRef, ArrowPrimitiveType, BooleanArray, RecordBatch, TimestampNanosecondArray,
-    UInt64Array,
+    Array, ArrayRef, ArrowPrimitiveType, BooleanArray, TimestampNanosecondArray, UInt64Array,
 };
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;

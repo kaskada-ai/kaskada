@@ -110,7 +110,7 @@ impl Expr {
         if self.result_type == data_type {
             Ok(self)
         } else {
-            let grouping = self.grouping.clone();
+            let grouping = self.grouping;
             Ok(Arc::new(Expr {
                 name: Cow::Borrowed("cast"),
                 literal_args: vec![],
