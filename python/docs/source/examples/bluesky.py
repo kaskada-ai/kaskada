@@ -113,7 +113,7 @@ async def main():
 
 
 # Copied from https://raw.githubusercontent.com/MarshalX/atproto/main/examples/firehose/process_commits.py
-def _get_ops_by_type(
+def _get_ops_by_type(  # noqa: C901, E302
     commit: models.ComAtprotoSyncSubscribeRepos.Commit,
 ) -> dict:  # noqa: C901, E302
     operation_by_type = {

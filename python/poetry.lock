@@ -722,7 +722,7 @@ develop = ["build", "twine"]
 name = "graphviz"
 version = "0.20.1"
 description = "Simple Python interface for Graphviz"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "graphviz-0.20.1-py3-none-any.whl", hash = "sha256:587c58a223b51611c0cf461132da386edd896a029524ca61a1462b880bf97977"},
@@ -3491,9 +3491,10 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
+explain = ["graphviz"]
 plot = ["plotly"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "d8a73b55ee47f657e4f7d51184206b4049c23c70ce517766da7238f16aeb2511"
+content-hash = "a690c5a87f12c8dd5dcd1842a32acd3e79b090cc5fc5ccb2ed7e184eafdc644e"

@@ -41,6 +41,7 @@ plotly = {version = "^5.16.1", optional = true}
 
 [tool.poetry.extras]
 plot = ["plotly"]
+explain = ["graphviz"]
 
 [tool.poetry.group.dev.dependencies]
 # Dependencies for building and developing.
@@ -61,6 +62,7 @@ pep8-naming = ">=0.12.1"
 pydocstyle = "^6.3.0"
 pyupgrade = ">=2.29.1"
 autoflake = "^2.2.0"
+graphviz = { version = "^0.20.1" }
 
 [tool.poetry.group.safety]
 optional = true
@@ -76,6 +78,7 @@ optional = true
 mypy = ">=0.930"
 pandas-stubs = "^2.0.2"
 typeguard = ">=2.13.3"
+graphviz = { version = "^0.20.1" }
 
 [tool.poetry.group.docs]
 # Dependencies for documentation.

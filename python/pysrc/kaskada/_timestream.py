@@ -6,6 +6,7 @@ import sys
 import warnings
 from datetime import datetime, timedelta
 from typing import (
+    TYPE_CHECKING,
     Callable,
     List,
     Literal,
@@ -26,6 +27,9 @@ from typing_extensions import TypeAlias
 
 from ._execution import Execution, ResultIterator, _ExecutionOptions
 
+
+if TYPE_CHECKING:
+    import graphviz
 
 #: A literal value that can be used as an argument to a Timestream operation.
 LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
@@ -1199,7 +1203,7 @@ class Timestream(object):
         kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
         results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
         mode: Literal["once", "live"] = "once",
-    ) -> Union[str, "graphviz.Source"]:
+    ) -> "graphviz.Source":
         """Return an explanation of this Timestream will be executed.
 
         This is intended for understanding how a given Timestream query will
@@ -1212,6 +1216,7 @@ class Timestream(object):
             mode: The execution mode to use. Defaults to `'once'` to produce the results
               from the currently available data. Use `'live'` to start a standing query
               that continues to process new data until stopped.
+
         Returns:
             A GraphViz representation of the execution plan as a string, SVG string, or SVG.
             Specific representation depends on the `format` argument.
@@ -1223,6 +1228,8 @@ class Timestream(object):
             This method is intended for debugging and development purposes only.
             The API may change in the future.
         """
+        import graphviz
+
         expr = self
         if not pa.types.is_struct(self.data_type):
             # The execution engine requires a struct, so wrap this in a record.
@@ -1232,17 +1239,9 @@ class Timestream(object):
             results, row_limit=None, max_batch_size=None, mode=mode
         )
 
-        dot = expr._ffi_expr.plan(kind, options)
-        try:
-            import graphviz
-
-            dot = graphviz.Source(dot, engine="dot")
-            return dot
-        except ImportError:
-            raise ValueError(
-                "`explain` requires `graphviz` python package: "
-                "install it using pip (or install `kaskada[explain]`)"
-            ) from None
+        dot = expr._ffi_expr.explain(kind, options)
+        dot = graphviz.Source(dot, engine="dot")
+        return dot
 
     def _execute(
         self,
