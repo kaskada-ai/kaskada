@@ -224,6 +224,7 @@ impl ExampleInputPreparer {
             &sd,
             &config,
             &None,
+            None,
         )
         .await
         .change_context(Error::PrepareInput)?

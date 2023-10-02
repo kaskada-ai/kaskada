@@ -32,6 +32,7 @@ pub async fn prepare_input<'a>(
     raw_metadata: RawMetadata,
     prepare_hash: u64,
     slice: &Option<slice_plan::Slice>,
+    time_multiplier: Option<i64>,
 ) -> anyhow::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>> {
     // This is a "hacky" way of adding the 3 key columns. We may just want
     // to manually do that (as part of deprecating `TableSchema`)?
@@ -58,7 +59,7 @@ pub async fn prepare_input<'a>(
             let read_batch = slice_preparer.slice_batch(batch)?;
 
             // 2. Prepare the batch
-            let prepared_batch = prepare_batch(&read_batch, config, prepared_schema.clone(), &next_subsort, None).unwrap();
+            let prepared_batch = prepare_batch(&read_batch, config, prepared_schema.clone(), &next_subsort, time_multiplier).unwrap();
 
             // 3. Update the key inverse
             let key_hash_column = prepared_batch.column(2);
@@ -147,10 +148,16 @@ mod tests {
             "id",
             "grouping",
         );
-        let stream =
-            prepare_input_stream::prepare_input(reader.boxed(), &config, raw_metadata, 0, &None)
-                .await
-                .unwrap();
+        let stream = prepare_input_stream::prepare_input(
+            reader.boxed(),
+            &config,
+            raw_metadata,
+            0,
+            &None,
+            None,
+        )
+        .await
+        .unwrap();
         let batches = stream.collect::<Vec<_>>().await;
         assert_eq!(batches.len(), 1);
         let (batch, metadata) = batches[0].as_ref().unwrap();
@@ -184,10 +191,16 @@ mod tests {
             "id",
             "grouping",
         );
-        let stream =
-            prepare_input_stream::prepare_input(reader.boxed(), &config, raw_metadata, 0, &None)
-                .await
-                .unwrap();
+        let stream = prepare_input_stream::prepare_input(
+            reader.boxed(),
+            &config,
+            raw_metadata,
+            0,
+            &None,
+            None,
+        )
+        .await
+        .unwrap();
         let batches = stream.collect::<Vec<_>>().await;
         assert_eq!(batches.len(), 1);
         let (batch, metadata) = batches[0].as_ref().unwrap();
