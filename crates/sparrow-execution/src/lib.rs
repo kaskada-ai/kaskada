@@ -122,7 +122,7 @@ mod tests {
                 source_id: table_id,
             },
             inputs: vec![],
-            data_type: input_type,
+            result_type: input_type,
             exprs: sparrow_physical::Exprs::new(),
         };
 
@@ -130,7 +130,7 @@ mod tests {
             id: 1.into(),
             kind: sparrow_physical::StepKind::Project,
             inputs: vec![0.into()],
-            data_type: output_type.clone(),
+            result_type: output_type.clone(),
             exprs: index_vec![
                 sparrow_physical::Expr {
                     name: "column".into(),

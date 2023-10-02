@@ -50,12 +50,22 @@ struct EvaluatorFactory {
 
 inventory::collect!(EvaluatorFactory);
 
+/// Static information available when creating an evaluator.
 pub struct StaticInfo<'a> {
-    /// Type of the input that the expressions are run on.
+    /// Type of the input that all the expressions are run on.
     input_type: &'a DataType,
+    /// Name of the instruction to be evaluated.
     name: &'a Cow<'static, str>,
+    /// Literal (static) arguments to *this* expression.
     literal_args: &'a [ScalarValue],
+    /// Arguments (dynamic) to *this* expression.
     args: Vec<&'a StaticArg<'a>>,
+    /// Result type this expression should produce.
+    ///
+    /// For many instructions, this should be inferred from the arguments.
+    /// It is part of the plan (a) for simplicity, so a plan may be executed
+    /// without performing type-checking and (b) because some instructions
+    /// need to know the result-type in order to execute (eg., cast).
     result_type: &'a DataType,
 }
 

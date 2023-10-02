@@ -27,6 +27,8 @@ pub enum Literal {
     String(String),
     Int64(i64),
     UInt64(u64),
+    // Decorum is needed to provide a total ordering on `f64` so we can
+    // derive `Ord` and `PartialOrd`.
     Float64(decorum::Total<f64>),
     Timedelta { seconds: i64, nanos: i64 },
     Uuid(Uuid),

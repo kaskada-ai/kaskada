@@ -34,7 +34,7 @@ pub struct Step {
     /// Inputs to this step.
     pub inputs: Vec<StepId>,
     /// The data type produced by this step.
-    pub data_type: DataType,
+    pub result_type: DataType,
     /// Expressions used in the step, if any.
     ///
     /// The final expression in the vector is considered the "result" of executing
