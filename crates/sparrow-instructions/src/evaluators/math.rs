@@ -65,7 +65,7 @@ impl EvaluatorFactory for AddEvaluator {
         let rhs = info.args[1].data_type();
         anyhow::ensure!(
             lhs == rhs,
-            "Argument typess for add must match, but got {lhs:?} and {rhs:?}"
+            "Argument types for add must match, but got {lhs:?} and {rhs:?}"
         );
         check_numeric("add", lhs)?;
 
@@ -95,7 +95,7 @@ impl EvaluatorFactory for SubEvaluator {
         let rhs = info.args[1].data_type();
         anyhow::ensure!(
             lhs == rhs,
-            "Argument typess for sub must match, but got {lhs:?} and {rhs:?}"
+            "Argument types for sub must match, but got {lhs:?} and {rhs:?}"
         );
         check_numeric("sub", lhs)?;
 
@@ -125,7 +125,7 @@ impl EvaluatorFactory for MulEvaluator {
         let rhs = info.args[1].data_type();
         anyhow::ensure!(
             lhs == rhs,
-            "Argument typess for mul must match, but got {lhs:?} and {rhs:?}"
+            "Argument types for mul must match, but got {lhs:?} and {rhs:?}"
         );
         check_numeric("mul", lhs)?;
 
