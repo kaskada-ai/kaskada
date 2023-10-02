@@ -46,7 +46,7 @@ pub struct Preparer {
     prepared_schema: SchemaRef,
     table_config: Arc<TableConfig>,
     next_subsort: AtomicU64,
-    time_multiplier: Option<Box<dyn arrow_array::Datum + Send + Sync>>,
+    time_multiplier: Option<Scalar<ArrayRef>>,
     object_stores: Arc<ObjectStoreRegistry>,
 }
 
@@ -128,7 +128,7 @@ impl Preparer {
             &source_data,
             &self.table_config,
             &None,
-            self.time_multiplier,
+            self.time_multiplier.clone(),
         )
         .await
         .change_context(Error::Internal)?
@@ -182,7 +182,7 @@ impl Preparer {
             &self.table_config,
             self.prepared_schema.clone(),
             &self.next_subsort,
-            self.time_multiplier.as_ref().map(|b| b.as_ref()),
+            self.time_multiplier.as_ref(),
         )
     }
 }
@@ -192,7 +192,7 @@ pub fn prepare_batch(
     table_config: &TableConfig,
     prepared_schema: SchemaRef,
     next_subsort: &AtomicU64,
-    time_multiplier: Option<&(dyn arrow_array::Datum + Send + Sync)>,
+    time_multiplier: Option<&Scalar<ArrayRef>>,
 ) -> error_stack::Result<RecordBatch, Error> {
     let time_column_name = table_config.time_column_name.clone();
     let subsort_column_name = table_config.subsort_column_name.clone();
@@ -276,7 +276,7 @@ fn get_required_column<'a>(
 fn time_multiplier(
     time_type: &DataType,
     time_unit: Option<&str>,
-) -> error_stack::Result<Option<Box<dyn arrow_array::Datum + Send + Sync>>, Error> {
+) -> error_stack::Result<Option<Scalar<ArrayRef>>, Error> {
     let multiplier = match time_unit.unwrap_or("ns") {
         "ns" => return Ok(None),
         "us" => 1_000,
@@ -295,14 +295,18 @@ fn time_multiplier(
         | DataType::Int32
         | DataType::Int64 => {
             // We'll multiply the i64 values, so create that kind of scalar.
-            Ok(Some(Box::new(Int64Array::new_scalar(multiplier))))
+            Ok(Some(Scalar::new(Arc::new(Int64Array::from(vec![
+                multiplier,
+            ])))))
         }
         DataType::Utf8 | DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
             Ok(None)
         }
         DataType::Float16 | DataType::Float32 | DataType::Float64 => {
             // We'll multiply the f64 values, so create that kind of scalar.
-            Ok(Some(Box::new(Float64Array::new_scalar(multiplier as f64))))
+            Ok(Some(Scalar::new(Arc::new(Float64Array::from(vec![
+                multiplier as f64,
+            ])))))
         }
         other => {
             error_stack::bail!(Error::ConvertTime(other.clone()))
@@ -312,7 +316,7 @@ fn time_multiplier(
 
 fn cast_to_timestamp(
     time: &ArrayRef,
-    time_multiplier: Option<&(dyn arrow_array::Datum + Send + Sync)>,
+    time_multiplier: Option<&Scalar<ArrayRef>>,
 ) -> error_stack::Result<ArrayRef, Error> {
     match time.data_type() {
         DataType::UInt8
@@ -341,7 +345,7 @@ fn cast_to_timestamp(
 
 fn numeric_to_timestamp<T: arrow_array::ArrowNumericType>(
     raw: &dyn Array,
-    time_multiplier: Option<&(dyn arrow_array::Datum + Send + Sync)>,
+    time_multiplier: Option<&Scalar<ArrayRef>>,
 ) -> error_stack::Result<ArrayRef, Error> {
     let error = || Error::ConvertTime(raw.data_type().clone());
 

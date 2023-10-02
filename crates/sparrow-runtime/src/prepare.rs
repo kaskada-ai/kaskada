@@ -38,7 +38,7 @@ pub async fn prepared_batches<'a>(
     source_data: &SourceData,
     config: &'a TableConfig,
     slice: &'a Option<slice_plan::Slice>,
-    time_multiplier: Option<i64>,
+    time_multiplier: Option<arrow_array::Scalar<arrow_array::ArrayRef>>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     let prepare_iter = match source_data.source.as_ref() {
@@ -240,7 +240,7 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
     mut reader: R,
     prepare_hash: u64,
     slice: &'a Option<slice_plan::Slice>,
-    time_multiplier: Option<i64>,
+    time_multiplier: Option<arrow_array::Scalar<arrow_array::ArrayRef>>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     use arrow::csv::ReaderBuilder;

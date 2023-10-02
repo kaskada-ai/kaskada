@@ -54,7 +54,7 @@ pub(crate) async fn stream_reader(
     projected_columns: Option<Vec<String>>,
     _flight_recorder: FlightRecorder,
     pulsar_source: &PulsarSource,
-    time_multiplier: Option<i64>,
+    time_multiplier: Option<arrow_array::Scalar<arrow_array::ArrayRef>>,
 ) -> error_stack::Result<impl Stream<Item = error_stack::Result<Batch, Error>> + 'static, Error> {
     // TODO: This should be the materialization ID, or configurable by the user.
     // This will be important when restarting a consumer at a specific point.

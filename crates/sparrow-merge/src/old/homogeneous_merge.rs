@@ -131,8 +131,7 @@ impl std::cmp::Ord for PendingMerge {
 #[cfg(test)]
 mod tests {
 
-    use arrow_array::UInt8Array;
-    use arrow_array::{RecordBatch, Scalar};
+    use arrow_array::{RecordBatch, UInt8Array};
     use proptest::prelude::*;
     use sparrow_core::TableSchema;
 
