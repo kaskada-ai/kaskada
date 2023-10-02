@@ -18,6 +18,7 @@ sparrow-physical = { path = "../sparrow-physical" }
 sparrow-transforms = { path = "../sparrow-transforms" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
 tokio.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 arrow-array.workspace = true

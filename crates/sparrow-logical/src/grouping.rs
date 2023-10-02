@@ -8,13 +8,17 @@ use crate::{Error, ExprRef};
 pub struct GroupId(u32);
 
 /// The grouping associated with an expression.
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Grouping {
     Literal,
     Group(GroupId),
 }
 
 impl Grouping {
+    pub fn new(group: u32) -> Grouping {
+        Grouping::Group(GroupId(group))
+    }
+
     pub fn from_args(args: &[ExprRef]) -> error_stack::Result<Grouping, Error> {
         let groupings = args
             .iter()

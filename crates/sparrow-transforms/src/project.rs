@@ -1,6 +1,5 @@
-use arrow_array::RecordBatch;
-use arrow_schema::SchemaRef;
-use error_stack::{IntoReport, ResultExt};
+use arrow_schema::DataType;
+use error_stack::ResultExt;
 use sparrow_arrow::Batch;
 
 use sparrow_expressions::ExpressionExecutor;
@@ -11,23 +10,21 @@ use crate::transform::{Error, Transform};
 /// Transform for projection.
 pub struct Project {
     evaluators: ExpressionExecutor,
-    outputs: Vec<usize>,
-    schema: SchemaRef,
 }
 
 impl Project {
-    pub fn try_new(
-        input_schema: &SchemaRef,
-        exprs: &Exprs,
-        schema: SchemaRef,
-    ) -> error_stack::Result<Self, Error> {
-        let evaluators = ExpressionExecutor::try_new(input_schema.as_ref(), exprs.exprs.as_vec())
+    pub fn try_new(exprs: &Exprs, output_type: &DataType) -> error_stack::Result<Self, Error> {
+        let evaluators = ExpressionExecutor::try_new(exprs.as_vec())
             .change_context_lazy(|| Error::CreateTransform("project"))?;
-        Ok(Self {
-            evaluators,
-            outputs: exprs.outputs.iter().map(|n| (*n).into()).collect(),
-            schema,
-        })
+        error_stack::ensure!(
+            output_type == evaluators.output_type(),
+            Error::MismatchedResultType {
+                transform: "project",
+                expected: output_type.clone(),
+                actual: evaluators.output_type().clone()
+            }
+        );
+        Ok(Self { evaluators })
     }
 }
 
@@ -36,16 +33,7 @@ impl Transform for Project {
         assert!(!batch.is_empty());
 
         let error = || Error::ExecuteTransform("project");
-        let columns = self.evaluators.execute(&batch).change_context_lazy(error)?;
-        let columns = self
-            .outputs
-            .iter()
-            .map(|index| columns[*index].clone())
-            .collect();
-
-        let result = RecordBatch::try_new(self.schema.clone(), columns)
-            .into_report()
-            .change_context_lazy(error)?;
+        let result = self.evaluators.execute(&batch).change_context_lazy(error)?;
         Ok(batch.with_projection(result))
     }
 

@@ -106,15 +106,11 @@ impl TransformPipeline {
             );
 
             let transform: Box<dyn Transform> = match &step.kind {
-                StepKind::Project { exprs } => Box::new(
-                    crate::project::Project::try_new(
-                        &input_step.schema,
-                        exprs,
-                        step.schema.clone(),
-                    )
-                    .change_context_lazy(|| Error::CreatingTransform {
-                        kind: (&step.kind).into(),
-                    })?,
+                StepKind::Project => Box::new(
+                    crate::project::Project::try_new(&step.exprs, &step.result_type)
+                        .change_context_lazy(|| Error::CreatingTransform {
+                            kind: (&step.kind).into(),
+                        })?,
                 ),
                 unsupported => {
                     error_stack::bail!(Error::UnsupportedStepKind {

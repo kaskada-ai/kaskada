@@ -24,8 +24,8 @@ impl<'a> WorkArea<'a> {
     }
 
     /// Return the [ArrayRef] for the given input index.
-    pub fn input_column(&self, index: usize) -> &ArrayRef {
-        self.input.record_batch().expect("non empty").column(index)
+    pub fn input_column(&self) -> &ArrayRef {
+        self.input.data().expect("non empty")
     }
 
     /// Return the [Value] for the given expression index.

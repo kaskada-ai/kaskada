@@ -16,8 +16,8 @@ mod tests {
     use std::sync::Arc;
 
     use arrow_array::cast::AsArray;
-    use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
-    use arrow_schema::{DataType, Field, Schema, SchemaRef};
+    use arrow_array::{Int64Array, StructArray, TimestampNanosecondArray, UInt64Array};
+    use arrow_schema::{DataType, Field, Fields};
     use error_stack::{IntoReport, ResultExt};
     use index_vec::index_vec;
     use parking_lot::Mutex;
@@ -44,31 +44,31 @@ mod tests {
         let (input_tx, input_rx) = tokio::sync::mpsc::channel(10);
         let (output_tx, mut output_rx) = tokio::sync::mpsc::channel(10);
 
-        let input_schema = Arc::new(Schema::new(vec![
+        let input_fields = Fields::from(vec![
             Field::new("a", DataType::Int64, true),
             Field::new("b", DataType::Int64, true),
             Field::new("c", DataType::Int64, true),
-        ]));
+        ]);
 
-        let output_schema = Arc::new(Schema::new(vec![
+        let output_fields = Fields::from(vec![
             Field::new("ab", DataType::Int64, true),
             Field::new("abc", DataType::Int64, true),
-        ]));
+        ]);
 
-        let input_batch = RecordBatch::try_new(
-            input_schema.clone(),
+        let input_data = Arc::new(StructArray::new(
+            input_fields.clone(),
             vec![
                 Arc::new(Int64Array::from(vec![0, 1, 2, 3])),
                 Arc::new(Int64Array::from(vec![4, 7, 10, 11])),
                 Arc::new(Int64Array::from(vec![Some(21), None, Some(387), Some(87)])),
             ],
-        )
-        .unwrap();
+            None,
+        ));
         let time = Arc::new(TimestampNanosecondArray::from(vec![0, 1, 2, 3]));
         let subsort = Arc::new(UInt64Array::from(vec![0, 1, 2, 3]));
         let key_hash = Arc::new(UInt64Array::from(vec![0, 1, 2, 3]));
         let input_batch = Batch::new_with_data(
-            input_batch,
+            input_data,
             time,
             subsort,
             key_hash,
@@ -79,16 +79,16 @@ mod tests {
 
         execute(
             "hello".to_owned(),
-            input_schema,
+            DataType::Struct(input_fields),
             input_rx,
-            output_schema,
+            DataType::Struct(output_fields),
             output_tx,
         )
         .await
         .unwrap();
 
         let output = output_rx.recv().await.unwrap();
-        let output = output.into_record_batch().unwrap();
+        let output = output.data().unwrap().as_struct();
         let ab = output.column_by_name("ab").unwrap();
         let abc = output.column_by_name("abc").unwrap();
         assert_eq!(ab.as_primitive(), &Int64Array::from(vec![4, 8, 12, 14]));
@@ -101,9 +101,9 @@ mod tests {
     /// Execute a physical plan.
     pub async fn execute(
         query_id: String,
-        input_schema: SchemaRef,
+        input_type: DataType,
         mut input: tokio::sync::mpsc::Receiver<Batch>,
-        output_schema: SchemaRef,
+        output_type: DataType,
         output: tokio::sync::mpsc::Sender<Batch>,
     ) -> error_stack::Result<(), Error> {
         let mut worker_pool = WorkerPool::start(query_id).change_context(Error::Creating)?;
@@ -114,56 +114,61 @@ mod tests {
         // - We create a hard-coded "project" step (1)
         // - We output the results to the channel.
 
+        let table_id = uuid::uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
+
         let scan = sparrow_physical::Step {
             id: 0.into(),
-            kind: sparrow_physical::StepKind::Scan {
-                table_name: "table".to_owned(),
+            kind: sparrow_physical::StepKind::Read {
+                source_id: table_id,
             },
             inputs: vec![],
-            schema: input_schema,
+            result_type: input_type,
+            exprs: sparrow_physical::Exprs::new(),
         };
 
         let project = sparrow_physical::Step {
             id: 1.into(),
-            kind: sparrow_physical::StepKind::Project {
-                exprs: sparrow_physical::Exprs {
-                    exprs: index_vec![
-                        sparrow_physical::Expr {
-                            name: "column".into(),
-                            literal_args: vec![ScalarValue::Utf8(Some("a".to_owned()))],
-                            args: vec![],
-                            result_type: DataType::Int64
-                        },
-                        sparrow_physical::Expr {
-                            name: "column".into(),
-                            literal_args: vec![ScalarValue::Utf8(Some("b".to_owned()))],
-                            args: vec![],
-                            result_type: DataType::Int64
-                        },
-                        sparrow_physical::Expr {
-                            name: "add".into(),
-                            literal_args: vec![],
-                            args: vec![0.into(), 1.into()],
-                            result_type: DataType::Int64
-                        },
-                        sparrow_physical::Expr {
-                            name: "column".into(),
-                            literal_args: vec![ScalarValue::Utf8(Some("c".to_owned()))],
-                            args: vec![],
-                            result_type: DataType::Int64
-                        },
-                        sparrow_physical::Expr {
-                            name: "add".into(),
-                            literal_args: vec![],
-                            args: vec![2.into(), 3.into()],
-                            result_type: DataType::Int64
-                        },
-                    ],
-                    outputs: vec![2.into(), 4.into()],
-                },
-            },
+            kind: sparrow_physical::StepKind::Project,
             inputs: vec![0.into()],
-            schema: output_schema,
+            result_type: output_type.clone(),
+            exprs: index_vec![
+                sparrow_physical::Expr {
+                    name: "column".into(),
+                    literal_args: vec![ScalarValue::Utf8(Some("a".to_owned()))],
+                    args: vec![],
+                    result_type: DataType::Int64
+                },
+                sparrow_physical::Expr {
+                    name: "column".into(),
+                    literal_args: vec![ScalarValue::Utf8(Some("b".to_owned()))],
+                    args: vec![],
+                    result_type: DataType::Int64
+                },
+                sparrow_physical::Expr {
+                    name: "add".into(),
+                    literal_args: vec![],
+                    args: vec![0.into(), 1.into()],
+                    result_type: DataType::Int64
+                },
+                sparrow_physical::Expr {
+                    name: "column".into(),
+                    literal_args: vec![ScalarValue::Utf8(Some("c".to_owned()))],
+                    args: vec![],
+                    result_type: DataType::Int64
+                },
+                sparrow_physical::Expr {
+                    name: "add".into(),
+                    literal_args: vec![],
+                    args: vec![2.into(), 3.into()],
+                    result_type: DataType::Int64
+                },
+                sparrow_physical::Expr {
+                    name: "record".into(),
+                    literal_args: vec![],
+                    args: vec![2.into(), 4.into()],
+                    result_type: output_type
+                }
+            ],
         };
 
         let sink_pipeline = worker_pool.add_pipeline(1, WriteChannelPipeline::new(output));

@@ -67,7 +67,7 @@ fn is_pipeline_breaker(index: StepId, step: &Step, references: &IndexVec<StepId,
             );
             true
         }
-        StepKind::Scan { .. } | StepKind::Merge | StepKind::Repartition { .. } => {
+        StepKind::Read { .. } | StepKind::Merge | StepKind::Repartition { .. } => {
             debug_println!(
                 DEBUG_SCHEDULING,
                 "Step {index} is new pipeline based on kind {:?}",
@@ -81,66 +81,65 @@ fn is_pipeline_breaker(index: StepId, step: &Step, references: &IndexVec<StepId,
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
-    use arrow_schema::Schema;
+    use arrow_schema::DataType;
     use sparrow_physical::{Exprs, Pipeline, Step, StepKind};
 
     use crate::pipeline_schedule;
 
     #[test]
     fn test_schedule_pipeline() {
-        let schema = Arc::new(Schema::empty());
+        let result_type = DataType::Null;
+        let table1 = uuid::uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
+        let table2 = uuid::uuid!("67e55044-10b1-426f-9247-bb680e5fe0c9");
         let steps = index_vec::index_vec![
             // 0: scan table1
             Step {
                 id: 0.into(),
-                kind: StepKind::Scan {
-                    table_name: "table1".to_owned(),
-                },
+                kind: StepKind::Read { source_id: table1 },
                 inputs: vec![],
-                schema: schema.clone(),
+                result_type: result_type.clone(),
+                exprs: Exprs::new(),
             },
             // 1: scan table2
             Step {
                 id: 1.into(),
-                kind: StepKind::Scan {
-                    table_name: "table2".to_owned(),
-                },
+                kind: StepKind::Read { source_id: table2 },
                 inputs: vec![],
-                schema: schema.clone(),
+                result_type: result_type.clone(),
+                exprs: Exprs::new(),
             },
             // 2: merge 0 and 1
             Step {
                 id: 2.into(),
                 kind: StepKind::Merge,
                 inputs: vec![0.into(), 1.into()],
-                schema: schema.clone(),
+                result_type: result_type.clone(),
+                exprs: Exprs::new(),
             },
             // 3: project 0 -> separate pipeline since 0 has 2 consumers
             Step {
                 id: 3.into(),
-                kind: StepKind::Project {
-                    exprs: Exprs::empty(),
-                },
+                kind: StepKind::Project,
                 inputs: vec![0.into()],
-                schema: schema.clone(),
+                result_type: result_type.clone(),
+                exprs: Exprs::new(),
             },
             // 4: project 2 -> same pipeline since only consumer
             Step {
                 id: 4.into(),
-                kind: StepKind::Project {
-                    exprs: Exprs::empty(),
-                },
+                kind: StepKind::Project,
                 inputs: vec![2.into()],
-                schema: schema.clone(),
+                result_type: result_type.clone(),
+                exprs: Exprs::new(),
             },
             // 5: merge 3 and 4 -> new pipeline since merge
             Step {
                 id: 5.into(),
                 kind: StepKind::Merge,
                 inputs: vec![3.into(), 4.into()],
-                schema,
+                result_type,
+                exprs: Exprs::new(),
             },
         ];
 
