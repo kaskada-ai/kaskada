@@ -13,12 +13,8 @@ pub struct Project {
 }
 
 impl Project {
-    pub fn try_new(
-        input_type: &DataType,
-        exprs: &Exprs,
-        output_type: &DataType,
-    ) -> error_stack::Result<Self, Error> {
-        let evaluators = ExpressionExecutor::try_new(input_type, exprs.as_vec())
+    pub fn try_new(exprs: &Exprs, output_type: &DataType) -> error_stack::Result<Self, Error> {
+        let evaluators = ExpressionExecutor::try_new(exprs.as_vec())
             .change_context_lazy(|| Error::CreateTransform("project"))?;
         error_stack::ensure!(
             output_type == evaluators.output_type(),

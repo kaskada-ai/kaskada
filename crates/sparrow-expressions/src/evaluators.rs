@@ -52,8 +52,6 @@ inventory::collect!(EvaluatorFactory);
 
 /// Static information available when creating an evaluator.
 pub struct StaticInfo<'a> {
-    /// Type of the input that all the expressions are run on.
-    input_type: &'a DataType,
     /// Name of the instruction to be evaluated.
     name: &'a Cow<'static, str>,
     /// Literal (static) arguments to *this* expression.
@@ -161,7 +159,6 @@ impl<'a> StaticInfo<'a> {
 
 /// Create the evaluators for the given expressions.
 pub(super) fn create_evaluators(
-    input_type: &DataType,
     exprs: &[Expr],
 ) -> error_stack::Result<Vec<Box<dyn Evaluator>>, Error> {
     // Static information (index in expressions, type, etc.) for each expression in `exprs`.
@@ -173,7 +170,6 @@ pub(super) fn create_evaluators(
     for (index, expr) in exprs.iter().enumerate() {
         let args = expr.args.iter().map(|index| &expressions[*index]).collect();
         let info = StaticInfo {
-            input_type,
             name: &expr.name,
             literal_args: &expr.literal_args,
             args,

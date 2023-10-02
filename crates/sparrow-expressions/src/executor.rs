@@ -19,11 +19,8 @@ pub struct ExpressionExecutor {
 
 impl ExpressionExecutor {
     /// Create an `ExpressionExecutor` for the given expressions.
-    pub fn try_new(
-        input_type: &DataType,
-        exprs: &[sparrow_physical::Expr],
-    ) -> error_stack::Result<Self, Error> {
-        let evaluators = evaluators::create_evaluators(input_type, exprs)?;
+    pub fn try_new(exprs: &[sparrow_physical::Expr]) -> error_stack::Result<Self, Error> {
+        let evaluators = evaluators::create_evaluators(exprs)?;
         let output_type = exprs
             .last()
             .expect("at least one expression")

@@ -18,14 +18,6 @@ impl Evaluator for InputEvaluator {
     }
 }
 
-fn create(info: super::StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluator>, Error> {
-    error_stack::ensure!(
-        info.input_type == info.result_type,
-        Error::InvalidResultType {
-            expected: info.result_type.clone(),
-            actual: info.input_type.clone(),
-        }
-    );
-
+fn create(_info: super::StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluator>, Error> {
     Ok(Box::new(InputEvaluator))
 }

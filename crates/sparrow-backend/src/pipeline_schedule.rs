@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_schedule_pipeline() {
-        let data_type = DataType::Null;
+        let result_type = DataType::Null;
         let table1 = uuid::uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
         let table2 = uuid::uuid!("67e55044-10b1-426f-9247-bb680e5fe0c9");
         let steps = index_vec::index_vec![
@@ -98,7 +98,7 @@ mod tests {
                 id: 0.into(),
                 kind: StepKind::Read { source_id: table1 },
                 inputs: vec![],
-                result_type: data_type.clone(),
+                result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
             // 1: scan table2
@@ -106,7 +106,7 @@ mod tests {
                 id: 1.into(),
                 kind: StepKind::Read { source_id: table2 },
                 inputs: vec![],
-                result_type: data_type.clone(),
+                result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
             // 2: merge 0 and 1
@@ -114,7 +114,7 @@ mod tests {
                 id: 2.into(),
                 kind: StepKind::Merge,
                 inputs: vec![0.into(), 1.into()],
-                result_type: data_type.clone(),
+                result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
             // 3: project 0 -> separate pipeline since 0 has 2 consumers
@@ -122,7 +122,7 @@ mod tests {
                 id: 3.into(),
                 kind: StepKind::Project,
                 inputs: vec![0.into()],
-                result_type: data_type.clone(),
+                result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
             // 4: project 2 -> same pipeline since only consumer
@@ -130,7 +130,7 @@ mod tests {
                 id: 4.into(),
                 kind: StepKind::Project,
                 inputs: vec![2.into()],
-                result_type: data_type.clone(),
+                result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
             // 5: merge 3 and 4 -> new pipeline since merge
