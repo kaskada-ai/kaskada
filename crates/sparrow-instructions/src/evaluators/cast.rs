@@ -125,12 +125,10 @@ fn cast_duration(input: &dyn Array, from: &TimeUnit, to: &TimeUnit) -> anyhow::R
     let to_nanos = time_unit_nanos(to);
 
     let result = if from_nanos < to_nanos {
-        let scalar: Int64Array = Int64Array::from_value(to_nanos / from_nanos, 1);
-        let scalar = arrow_array::Scalar::new(scalar);
+        let scalar = Int64Array::new_scalar(to_nanos / from_nanos);
         arrow_arith::numeric::mul(&input, &scalar)?
     } else {
-        let scalar: Int64Array = Int64Array::from_value(from_nanos / to_nanos, 1);
-        let scalar = arrow_array::Scalar::new(scalar);
+        let scalar = Int64Array::new_scalar(from_nanos / to_nanos);
         arrow_arith::numeric::mul(&input, &scalar)?
     };
 

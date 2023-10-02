@@ -290,19 +290,14 @@ fn time_multiplier(
         | DataType::Int32
         | DataType::Int64 => {
             // We'll multiply the i64 values, so create that kind of scalar.
-            Ok(Some(Box::new(Scalar::new(Int64Array::from_value(
-                multiplier, 1,
-            )))))
+            Ok(Some(Box::new(Int64Array::new_scalar(multiplier))))
         }
         DataType::Utf8 | DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
             Ok(None)
         }
         DataType::Float16 | DataType::Float32 | DataType::Float64 => {
             // We'll multiply the f64 values, so create that kind of scalar.
-            Ok(Some(Box::new(Scalar::new(Float64Array::from_value(
-                multiplier as f64,
-                1,
-            )))))
+            Ok(Some(Box::new(Float64Array::new_scalar(multiplier as f64))))
         }
         other => {
             error_stack::bail!(Error::ConvertTime(other.clone()))

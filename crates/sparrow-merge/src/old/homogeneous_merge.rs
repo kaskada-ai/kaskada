@@ -196,9 +196,7 @@ mod tests {
         let split_array = UInt8Array::from(split);
         let inputs: Vec<_> = (0..inputs)
             .map(|n| {
-                let filter =
-                    arrow_ord::cmp::eq(&split_array, &Scalar::new(UInt8Array::from_value(n, 1)))
-                        .unwrap();
+                let filter = arrow_ord::cmp::eq(&split_array, &UInt8Array::new_scalar(n)).unwrap();
                 arrow_select::filter::filter_record_batch(&merged, &filter).unwrap()
             })
             .collect();

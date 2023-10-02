@@ -157,9 +157,7 @@ where
         let result = match rhs.try_primitive_literal::<T>() {
             Ok(Some(rhs)) if !rhs.is_zero() => {
                 // Division by a literal
-                let rhs: arrow_array::PrimitiveArray<T> =
-                    arrow_array::PrimitiveArray::from_value(rhs, 1);
-                let rhs = arrow_array::Scalar::new(&rhs);
+                let rhs = arrow_array::PrimitiveArray::<T>::new_scalar(rhs);
                 let result = arrow_arith::numeric::div(&lhs, &rhs)?;
                 Arc::new(result)
             }
