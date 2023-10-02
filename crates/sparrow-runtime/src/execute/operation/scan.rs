@@ -323,6 +323,9 @@ impl ScanOperation {
                     // TODO: Fix flight recorder
                     FlightRecorder::disabled(),
                     p,
+                    // TODO: Support time units
+                    // The stream reader currently only supports time units in nanoseconds.
+                    None,
                 )
                 .await
                 .change_context(Error::internal_msg("failed to create stream reader"))?

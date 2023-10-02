@@ -7,5 +7,5 @@ mod table;
 pub use error::Error;
 pub use execution::Execution;
 pub use expr::{Expr, Literal};
-pub use session::{ExecutionOptions, Results, Session};
+pub use session::*;
 pub use table::Table;
