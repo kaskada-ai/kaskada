@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use arrow::array::{Array, ArrayRef, StringArray, UInt64Array};
-use arrow::compute::eq_scalar;
 use arrow::datatypes::DataType;
 use arrow::record_batch::RecordBatch;
 use error_stack::{IntoReport, ResultExt};
@@ -91,6 +90,7 @@ impl SlicePreparer {
                 let upper_bound = (percent / 100.0 * (u64::MAX as f64)).round() as u64;
                 let entity_column = self.hash_entity_column(&record_batch)?;
 
+                #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
                 arrow::compute::lt_eq_scalar(&entity_column, upper_bound)
                     .into_report()
                     .change_context(Error::SlicingBatch)?
@@ -109,7 +109,8 @@ impl SlicePreparer {
 
                 // Convert that from a primitive array to a boolean array by comparing to the
                 // scalar value 1.
-                eq_scalar(&include, 1)
+                #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
+                arrow::compute::eq_scalar(&include, 1)
                     .into_report()
                     .change_context(Error::SlicingBatch)?
             }

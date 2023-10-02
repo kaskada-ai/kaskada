@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 use crate::evaluators::macros::{
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
-    create_signed_evaluator, create_typed_evaluator,
+    create_typed_evaluator,
 };
 use crate::{ColumnarValue, ComputeStore, GroupingIndices};
 
@@ -87,6 +87,20 @@ impl<'a> StaticInfo<'a> {
                 num_args
             ),
         }
+    }
+}
+
+fn check_numeric(evaluator: &'static str, data_type: &DataType) -> anyhow::Result<()> {
+    match data_type {
+        DataType::Int32
+        | DataType::Int64
+        | DataType::UInt32
+        | DataType::UInt64
+        | DataType::Float32
+        | DataType::Float64 => Ok(()),
+        unsupported_type => Err(anyhow::anyhow!(format!(
+            "Unsupported non-numeric input type {unsupported_type:?} for {evaluator}",
+        ))),
     }
 }
 
@@ -185,9 +199,7 @@ fn create_simple_evaluator(
     mut info: StaticInfo<'_>,
 ) -> anyhow::Result<Box<dyn Evaluator>> {
     match op {
-        InstOp::Add => {
-            create_number_evaluator!(&info.args[0].data_type, AddEvaluator, info)
-        }
+        InstOp::Add => AddEvaluator::try_new(info),
         InstOp::AddTime => AddTimeEvaluator::try_new(info),
         InstOp::Ceil => CeilEvaluator::try_new(info),
         InstOp::Clamp => {
@@ -216,7 +228,7 @@ fn create_simple_evaluator(
         InstOp::Div => {
             create_number_evaluator!(&info.args[0].data_type, DivEvaluator, info)
         }
-        InstOp::Eq => EqEvaluatorFactory::try_new(info),
+        InstOp::Eq => EqEvaluator::try_new(info),
         InstOp::Exp => {
             create_float_evaluator!(&info.args[0].data_type, ExpEvaluator, info)
         }
@@ -305,13 +317,9 @@ fn create_simple_evaluator(
         InstOp::MonthOfYear0 => MonthOfYear0Evaluator::try_new(info),
         InstOp::Months => MonthsEvaluator::try_new(info),
         InstOp::MonthsBetween => MonthsBetweenEvaluator::try_new(info),
-        InstOp::Mul => {
-            create_number_evaluator!(&info.args[0].data_type, MulEvaluator, info)
-        }
-        InstOp::Neg => {
-            create_signed_evaluator!(&info.args[0].data_type, NegEvaluator, info)
-        }
-        InstOp::Neq => NeqEvaluatorFactory::try_new(info),
+        InstOp::Mul => MulEvaluator::try_new(info),
+        InstOp::Neg => NegEvaluator::try_new(info),
+        InstOp::Neq => NeqEvaluator::try_new(info),
         InstOp::Not => NotEvaluator::try_new(info),
         InstOp::NullIf => NullIfEvaluator::try_new(info),
         InstOp::Powf => {
@@ -320,9 +328,7 @@ fn create_simple_evaluator(
         InstOp::Round => RoundEvaluator::try_new(info),
         InstOp::Seconds => SecondsEvaluator::try_new(info),
         InstOp::SecondsBetween => SecondsBetweenEvaluator::try_new(info),
-        InstOp::Sub => {
-            create_number_evaluator!(&info.args[0].data_type, SubEvaluator, info)
-        }
+        InstOp::Sub => SubEvaluator::try_new(info),
         InstOp::Substring => SubstringEvaluator::try_new(info),
         InstOp::Sum => {
             create_number_evaluator!(&info.args[0].data_type, ArrowAggEvaluator, Sum, info)

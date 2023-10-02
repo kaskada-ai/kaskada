@@ -157,9 +157,9 @@ async fn test_query_with_merge_and_map_output() {
     .await
     .unwrap();
 
-    assert_eq!(
-        "E28AF590FCD81C1F47F79355DBCADDCBB76CF0B15091EB4D07F2E900",
-        hash
+    insta::assert_snapshot!(
+        hash,
+        @"D61E5781315EF469CD4B30CCE5A0760509A940B37B7163ED9B38B84C"
     );
 }
 
@@ -173,8 +173,7 @@ async fn test_first_last_map() {
             .await
             .unwrap();
 
-    let expected = "D88A77A7F5172527642A4784A7482D17303FBE510435AA5E6BD3965C";
-    assert_eq!(hash, expected);
+    insta::assert_snapshot!(hash, @"9AC24FF800B6ED977E9095E781437FB89A35DC3935A3A61756020EAE");
 }
 
 #[tokio::test]

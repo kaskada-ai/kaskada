@@ -1,9 +1,9 @@
 use anyhow::anyhow;
-use arrow::array::{
+use arrow::datatypes::*;
+use arrow_array::{
     Array, ArrayRef, BooleanArray, GenericStringArray, MapArray, OffsetSizeTrait, PrimitiveArray,
     StructArray,
 };
-use arrow::datatypes::*;
 use owning_ref::ArcRef;
 use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_map_array, downcast_primitive_array, downcast_string_array,

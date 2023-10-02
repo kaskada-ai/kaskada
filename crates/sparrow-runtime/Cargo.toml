@@ -19,6 +19,7 @@ ahash.workspace = true
 anyhow.workspace = true
 arrow.workspace = true
 arrow-array.workspace = true
+arrow-arith.workspace = true
 arrow-select.workspace = true
 async-once-cell.workspace = true
 async-stream.workspace = true

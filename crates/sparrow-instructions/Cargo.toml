@@ -12,7 +12,9 @@ The instructions supported in Sparrow execution plans.
 [dependencies]
 anyhow.workspace = true
 arrow.workspace = true
+arrow-array.workspace = true
 arrow-arith.workspace = true
+arrow-ord.workspace = true
 arrow-schema.workspace = true
 bincode.workspace = true
 bit-set.workspace = true

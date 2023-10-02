@@ -161,9 +161,9 @@ async fn test_list_schemas_are_compatible() {
     .await
     .unwrap();
 
-    assert_eq!(
-        "C08A8D8F24F79BFAD10822D39F5734B1BCD35B73EC5C4A7AF3A90A5F",
-        hash
+    insta::assert_snapshot!(
+        hash,
+        @"36F43DDEFC30C844CED73BEDAB7EF0CA0365A52B6B079EA23E7FFB98"
     );
 }
 

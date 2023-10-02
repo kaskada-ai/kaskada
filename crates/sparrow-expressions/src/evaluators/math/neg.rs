@@ -22,7 +22,7 @@ struct NegEvaluator<T: ArrowNumericType> {
 impl<T: ArrowNumericType> Evaluator for NegEvaluator<T> {
     fn evaluate(&self, info: &WorkArea<'_>) -> error_stack::Result<ArrayRef, Error> {
         let input = info.expression(self.input);
-        let result = arrow_arith::arithmetic::negate::<T>(input)
+        let result = arrow_arith::numeric::neg_wrapping(input)
             .into_report()
             .change_context(Error::ExprEvaluation)?;
         Ok(Arc::new(result))

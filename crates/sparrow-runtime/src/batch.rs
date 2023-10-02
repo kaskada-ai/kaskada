@@ -139,7 +139,13 @@ impl Batch {
 
     #[cfg(test)]
     pub fn batch_from_dates(start: NaiveDateTime, end: NaiveDateTime) -> Batch {
-        let times: Vec<i64> = (start.timestamp_nanos()..=end.timestamp_nanos()).collect();
+        let start = start
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow");
+        let end = end
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow");
+        let times: Vec<i64> = (start..=end).collect();
         let time = TimestampNanosecondArray::from_iter_values(times.iter().copied());
         Self::test_batch_random_keys(time)
     }

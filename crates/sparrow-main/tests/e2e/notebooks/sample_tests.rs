@@ -81,5 +81,5 @@ async fn test_sample_events_to_parquet() {
         .unwrap();
 
     assert_eq!(no_simplifier, simplifier);
-    insta::assert_snapshot!(simplifier, @"D2493BFB6F4BA9C5F926AA4F51931952BE705773CEA8C5F3A8256121")
+    insta::assert_snapshot!(simplifier, @"30D87B12D438E393F3F3F02F00A50849100AC5F0FA4FF31429609C9C")
 }

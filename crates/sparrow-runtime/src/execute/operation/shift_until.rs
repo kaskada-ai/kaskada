@@ -343,6 +343,7 @@ impl CurrentBatch {
 
         // Gets the array matching the key hash
         let key_arr: &UInt64Array = downcast_primitive_array(self.batch.columns()[0].as_ref())?;
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let key_filter = arrow::compute::eq_scalar(key_arr, key_hash)?;
 
         // `key_filter & !already_emitted` gives the array of rows that match and have
@@ -441,6 +442,7 @@ impl RetainedBatch {
             // If the key was present, we haven't sent rows for this key prior.
             // Find all rows matching the key, and return them.
             let key_arr: &UInt64Array = downcast_primitive_array(self.batch.columns()[0].as_ref())?;
+            #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
             let row_filter = arrow::compute::eq_scalar(key_arr, key_hash)?;
             let rows_to_emit =
                 arrow::compute::kernels::filter::filter_record_batch(&self.batch, &row_filter)?;

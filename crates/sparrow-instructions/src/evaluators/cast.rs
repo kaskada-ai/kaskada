@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::ValueRef;
 use anyhow::anyhow;
 use arrow::array::{
-    Array, ArrayRef, AsArray, Int32Array, Int64Array, IntervalDayTimeArray, IntervalYearMonthArray,
+    Array, ArrayRef, Int32Array, Int64Array, IntervalDayTimeArray, IntervalYearMonthArray,
 };
 use arrow::datatypes::DataType;
 use arrow_schema::TimeUnit;
@@ -120,15 +120,16 @@ fn time_unit_nanos(unit: &TimeUnit) -> i64 {
 
 fn cast_duration(input: &dyn Array, from: &TimeUnit, to: &TimeUnit) -> anyhow::Result<ArrayRef> {
     let input: ArrayRef = arrow::compute::cast(input, &DataType::Int64)?;
-    let input: &Int64Array = input.as_primitive();
 
     let from_nanos = time_unit_nanos(from);
     let to_nanos = time_unit_nanos(to);
 
     let result = if from_nanos < to_nanos {
-        arrow_arith::arithmetic::multiply_scalar(input, to_nanos / from_nanos)?
+        let scalar = Int64Array::new_scalar(to_nanos / from_nanos);
+        arrow_arith::numeric::mul(&input, &scalar)?
     } else {
-        arrow_arith::arithmetic::divide_scalar(input, from_nanos / to_nanos)?
+        let scalar = Int64Array::new_scalar(from_nanos / to_nanos);
+        arrow_arith::numeric::mul(&input, &scalar)?
     };
 
     let result = arrow::compute::cast(&result, &DataType::Duration(to.clone()))?;

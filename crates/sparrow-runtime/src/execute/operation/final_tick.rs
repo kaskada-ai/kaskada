@@ -200,7 +200,11 @@ impl Operation for FinalTickOperation {
                     let discovered_entities = self.discover_entities(&incoming)?;
                     let keys_before_tick = discovered_entities
                         .iter()
-                        .filter(|(_, t)| **t <= tick_at.timestamp_nanos())
+                        .filter(|(_, t)| {
+                            **t <= tick_at
+                                .timestamp_nanos_opt()
+                                .expect("timestamp doesn't overflow")
+                        })
                         .map(|(k, _)| *k);
                     self.key_hashes.extend(keys_before_tick);
 
@@ -228,7 +232,15 @@ impl Operation for FinalTickOperation {
 
         if !self.key_hashes.is_empty() {
             if let Some(tick_at) = self.tick_at {
-                send_tick_batch(tick_at.timestamp_nanos() + 1, &self.key_hashes, &sender).await?;
+                send_tick_batch(
+                    tick_at
+                        .timestamp_nanos_opt()
+                        .expect("timestamp doesn't overflow")
+                        + 1,
+                    &self.key_hashes,
+                    &sender,
+                )
+                .await?;
             } else {
                 send_tick_batch(self.current_time + 1, &self.key_hashes, &sender).await?;
             }
@@ -408,7 +420,14 @@ mod tests {
 
         if let Some(input) = operation_stream.next().await {
             let num_rows = input.time.len();
-            validate_tick_batch(end.timestamp_nanos() + 1, &mut key_hashes, input, num_rows)
+            validate_tick_batch(
+                end.timestamp_nanos_opt()
+                    .expect("timestamp doesn't overflow")
+                    + 1,
+                &mut key_hashes,
+                input,
+                num_rows,
+            )
         } else {
             panic!("expected batch")
         }

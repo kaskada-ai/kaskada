@@ -25,6 +25,7 @@ impl<T: ArrowNumericType> Evaluator for LtePrimitiveEvaluator<T> {
         let lhs = work_area.expression(self.lhs);
         let rhs = work_area.expression(self.rhs);
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow_ord::comparison::lt_eq::<T>(lhs, rhs)
             .into_report()
             .change_context(Error::ExprEvaluation)?;

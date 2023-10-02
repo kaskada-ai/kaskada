@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use crate::ValueRef;
 use arrow::array::{ArrayRef, PrimitiveArray};
-use arrow::compute::math_op;
 use arrow::datatypes::{ArrowNativeTypeOp, ArrowNumericType};
 use num::traits::Pow;
 use sparrow_arrow::scalar_value::NativeFromScalar;
@@ -79,7 +78,7 @@ where
     T: ArrowNumericType,
     T::Native: ArrowNativeTypeOp + Pow<T::Native, Output = T::Native>,
 {
-    let result = math_op(base, exp, |b, e| b.pow(e))?;
+    let result = arrow_arith::arity::binary(base, exp, |b, e| b.pow(e))?;
     Ok(result)
 }
 

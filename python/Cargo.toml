@@ -12,7 +12,7 @@ Python library for building and executing temporal queries.
 [workspace]
 
 [dependencies]
-arrow = { version = "43.0.0", features = ["pyarrow"] }
+arrow = { version = "47.0.0", features = ["pyarrow"] }
 anyhow = { version = "1.0.70", features = ["backtrace"] }
 derive_more = "0.99.17"
 error-stack = { version = "0.3.1", features = ["anyhow", "spantrace"] }

@@ -117,7 +117,12 @@ impl Operation for TickOperation {
         };
 
         // If `next_tick` is 0, we can assume that it has not been initialized yet.
-        if self.next_tick.timestamp_nanos() == 0 {
+        if self
+            .next_tick
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow")
+            == 0
+        {
             self.tick_iter = None
         } else {
             self.tick_iter = Some(TickIter::try_new(
@@ -186,7 +191,13 @@ impl Operation for TickOperation {
 
         // Once we're done with incoming batches, see if we need to
         // process one last tick at the current upper bound.
-        if self.next_tick.timestamp_nanos() == self.current_time && !self.key_hashes.is_empty() {
+        if self
+            .next_tick
+            .timestamp_nanos_opt()
+            .expect("timestamp doesn't overflow")
+            == self.current_time
+            && !self.key_hashes.is_empty()
+        {
             send_tick_batch(self.next_tick, &self.key_hashes, &sender)
                 .await
                 .into_report()
@@ -298,7 +309,10 @@ impl TickOperation {
 
             // Loop until ticks are emitted for each time up to the upper bound.
             while upper_bound > self.next_tick {
-                let tick_nanos = self.next_tick.timestamp_nanos();
+                let tick_nanos = self
+                    .next_tick
+                    .timestamp_nanos_opt()
+                    .expect("timestamp doesn't overflow");
                 // Add entities discovered prior to tick time to known entity set
                 let keys_before_tick = discovered_entities
                     .iter()
@@ -445,7 +459,11 @@ async fn send_tick_batch(
         // SAFETY: We create the iterator with a known / fixed length.
         let time_column = unsafe {
             TimestampNanosecondArray::from_trusted_len_iter(
-                std::iter::repeat(Some(tick.timestamp_nanos())).take(len),
+                std::iter::repeat(Some(
+                    tick.timestamp_nanos_opt()
+                        .expect("timestamp doesn't overflow"),
+                ))
+                .take(len),
             )
         };
         let time_column: ArrayRef = Arc::new(time_column);
@@ -465,12 +483,16 @@ async fn send_tick_batch(
 
         // The tick batches only occur at one time, so the bounds are at that time.
         let lower_bound = KeyTriple {
-            time: tick.timestamp_nanos(),
+            time: tick
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: u64::MAX,
             key_hash: first_key,
         };
         let upper_bound = KeyTriple {
-            time: tick.timestamp_nanos(),
+            time: tick
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: u64::MAX,
             key_hash: last_key,
         };
@@ -642,7 +664,13 @@ mod tests {
         let second_end = NaiveDateTime::from_timestamp_opt(7300, 2).unwrap();
         let second_batch = Batch::batch_from_dates(second_start, second_end);
         // You can only update the entities up the time of the first tick.
-        update_key_hashes_up_to(&mut key_hashes, &second_batch, first_tick.timestamp_nanos());
+        update_key_hashes_up_to(
+            &mut key_hashes,
+            &second_batch,
+            first_tick
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
+        );
         sender.send(second_batch.clone()).await.unwrap();
 
         // Begin processing
@@ -670,7 +698,9 @@ mod tests {
         update_key_hashes_up_to(
             &mut key_hashes,
             &second_batch,
-            second_tick.timestamp_nanos(),
+            second_tick
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
         );
         if let Some(input) = operation_stream.next().await {
             let num_rows = key_hashes.len();
@@ -748,7 +778,8 @@ mod tests {
         let new_upper_bound = KeyTriple {
             time: NaiveDateTime::from_timestamp_opt(10801, 0)
                 .unwrap()
-                .timestamp_nanos(),
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: 0,
             key_hash: 0,
         };
@@ -795,7 +826,9 @@ mod tests {
         let batch = Batch::batch_from_dates(start, end);
 
         let expected_bound = KeyTriple {
-            time: start.timestamp_nanos(),
+            time: start
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: 0,
             key_hash: 0,
         };
@@ -826,12 +859,16 @@ mod tests {
         let batch = Batch::batch_from_nanos(0, 0);
         let batch = RecordBatch::new_empty(batch.data.schema());
         let lower_bound = KeyTriple {
-            time: start.timestamp_nanos(),
+            time: start
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: 0,
             key_hash: 0,
         };
         let upper_bound = KeyTriple {
-            time: end.timestamp_nanos(),
+            time: end
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: 0,
             key_hash: 0,
         };
@@ -864,7 +901,9 @@ mod tests {
             NaiveDateTime::from_timestamp_opt(3700, 0).unwrap(),
             NaiveDateTime::from_timestamp_opt(3800, 0).unwrap(),
         ];
-        let times = times.iter().map(|i| i.timestamp_nanos());
+        let times = times
+            .iter()
+            .map(|i| i.timestamp_nanos_opt().expect("timestamp doesn't overflow"));
         let time = TimestampNanosecondArray::from_iter_values(times);
         let subsort = UInt64Array::from_iter_values(vec![0, 0, 0, 0, 0]);
         let keys = UInt64Array::from_iter_values(vec![0, 1, 0, 3, 1]);
@@ -896,14 +935,16 @@ mod tests {
         let lower_bound = KeyTriple {
             time: NaiveDateTime::from_timestamp_opt(3900, 0)
                 .unwrap()
-                .timestamp_nanos(),
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: 0,
             key_hash: 0,
         };
         let upper_bound = KeyTriple {
             time: NaiveDateTime::from_timestamp_opt(7400, 0)
                 .unwrap()
-                .timestamp_nanos(),
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow"),
             subsort: 0,
             key_hash: 0,
         };
@@ -927,7 +968,8 @@ mod tests {
             // We'll get an empty batch to the upper bound
             let upper = NaiveDateTime::from_timestamp_opt(3800, 0)
                 .unwrap()
-                .timestamp_nanos();
+                .timestamp_nanos_opt()
+                .expect("timestamp doesn't overflow");
             assert_eq!(input.upper_bound.time, upper);
         }
 
@@ -954,7 +996,11 @@ mod tests {
         num_rows: usize,
     ) {
         let times = TimestampNanosecondArray::from_iter_values(
-            std::iter::repeat(tick.timestamp_nanos()).take(num_rows),
+            std::iter::repeat(
+                tick.timestamp_nanos_opt()
+                    .expect("timestamp doesn't overflow"),
+            )
+            .take(num_rows),
         );
         let subsort = UInt64Array::from_iter_values(std::iter::repeat(u64::MAX).take(num_rows));
         let keys: UInt64Array = keys.keys().take(num_rows).collect();

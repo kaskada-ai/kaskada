@@ -26,6 +26,7 @@ where
         let lhs = info.value(&self.lhs)?.primitive_array()?;
         let rhs = info.value(&self.rhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::gt::<T>(lhs.as_ref(), rhs.as_ref())?;
         Ok(Arc::new(result))
     }
@@ -70,6 +71,7 @@ where
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let lhs = info.value(&self.lhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::gt_scalar::<T>(lhs.as_ref(), self.rhs)?;
         Ok(Arc::new(result))
     }
@@ -113,6 +115,7 @@ where
         let lhs = info.value(&self.lhs)?.primitive_array()?;
         let rhs = info.value(&self.rhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::lt::<T>(lhs.as_ref(), rhs.as_ref())?;
         Ok(Arc::new(result))
     }
@@ -156,6 +159,7 @@ where
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let lhs = info.value(&self.lhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::lt_scalar::<T>(lhs.as_ref(), self.rhs)?;
         Ok(Arc::new(result))
     }
@@ -199,6 +203,7 @@ where
         let lhs = info.value(&self.lhs)?.primitive_array()?;
         let rhs = info.value(&self.rhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::gt_eq::<T>(lhs.as_ref(), rhs.as_ref())?;
         Ok(Arc::new(result))
     }
@@ -242,6 +247,7 @@ where
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let lhs = info.value(&self.lhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::gt_eq_scalar::<T>(lhs.as_ref(), self.rhs)?;
         Ok(Arc::new(result))
     }
@@ -285,6 +291,7 @@ where
         let lhs = info.value(&self.lhs)?.primitive_array()?;
         let rhs = info.value(&self.rhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::lt_eq::<T>(lhs.as_ref(), rhs.as_ref())?;
         Ok(Arc::new(result))
     }
@@ -328,6 +335,7 @@ where
     fn evaluate(&mut self, info: &dyn RuntimeInfo) -> anyhow::Result<ArrayRef> {
         let lhs = info.value(&self.lhs)?.primitive_array()?;
 
+        #[allow(deprecated)] // https://github.com/kaskada-ai/kaskada/issues/783
         let result = arrow::compute::lt_eq_scalar::<T>(lhs.as_ref(), self.rhs)?;
         Ok(Arc::new(result))
     }

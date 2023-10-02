@@ -54,47 +54,6 @@ macro_rules! create_number_evaluator {
     }};
 }
 
-/// Create a `Box<dyn Evaluator>` for a signed instruction.
-///
-/// The `$input_type` must be a `&DataType` corresponding to the signed input
-/// to the instruction.
-///
-/// The `$evaluator` must be a `struct` that takes a single `T:
-/// ArrowPrimitiveType` generic and which implements `Evaluator`.
-///
-/// The `$info` should be a `StaticInfo`, which contains information relevant
-/// to creating a new evaluator.
-///
-/// # Example
-///
-/// ```no_run
-/// struct NegEvaluator<T: ArrowPrimitiveType>;
-/// impl<T: ArrowPrimitiveType> Evaluator for NegEvaluator<T> { ... }
-///
-/// fn create_evaluator(args: Vec<StaticArg>, result_type: &DataType) -> anyhow::Result<Self> {
-///   create_signed_evaluator!(&args[0].data_type, NegEvaluator, args, result_type)
-/// }
-/// ```
-macro_rules! create_signed_evaluator {
-    ($input_type:expr, $evaluator:ident, $info:expr) => {{
-        use arrow::datatypes::*;
-        match $input_type {
-            DataType::Int32 => $evaluator::<Int32Type>::try_new($info),
-            DataType::Int64 => $evaluator::<Int64Type>::try_new($info),
-            DataType::Float32 => $evaluator::<Float32Type>::try_new($info),
-            DataType::Float64 => $evaluator::<Float64Type>::try_new($info),
-            unsupported_type => {
-                // This macro should only be used on `signed` numeric types.
-                Err(anyhow::anyhow!(format!(
-                    "Unsupported non-signed input type {:?} for {}",
-                    unsupported_type,
-                    stringify!($evaluator)
-                )))
-            }
-        }
-    }};
-}
-
 /// Create a `Box<dyn Evaluator>` for a float instructions.
 ///
 /// The `$input_type` must be a `&DataType` corresponding to the float input
@@ -326,5 +285,5 @@ macro_rules! create_typed_evaluator {
 
 pub(super) use {
     create_float_evaluator, create_number_evaluator, create_ordered_evaluator,
-    create_signed_evaluator, create_typed_evaluator,
+    create_typed_evaluator,
 };
