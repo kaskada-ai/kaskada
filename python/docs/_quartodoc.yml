@@ -6,6 +6,7 @@ quartodoc:
   package: kaskada
   renderer:
     style: _renderer.py
+  render_interlinks: true
 
   # write sidebar data to this file
   sidebar: reference/_sidebar.yml

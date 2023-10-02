@@ -129,7 +129,7 @@ class Sliding(Window):
     Args:
         duration: the number of active windows at any given time.
         predicate: the condition used to determine when the oldest window ends and a new
-          window starts.
+            window starts.
 
     Returns:
         Overlapping windows for aggregating values.
