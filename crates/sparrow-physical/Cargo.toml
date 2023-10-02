@@ -17,6 +17,7 @@ index_vec.workspace = true
 serde.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 strum_macros.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 serde_yaml.workspace = true

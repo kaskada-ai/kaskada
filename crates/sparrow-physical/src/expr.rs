@@ -11,48 +11,7 @@ index_vec::define_index_type! {
     DISPLAY_FORMAT = "{}";
 }
 
-/// Represents 1 or more values computed by expressions.
-///
-/// Expressions are evaluated by producing a sequence of columns
-/// and then selecting specific columns from those computed.
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct Exprs {
-    /// The expressions computing the intermediate values.
-    pub exprs: IndexVec<ExprId, Expr>,
-    /// The indices of columns to output.
-    pub outputs: Vec<ExprId>,
-}
-
-impl Exprs {
-    pub fn empty() -> Self {
-        Self {
-            exprs: IndexVec::default(),
-            outputs: vec![],
-        }
-    }
-
-    /// Create expressions computing the value of the last expression.
-    pub fn singleton(exprs: Vec<Expr>) -> Self {
-        let output = exprs.len() - 1;
-        Self {
-            exprs: exprs.into(),
-            outputs: vec![output.into()],
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.outputs.is_empty()
-    }
-
-    pub fn is_singleton(&self) -> bool {
-        self.outputs.len() == 1
-    }
-
-    /// Return the number of outputs produced by these expressions.
-    pub fn output_len(&self) -> usize {
-        self.outputs.len()
-    }
-}
+pub type Exprs = IndexVec<ExprId, Expr>;
 
 /// A physical expression which describes how a value should be computed.
 ///
@@ -66,7 +25,7 @@ pub struct Expr {
     ///
     /// Similar to an opcode or function.
     ///
-    /// Generally, interning owned strings to the specific owned static strings is preferred.
+    /// Generally, interning owned strings to the specific static strings is preferred.
     pub name: Cow<'static, str>,
     /// Zero or more literal-valued arguments.
     pub literal_args: Vec<ScalarValue>,

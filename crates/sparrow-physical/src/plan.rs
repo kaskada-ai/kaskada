@@ -7,7 +7,7 @@ use crate::{Step, StepId};
 /// The plan is represented as an array of steps, with each step referencing
 /// it's children (inputs) by index. The array is topologically sorted so that
 /// every step appears after the inputs to that step.
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Default)]
 pub struct Plan {
     /// The steps in the plan.
     pub steps: IndexVec<StepId, Step>,
