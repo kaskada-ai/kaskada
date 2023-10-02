@@ -41,7 +41,7 @@ use sparrow_instructions::{InstKind, InstOp, Udf};
 use sparrow_syntax::{FenlType, Location};
 pub(crate) use step_kind::*;
 type DfgGraph = egg::EGraph<language::DfgLang, analysis::DfgAnalysis>;
-pub(super) use expr::DfgExpr;
+pub use expr::DfgExpr;
 pub(crate) use pattern::*;
 use smallvec::smallvec;
 use tracing::{info, info_span};

@@ -160,6 +160,7 @@ class PyDict(Source):
         """Create a source reading from rows represented as dicts.
 
         Args:
+            rows: The input row(s) as a dictionary or list of dictionaries.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             queryable: Whether added rows will be available for running queries.

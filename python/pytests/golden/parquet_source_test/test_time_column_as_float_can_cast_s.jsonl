@@ -1,0 +1,10 @@
+{"_time":"2023-09-26T18:33:20.000000000","_key":"karen","id":"cb_001","purchase_time":1695753200.0,"customer_id":"karen","vendor_id":"chum_bucket","amount":9,"subsort_id":0}
+{"_time":"2023-09-26T18:33:21.000000000","_key":"patrick","id":"kk_001","purchase_time":1695753201.0,"customer_id":"patrick","vendor_id":"krusty_krab","amount":3,"subsort_id":1}
+{"_time":"2023-09-26T18:33:22.000000000","_key":"karen","id":"cb_002","purchase_time":1695753202.0,"customer_id":"karen","vendor_id":"chum_bucket","amount":2,"subsort_id":2}
+{"_time":"2023-09-26T18:33:23.000000000","_key":"patrick","id":"kk_002","purchase_time":1695753203.0,"customer_id":"patrick","vendor_id":"krusty_krab","amount":5,"subsort_id":3}
+{"_time":"2023-09-26T18:33:24.000000000","_key":"karen","id":"cb_003","purchase_time":1695753204.0,"customer_id":"karen","vendor_id":"chum_bucket","amount":4,"subsort_id":4}
+{"_time":"2023-09-26T18:33:25.000000000","_key":"patrick","id":"kk_003","purchase_time":1695753205.0,"customer_id":"patrick","vendor_id":"krusty_krab","amount":12,"subsort_id":5}
+{"_time":"2023-09-26T18:33:26.000000000","_key":"patrick","id":"cb_004","purchase_time":1695753206.0,"customer_id":"patrick","vendor_id":"chum_bucket","amount":5000,"subsort_id":6}
+{"_time":"2023-09-26T18:33:27.000000000","_key":"karen","id":"cb_005","purchase_time":1695753207.0,"customer_id":"karen","vendor_id":"chum_bucket","amount":3,"subsort_id":7}
+{"_time":"2023-09-26T18:33:28.000000000","_key":"karen","id":"cb_006","purchase_time":1695753208.0,"customer_id":"karen","vendor_id":"chum_bucket","amount":5,"subsort_id":8}
+{"_time":"2023-09-26T18:33:29.000000000","_key":"patrick","id":"kk_004","purchase_time":1695753209.0,"customer_id":"patrick","vendor_id":"krusty_krab","amount":9,"subsort_id":9}

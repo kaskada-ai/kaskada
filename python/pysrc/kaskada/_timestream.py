@@ -6,6 +6,7 @@ import sys
 import warnings
 from datetime import datetime, timedelta
 from typing import (
+    TYPE_CHECKING,
     Callable,
     List,
     Literal,
@@ -26,6 +27,9 @@ from typing_extensions import TypeAlias
 
 from ._execution import Execution, ResultIterator, _ExecutionOptions
 
+
+if TYPE_CHECKING:
+    import graphviz
 
 #: A literal value that can be used as an argument to a Timestream operation.
 LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
@@ -1194,6 +1198,51 @@ class Timestream(object):
 
         raise AssertionError(f"Unhandled kind {kind}")
 
+    def explain(
+        self,
+        kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
+        results: Optional[Union[kd.results.History, kd.results.Snapshot]] = None,
+        mode: Literal["once", "live"] = "once",
+    ) -> "graphviz.Source":
+        """Return an explanation of this Timestream will be executed.
+
+        This is intended for understanding how a given Timestream query will
+        be executed. It does not guarantee that the same query will always
+        be executed the same way.
+
+        Args:
+            results: The results to produce. Defaults to `History()` producing all points.
+            kind: The kind of plan to produce.
+            mode: The execution mode to use. Defaults to `'once'` to produce the results
+              from the currently available data. Use `'live'` to start a standing query
+              that continues to process new data until stopped.
+
+        Returns:
+            A GraphViz representation of the execution plan as a string, SVG string, or SVG.
+            Specific representation depends on the `format` argument.
+
+        Raises:
+            ValueError if the `kind` is not recognized or the `format` is not supported.
+
+        Caution:
+            This method is intended for debugging and development purposes only.
+            The API may change in the future.
+        """
+        import graphviz
+
+        expr = self
+        if not pa.types.is_struct(self.data_type):
+            # The execution engine requires a struct, so wrap this in a record.
+            expr = record({"result": self})
+
+        options = _ExecutionOptions.create(
+            results, row_limit=None, max_batch_size=None, mode=mode
+        )
+
+        dot = expr._ffi_expr.explain(kind, options)
+        dot = graphviz.Source(dot, engine="dot")
+        return dot
+
     def _execute(
         self,
         results: Optional[Union[kd.results.History, kd.results.Snapshot]],
@@ -1208,29 +1257,7 @@ class Timestream(object):
             # The execution engine requires a struct, so wrap this in a record.
             expr = record({"result": self})
 
-        options = _ExecutionOptions(
-            row_limit=row_limit,
-            max_batch_size=max_batch_size,
-            materialize=mode == "live",
-        )
-
-        if results is None:
-            results = kd.results.History()
-
-        if isinstance(results, kd.results.History):
-            options.results = "history"
-            if results.since is not None:
-                options.changed_since = int(results.since.timestamp())
-            if results.until is not None:
-                options.final_at = int(results.until.timestamp())
-        elif isinstance(results, kd.results.Snapshot):
-            options.results = "snapshot"
-            if results.changed_since is not None:
-                options.changed_since = int(results.changed_since.timestamp())
-            if results.at is not None:
-                options.final_at = int(results.at.timestamp())
-        else:
-            raise AssertionError(f"Unhandled results type {results!r}")
+        options = _ExecutionOptions.create(results, row_limit, max_batch_size, mode)
         return expr._ffi_expr.execute(options)
 
 

@@ -18,6 +18,9 @@ dependencies = [
 plot = [
   "plotly >= 5.0.0, < 6.0.0",
 ]
+explain = [
+  "graphviz >= 0.20.1, < 1.0.0",
+]
 
 [tool.poetry]
 name = "kaskada"
@@ -33,10 +36,12 @@ pandas = "^2.0.3"
 python = ">=3.9,<4.0"
 pyarrow = "^12.0.1"
 typing-extensions = "^4.7.1"
+graphviz = { version = "^0.20.1", optional = true }
 plotly = {version = "^5.16.1", optional = true}
 
 [tool.poetry.extras]
 plot = ["plotly"]
+explain = ["graphviz"]
 
 [tool.poetry.group.dev.dependencies]
 # Dependencies for building and developing.
@@ -57,6 +62,7 @@ pep8-naming = ">=0.12.1"
 pydocstyle = "^6.3.0"
 pyupgrade = ">=2.29.1"
 autoflake = "^2.2.0"
+graphviz = { version = "^0.20.1" }
 
 [tool.poetry.group.safety]
 optional = true
@@ -72,6 +78,7 @@ optional = true
 mypy = ">=0.930"
 pandas-stubs = "^2.0.2"
 typeguard = ">=2.13.3"
+graphviz = { version = "^0.20.1" }
 
 [tool.poetry.group.docs]
 # Dependencies for documentation.
@@ -87,7 +94,7 @@ myst-parser = {version = ">=0.16.1"}
 # Use myst-nb from git since the currently released version (0.17.2) pins
 # Sphinx to < 6. Once a new release occurs we can upgrade to `0.18.0` or newer.
 # https://github.com/executablebooks/MyST-NB/issues/530
-myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "3d6a5d1"}
+myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "59854c270deb76f297f228477be5d5088babd143" }
 plotly = {version = "^5.16.1"}
 linkify-it-py = "^2.0.2"
 pydata-sphinx-theme = "^0.13.3"
