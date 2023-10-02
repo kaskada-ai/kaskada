@@ -1,7 +1,6 @@
+use arrow_array::cast::AsArray;
 use arrow_array::types::{TimestampNanosecondType, UInt64Type};
-use arrow_array::{
-    Array, ArrayRef, ArrowPrimitiveType, BooleanArray, TimestampNanosecondArray, UInt64Array,
-};
+use arrow_array::{Array, ArrayRef, ArrowPrimitiveType, TimestampNanosecondArray, UInt64Array};
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;
 
@@ -253,54 +252,6 @@ impl Batch {
         }
     }
 
-    // TODO: Use "filter-bits" to avoid eagerly creating new columns.
-    pub fn filter(&self, predicate: &BooleanArray) -> error_stack::Result<Self, Error> {
-        match &self.data {
-            Some(info) => {
-                let filter = arrow_select::filter::FilterBuilder::new(predicate)
-                    .optimize()
-                    .build();
-                let data = filter
-                    .filter(&info.data)
-                    .into_report()
-                    .change_context(Error::Internal)?;
-
-                // TODO: This is unnecessary if `time` and `key_hash` were already in the batch.
-                // We should figure out how to avoid the redundant work.
-                let time = filter
-                    .filter(&info.time)
-                    .into_report()
-                    .change_context(Error::Internal)?;
-                let subsort = filter
-                    .filter(&info.subsort)
-                    .into_report()
-                    .change_context(Error::Internal)?;
-                let key_hash = filter
-                    .filter(&info.key_hash)
-                    .into_report()
-                    .change_context(Error::Internal)?;
-                let info = BatchInfo {
-                    data,
-                    time,
-                    subsort,
-                    key_hash,
-                    // TODO: Should the `*_present_time` be updated to reflect actual contents of batch?
-                    min_present_time: info.min_present_time,
-                    max_present_time: info.max_present_time,
-                };
-
-                Ok(Self {
-                    data: Some(info),
-                    up_to_time: self.up_to_time,
-                })
-            }
-            None => {
-                assert_eq!(predicate.len(), 0);
-                Ok(self.clone())
-            }
-        }
-    }
-
     pub fn slice(&self, offset: usize, length: usize) -> Self {
         match &self.data {
             Some(info) => {
@@ -446,15 +397,15 @@ impl BatchInfo {
     }
 
     pub(crate) fn time(&self) -> &TimestampNanosecondArray {
-        downcast_primitive_array(self.time.as_ref()).expect("type checked in constructor")
+        self.time.as_primitive()
     }
 
     pub(crate) fn subsort(&self) -> &UInt64Array {
-        downcast_primitive_array(self.subsort.as_ref()).expect("type checked in constructor")
+        self.subsort.as_primitive()
     }
 
     pub(crate) fn key_hash(&self) -> &UInt64Array {
-        downcast_primitive_array(self.key_hash.as_ref()).expect("type checked in constructor")
+        self.key_hash.as_primitive()
     }
 }
 

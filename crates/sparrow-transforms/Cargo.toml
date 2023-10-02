@@ -12,6 +12,7 @@ Implementation of transforms and pipeline for executing them.
 [dependencies]
 arrow-array.workspace = true
 arrow-schema.workspace = true
+arrow-select.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 itertools.workspace = true
@@ -23,6 +24,7 @@ sparrow-scheduler = { path = "../sparrow-scheduler" }
 tracing.workspace = true
 
 [dev-dependencies]
+index_vec.workspace = true
 
 [lib]
 doctest = false

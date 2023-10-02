@@ -28,6 +28,6 @@ pub(crate) trait Transform: Send + Sync {
         std::any::type_name::<Self>()
     }
 
-    /// Apply the transfrom to the given input batch.
+    /// Apply the transform to the given input batch.
     fn apply(&self, batch: Batch) -> error_stack::Result<Batch, Error>;
 }
