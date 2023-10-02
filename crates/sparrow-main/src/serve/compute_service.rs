@@ -639,6 +639,7 @@ mod tests {
             &Some(slice_plan::Slice::Percent(slice_plan::PercentSlice {
                 percent: 50.0,
             })),
+            None,
         )
         .await
         .unwrap()

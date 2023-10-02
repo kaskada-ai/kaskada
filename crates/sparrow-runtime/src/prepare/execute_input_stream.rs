@@ -64,6 +64,7 @@ pub async fn prepare_input<'a>(
     slice: Option<&slice_plan::Slice>,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     bounded_lateness: i64,
+    time_multiplier: Option<i64>,
 ) -> anyhow::Result<BoxStream<'a, error_stack::Result<Option<RecordBatch>, Error>>> {
     // This is a "hacky" way of adding the 3 key columns. We may just want
     // to manually do that (as part of deprecating `TableSchema`)?
@@ -154,7 +155,7 @@ pub async fn prepare_input<'a>(
             let record_batch = slice_preparer.slice_batch(record_batch)?;
 
             // 3. Prepare the batch
-            let record_batch = prepare_batch(&record_batch, &config, prepared_schema.clone(), &next_subsort, None).unwrap();
+            let record_batch = prepare_batch(&record_batch, &config, prepared_schema.clone(), &next_subsort, time_multiplier).unwrap();
 
             // 4. Update the key inverse
             let key_hash_column = record_batch.column(2);
@@ -350,6 +351,7 @@ mod tests {
             None,
             key_hash_inverse.clone(),
             5,
+            None,
         )
         .await
         .unwrap();
@@ -399,6 +401,7 @@ mod tests {
             None,
             key_hash_inverse.clone(),
             5,
+            None,
         )
         .await
         .unwrap();
@@ -449,6 +452,7 @@ mod tests {
             None,
             key_hash_inverse.clone(),
             5,
+            None,
         )
         .await
         .unwrap();

@@ -38,6 +38,7 @@ pub async fn prepared_batches<'a>(
     source_data: &SourceData,
     config: &'a TableConfig,
     slice: &'a Option<slice_plan::Slice>,
+    time_multiplier: Option<i64>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     let prepare_iter = match source_data.source.as_ref() {
@@ -72,6 +73,7 @@ pub async fn prepared_batches<'a>(
                     raw_metadata,
                     prepare_hash,
                     slice,
+                    time_multiplier,
                 )
                 .await
                 .into_report()
@@ -110,14 +112,14 @@ pub async fn prepared_batches<'a>(
                 // Transfer the local file to the reader. When the CSV reader
                 // completes the reader will be dropped, and the file deleted.
                 let reader = BufReader::new(local_file);
-                reader_from_csv(config, reader, prepare_hash, slice).await?
+                reader_from_csv(config, reader, prepare_hash, slice, time_multiplier).await?
             }
             source_data::Source::CsvData(content) => {
                 let prepare_hash = DETERMINISTIC_RUNTIME_HASHER.hash_one(content);
 
                 let content = Cursor::new(content.to_string());
                 let reader = BufReader::new(content);
-                reader_from_csv(config, reader, prepare_hash, slice).await?
+                reader_from_csv(config, reader, prepare_hash, slice, time_multiplier).await?
             }
         },
     };
@@ -140,9 +142,11 @@ pub async fn prepare_file(
         .object_store(&output_url)
         .change_context(Error::Internal)?;
 
-    let mut prepare_stream = prepared_batches(object_stores, source_data, table_config, slice)
-        .await?
-        .enumerate();
+    // NOTE: Time units not supported via fenl prepare
+    let mut prepare_stream =
+        prepared_batches(object_stores, source_data, table_config, slice, None)
+            .await?
+            .enumerate();
 
     let mut prepared_files = Vec::new();
     let mut uploads = FuturesUnordered::new();
@@ -236,6 +240,7 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
     mut reader: R,
     prepare_hash: u64,
     slice: &'a Option<slice_plan::Slice>,
+    time_multiplier: Option<i64>,
 ) -> error_stack::Result<BoxStream<'a, error_stack::Result<(RecordBatch, RecordBatch), Error>>, Error>
 {
     use arrow::csv::ReaderBuilder;
@@ -270,10 +275,17 @@ async fn reader_from_csv<'a, R: std::io::Read + std::io::Seek + Send + 'static>(
         .map(|batch| batch.into_report().change_context(Error::ReadingBatch))
         .boxed();
 
-    prepare_input_stream::prepare_input(reader, config, raw_metadata, prepare_hash, slice)
-        .await
-        .into_report()
-        .change_context(Error::CreateReader)
+    prepare_input_stream::prepare_input(
+        reader,
+        config,
+        raw_metadata,
+        prepare_hash,
+        slice,
+        time_multiplier,
+    )
+    .await
+    .into_report()
+    .change_context(Error::CreateReader)
 }
 
 #[cfg(test)]
@@ -368,6 +380,7 @@ mod tests {
             &source_data,
             &table_config,
             &None,
+            None,
         )
         .await
         .unwrap()
@@ -403,6 +416,7 @@ mod tests {
             &source_data,
             &table_config,
             &None,
+            None,
         )
         .await
         .unwrap()
@@ -465,6 +479,7 @@ mod tests {
             &source_data,
             &table_config,
             &slice,
+            None,
         )
         .await
         .unwrap()
@@ -505,6 +520,7 @@ mod tests {
             &source_data,
             &table_config,
             slice,
+            None,
         )
         .await
         .unwrap()
