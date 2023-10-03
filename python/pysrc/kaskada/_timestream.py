@@ -864,7 +864,7 @@ class Timestream(object):
 
         See Also:
             This returns the maximum of values in a column. See
-            :func:`greatest` to get the maximum value
+            [](`~kaskada.Timestream.greatest`) to get the maximum value
             between Timestreams at each point.
         """
         return _aggregation("max", self, window)
@@ -879,7 +879,7 @@ class Timestream(object):
 
         See Also:
             This returns the minimum of values in a column. See
-            :func:`least` to get the minimum value
+            [](`~kaskada.Timestream.least`) to get the minimum value
             between Timestreams at each point.
         """
         return _aggregation("min", self, window)
@@ -1005,8 +1005,8 @@ class Timestream(object):
             are already integers.
 
         See Also:
-            - :func:`ceil`
-            - :func:`floor`
+            - [](`~kaskada.Timestream.ceil`)
+            - [](`~kaskada.Timestream.floor`)
         """
         return Timestream._call("round", self)
 
@@ -1032,7 +1032,7 @@ class Timestream(object):
 
         See Also:
             This returns the greatest of two values. See
-            :func:`max` for the maximum of values in
+            [](`~kaskada.Timestream.max`) for the maximum of values in
             a column.
         """
         return Timestream._call("zip_max", self, rhs)
@@ -1051,7 +1051,7 @@ class Timestream(object):
 
         See Also:
             This returns the least of two values. See
-            :func:`min` for the minimum of values in
+            [](`~kaskada.Timestream.min`) for the minimum of values in
             a column.
         """
         return Timestream._call("zip_min", self, rhs)
@@ -1082,10 +1082,10 @@ class Timestream(object):
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
 
         See Also:
-            - :func:`preview`: For quick peeks at the contents of a TimeStream during development.
-            - :func:`write`: For writing results to supported destinations without passing through
+            - [](`~kaskada.Timestream.preview`): For quick peeks at the contents of a TimeStream during development.
+            - [](`~kaskada.Timestream.write`): For writing results to supported destinations without passing through
                   Pandas.
-            - :func:`run_iter`: For non-blocking (iterator or async iterator) execution.
+            - [](`~kaskada.Timestream.run_iter`): For non-blocking (iterator or async iterator) execution.
         """
         execution = self._execute(results, row_limit=row_limit)
         batches = execution.collect_pyarrow()
@@ -1181,7 +1181,7 @@ class Timestream(object):
             cancelling the query or materialization as well as iterating.
 
         See Also:
-            - :func:`write`: To write the results directly to a
+            - [](`~kaskada.Timestream.write`): To write the results directly to a
               :class:`Destination<kaskada.destinations.Destination>`.
         """
         execution = self._execute(
