@@ -16,6 +16,7 @@
 //! must be executed to move data to the appropriate partitions.
 
 mod project;
+mod select;
 mod transform;
 mod transform_pipeline;
 

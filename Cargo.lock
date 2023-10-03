@@ -4882,8 +4882,10 @@ version = "0.11.0"
 dependencies = [
  "arrow-array",
  "arrow-schema",
+ "arrow-select",
  "derive_more",
  "error-stack",
+ "index_vec",
  "itertools 0.11.0",
  "parking_lot 0.12.1",
  "sparrow-arrow",

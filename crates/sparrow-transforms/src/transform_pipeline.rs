@@ -112,6 +112,12 @@ impl TransformPipeline {
                             kind: (&step.kind).into(),
                         })?,
                 ),
+                StepKind::Filter => Box::new(
+                    crate::select::Select::try_new(&step.exprs, &step.result_type)
+                        .change_context_lazy(|| Error::CreatingTransform {
+                            kind: (&step.kind).into(),
+                        })?,
+                ),
                 unsupported => {
                     error_stack::bail!(Error::UnsupportedStepKind {
                         kind: unsupported.into()
@@ -221,6 +227,7 @@ impl Pipeline for TransformPipeline {
         );
 
         // If the batch is non empty, process it.
+        // TODO: Propagate empty batches to further the watermark.
         if !batch.is_empty() {
             let mut batch = batch;
             for transform in self.transforms.iter() {
