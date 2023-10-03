@@ -1,6 +1,7 @@
 use hashbrown::HashMap;
-use sparrow_runtime::stores::ObjectStoreRegistry;
+use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use std::borrow::Cow;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
@@ -34,16 +35,28 @@ pub struct Session {
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
     object_store_registry: Arc<ObjectStoreRegistry>,
     rt: tokio::runtime::Runtime,
-    /// Temporary directory to hold prepared files for this session.
+    /// Url to prepare files to.
     ///
-    /// Creating in the session ensures it won't be dropped until the
-    /// session is closed.
-    prepared_dir: tempfile::TempDir,
+    /// May be a path to a temporary directory, remote object store, etc.
+    /// Note: Creating in the Session ensures temporary files won't be dropped
+    /// until the session is closed.
+    prepare_prefix: ObjectStoreUrl,
+    /// Temporary directory for preparing files to in the local case.
+    ///
+    /// Stored in the session to ensure it persists until the Session is dropped.
+    _temp_dir: tempfile::TempDir,
 }
 
 impl Default for Session {
     fn default() -> Self {
-        let prepared_dir = tempfile::tempdir().expect("failed to create temp dir");
+        // TODO: Support object stores
+        // Likely will need the option to pass in the destination url when executing the
+        // query or creating a table.
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let mut url = "file://".to_owned();
+        url.push_str(temp_dir.path().to_str().expect("valid string"));
+        let prepare_prefix = ObjectStoreUrl::from_str(&url).expect("object store url");
+
         Self {
             data_context: Default::default(),
             dfg: Default::default(),
@@ -51,7 +64,8 @@ impl Default for Session {
             udfs: Default::default(),
             object_store_registry: Default::default(),
             rt: tokio::runtime::Runtime::new().expect("tokio runtime"),
-            prepared_dir,
+            prepare_prefix,
+            _temp_dir: temp_dir,
         }
     }
 }
@@ -132,7 +146,7 @@ impl Session {
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
         source: Option<&str>,
-    ) -> error_stack::Result<Table<'_>, Error> {
+    ) -> error_stack::Result<Table, Error> {
         let uuid = Uuid::new_v4();
         let schema_proto = sparrow_api::kaskada::v1alpha::Schema::try_from(schema.as_ref())
             .into_report()
@@ -195,7 +209,7 @@ impl Session {
             time_unit,
             self.object_store_registry.clone(),
             source,
-            self.prepared_dir.path(),
+            self.prepare_prefix.clone(),
         )
     }
 

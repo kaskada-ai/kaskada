@@ -17,14 +17,14 @@ use sparrow_runtime::{key_hash_inverse::ThreadSafeKeyHashInverse, stores::Object
 
 use crate::{Error, Expr};
 
-pub struct Table<'a> {
+pub struct Table {
     pub expr: Expr,
     preparer: Preparer,
     key_column: usize,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     source: Source,
     registry: Arc<ObjectStoreRegistry>,
-    prepared_dir: &'a std::path::Path,
+    prepare_prefix: ObjectStoreUrl,
 }
 
 #[derive(Debug)]
@@ -33,7 +33,7 @@ enum Source {
     Parquet(Arc<FileSets>),
 }
 
-impl<'a> Table<'a> {
+impl Table {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         table_info: &mut TableInfo,
@@ -44,7 +44,7 @@ impl<'a> Table<'a> {
         time_unit: Option<&str>,
         object_stores: Arc<ObjectStoreRegistry>,
         source: Option<&str>,
-        prepared_dir: &'a std::path::Path,
+        prepare_prefix: ObjectStoreUrl,
     ) -> error_stack::Result<Self, Error> {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
@@ -101,7 +101,7 @@ impl<'a> Table<'a> {
             key_column: key_column + KEY_FIELDS.len(),
             source,
             registry: object_stores,
-            prepared_dir,
+            prepare_prefix: prepare_prefix.to_owned(),
         })
     }
 
@@ -137,7 +137,7 @@ impl<'a> Table<'a> {
         Ok(())
     }
 
-    pub async fn add_parquet(&self, path: &std::path::Path) -> error_stack::Result<(), Error> {
+    pub async fn add_parquet(&self, path: &str) -> error_stack::Result<(), Error> {
         let file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
@@ -148,7 +148,7 @@ impl<'a> Table<'a> {
 
         let prepared = self
             .preparer
-            .prepare_parquet(path, self.prepared_dir)
+            .prepare_parquet(path, &self.prepare_prefix)
             .await
             .change_context(Error::Prepare)?;
 

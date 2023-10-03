@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -95,22 +94,22 @@ impl Preparer {
     /// - This produces metadata files alongside data files.
     /// Parameters:
     /// - `to_prepare`: The path to the parquet file to prepare.
-    /// - `prepared_dir`: The directory to write the prepared files to.
+    /// - `prepare_prefix`: The prefix to write prepared files to.
     pub async fn prepare_parquet(
         &self,
-        to_prepare: &std::path::Path,
-        prepared_dir: &std::path::Path,
+        to_prepare: &str,
+        prepare_prefix: &ObjectStoreUrl,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
         // TODO: Support Slicing
-        let output_path_prefix = self.prepared_output_prefix(prepared_dir);
-        let output_url = ObjectStoreUrl::from_str(&output_path_prefix)
-            .change_context_lazy(|| Error::InvalidUrl(output_path_prefix))?;
+        let output_url = self.prepared_output_url_prefix(prepare_prefix)?;
 
         let object_store = self
             .object_stores
             .object_store(&output_url)
             .change_context(Error::Internal)?;
 
+        // TODO: support preparing from remote stores
+        let to_prepare = std::path::Path::new(to_prepare);
         let source_data = SourceData {
             source: Some(
                 SourceData::try_from_local(to_prepare)
@@ -184,20 +183,28 @@ impl Preparer {
         )
     }
 
-    /// Creates the local output prefix to use for prepared files.
+    /// Creates the output url prefix to use for prepared files.
     ///
     /// e.g. for osx: file:///<dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>
-    pub fn prepared_output_prefix(&self, dir: &std::path::Path) -> String {
+    ///      for s3:  s3://<path>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>
+    pub fn prepared_output_url_prefix(
+        &self,
+        prefix: &ObjectStoreUrl,
+    ) -> error_stack::Result<ObjectStoreUrl, Error> {
+        let error = || Error::InvalidUrl(prefix.to_string());
         let uuid = Uuid::new_v4();
 
-        // Construct the path using PathBuf to handle platform-specific path separators.
-        let mut buf = std::path::PathBuf::new();
-        buf.push(dir);
-        buf.push(KASKADA_PATH);
-        buf.push("tables");
-        buf.push("prepare");
-        buf.push(uuid.to_string());
-        buf.to_string_lossy().to_string()
+        let url = prefix
+            .join(KASKADA_PATH)
+            .change_context_lazy(error)?
+            .join("tables")
+            .change_context_lazy(error)?
+            .join("prepare")
+            .change_context_lazy(error)?
+            .join(&uuid.to_string())
+            .change_context_lazy(error)?;
+
+        Ok(url)
     }
 }
 
