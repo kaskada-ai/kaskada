@@ -34,10 +34,16 @@ pub struct Session {
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
     object_store_registry: Arc<ObjectStoreRegistry>,
     rt: tokio::runtime::Runtime,
+    /// Temporary directory to hold prepared files for this session.
+    ///
+    /// Creating in the session ensures it won't be dropped until the
+    /// session is closed.
+    prepared_dir: tempfile::TempDir,
 }
 
 impl Default for Session {
     fn default() -> Self {
+        let prepared_dir = tempfile::tempdir().expect("failed to create temp dir");
         Self {
             data_context: Default::default(),
             dfg: Default::default(),
@@ -45,6 +51,7 @@ impl Default for Session {
             udfs: Default::default(),
             object_store_registry: Default::default(),
             rt: tokio::runtime::Runtime::new().expect("tokio runtime"),
+            prepared_dir,
         }
     }
 }
@@ -125,7 +132,7 @@ impl Session {
         grouping_name: Option<&str>,
         time_unit: Option<&str>,
         source: Option<&str>,
-    ) -> error_stack::Result<Table, Error> {
+    ) -> error_stack::Result<Table<'_>, Error> {
         let uuid = Uuid::new_v4();
         let schema_proto = sparrow_api::kaskada::v1alpha::Schema::try_from(schema.as_ref())
             .into_report()
@@ -188,6 +195,7 @@ impl Session {
             time_unit,
             self.object_store_registry.clone(),
             source,
+            self.prepared_dir.path(),
         )
     }
 

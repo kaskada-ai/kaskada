@@ -93,13 +93,16 @@ impl Preparer {
     /// - This adds or casts columns as needed.
     /// - This produces multiple parts if the input file is large.
     /// - This produces metadata files alongside data files.
+    /// Parameters:
+    /// - `to_prepare`: The path to the parquet file to prepare.
+    /// - `prepared_dir`: The directory to write the prepared files to.
     pub async fn prepare_parquet(
         &self,
-        path: &std::path::Path,
+        to_prepare: &std::path::Path,
+        prepared_dir: &std::path::Path,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
         // TODO: Support Slicing
-
-        let output_path_prefix = self.prepared_output_prefix();
+        let output_path_prefix = self.prepared_output_prefix(prepared_dir);
         let output_url = ObjectStoreUrl::from_str(&output_path_prefix)
             .change_context_lazy(|| Error::InvalidUrl(output_path_prefix))?;
 
@@ -110,7 +113,7 @@ impl Preparer {
 
         let source_data = SourceData {
             source: Some(
-                SourceData::try_from_local(path)
+                SourceData::try_from_local(to_prepare)
                     .into_report()
                     .change_context(Error::Internal)?,
             ),
@@ -180,17 +183,21 @@ impl Preparer {
             self.time_multiplier.as_ref(),
         )
     }
-    // Prepared files are stored in the following format:
-    // file:///<temp_dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/part-<n>.parquet
-    pub fn prepared_output_prefix(&self) -> String {
+
+    /// Creates the local output prefix to use for prepared files.
+    ///
+    /// e.g. for osx: file:///<dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>
+    pub fn prepared_output_prefix(&self, dir: &std::path::Path) -> String {
         let uuid = Uuid::new_v4();
-        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
-        format!(
-            "file:///{}/{}/tables/{}/prepare/{uuid}/",
-            temp_dir.path().display(),
-            KASKADA_PATH,
-            self.table_config.uuid
-        )
+
+        // Construct the path using PathBuf to handle platform-specific path separators.
+        let mut buf = std::path::PathBuf::new();
+        buf.push(dir);
+        buf.push(KASKADA_PATH);
+        buf.push("tables");
+        buf.push("prepare");
+        buf.push(uuid.to_string());
+        buf.to_string_lossy().to_string()
     }
 }
 

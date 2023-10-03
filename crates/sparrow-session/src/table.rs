@@ -17,13 +17,14 @@ use sparrow_runtime::{key_hash_inverse::ThreadSafeKeyHashInverse, stores::Object
 
 use crate::{Error, Expr};
 
-pub struct Table {
+pub struct Table<'a> {
     pub expr: Expr,
     preparer: Preparer,
     key_column: usize,
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     source: Source,
     registry: Arc<ObjectStoreRegistry>,
+    prepared_dir: &'a std::path::Path,
 }
 
 #[derive(Debug)]
@@ -32,7 +33,7 @@ enum Source {
     Parquet(Arc<FileSets>),
 }
 
-impl Table {
+impl<'a> Table<'a> {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         table_info: &mut TableInfo,
@@ -43,6 +44,7 @@ impl Table {
         time_unit: Option<&str>,
         object_stores: Arc<ObjectStoreRegistry>,
         source: Option<&str>,
+        prepared_dir: &'a std::path::Path,
     ) -> error_stack::Result<Self, Error> {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
@@ -99,6 +101,7 @@ impl Table {
             key_column: key_column + KEY_FIELDS.len(),
             source,
             registry: object_stores,
+            prepared_dir,
         })
     }
 
@@ -145,7 +148,7 @@ impl Table {
 
         let prepared = self
             .preparer
-            .prepare_parquet(path)
+            .prepare_parquet(path, self.prepared_dir)
             .await
             .change_context(Error::Prepare)?;
 
