@@ -94,7 +94,7 @@ class SideBar:
 
         _log.info("Generating blueprint.")
         bp = blueprint(layout, dynamic=self.dynamic, parser=self.parser)
-        preview(bp, max_depth=3)
+        #preview(bp, max_depth=5)
 
         _log.info("Generating sidebar.")
         d_sidebar = self._generate_sidebar(bp)
@@ -113,6 +113,8 @@ class SideBar:
             msg += first_error
             raise ValueError(msg) from None
 
+# maybe don't even need to do this.  maybe can do completely with render,
+# if it puts things in folders based on my _quartodoc config layout
 
     def _generate_sidebar(self, blueprint: layout.Layout):
         contents = [f"{self.dir}/index{self.out_page_suffix}"]

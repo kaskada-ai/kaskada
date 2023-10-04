@@ -16,6 +16,8 @@ quartodoc:
   sections:
     - title: Timestream
       #flatten: true
+      options:
+        children: embedded
       package: null
       contents:
         - name: kaskada.Timestream
