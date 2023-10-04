@@ -21,6 +21,24 @@ impl ObjectStoreUrl {
             .change_context_lazy(|| Error::InvalidUrl(self.url.to_string()))
     }
 
+    /// Return the [std::path::Path] corresponding to this URL.
+    pub fn std_path(&self) -> error_stack::Result<std::path::PathBuf, Error> {
+        let path = self
+            .url
+            .to_file_path()
+            .map_err(|_| Error::InvalidUrl(self.url.to_string()))?;
+        Ok(path)
+    }
+
+    /// Convert a directory name as [std::path::Path] into an URL in the `file` scheme.
+    ///
+    /// This ensures the path has a trailing slash.
+    pub fn from_directory_path(path: &std::path::Path) -> error_stack::Result<Self, Error> {
+        let url = Url::from_directory_path(path)
+            .map_err(|_| Error::InvalidUrl(path.to_string_lossy().to_string()))?;
+        Ok(Self { url })
+    }
+
     pub fn url(&self) -> &Url {
         &self.url
     }
@@ -49,16 +67,6 @@ impl ObjectStoreUrl {
     /// This is the inverse of [`join`].
     pub fn relative_path(&self, url: &Self) -> Option<String> {
         self.url.make_relative(&url.url)
-    }
-
-    pub fn is_local(&self) -> bool {
-        self.url.scheme() == "file"
-    }
-
-    // TODO: Currently only supports the "s3" scheme
-    // Several others are supported by ObjectStore: https://docs.rs/object_store/latest/object_store/aws/struct.AmazonS3Builder.html#method.with_url
-    pub fn is_s3(&self) -> bool {
-        self.url.scheme() == "s3"
     }
 
     /// Return the local path, if this is a local file.

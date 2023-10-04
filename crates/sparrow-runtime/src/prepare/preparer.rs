@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -186,49 +185,32 @@ impl Preparer {
 
     /// Creates the output url prefix to use for prepared files.
     ///
-    /// e.g. for osx: file:///<dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>
-    ///      for s3:  s3://<path>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>
+    /// e.g. for osx: file:///<dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/
+    ///      for s3:  s3://<path>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/
     pub fn prepared_output_url_prefix(
         &self,
         prefix: &ObjectStoreUrl,
     ) -> error_stack::Result<ObjectStoreUrl, Error> {
         let error = || Error::InvalidUrl(prefix.to_string());
 
-        // Append the trailing slash to make it a directory
         let uuid = Uuid::new_v4();
-        let uuid = uuid.to_string() + "/";
 
-        if prefix.is_local() {
-            // The temp directory doesn't have a trailing slash, so we can't join on the existing URL.
-            let prefix = prefix.to_string();
-            let url = prefix
-                + "/"
-                + KASKADA_PATH
-                + "/tables/"
-                + &self.table_config.uuid.to_string()
-                + "/prepared/"
-                + &uuid;
+        let url = prefix
+            .join(KASKADA_PATH)
+            .change_context_lazy(error)?
+            .join("tables")
+            .change_context_lazy(error)?
+            .join(&self.table_config.uuid.to_string())
+            .change_context_lazy(error)?
+            .join("prepared")
+            .change_context_lazy(error)?
+            .join(&uuid.to_string())
+            .change_context_lazy(error)?;
 
-            let url = ObjectStoreUrl::from_str(&url).change_context_lazy(error)?;
-            Ok(url)
-        } else if prefix.is_s3() {
-            // TODO: This requires the s3 path has a trailing slash as-is.
-            // Should we check that and append it if we need to?
-            let url = prefix
-                .join(KASKADA_PATH)
-                .change_context_lazy(error)?
-                .join("tables")
-                .change_context_lazy(error)?
-                .join(&self.table_config.uuid.to_string())
-                .change_context_lazy(error)?
-                .join("prepared")
-                .change_context_lazy(error)?
-                .join(&uuid.to_string())
-                .change_context_lazy(error)?;
-            Ok(url)
-        } else {
-            error_stack::bail!(Error::Internal)
-        }
+        // Ensure it's treated as a directory
+        let path = url.std_path().change_context_lazy(error)?;
+        let url = ObjectStoreUrl::from_directory_path(&path).unwrap();
+        Ok(url)
     }
 }
 
