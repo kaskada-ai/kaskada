@@ -213,9 +213,13 @@ class Renderer(BaseRenderer):
         else:
             header = []
 
-        result = map(self.render, el.contents)
-
-        return "\n\n".join([*header, *result])
+        if el.flatten:
+            rows = list([[f'[{entry.name}](`{entry.anchor}`)', self.summarize(entry.obj)] for entry in el.contents])
+            table = self._render_table(rows, ["Method", "Description"])
+            return "\n\n".join([*header, table])
+        else:
+            result = map(self.render, el.contents)
+            return "\n\n".join([*header, *result])
 
     @dispatch
     def render(self, el: layout.Section):
@@ -490,7 +494,6 @@ class Renderer(BaseRenderer):
     def render(self, el: ds.DocstringSectionAttributes):
         header = ["Name", "Type", "Description"]
         rows = list(map(self.render, el.value))
-
         return self._render_table(rows, header)
 
     @dispatch

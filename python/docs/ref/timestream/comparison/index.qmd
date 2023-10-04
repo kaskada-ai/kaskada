@@ -1,0 +1,25 @@
+---
+title: Comparision
+---
+
+Comparison operations produce boolean Timestreams.
+
+::: {.callout-important}
+In addition to the chainable methods, standard operators are implemented where appropriate.
+For instance, `a.ge(b)` may be written as `a >= b`.
+See the notes on the specific functions for more information.
+
+To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *not* overloaded.
+:::
+
+
+| Method                                                     | Description                                                                 |
+|------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [Timestream.eq](`kaskada.Timestream.eq`)                   | Return a Timestream that is true if this is equal to `other`.               |
+| [Timestream.ge](`kaskada.Timestream.ge`)                   | Return a TimeStream that is true if this is greater than or equal to `rhs`. |
+| [Timestream.gt](`kaskada.Timestream.gt`)                   | Return a Timestream that is true if this is greater than `rhs`.             |
+| [Timestream.le](`kaskada.Timestream.le`)                   | Return a Timestream that is true if this is less than or equal to `rhs`.    |
+| [Timestream.lt](`kaskada.Timestream.lt`)                   | Return a Timestream that is true if this is less than `rhs`.                |
+| [Timestream.ne](`kaskada.Timestream.ne`)                   | Return a Timestream that is true if this is not equal to `other`.           |
+| [Timestream.is_null](`kaskada.Timestream.is_null`)         | Return a boolean Timestream containing `true` when `self` is `null`.        |
+| [Timestream.is_not_null](`kaskada.Timestream.is_not_null`) | Return a boolean Timestream containing `true` when `self` is not `null`.    |

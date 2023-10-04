@@ -1,0 +1,14 @@
+---
+title: Time
+---
+
+
+
+| Method                                                                           | Description                                                                           |
+|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| [Timestream.shift_by](`kaskada.Timestream.shift_by`)                             | Return a Timestream shifting each point forward by the `delta`.                       |
+| [Timestream.shift_to](`kaskada.Timestream.shift_to`)                             | Return a Timestream shifting each point forward to `time`.                            |
+| [Timestream.shift_until](`kaskada.Timestream.shift_until`)                       | Return a Timestream shifting each point forward to the next time `predicate` is true. |
+| [Timestream.time](`kaskada.Timestream.time`)                                     | Return a Timestream containing the time of each point.                                |
+| [Timestream.seconds_since](`kaskada.Timestream.seconds_since`)                   | Return a Timestream containing seconds between `time` and `self`.                     |
+| [Timestream.seconds_since_previous](`kaskada.Timestream.seconds_since_previous`) | Return a Timestream containing seconds between `self` and the time `n` points ago.    |

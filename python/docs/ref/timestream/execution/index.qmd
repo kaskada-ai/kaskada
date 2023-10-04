@@ -1,0 +1,13 @@
+---
+title: Execution
+---
+
+`Execution(self, ffi_execution)`
+
+Represents an execution of a TimeStream.
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [stop](kaskada.Execution.stop.qmd#kaskada.Execution.stop) | Stop or cancel the execution. |

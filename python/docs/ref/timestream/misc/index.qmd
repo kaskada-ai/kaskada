@@ -1,0 +1,16 @@
+---
+title: Miscellaneous
+---
+
+
+| Method                                               | Description                                                                                         |
+|------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| [Timestream.cast](`kaskada.Timestream.cast`)         | Return this Timestream cast to the given data type.                                                 |
+| [Timestream.coalesce](`kaskada.Timestream.coalesce`) | Return a Timestream containing the first non-null point from self and the arguments.                |
+| [Timestream.else_](`kaskada.Timestream.else_`)       | Return a Timestream containing `self` when not `null`, and `other` otherwise.                       |
+| [Timestream.filter](`kaskada.Timestream.filter`)     | Return a Timestream containing only the points where `condition` is `true`.                         |
+| [Timestream.hash](`kaskada.Timestream.hash`)         | Return a Timestream containing the hash of the input.                                               |
+| [Timestream.if_](`kaskada.Timestream.if_`)           | Return a `Timestream` from `self` at points where `condition` is `true`, and `null` otherwise.      |
+| [Timestream.lag](`kaskada.Timestream.lag`)           | Return a Timestream containing the value `n` points before each point.                              |
+| [Timestream.null_if](`kaskada.Timestream.null_if`)   | Return a `Timestream` from `self` at points where `condition` is not `false`, and `null` otherwise. |
+| [Timestream.pipe](`kaskada.Timestream.pipe`)         | Apply chainable functions that produce Timestreams.                                                 |

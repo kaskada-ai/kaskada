@@ -4,8 +4,8 @@ project:
   preview:
     port: 4200
 
-metadata-files:
-  - reference/_sidebar.yml
+#metadata-files:
+#  - reference/_sidebar.yml
 
 website:
   favicon: "_static/favicon.png"
@@ -21,7 +21,7 @@ website:
         text: User Guide
       - href: examples/index.qmd
         text: Examples
-      - href: reference/index.qmd
+      - href: ref/index.qmd
         text: API
       - href: blog/index.qmd
         text: Blog
@@ -36,6 +36,9 @@ website:
     contents: guide
   - title: Examples
     contents: examples
+  - title: API
+    style: docked
+    contents: ref
 
   page-footer:
     border: true

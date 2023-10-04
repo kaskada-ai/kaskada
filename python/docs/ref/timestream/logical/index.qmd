@@ -1,0 +1,10 @@
+---
+title: Logical
+---
+
+
+| Method                                       | Description                                                  |
+|----------------------------------------------|--------------------------------------------------------------|
+| [Timestream.and_](`kaskada.Timestream.and_`) | Return the logical conjunction of this Timestream and `rhs`. |
+| [Timestream.or_](`kaskada.Timestream.or_`)   | Return the logical disjunction of this Timestream and `rhs`. |
+| [Timestream.not_](`kaskada.Timestream.not_`) | Return the logical negation of this Timestream.              |
