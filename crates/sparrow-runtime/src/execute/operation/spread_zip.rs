@@ -239,7 +239,7 @@ fn list_spread_zip(
 ) -> anyhow::Result<ArrayRef> {
     let mut take_indices = UInt32Builder::new();
     let mut truthy_index = 0;
-    let mut falsy_index = 0;
+    let mut falsy_index = truthy.len() as u32;
     for signal in mask.iter() {
         match signal {
             None => take_indices.append_null(),
@@ -346,7 +346,7 @@ fn struct_spread_zip(
 mod tests {
     use arrow_array::{
         builder::{Int64Builder, ListBuilder},
-        Int32Array, UInt32Array, Int64Array,
+        Int32Array, Int64Array, UInt32Array,
     };
 
     use super::*;
@@ -374,17 +374,31 @@ mod tests {
 
         let mut falsy = ListBuilder::new(Int64Builder::new());
         falsy.append_value([Some(10), Some(5), Some(2)]);
-        falsy.append_value([]);
+        falsy.append_value([Some(3)]);
         falsy.append(false);
-        falsy.append_value([None, None, None, None]);
+        falsy.append_value([Some(199)]);
         let falsy = falsy.finish();
 
         let result = spread_zip(&mask, &truthy, &falsy).unwrap();
         let result = result.as_list::<i32>();
         let values = result.values().as_primitive::<Int64Type>();
-        let expected = Int64Array::from(vec![Some(1)]);
+        let expected = Int64Array::from(vec![
+            Some(1),
+            Some(2),
+            Some(3),
+            Some(10),
+            Some(5),
+            Some(2),
+            None,
+            None,
+            Some(3),
+        ]);
 
-        // assert_eq!(expected_offset, offsets);
+        let expected_offsets =
+            Int32Array::from(vec![Some(0), Some(3), Some(6), Some(6), Some(8), Some(9)]);
+        let offsets: Vec<i32> = result.offsets().into_iter().map(|i| *i).collect();
+        let offsets = Int32Array::from(offsets);
+        assert_eq!(expected_offsets, offsets);
         assert_eq!(&expected, values);
     }
 }
