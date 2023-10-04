@@ -7,6 +7,8 @@ use arrow::array::{
 };
 use arrow::buffer::NullBuffer;
 use arrow::datatypes::*;
+use arrow_array::builder::UInt32Builder;
+use arrow_array::cast::AsArray;
 use itertools::{izip, Itertools};
 use sparrow_arrow::downcast::{
     downcast_boolean_array, downcast_primitive_array, downcast_string_array, downcast_struct_array,
@@ -123,6 +125,7 @@ pub(super) fn spread_zip(
         }
         DataType::Utf8 => string_spread_zip(mask, truthy, falsy),
         DataType::Struct(fields) => struct_spread_zip(fields, mask, truthy, falsy),
+        DataType::List(_) => list_spread_zip(mask, truthy, falsy),
         unsupported => Err(anyhow::anyhow!(
             "Unsupported type for spread_zip: {:?}",
             unsupported
@@ -164,7 +167,7 @@ fn boolean_spread_zip(
 }
 
 // TODO: Bug exists here that causes incorrect spread of rows.
-// Current implementation uses inefficient version of spread_zip.
+// Current implementation uses the inefficient version of spread_zip.
 #[allow(unused)]
 fn primitive_spread_zip<T: ArrowPrimitiveType>(
     mask: &BooleanArray,
@@ -212,8 +215,8 @@ fn primitive_spread_zip_inefficient<T: ArrowPrimitiveType>(
     truthy: &dyn Array,
     falsy: &dyn Array,
 ) -> anyhow::Result<ArrayRef> {
-    let truthy: &PrimitiveArray<T> = downcast_primitive_array(truthy)?;
-    let falsy: &PrimitiveArray<T> = downcast_primitive_array(falsy)?;
+    let truthy: &PrimitiveArray<T> = truthy.as_primitive();
+    let falsy: &PrimitiveArray<T> = falsy.as_primitive();
     let mut truthy = truthy.iter();
     let mut falsy = falsy.iter();
 
@@ -227,6 +230,33 @@ fn primitive_spread_zip_inefficient<T: ArrowPrimitiveType>(
     }
 
     Ok(Arc::new(builder.finish()))
+}
+
+fn list_spread_zip(
+    mask: &BooleanArray,
+    truthy: &dyn Array,
+    falsy: &dyn Array,
+) -> anyhow::Result<ArrayRef> {
+    let mut take_indices = UInt32Builder::new();
+    let mut truthy_index = 0;
+    let mut falsy_index = 0;
+    for signal in mask.iter() {
+        match signal {
+            None => take_indices.append_null(),
+            Some(true) => {
+                take_indices.append_value(truthy_index);
+                truthy_index += 1;
+            }
+            Some(false) => {
+                take_indices.append_value(falsy_index);
+                falsy_index += 1;
+            }
+        };
+    }
+
+    let take_indices = take_indices.finish();
+    let result = sparrow_arrow::concat_take(truthy, falsy, &take_indices)?;
+    Ok(result)
 }
 
 fn string_spread_zip(
@@ -310,4 +340,51 @@ fn struct_spread_zip(
         spread_arrays,
         Some(null_buffer),
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use arrow_array::{
+        builder::{Int64Builder, ListBuilder},
+        Int32Array, UInt32Array, Int64Array,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_spread_zip_u32() {
+        let mask = BooleanArray::from(vec![Some(true), Some(false), None, Some(true), Some(false)]);
+        let truthy = UInt32Array::from(vec![1, 2]);
+        let falsy = UInt32Array::from(vec![3, 4]);
+
+        let result = spread_zip(&mask, &truthy, &falsy).unwrap();
+        let result = result.as_primitive::<UInt32Type>();
+        assert_eq!(result.values(), &[1, 4, 0, 2]);
+    }
+
+    #[test]
+    fn test_spread_zip_list() {
+        let mask = BooleanArray::from(vec![Some(true), Some(false), None, Some(true), Some(false)]);
+        let mut truthy = ListBuilder::new(Int64Builder::new());
+        truthy.append_value([Some(1), Some(2), Some(3)]);
+        truthy.append_value([None, None]);
+        truthy.append(false);
+        truthy.append_value([]);
+        let truthy = truthy.finish();
+
+        let mut falsy = ListBuilder::new(Int64Builder::new());
+        falsy.append_value([Some(10), Some(5), Some(2)]);
+        falsy.append_value([]);
+        falsy.append(false);
+        falsy.append_value([None, None, None, None]);
+        let falsy = falsy.finish();
+
+        let result = spread_zip(&mask, &truthy, &falsy).unwrap();
+        let result = result.as_list::<i32>();
+        let values = result.values().as_primitive::<Int64Type>();
+        let expected = Int64Array::from(vec![Some(1)]);
+
+        // assert_eq!(expected_offset, offsets);
+        assert_eq!(&expected, values);
+    }
 }
