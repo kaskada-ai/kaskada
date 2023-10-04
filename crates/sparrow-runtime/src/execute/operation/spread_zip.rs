@@ -359,7 +359,7 @@ mod tests {
 
         let result = spread_zip(&mask, &truthy, &falsy).unwrap();
         let result = result.as_primitive::<UInt32Type>();
-        assert_eq!(result.values(), &[1, 4, 0, 2]);
+        assert_eq!(result.values(), &[1, 3, 0, 2, 4]);
     }
 
     #[test]
