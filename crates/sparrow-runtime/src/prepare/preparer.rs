@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -192,19 +193,42 @@ impl Preparer {
         prefix: &ObjectStoreUrl,
     ) -> error_stack::Result<ObjectStoreUrl, Error> {
         let error = || Error::InvalidUrl(prefix.to_string());
+
+        // Append the trailing slash to make it a directory
         let uuid = Uuid::new_v4();
+        let uuid = uuid.to_string() + "/";
 
-        let url = prefix
-            .join(KASKADA_PATH)
-            .change_context_lazy(error)?
-            .join("tables")
-            .change_context_lazy(error)?
-            .join("prepare")
-            .change_context_lazy(error)?
-            .join(&uuid.to_string())
-            .change_context_lazy(error)?;
+        if prefix.is_local() {
+            // The temp directory doesn't have a trailing slash, so we can't join on the existing URL.
+            let prefix = prefix.to_string();
+            let url = prefix
+                + "/"
+                + KASKADA_PATH
+                + "/tables/"
+                + &self.table_config.uuid.to_string()
+                + "/prepared/"
+                + &uuid;
 
-        Ok(url)
+            let url = ObjectStoreUrl::from_str(&url).change_context_lazy(error)?;
+            Ok(url)
+        } else if prefix.is_s3() {
+            // TODO: This requires the s3 path has a trailing slash as-is.
+            // Should we check that and append it if we need to?
+            let url = prefix
+                .join(KASKADA_PATH)
+                .change_context_lazy(error)?
+                .join("tables")
+                .change_context_lazy(error)?
+                .join(&self.table_config.uuid.to_string())
+                .change_context_lazy(error)?
+                .join("prepared")
+                .change_context_lazy(error)?
+                .join(&uuid.to_string())
+                .change_context_lazy(error)?;
+            Ok(url)
+        } else {
+            error_stack::bail!(Error::Internal)
+        }
     }
 }
 

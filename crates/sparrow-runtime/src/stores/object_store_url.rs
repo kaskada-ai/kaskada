@@ -51,6 +51,16 @@ impl ObjectStoreUrl {
         self.url.make_relative(&url.url)
     }
 
+    pub fn is_local(&self) -> bool {
+        self.url.scheme() == "file"
+    }
+
+    // TODO: Currently only supports the "s3" scheme
+    // Several others are supported by ObjectStore: https://docs.rs/object_store/latest/object_store/aws/struct.AmazonS3Builder.html#method.with_url
+    pub fn is_s3(&self) -> bool {
+        self.url.scheme() == "s3"
+    }
+
     /// Return the local path, if this is a local file.
     pub fn local_path(&self) -> Option<&Path> {
         if self.url.scheme() == "file" {
