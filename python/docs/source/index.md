@@ -31,7 +31,7 @@ sd_hide_title: true
 
 ## Real-time AI in minutes
 
-Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python..
+Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python.
 Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you can load data, process it, train and serve models all in the same place.
 
 There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](./guide/quickstart.md).
@@ -113,6 +113,7 @@ Check out the [Quick Start](./guide/quickstart.md) now!
 
 guide/index
 examples/index
+community/index
 reference/index
 blog/index
 ```
