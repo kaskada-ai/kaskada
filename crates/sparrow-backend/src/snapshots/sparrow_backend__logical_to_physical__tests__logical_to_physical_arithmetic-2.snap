@@ -1,0 +1,60 @@
+---
+source: crates/sparrow-backend/src/logical_to_physical.rs
+expression: physical_add_x1_y1
+---
+steps:
+  - id: 0
+    kind:
+      read:
+        source_id: 00000000-0000-0000-0000-000000000001
+    inputs: []
+    result_type:
+      Struct:
+        - name: x
+          data_type: Int64
+          nullable: false
+          dict_id: 0
+          dict_is_ordered: false
+          metadata: {}
+        - name: y
+          data_type: Float64
+          nullable: false
+          dict_id: 0
+          dict_is_ordered: false
+          metadata: {}
+    exprs: []
+  - id: 1
+    kind: project
+    inputs:
+      - 0
+    result_type: Float64
+    exprs:
+      - name: input
+        literal_args: []
+        args: []
+        result_type: Float64
+      - name: fieldref
+        literal_args:
+          - Utf8: y
+        args:
+          - 0
+        result_type: Float64
+      - name: fieldref
+        literal_args:
+          - Utf8: x
+        args:
+          - 0
+        result_type: Int64
+      - name: cast
+        literal_args: []
+        args:
+          - 2
+        result_type: Float64
+      - name: add
+        literal_args: []
+        args:
+          - 3
+          - 1
+        result_type: Float64
+pipelines: []
+

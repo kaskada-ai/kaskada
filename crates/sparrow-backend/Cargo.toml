@@ -11,12 +11,27 @@ Compilation backend for Kaskada queries.
 
 [dependencies]
 arrow-schema.workspace = true
+bitvec.workspace = true
+derive_more.workspace = true
+egg.workspace = true
+enum-as-inner.workspace = true
+error-stack.workspace = true
+hashbrown.workspace = true
 index_vec.workspace = true
+itertools.workspace = true
+rand.workspace = true
+smallvec.workspace = true
+sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-core = { path = "../sparrow-core" }
+sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-logical = { path = "../sparrow-logical" }
 sparrow-physical = { path = "../sparrow-physical" }
 uuid.workspace = true
+static_init.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
+insta.workspace = true
 
 [lib]
 doctest = false
