@@ -1,5 +1,5 @@
 use hashbrown::HashMap;
-use sparrow_runtime::stores::ObjectStoreRegistry;
+use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -34,10 +34,27 @@ pub struct Session {
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
     object_store_registry: Arc<ObjectStoreRegistry>,
     rt: tokio::runtime::Runtime,
+    /// Default temporary path to prepare files to.
+    ///
+    /// NOTE: we'll want to figure out how we're passing in the user-defined
+    /// destination url. It's possible it could be passed in as part of the
+    /// query, at which point we'd use that instead of this default temporary path.
+    prepare_prefix: ObjectStoreUrl,
+    /// Temporary directory for preparing files to in the local case.
+    ///
+    /// Stored in the session to ensure it persists until the Session is dropped.
+    _temp_dir: tempfile::TempDir,
 }
 
 impl Default for Session {
     fn default() -> Self {
+        // TODO: Support object stores
+        // Likely will need the option to pass in the destination url when executing the
+        // query or creating a table.
+
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let prepare_prefix =
+            ObjectStoreUrl::from_directory_path(temp_dir.path()).expect("valid path");
         Self {
             data_context: Default::default(),
             dfg: Default::default(),
@@ -45,6 +62,8 @@ impl Default for Session {
             udfs: Default::default(),
             object_store_registry: Default::default(),
             rt: tokio::runtime::Runtime::new().expect("tokio runtime"),
+            prepare_prefix,
+            _temp_dir: temp_dir,
         }
     }
 }
@@ -188,6 +207,7 @@ impl Session {
             time_unit,
             self.object_store_registry.clone(),
             source,
+            self.prepare_prefix.clone(),
         )
     }
 

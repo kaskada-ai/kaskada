@@ -4824,6 +4824,7 @@ dependencies = [
  "sparrow-runtime",
  "sparrow-syntax",
  "static_init",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "uuid 1.4.1",

@@ -1,6 +1,4 @@
-use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 use arrow::array::{ArrayRef, UInt64Array};
 use arrow::compute::SortColumn;
@@ -11,12 +9,19 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::{PreparedFile, SourceData, TableConfig};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use crate::PreparedMetadata;
 
 use super::{prepared_batches, write_parquet};
+
+/// For now, this is a temporary location for the prepared files.
+/// In the future, we'll want to move this path to a managed cache
+/// so we can reuse state.
+const KASKADA_PATH: &str = "kaskada";
+const PREPARED_FILE_PREFIX: &str = "part";
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -87,35 +92,29 @@ impl Preparer {
     /// - This adds or casts columns as needed.
     /// - This produces multiple parts if the input file is large.
     /// - This produces metadata files alongside data files.
+    /// Parameters:
+    /// - `to_prepare`: The path to the parquet file to prepare.
+    /// - `prepare_prefix`: The prefix to write prepared files to.
     pub async fn prepare_parquet(
         &self,
-        path: &std::path::Path,
+        to_prepare: &str,
+        prepare_prefix: &ObjectStoreUrl,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
         // TODO: Support Slicing
-
-        // Prepared files are stored in the following format:
-        // file:///<cwd>/tables/<table_uuid>/prepared/<uuid>/part-<n>.parquet
-        let cur_dir = std::env::current_dir().expect("current dir");
-        let cur_dir = cur_dir.to_string_lossy();
-
-        let uuid = Uuid::new_v4();
-        let output_path_prefix = format!(
-            "file:///{}/tables/{}/prepare/{uuid}/",
-            cur_dir, self.table_config.uuid
-        );
-        let output_file_prefix = "part";
-
-        let output_url = ObjectStoreUrl::from_str(&output_path_prefix)
-            .change_context_lazy(|| Error::InvalidUrl(path.to_string_lossy().to_string()))?;
+        let output_url = self
+            .prepared_output_url_prefix(prepare_prefix)
+            .change_context_lazy(|| Error::InvalidUrl(prepare_prefix.to_string()))?;
 
         let object_store = self
             .object_stores
             .object_store(&output_url)
             .change_context(Error::Internal)?;
 
+        // TODO: support preparing from remote stores
+        let to_prepare = std::path::Path::new(to_prepare);
         let source_data = SourceData {
             source: Some(
-                SourceData::try_from_local(path)
+                SourceData::try_from_local(to_prepare)
                     .into_report()
                     .change_context(Error::Internal)?,
             ),
@@ -140,10 +139,10 @@ impl Preparer {
             let (data, metadata) = next.change_context(Error::Internal)?;
 
             let data_url = output_url
-                .join(&format!("{output_file_prefix}-{n}.parquet"))
+                .join(&format!("{PREPARED_FILE_PREFIX}-{n}.parquet"))
                 .change_context(Error::Internal)?;
             let metadata_url = output_url
-                .join(&format!("{output_file_prefix}-{n}-metadata.parquet"))
+                .join(&format!("{PREPARED_FILE_PREFIX}-{n}-metadata.parquet"))
                 .change_context(Error::Internal)?;
 
             // Create the prepared file via PreparedMetadata.
@@ -184,6 +183,26 @@ impl Preparer {
             &self.next_subsort,
             self.time_multiplier.as_ref(),
         )
+    }
+
+    /// Creates the output url prefix to use for prepared files.
+    ///
+    /// e.g. for osx: file:///<dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/
+    ///      for s3:  s3://<path>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/
+    fn prepared_output_url_prefix(
+        &self,
+        prefix: &ObjectStoreUrl,
+    ) -> error_stack::Result<ObjectStoreUrl, crate::stores::registry::Error> {
+        let uuid = Uuid::new_v4();
+        let url = prefix
+            .join(KASKADA_PATH)?
+            .join("tables")?
+            .join(&self.table_config.uuid.to_string())?
+            .join("prepared")?
+            .join(&uuid.to_string())?
+            .ensure_directory()?;
+
+        Ok(url)
     }
 }
 

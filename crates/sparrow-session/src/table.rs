@@ -24,6 +24,7 @@ pub struct Table {
     key_hash_inverse: Arc<ThreadSafeKeyHashInverse>,
     source: Source,
     registry: Arc<ObjectStoreRegistry>,
+    prepare_prefix: ObjectStoreUrl,
 }
 
 #[derive(Debug)]
@@ -43,6 +44,7 @@ impl Table {
         time_unit: Option<&str>,
         object_stores: Arc<ObjectStoreRegistry>,
         source: Option<&str>,
+        prepare_prefix: ObjectStoreUrl,
     ) -> error_stack::Result<Self, Error> {
         let prepared_fields: Fields = KEY_FIELDS
             .iter()
@@ -99,6 +101,7 @@ impl Table {
             key_column: key_column + KEY_FIELDS.len(),
             source,
             registry: object_stores,
+            prepare_prefix: prepare_prefix.to_owned(),
         })
     }
 
@@ -134,7 +137,7 @@ impl Table {
         Ok(())
     }
 
-    pub async fn add_parquet(&self, path: &std::path::Path) -> error_stack::Result<(), Error> {
+    pub async fn add_parquet(&self, path: &str) -> error_stack::Result<(), Error> {
         let file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
@@ -145,7 +148,7 @@ impl Table {
 
         let prepared = self
             .preparer
-            .prepare_parquet(path)
+            .prepare_parquet(path, &self.prepare_prefix)
             .await
             .change_context(Error::Prepare)?;
 

@@ -21,6 +21,27 @@ impl ObjectStoreUrl {
             .change_context_lazy(|| Error::InvalidUrl(self.url.to_string()))
     }
 
+    /// Returns the URL, ensuring it is a directory.
+    pub fn ensure_directory(self) -> error_stack::Result<Self, Error> {
+        let mut url = self.url.to_string();
+        if !url.ends_with('/') {
+            url.push('/');
+        }
+
+        let url = Url::parse(&url)
+            .into_report()
+            .change_context_lazy(|| Error::InvalidUrl(self.url.to_string()))?;
+        Ok(Self { url })
+    }
+
+    /// Constructs an [ObjectStoreUrl] from a local directory path.
+    pub fn from_directory_path(path: &std::path::Path) -> error_stack::Result<Self, Error> {
+        let url = Url::from_directory_path(path)
+            .map_err(|_| Error::InvalidUrl(path.display().to_string()))?;
+
+        Ok(Self { url })
+    }
+
     pub fn url(&self) -> &Url {
         &self.url
     }
