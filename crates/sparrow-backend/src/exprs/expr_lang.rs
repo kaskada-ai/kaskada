@@ -55,7 +55,9 @@ impl egg::Language for ExprLang {
         // `(field-ref["foo"] ?base)`
         // `(cast[i64] ?base)`
 
-        self.name == other.name && self.literal_args == other.literal_args && self.result_type == other.result_type
+        self.name == other.name
+            && self.literal_args == other.literal_args
+            && self.result_type == other.result_type
     }
 }
 
