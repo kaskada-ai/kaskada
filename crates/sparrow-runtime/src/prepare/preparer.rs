@@ -1,5 +1,4 @@
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 use arrow::array::{ArrayRef, UInt64Array};
 use arrow::compute::SortColumn;
@@ -10,6 +9,7 @@ use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
 use sparrow_api::kaskada::v1alpha::{PreparedFile, SourceData, TableConfig};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::stores::{ObjectStoreRegistry, ObjectStoreUrl};
@@ -101,7 +101,9 @@ impl Preparer {
         prepare_prefix: &ObjectStoreUrl,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
         // TODO: Support Slicing
-        let output_url = self.prepared_output_url_prefix(prepare_prefix)?;
+        let output_url = self
+            .prepared_output_url_prefix(prepare_prefix)
+            .change_context_lazy(|| Error::InvalidUrl(prepare_prefix.to_string()))?;
 
         let object_store = self
             .object_stores
@@ -187,29 +189,19 @@ impl Preparer {
     ///
     /// e.g. for osx: file:///<dir>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/
     ///      for s3:  s3://<path>/<KASKADA_PATH>/tables/<table_uuid>/prepared/<uuid>/
-    pub fn prepared_output_url_prefix(
+    fn prepared_output_url_prefix(
         &self,
         prefix: &ObjectStoreUrl,
-    ) -> error_stack::Result<ObjectStoreUrl, Error> {
-        let error = || Error::InvalidUrl(prefix.to_string());
-
+    ) -> error_stack::Result<ObjectStoreUrl, crate::stores::registry::Error> {
         let uuid = Uuid::new_v4();
-
         let url = prefix
-            .join(KASKADA_PATH)
-            .change_context_lazy(error)?
-            .join("tables")
-            .change_context_lazy(error)?
-            .join(&self.table_config.uuid.to_string())
-            .change_context_lazy(error)?
-            .join("prepared")
-            .change_context_lazy(error)?
-            .join(&uuid.to_string())
-            .change_context_lazy(error)?;
+            .join(KASKADA_PATH)?
+            .join("tables")?
+            .join(&self.table_config.uuid.to_string())?
+            .join("prepared")?
+            .join(&uuid.to_string())?
+            .ensure_directory()?;
 
-        // Ensure it's treated as a directory
-        let path = url.std_path().change_context_lazy(error)?;
-        let url = ObjectStoreUrl::from_directory_path(&path).unwrap();
         Ok(url)
     }
 }
