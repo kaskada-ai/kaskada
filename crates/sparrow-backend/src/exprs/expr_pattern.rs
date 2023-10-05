@@ -42,7 +42,7 @@ impl ExprPattern {
         // to add an instruction. This may be overkill, but does simplify
         // (a) de-duplicating expressions that appear in multiple arguments
         // (b) managing things like "all of these arguments should have a
-        // singe input".
+        // single input".
         //
         // If the use of the EGraph and extractor proves to be too expensive
         // we could do this "combine while de-duplicating" ourselves.

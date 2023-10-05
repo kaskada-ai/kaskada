@@ -52,9 +52,6 @@ impl egg::Language for ExprLang {
         // Some instructions (especially `cast`) depend on the `result_type` to
         // determine the operation being performed.
 
-        // `(field-ref["foo"] ?base)`
-        // `(cast[i64] ?base)`
-
         self.name == other.name
             && self.literal_args == other.literal_args
             && self.result_type == other.result_type
