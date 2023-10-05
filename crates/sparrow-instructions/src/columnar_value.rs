@@ -1,14 +1,11 @@
 use anyhow::anyhow;
 use arrow::datatypes::*;
+use arrow_array::cast::AsArray;
 use arrow_array::{
     Array, ArrayRef, BooleanArray, GenericStringArray, MapArray, OffsetSizeTrait, PrimitiveArray,
     StructArray,
 };
 use owning_ref::ArcRef;
-use sparrow_arrow::downcast::{
-    downcast_boolean_array, downcast_map_array, downcast_primitive_array, downcast_string_array,
-    downcast_struct_array,
-};
 use sparrow_arrow::scalar_value::{NativeFromScalar, ScalarValue};
 
 /// The input to an instruction.
@@ -52,14 +49,14 @@ impl ColumnarValue {
     /// struct array.
     pub fn struct_array(&self) -> anyhow::Result<ArcRef<dyn Array, StructArray>> {
         let array = self.array_ref()?;
-        ArcRef::new(array).try_map(|a| downcast_struct_array(a))
+        Ok(ArcRef::new(array).map(|a| a.as_struct()))
     }
 
     /// Specialized version of `array_ref` that downcasts the array to a
     /// map array.
     pub fn map_array(&self) -> anyhow::Result<ArcRef<dyn Array, MapArray>> {
         let array = self.array_ref()?;
-        ArcRef::new(array).try_map(|a| downcast_map_array(a))
+        Ok(ArcRef::new(array).map(|a| a.as_map()))
     }
 
     /// Specialized version of `array_ref` that downcasts the array to a
@@ -69,7 +66,7 @@ impl ColumnarValue {
         T: OffsetSizeTrait,
     {
         let array = self.array_ref()?;
-        ArcRef::new(array).try_map(|a| downcast_string_array(a))
+        Ok(ArcRef::new(array).map(|a| a.as_string::<T>()))
     }
 
     /// Specialized version of `array_ref` that downcasts the array to a
@@ -79,14 +76,14 @@ impl ColumnarValue {
         &self,
     ) -> anyhow::Result<ArcRef<dyn Array, PrimitiveArray<T>>> {
         let array = self.array_ref()?;
-        ArcRef::new(array).try_map(|a| downcast_primitive_array(a))
+        Ok(ArcRef::new(array).map(|a| a.as_primitive::<T>()))
     }
 
     /// Specialized version of `array_ref` that downcasts the array to a
     /// boolean array.
     pub fn boolean_array(&self) -> anyhow::Result<ArcRef<dyn Array, BooleanArray>> {
         let array = self.array_ref()?;
-        ArcRef::new(array).try_map(|a| downcast_boolean_array(a))
+        Ok(ArcRef::new(array).map(|a| a.as_boolean()))
     }
 
     /// Attempt to get the native value of a literal from this `ColumnarValue`.
