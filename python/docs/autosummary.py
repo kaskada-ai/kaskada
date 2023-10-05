@@ -18,33 +18,30 @@ from types import ModuleType
 from pydantic import ValidationError
 
 from quartodoc.inventory import create_inventory, convert_inventory
-from quartodoc import layout
+from quartodoc import layout, preview
 from quartodoc.parsers import get_parser_defaults
 from quartodoc.renderers import Renderer
 from quartodoc.validation import fmt
 
 from typing import Any
 
+
 def _enable_logs():
     import logging
     import sys
 
     root = logging.getLogger("quartodoc")
-    root.setLevel(logging.INFO)
 
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(logging.WARNING)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
+
 _log = logging.getLogger("quartodoc")
-
-
-
-
 
 
 # pkgdown =====================================================================
@@ -205,16 +202,18 @@ class Builder:
         _log.info("Generating blueprint.")
         blueprint = blueprint(self.layout, dynamic=self.dynamic, parser=self.parser)
 
+        hierarchy = self.gen_hierarchy(blueprint)
+
         _log.info("Collecting pages and inventory items.")
         pages, items = collect(blueprint, base_dir=self.dir)
 
         # writing pages ----
 
-        _log.info("Writing index")
-        self.write_index(blueprint)
+        _log.info("Writing indexes")
+        self.write_indexes(blueprint)
 
         _log.info("Writing docs pages")
-        self.write_doc_pages(pages, filter)
+        # self.write_doc_pages(pages, filter)
 
         # inventory ----
 
@@ -237,7 +236,69 @@ class Builder:
             _log.info(f"Writing sidebar yaml to {self.sidebar}")
             self.write_sidebar(blueprint)
 
-    def write_index(self, blueprint: layout.Layout):
+    def gen_hierarchy(self, blueprint: layout.Layout) -> {str: str}:
+        last_title = None
+        hierarchy = {}
+
+        for section in blueprint.sections:
+            preview(section, max_depth=3)
+            print()
+            package = section.package if section.package else self.package
+            if section.title:
+                last_title = section.title
+                location = section.title
+            elif section.subtitle:
+                location = f'{last_title}/{section.subtitle}'
+
+            for item in section.contents:
+                hierarchy[f'{package}.{item.path}'] = location
+        print(hierarchy)
+        return hierarchy
+
+    def header(self, title: str, order: Optional[str] = None) -> str:
+        text = ["---"]
+        text.append(f'title: {title}')
+        if order:
+            text.append(f'order: {order}')
+        text.append("---")
+        return "\n".join(text) + "\n\n"
+
+    def write_indexes(self, blueprint: layout.Layout):
+        """Write index pages for all sections"""
+
+        # --- root index
+        text = self.header(self.title)
+
+        p_index = Path(self.dir) / self.out_index
+        p_index.parent.mkdir(exist_ok=True, parents=True)
+        p_index.write_text(text)
+
+        # --- section indexes
+        last_title = None
+        order = 1
+
+        for section in blueprint.sections:
+            if section.title:
+                last_title = section.title
+                text = self.header(section.title, order=order)
+                order += 1
+                p_index = Path(self.dir) / section.title / self.out_index
+            elif section.subtitle:
+                text = self.header(section.subtitle)
+                p_index = Path(self.dir) / last_title / section.subtitle / self.out_index
+
+            if section.desc:
+                text += section.desc
+
+            if section.contents:
+                text += self.renderer.summarize(section.contents)
+
+            p_index.parent.mkdir(exist_ok=True, parents=True)
+            p_index.write_text(text)
+
+        return
+
+    def write_index_old(self, blueprint: layout.Layout):
         """Write API index page."""
 
         _log.info("Summarizing docs for index page.")
@@ -372,6 +433,7 @@ class BuilderPkgdown(Builder):
     """Build an API in R pkgdown style."""
 
     style = "pkgdown"
+
 
 if __name__ == "__main__":
     _enable_logs()

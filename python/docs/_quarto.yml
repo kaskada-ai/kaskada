@@ -21,7 +21,7 @@ website:
         text: User Guide
       - href: examples/index.qmd
         text: Examples
-      - href: ref/index.qmd
+      - href: reference/index.qmd
         text: API
       - href: blog/index.qmd
         text: Blog
@@ -38,7 +38,7 @@ website:
     contents: examples
   - title: API
     style: docked
-    contents: ref
+    contents: reference
 
   page-footer:
     border: true

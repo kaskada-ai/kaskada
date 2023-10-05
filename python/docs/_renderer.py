@@ -158,8 +158,6 @@ class Renderer(BaseRenderer):
 
         return res
 
-
-
     @dispatch
     def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None):
         """Return a string representation of an object's signature."""
@@ -214,7 +212,8 @@ class Renderer(BaseRenderer):
             header = []
 
         if el.flatten:
-            rows = list([[f'[{entry.name}](`{entry.anchor}`)', self.summarize(entry.obj)] for entry in el.contents])
+            rows = list([[f'[{entry.name}](`{entry.anchor}`)', self.summarize(entry.obj)]
+                        for entry in el.contents])
             table = self._render_table(rows, ["Method", "Description"])
             return "\n\n".join([*header, table])
         else:
@@ -345,12 +344,10 @@ class Renderer(BaseRenderer):
                         [self.render(x) for x in raw_meths if isinstance(x, layout.Doc)]
                     )
 
-
         str_sig = self.signature(el)
         sig_part = [str_sig] if self.show_signature else []
 
         body = self.render(el.obj)
-
 
         return "\n\n".join([title, *sig_part, body, *attr_docs, *class_docs, *meth_docs])
 
@@ -498,7 +495,8 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: ds.DocstringAttribute):
-        print(f'Attribute anno: {el.annotation} desc: {el.description} name: {el.name} value: {el.value}')
+        print(
+            f'Attribute anno: {el.annotation} desc: {el.description} name: {el.name} value: {el.value}')
         row = [
             sanitize(el.name),
             self.render_annotation(el.annotation),
@@ -560,7 +558,6 @@ class Renderer(BaseRenderer):
         annotation = self.render_annotation(el.annotation)
         return (annotation, sanitize(el.description, allow_markdown=True))
 
-
     @dispatch
     def render(self, el: ds.DocstringSectionAdmonition):
         return el.value.description
@@ -608,16 +605,19 @@ class Renderer(BaseRenderer):
             header = ""
 
         if el.contents:
-            thead = "| | |\n| --- | --- |"
-
-            rendered = []
-            for child in el.contents:
-                rendered.append(self.summarize(child))
-
-            str_func_table = "\n".join([thead, *rendered])
-            return f"{header}\n\n{str_func_table}"
+            return f"{header}\n\n{self.summarize(el.contents)}"
 
         return header
+
+    @dispatch
+    def summarize(self, contents: layout.ContentList):
+        thead = "| | |\n| --- | --- |"
+
+        rendered = []
+        for child in contents:
+            rendered.append(self.summarize(child))
+
+        return "\n".join([thead, *rendered])
 
     @dispatch
     def summarize(self, el: layout.Page):
