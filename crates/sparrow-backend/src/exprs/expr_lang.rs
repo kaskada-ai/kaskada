@@ -43,10 +43,16 @@ impl egg::Language for ExprLang {
     }
 
     fn matches(&self, other: &Self) -> bool {
-        // Note that this should *only* consider whether the node is the same operation.
+        // Note: As per
+        // https://egraphs-good.github.io/egg/egg/trait.Language.html#tymethod.matches,
+        // this should *only* consider whether the node corresponds to the same
+        // operation.
         //
         // egg itself will check whether the arguments are *equivalent*.
-        self.name == other.name && self.literal_args == other.literal_args
+        //
+        // Some instructions (especially `cast`) depend on the `result_type` to
+        // determine the operation being performed.
+        self.name == other.name && self.literal_args == other.literal_args && self.result_type == other.result_type
     }
 }
 
