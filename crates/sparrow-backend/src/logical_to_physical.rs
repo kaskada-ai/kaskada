@@ -93,8 +93,8 @@ impl LogicalToPhysical {
             Ok(None) => todo!("handle all-literal arguments"),
             Ok(Some(step)) => {
                 // There is only one step, which means all of the arguments are already
-                // available in the same place, and it is a projection. We just need the
-                // expression IDs of each argument.
+                // available in the same place. We can use all of those patterns within
+                // a single step to provide the arguments.
                 let exprs = args
                     .into_iter()
                     .map(|arg| {
@@ -128,12 +128,22 @@ impl LogicalToPhysical {
                     .into_iter()
                     .map(|arg| {
                         // Determine which input to the merge we want.
-                        // Start with replacement containing `(fieldref ?input "step_<step_id>)")
+                        // Start with replacement containing `?input => (fieldref ?input "step_<step_id>)")
                         let mut exprs = ExprPattern::new_input()?;
 
                         let data_type = self.reference_type(&arg)?.clone();
                         exprs.add_instruction(
                             "fieldref",
+                            // Note: that `merge` should produce a record with a
+                            // field for each merged step, identified by the
+                            // step ID being merged. This may change depending
+                            // on (a) optimizations that change steps and
+                            // whether it is difficult to update these and (b)
+                            // how we choose to implement merge.
+                            //
+                            // It may be more practical to use the "index of the
+                            // step ID in the inputs" which would be more stable
+                            // as we change step IDs.
                             smallvec![ScalarValue::Utf8(Some(format!("step_{}", arg.step_id)))],
                             smallvec![egg::Id::from(0)],
                             data_type,

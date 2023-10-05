@@ -6,8 +6,9 @@ use crate::Error;
 
 /// An linear representation of the expressions.
 ///
-/// Unlike `MutableExprs` this does not deduplicate the expressions internally.
-/// However, when added to a `MutableExprs` deduplication will be performed.
+/// Unlike `ExprGraph` (which is built on `egg::EGraph`) this does not
+/// deduplicate the expressions internally. However, when added to a `ExprGraph`
+/// or `EGraph` deduplication will be performed.
 #[derive(Debug, PartialEq, Eq, Hash, Default)]
 pub(crate) struct ExprVec {
     pub(super) expr: egg::RecExpr<ExprLang>,

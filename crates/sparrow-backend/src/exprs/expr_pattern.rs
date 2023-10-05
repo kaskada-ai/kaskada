@@ -8,6 +8,11 @@ use crate::exprs::ExprVec;
 use crate::Error;
 
 /// A representation of an expression with "holes" that may be instantiated.
+///
+/// For instance, while `(add (source["uuid"]) (literal 1))` is an expression that adds
+/// the literal `1` to the identified `source`, `(add ?input (literal 1))` is a pattern
+/// with a hole (placeholder) named `?input` that adds 1 to whatever we substitute in for
+/// `?input`.
 #[derive(Debug, Default)]
 pub(crate) struct ExprPattern {
     pub(super) expr: egg::PatternAst<ExprLang>,
@@ -33,6 +38,14 @@ impl ExprPattern {
         args: Vec<ExprPattern>,
         data_type: arrow_schema::DataType,
     ) -> error_stack::Result<ExprPattern, Error> {
+        // NOTE: This adds the pattern for each argument to an `EGraph`
+        // to add an instruction. This may be overkill, but does simplify
+        // (a) de-duplicating expressions that appear in multiple arguments
+        // (b) managing things like "all of these arguments should have a
+        // singe input".
+        //
+        // If the use of the EGraph and extractor proves to be too expensive
+        // we could do this "combine while de-duplicating" ourselves.
         let mut graph = egg::EGraph::<egg::ENodeOrVar<ExprLang>, ()>::default();
         let mut arg_ids = SmallVec::with_capacity(args.len());
         for arg in args {
@@ -64,6 +77,13 @@ impl ExprPattern {
         &self,
         input_type: arrow_schema::DataType,
     ) -> error_stack::Result<ExprVec, Error> {
+        // Note: Instead of instantiating the pattern ourselves (replacing `?input` with the
+        // input expression) we instead make an `EGraph`, add the input expression, and then
+        // instantiate the pattern into that.
+        //
+        // This lets us extract the *best* (shortest) expression, rather than copying all of
+        // the pattern. One nice thing about this is that the `EGraph` will de-duplicate
+        // equivalent operations, etc.
         let mut graph = egg::EGraph::<ExprLang, ()>::default();
 
         let input_id = graph.add(ExprLang {
@@ -88,7 +108,11 @@ impl ExprPattern {
         self.expr.as_ref().len()
     }
 
-    /// Return true if this contains a single expression for the input.
+    /// Return true if this pattern just returns `?input`.
+    ///
+    /// This is used to identify expression patterns that "just pass the value through".
+    /// For instance, a projection step with the `identity` pattern is a noop and can
+    /// be removed.
     pub fn is_identity(&self) -> bool {
         // TODO: We may want to make this more intelligent and detect cases where
         // the expression is *equivalent* to the identity. But for now, we think
