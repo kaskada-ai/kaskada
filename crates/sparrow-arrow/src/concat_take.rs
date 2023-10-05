@@ -1,4 +1,4 @@
-use arrow_array::{ArrayRef, UInt32Array};
+use arrow_array::{Array, ArrayRef, UInt32Array};
 
 /// Concatenates two arrays and then takes the values at the given indices.
 ///
@@ -6,8 +6,8 @@ use arrow_array::{ArrayRef, UInt32Array};
 /// the indices are solely in the first or second array and then taking the values from
 /// the respective arrays.
 pub fn concat_take(
-    array1: &ArrayRef,
-    array2: &ArrayRef,
+    array1: &dyn Array,
+    array2: &dyn Array,
     indices: &UInt32Array,
 ) -> anyhow::Result<ArrayRef> {
     let combined = arrow_select::concat::concat(&[array1, array2])?;
