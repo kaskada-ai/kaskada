@@ -1,9 +1,0 @@
----
-title: Grouping
----
-
-
-| Method                                               | Description                                                        |
-|------------------------------------------------------|--------------------------------------------------------------------|
-| [Timestream.lookup](`kaskada.Timestream.lookup`)     | Return a Timestream looking up the value of `self` for each `key`. |
-| [Timestream.with_key](`kaskada.Timestream.with_key`) | Return a Timestream with a new grouping by `key`.                  |

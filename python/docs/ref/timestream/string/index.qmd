@@ -1,9 +1,0 @@
----
-title: String
----
-
-
-| Method                                         | Description                                                  |
-|------------------------------------------------|--------------------------------------------------------------|
-| [Timestream.lower](`kaskada.Timestream.lower`) | Return a Timestream with all values converted to lower case. |
-| [Timestream.upper](`kaskada.Timestream.upper`) | Return a Timestream with all values converted to upper case. |

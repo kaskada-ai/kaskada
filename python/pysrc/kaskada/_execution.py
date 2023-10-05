@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import AsyncIterator, Callable, Iterator, Literal, Optional, TypeVar, Union
 
-import kaskada as kd
+from kaskada.results import History, Snapshot
 import pyarrow as pa
 
 from . import _ffi
@@ -43,7 +43,7 @@ class _ExecutionOptions:
 
     @staticmethod
     def create(
-        results: Optional[Union[kd.results.History, kd.results.Snapshot]],
+        results: Optional[Union[History, Snapshot]],
         row_limit: Optional[int],
         max_batch_size: Optional[int],
         mode: Literal["once", "live"] = "once",
@@ -56,15 +56,15 @@ class _ExecutionOptions:
         )
 
         if results is None:
-            results = kd.results.History()
+            results = History()
 
-        if isinstance(results, kd.results.History):
+        if isinstance(results, History):
             options.results = "history"
             if results.since is not None:
                 options.changed_since = int(results.since.timestamp())
             if results.until is not None:
                 options.final_at = int(results.until.timestamp())
-        elif isinstance(results, kd.results.Snapshot):
+        elif isinstance(results, Snapshot):
             options.results = "snapshot"
             if results.changed_since is not None:
                 options.changed_since = int(results.changed_since.timestamp())

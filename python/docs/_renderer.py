@@ -86,19 +86,12 @@ class Renderer(BaseRenderer):
             self.crnt_header_level -= n
 
     def _fetch_object_dispname(self, el: "dc.Alias | dc.Object"):
-        # TODO: copied from Builder, should move into util function
-        if self.display_name in {"name", "short"}:
-            return el.name
-        elif self.display_name == "relative":
-            return ".".join(el.path.split(".")[1:])
+        parts = el.path.split(".")[1:]
+        name = parts.pop()
+        prefix = ".".join(parts)
 
-        elif self.display_name == "full":
-            return el.path
-
-        elif self.display_name == "canonical":
-            return el.canonical_path
-
-        raise ValueError(f"Unsupported display_name: `{self.display_name}`")
+        return f"**{prefix}.**[**{name}**]{{.red}}"
+        # return ".".join(el.path.split(".")[1:])
 
     def _fetch_method_parameters(self, el: dc.Function):
         # adapted from mkdocstrings-python jinja tempalate
@@ -164,13 +157,16 @@ class Renderer(BaseRenderer):
         return self.signature(el.target, el)
 
     @dispatch
-    def signature(
-        self, el: Union[dc.Class, dc.Function], source: Optional[dc.Alias] = None
-    ):
+    def signature(self, el: dc.Function, source: Optional[dc.Alias] = None) -> str:
         name = self._fetch_object_dispname(source or el)
         pars = self.render(self._fetch_method_parameters(el))
 
-        return f"`{name}({pars})`"
+        return f"{name}(***{pars}***)"
+
+    @dispatch
+    def signature(self, el: dc.Class, source: Optional[dc.Alias] = None) -> str:
+        name = self._fetch_object_dispname(source or el)
+        return f"***class*** {name}"
 
     @dispatch
     def signature(
@@ -181,13 +177,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render_header(self, el: layout.Doc):
-        """Render the header of a docstring, including any anchors."""
-        _str_dispname = el.name
-
-        # TODO: support anchors that are not fully qualified paths?
-        # e.g. get_object, rather than quartodoc.get_object
-        _anchor = f"{{ #{el.obj.path} }}"
-        return f"{'#' * self.crnt_header_level} {_str_dispname} {_anchor}"
+        return self.header(el.name)
 
     # render method -----------------------------------------------------------
 
@@ -203,11 +193,19 @@ class Renderer(BaseRenderer):
 
     # render layouts ==========================================================
 
+    def header(self, title: str, order: Optional[str] = None) -> str:
+        text = ["---"]
+        text.append(f'title: {title}')
+        if order:
+            text.append(f'order: {order}')
+        text.append("---")
+        return "\n".join(text) + "\n\n"
+
     @dispatch
     def render(self, el: layout.Page):
         if el.summary:
             sum_ = el.summary
-            header = [f"{'#' * self.crnt_header_level} {sum_.name}\n\n{sum_.desc}"]
+            header = [f"{self.header(sum_.name)}\n\n{sum_.desc}"]
         else:
             header = []
 
@@ -376,7 +374,8 @@ class Renderer(BaseRenderer):
                 body = self.render(section)
 
                 if title != "text":
-                    header = f"{'#' * (self.crnt_header_level + 1)} {title.title()}"
+                    # header here is a definition list term
+                    header = title.title()
                     str_body.append("\n\n".join([header, body]))
                 else:
                     str_body.append(body)
@@ -451,7 +450,6 @@ class Renderer(BaseRenderer):
             res = f"{glob}{name}={el.default}"
         else:
             res = f"{glob}{name}"
-
         return res
 
     # docstring parts -------------------------------------------------------------
@@ -472,18 +470,23 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
+        # render as a definition list item
         rows = list(map(self.render, el.value))
-        header = ["Name", "Type", "Description", "Default"]
-        return self._render_table(rows, header)
+        text = "\n".join(rows)
+        return f': {text}'
 
     @dispatch
-    def render(self, el: ds.DocstringParameter) -> Tuple[str]:
-        # TODO: if default is not, should return the word "required" (unescaped)
-        default = "_required_" if el.default is None else escape(el.default)
-
+    def render(self, el: ds.DocstringParameter) -> str:
+        # render as an un-ordered list item
+        name = el.name
         annotation = self.render_annotation(el.annotation)
         clean_desc = sanitize(el.description, allow_markdown=True)
-        return (escape(el.name), annotation, clean_desc, default)
+
+        if el.default is None:
+            return f'* **{name}** ({annotation}) -- {clean_desc}'
+        else:
+            default = escape(el.default)
+            return f'* **{name}** ({annotation}, default: {default}) -- {clean_desc}'
 
     # attributes ----
 
@@ -495,8 +498,6 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: ds.DocstringAttribute):
-        print(
-            f'Attribute anno: {el.annotation} desc: {el.description} name: {el.name} value: {el.value}')
         row = [
             sanitize(el.name),
             self.render_annotation(el.annotation),
@@ -515,14 +516,12 @@ class Renderer(BaseRenderer):
     @dispatch
     def render(self, el: qast.DocstringSectionSeeAlso):
         # TODO: attempt to parse See Also sections
-        print(f'SeeAlso value: {el.value}')
         return convert_rst_link_to_md(el.value)
 
     # notes ----
 
     @dispatch
     def render(self, el: qast.DocstringSectionNotes):
-        print(f'Notes value: {el.value}')
         return el.value
 
     # examples ----
@@ -547,20 +546,20 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: Union[ds.DocstringSectionReturns, ds.DocstringSectionRaises]):
+        # render as a definition list
         rows = list(map(self.render, el.value))
-        header = ["Type", "Description"]
-
-        return self._render_table(rows, header)
+        text = "\n".join(rows)
+        return f': {text}'
 
     @dispatch
     def render(self, el: Union[ds.DocstringReturn, ds.DocstringRaise]):
         # similar to DocstringParameter, but no name or default
         annotation = self.render_annotation(el.annotation)
-        return (annotation, sanitize(el.description, allow_markdown=True))
+        return f'{annotation} -- {sanitize(el.description, allow_markdown=True)}'
 
     @dispatch
     def render(self, el: ds.DocstringSectionAdmonition):
-        return el.value.description
+        return sanitize(el.value.description, allow_markdown=True)
 
     # unsupported parts ----
 
@@ -652,6 +651,7 @@ class Renderer(BaseRenderer):
     def summarize(
         self, el: layout.Doc, path: Optional[str] = None, shorten: bool = False
     ):
+        # this is where summary page method links are created
         if path is None:
             link = f"[{el.name}](#{el.anchor})"
         else:

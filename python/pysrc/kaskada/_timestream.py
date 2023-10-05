@@ -20,6 +20,9 @@ from typing import (
 )
 
 import kaskada
+from kaskada.windows import Window, Since, Sliding, Trailing, Tumbling
+from kaskada.results import History, Snapshot
+from kaskada.destinations import Destination
 import kaskada._ffi as _ffi
 import pandas as pd
 import pyarrow as pa
@@ -646,7 +649,7 @@ class Timestream(object):
         *,
         max: Optional[int],
         min: Optional[int] = 0,
-        window: Optional[kaskada.windows.Window] = None,
+        window: Optional[Window] = None,
     ) -> Timestream:
         """Return a Timestream collecting up to the last `max` values in the `window`.
 
@@ -804,7 +807,7 @@ class Timestream(object):
         """
         return Timestream._call("shift_until", predicate, self, input=self)
 
-    def sum(self, *, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def sum(self, *, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream summing the values in the `window`.
 
         Computes the sum for each key separately.
@@ -814,7 +817,7 @@ class Timestream(object):
         """
         return _aggregation("sum", self, window)
 
-    def first(self, *, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def first(self, *, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the first value in the `window`.
 
         Computed for each key separately.
@@ -824,7 +827,7 @@ class Timestream(object):
         """
         return _aggregation("first", self, window)
 
-    def last(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def last(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the last value in the `window`.
 
         Computed for each key separately.
@@ -834,7 +837,7 @@ class Timestream(object):
         """
         return _aggregation("last", self, window)
 
-    def count(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def count(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the count value in the `window`.
 
         Computed for each key separately.
@@ -844,7 +847,7 @@ class Timestream(object):
         """
         return _aggregation("count", self, window)
 
-    def count_if(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def count_if(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the count of `true` values in `window`.
 
         Computed for each key separately.
@@ -854,7 +857,7 @@ class Timestream(object):
         """
         return _aggregation("count_if", self, window)
 
-    def max(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def max(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the max value in the `window`.
 
         Computed for each key separately.
@@ -869,7 +872,7 @@ class Timestream(object):
         """
         return _aggregation("max", self, window)
 
-    def min(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def min(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the min value in the `window`.
 
         Computed for each key separately.
@@ -884,7 +887,7 @@ class Timestream(object):
         """
         return _aggregation("min", self, window)
 
-    def mean(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def mean(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the mean value in the `window`.
 
         Computed for each key separately.
@@ -894,7 +897,7 @@ class Timestream(object):
         """
         return _aggregation("mean", self, window)
 
-    def stddev(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def stddev(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the standard deviation in the `window`.
 
         Computed for each key separately.
@@ -904,7 +907,7 @@ class Timestream(object):
         """
         return _aggregation("stddev", self, window)
 
-    def variance(self, window: Optional[kaskada.windows.Window] = None) -> Timestream:
+    def variance(self, window: Optional[Window] = None) -> Timestream:
         """Return a Timestream containing the variance in the `window`.
 
         Computed for each key separately.
@@ -1059,7 +1062,7 @@ class Timestream(object):
     def preview(
         self,
         limit: int = 10,
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
     ) -> pd.DataFrame:
         """Preview the points in this TimeStream as a DataFrame.
 
@@ -1071,7 +1074,7 @@ class Timestream(object):
 
     def to_pandas(
         self,
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
         *,
         row_limit: Optional[int] = None,
     ) -> pd.DataFrame:
@@ -1095,9 +1098,9 @@ class Timestream(object):
 
     def write(
         self,
-        destination: kaskada.destinations.Destination,
+        destination: Destination,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
     ) -> Execution:
         """Execute the TimeStream writing to the given destination.
 
@@ -1121,7 +1124,7 @@ class Timestream(object):
         kind: Literal["pandas"] = "pandas",
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> ResultIterator[pd.DataFrame]:
@@ -1133,7 +1136,7 @@ class Timestream(object):
         kind: Literal["pyarrow"],
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> ResultIterator[pa.RecordBatch]:
@@ -1145,7 +1148,7 @@ class Timestream(object):
         kind: Literal["row"],
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> ResultIterator[dict]:
@@ -1156,7 +1159,7 @@ class Timestream(object):
         kind: Literal["pandas", "pyarrow", "row"] = "pandas",
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> Union[
@@ -1199,7 +1202,7 @@ class Timestream(object):
     def explain(
         self,
         kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[Union[History, Snapshot]] = None,
         mode: Literal["once", "live"] = "once",
     ) -> "graphviz.Source":
         """Return an explanation of this Timestream will be executed.
@@ -1243,7 +1246,7 @@ class Timestream(object):
 
     def _execute(
         self,
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]],
+        results: Optional[Union[History, Snapshot]],
         *,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
@@ -1262,7 +1265,7 @@ class Timestream(object):
 def _aggregation(
     op: str,
     input: Timestream,
-    window: Optional[kaskada.windows.Window],
+    window: Optional[Window],
     *args: Union[Timestream, LiteralValue],
 ) -> Timestream:
     """Return the aggregation `op` with the given `input`, `window` and `args`.
@@ -1278,12 +1281,12 @@ def _aggregation(
     """
     if window is None:
         return Timestream._call(op, input, *args, None, None)
-    elif isinstance(window, kaskada.windows.Since):
+    elif isinstance(window, Since):
         predicate = window.predicate
         if callable(predicate):
             predicate = predicate(input)
         return Timestream._call(op, input, *args, predicate, None)
-    elif isinstance(window, kaskada.windows.Sliding):
+    elif isinstance(window, Sliding):
         predicate = window.predicate
         if callable(predicate):
             predicate = predicate(input)
@@ -1291,7 +1294,7 @@ def _aggregation(
         return Timestream._call(op, input, *args, predicate, window.duration).filter(
             predicate
         )
-    elif isinstance(window, kaskada.windows.Trailing):
+    elif isinstance(window, Trailing):
         if op != "collect":
             raise NotImplementedError(
                 f"Aggregation '{op} does not support trailing windows"
@@ -1313,7 +1316,7 @@ def _aggregation(
         # `duration` has passed with no "real" inputs.
         merged_input = record({"input": input, "shift": input_shift}).col("input")
         return Timestream._call("collect", merged_input, *args, None, trailing_ns)
-    elif isinstance(window, kaskada.windows.Tumbling):
+    elif isinstance(window, Tumbling):
         # Tumbling windows are analogous to Since windows, aside from output behavior.
         # Tumbling windows only emit once per window. However, this behavior is not implemented
         # in Sparrow yet, so we hack this by using a Since window with a filter applied afterwards

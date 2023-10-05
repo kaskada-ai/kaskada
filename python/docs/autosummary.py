@@ -23,7 +23,7 @@ from quartodoc.parsers import get_parser_defaults
 from quartodoc.renderers import Renderer
 from quartodoc.validation import fmt
 
-from typing import Any
+from typing import Any, Union, Optional
 
 
 def _enable_logs():
@@ -31,9 +31,10 @@ def _enable_logs():
     import sys
 
     root = logging.getLogger("quartodoc")
+    root.setLevel(logging.INFO)
 
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -213,7 +214,7 @@ class Builder:
         self.write_indexes(blueprint)
 
         _log.info("Writing docs pages")
-        # self.write_doc_pages(pages, filter)
+        self.write_doc_pages(pages, filter, hierarchy)
 
         # inventory ----
 
@@ -236,14 +237,20 @@ class Builder:
             _log.info(f"Writing sidebar yaml to {self.sidebar}")
             self.write_sidebar(blueprint)
 
+    def get_package(self, item: Union[layout.Section, layout.Page]) -> str:
+        if item.package and f'{item.package}' != "":
+            return item.package
+        else:
+            return self.package
+
     def gen_hierarchy(self, blueprint: layout.Layout) -> {str: str}:
         last_title = None
         hierarchy = {}
 
         for section in blueprint.sections:
-            preview(section, max_depth=3)
+            preview(section, max_depth=4)
             print()
-            package = section.package if section.package else self.package
+
             if section.title:
                 last_title = section.title
                 location = section.title
@@ -251,7 +258,7 @@ class Builder:
                 location = f'{last_title}/{section.subtitle}'
 
             for item in section.contents:
-                hierarchy[f'{package}.{item.path}'] = location
+                hierarchy[f'{self.get_package(section)}.{item.path}'] = location
         print(hierarchy)
         return hierarchy
 
@@ -288,7 +295,7 @@ class Builder:
                 p_index = Path(self.dir) / last_title / section.subtitle / self.out_index
 
             if section.desc:
-                text += section.desc
+                text += section.desc + "\n\n"
 
             if section.contents:
                 text += self.renderer.summarize(section.contents)
@@ -313,13 +320,20 @@ class Builder:
 
         return str(p_index)
 
-    def write_doc_pages(self, pages, filter: str):
+    def write_doc_pages(self, pages: [layout.Page], filter: str, hierarchy: {}):
         """Write individual function documentation pages."""
 
         for page in pages:
             _log.info(f"Rendering {page.path}")
+            # preview(page)
             rendered = self.renderer.render(page)
-            html_path = Path(self.dir) / (page.path + self.out_page_suffix)
+
+            try:
+                location = hierarchy[f'{self.get_package(page)}.{page.path}']
+            except:
+                location = hierarchy[page.contents[0].anchor]
+
+            html_path = Path(self.dir) / location / (page.path + self.out_page_suffix)
             html_path.parent.mkdir(exist_ok=True, parents=True)
 
             # Only write out page if it has changed, or we've set the
