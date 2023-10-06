@@ -1,25 +1,14 @@
 from __future__ import annotations
 
-import inspect
 import logging
-import warnings
 import yaml
 
 from fnmatch import fnmatchcase
-from griffe.loader import GriffeLoader
-from griffe.collections import ModulesCollection, LinesCollection
-from griffe.dataclasses import Alias
-from griffe.docstrings.parsers import Parser, parse
-from griffe.docstrings import dataclasses as ds  # noqa
-from griffe import dataclasses as dc
-from plum import dispatch  # noqa
 from pathlib import Path
-from types import ModuleType
 from pydantic import ValidationError
 
 from quartodoc.inventory import create_inventory, convert_inventory
 from quartodoc import layout, preview
-from quartodoc.parsers import get_parser_defaults
 from quartodoc.renderers import Renderer
 from quartodoc.validation import fmt
 
@@ -45,10 +34,6 @@ def _enable_logs():
 _log = logging.getLogger("quartodoc")
 
 
-# pkgdown =====================================================================
-
-
-# TODO: styles -- pkgdown, single-page, many-pages
 class Builder:
     """Base class for building API docs.
 
@@ -434,12 +419,6 @@ class Builder:
         yaml.dump(d_sidebar, open(self.sidebar, "w"))
 
     def _page_to_links(self, el: layout.Page) -> list[str]:
-        # if el.flatten:
-        #     links = []
-        #     for entry in el.contents:
-        #         links.append(f"{self.dir}/{entry.path}{self.out_page_suffix}")
-        #     return links
-
         return [f"{self.dir}/{el.path}{self.out_page_suffix}"]
 
     # constructors ----
@@ -469,12 +448,10 @@ class Builder:
 
 
 class BuilderPkgdown(Builder):
-    """Build an API in R pkgdown style."""
-
     style = "pkgdown"
 
 
 if __name__ == "__main__":
     _enable_logs()
-    b = BuilderPkgdown.from_quarto_config("_quartodoc.old.yml")
+    b = BuilderPkgdown.from_quarto_config("_quartodoc.yml")
     b.build()

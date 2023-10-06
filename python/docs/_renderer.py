@@ -124,24 +124,20 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render_annotation(self, el: str) -> str:
-        print(f"render str: {el}")
         return sanitize(el)
 
     @dispatch
     def render_annotation(self, el: None) -> str:
-        print("render none")
         return ""
 
     @dispatch
     def render_annotation(self, el: expr.Name) -> str:
-        print(f"render name: {el} {el.full}")
         if el.full not in skip_annotation_types:
             return f"[{sanitize(el.source)}](`{el.full}`)"
         return ""
 
     @dispatch
     def render_annotation(self, el: expr.Expression) -> str:
-        print(f"render expr: {el}")
         text = "".join(map(self.render_annotation, el))
         return text.lstrip(".")
 
@@ -315,8 +311,6 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: dc.Parameter):
-        print(f'Parameter: {el} anno: {el.annotation}')
-        # TODO: missing annotation
         splats = {dc.ParameterKind.var_keyword, dc.ParameterKind.var_positional}
         has_default = el.default and el.kind not in splats
 
@@ -484,8 +478,6 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: ds.DocstringSectionAdmonition) -> str:
-        print(f'Admonition: {el.title} {el.value.description}')
-
         rows = []
         if el.title.lower().startswith("note"):
             rows.append(f'::: {{.callout-note title="{el.title}"}}')
