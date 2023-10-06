@@ -1,17 +1,12 @@
 quartodoc:
   title: API
   dir: reference
-  out_index: index.qmd
-  parser: google
   package: kaskada
   source_dir: ../pysrc
-  renderer:
-    style: _renderer.py
   options:
     children: separate
     include_empty: true
   dynamic: true
-  render_interlinks: true
 
   sections:
     - title: Timestream

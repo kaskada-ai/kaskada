@@ -28,7 +28,7 @@ For any input table that is continuous, the join is `as of` the time of the outp
 
 ## Explicit Lookups
 
-Values from associated with other entities may be retrieved using [`kaskada.Timestream.lookup`](../reference/Timestream.lookup.qmd).
+Values from associated with other entities may be retrieved using [](`kaskada.Timestream.lookup`).
 `left.lookup(right)` does a left-join, looking up the value from `right` for each computed key in `left`.
 
 Lookups are _temporally correct_ -- the value retrieved corresponds to the `right` value at the time the key occurred in `left`.

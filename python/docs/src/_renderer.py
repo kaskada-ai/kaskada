@@ -9,8 +9,6 @@ from plum import dispatch
 from typing import Union, Optional
 from quartodoc import layout
 
-from _base import BaseRenderer
-
 
 try:
     # Name and Expression were moved to expressions in v0.28
@@ -50,36 +48,20 @@ def sanitize(val: str, allow_markdown=False):
     return res
 
 
-class Renderer(BaseRenderer):
-    """Render docstrings to markdown.
+class Renderer():
+    """Render docstrings to markdown."""
 
-    Parameters
-    ----------
-    show_signature_annotations: bool
-        Whether to show annotations in the function signature.
-    """
-
-    style = "markdown"
-
-    def __init__(
-        self,
-        show_signature_annotations: bool = False,
-        hook_pre=None,
-    ):
-        self.show_signature_annotations = show_signature_annotations
-        self.hook_pre = hook_pre
-
-    def _fetch_object_dispname(self, el: "dc.Alias | dc.Object"):
+    def _get_display_name(self, el: "dc.Alias | dc.Object"):
         parts = el.path.split(".")[1:]
         name = parts.pop()
         prefix = ".".join(parts)
-        dispname = f"**{prefix}.**[**{name}**]{{.red}}"
+        display_name = f"**{prefix}.**[**{name}**]{{.red}}"
 
         if isinstance(el, dc.Object):
             if 'staticmethod' in el.labels:
-                dispname = "***static*** " + dispname
+                display_name = "***static*** " + display_name
 
-        text = [dispname]
+        text = [display_name]
 
         # if isinstance(el, dc.Object) and el.kind == dc.Kind.CLASS:
         #     text.append(f"Bases: []({el.parent.name})")
@@ -87,7 +69,6 @@ class Renderer(BaseRenderer):
         return "\n\n".join(text)
 
     def _fetch_method_parameters(self, el: dc.Function):
-        # adapted from mkdocstrings-python jinja tempalate
         if el.parent and el.parent.is_class and len(el.parameters) > 0:
             if el.parameters[0].name in {"self", "cls"}:
                 return dc.Parameters(*list(el.parameters)[1:])
@@ -154,20 +135,20 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None) -> str:
-        name = self._fetch_object_dispname(source or el)
+        name = self._get_display_name(source or el)
         pars = self.render(self._fetch_method_parameters(el))
         return f"{name}([{pars}]{{.bold-italic}})"
 
     @dispatch
     def signature(self, el: dc.Class, source: Optional[dc.Alias] = None) -> str:
-        name = self._fetch_object_dispname(source or el)
+        name = self._get_display_name(source or el)
         return f"***class*** {name}"
 
     @dispatch
     def signature(
         self, el: Union[dc.Module, dc.Attribute], source: Optional[dc.Alias] = None
     ):
-        name = self._fetch_object_dispname(source or el)
+        name = self._get_display_name(source or el)
         return f"`{name}`"
 
     # render method -----------------------------------------------------------
@@ -335,15 +316,9 @@ class Renderer(BaseRenderer):
         else:
             glob = ""
 
-        annotation = self.render_annotation(el.annotation)
         name = sanitize(el.name)
 
-        if self.show_signature_annotations:
-            if annotation and has_default:
-                res = f"{glob}{name}: {annotation} = {el.default}"
-            elif annotation:
-                res = f"{glob}{name}: {annotation}"
-        elif has_default:
+        if has_default:
             res = f"{glob}{name}={el.default}"
         else:
             res = f"{glob}{name}"
@@ -508,9 +483,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def summarize(self, el):
-        """Produce a summary table."""
-
-        raise NotImplementedError("Unsupported type: {type(el)}")
+        raise NotImplementedError(f"Unsupported type: {type(el)}")
 
     @dispatch
     def summarize(self, el: layout.Layout):

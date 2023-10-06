@@ -14,7 +14,7 @@ The things to consider when deciding how to execute the Timestream are:
 
 ::: {.callout-tip title="Preview during development"}
 While developing queries, it is often useful to view a few rows from the result.
-Using [`kaskada.Timestream.preview`](../reference/Timestream.preview.qmd) you can retrieve a small set of rows from the result set as a Pandas DataFrame.
+Using [](`kaskada.Timestream.preview`) you can retrieve a small set of rows from the result set as a Pandas DataFrame.
 :::
 
 ## History vs. Snapshot
@@ -82,11 +82,11 @@ Similarly, when producing a history, Kaskada can use any persisted state before 
 
 ## Destinations
 
-The methods [`Timestream.preview`](../reference/Timestream.preview.qmd) and [`Timestream.to_pandas`](../reference/Timestream.to_pandas.qmd) provide the results of a query in a Pandas DataFrame for easy visualization and consumption within the Python process.
+The methods [](`kaskada.Timestream.preview`) and [](`kaskada.Timestream.to_pandas`) provide the results of a query in a Pandas DataFrame for easy visualization and consumption within the Python process.
 
-The [`Timestream.run_iter`](../reference/Timestream.run_iter.qmd) methods provides synchronous and asynchronous iterators over the results in a variety of formats including Pandas DataFrames, PyArrow RecordBatches, and rows as Python dictionaries.
+The [](`kaskada.Timestream.run_iter`) methods provides synchronous and asynchronous iterators over the results in a variety of formats including Pandas DataFrames, PyArrow RecordBatches, and rows as Python dictionaries.
 This allows you to run the entire retrieve-evaluate-respond loop within a single Python process.
 
-The [`Timestream.write`](../reference/Timestream.write.qmd) function allows you to specify a destination from [`kaskada.destinations`](../reference/destinations.qmd) for results. This supports both `once` and `live` queries.
+The [](`kaskada.Timestream.write`) function allows you to specify a destination from [`kaskada.destinations`](../reference/Destinations/index.qmd) for results. This supports both `once` and `live` queries.
 
-See the reference on [destinations](../reference/destinations.qmd) for more on the supported destinations.
+See the reference on [destinations](../reference/Destinations/index.qmd) for more on the supported destinations.

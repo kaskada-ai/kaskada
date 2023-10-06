@@ -9,7 +9,7 @@ listing:
 ---
 
 Kaskada operates on typed Timestreams.
-Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated [PyArrow data type](https://arrow.apache.org/docs/python/api/datatypes.html) returned by [`kaskada.Timestream.data_type`](../reference/timestream_class.qmd#kaskada.Timestream.data_type).
+Similar to how every Pandas `DataFrame` has an associated `dtype`, every Kaskada `Timestream` has an associated [PyArrow data type](https://arrow.apache.org/docs/python/api/datatypes.html) returned by [](`kaskada.Timestream.data_type`).
 The set of supported types is based on the types supported by [Apache Arrow](https://arrow.apache.org/).
 
 Each `Timestream` contains points of the corresponding type.

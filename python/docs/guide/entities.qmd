@@ -79,7 +79,7 @@ kd.plot.render(
 
 ## Changing Keys
 
-The key associated with each point may be changed using [`kaskada.Timestream.with_key`](../reference/Timestream.with_key.qmd).
+The key associated with each point may be changed using [](`kaskada.Timestream.with_key`).
 For example, given a stream of purchases associated with each user, we could create a Timestream associated with the purchased item:
 
 ```{.python filename="Using with-key to associate purchases with items"}
