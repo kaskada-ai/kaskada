@@ -33,7 +33,19 @@ website:
   sidebar:
   - title: User Guide
     style: docked
-    contents: guide
+    contents:
+      - guide/index.qmd
+      - guide/quickstart.qmd
+      - guide/tour.qmd
+      - guide/why.qmd
+      - guide/installation.qmd
+      - guide/timestreams.qmd
+      - guide/data_types.qmd
+      - guide/entities.qmd
+      - guide/aggregation.qmd
+      - guide/joins.qmd
+      - guide/sources.qmd
+      - guide/execution.qmd
   - title: Examples
     contents: examples
   - title: API

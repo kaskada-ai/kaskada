@@ -1,6 +1,5 @@
 ---
 title: Entities and Grouping
-order: 7
 ---
 
 Entities organize data for use in feature engineering.
@@ -54,7 +53,7 @@ This is helpful since the _feature vector_ for an entity will depend only on eve
 --->
 
 ```{python}
-#| code-fold: true
+# | code-fold: true
 
 import asyncio
 import kaskada as kd

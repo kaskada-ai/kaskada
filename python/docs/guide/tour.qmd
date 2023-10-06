@@ -1,6 +1,5 @@
 ---
 title: Tour of Kaskada
-order: 2
 ---
 <!---
 % Level: Beginner
@@ -16,7 +15,7 @@ This tour uses Kaskada and Plotly to render the illustrations.
 The initial setup / data is below.
 
 ```{python}
-#| code-fold: true
+# | code-fold: true
 import asyncio
 import kaskada as kd
 kd.init_session()
@@ -46,8 +45,8 @@ This is accomplished by _aggregating_ the events.
 The results of an aggregation change over time as additional events occur.
 
 ```{python}
-#| echo: false
-#| warning: false
+# | echo: false
+# | warning: false
 
 kd.plot.render(
     kd.plot.Plot(single_entity.col("m"), name="m"),

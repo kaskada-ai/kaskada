@@ -1,6 +1,5 @@
 ---
 title: Execution
-order: 11
 ---
 
 A [Timestream](./timestreams.qmd) may be executed and written to a [destination](#destinations) in a variety of ways.

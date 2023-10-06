@@ -1,6 +1,5 @@
 ---
 title: Installation
-order: 4
 ---
 
 To install Kaskada, you need to be using Python >= 3.8.

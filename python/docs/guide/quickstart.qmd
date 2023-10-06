@@ -1,6 +1,5 @@
 ---
 title: Quick Start
-order: 1
 ---
 
 This shows the bare minimum needed to get started with Kaskada.
@@ -37,5 +36,5 @@ content = "\n".join(
     ]
 )
 source = await kd.sources.CsvString.create(content, time_column="time", key_column="key")
-source.select("m", "n").extend({"sum_m": source.col("m").sum() }).to_pandas()
+source.select("m", "n").extend({"sum_m": source.col("m").sum()}).to_pandas()
 ```

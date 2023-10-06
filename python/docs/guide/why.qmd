@@ -1,6 +1,5 @@
 ---
 title: Why Kaskada?
-order: 3
 ---
 
 Kaskada is a library for executing temporal queries over event-based data.

@@ -1,6 +1,5 @@
 ---
 title: Sources
-order: 10
 ---
 
 Sources describe how events enter a Timestream.
