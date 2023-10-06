@@ -107,7 +107,7 @@ class Renderer(BaseRenderer):
             rows.append(':::')
         return "\n" + "\n".join(rows)
 
-    def _render_header(self, title: str, order: Optional[str] = None) -> str:
+    def _render_header(self, title: str, order: Optional[int] = None) -> str:
         text = ["---"]
         text.append(f'title: {title}')
         if order:
@@ -183,6 +183,20 @@ class Renderer(BaseRenderer):
         return el
 
     # render layouts ==========================================================
+
+    @dispatch
+    def render(self, el: layout.Section, order: Optional[int] = None) -> str:
+        rows = [self._render_header(el.title or el.subtitle, order=order)]
+
+        if el.desc:
+            rows.append(el.desc)
+
+        text = "\n\n".join(rows)
+
+        if len(el.contents) > 0:
+            text += "\n\n" + self.summarize(el.contents)
+
+        return text
 
     @dispatch
     def render(self, el: layout.Page):
@@ -391,25 +405,6 @@ class Renderer(BaseRenderer):
 
         return self._render_definition_list("Attributes:", rows, title_class="highlight")
 
-    # warnings ----
-
-    @dispatch
-    def render(self, el: qast.DocstringSectionWarnings):
-        return el.value
-
-    # see also ----
-
-    @dispatch
-    def render(self, el: qast.DocstringSectionSeeAlso):
-        # TODO: attempt to parse See Also sections
-        return convert_rst_link_to_md(el.value)
-
-    # notes ----
-
-    @dispatch
-    def render(self, el: qast.DocstringSectionNotes):
-        return el.value
-
     # examples ----
 
     @dispatch
@@ -505,8 +500,7 @@ class Renderer(BaseRenderer):
         raise NotImplementedError(f"{type(el)}")
 
     # Summarize ===============================================================
-    # this method returns a summary description, such as a table summarizing a
-    # layout.Section, or a row in the table for layout.Page or layout.DocFunction.
+    # this method returns a summary description, such as a table
 
     @staticmethod
     def _summary_row(link, description):

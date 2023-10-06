@@ -16,7 +16,7 @@ quartodoc:
   sections:
     - title: Timestream
       options:
-        children: embedded
+        children: flat
       contents:
         # maybe make this a single page with the 3 items?
         - name: Timestream

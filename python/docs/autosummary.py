@@ -195,11 +195,11 @@ class Builder:
 
         # writing pages ----
 
-        _log.info("Writing indexes")
-        self.write_indexes(blueprint)
+        _log.info("Writing pages")
+        self.write_pages(blueprint)
 
-        _log.info("Writing docs pages")
-        self.write_doc_pages(pages, filter, hierarchy)
+        # _log.info("Writing docs pages")
+        # self.write_doc_pages(pages, filter, hierarchy)
 
         # inventory ----
 
@@ -240,12 +240,6 @@ class Builder:
         else:
             convert_inventory(inv, self.out_inventory)
 
-        # sidebar ----
-
-        if self.sidebar:
-            _log.info(f"Writing sidebar yaml to {self.sidebar}")
-            self.write_sidebar(blueprint)
-
     def get_package(self, item: Union[layout.Section, layout.Page]) -> str:
         if item.package and f'{item.package}' != "":
             return item.package
@@ -271,49 +265,39 @@ class Builder:
         # print(hierarchy)
         return hierarchy
 
-    def header(self, title: str, order: Optional[str] = None) -> str:
-        text = ["---"]
-        text.append(f'title: {title}')
-        if order:
-            text.append(f'order: {order}')
-        text.append("---")
-        return "\n".join(text) + "\n\n"
+    def write_pages(self, blueprint: layout.Layout):
+        root = layout.Section(
+            title=self.title,
+            desc="This is the API Reference",
+        )
 
-    def write_indexes(self, blueprint: layout.Layout):
-        """Write index pages for all sections"""
+        root_text = self.renderer.render(root)
+        root_path = Path(self.dir) / self.out_index
+        self.write_page_if_not_exists(root_path, root_text)
 
-        # --- root index
-        text = self.header(self.title)
-        text += "This is the API Reference"
-
-        p_index = Path(self.dir) / self.out_index
-        p_index.parent.mkdir(exist_ok=True, parents=True)
-        p_index.write_text(text)
-
-        # --- section indexes
         last_title = None
         order = 1
 
         for section in blueprint.sections:
             if section.title:
                 last_title = section.title
-                text = self.header(section.title, order=order)
+                section_text = self.renderer.render(section, order=order)
                 order += 1
-                p_index = Path(self.dir) / section.title / self.out_index
+                location = Path(self.dir) / section.title
             elif section.subtitle:
-                text = self.header(section.subtitle)
-                p_index = Path(self.dir) / last_title / section.subtitle / self.out_index
+                section_text = self.renderer.render(section)
+                location = Path(self.dir) / last_title / section.subtitle
 
-            if section.desc:
-                text += section.desc + "\n\n"
+            section_path = location / self.out_index
+            self.write_page_if_not_exists(section_path, section_text)
 
-            if section.contents:
-                text += self.renderer.summarize(section.contents)
-
-            p_index.parent.mkdir(exist_ok=True, parents=True)
-            p_index.write_text(text)
-
-        return
+            for item in section.contents:
+                if isinstance(item, layout.Page):
+                    _log.info(f"Rendering {item.path}")
+                    preview(item, max_depth=4)
+                    page_text = self.renderer.render(item)
+                    page_path = location / (item.path + self.out_page_suffix)
+                    self.write_page_if_not_exists(page_path, page_text)
 
     def write_index_old(self, blueprint: layout.Layout):
         """Write API index page."""
@@ -330,43 +314,17 @@ class Builder:
 
         return str(p_index)
 
-    def write_doc_pages(self, pages: [layout.Page], filter: str, hierarchy: {}):
-        """Write individual function documentation pages."""
-
-        for page in pages:
-            _log.info(f"Rendering {page.path}")
-            # preview(page)
-            rendered = self.renderer.render(page)
-
-            try:
-                location = hierarchy[f'{self.get_package(page)}.{page.path}']
-            except:
-                location = hierarchy[page.contents[0].anchor]
-
-            html_path = Path(self.dir) / location / (page.path + self.out_page_suffix)
-            html_path.parent.mkdir(exist_ok=True, parents=True)
-
-            # Only write out page if it has changed, or we've set the
-            # rewrite_all_pages option. This ensures that quarto won't have
-            # to re-render every page of the API all the time.
-            if filter != "*":
-                is_match = fnmatchcase(page.path, filter)
-
-                if is_match:
-                    _log.info("Matched filter")
-                else:
-                    _log.info("Skipping write (no filter match)")
-                    continue
-
-            if (
-                self.rewrite_all_pages
-                or (not html_path.exists())
-                or (html_path.read_text() != rendered)
-            ):
-                _log.info(f"Writing: {page.path}")
-                html_path.write_text(rendered)
-            else:
-                _log.info("Skipping write (content unchanged)")
+    def write_page_if_not_exists(self, path: Path, content):
+        if (
+            self.rewrite_all_pages
+            or (not path.exists())
+            or (path.read_text() != content)
+        ):
+            _log.info(f"Writing: {path}")
+            path.parent.mkdir(exist_ok=True, parents=True)
+            path.write_text(content)
+        else:
+            _log.info("Skipping write (content unchanged)")
 
     # inventory ----
 
@@ -379,47 +337,6 @@ class Builder:
         inventory = create_inventory(self.package, version, items)
 
         return inventory
-
-    # sidebar ----
-
-    def _generate_sidebar(self, blueprint: layout.Layout):
-        contents = [f"{self.dir}/index{self.out_page_suffix}"]
-        in_subsection = False
-        crnt_entry = {}
-        for section in blueprint.sections:
-            if section.title:
-                if crnt_entry:
-                    contents.append(crnt_entry)
-
-                in_subsection = False
-                crnt_entry = {"section": section.title, "contents": []}
-            elif section.subtitle:
-                in_subsection = True
-
-            links = []
-            for entry in section.contents:
-                links.extend(self._page_to_links(entry))
-
-            if in_subsection:
-                sub_entry = {"section": section.subtitle, "contents": links}
-                crnt_entry["contents"].append(sub_entry)
-            else:
-                crnt_entry["contents"].extend(links)
-
-        if crnt_entry:
-            contents.append(crnt_entry)
-
-        entries = [{"id": self.dir, "contents": contents}, {"id": "dummy-sidebar"}]
-        return {"website": {"sidebar": entries}}
-
-    def write_sidebar(self, blueprint: layout.Layout):
-        """Write a yaml config file for API sidebar."""
-
-        d_sidebar = self._generate_sidebar(blueprint)
-        yaml.dump(d_sidebar, open(self.sidebar, "w"))
-
-    def _page_to_links(self, el: layout.Page) -> list[str]:
-        return [f"{self.dir}/{el.path}{self.out_page_suffix}"]
 
     # constructors ----
 
