@@ -3,6 +3,7 @@
 use std::str::FromStr; // stop clippy erroring on generated code from tonic (proto)
 
 use itertools::Itertools;
+use url::Url;
 
 use crate::kaskada::v1alpha::object_store_destination::ResultPaths;
 use crate::kaskada::v1alpha::operation_plan::tick_operation::TickBehavior;
@@ -166,6 +167,15 @@ impl SourceData {
                 source_data::Source::ParquetPath(format!("file://{}", path.display()))
             }
             Some("csv") => source_data::Source::CsvPath(format!("file://{}", path.display())),
+            unsupported => anyhow::bail!("Unsupported extension {:?}", unsupported),
+        };
+        Ok(path)
+    }
+
+    pub fn try_from_url(url: &Url, extension: Option<&str>) -> anyhow::Result<source_data::Source> {
+        let path = match extension {
+            Some("parquet") => source_data::Source::ParquetPath(url.to_string()),
+            Some("csv") => source_data::Source::CsvPath(url.to_string()),
             unsupported => anyhow::bail!("Unsupported extension {:?}", unsupported),
         };
         Ok(path)

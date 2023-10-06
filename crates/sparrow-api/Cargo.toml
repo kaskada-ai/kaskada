@@ -32,6 +32,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tonic.workspace = true
 uuid.workspace = true
+url.workspace = true
 
 [build-dependencies]
 prost-build.workspace = true

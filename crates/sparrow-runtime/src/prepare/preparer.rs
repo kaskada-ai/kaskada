@@ -112,9 +112,12 @@ impl Preparer {
 
         // TODO: support preparing from remote stores
         let to_prepare = std::path::Path::new(to_prepare);
+        let extension = to_prepare.extension().and_then(|ext| ext.to_str());
+        let to_prepare_url = ObjectStoreUrl::from_file_path(to_prepare)
+            .change_context_lazy(|| Error::InvalidUrl(to_prepare.display().to_string()))?;
         let source_data = SourceData {
             source: Some(
-                SourceData::try_from_local(to_prepare)
+                SourceData::try_from_url(to_prepare_url.url(), extension)
                     .into_report()
                     .change_context(Error::Internal)?,
             ),

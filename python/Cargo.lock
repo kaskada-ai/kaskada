@@ -3694,6 +3694,7 @@ dependencies = [
  "tokio",
  "tonic",
  "tonic-build",
+ "url",
  "uuid 1.4.1",
 ]
 
