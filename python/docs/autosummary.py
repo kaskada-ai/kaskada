@@ -248,8 +248,8 @@ class Builder:
         hierarchy = {}
 
         for section in blueprint.sections:
-            preview(section, max_depth=4)
-            print()
+            #preview(section, max_depth=4)
+            #print()
 
             if section.title:
                 last_title = section.title
@@ -259,7 +259,7 @@ class Builder:
 
             for item in section.contents:
                 hierarchy[f'{self.get_package(section)}.{item.path}'] = location
-        print(hierarchy)
+        #print(hierarchy)
         return hierarchy
 
     def header(self, title: str, order: Optional[str] = None) -> str:

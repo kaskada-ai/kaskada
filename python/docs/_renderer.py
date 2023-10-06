@@ -92,13 +92,10 @@ class Renderer(BaseRenderer):
         dispname = f"**{prefix}.**[**{name}**]{{.red}}"
 
         if isinstance(el, dc.Object):
-            print(f'Object: {el.labels}')
             if 'staticmethod' in el.labels:
                 dispname = "***static*** " + dispname
-                print(dispname)
 
         text = [dispname]
-        print(dispname)
 
         # if isinstance(el, dc.Object) and el.kind == dc.Kind.CLASS:
         #     text.append(f"Bases: []({el.parent.name})")
@@ -113,6 +110,23 @@ class Renderer(BaseRenderer):
 
         return el.parameters
 
+    def _render_definition_list(self, title: str, items: [str]) -> str:
+        rows = [title]
+        for item in items:
+            if len(rows) == 1:
+                rows.append(f'~   {item}')
+            else:
+                rows.append(f'    {item}')
+        return "\n".join(rows)
+
+    def _render_header(self, title: str, order: Optional[str] = None) -> str:
+        text = ["---"]
+        text.append(f'title: {title}')
+        if order:
+            text.append(f'order: {order}')
+        text.append("---")
+        return "\n".join(text)
+
     def _render_table(self, rows, headers):
         table = tabulate(rows, headers=headers, tablefmt="github")
 
@@ -122,12 +136,6 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render_annotation(self, el: str) -> str:
-        """Special hook for rendering a type annotation.
-        Parameters
-        ----------
-        el:
-            An object representing a type annotation.
-        """
         return sanitize(el)
 
     @dispatch
@@ -136,12 +144,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render_annotation(self, el: expr.Name) -> str:
-        # TODO: maybe there is a way to get tabulate to handle this?
-        # unescaped pipes screw up table formatting
-        if self.render_interlinks:
-            return f"[{sanitize(el.source)}](`{el.full}`)"
-
-        return sanitize(el.source)
+        return f"[{sanitize(el.source)}](`{el.full}`)"
 
     @dispatch
     def render_annotation(self, el: expr.Expression) -> str:
@@ -154,9 +157,6 @@ class Renderer(BaseRenderer):
         orig = self.display_name
 
         # set signature path, generate signature, then set back
-        # TODO: this is for backwards compatibility with the old approach
-        # of only defining signature over griffe objects, which projects
-        # like shiny currently extend
         self.display_name = el.signature_name
         res = self.signature(el.obj)
         self.display_name = orig
@@ -172,8 +172,7 @@ class Renderer(BaseRenderer):
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None) -> str:
         name = self._fetch_object_dispname(source or el)
         pars = self.render(self._fetch_method_parameters(el))
-
-        return f"{name}(***{pars}***)"
+        return f"{name}(*** {pars} ***)"
 
     @dispatch
     def signature(self, el: dc.Class, source: Optional[dc.Alias] = None) -> str:
@@ -186,11 +185,6 @@ class Renderer(BaseRenderer):
     ):
         name = self._fetch_object_dispname(source or el)
         return f"`{name}`"
-
-    @dispatch
-    def render_header(self, el: layout.Doc):
-
-        return self.header(el.name)
 
     # render method -----------------------------------------------------------
 
@@ -206,24 +200,19 @@ class Renderer(BaseRenderer):
 
     # render layouts ==========================================================
 
-    def header(self, title: str, order: Optional[str] = None) -> str:
-        text = ["---"]
-        text.append(f'title: {title}')
-        if order:
-            text.append(f'order: {order}')
-        text.append("---")
-        return "\n".join(text)
-
     @dispatch
     def render(self, el: layout.Page):
+        rows = []
         if el.summary:
-            sum_ = el.summary
-            header = [f"{self.header(sum_.name)}\n\n{sum_.desc}"]
-        else:
-            header = []
+            if el.summary.name:
+                rows.append(self._render_header(el.summary.name))
+            if el.summary.desc:
+                rows.append(sanitize(el.summary.desc, allow_markdown=True))
 
-        result = map(self.render, el.contents)
-        return "\n\n".join([*header, *result])
+        for item in el.contents:
+            rows.append(self.render(item))
+
+        return "\n\n".join(rows)
 
     @dispatch
     def render(self, el: layout.Doc):
@@ -231,8 +220,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: Union[layout.DocClass, layout.DocModule], single_page: bool = False):
-        print("boop")
-        title = self.render_header(el)
+        title = self._render_header(el.name)
 
         attr_docs = []
         meth_docs = []
@@ -296,22 +284,21 @@ class Renderer(BaseRenderer):
                          for x in raw_meths if isinstance(x, layout.Doc)]
                     )
 
-        str_sig = self.signature(el)
-        sig_part = [str_sig] if self.show_signature else []
+        sig = self.signature(el)
+        body_rows = self.render(el.obj).split("\n")
+        text = self._render_definition_list(sig, body_rows)
 
-        body = self.render(el.obj)
-
-        return "\n\n".join([title, *sig_part, body, *attr_docs, *class_docs, *meth_docs])
+        return "\n\n".join([title, text, *attr_docs, *class_docs, *meth_docs])
 
     @dispatch
     def render(self, el: Union[layout.DocFunction, layout.DocAttribute], single_page: bool = False):
-        title = "" if single_page else self.render_header(el)
+        title = "" if single_page else self._render_header(el.name)
 
-        sig = self.signature(el) if self.show_signature else ""
-
+        sig = self.signature(el)
         body_rows = self.render(el.obj).split("\n")
+        text = self._render_definition_list(sig, body_rows)
 
-        return "\n\n".join([title, sig, self.get_definition_list(body_rows)])
+        return "\n\n".join([title, text])
 
     # render griffe objects ===================================================
 
@@ -415,32 +402,20 @@ class Renderer(BaseRenderer):
 
     # parameters ----
 
-    def get_definition_list(self, items: [str]) -> str:
-        rows = []
-        for item in items:
-            if len(rows) == 0:
-                rows.append(f'~   {item}')
-            else:
-                rows.append(f'    {item}')
-        return "\n".join(rows)
-
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
-        rows = list(map(self.render, el.value))
-        return f'Parameters:\n{self.get_definition_list(rows)}'
+        # if more than one param, render as un-ordered list
+        prefix = "* " if len(el.value) > 1 else ""
 
-    @dispatch
-    def render(self, el: ds.DocstringParameter) -> str:
-        # render as an un-ordered list item
-        name = el.name
-        annotation = self.render_annotation(el.annotation)
-        clean_desc = sanitize(el.description, allow_markdown=True)
+        rows = []
+        for param in el.value:
+            anno = self.render_annotation(param.annotation)
+            desc = sanitize(param.description, allow_markdown=True)
+            default = f', default: {escape(param.default)}' if param.default else ""
 
-        if el.default is None:
-            return f'* **{name}** ({annotation}) -- {clean_desc}'
-        else:
-            default = escape(el.default)
-            return f'* **{name}** ({annotation}, default: {default}) -- {clean_desc}'
+            rows.append(f'{prefix}**{param.name}** ({anno}{default}) -- {desc}')
+
+        return self._render_definition_list("Parameters:", rows)
 
     # attributes ----
 
@@ -505,21 +480,21 @@ class Renderer(BaseRenderer):
         return "\n".join(rows)
 
     @dispatch
-    def render(self, el: ds.DocstringReturn):
-        # similar to DocstringParameter, but no name or default
-        text = []
-
-        returns = sanitize(el.description, allow_markdown=True)
-        if returns:
-            text.append('Returns:')
-            text.append(f'~   {returns}')
-
+    def render(self, el: ds.DocstringReturn) -> str:
+        returns = []
         return_type = self.render_annotation(el.annotation)
         if return_type:
-            text.append('Return type:')
-            text.append(f'~   {return_type}')
+            returns.append(return_type)
 
-        return "\n\n".join(text)
+        return_desc = sanitize(el.description, allow_markdown=True)
+        if return_desc:
+            returns.append(return_desc)
+
+        returns_text = " -- ".join(returns)
+        if returns_text:
+            return self._render_definition_list("Returns:", [returns_text])
+        else:
+            return ""
 
     @dispatch
     def render(self, el: ds.DocstringRaise):

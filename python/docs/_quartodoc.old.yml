@@ -9,21 +9,21 @@ quartodoc:
     style: _renderer.py
   options:
     children: separate
+  dynamic: true
   render_interlinks: true
-
-  # write sidebar data to this file
-  sidebar: reference/_sidebar.yml
 
   sections:
     - title: Timestream
       options:
         children: embedded
-      package: null
       contents:
-        - name: kaskada.Timestream
-          members: [data_type]
-        - kaskada.Arg
-        - kaskada.LiteralValue
+        # maybe make this a single page with the 3 items?
+        - name: Timestream
+          members:
+            - data_type
+        - _timestream.LiteralValue
+        - _timestream.Arg
+
     - subtitle: Aggregation
       desc: |
         The User Guide has details on [aggregations in general](../../../guide/aggregation.qmd).
