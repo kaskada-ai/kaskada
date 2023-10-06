@@ -217,7 +217,6 @@ class Builder:
         self.write_doc_pages(pages, filter, hierarchy)
 
         # inventory ----
-        print(hierarchy)
 
         # update paths in items
         for item in items:
@@ -242,9 +241,6 @@ class Builder:
 
             if location:
                 item.uri = f'{self.dir}/{location}/{path}#{fragment}'
-
-        for i in range(10):
-            print(f'Item: {items[i]}')
 
         _log.info("Creating inventory file")
         inv = self.create_inventory(items)

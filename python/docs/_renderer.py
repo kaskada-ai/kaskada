@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import quartodoc.ast as qast
 
-from contextlib import contextmanager
 from griffe.docstrings import dataclasses as ds
 from griffe import dataclasses as dc
 from tabulate import tabulate
@@ -18,6 +17,14 @@ try:
     from griffe import expressions as expr
 except ImportError:
     from griffe import dataclasses as expr
+
+skip_annotation_types = [
+    "kaskada",
+    "kaskada.destination",
+    "kaskada.results",
+    "kaskada.windows",
+    "pyarrow",
+]
 
 
 def _has_attr_section(el: dc.Docstring | None):
@@ -117,19 +124,26 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render_annotation(self, el: str) -> str:
+        print(f"render str: {el}")
         return sanitize(el)
 
     @dispatch
     def render_annotation(self, el: None) -> str:
+        print("render none")
         return ""
 
     @dispatch
     def render_annotation(self, el: expr.Name) -> str:
-        return f"[{sanitize(el.source)}](`{el.full}`)"
+        print(f"render name: {el} {el.full}")
+        if el.full not in skip_annotation_types:
+            return f"[{sanitize(el.source)}](`{el.full}`)"
+        return ""
 
     @dispatch
     def render_annotation(self, el: expr.Expression) -> str:
-        return "".join(map(self.render_annotation, el))
+        print(f"render expr: {el}")
+        text = "".join(map(self.render_annotation, el))
+        return text.lstrip(".")
 
     # signature method --------------------------------------------------------
 
@@ -301,7 +315,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: dc.Parameter):
-        print(f'Parameter: {el}')
+        print(f'Parameter: {el} anno: {el.annotation}')
         # TODO: missing annotation
         splats = {dc.ParameterKind.var_keyword, dc.ParameterKind.var_positional}
         has_default = el.default and el.kind not in splats
@@ -468,32 +482,22 @@ class Renderer(BaseRenderer):
 
         return self._render_definition_list("Raises:", rows, title_class="highlight")
 
-    # @dispatch
-    # def render(self, el: ds.DocstringReturn) -> str:
-    #     returns = []
-    #     return_type = self.render_annotation(el.annotation)
-    #     if return_type:
-    #         returns.append(return_type)
-
-    #     return_desc = sanitize(el.description, allow_markdown=True)
-    #     if return_desc:
-    #         returns.append(return_desc)
-
-    #     returns_text = " -- ".join(returns)
-    #     if returns_text:
-    #         return self._render_definition_list("Returns:", [returns_text], title_class="highlight")
-    #     else:
-    #         return ""
-
     @dispatch
-    def render(self, el: ds.DocstringRaise):
-        # similar to DocstringParameter, but no name or default
-        annotation = self.render_annotation(el.annotation)
-        return f'{annotation} -- {sanitize(el.description, allow_markdown=True)}'
+    def render(self, el: ds.DocstringSectionAdmonition) -> str:
+        print(f'Admonition: {el.title} {el.value.description}')
 
-    @dispatch
-    def render(self, el: ds.DocstringSectionAdmonition):
-        return sanitize(el.value.description, allow_markdown=True)
+        rows = []
+        if el.title.lower().startswith("note"):
+            rows.append(f'::: {{.callout-note title="{el.title}"}}')
+        elif el.title.lower().startswith("warn"):
+            rows.append(f'::: {{.callout-warning title="{el.title}"}}')
+        else:
+            rows.append(f'::: {{.callout-tip title="{el.title}"}}')
+
+        rows.append(el.value.description)
+        rows.append(':::')
+
+        return "\n".join(rows)
 
     # unsupported parts ----
 

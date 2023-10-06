@@ -996,8 +996,8 @@ class Timestream(object):
 
         Returns:
             A Timestream of the same type as `self`. The result contains `null`
-            if the value was `null` at that point. Otherwise, it contains
-            the result of rounding the value to the nearest integer.
+                if the value was `null` at that point. Otherwise, it contains
+                the result of rounding the value to the nearest integer.
 
         Notes:
             This method may be applied to any numeric type. For anything other
@@ -1026,9 +1026,9 @@ class Timestream(object):
 
         Returns:
             Each point contains the value from `self` if `self`
-            is greater than `rhs`, otherwise it contains `rhs`.
-            If any input is `null` or `NaN`, then that will be
-            the result.
+                is greater than `rhs`, otherwise it contains `rhs`.
+                If any input is `null` or `NaN`, then that will be
+                the result.
 
         See Also:
             This returns the greatest of two values. See
@@ -1045,9 +1045,9 @@ class Timestream(object):
 
         Returns:
             Each point contains the value from `self` if `self`
-            is less than `rhs`, otherwise it contains `rhs`.
-            If any input is `null` or `NaN`, then that will be
-            the result.
+                is less than `rhs`, otherwise it contains `rhs`.
+                If any input is `null` or `NaN`, then that will be
+                the result.
 
         See Also:
             This returns the least of two values. See
@@ -1110,8 +1110,8 @@ class Timestream(object):
 
         Returns:
             An `ExecutionProgress` which allows iterating (synchronously or asynchronously)
-            over the progress information, as well as cancelling the query if it is no longer
-            needed.
+                over the progress information, as well as cancelling the query if it is no longer
+                needed.
         """
         raise NotImplementedError
 
@@ -1178,7 +1178,7 @@ class Timestream(object):
 
         Returns:
             Iterator over data of the corresponding kind. The `QueryIterator` allows
-            cancelling the query or materialization as well as iterating.
+                cancelling the query or materialization as well as iterating.
 
         See Also:
             - [](`~kaskada.Timestream.write`): To write the results directly to a
@@ -1217,7 +1217,7 @@ class Timestream(object):
 
         Returns:
             A GraphViz representation of the execution plan as a string, SVG string, or SVG.
-            Specific representation depends on the `format` argument.
+                Specific representation depends on the `format` argument.
 
         Raises:
             ValueError: if the `kind` is not recognized or the `format` is not supported.
