@@ -1,4 +1,5 @@
 import kaskada as kd
+import pytest
 
 
 async def test_read_parquet(golden) -> None:
@@ -65,3 +66,15 @@ async def test_time_column_as_float_can_cast_ns(golden) -> None:
         key_column="customer_id",
     )
     golden.jsonl(source)
+
+
+async def test_invalid_uri(golden) -> None:
+    with pytest.raises(Exception) as ex:
+        source = await kd.sources.Parquet.create(
+            "../testdata/purchases/purchases part1.parquet",
+            time_column="purchase_time",
+            key_column="customer_id",
+            subsort_column="subsort_id",
+        )
+        golden.jsonl(source)
+        assert isinstance(ex.value, FileNotFoundError)
