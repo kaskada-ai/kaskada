@@ -93,6 +93,6 @@ class Source(Timestream):
 
     @staticmethod
     def _get_absolute_path(path: Optional[str]) -> Optional[str]:
-        if path is None or path.startswith("/"):
+        if path is None or os.path.isabs(path):
             return path
-        return os.getcwd() + "/" + path
+        return os.path.abspath(path)
