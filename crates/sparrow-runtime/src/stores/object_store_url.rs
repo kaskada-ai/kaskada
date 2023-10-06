@@ -16,7 +16,7 @@ pub struct ObjectStoreUrl {
 impl ObjectStoreUrl {
     /// Return the [object_store::path::Path] corresponding to this URL.
     pub fn path(&self) -> error_stack::Result<object_store::path::Path, Error> {
-        object_store::path::Path::parse(self.url.path())
+        object_store::path::Path::from_url_path(self.url.path())
             .into_report()
             .change_context_lazy(|| Error::InvalidUrl(self.url.to_string()))
     }
@@ -31,6 +31,14 @@ impl ObjectStoreUrl {
         let url = Url::parse(&url)
             .into_report()
             .change_context_lazy(|| Error::InvalidUrl(self.url.to_string()))?;
+        Ok(Self { url })
+    }
+
+    /// Constructs an [ObjectStoreUrl] from a local file path
+    pub fn from_file_path(path: &std::path::Path) -> error_stack::Result<Self, Error> {
+        let url =
+            Url::from_file_path(path).map_err(|_| Error::InvalidUrl(path.display().to_string()))?;
+
         Ok(Self { url })
     }
 

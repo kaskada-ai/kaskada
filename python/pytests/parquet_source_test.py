@@ -68,13 +68,21 @@ async def test_time_column_as_float_can_cast_ns(golden) -> None:
     golden.jsonl(source)
 
 
-async def test_invalid_uri(golden) -> None:
-    with pytest.raises(Exception) as ex:
-        source = await kd.sources.Parquet.create(
-            "../testdata/purchases/purchases part1.parquet",
-            time_column="purchase_time",
-            key_column="customer_id",
-            subsort_column="subsort_id",
-        )
-        golden.jsonl(source)
-        assert isinstance(ex.value, FileNotFoundError)
+async def test_with_space_in_path(golden) -> None:
+    source = await kd.sources.Parquet.create(
+        "../testdata/purchases/purchases part1.parquet",
+        time_column="purchase_time",
+        key_column="customer_id",
+        subsort_column="subsort_id",
+    )
+    golden.jsonl(source)
+
+
+async def test_with_trailing_slash(golden) -> None:
+    source = await kd.sources.Parquet.create(
+        "../testdata/purchases/purchases part1.parquet/",
+        time_column="purchase_time",
+        key_column="customer_id",
+        subsort_column="subsort_id",
+    )
+    golden.jsonl(source)
