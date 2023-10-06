@@ -3,15 +3,14 @@ from __future__ import annotations
 import quartodoc.ast as qast
 
 from contextlib import contextmanager
-from functools import wraps
 from griffe.docstrings import dataclasses as ds
 from griffe import dataclasses as dc
 from tabulate import tabulate
 from plum import dispatch
-from typing import Tuple, Union, Optional
+from typing import Union, Optional
 from quartodoc import layout
 
-from _base import BaseRenderer, escape, sanitize, convert_rst_link_to_md
+from _base import BaseRenderer
 
 
 try:
@@ -28,62 +27,40 @@ def _has_attr_section(el: dc.Docstring | None):
     return any([isinstance(x, ds.DocstringSectionAttributes) for x in el.parsed])
 
 
+def escape(val: str):
+    return f"`{val}`"
+
+
+def sanitize(val: str, allow_markdown=False):
+    # sanitize common tokens that break tables
+    res = val.replace("\n", " ").replace("|", "\\|")
+
+    # sanitize elements that can get interpreted as markdown links
+    # or citations
+    if not allow_markdown:
+        return res.replace("[", "\\[").replace("]", "\\]")
+
+    return res
+
+
 class Renderer(BaseRenderer):
     """Render docstrings to markdown.
 
     Parameters
     ----------
-    header_level: int
-        The level of the header (e.g. 1 is the biggest).
-    show_signature: bool
-        Whether to show the function signature.
     show_signature_annotations: bool
         Whether to show annotations in the function signature.
-    display_name: str
-        The default name shown for documented functions. Either "name", "relative",
-        "full", or "canonical". These options range from just the function name, to its
-        full path relative to its package, to including the package name, to its
-        the its full path relative to its .__module__.
-
-    Examples
-    --------
-
-    >>> from quartodoc import MdRenderer, get_object
-    >>> renderer = MdRenderer(header_level=2)
-    >>> f = get_object("quartodoc", "get_object")
-    >>> print(renderer.render(f)[:81])
-    ## get_object
-    `get_object(module: str, object_name: str, parser: str = 'numpy')`
-
     """
 
     style = "markdown"
 
     def __init__(
         self,
-        header_level: int = 1,
-        show_signature: bool = True,
         show_signature_annotations: bool = False,
-        display_name: str = "relative",
         hook_pre=None,
-        render_interlinks=False,
     ):
-        self.header_level = header_level
-        self.show_signature = show_signature
         self.show_signature_annotations = show_signature_annotations
-        self.display_name = display_name
         self.hook_pre = hook_pre
-        self.render_interlinks = render_interlinks
-
-        self.crnt_header_level = self.header_level
-
-    @contextmanager
-    def _increment_header(self, n=1):
-        self.crnt_header_level += n
-        try:
-            yield
-        finally:
-            self.crnt_header_level -= n
 
     def _fetch_object_dispname(self, el: "dc.Alias | dc.Object"):
         parts = el.path.split(".")[1:]
@@ -110,14 +87,18 @@ class Renderer(BaseRenderer):
 
         return el.parameters
 
-    def _render_definition_list(self, title: str, items: [str]) -> str:
+    def _render_definition_list(self, title: str, items: [str], title_class: Optional[str] = None) -> str:
+       # title = f'{{.{title_class}}}{title_text}' if title_class else title_text
         rows = [title]
         for item in items:
             if len(rows) == 1:
                 rows.append(f'~   {item}')
             else:
                 rows.append(f'    {item}')
-        return "\n".join(rows)
+        if title_class:
+            rows.insert(0, f':::{{.{title_class}}}')
+            rows.append(':::')
+        return "\n" + "\n".join(rows)
 
     def _render_header(self, title: str, order: Optional[str] = None) -> str:
         text = ["---"]
@@ -154,14 +135,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def signature(self, el: layout.Doc):
-        orig = self.display_name
-
-        # set signature path, generate signature, then set back
-        self.display_name = el.signature_name
-        res = self.signature(el.obj)
-        self.display_name = orig
-
-        return res
+        return self.signature(el.obj)
 
     @dispatch
     def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None):
@@ -172,7 +146,7 @@ class Renderer(BaseRenderer):
     def signature(self, el: dc.Function, source: Optional[dc.Alias] = None) -> str:
         name = self._fetch_object_dispname(source or el)
         pars = self.render(self._fetch_method_parameters(el))
-        return f"{name}(*** {pars} ***)"
+        return f"{name}([{pars}]{{.bold-italic}})"
 
     @dispatch
     def signature(self, el: dc.Class, source: Optional[dc.Alias] = None) -> str:
@@ -219,79 +193,38 @@ class Renderer(BaseRenderer):
         raise NotImplementedError(f"Unsupported Doc type: {type(el)}")
 
     @dispatch
-    def render(self, el: Union[layout.DocClass, layout.DocModule], single_page: bool = False):
+    def render(self, el: Union[layout.DocClass, layout.DocModule], single_page: bool = False) -> str:
         title = self._render_header(el.name)
-
-        attr_docs = []
-        meth_docs = []
-        class_docs = []
-
-        if el.members:
-            sub_header = "#" * (self.crnt_header_level + 1)
-            raw_attrs = [x for x in el.members if x.obj.is_attribute]
-            raw_meths = [x for x in el.members if x.obj.is_function]
-            raw_classes = [x for x in el.members if x.obj.is_class]
-
-            header = "| Name | Description |\n| --- | --- |"
-
-            # attribute summary table ----
-            # docstrings can define an attributes section. If that exists on
-            # then we skip summarizing each attribute into a table.
-            # TODO: for now, we skip making an attribute table on classes, unless
-            # they contain an attributes section in the docstring
-            if (
-                raw_attrs
-                and not _has_attr_section(el.obj.docstring)
-                # TODO: what should backwards compat be?
-                # and not isinstance(el, layout.DocClass)
-            ):
-
-                _attrs_table = "\n".join(map(self.summarize, raw_attrs))
-                attrs = f"{sub_header} Attributes\n\n{header}\n{_attrs_table}"
-                attr_docs.append(attrs)
-
-            # classes summary table ----
-            if raw_classes:
-                _summary_table = "\n".join(map(self.summarize, raw_classes))
-                section_name = "Classes"
-                objs = f"{sub_header} {section_name}\n\n{header}\n{_summary_table}"
-                class_docs.append(objs)
-
-                n_incr = 1 if el.flat else 2
-                with self._increment_header(n_incr):
-                    class_docs.extend(
-                        [
-                            self.render(x)
-                            for x in raw_classes
-                            if isinstance(x, layout.Doc)
-                        ]
-                    )
-
-            # method summary table ----
-            if raw_meths:
-                #     _summary_table = "\n".join(map(self.summarize, raw_meths))
-                # section_name = (
-                #     "Methods" if isinstance(el, layout.DocClass) else "Functions"
-                # )
-                # objs = f"{sub_header} {section_name}\n\n{header}\n{_summary_table}"
-                # meth_docs.append(objs)
-
-                # TODO use context manager, or context variable?
-                n_incr = 1 if el.flat else 2
-                with self._increment_header(n_incr):
-                    meth_docs.extend(
-                        [self.render(x, single_page=True)
-                         for x in raw_meths if isinstance(x, layout.Doc)]
-                    )
 
         sig = self.signature(el)
         body_rows = self.render(el.obj).split("\n")
+
+        if el.members:
+            # add attributes
+            # skip if docstring has an attributes section
+            raw_attrs = [x for x in el.members if x.obj.is_attribute]
+            if raw_attrs and not _has_attr_section(el.obj.docstring):
+                attr_rows = map(self.render, raw_attrs)
+                attr_text = self._render_definition_list(
+                    "Attributes:", attr_rows, title_class="highlight")
+                body_rows.extend(attr_text.split("\n"))
+
+            # add classes
+            for raw_class in el.members:
+                if raw_class.obj.is_class and isinstance(raw_class, layout.Doc):
+                    body_rows.extend(self.render(raw_class, single_page=True).split("\n"))
+
+            # add methods
+            for raw_method in el.members:
+                if raw_method.obj.is_function and isinstance(raw_method, layout.Doc):
+                    body_rows.extend(self.render(raw_method, single_page=True).split("\n"))
+
         text = self._render_definition_list(sig, body_rows)
 
-        return "\n\n".join([title, text, *attr_docs, *class_docs, *meth_docs])
+        return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: Union[layout.DocFunction, layout.DocAttribute], single_page: bool = False):
+    def render(self, el: layout.DocFunction, single_page: bool = False):
         title = "" if single_page else self._render_header(el.name)
 
         sig = self.signature(el)
@@ -299,6 +232,13 @@ class Renderer(BaseRenderer):
         text = self._render_definition_list(sig, body_rows)
 
         return "\n\n".join([title, text])
+
+    @dispatch
+    def render(self, el: layout.DocAttribute, single_page: bool = False):
+        link = f"[{el.name}](#{el.anchor})"
+        description = self.summarize(el.obj)
+
+        return " -- ".join([link, description])
 
     # render griffe objects ===================================================
 
@@ -361,6 +301,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render(self, el: dc.Parameter):
+        print(f'Parameter: {el}')
         # TODO: missing annotation
         splats = {dc.ParameterKind.var_keyword, dc.ParameterKind.var_positional}
         has_default = el.default and el.kind not in splats
@@ -406,33 +347,41 @@ class Renderer(BaseRenderer):
     def render(self, el: ds.DocstringSectionParameters):
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
+        follow = "  " if len(el.value) > 1 else ""
 
         rows = []
         for param in el.value:
+            name = sanitize(param.name)
             anno = self.render_annotation(param.annotation)
-            desc = sanitize(param.description, allow_markdown=True)
             default = f', default: {escape(param.default)}' if param.default else ""
 
-            rows.append(f'{prefix}**{param.name}** ({anno}{default}) -- {desc}')
+            rows.append(f'{prefix}**{name}** ({anno}{default})')
+            rows.append("")
+            for row in param.description.split("\n"):
+                rows.append(f'{follow}{row}')
+            rows.append("")
 
-        return self._render_definition_list("Parameters:", rows)
+        return self._render_definition_list("Parameters:", rows, title_class="highlight")
 
     # attributes ----
 
     @dispatch
     def render(self, el: ds.DocstringSectionAttributes):
-        header = ["Name", "Type", "Description"]
-        rows = list(map(self.render, el.value))
-        return self._render_table(rows, header)
+        # if more than one param, render as un-ordered list
+        prefix = "* " if len(el.value) > 1 else ""
+        follow = "  " if len(el.value) > 1 else ""
 
-    @dispatch
-    def render(self, el: ds.DocstringAttribute):
-        row = [
-            sanitize(el.name),
-            self.render_annotation(el.annotation),
-            sanitize(el.description or "", allow_markdown=True),
-        ]
-        return row
+        rows = []
+        for attr in el.value:
+            name = sanitize(attr.name)
+            anno = self.render_annotation(attr.annotation)
+            rows.append(f'{prefix}**{name}** ({anno})')
+            rows.append("")
+            for row in attr.description.split("\n"):
+                rows.append(f'{follow}{row}')
+            rows.append("")
+
+        return self._render_definition_list("Attributes:", rows, title_class="highlight")
 
     # warnings ----
 
@@ -474,27 +423,67 @@ class Renderer(BaseRenderer):
     # returns ----
 
     @dispatch
-    def render(self, el: Union[ds.DocstringSectionReturns, ds.DocstringSectionRaises]):
-        # render as a definition list
-        rows = list(map(self.render, el.value))
-        return "\n".join(rows)
+    def render(self, el: ds.DocstringSectionReturns):
+        # if more than one param, render as un-ordered list
+        prefix = "* " if len(el.value) > 1 else ""
+        follow = "  " if len(el.value) > 1 else ""
+
+        rows = []
+        for item in el.value:
+            title = prefix
+            name = sanitize(item.name)
+            if name:
+                title += f'**{name}**'
+
+            return_type = self.render_annotation(item.annotation)
+            if return_type:
+                title += return_type
+
+            if title != prefix:
+                rows.append(title)
+
+            if item.description:
+                rows.append("")
+                for row in item.description.split("\n"):
+                    rows.append(f'{follow}{row}')
+                rows.append("")
+
+        return self._render_definition_list("Returns:", rows, title_class="highlight")
 
     @dispatch
-    def render(self, el: ds.DocstringReturn) -> str:
-        returns = []
-        return_type = self.render_annotation(el.annotation)
-        if return_type:
-            returns.append(return_type)
+    def render(self, el: ds.DocstringSectionRaises):
+        # if more than one param, render as un-ordered list
+        prefix = "* " if len(el.value) > 1 else ""
+        follow = "  " if len(el.value) > 1 else ""
 
-        return_desc = sanitize(el.description, allow_markdown=True)
-        if return_desc:
-            returns.append(return_desc)
+        rows = []
+        for item in el.value:
+            # name = sanitize(item.name)
+            anno = self.render_annotation(item.annotation)
+            rows.append(f'{prefix}{anno}')
+            rows.append("")
+            for row in item.description.split("\n"):
+                rows.append(f'{follow}{row}')
+            rows.append("")
 
-        returns_text = " -- ".join(returns)
-        if returns_text:
-            return self._render_definition_list("Returns:", [returns_text])
-        else:
-            return ""
+        return self._render_definition_list("Raises:", rows, title_class="highlight")
+
+    # @dispatch
+    # def render(self, el: ds.DocstringReturn) -> str:
+    #     returns = []
+    #     return_type = self.render_annotation(el.annotation)
+    #     if return_type:
+    #         returns.append(return_type)
+
+    #     return_desc = sanitize(el.description, allow_markdown=True)
+    #     if return_desc:
+    #         returns.append(return_desc)
+
+    #     returns_text = " -- ".join(returns)
+    #     if returns_text:
+    #         return self._render_definition_list("Returns:", [returns_text], title_class="highlight")
+    #     else:
+    #         return ""
 
     @dispatch
     def render(self, el: ds.DocstringRaise):

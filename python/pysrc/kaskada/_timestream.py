@@ -746,7 +746,7 @@ class Timestream(object):
 
         Returns:
             Timestream containing the first non-null value from each point.
-            If all values are null, then returns null.
+                If all values are null, then returns null.
         """
         return Timestream._call("coalesce", self, arg, *args, input=self)
 

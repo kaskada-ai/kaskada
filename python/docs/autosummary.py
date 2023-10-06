@@ -217,6 +217,34 @@ class Builder:
         self.write_doc_pages(pages, filter, hierarchy)
 
         # inventory ----
+        print(hierarchy)
+
+        # update paths in items
+        for item in items:
+            uri = item.uri
+            uri = uri.removeprefix(f'{self.dir}/')
+
+            path = uri.split('#')[0] if "#" in uri else uri
+            fragment = uri.split('#')[1] if "#" in uri else ""
+
+            location = None
+            uri_lookup = f'kaskada.{path.removesuffix(".html")}'
+            prefix_lookup = f".".join(item.name.split(".")[:-1])
+            if uri_lookup in hierarchy:
+                location = hierarchy[uri_lookup]
+            elif prefix_lookup in hierarchy:
+                location = hierarchy[prefix_lookup]
+            elif item.name in hierarchy:
+                location = hierarchy[item.name]
+            else:
+                print(
+                    f'Lost Item: {item}, uri_lookup: {uri_lookup}, prefix_lookup: {prefix_lookup}')
+
+            if location:
+                item.uri = f'{self.dir}/{location}/{path}#{fragment}'
+
+        for i in range(10):
+            print(f'Item: {items[i]}')
 
         _log.info("Creating inventory file")
         inv = self.create_inventory(items)
@@ -248,8 +276,8 @@ class Builder:
         hierarchy = {}
 
         for section in blueprint.sections:
-            #preview(section, max_depth=4)
-            #print()
+            # preview(section, max_depth=4)
+            # print()
 
             if section.title:
                 last_title = section.title
@@ -259,7 +287,7 @@ class Builder:
 
             for item in section.contents:
                 hierarchy[f'{self.get_package(section)}.{item.path}'] = location
-        #print(hierarchy)
+        # print(hierarchy)
         return hierarchy
 
     def header(self, title: str, order: Optional[str] = None) -> str:
