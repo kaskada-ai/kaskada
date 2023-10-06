@@ -106,9 +106,11 @@ sphinx-social-cards = { version = "^0.3.0", python = ">=3.9,<3.12" }
 optional = true
 
 [tool.poetry.group.test.dependencies]
+boto3 = "^1.28.54"
 coverage = { extras = ["toml"], version = ">=6.2"}
 pytest = ">=6.2.5"
 pytest-asyncio = "^0.21.1"
+pytest-docker-fixtures = "^1.3.17"
 xdoctest = {extras = ["colors"], version = ">=0.15.10"}
 
 [tool.poetry.group.release]

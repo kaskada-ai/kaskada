@@ -1,7 +1,6 @@
 import kaskada as kd
 import pytest
 
-
 @pytest.mark.skip("temporary skip, failing windows build")
 async def test_read_parquet(golden) -> None:
     source = await kd.sources.Parquet.create(
@@ -91,5 +90,52 @@ async def test_with_trailing_slash(golden) -> None:
         time_column="purchase_time",
         key_column="customer_id",
         subsort_column="subsort_id",
+    )
+    golden.jsonl(source)
+
+@pytest.mark.svc("minio")
+async def test_read_parquet_from_s3_minio(minio, golden) -> None:
+    # Upload a parquet file to minio for testing purposes
+    (minio_host, minio_port) = minio
+    import boto3
+    AWS_ENDPOINT = f'http://{minio_host}:{minio_port}'
+    # Defaults set in the `pytest-docker-fixtures`
+    # https://github.com/guillotinaweb/pytest-docker-fixtures/blob/236fdc1b6a9db03640040af2baf3bd3dfcc8d187/pytest_docker_fixtures/images.py#L42
+    AWS_ACCESS_KEY_ID = 'x' * 10
+    AWS_SECRET_ACCESS_KEY = 'x' * 10
+    s3_client = boto3.client('s3',
+        endpoint_url = AWS_ENDPOINT,
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        # aws_session_token=None,
+        # config=boto3.session.Config(signature_version='s3v4'),
+        # verify=False
+    )
+    s3_client.create_bucket(Bucket='test-bucket')
+    s3_client.upload_file('../testdata/purchases/purchases_part1.parquet', 'test-bucket', 'purchases_part1.parquet')
+
+    # This is a hack.
+    # The session (which is only created once) will cache the S3 client.
+    # This means that generally, changing the environment variables would
+    # require creating a new session to be picked up.
+    # Currently, we don't allow recreating the session (or scoping it).
+    # We probably should.
+    #
+    # But... this still works. The trick is that the S3 client isn't
+    # created until the first S3 URL is used. As long as we set the
+    # environment variables before that, they will be picked up and
+    # stored in the session appropriately.
+    import os
+    os.environ["AWS_ENDPOINT"] = AWS_ENDPOINT
+    os.environ["AWS_ACCESS_KEY_ID"] = AWS_ACCESS_KEY_ID
+    os.environ["AWS_SECRET_ACCESS_KEY"] = AWS_SECRET_ACCESS_KEY
+    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+    # Minio requires HTTP.
+    os.environ["AWS_ALLOW_HTTP"] = "true"
+
+    source = await kd.sources.Parquet.create(
+        "s3://test-bucket/purchases_part1.parquet",
+        time_column="purchase_time",
+        key_column="customer_id",
     )
     golden.jsonl(source)

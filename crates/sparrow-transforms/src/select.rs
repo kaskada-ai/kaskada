@@ -117,14 +117,14 @@ mod tests {
         let time = Arc::new(TimestampNanosecondArray::from(vec![0, 1, 2, 3]));
         let subsort = Arc::new(UInt64Array::from(vec![0, 1, 2, 3]));
         let key_hash = Arc::new(UInt64Array::from(vec![0, 1, 2, 3]));
-        let input_batch = Batch::new_with_data(
+
+        Batch::new_with_data(
             input_data,
             time,
             subsort,
             key_hash,
             RowTime::from_timestamp_ns(3),
-        );
-        input_batch
+        )
     }
 
     #[test]

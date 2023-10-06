@@ -29,7 +29,7 @@ pub mod key_hash_inverse;
 mod metadata;
 mod min_heap;
 pub mod prepare;
-mod read;
+pub mod read;
 pub mod stores;
 mod streams;
 mod util;

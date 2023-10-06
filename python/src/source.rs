@@ -11,15 +11,13 @@ use crate::expr::Expr;
 use crate::session::Session;
 
 #[pyclass]
-pub(crate) struct Table {
-    #[pyo3(get)]
-    name: String,
+pub(crate) struct ArrowSource {
     rust_table: Arc<RustTable>,
     session: Session,
 }
 
 #[pymethods]
-impl Table {
+impl ArrowSource {
     /// Create a new table.
     #[new]
     #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit, source))]
@@ -50,8 +48,7 @@ impl Table {
             source,
         )?;
 
-        let table = Table {
-            name,
+        let table = Self {
             rust_table: Arc::new(rust_table),
             session,
         };
@@ -86,10 +83,75 @@ impl Table {
         })?)
     }
 
-    fn add_parquet<'py>(&mut self, py: Python<'py>, url: String) -> Result<&'py PyAny> {
+    fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> Result<&'py PyAny> {
         let rust_table = self.rust_table.clone();
         Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
-            let result = rust_table.add_parquet(&url).await;
+            let path = std::path::Path::new(&path);
+            let result = rust_table.add_parquet(path).await;
+            Python::with_gil(|py| {
+                result.unwrap();
+                Ok(py.None())
+            })
+        })?)
+    }
+}
+
+#[pyclass]
+pub(crate) struct ParquetSource {
+    rust_table: Arc<RustTable>,
+    session: Session,
+}
+
+#[pymethods]
+impl ParquetSource {
+    /// Create a new table.
+    #[new]
+    #[pyo3(signature = (session, name, time_column, key_column, schema, queryable, subsort_column, grouping_name, time_unit, source))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        session: Session,
+        name: String,
+        time_column: &str,
+        key_column: &str,
+        subsort_column: Option<&str>,
+        grouping_name: Option<&str>,
+        time_unit: Option<&str>,
+    ) -> Result<Self> {
+        // Look at the parquet files.
+        let raw_schema = Arc::new(schema.0);
+
+        let rust_table = session.rust_session()?.add_table(
+            &name,
+            raw_schema,
+            time_column,
+            false,
+            subsort_column,
+            key_column,
+            grouping_name,
+            time_unit,
+            Some("parquet"),
+        )?;
+
+        let table = Self {
+            rust_table: Arc::new(rust_table),
+            session,
+        };
+        Ok(table)
+    }
+
+    fn expr(&self) -> Expr {
+        let rust_expr = self.rust_table.expr.clone();
+        Expr {
+            rust_expr,
+            session: self.session.clone(),
+        }
+    }
+
+    fn add_parquet<'py>(&mut self, py: Python<'py>, path: String) -> Result<&'py PyAny> {
+        let rust_table = self.rust_table.clone();
+        Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
+            let path = std::path::Path::new(&path);
+            let result = rust_table.add_parquet(path).await;
             Python::with_gil(|py| {
                 result.unwrap();
                 Ok(py.None())

@@ -106,7 +106,11 @@ impl FromStr for ObjectStoreUrl {
     type Err = error_stack::Report<ParseError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Url::from_str(s)
+        let base = std::env::current_dir()
+            .into_report()
+            .change_context(ParseError(s.to_owned()))?;
+        let base = Url::from_directory_path(base).map_err(|_| ParseError(s.to_owned()))?;
+        base.join(s)
             .into_report()
             .change_context(ParseError(s.to_owned()))
             .map(|it| ObjectStoreUrl { url: it })
