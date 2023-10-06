@@ -1,5 +1,4 @@
 import kaskada as kd
-import pytest
 
 
 async def test_read_parquet(golden) -> None:
