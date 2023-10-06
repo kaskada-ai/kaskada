@@ -65,3 +65,18 @@ dd {
 .red {
     color: #e83e8c
 }
+
+dl dl dt {
+    padding-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+}
+
+body.quarto-light dl dl dt {
+    background-color: #f5f5f5;
+}
+
+body.quarto-dark dl dl dt {
+    background-color: #2f2f2f;
+}

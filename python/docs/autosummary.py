@@ -275,6 +275,7 @@ class Builder:
 
         # --- root index
         text = self.header(self.title)
+        text += "This is the API Reference"
 
         p_index = Path(self.dir) / self.out_index
         p_index.parent.mkdir(exist_ok=True, parents=True)

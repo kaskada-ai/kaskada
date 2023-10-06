@@ -89,9 +89,21 @@ class Renderer(BaseRenderer):
         parts = el.path.split(".")[1:]
         name = parts.pop()
         prefix = ".".join(parts)
+        dispname = f"**{prefix}.**[**{name}**]{{.red}}"
 
-        return f"**{prefix}.**[**{name}**]{{.red}}"
-        # return ".".join(el.path.split(".")[1:])
+        if isinstance(el, dc.Object):
+            print(f'Object: {el.labels}')
+            if 'staticmethod' in el.labels:
+                dispname = "***static*** " + dispname
+                print(dispname)
+
+        text = [dispname]
+        print(dispname)
+
+        # if isinstance(el, dc.Object) and el.kind == dc.Kind.CLASS:
+        #     text.append(f"Bases: []({el.parent.name})")
+
+        return "\n\n".join(text)
 
     def _fetch_method_parameters(self, el: dc.Function):
         # adapted from mkdocstrings-python jinja tempalate
@@ -177,6 +189,7 @@ class Renderer(BaseRenderer):
 
     @dispatch
     def render_header(self, el: layout.Doc):
+
         return self.header(el.name)
 
     # render method -----------------------------------------------------------
@@ -199,7 +212,7 @@ class Renderer(BaseRenderer):
         if order:
             text.append(f'order: {order}')
         text.append("---")
-        return "\n".join(text) + "\n\n"
+        return "\n".join(text)
 
     @dispatch
     def render(self, el: layout.Page):
@@ -209,76 +222,16 @@ class Renderer(BaseRenderer):
         else:
             header = []
 
-        if el.flatten:
-            rows = list([[f'[{entry.name}](`{entry.anchor}`)', self.summarize(entry.obj)]
-                        for entry in el.contents])
-            table = self._render_table(rows, ["Method", "Description"])
-            return "\n\n".join([*header, table])
-        else:
-            result = map(self.render, el.contents)
-            return "\n\n".join([*header, *result])
-
-    @dispatch
-    def render(self, el: layout.Section):
-        section_top = f"{'#' * self.crnt_header_level} {el.title}\n\n{el.desc}"
-
-        with self._increment_header():
-            body = list(map(self.render, el.contents))
-
-        return "\n\n".join([section_top, *body])
-
-    @dispatch
-    def render(self, el: layout.Interlaced):
-        # render a sequence of objects with like-sections together.
-        # restrict its behavior to documenting functions for now ----
-        for doc in el.contents:
-            if not isinstance(doc, (layout.DocFunction, layout.DocAttribute)):
-                raise NotImplementedError(
-                    "Can only render Interlaced elements if all content elements"
-                    " are function or attribute docs."
-                    f" Found an element of type {type(doc)}, with name {doc.name}"
-                )
-
-        # render ----
-        # currently, we use everything from the first function, and just render
-        # the signatures together
-        first_doc = el.contents[0]
-        objs = [doc.obj for doc in el.contents]
-
-        if first_doc.obj.docstring is None:
-            raise ValueError("The first element of Interlaced must have a docstring.")
-
-        str_title = self.render_header(first_doc)
-        str_sig = "\n\n".join(map(self.signature, objs))
-        str_body = []
-
-        # TODO: we should also interlace parameters and examples
-        # parsed = map(qast.transform, [x.docstring.parsed for x in objs if x.docstring])
-
-        # TODO: this is copied from the render method for dc.Object
-        for section in qast.transform(first_doc.obj.docstring.parsed):
-            title = section.title or section.kind.value
-            body = self.render(section)
-
-            if title != "text":
-                header = f"{'#' * (self.crnt_header_level + 1)} {title.title()}"
-                str_body.append("\n\n".join([header, body]))
-            else:
-                str_body.append(body)
-
-        if self.show_signature:
-            parts = [str_title, str_sig, *str_body]
-        else:
-            parts = [str_title, *str_body]
-
-        return "\n\n".join(parts)
+        result = map(self.render, el.contents)
+        return "\n\n".join([*header, *result])
 
     @dispatch
     def render(self, el: layout.Doc):
         raise NotImplementedError(f"Unsupported Doc type: {type(el)}")
 
     @dispatch
-    def render(self, el: Union[layout.DocClass, layout.DocModule]):
+    def render(self, el: Union[layout.DocClass, layout.DocModule], single_page: bool = False):
+        print("boop")
         title = self.render_header(el)
 
         attr_docs = []
@@ -328,18 +281,19 @@ class Renderer(BaseRenderer):
 
             # method summary table ----
             if raw_meths:
-                _summary_table = "\n".join(map(self.summarize, raw_meths))
-                section_name = (
-                    "Methods" if isinstance(el, layout.DocClass) else "Functions"
-                )
-                objs = f"{sub_header} {section_name}\n\n{header}\n{_summary_table}"
-                meth_docs.append(objs)
+                #     _summary_table = "\n".join(map(self.summarize, raw_meths))
+                # section_name = (
+                #     "Methods" if isinstance(el, layout.DocClass) else "Functions"
+                # )
+                # objs = f"{sub_header} {section_name}\n\n{header}\n{_summary_table}"
+                # meth_docs.append(objs)
 
                 # TODO use context manager, or context variable?
                 n_incr = 1 if el.flat else 2
                 with self._increment_header(n_incr):
                     meth_docs.extend(
-                        [self.render(x) for x in raw_meths if isinstance(x, layout.Doc)]
+                        [self.render(x, single_page=True)
+                         for x in raw_meths if isinstance(x, layout.Doc)]
                     )
 
         str_sig = self.signature(el)
@@ -350,13 +304,14 @@ class Renderer(BaseRenderer):
         return "\n\n".join([title, *sig_part, body, *attr_docs, *class_docs, *meth_docs])
 
     @dispatch
-    def render(self, el: Union[layout.DocFunction, layout.DocAttribute]):
-        title = self.render_header(el)
+    def render(self, el: Union[layout.DocFunction, layout.DocAttribute], single_page: bool = False):
+        title = "" if single_page else self.render_header(el)
 
-        str_sig = self.signature(el)
-        sig_part = [str_sig] if self.show_signature else []
+        sig = self.signature(el) if self.show_signature else ""
 
-        return "\n\n".join([title, *sig_part, self.render(el.obj)])
+        body_rows = self.render(el.obj).split("\n")
+
+        return "\n\n".join([title, sig, self.get_definition_list(body_rows)])
 
     # render griffe objects ===================================================
 
@@ -370,15 +325,7 @@ class Renderer(BaseRenderer):
         else:
             patched_sections = qast.transform(el.docstring.parsed)
             for section in patched_sections:
-                title = section.title or section.kind.value
-                body = self.render(section)
-
-                if title != "text":
-                    # header here is a definition list term
-                    header = title.title()
-                    str_body.append("\n\n".join([header, body]))
-                else:
-                    str_body.append(body)
+                str_body.append(self.render(section))
 
         parts = [*str_body]
 
@@ -468,12 +415,19 @@ class Renderer(BaseRenderer):
 
     # parameters ----
 
+    def get_definition_list(self, items: [str]) -> str:
+        rows = []
+        for item in items:
+            if len(rows) == 0:
+                rows.append(f'~   {item}')
+            else:
+                rows.append(f'    {item}')
+        return "\n".join(rows)
+
     @dispatch
     def render(self, el: ds.DocstringSectionParameters):
-        # render as a definition list item
         rows = list(map(self.render, el.value))
-        text = "\n".join(rows)
-        return f': {text}'
+        return f'Parameters:\n{self.get_definition_list(rows)}'
 
     @dispatch
     def render(self, el: ds.DocstringParameter) -> str:
@@ -548,11 +502,27 @@ class Renderer(BaseRenderer):
     def render(self, el: Union[ds.DocstringSectionReturns, ds.DocstringSectionRaises]):
         # render as a definition list
         rows = list(map(self.render, el.value))
-        text = "\n".join(rows)
-        return f': {text}'
+        return "\n".join(rows)
 
     @dispatch
-    def render(self, el: Union[ds.DocstringReturn, ds.DocstringRaise]):
+    def render(self, el: ds.DocstringReturn):
+        # similar to DocstringParameter, but no name or default
+        text = []
+
+        returns = sanitize(el.description, allow_markdown=True)
+        if returns:
+            text.append('Returns:')
+            text.append(f'~   {returns}')
+
+        return_type = self.render_annotation(el.annotation)
+        if return_type:
+            text.append('Return type:')
+            text.append(f'~   {return_type}')
+
+        return "\n\n".join(text)
+
+    @dispatch
+    def render(self, el: ds.DocstringRaise):
         # similar to DocstringParameter, but no name or default
         annotation = self.render_annotation(el.annotation)
         return f'{annotation} -- {sanitize(el.description, allow_markdown=True)}'

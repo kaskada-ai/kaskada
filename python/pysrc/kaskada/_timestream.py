@@ -1174,7 +1174,7 @@ class Timestream(object):
             mode: The execution mode to use. Defaults to `'once'` to produce the results
                 from the currently available data. Use `'live'` to start a standing query
                 that continues to process new data until stopped.
-            results: The results to produce. Defaults to `Histroy()` producing all points.
+            results: The results to produce. Defaults to `History()` producing all points.
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
             max_batch_size: The maximum number of rows to return in each batch.
                 Defaults to `None` for no limit.

@@ -1,6 +1,3 @@
-filters:
-   - include-code-files
-
 format:
   html:
     link-external-icon: true

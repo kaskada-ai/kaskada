@@ -61,8 +61,8 @@ format:
       - design-style.css
     include-in-header: _announcement.html
     toc: true
-    link-external-icon: true
-    link-external-newwindow: true
+    link-external-icon: false
+    link-external-newwindow: false
     link-external-filter: '^(?:http:|https:)\/\/kaskada\.io\/'
 
 filters:

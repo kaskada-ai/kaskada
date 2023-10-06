@@ -16,7 +16,6 @@ quartodoc:
 
   sections:
     - title: Timestream
-      #flatten: true
       options:
         children: embedded
       package: null
@@ -154,6 +153,7 @@ quartodoc:
         - Since
         - Sliding
         - Trailing
+        - Tumbling
     - title: Sources
       options:
         children: embedded
