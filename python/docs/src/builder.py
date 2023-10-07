@@ -12,23 +12,8 @@ from quartodoc.validation import fmt
 
 from typing import Any, Union
 
-from _renderer import Renderer
-
-
-def _enable_logs():
-    import logging
-    import sys
-
-    root = logging.getLogger("quartodoc")
-    root.setLevel(logging.INFO)
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
+from renderer import Renderer
+from summarizer import Summarizer
 
 
 _log = logging.getLogger("quartodoc")
@@ -100,6 +85,7 @@ class Builder:
         self.title = title
         self.rewrite_all_pages = rewrite_all_pages
         self.renderer = Renderer()
+        self.summarizer = Summarizer()
 
         if source_dir:
             self.source_dir = str(Path(source_dir).absolute())
@@ -169,6 +155,7 @@ class Builder:
         order = 1
 
         for section in self.blueprint.sections:
+            preview(section, max_depth=4)
             if section.title:
                 last_title = section.title
                 section_text = self.renderer.render(section, order=order)
@@ -181,27 +168,31 @@ class Builder:
             section_path = location / self.out_index
             self.write_page_if_not_exists(section_path, section_text)
 
+            is_flat = section.options and section.options.children == layout.ChoicesChildren.flat
+
             for page in section.contents:
                 if isinstance(page, layout.Page):
-                    _log.info(f"Rendering {page.path}")
-                    # preview(page, max_depth=4)
-                    page_text = self.renderer.render(page)
-                    page_path = location / (page.path + self.out_page_suffix)
-                    self.write_page_if_not_exists(page_path, page_text)
+                    # don't make separate pages for flat sections
+                    if not is_flat:
+                        _log.info(f"Rendering {page.path}")
+                        # preview(page, max_depth=4)
+                        page_text = self.renderer.render(page)
+                        page_path = location / (page.path + self.out_page_suffix)
+                        self.write_page_if_not_exists(page_path, page_text)
                     if page.path in self.page_map:
                         del self.page_map[page.path]
 
-                    self.update_page_items(page, location)
+                    self.update_page_items(page, location, is_flat)
                 else:
                     raise NotImplementedError(f"Unsupported section item: {type(page)}")
 
-        print(f'Extra pages: {self.page_map}')
+        print(f'Extra pages: {self.page_map.keys()}')
         print(f'Extra items: {self.item_map.keys()}')
 
-    def update_page_items(self, page: layout.Page, location: Path):
+    def update_page_items(self, page: layout.Page, location: Path, is_flat: bool):
         for doc in page.contents:
             if isinstance(doc, layout.Doc):
-                page_path = f'{location}/{page.path}.html'
+                page_path = f'{location}/index.html' if is_flat else f'{location}/{page.path}.html'
                 self.update_items(doc, page_path)
             else:
                 raise NotImplementedError(f"Unsupported page item: {type(doc)}")
@@ -243,7 +234,7 @@ class Builder:
         """Write API index page."""
 
         _log.info("Summarizing docs for index page.")
-        content = self.renderer.summarize(bp)
+        content = self.summarizer.summarize(bp)
         _log.info(f"Writing index to directory: {self.dir}")
 
         final = f"# {self.title}\n\n{content}"
@@ -285,9 +276,3 @@ class Builder:
         return Builder(
             **{k: v for k, v in cfg.items()},
         )
-
-
-if __name__ == "__main__":
-    _enable_logs()
-    b = Builder.from_quarto_config("_quartodoc.yml")
-    b.build()

@@ -31,13 +31,17 @@ from ._execution import Execution, ResultIterator, _ExecutionOptions
 if TYPE_CHECKING:
     import graphviz
 
-#: A literal value that can be used as an argument to a Timestream operation.
+# docstring must be under the definition :(
 LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]
 
-#: A Timestream or literal which can be used as an argument to a Timestream operation.
+"""A literal value that can be used as an argument to a Timestream operation."""
+
+# docstring must be under the definition :(
 Arg: TypeAlias = Union[
     "Timestream", Callable[["Timestream"], "Timestream"], LiteralValue
 ]
+
+"""A Timestream or literal which can be used as an argument to a Timestream operation."""
 
 
 def _augment_error(args: Sequence[Arg], e: Exception) -> Exception:

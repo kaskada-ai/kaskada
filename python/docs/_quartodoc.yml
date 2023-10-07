@@ -13,13 +13,11 @@ quartodoc:
       options:
         children: flat
       contents:
-        # maybe make this a single page with the 3 items?
         - name: Timestream
           members:
             - data_type
         - _timestream.LiteralValue
         - _timestream.Arg
-
     - subtitle: Aggregation
       desc: |
         The User Guide has details on [aggregations in general](../../../guide/aggregation.qmd).
@@ -151,32 +149,41 @@ quartodoc:
         - Trailing
         - Tumbling
     - title: Sources
+      package: kaskada.sources
       options:
         children: embedded
-      package: kaskada.sources
       contents:
-        - Source
+        # - Source
         - CsvString
         - JsonlString
         - Pandas
         - Parquet
         - PyDict
+        # - package: kaskada.sources.source
+        #   name: TimeUnit
+    - subtitle: Source
+      package: kaskada.sources
+      options:
+        children: flat
+      contents:
+        - Source
+        - source.TimeUnit
     - title: Destinations
+      package: kaskada.destinations
       options:
         children: embedded
-      package: kaskada.destinations
       contents:
         - Destination
-    - title: Results
-      options:
-        children: embedded
-      package: kaskada.results
-      contents:
-        - History
-        - Snapshot
     - title: Execution
       options:
         children: embedded
       contents:
         - Execution
         - ResultIterator
+    - title: Results
+      package: kaskada.results
+      options:
+        children: embedded
+      contents:
+        - History
+        - Snapshot

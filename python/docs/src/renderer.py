@@ -9,6 +9,7 @@ from plum import dispatch
 from typing import Union, Optional
 from quartodoc import layout
 
+from summarizer import Summarizer
 
 try:
     # Name and Expression were moved to expressions in v0.28
@@ -18,7 +19,7 @@ except ImportError:
 
 skip_annotation_types = [
     "kaskada",
-    "kaskada.destination",
+    "kaskada.destinations",
     "kaskada.results",
     "kaskada.windows",
     "pyarrow",
@@ -51,6 +52,8 @@ def sanitize(val: str, allow_markdown=False):
 class Renderer():
     """Render docstrings to markdown."""
 
+    summarizer = Summarizer()
+
     def _get_display_name(self, el: "dc.Alias | dc.Object"):
         parts = el.path.split(".")[1:]
         name = parts.pop()
@@ -76,7 +79,6 @@ class Renderer():
         return el.parameters
 
     def _render_definition_list(self, title: str, items: [str], title_class: Optional[str] = None) -> str:
-       # title = f'{{.{title_class}}}{title_text}' if title_class else title_text
         rows = [title]
         for item in items:
             if len(rows) == 1:
@@ -172,24 +174,32 @@ class Renderer():
         if el.desc:
             rows.append(el.desc)
 
-        text = "\n\n".join(rows)
-
-        if len(el.contents) > 0:
-            text += "\n\n" + self.summarize(el.contents)
+        if el.options and el.options.children == layout.ChoicesChildren.flat:
+            for page in el.contents:
+                print(f'Page type: {type(page)}')
+                rows.append(self.render(page, is_flat=True))
+            text = "\n\n".join(rows)
+        else:
+            text = "\n\n".join(rows)
+            text += "\n\n" + self.summarizer.summarize(el.contents)
 
         return text
 
     @dispatch
-    def render(self, el: layout.Page):
+    def render(self, el: layout.Page, is_flat: bool = False):
         rows = []
         if el.summary:
             if el.summary.name:
-                rows.append(self._render_header(el.summary.name))
+                if is_flat:
+                    rows.append(f'## {el.summary.name}')
+                else:
+                    rows.append(self._render_header(el.summary.name))
             if el.summary.desc:
                 rows.append(sanitize(el.summary.desc, allow_markdown=True))
 
         for item in el.contents:
-            rows.append(self.render(item))
+            print(f'Item type: {type(item)}')
+            rows.append(self.render(item, is_flat=is_flat))
 
         return "\n\n".join(rows)
 
@@ -198,8 +208,8 @@ class Renderer():
         raise NotImplementedError(f"Unsupported Doc type: {type(el)}")
 
     @dispatch
-    def render(self, el: Union[layout.DocClass, layout.DocModule], single_page: bool = False) -> str:
-        title = self._render_header(el.name)
+    def render(self, el: Union[layout.DocClass, layout.DocModule], is_flat: bool = False) -> str:
+        title = "" if is_flat else self._render_header(el.name)
 
         sig = self.signature(el)
         body_rows = self.render(el.obj).split("\n")
@@ -217,20 +227,20 @@ class Renderer():
             # add classes
             for raw_class in el.members:
                 if raw_class.obj.is_class and isinstance(raw_class, layout.Doc):
-                    body_rows.extend(self.render(raw_class, single_page=True).split("\n"))
+                    body_rows.extend(self.render(raw_class, is_flat=True).split("\n"))
 
             # add methods
             for raw_method in el.members:
                 if raw_method.obj.is_function and isinstance(raw_method, layout.Doc):
-                    body_rows.extend(self.render(raw_method, single_page=True).split("\n"))
+                    body_rows.extend(self.render(raw_method, is_flat=True).split("\n"))
 
         text = self._render_definition_list(sig, body_rows)
 
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocFunction, single_page: bool = False):
-        title = "" if single_page else self._render_header(el.name)
+    def render(self, el: layout.DocFunction, is_flat: bool = False):
+        title = "" if is_flat else self._render_header(el.name)
 
         sig = self.signature(el)
         body_rows = self.render(el.obj).split("\n")
@@ -239,9 +249,9 @@ class Renderer():
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocAttribute, single_page: bool = False):
+    def render(self, el: layout.DocAttribute, is_flat: bool = False):
         link = f"[{el.name}](#{el.anchor})"
-        description = self.summarize(el.obj)
+        description = self.summarizer.summarize(el.obj)
 
         return " -- ".join([link, description])
 
@@ -473,112 +483,3 @@ class Renderer():
     )
     def render(self, el):
         raise NotImplementedError(f"{type(el)}")
-
-    # Summarize ===============================================================
-    # this method returns a summary description, such as a table
-
-    @staticmethod
-    def _summary_row(link, description):
-        return f"| {link} | {sanitize(description, allow_markdown=True)} |"
-
-    @dispatch
-    def summarize(self, el):
-        raise NotImplementedError(f"Unsupported type: {type(el)}")
-
-    @dispatch
-    def summarize(self, el: layout.Layout):
-        rendered_sections = list(map(self.summarize, el.sections))
-        return "\n\n".join(rendered_sections)
-
-    @dispatch
-    def summarize(self, el: layout.Section):
-        desc = f"\n\n{el.desc}" if el.desc is not None else ""
-        if el.title is not None:
-            header = f"## {el.title}{desc}"
-        elif el.subtitle is not None:
-            header = f"### {el.subtitle}{desc}"
-        else:
-            header = ""
-
-        if el.contents:
-            return f"{header}\n\n{self.summarize(el.contents)}"
-
-        return header
-
-    @dispatch
-    def summarize(self, contents: layout.ContentList):
-        thead = "| | |\n| --- | --- |"
-
-        rendered = []
-        for child in contents:
-            rendered.append(self.summarize(child))
-
-        return "\n".join([thead, *rendered])
-
-    @dispatch
-    def summarize(self, el: layout.Page):
-        if el.summary is not None:
-            # TODO: assumes that files end with .qmd
-            return self._summary_row(
-                f"[{el.summary.name}]({el.path}.qmd)", el.summary.desc
-            )
-
-        if len(el.contents) > 1 and not el.flatten:
-            raise ValueError(
-                "Cannot summarize Page. Either set its `summary` attribute with name "
-                "and description details, or set `flatten` to True."
-            )
-
-        else:
-            rows = [self.summarize(entry, el.path) for entry in el.contents]
-            return "\n".join(rows)
-
-    @dispatch
-    def summarize(self, el: layout.MemberPage):
-        # TODO: model should validate these only have a single entry
-        return self.summarize(el.contents[0], el.path, shorten=True)
-
-    @dispatch
-    def summarize(self, el: layout.Interlaced, *args, **kwargs):
-        rows = [self.summarize(doc, *args, **kwargs) for doc in el.contents]
-
-        return "\n".join(rows)
-
-    @dispatch
-    def summarize(
-        self, el: layout.Doc, path: Optional[str] = None, shorten: bool = False
-    ):
-        # this is where summary page method links are created
-        if path is None:
-            link = f"[{el.name}](#{el.anchor})"
-        else:
-            # TODO: assumes that files end with .qmd
-            link = f"[{el.name}]({path}.qmd#{el.anchor})"
-
-        description = self.summarize(el.obj)
-        return self._summary_row(link, description)
-
-    @dispatch
-    def summarize(self, el: layout.Link):
-        description = self.summarize(el.obj)
-        return self._summary_row(f"[](`{el.name}`)", description)
-
-    @dispatch
-    def summarize(self, obj: Union[dc.Object, dc.Alias]) -> str:
-        """Test"""
-        # get high-level description
-        doc = obj.docstring
-        if doc is None:
-            docstring_parts = []
-        else:
-            docstring_parts = doc.parsed
-
-        if len(docstring_parts) and isinstance(
-            docstring_parts[0], ds.DocstringSectionText
-        ):
-            description = docstring_parts[0].value
-            short = description.split("\n")[0]
-
-            return short
-
-        return ""
