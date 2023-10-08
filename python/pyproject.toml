@@ -3,9 +3,7 @@ name = "kaskada"
 version = "0.6.0-a.2"
 description = "Kaskada query builder and local execution engine."
 requires-python = ">=3.9,<4.0"
-classifiers = [
-    "Development Status :: 3 - Alpha",
-]
+classifiers = ["Development Status :: 3 - Alpha"]
 # We need to list dependencies here for maturin to put them in the package.
 # They should match what poetry believes we need.
 dependencies = [
@@ -15,12 +13,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-plot = [
-  "plotly >= 5.0.0, < 6.0.0",
-]
-explain = [
-  "graphviz >= 0.20.1, < 1.0.0",
-]
+plot = ["plotly >= 5.0.0, < 6.0.0"]
+explain = ["graphviz >= 0.20.1, < 1.0.0"]
 
 [tool.poetry]
 name = "kaskada"
@@ -37,7 +31,7 @@ python = ">=3.9,<4.0"
 pyarrow = "^12.0.1"
 typing-extensions = "^4.7.1"
 graphviz = { version = "^0.20.1", optional = true }
-plotly = {version = "^5.16.1", optional = true}
+plotly = { version = "^5.16.1", optional = true }
 
 [tool.poetry.extras]
 plot = ["plotly"]
@@ -85,31 +79,21 @@ graphviz = { version = "^0.20.1" }
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-sphinx = ">=6.0.0"
-sphinx-autobuild = ">=2021.3.14"
-sphinx-autodoc-typehints = ">=1.23.0"
-sphinx-copybutton = "^0.5.2"
-sphinx-design = "^0.5.0"
-myst-parser = {version = ">=0.16.1"}
-# Use myst-nb from git since the currently released version (0.17.2) pins
-# Sphinx to < 6. Once a new release occurs we can upgrade to `0.18.0` or newer.
-# https://github.com/executablebooks/MyST-NB/issues/530
-myst-nb = { git = "https://github.com/executablebooks/MyST-NB.git", rev = "59854c270deb76f297f228477be5d5088babd143" }
-plotly = {version = "^5.16.1"}
-linkify-it-py = "^2.0.2"
-pydata-sphinx-theme = "^0.13.3"
-ablog = "^0.11.4.post1"
-sphinx-social-cards = { version = "^0.3.0", python = ">=3.9,<3.12" }
+plotly = { version = "^5.16.1" }
+quartodoc = "~0.6.3"
+nbformat = "^5.9.2"
+nbclient = "^0.8.0"
+jupyter = "^1.0.0"
 
 [tool.poetry.group.test]
 # Dependencies for testing
 optional = true
 
 [tool.poetry.group.test.dependencies]
-coverage = { extras = ["toml"], version = ">=6.2"}
+coverage = { extras = ["toml"], version = ">=6.2" }
 pytest = ">=6.2.5"
 pytest-asyncio = "^0.21.1"
-xdoctest = {extras = ["colors"], version = ">=0.15.10"}
+xdoctest = { extras = ["colors"], version = ">=0.15.10" }
 
 [tool.poetry.group.release]
 # Dependencies for performing the
@@ -160,7 +144,5 @@ show_error_context = true
 
 # pyproject.toml
 [tool.pytest.ini_options]
-testpaths = [
-    "pytests",
-]
+testpaths = ["pytests"]
 asyncio_mode = "auto"
