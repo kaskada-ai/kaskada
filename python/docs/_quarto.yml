@@ -1,7 +1,6 @@
 project:
   type: website
   output-dir: .quarto/_site
-  #lib-dir: _static
   preview:
     port: 4200
     browser: true # Open a web browser to view the preview

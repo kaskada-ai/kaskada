@@ -1,10 +1,12 @@
 ---
 format:
   html:
-    toc: false
     css:
       - _static/css/design-style.css
       - _static/css/root.css
+    link-external-icon: true
+    link-external-newwindow: true
+    toc: false
 
 listing:
   - id: cards

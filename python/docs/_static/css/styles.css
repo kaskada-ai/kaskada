@@ -85,20 +85,3 @@ body.quarto-dark .highlight dt {
     font-weight: bolder;
     font-style: italic;
 }
-
-.sd-sphinx-override, .sd-sphinx-override * {
-    -moz-box-sizing: border-box;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-}
-.sd-container, .sd-container-fluid, .sd-container-lg, .sd-container-md, .sd-container-sm, .sd-container-xl {
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: var(--sd-gutter-x, 0.75rem);
-    padding-right: var(--sd-gutter-x, 0.75rem);
-    width: 100%;
-}
-
-.sd-mb-4, .sd-my-4 {
-    margin-bottom: 1.5rem !important;
-}

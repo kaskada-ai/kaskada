@@ -2,4 +2,9 @@ execute:
   daemon: false
   warning: false
 
+format:
+  html:
+    link-external-icon: true
+    link-external-newwindow: true
+
 jupyter: python3

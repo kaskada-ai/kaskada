@@ -120,8 +120,20 @@ def docs_gen(session: nox.Session) -> None:
     """Generate API reference docs"""
     install(session, groups=["docs"])
 
+    reference_dir = Path("docs", "reference")
+    if reference_dir.exists():
+        shutil.rmtree(reference_dir)
+
+    interlinks_dir = Path("docs", "_inv")
+    if interlinks_dir.exists():
+        shutil.rmtree(interlinks_dir)
+
+    objects_file = Path("docs", "objects.json")
+    if objects_file.exists():
+        objects_file.unlink()
+
     with session.chdir("docs"):
-        session.run("python", "-m", "_scripts/gen_reference.py")
+        session.run("python", "_scripts/gen_reference.py")
         session.run("python", "-m", "quartodoc", "interlinks")
 
 
@@ -129,7 +141,7 @@ def docs_gen(session: nox.Session) -> None:
 def docs(session: nox.Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
 
-    install(session, groups=["typecheck", "docs"])
+    install(session, groups=["docs"])
 
     build_dir = Path("docs", ".quarto", "_site")
     if build_dir.exists():
