@@ -1,0 +1,44 @@
+```{=html}
+<table class="table" id="id1">
+    <colgroup>
+        <col style="width: 25.0%">
+        <col style="width: 75.0%">
+    </colgroup>
+    <thead>
+        <tr>
+            <th class="head">
+                <p>Types</p>
+            </th>
+            <th class="head">
+                <p>Description</p>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        <% for (const item of items) { %>
+            <tr>
+                <td>
+                    <p>
+                        <% for (const index in item.types) { %>
+                            <code><%= item.types[index] %></code>
+                            <% if (index < item.types.length - 1) { %>,<% } %>
+                                    <% } %>
+                    </p>
+                </td>
+                <td>
+                    <p>
+                        <%= item.desc %>
+                    </p>
+                    <p>
+                        Examples:
+                        <% for (const index in item.examples) { %>
+                            <code><%= item.examples[index] %></code>
+                            <% if (index < item.examples.length - 1) { %>,<% } %>
+                                    <% } %>
+                    </p>
+                </td>
+            </tr>
+            <% } %>
+    </tbody>
+</table>
+```
