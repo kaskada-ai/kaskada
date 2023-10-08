@@ -114,23 +114,21 @@ def xdoctest(session: nox.Session) -> None:
     install(session, groups=["test"])
     session.run("python", "-m", "xdoctest", *args)
 
+@nox.session(name="docs-clean", python=python_versions[0])
+def docs_clean(session: nox.Session) -> None:
+    """Clean up generated and cached docs"""
+
+    for item in [".quarto", "reference", "_inv", "objects.json"]:
+        p = Path("docs", item)
+        if p.exists() and p.is_dir():
+            shutil.rmtree(dir)
+        elif p.exists() and p.is_file():
+            p.unlink()
 
 @nox.session(name="docs-gen", python=python_versions[0])
 def docs_gen(session: nox.Session) -> None:
     """Generate API reference docs"""
     install(session, groups=["docs"])
-
-    reference_dir = Path("docs", "reference")
-    if reference_dir.exists():
-        shutil.rmtree(reference_dir)
-
-    interlinks_dir = Path("docs", "_inv")
-    if interlinks_dir.exists():
-        shutil.rmtree(interlinks_dir)
-
-    objects_file = Path("docs", "objects.json")
-    if objects_file.exists():
-        objects_file.unlink()
 
     with session.chdir("docs"):
         session.run("python", "_scripts/gen_reference.py")
@@ -140,12 +138,7 @@ def docs_gen(session: nox.Session) -> None:
 @nox.session(python=python_versions[0])
 def docs(session: nox.Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
-
     install(session, groups=["docs"])
-
-    build_dir = Path("docs", ".quarto", "_site")
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
 
     with session.chdir("docs"):
         session.run("quarto", "preview", external=True)
