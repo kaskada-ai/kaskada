@@ -24,9 +24,6 @@ class Since(Window):
 
     Args:
         predicate: the condition used to determine when the window resets.
-
-    Returns:
-        Window for aggregating cumulative values since the predicate.
     """
 
     #: The boolean Timestream to use as predicate for the window.
@@ -38,27 +35,47 @@ class Since(Window):
 
     @staticmethod
     def minutely() -> Since:
-        """Return a window since the start of each calendar minute."""
+        """Return a window since the start of each calendar minute.
+
+        Returns:
+            Window for aggregating cumulative values since the predicate.
+        """
         return Since(predicate=lambda domain: Timestream._call("minutely", domain))
 
     @staticmethod
     def hourly() -> Since:
-        """Return a window since the start of each calendar hour."""
+        """Return a window since the start of each calendar hour.
+
+        Returns:
+            Window for aggregating cumulative values since the predicate.
+        """
         return Since(predicate=lambda domain: Timestream._call("hourly", domain))
 
     @staticmethod
     def daily() -> Since:
-        """Return a window since the start of each calendar day."""
+        """Return a window since the start of each calendar day.
+
+        Returns:
+            Window for aggregating cumulative values since the predicate.
+        """
         return Since(predicate=lambda domain: Timestream._call("daily", domain))
 
     @staticmethod
     def monthly() -> Since:
-        """Return a window since the start of each calendar month."""
+        """Return a window since the start of each calendar month.
+
+        Returns:
+            Window for aggregating cumulative values since the predicate.
+        """
         return Since(predicate=lambda domain: Timestream._call("monthly", domain))
 
     @staticmethod
     def yearly() -> Since:
-        """Return a window since the start of each calendar year."""
+        """Return a window since the start of each calendar year.
+
+        Returns:
+            Window for aggregating cumulative values since the predicate.
+        """
         return Since(predicate=lambda domain: Timestream._call("yearly", domain))
 
 
@@ -73,10 +90,7 @@ class Tumbling(Window):
     Args:
         predicate: the condition used to determine when the window resets.
 
-    Returns:
-        Window for aggregating values since the predicate.
-
-    Note:
+    Notes:
         Like other systems, Kaskada treats tumbling windows as non-overlapping.
         When one window ends the next starts.
 
@@ -94,27 +108,47 @@ class Tumbling(Window):
 
     @staticmethod
     def minutely() -> Tumbling:
-        """Return a tumbling window that resets at the start of each calendar minute."""
+        """Return a tumbling window that resets at the start of each calendar minute.
+
+        Returns:
+            Window for aggregating values since the predicate.
+        """
         return Tumbling(predicate=lambda domain: Timestream._call("minutely", domain))
 
     @staticmethod
     def hourly() -> Tumbling:
-        """Return a tumbling window that resets at the start of each calendar hour."""
+        """Return a tumbling window that resets at the start of each calendar hour.
+
+        Returns:
+            Window for aggregating values since the predicate.
+        """
         return Tumbling(predicate=lambda domain: Timestream._call("hourly", domain))
 
     @staticmethod
     def daily() -> Tumbling:
-        """Return a tumbling window that resets at the start of each calendar day."""
+        """Return a tumbling window that resets at the start of each calendar day.
+
+        Returns:
+            Window for aggregating values since the predicate.
+        """
         return Tumbling(predicate=lambda domain: Timestream._call("daily", domain))
 
     @staticmethod
     def monthly() -> Tumbling:
-        """Return a tumbling window that resets at the start of each calendar month."""
+        """Return a tumbling window that resets at the start of each calendar month.
+
+        Returns:
+            Window for aggregating values since the predicate.
+        """
         return Tumbling(predicate=lambda domain: Timestream._call("monthly", domain))
 
     @staticmethod
     def yearly() -> Tumbling:
-        """Return a tumbling window that resets at the start of each calendar year."""
+        """Return a tumbling window that resets at the start of each calendar year.
+
+        Returns:
+            Window for aggregating values since the predicate.
+        """
         return Tumbling(predicate=lambda domain: Timestream._call("yearly", domain))
 
 
@@ -129,10 +163,7 @@ class Sliding(Window):
     Args:
         duration: the number of active windows at any given time.
         predicate: the condition used to determine when the oldest window ends and a new
-          window starts.
-
-    Returns:
-        Overlapping windows for aggregating values.
+            window starts.
     """
 
     #: The number of sliding intervals to use in the window.
@@ -155,6 +186,9 @@ class Sliding(Window):
 
         Args:
             duration: The number of minutes to use in the window.
+
+        Returns:
+            Overlapping windows for aggregating values.
         """
         return Sliding(
             duration=duration,
@@ -167,6 +201,9 @@ class Sliding(Window):
 
         Args:
             duration: The number of hours to use in the window.
+
+        Returns:
+            Overlapping windows for aggregating values.
         """
         return Sliding(
             duration=duration,
@@ -179,6 +216,9 @@ class Sliding(Window):
 
         Args:
             duration: The number of days to use in the window.
+
+        Returns:
+            Overlapping windows for aggregating values.
         """
         return Sliding(
             duration=duration,
@@ -191,6 +231,9 @@ class Sliding(Window):
 
         Args:
             duration: The number of months to use in the window.
+
+        Returns:
+            Overlapping windows for aggregating values.
         """
         return Sliding(
             duration=duration,
@@ -203,6 +246,9 @@ class Sliding(Window):
 
         Args:
             duration: The number of years to use in the window.
+
+        Returns:
+            Overlapping windows for aggregating values.
         """
         return Sliding(
             duration=duration,
