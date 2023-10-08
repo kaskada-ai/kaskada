@@ -16,5 +16,5 @@ if __name__ == "__main__":
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
-    b = Builder.from_quarto_config("_quartodoc.yml")
+    b = Builder.from_quarto_config("_reference.yml")
     b.build()

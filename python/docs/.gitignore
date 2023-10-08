@@ -1,6 +1,5 @@
-/.quarto/
-/_site/
-/_inv/
+.quarto/
+_inv/
 
 reference/
 objects.json

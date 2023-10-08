@@ -1,19 +1,20 @@
 project:
   type: website
-  output-dir: _site
+  output-dir: .quarto/_site
+  #lib-dir: _static
   preview:
     port: 4200
-
-#metadata-files:
-#  - reference/_sidebar.yml
+    browser: true # Open a web browser to view the preview
+    navigate: true # Navigate the browser automatically when outputs are updated
+    watch-inputs: true # Re-render input files when they change
 
 website:
-  favicon: "_static/favicon.png"
+  favicon: "_static/images/favicon.png"
   google-analytics: G-HR9E2E6TG4
   page-navigation: true
   navbar:
     background: primary
-    logo: "_static/kaskada-negative.svg"
+    logo: "_static/images/kaskada-negative.svg"
     logo-alt: "Kaskada logo."
     title: false
     left:
@@ -56,11 +57,11 @@ website:
     border: true
     left: "© Copyright 2023, Kaskada Contributors."
   repo-url: https://github.com/kaskada-ai/kaskada/
-  repo-subdir: python/source
+  repo-subdir: python/docs
   repo-actions:
     - edit
     - source
-  site-url: https://kaskada.io/kaskada
+  site-url: https://kaskada.io
   title: Kaskada
 
 format:
@@ -69,9 +70,8 @@ format:
       light: flatly
       dark: darkly #vapor
     css:
-      - styles.css
-      - design-style.css
-    include-in-header: _announcement.html
+      - _static/css/styles.css
+    include-in-header: _templates/announcement.html
     toc: true
     link-external-icon: false
     link-external-newwindow: false
@@ -91,4 +91,3 @@ interlinks:
       url: https://arrow.apache.org/docs/
     python:
       url: https://docs.python.org/3/
-

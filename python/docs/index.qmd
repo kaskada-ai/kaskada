@@ -3,13 +3,14 @@ format:
   html:
     toc: false
     css:
-      - design-style.css
+      - _static/css/design-style.css
+      - _static/css/root.css
 
 listing:
   - id: cards
-    template: _card.ejs
+    template: _templates/card.ejs
     contents:
-      - name: "{{< fa timeline >}}Real-time Aggregation"
+      - name: "Real-time Aggregation"
         icon: timeline
         content: Precompute model inputs from streaming data with robust data connectors, transformations & aggregations.
       - name: Event Detection
@@ -21,8 +22,8 @@ listing:
 ---
 
 ::::: {.px-4 .py-5 .my-5 .text-center}
-<img class="d-block mx-auto mb-4 only-light" src="_static/kaskada-positive.svg" alt="" width="50%">
-<img class="d-block mx-auto mb-4 only-dark" src="_static/kaskada-negative.svg" alt="" width="50%">
+<img class="d-block mx-auto mb-4 only-light" src="_static/images/kaskada-positive.svg" alt="" width="50%">
+<img class="d-block mx-auto mb-4 only-dark" src="_static/images/kaskada-negative.svg" alt="" width="50%">
 <h1 class="display-5 fw-bold">Real-Time AI without the fuss.</h1>
 ::: {.col-lg-7 .mx-auto}
 [Kaskada is a next-generation streaming engine that connects AI models to real-time & historical data.]{.lead .mb-4}
