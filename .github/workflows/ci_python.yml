@@ -69,13 +69,13 @@ jobs:
           poetry install --only=main --only=lint
       - name: black
         run: |
-          poetry run black --diff pysrc pytests docs/source
+          poetry run black --diff pysrc pytests docs
       - name: flake8
         run: |
-          poetry run flake8 pysrc pytests docs/source
+          poetry run flake8 pysrc pytests docs
       - name: isort
         run: |
-          poetry run isort --filter-files --diff pysrc pytests docs/source
+          poetry run isort --filter-files --diff pysrc pytests docs
       - name: pydocstyle
         run: |
           poetry run pydocstyle pysrc
@@ -227,28 +227,19 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
-      - name: Setup QT
-        # Needed by sphinx-social-cards.
-        # https://github.com/2bndy5/sphinx-social-cards/blob/main/.github/workflows/build.yml#L54
-        run: |
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0
-          echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
       - name: Build docs
-        # ablog doesn't currently indicate whether it supports parallel reads,
-        # leading to a warning.
-        # when possible, add `"-j", "auto",` to do parallel builds (and in nox).
         run: |
           poetry env use 3.11
-          source $(poetry env info --path)/bin/activate
-          poetry install --with=docs
-          pip install ${WHEEL} --force-reinstall
-          sphinx-build docs/source docs/_build -W # -j auto
+          nox -s docs-gen
+          nox -s docs-build
           deactivate
       - name: Upload docs
         uses: actions/upload-pages-artifact@v2
         with:
           # Automatically uploads an artifact from the './_site' directory by default
-          path: ${{ github.workspace }}/python/docs/_build
+          path: ${{ github.workspace }}/python/docs/_site
 
   rust-format:
     runs-on: ubuntu-20.04
