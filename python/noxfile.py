@@ -114,6 +114,7 @@ def xdoctest(session: nox.Session) -> None:
     install(session, groups=["test"])
     session.run("python", "-m", "xdoctest", *args)
 
+
 @nox.session(name="docs-clean", python=python_versions[0])
 def docs_clean(session: nox.Session) -> None:
     """Clean up generated and cached docs"""
@@ -121,9 +122,10 @@ def docs_clean(session: nox.Session) -> None:
     for item in [".quarto", "reference", "_inv", "objects.json"]:
         p = Path("docs", item)
         if p.exists() and p.is_dir():
-            shutil.rmtree(dir)
+            shutil.rmtree(p)
         elif p.exists() and p.is_file():
             p.unlink()
+
 
 @nox.session(name="docs-gen", python=python_versions[0])
 def docs_gen(session: nox.Session) -> None:
@@ -142,6 +144,15 @@ def docs(session: nox.Session) -> None:
 
     with session.chdir("docs"):
         session.run("quarto", "preview", external=True)
+
+
+@nox.session(name="docs-build", python=python_versions[0])
+def docs_build(session: nox.Session) -> None:
+    """Build the docs."""
+    install(session, groups=["docs"])
+
+    with session.chdir("docs"):
+        session.run("quarto", "render", "--output-dir", "_site", external=True)
 
 
 def install(session: nox.Session, *, groups: Iterable[str], root: bool = True) -> None:

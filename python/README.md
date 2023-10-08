@@ -62,3 +62,11 @@ nox
   ```
 
   Try this if you see something unexpected (especially after deleting or renaming).
+
+* Builds docs to `docs/_site`
+
+  ```shell
+  nox -s docs-build
+  ```
+
+  This is primarily used in CI.

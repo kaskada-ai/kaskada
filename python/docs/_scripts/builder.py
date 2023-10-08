@@ -155,7 +155,6 @@ class Builder:
         order = 1
 
         for section in self.blueprint.sections:
-            preview(section, max_depth=4)
             if section.title:
                 last_title = section.title
                 section_text = self.renderer.render(section, order=order)
@@ -186,8 +185,13 @@ class Builder:
                 else:
                     raise NotImplementedError(f"Unsupported section item: {type(page)}")
 
-        print(f'Extra pages: {self.page_map.keys()}')
-        print(f'Extra items: {self.item_map.keys()}')
+        if len(self.page_map.keys()) > 0:
+            _log.warning(f'Extra pages: {self.page_map.keys()}')
+            _log.error(f'Linking between pages may not work properly. Fix the issue and try again')
+
+        if len(self.item_map.keys()) > 0:
+            _log.warning(f'Extra items: {self.item_map.keys()}')
+            _log.error(f'Linking between pages may not work properly. Fix the issue and try again')
 
     def update_page_items(self, page: layout.Page, location: Path, is_flat: bool):
         for doc in page.contents:

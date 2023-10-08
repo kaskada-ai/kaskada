@@ -176,7 +176,6 @@ class Renderer():
 
         if el.options and el.options.children == layout.ChoicesChildren.flat:
             for page in el.contents:
-                print(f'Page type: {type(page)}')
                 rows.append(self.render(page, is_flat=True))
             text = "\n\n".join(rows)
         else:
@@ -198,7 +197,6 @@ class Renderer():
                 rows.append(sanitize(el.summary.desc, allow_markdown=True))
 
         for item in el.contents:
-            print(f'Item type: {type(item)}')
             rows.append(self.render(item, is_flat=is_flat))
 
         return "\n\n".join(rows)

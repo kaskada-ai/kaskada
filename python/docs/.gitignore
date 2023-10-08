@@ -13,3 +13,6 @@
 index-listing.json
 data_types-listing.json
 /site_libs/
+
+# output of the site from `nox -s docs-build`
+/_site/

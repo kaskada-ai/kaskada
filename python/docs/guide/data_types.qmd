@@ -3,7 +3,7 @@ title: Data Types
 
 listing:
   - id: types
-    template: _templates/data_types_table.ejs
+    template: ../_templates/data_types_table.ejs
     contents:
       - data_types.yml
 ---
