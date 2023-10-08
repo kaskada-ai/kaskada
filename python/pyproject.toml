@@ -32,9 +32,6 @@ pyarrow = "^12.0.1"
 typing-extensions = "^4.7.1"
 graphviz = { version = "^0.20.1", optional = true }
 plotly = { version = "^5.16.1", optional = true }
-nbformat = "^5.9.2"
-nbclient = "^0.8.0"
-jupyter = "^1.0.0"
 
 [tool.poetry.extras]
 plot = ["plotly"]
@@ -84,6 +81,9 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 plotly = { version = "^5.16.1" }
 quartodoc = "~0.6.3"
+nbformat = "^5.9.2"
+nbclient = "^0.8.0"
+jupyter = "^1.0.0"
 
 [tool.poetry.group.test]
 # Dependencies for testing
