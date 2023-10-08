@@ -1,0 +1,18 @@
+# quarto build cache
+/.quarto/
+
+# quartodoc interlink artifacts
+/_inv/
+/objects.json
+
+# generated API docs
+/reference/
+
+# files that might remain if a quarto build is interrupted
+*.html
+index-listing.json
+data_types-listing.json
+/site_libs/
+
+# output of the site from `nox -s docs-build`
+/_site/
