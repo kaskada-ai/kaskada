@@ -134,7 +134,6 @@ jobs:
           done
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
-
       - name: Build docs
         run: |
           poetry env use 3.11

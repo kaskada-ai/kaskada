@@ -119,7 +119,7 @@ def xdoctest(session: nox.Session) -> None:
 def docs_clean(session: nox.Session) -> None:
     """Clean up generated and cached docs"""
 
-    for item in [".quarto", "reference", "_inv", "objects.json"]:
+    for item in ["_inv", "_site", ".quarto", "objects.json", "reference"]:
         p = Path("docs", item)
         if p.exists() and p.is_dir():
             shutil.rmtree(p)
