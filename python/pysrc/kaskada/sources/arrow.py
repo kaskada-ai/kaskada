@@ -551,8 +551,9 @@ class Parquet(Source):
         """Create a Parquet source.
 
         Args:
-            url: The url to the Parquet file to add. This should be a URL or a path relative
-              to the working directory. The URL may be an object-store URL.
+            file: The url or path of the Parquet file to add. Paths should be relative to the
+              current working directory or absolute. URLs may describe local file paths or
+              object-store locations.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use. If not provided, it will be inferred from the input.
@@ -581,6 +582,6 @@ class Parquet(Source):
             await source.add_file(url)
         return source
 
-    async def add_file(self, url: str) -> None:
+    async def add_file(self, file: str) -> None:
         """Add data to the source."""
-        await self._ffi_table.add_parquet(url)
+        await self._ffi_table.add_parquet(file)

@@ -137,7 +137,7 @@ impl Table {
         Ok(())
     }
 
-    pub async fn add_parquet(&self, url: &str) -> error_stack::Result<(), Error> {
+    pub async fn add_parquet(&self, file: &str) -> error_stack::Result<(), Error> {
         let file_sets = match &self.source {
             Source::Parquet(file_sets) => file_sets.clone(),
             other => error_stack::bail!(Error::internal_msg(format!(
@@ -146,7 +146,7 @@ impl Table {
             ))),
         };
         let url =
-            ObjectStoreUrl::from_str(url).change_context(Error::InvalidUrl(url.to_owned()))?;
+            ObjectStoreUrl::from_str(file).change_context(Error::InvalidUrl(file.to_owned()))?;
 
         let prepared = self
             .preparer

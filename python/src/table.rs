@@ -86,10 +86,10 @@ impl Table {
         })?)
     }
 
-    fn add_parquet<'py>(&mut self, py: Python<'py>, url: String) -> Result<&'py PyAny> {
+    fn add_parquet<'py>(&mut self, py: Python<'py>, file: String) -> Result<&'py PyAny> {
         let rust_table = self.rust_table.clone();
         Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
-            let result = rust_table.add_parquet(&url).await;
+            let result = rust_table.add_parquet(&file).await;
             Python::with_gil(|py| {
                 result.unwrap();
                 Ok(py.None())
