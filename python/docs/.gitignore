@@ -9,7 +9,10 @@
 /reference/
 
 # files that might remain if a quarto build is interrupted
-*.html
+index.html
+/blog/*.html
+/examples/*.html
+/guide/*.html
 index-listing.json
 data_types-listing.json
 /site_libs/
