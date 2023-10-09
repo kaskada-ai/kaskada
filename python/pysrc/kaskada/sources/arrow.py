@@ -551,9 +551,8 @@ class Parquet(Source):
         """Create a Parquet source.
 
         Args:
-            url: The url to the Parquet file to add. This should be a local `file://` URL
-              relative the working direcotory or an absolute file URI, or an object-store
-              URL.
+            url: The url to the Parquet file to add. This should be a URL or a path relative
+              to the working directory. The URL may be an object-store URL.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use. If not provided, it will be inferred from the input.

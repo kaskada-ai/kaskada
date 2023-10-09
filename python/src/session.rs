@@ -46,7 +46,6 @@ pub(crate) fn parquet_schema<'py>(
 
     Ok(pyo3_asyncio::tokio::future_into_py(py,
         async move {
-            println!("Schema: {url}");
             let file = sparrow_runtime::read::ParquetFile::try_new(
                 registry.as_ref(),
                 url,

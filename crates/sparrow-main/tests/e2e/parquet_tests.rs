@@ -120,40 +120,6 @@ async fn test_timestamp_microseconds() {
 }
 
 #[tokio::test]
-async fn test_ury() {
-    let data_fixture = DataFixture::new()
-        .with_table_from_files(
-            TableConfig::new_with_table_source(
-                "Purchases",
-                &Uuid::new_v4(),
-                "purchase_time",
-                None,
-                "customer_id",
-                "subsort_id",
-            ),
-            &["purchases/purchases part1.parquet"],
-        )
-        .await
-        .unwrap();
-
-    insta::assert_snapshot!(QueryFixture::new("Events").run_to_csv(&data_fixture).await.unwrap(), @r###"
-    _time,_subsort,_key_hash,_key,time,user_id
-    1970-01-01T00:00:00.001000000,17227329910109684520,13074916891489937275,a,1970-01-01T00:00:00.001000000,a
-    1970-01-01T00:00:00.001001000,17227329910109684521,12352002978215245678,b,1970-01-01T00:00:00.001001000,b
-    1970-01-01T00:00:00.001002000,17227329910109684522,298518813902531243,c,1970-01-01T00:00:00.001002000,c
-    1970-01-01T00:00:00.001003000,17227329910109684523,5884497185123646446,d,1970-01-01T00:00:00.001003000,d
-    "###);
-    // async def test_invalid_uri(golden) -> None:
-    // source = await kd.sources.Parquet.create(
-    //     "../testdata/purchases/purchases part1.parquet",
-    //     time_column="purchase_time",
-    //     key_column="customer_id",
-    //     subsort_column="subsort_id",
-    // )
-    // golden.jsonl(source)
-}
-
-#[tokio::test]
 async fn test_multi_file_purchases() {
     let data_fixture = DataFixture::new()
         .with_table_from_files(
