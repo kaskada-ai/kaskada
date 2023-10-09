@@ -232,6 +232,7 @@ jobs:
       - name: Build docs
         run: |
           poetry env use 3.11
+          poetry install --only=dev
           nox -s docs-gen
           nox -s docs-build
           deactivate
