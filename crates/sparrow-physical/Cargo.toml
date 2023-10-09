@@ -12,13 +12,14 @@ Physical execution plans for Kaskada queries.
 [dependencies]
 arrow-schema.workspace = true
 index_vec.workspace = true
+serde_yaml.workspace = true
 serde.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 strum_macros.workspace = true
+tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
-serde_yaml.workspace = true
 insta.workspace = true
 
 [lib]

@@ -18,6 +18,11 @@ pub fn compile(
         Cow::Owned(CompileOptions::default())
     };
 
-    let physical = LogicalToPhysical::new().apply(root)?;
+    // Convert the logical expression tree to a physical plan.
+    let mut physical = LogicalToPhysical::new().apply(root)?;
+
+    // Schedule the steps in the physical plan.
+    physical.pipelines = crate::pipeline_schedule(&physical.steps);
+
     Ok(physical)
 }

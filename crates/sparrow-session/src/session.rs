@@ -563,11 +563,26 @@ impl Session {
             .map_err(|e| e.change_context(Error::Execute))
             .boxed();
 
+        // Create a future that resolves to either `Err(first_error)` or `Ok`.
+        let future = Box::pin(async move {
+            let mut errors = progress
+                .filter_map(|result| {
+                    futures::future::ready(if let Err(e) = result { Some(e) } else { None })
+                })
+                .boxed();
+            let first_error = errors.next().await;
+            if let Some(first_error) = first_error {
+                Err(first_error)
+            } else {
+                Ok(())
+            }
+        });
+
         let handle = self.rt.handle().clone();
         Ok(Execution::new(
             handle,
             output_rx,
-            progress,
+            future,
             stop_signal_tx,
             schema,
         ))

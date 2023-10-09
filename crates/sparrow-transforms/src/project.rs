@@ -97,13 +97,13 @@ mod tests {
                 result_type: input_type.clone(),
             },
             sparrow_physical::Expr {
-                name: "field_ref".into(),
+                name: "fieldref".into(),
                 literal_args: vec![ScalarValue::Utf8(Some("a".to_owned()))],
                 args: vec![0.into()],
                 result_type: DataType::Int64,
             },
             sparrow_physical::Expr {
-                name: "field_ref".into(),
+                name: "fieldref".into(),
                 literal_args: vec![ScalarValue::Utf8(Some("b".to_owned()))],
                 args: vec![0.into()],
                 result_type: DataType::Int64,

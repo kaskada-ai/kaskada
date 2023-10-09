@@ -13,10 +13,12 @@ Scheduler for managing local, multi-threaded execution.
 core_affinity.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
+hashbrown.workspace = true
 index_vec.workspace = true
 itertools.workspace = true
+parking_lot.workspace = true
 serde.workspace = true
-sparrow-arrow = { path = "../sparrow-arrow" }
+smallvec.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
 tracing.workspace = true
 work-queue = "0.1.4"

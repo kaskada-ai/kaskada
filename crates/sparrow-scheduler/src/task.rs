@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use error_stack::ResultExt;
 
+use crate::pending::PendingPartition;
 use crate::schedule_count::ScheduleCount;
-use crate::{Error, Partition, Pipeline, Scheduler};
+use crate::{Error, Pipeline, Scheduler};
 
 /// The unit of work executed by the scheduler.
 ///
@@ -11,16 +12,14 @@ use crate::{Error, Partition, Pipeline, Scheduler};
 /// single [Pipeline] and produces a single unit of output (typically a batch).
 #[derive(Debug)]
 pub struct Task {
-    /// Index of this pipeline. Used for debugging.
-    index: usize,
+    /// Entry recording the status (pending or not) of this task.
+    pending: PendingPartition,
     /// Name of the pipeline implementation.
     name: &'static str,
     /// The pipeline to execute.
     ///
     /// This is a weak reference to avoid cycles.
     pipeline: std::sync::Weak<dyn Pipeline>,
-    /// The partition of the pipeline to execute.
-    partition: Partition,
     /// An atomic counter tracking how many times the task has been submitted.
     ///
     /// This is reset after the task is executed.
@@ -30,16 +29,14 @@ pub struct Task {
 impl Task {
     /// Create a new task executing the given pipeline and partition.
     pub(crate) fn new(
-        index: usize,
+        pending: PendingPartition,
         name: &'static str,
         pipeline: std::sync::Weak<dyn Pipeline>,
-        partition: Partition,
     ) -> Self {
         Self {
-            index,
+            pending,
             name,
             pipeline,
-            partition,
             schedule_count: ScheduleCount::default(),
         }
     }
@@ -59,18 +56,18 @@ impl Task {
 
     fn pipeline(&self) -> error_stack::Result<Arc<dyn Pipeline>, Error> {
         Ok(self.pipeline.upgrade().ok_or(Error::PipelineDropped {
-            index: self.index,
+            index: self.pending.pipeline_index,
             name: self.name,
-            partition: self.partition,
+            partition: self.pending.partition,
         })?)
     }
 
     fn error(&self, method: &'static str) -> Error {
         Error::Pipeline {
             method,
-            index: self.index,
+            index: self.pending.pipeline_index,
             name: self.name,
-            partition: self.partition,
+            partition: self.pending.partition,
         }
     }
 
@@ -81,9 +78,20 @@ impl Task {
     ) -> error_stack::Result<bool, Error> {
         let guard = self.schedule_count.guard();
         self.pipeline()?
-            .do_work(self.partition, scheduler)
+            .do_work(self.pending.partition, scheduler)
             .change_context_lazy(|| self.error("do_work"))?;
         Ok(guard.finish())
+    }
+
+    /// Mark this task as completed.
+    ///
+    /// After this, it should not be scheduled nor should work be done.
+    pub fn complete(&self) {
+        self.pending.complete()
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.pending.is_complete()
     }
 }
 

@@ -39,6 +39,10 @@ impl InMemory {
 }
 
 impl Source for InMemory {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn prepared_schema(&self) -> SchemaRef {
         self.prepared_schema.clone()
     }
@@ -46,8 +50,8 @@ impl Source for InMemory {
     fn read(
         &self,
         projected_datatype: &DataType,
-        read_config: ReadConfig,
-    ) -> futures::stream::BoxStream<'_, error_stack::Result<Batch, SourceError>> {
+        read_config: Arc<ReadConfig>,
+    ) -> futures::stream::BoxStream<'static, error_stack::Result<Batch, SourceError>> {
         assert_eq!(
             &DataType::Struct(self.prepared_schema().fields().clone()),
             projected_datatype,

@@ -77,6 +77,23 @@ impl Batch {
         })
     }
 
+    pub fn into_record_batch(self, schema: Arc<Schema>) -> Option<RecordBatch> {
+        self.data.map(|data| {
+            if let Some(fields) = data.data.as_struct_opt() {
+                let mut columns = Vec::with_capacity(3 + fields.num_columns());
+                columns.extend_from_slice(&[data.time, data.subsort, data.key_hash]);
+                columns.extend_from_slice(fields.columns());
+                RecordBatch::try_new(schema, columns).expect("create_batch")
+            } else {
+                RecordBatch::try_new(
+                    schema,
+                    vec![data.time, data.subsort, data.key_hash, data.data],
+                )
+                .expect("create_batch")
+            }
+        })
+    }
+
     pub fn is_empty(&self) -> bool {
         self.data.is_none()
     }

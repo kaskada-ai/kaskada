@@ -59,7 +59,7 @@ steps:
       - name: input
         literal_args: []
         args: []
-        result_type: Float64
+        result_type: "Null"
       - name: fieldref
         literal_args:
           - Utf8: step_1

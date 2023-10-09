@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 use sparrow_batch::Batch;
 use sparrow_physical::{StepId, StepKind};
 use sparrow_scheduler::{
-    Partition, Partitioned, Pipeline, PipelineError, PipelineInput, Scheduler, TaskRef,
+    InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
 };
 
 use crate::transform::Transform;
@@ -17,8 +17,8 @@ pub struct TransformPipeline {
     /// The state for each partition.
     partitions: Partitioned<TransformPartition>,
     transforms: Vec<Box<dyn Transform>>,
-    /// Sink for the down-stream computation.
-    sink: PipelineInput,
+    /// Input handles for the consuming (receiving) computations.
+    consumers: InputHandles,
 }
 
 impl std::fmt::Debug for TransformPipeline {
@@ -82,12 +82,21 @@ pub enum Error {
 impl error_stack::Context for Error {}
 
 impl TransformPipeline {
+    /// Create a new transform pipeline.
+    ///
+    /// Args:
+    ///   first_step_input_id: The `StepId` of the step that produces input to
+    ///     this pipeline. It should be the only input step to the first step in
+    ///     `steps`.
+    ///   steps: Iterator over the steps (in order) comprising the pipeline.
+    ///     They should all be transforms.
+    ///   consumers: The `InputHandles` to output the result of the transform to.
     pub fn try_new<'a>(
-        input_step: &sparrow_physical::Step,
+        first_step_input_id: StepId,
         steps: impl Iterator<Item = &'a sparrow_physical::Step> + ExactSizeIterator,
-        sink: PipelineInput,
+        consumers: InputHandles,
     ) -> error_stack::Result<Self, Error> {
-        let mut input_step = input_step;
+        let mut input_step_id = first_step_input_id;
         let mut transforms = Vec::with_capacity(steps.len());
         for step in steps {
             error_stack::ensure!(
@@ -98,9 +107,9 @@ impl TransformPipeline {
                 }
             );
             error_stack::ensure!(
-                step.inputs[0] == input_step.id,
+                step.inputs[0] == input_step_id,
                 Error::UnexpectedInput {
-                    expected: input_step.id,
+                    expected: input_step_id,
                     actual: step.inputs[0]
                 }
             );
@@ -125,12 +134,12 @@ impl TransformPipeline {
                 }
             };
             transforms.push(transform);
-            input_step = step;
+            input_step_id = step.id;
         }
         Ok(Self {
             partitions: Partitioned::default(),
             transforms,
-            sink,
+            consumers,
         })
     }
 }
@@ -169,7 +178,6 @@ impl Pipeline for TransformPipeline {
                 input_partition
             }
         );
-
         partition.add_input(batch);
         scheduler.schedule(partition.task.clone());
         Ok(())
@@ -218,7 +226,7 @@ impl Pipeline for TransformPipeline {
                 partition.is_input_closed(),
                 PipelineError::illegal_state("scheduled without work")
             );
-            return self.sink.close_input(input_partition, scheduler);
+            return self.consumers.close_input(input_partition, scheduler);
         };
 
         tracing::trace!(
@@ -244,7 +252,7 @@ impl Pipeline for TransformPipeline {
 
             // If the result is non-empty, output it.
             if !batch.is_empty() {
-                self.sink
+                self.consumers
                     .add_input(input_partition, batch, scheduler)
                     .change_context(PipelineError::Execution)?;
             }
@@ -252,9 +260,11 @@ impl Pipeline for TransformPipeline {
 
         // If the input is closed and empty, then we should close the sink.
         if partition.is_input_closed() && partition.is_input_empty() {
-            self.sink
+            tracing::info!("Input is closed and empty. Closing consumers");
+            self.consumers
                 .close_input(input_partition, scheduler)
                 .change_context(PipelineError::Execution)?;
+            partition.task.complete();
         }
 
         // Note: We don't re-schedule the transform if there is input.

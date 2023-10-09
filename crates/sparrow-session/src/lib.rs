@@ -10,6 +10,7 @@
 mod error;
 mod execution;
 mod expr;
+pub mod partitioned;
 mod session;
 mod table;
 

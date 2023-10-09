@@ -19,8 +19,12 @@ futures.workspace = true
 itertools.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
+sparrow-backend = { path = "../sparrow-backend" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-merge = { path = "../sparrow-merge" }
+sparrow-execution = { path = "../sparrow-execution" }
+sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
+sparrow-logical = { path = "../sparrow-logical" }
 sparrow-runtime = { path = "../sparrow-runtime" }
 sparrow-sources = { path = "../sparrow-sources" }
 sparrow-syntax = { path = "../sparrow-syntax" }

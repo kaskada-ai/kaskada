@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use crate::pending::PendingSet;
 use crate::{queue::*, Error, TaskRef};
 
 pub trait Scheduler {
@@ -71,15 +74,34 @@ pub struct Worker {
 
 impl Worker {
     /// Run the work loop to completion.
-    pub(crate) fn work_loop(mut self) -> error_stack::Result<(), Error> {
-        while let Some(task) = self.queue.pop() {
-            if task.do_work(&mut self)? {
-                // This means that the task was schedule while we were executing.
-                // As a result, we didn't add it to any queue yet, so we need to
-                // do so now.
-                self.queue.push_global(task);
+    pub(crate) fn work_loop(
+        mut self,
+        index: usize,
+        pending_set: Arc<PendingSet>,
+    ) -> error_stack::Result<(), Error> {
+        loop {
+            while let Some(task) = self.queue.pop() {
+                tracing::info!("Running task: {task:?} on worker {index}");
+                if task.do_work(&mut self)? {
+                    // This means that the task was scheduled while we were executing.
+                    // As a result, we didn't add it to any queue yet, so we need to
+                    // do so now.
+                    self.queue.push_global(task);
+                }
+            }
+
+            let pending_count = pending_set.pending_partition_count();
+            if pending_count == 0 {
+                break;
+            } else {
+                // Right now, this "busy-waits" by immediately trying to pull more work.
+                // This potentially leads to thread thrashing. We should instead call
+                // `thread::park` to park this thread, and call thread::unpark` when
+                // work is added to the global queue / back of the local queues.
             }
         }
+
+        tracing::info!("All partitions completed. Shutting down worker {index}");
         Ok(())
     }
 }

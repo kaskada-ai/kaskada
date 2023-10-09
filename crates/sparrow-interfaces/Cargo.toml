@@ -15,7 +15,6 @@ derive_more.workspace = true
 error-stack.workspace = true
 futures.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
-sparrow-core = { path = "../sparrow-core" }
 
 [dev-dependencies]
 

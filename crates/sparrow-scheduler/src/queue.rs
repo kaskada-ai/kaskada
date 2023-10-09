@@ -32,7 +32,7 @@ impl<T> Clone for GlobalQueue<T> {
     }
 }
 
-impl<T> GlobalQueue<T> {
+impl<T: std::fmt::Debug> GlobalQueue<T> {
     pub(crate) fn new(local_queues: usize, local_queue_size: u16) -> Self {
         Self {
             queue: work_queue::Queue::new(local_queues, local_queue_size),
@@ -53,7 +53,7 @@ impl<T> GlobalQueue<T> {
     }
 }
 
-impl<T> LocalQueue<T> {
+impl<T: std::fmt::Debug> LocalQueue<T> {
     /// Pop an item from the local queue, or steal from the global and sibling queues if it is empty.
     pub fn pop(&mut self) -> Option<T> {
         self.queue.pop()

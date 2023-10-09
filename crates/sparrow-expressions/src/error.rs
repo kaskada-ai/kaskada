@@ -73,8 +73,11 @@ pub enum Error {
         b_label: &'static str,
         b_len: usize,
     },
-    #[display(fmt = "no field named '{field_name}' in struct")]
-    NoSuchField { field_name: String },
+    #[display(fmt = "no field named '{field_name}' in struct '{fields:?}")]
+    NoSuchField {
+        field_name: String,
+        fields: arrow_schema::Fields,
+    },
     #[display(fmt = "unsupported: {_0}")]
     Unsupported(Cow<'static, str>),
 }

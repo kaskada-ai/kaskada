@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow_schema::{DataType, SchemaRef};
 use futures::stream::BoxStream;
 use sparrow_batch::Batch;
@@ -21,12 +23,34 @@ pub trait Source: Send + Sync {
     fn read(
         &self,
         projected_datatype: &DataType,
-        read_config: ReadConfig,
-    ) -> BoxStream<'_, error_stack::Result<Batch, SourceError>>;
+        read_config: Arc<ReadConfig>,
+    ) -> BoxStream<'static, error_stack::Result<Batch, SourceError>>;
+
+    /// Allow downcasting the source.
+    fn as_any(&self) -> &dyn std::any::Any;
+}
+
+pub trait SourceExt {
+    fn downcast_source_opt<T: Source + 'static>(&self) -> Option<&T>;
+    fn downcast_source<T: Source + 'static>(&self) -> &T {
+        self.downcast_source_opt().expect("unexpected type")
+    }
+}
+
+impl SourceExt for Arc<dyn Source> {
+    fn downcast_source_opt<T: Source + 'static>(&self) -> Option<&T> {
+        self.as_any().downcast_ref()
+    }
+}
+
+impl SourceExt for &Arc<dyn Source> {
+    fn downcast_source_opt<T: Source + 'static>(&self) -> Option<&T> {
+        self.as_any().downcast_ref()
+    }
 }
 
 /// Defines the configuration for a read from a source.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ReadConfig {
     /// If true, the read will act as an unbounded source and continue reading
     /// as new data is added. It is on the consumer to close the channel.

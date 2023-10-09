@@ -32,7 +32,20 @@ steps:
       - name: input
         literal_args: []
         args: []
-        result_type: Int64
+        result_type:
+          Struct:
+            - name: x
+              data_type: Int64
+              nullable: false
+              dict_id: 0
+              dict_is_ordered: false
+              metadata: {}
+            - name: y
+              data_type: Float64
+              nullable: false
+              dict_id: 0
+              dict_is_ordered: false
+              metadata: {}
       - name: fieldref
         literal_args:
           - Utf8: x
