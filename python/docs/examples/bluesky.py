@@ -79,13 +79,15 @@ async def main():
 
             # The parsing produces a hot mess of incompatible types, so we build
             # a dict from scratch to simplify.
-            posts.add_rows({
-                "record": dict(new_post["record"]),
-                "uri": new_post["uri"],
-                "cid": new_post["cid"],
-                "author": new_post["author"],
-                "ts": time.time(),
-            })
+            posts.add_rows(
+                {
+                    "record": dict(new_post["record"]),
+                    "uri": new_post["uri"],
+                    "cid": new_post["cid"],
+                    "author": new_post["author"],
+                    "ts": time.time(),
+                }
+            )
 
     # Handler for values emitted by Kaskada.
     async def receive_outputs():

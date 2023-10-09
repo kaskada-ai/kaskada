@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import logging
 import sys
-
 from pathlib import Path
-from pydantic import ValidationError
-
-from quartodoc.inventory import create_inventory, convert_inventory
-from quartodoc import layout, preview, blueprint, collect
-from quartodoc.validation import fmt
-
 from typing import Any, Union
 
+from pydantic import ValidationError
+from quartodoc import blueprint, collect, layout, preview
+from quartodoc.inventory import convert_inventory, create_inventory
+from quartodoc.validation import fmt
 from renderer import Renderer
 from summarizer import Summarizer
 
@@ -136,7 +133,7 @@ class Builder:
         convert_inventory(inv, self.out_inventory)
 
     def get_package(self, item: Union[layout.Section, layout.Page]) -> str:
-        if item.package and f'{item.package}' != "":
+        if item.package and f"{item.package}" != "":
             return item.package
         else:
             return self.package
@@ -167,7 +164,10 @@ class Builder:
             section_path = location / self.out_index
             self.write_page_if_not_exists(section_path, section_text)
 
-            is_flat = section.options and section.options.children == layout.ChoicesChildren.flat
+            is_flat = (
+                section.options
+                and section.options.children == layout.ChoicesChildren.flat
+            )
 
             for page in section.contents:
                 if isinstance(page, layout.Page):
@@ -186,24 +186,32 @@ class Builder:
                     raise NotImplementedError(f"Unsupported section item: {type(page)}")
 
         if len(self.page_map.keys()) > 0:
-            _log.warning(f'Extra pages: {self.page_map.keys()}')
-            _log.error(f'Linking between pages may not work properly. Fix the issue and try again')
+            _log.warning(f"Extra pages: {self.page_map.keys()}")
+            _log.error(
+                f"Linking between pages may not work properly. Fix the issue and try again"
+            )
 
         if len(self.item_map.keys()) > 0:
-            _log.warning(f'Extra items: {self.item_map.keys()}')
-            _log.error(f'Linking between pages may not work properly. Fix the issue and try again')
+            _log.warning(f"Extra items: {self.item_map.keys()}")
+            _log.error(
+                f"Linking between pages may not work properly. Fix the issue and try again"
+            )
 
     def update_page_items(self, page: layout.Page, location: Path, is_flat: bool):
         for doc in page.contents:
             if isinstance(doc, layout.Doc):
-                page_path = f'{location}/index.html' if is_flat else f'{location}/{page.path}.html'
+                page_path = (
+                    f"{location}/index.html"
+                    if is_flat
+                    else f"{location}/{page.path}.html"
+                )
                 self.update_items(doc, page_path)
             else:
                 raise NotImplementedError(f"Unsupported page item: {type(doc)}")
 
     def update_items(self, doc: layout.Doc, page_path: str):
         name = doc.obj.path
-        uri = f'{page_path}#{doc.anchor}'
+        uri = f"{page_path}#{doc.anchor}"
 
         # item corresponding to the specified path ----
         # e.g. this might be a top-level import
@@ -213,7 +221,7 @@ class Builder:
             del self.item_map[name]
         else:
             item = layout.Item(uri=uri, name=name, obj=doc.obj, dispname=None)
-            _log.warning(f'Missing item, adding it: {item}')
+            _log.warning(f"Missing item, adding it: {item}")
         self.items.append(item)
 
         canonical_path = doc.obj.canonical_path
@@ -225,8 +233,10 @@ class Builder:
                 item.uri = uri
                 del self.item_map[canonical_path]
             else:
-                item = layout.Item(uri=uri, name=canonical_path, obj=doc.obj, dispname=name)
-                _log.warning(f'Missing item, adding it: {item}')
+                item = layout.Item(
+                    uri=uri, name=canonical_path, obj=doc.obj, dispname=name
+                )
+                _log.warning(f"Missing item, adding it: {item}")
             self.items.append(item)
 
         # recurse in 😊

@@ -1063,7 +1063,9 @@ class Timestream(object):
     def preview(
         self,
         limit: int = 10,
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
     ) -> pd.DataFrame:
         """Preview the points in this TimeStream as a DataFrame.
 
@@ -1075,7 +1077,9 @@ class Timestream(object):
 
     def to_pandas(
         self,
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
         *,
         row_limit: Optional[int] = None,
     ) -> pd.DataFrame:
@@ -1086,9 +1090,10 @@ class Timestream(object):
             row_limit: The maximum number of rows to return. Defaults to `None` for no limit.
 
         See Also:
-            - [](`~kaskada.Timestream.preview`): For quick peeks at the contents of a TimeStream during development.
-            - [](`~kaskada.Timestream.write`): For writing results to supported destinations without passing through
-                  Pandas.
+            - [](`~kaskada.Timestream.preview`): For quick peeks at the contents of a TimeStream during
+                development.
+            - [](`~kaskada.Timestream.write`): For writing results to supported destinations without
+                passing through Pandas.
             - [](`~kaskada.Timestream.run_iter`): For non-blocking (iterator or async iterator) execution.
         """
         execution = self._execute(results, row_limit=row_limit)
@@ -1101,7 +1106,9 @@ class Timestream(object):
         self,
         destination: kaskada.destinations.Destination,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
     ) -> Execution:
         """Execute the TimeStream writing to the given destination.
 
@@ -1125,7 +1132,9 @@ class Timestream(object):
         kind: Literal["pandas"] = "pandas",
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> ResultIterator[pd.DataFrame]:
@@ -1137,7 +1146,9 @@ class Timestream(object):
         kind: Literal["pyarrow"],
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> ResultIterator[pa.RecordBatch]:
@@ -1149,7 +1160,9 @@ class Timestream(object):
         kind: Literal["row"],
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> ResultIterator[dict]:
@@ -1160,7 +1173,9 @@ class Timestream(object):
         kind: Literal["pandas", "pyarrow", "row"] = "pandas",
         *,
         mode: Literal["once", "live"] = "once",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
         row_limit: Optional[int] = None,
         max_batch_size: Optional[int] = None,
     ) -> Union[
@@ -1203,7 +1218,9 @@ class Timestream(object):
     def explain(
         self,
         kind: Literal["initial_dfg", "final_dfg", "final_plan"] = "final_plan",
-        results: Optional[Union[kaskada.results.History, kaskada.results.Snapshot]] = None,
+        results: Optional[
+            Union[kaskada.results.History, kaskada.results.Snapshot]
+        ] = None,
         mode: Literal["once", "live"] = "once",
     ) -> "graphviz.Source":
         """Return an explanation of this Timestream will be executed.

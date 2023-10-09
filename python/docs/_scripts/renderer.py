@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+from typing import Optional, Union
+
 import quartodoc.ast as qast
-
-from griffe.docstrings import dataclasses as ds
 from griffe import dataclasses as dc
-from tabulate import tabulate
+from griffe.docstrings import dataclasses as ds
 from plum import dispatch
-from typing import Union, Optional
 from quartodoc import layout
-
 from summarizer import Summarizer
+from tabulate import tabulate
+
 
 try:
     # Name and Expression were moved to expressions in v0.28
@@ -49,7 +49,7 @@ def sanitize(val: str, allow_markdown=False):
     return res
 
 
-class Renderer():
+class Renderer:
     """Render docstrings to markdown."""
 
     summarizer = Summarizer()
@@ -61,7 +61,7 @@ class Renderer():
         display_name = f"**{prefix}.**[**{name}**]{{.red}}"
 
         if isinstance(el, dc.Object):
-            if 'staticmethod' in el.labels:
+            if "staticmethod" in el.labels:
                 display_name = "***static*** " + display_name
 
         text = [display_name]
@@ -78,23 +78,25 @@ class Renderer():
 
         return el.parameters
 
-    def _render_definition_list(self, title: str, items: [str], title_class: Optional[str] = None) -> str:
+    def _render_definition_list(
+        self, title: str, items: [str], title_class: Optional[str] = None
+    ) -> str:
         rows = [title]
         for item in items:
             if len(rows) == 1:
-                rows.append(f'~   {item}')
+                rows.append(f"~   {item}")
             else:
-                rows.append(f'    {item}')
+                rows.append(f"    {item}")
         if title_class:
-            rows.insert(0, f':::{{.{title_class}}}')
-            rows.append(':::')
+            rows.insert(0, f":::{{.{title_class}}}")
+            rows.append(":::")
         return "\n" + "\n".join(rows)
 
     def _render_header(self, title: str, order: Optional[int] = None) -> str:
         text = ["---"]
-        text.append(f'title: {title}')
+        text.append(f"title: {title}")
         if order:
-            text.append(f'order: {order}')
+            text.append(f"order: {order}")
         text.append("---")
         return "\n".join(text)
 
@@ -190,7 +192,7 @@ class Renderer():
         if el.summary:
             if el.summary.name:
                 if is_flat:
-                    rows.append(f'## {el.summary.name}')
+                    rows.append(f"## {el.summary.name}")
                 else:
                     rows.append(self._render_header(el.summary.name))
             if el.summary.desc:
@@ -206,7 +208,9 @@ class Renderer():
         raise NotImplementedError(f"Unsupported Doc type: {type(el)}")
 
     @dispatch
-    def render(self, el: Union[layout.DocClass, layout.DocModule], is_flat: bool = False) -> str:
+    def render(
+        self, el: Union[layout.DocClass, layout.DocModule], is_flat: bool = False
+    ) -> str:
         title = "" if is_flat else self._render_header(el.name)
 
         sig = self.signature(el)
@@ -219,7 +223,8 @@ class Renderer():
             if raw_attrs and not _has_attr_section(el.obj.docstring):
                 attr_rows = map(self.render, raw_attrs)
                 attr_text = self._render_definition_list(
-                    "Attributes:", attr_rows, title_class="highlight")
+                    "Attributes:", attr_rows, title_class="highlight"
+                )
                 body_rows.extend(attr_text.split("\n"))
 
             # add classes
@@ -358,15 +363,17 @@ class Renderer():
         for param in el.value:
             name = sanitize(param.name)
             anno = self.render_annotation(param.annotation)
-            default = f', default: {escape(param.default)}' if param.default else ""
+            default = f", default: {escape(param.default)}" if param.default else ""
 
-            rows.append(f'{prefix}**{name}** ({anno}{default})')
+            rows.append(f"{prefix}**{name}** ({anno}{default})")
             rows.append("")
             for row in param.description.split("\n"):
-                rows.append(f'{follow}{row}')
+                rows.append(f"{follow}{row}")
             rows.append("")
 
-        return self._render_definition_list("Parameters:", rows, title_class="highlight")
+        return self._render_definition_list(
+            "Parameters:", rows, title_class="highlight"
+        )
 
     # attributes ----
 
@@ -380,13 +387,15 @@ class Renderer():
         for attr in el.value:
             name = sanitize(attr.name)
             anno = self.render_annotation(attr.annotation)
-            rows.append(f'{prefix}**{name}** ({anno})')
+            rows.append(f"{prefix}**{name}** ({anno})")
             rows.append("")
             for row in attr.description.split("\n"):
-                rows.append(f'{follow}{row}')
+                rows.append(f"{follow}{row}")
             rows.append("")
 
-        return self._render_definition_list("Attributes:", rows, title_class="highlight")
+        return self._render_definition_list(
+            "Attributes:", rows, title_class="highlight"
+        )
 
     # examples ----
 
@@ -419,7 +428,7 @@ class Renderer():
             title = prefix
             name = sanitize(item.name)
             if name:
-                title += f'**{name}**'
+                title += f"**{name}**"
 
             return_type = self.render_annotation(item.annotation)
             if return_type:
@@ -431,7 +440,7 @@ class Renderer():
             if item.description:
                 rows.append("")
                 for row in item.description.split("\n"):
-                    rows.append(f'{follow}{row}')
+                    rows.append(f"{follow}{row}")
                 rows.append("")
 
         return self._render_definition_list("Returns:", rows, title_class="highlight")
@@ -446,10 +455,10 @@ class Renderer():
         for item in el.value:
             # name = sanitize(item.name)
             anno = self.render_annotation(item.annotation)
-            rows.append(f'{prefix}{anno}')
+            rows.append(f"{prefix}{anno}")
             rows.append("")
             for row in item.description.split("\n"):
-                rows.append(f'{follow}{row}')
+                rows.append(f"{follow}{row}")
             rows.append("")
 
         return self._render_definition_list("Raises:", rows, title_class="highlight")
@@ -465,7 +474,7 @@ class Renderer():
             rows.append(f'::: {{.callout-tip title="{el.title}"}}')
 
         rows.append(el.value.description)
-        rows.append(':::')
+        rows.append(":::")
 
         return "\n".join(rows)
 
