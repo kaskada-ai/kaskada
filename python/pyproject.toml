@@ -79,6 +79,7 @@ mypy = ">=0.930"
 pandas-stubs = "^2.0.2"
 typeguard = ">=2.13.3"
 graphviz = { version = "^0.20.1" }
+boto3-stubs = {extras = ["s3"], version = "^1.28.62"}
 
 [tool.poetry.group.docs]
 # Dependencies for documentation.
