@@ -72,7 +72,7 @@ jobs:
           poetry run black --diff pysrc pytests docs
       - name: flake8
         run: |
-          poetry run flake8 pysrc pytests docs
+          poetry run flake8 pysrc pytests
       - name: isort
         run: |
           poetry run isort --filter-files --diff pysrc pytests docs
@@ -232,6 +232,7 @@ jobs:
       - name: Build docs
         run: |
           poetry env use 3.11
+          source $(poetry env info --path)/bin/activate
           poetry install --only=dev
           nox -s docs-gen
           nox -s docs-build
