@@ -233,9 +233,12 @@ jobs:
         run: |
           poetry env use 3.11
           source $(poetry env info --path)/bin/activate
-          poetry install --only=dev
-          nox -s docs-gen
-          nox -s docs-build
+          poetry install --with=docs
+          pip install ${WHEEL} --force-reinstall
+          cd docs
+          python _scripts/gen_reference.py
+          python -m quartodoc interlinks
+          quarto render --output-dir _site
           deactivate
       - name: Upload docs
         uses: actions/upload-pages-artifact@v2
