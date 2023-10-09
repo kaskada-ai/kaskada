@@ -140,6 +140,10 @@ def docs_gen(session: nox.Session) -> None:
 @nox.session(python=python_versions[0])
 def docs(session: nox.Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
+    if not shutil.which("quarto"):
+        session.error("Unable to execute `quarto`. Is it installed and in your path?\n"
+                      "See https://quarto.org/docs/get-started/")
+
     install(session, groups=["docs"])
 
     with session.chdir("docs"):
@@ -149,6 +153,10 @@ def docs(session: nox.Session) -> None:
 @nox.session(name="docs-build", python=python_versions[0])
 def docs_build(session: nox.Session) -> None:
     """Build the docs."""
+    if not shutil.which("quarto"):
+        session.error("Unable to execute `quarto`. Is it installed and in your path?\n"
+                      "See https://quarto.org/docs/get-started/")
+
     install(session, groups=["docs"])
 
     with session.chdir("docs"):

@@ -21,6 +21,8 @@ website:
         text: User Guide
       - href: examples/index.qmd
         text: Examples
+      - href: community/index.qmd
+        text: Community
       - href: reference/index.qmd
         text: API
       - href: blog/index.qmd
@@ -48,6 +50,9 @@ website:
       - guide/execution.qmd
   - title: Examples
     contents: examples
+  - title: Community
+    contents:
+      - community/index.qmd
   - title: API
     style: docked
     contents: reference

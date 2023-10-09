@@ -44,7 +44,7 @@ nox
 * Generate reference docs
 
   ```shell
-  nox -s gen-docs
+  nox -s docs-gen
   ```
 
   You should re-run this after making any updates to the `pysrc` docstrings.
@@ -71,4 +71,3 @@ nox
   ```
 
   This is primarily used in CI.
-  

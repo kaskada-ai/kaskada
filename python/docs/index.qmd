@@ -3,7 +3,6 @@ format:
   html:
     css:
       - _static/css/design-style.css
-      - _static/css/root.css
     link-external-icon: true
     link-external-newwindow: true
     toc: false
@@ -13,13 +12,13 @@ listing:
     template: _templates/card.ejs
     contents:
       - name: "Real-time Aggregation"
-        icon: timeline
+        icon: bi bi-clock-history
         content: Precompute model inputs from streaming data with robust data connectors, transformations & aggregations.
       - name: Event Detection
-        icon: binoculars
+        icon: bi bi-binoculars-fill
         content: Trigger pro-active AI behaviors by identifying important activities, as they happen.
       - name: History Replay
-        icon: backward
+        icon: bi bi-skip-backward-fill
         content: Backtest and fine-tune from historical data using per-example time travel and point-in-time joins.
 ---
 
