@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from griffe.docstrings import dataclasses as ds
+from typing import Optional, Union
+
 from griffe import dataclasses as dc
+from griffe.docstrings import dataclasses as ds
 from plum import dispatch
-from typing import Union, Optional
 from quartodoc import layout
 
 
-class Summarizer():
+class Summarizer:
     """Summarize docstrings to markdown."""
 
     @staticmethod
