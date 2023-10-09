@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Union
 
 from pydantic import ValidationError
-from quartodoc import blueprint, collect, layout, preview
+from quartodoc import blueprint, collect, layout  # , preview
 from quartodoc.inventory import convert_inventory, create_inventory
 from quartodoc.validation import fmt
 from renderer import Renderer
@@ -188,13 +188,13 @@ class Builder:
         if len(self.page_map.keys()) > 0:
             _log.warning(f"Extra pages: {self.page_map.keys()}")
             _log.error(
-                f"Linking between pages may not work properly. Fix the issue and try again"
+                "Linking between pages may not work properly. Fix the issue and try again"
             )
 
         if len(self.item_map.keys()) > 0:
             _log.warning(f"Extra items: {self.item_map.keys()}")
             _log.error(
-                f"Linking between pages may not work properly. Fix the issue and try again"
+                "Linking between pages may not work properly. Fix the issue and try again"
             )
 
     def update_page_items(self, page: layout.Page, location: Path, is_flat: bool):
