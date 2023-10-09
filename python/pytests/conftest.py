@@ -8,7 +8,8 @@ import pytest
 from kaskada import init_session
 
 
-pytest_plugins = ['pytest_docker_fixtures']
+pytest_plugins = ["pytest_docker_fixtures"]
+
 
 def pytest_addoption(parser: pytest.Parser):
     parser.addoption("--save-golden", action="store_true", help="update golden files")
@@ -26,6 +27,7 @@ def pytest_configure(config):
         "markers", "svc(name): tests that require the named service"
     )
 
+
 def pytest_runtest_setup(item):
     """Skip the test unless all of the marked services are present."""
     required_svcs = {mark.args[0] for mark in item.iter_markers(name="svc")}
@@ -34,6 +36,7 @@ def pytest_runtest_setup(item):
     missing_svcs = required_svcs - provided_svcs
     if missing_svcs:
         pytest.skip(f"test requires services {missing_svcs!r}")
+
 
 @pytest.fixture(autouse=True, scope="session")
 def session() -> None:
@@ -47,6 +50,7 @@ def event_loop():
     loop = policy.new_event_loop()
     yield loop
     loop.close()
+
 
 class GoldenFixture(object):
     def __init__(self, dirname: str, test_name: str, save: bool):
