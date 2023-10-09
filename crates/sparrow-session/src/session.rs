@@ -32,7 +32,7 @@ pub struct Session {
     /// uuid. Once we run on multiple machines, we'll have to serialize/pickle the
     /// udf as well.
     udfs: HashMap<Uuid, Arc<dyn Udf>>,
-    object_store_registry: Arc<ObjectStoreRegistry>,
+    pub object_store_registry: Arc<ObjectStoreRegistry>,
     rt: tokio::runtime::Runtime,
     /// Default temporary path to prepare files to.
     ///

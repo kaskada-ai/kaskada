@@ -1,3 +1,12 @@
+#![warn(
+    rust_2018_idioms,
+    nonstandard_style,
+    future_incompatible,
+    clippy::mod_module_files,
+    clippy::print_stdout,
+    clippy::print_stderr
+)]
+
 use pyo3::prelude::*;
 
 mod error;
@@ -22,5 +31,6 @@ fn ffi(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<table::Table>()?;
     m.add_class::<execution::Execution>()?;
 
+    m.add_function(wrap_pyfunction!(session::parquet_schema, m)?)?;
     Ok(())
 }

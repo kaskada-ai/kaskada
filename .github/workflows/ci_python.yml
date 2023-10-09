@@ -125,7 +125,7 @@ jobs:
             pip install ${WHEEL} --force-reinstall
             echo "::endgroup::"
             echo "::group::Test Python $V"
-            poetry run pytest
+            poetry run pytest pytests -S minio
             echo "::endgroup::"
             echo "::group::MyPy Python $V"
             poetry run mypy -- --install-types --non-interactive pysrc pytests

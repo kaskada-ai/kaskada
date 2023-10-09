@@ -97,7 +97,7 @@ impl Preparer {
     /// - `prepare_prefix`: The prefix to write prepared files to.
     pub async fn prepare_parquet(
         &self,
-        to_prepare: &str,
+        to_prepare: ObjectStoreUrl,
         prepare_prefix: &ObjectStoreUrl,
     ) -> error_stack::Result<Vec<PreparedFile>, Error> {
         // TODO: Support Slicing
@@ -110,14 +110,10 @@ impl Preparer {
             .object_store(&output_url)
             .change_context(Error::Internal)?;
 
-        // TODO: support preparing from remote stores
-        let to_prepare = std::path::Path::new(to_prepare);
-        let extension = to_prepare.extension().and_then(|ext| ext.to_str());
-        let to_prepare_url = ObjectStoreUrl::from_file_path(to_prepare)
-            .change_context_lazy(|| Error::InvalidUrl(to_prepare.display().to_string()))?;
+        let extension = Some("parquet");
         let source_data = SourceData {
             source: Some(
-                SourceData::try_from_url(to_prepare_url.url(), extension)
+                SourceData::try_from_url(to_prepare.url(), extension)
                     .into_report()
                     .change_context(Error::Internal)?,
             ),

@@ -396,7 +396,7 @@ mod tests {
 
         let expected_offsets =
             Int32Array::from(vec![Some(0), Some(3), Some(6), Some(6), Some(8), Some(9)]);
-        let offsets: Vec<i32> = result.offsets().into_iter().map(|i| *i).collect();
+        let offsets: Vec<i32> = result.offsets().iter().copied().collect();
         let offsets = Int32Array::from(offsets);
         assert_eq!(expected_offsets, offsets);
         assert_eq!(&expected, values);

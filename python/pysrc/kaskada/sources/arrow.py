@@ -10,6 +10,8 @@ import pyarrow.csv
 import pyarrow.json
 import pyarrow.parquet
 
+from .. import _ffi
+from .._session import _get_session
 from .source import Source, TimeUnit
 
 
@@ -537,7 +539,7 @@ class Parquet(Source):
 
     @staticmethod
     async def create(
-        path: Optional[str] = None,
+        url: Optional[str] = None,
         *,
         time_column: str,
         key_column: str,
@@ -549,8 +551,9 @@ class Parquet(Source):
         """Create a Parquet source.
 
         Args:
-            path: The path to the Parquet file to add. This can be relative to the current
-              working directory or an absolute path (prefixed by '/').
+            file: The url or path of the Parquet file to add. Paths should be relative to the
+              current working directory or absolute. URLs may describe local file paths or
+              object-store locations.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use. If not provided, it will be inferred from the input.
@@ -562,13 +565,10 @@ class Parquet(Source):
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
-        path = Source._get_absolute_path(path)
-
         if schema is None:
-            if path is None:
-                raise ValueError("Must provide schema or path to parquet file")
-            schema = pa.parquet.read_schema(path)
-
+            if url is None:
+                raise ValueError("Must provide schema or url to parquet file")
+            schema = await _ffi.parquet_schema(_get_session(), url)
         source = Parquet(
             time_column=time_column,
             key_column=key_column,
@@ -578,10 +578,10 @@ class Parquet(Source):
             time_unit=time_unit,
         )
 
-        if path:
-            await source.add_file(path)
+        if url:
+            await source.add_file(url)
         return source
 
-    async def add_file(self, path: str) -> None:
+    async def add_file(self, file: str) -> None:
         """Add data to the source."""
-        await self._ffi_table.add_parquet(str(Source._get_absolute_path(path)))
+        await self._ffi_table.add_parquet(file)
