@@ -54,10 +54,10 @@ class Renderer:
 
     summarizer = Summarizer()
 
-    def _get_display_name(self, el: "dc.Alias | dc.Object"):
+    def _get_display_name(self, el: "dc.Alias | dc.Object") -> str:
         parts = el.path.split(".")[1:]
         name = parts.pop()
-        prefix = ".".join(parts)
+        prefix = ".".join(parts) if len(parts) > 0 else "kaskada"
         display_name = f"**{prefix}.**[**{name}**]{{.red}}"
 
         if isinstance(el, dc.Object):
@@ -90,7 +90,9 @@ class Renderer:
         if title_class:
             rows.insert(0, f":::{{.{title_class}}}")
             rows.append(":::")
-        return "\n" + "\n".join(rows)
+        text = "\n\n".join(rows)
+        # fix extra indenting for nested definition lists
+        return text.replace("\n\n    \n\n", "\n\n")
 
     def _render_header(self, title: str, order: Optional[int] = None) -> str:
         text = ["---"]
@@ -100,7 +102,7 @@ class Renderer:
         text.append("---")
         return "\n".join(text)
 
-    def _render_table(self, rows, headers):
+    def _render_table(self, rows, headers) -> str:
         table = tabulate(rows, headers=headers, tablefmt="github")
 
         return table
@@ -109,6 +111,10 @@ class Renderer:
 
     @dispatch
     def render_annotation(self, el: str) -> str:  # noqa: F811
+        # hack to get Timestream in the correct format for the kaskada.Arg
+        # alias docs
+        if el == "'Timestream'":
+            return "[Timestream](`kaskada.Timestream`)"
         return sanitize(el)
 
     @dispatch
@@ -126,14 +132,19 @@ class Renderer:
         text = "".join(map(self.render_annotation, el))
         return text.lstrip(".")
 
+    @dispatch
+    def render_annotation(self, el: dc.Attribute) -> str:  # noqa: F811
+        text = "".join(map(self.render_annotation, el.value))
+        return text.lstrip(".")
+
     # signature method --------------------------------------------------------
 
     @dispatch
-    def signature(self, el: layout.Doc):  # noqa: F811
+    def signature(self, el: layout.Doc) -> str:  # noqa: F811
         return self.signature(el.obj)
 
     @dispatch
-    def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None):  # noqa: F811
+    def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None) -> str:  # noqa: F811
         """Return a string representation of an object's signature."""
         return self.signature(el.target, el)
 
@@ -155,20 +166,20 @@ class Renderer:
     @dispatch
     def signature(  # noqa: F811
         self, el: Union[dc.Module, dc.Attribute], source: Optional[dc.Alias] = None
-    ):
+    ) -> str:
         name = self._get_display_name(source or el)
         return f"`{name}`"
 
     # render method -----------------------------------------------------------
 
     @dispatch
-    def render(self, el):  # noqa: F811
+    def render(self, el) -> str:  # noqa: F811
         """Return a string representation of an object, or layout element."""
 
         raise NotImplementedError(f"Unsupported type: {type(el)}")
 
     @dispatch
-    def render(self, el: str):  # noqa: F811
+    def render(self, el: str) -> str:  # noqa: F811
         return el
 
     # render layouts ==========================================================
@@ -193,7 +204,7 @@ class Renderer:
         return text
 
     @dispatch
-    def render(self, el: layout.Page, is_flat: bool = False):  # noqa: F811
+    def render(self, el: layout.Page, is_flat: bool = False) -> str:  # noqa: F811
         rows = []
         if el.summary:
             if el.summary.name:
@@ -210,7 +221,7 @@ class Renderer:
         return "\n\n".join(rows)
 
     @dispatch
-    def render(self, el: layout.Doc):  # noqa: F811
+    def render(self, el: layout.Doc) -> str:  # noqa: F811
         raise NotImplementedError(f"Unsupported Doc type: {type(el)}")
 
     @dispatch
@@ -250,7 +261,7 @@ class Renderer:
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocFunction, is_flat: bool = False):  # noqa: F811
+    def render(self, el: layout.DocFunction, is_flat: bool = False) -> str:  # noqa: F811
         title = "" if is_flat else self._render_header(el.name)
 
         sig = self.signature(el)
@@ -260,16 +271,20 @@ class Renderer:
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocAttribute, is_flat: bool = False):  # noqa: F811
+    def render(self, el: layout.DocAttribute, is_flat: bool = False) -> str:  # noqa: F811
         link = f"[{el.name}](#{el.anchor})"
         description = self.summarizer.summarize(el.obj)
+
+        # check for TypeAlias like "LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]"
+        if isinstance(el.obj, dc.Alias) and el.obj.target and el.obj.target.value:
+            return self._render_definition_list(title=link, items=[description, self.render_annotation(el.obj.target)])
 
         return " -- ".join([link, description])
 
     # render griffe objects ===================================================
 
     @dispatch
-    def render(self, el: Union[dc.Object, dc.Alias]):  # noqa: F811
+    def render(self, el: Union[dc.Object, dc.Alias]) -> str:  # noqa: F811
         """Render high level objects representing functions, classes, etc.."""
 
         str_body = []
@@ -287,7 +302,7 @@ class Renderer:
     # signature parts -------------------------------------------------------------
 
     @dispatch
-    def render(self, el: dc.Parameters):  # noqa: F811
+    def render(self, el: dc.Parameters) -> str:  # noqa: F811
         # index for switch from positional to kw args (via an unnamed *)
         try:
             kw_only = [par.kind for par in el].index(
@@ -327,7 +342,7 @@ class Renderer:
         return ", ".join(pars)
 
     @dispatch
-    def render(self, el: dc.Parameter):  # noqa: F811
+    def render(self, el: dc.Parameter) -> str:  # noqa: F811
         splats = {dc.ParameterKind.var_keyword,
                   dc.ParameterKind.var_positional}
         has_default = el.default and el.kind not in splats
@@ -353,7 +368,7 @@ class Renderer:
     # note this can be a number of things. for example, opening docstring text,
     # or a section with a header not included in the numpydoc standard
     @dispatch
-    def render(self, el: ds.DocstringSectionText):  # noqa: F811
+    def render(self, el: ds.DocstringSectionText) -> str:  # noqa: F811
         new_el = qast.transform(el)
         if isinstance(new_el, ds.DocstringSectionText):
             # ensures we don't recurse forever
@@ -364,7 +379,7 @@ class Renderer:
     # parameters ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionParameters):  # noqa: F811
+    def render(self, el: ds.DocstringSectionParameters) -> str:  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -388,7 +403,7 @@ class Renderer:
     # attributes ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionAttributes):  # noqa: F811
+    def render(self, el: ds.DocstringSectionAttributes) -> str:  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -410,7 +425,7 @@ class Renderer:
     # examples ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionExamples):  # noqa: F811
+    def render(self, el: ds.DocstringSectionExamples) -> str:  # noqa: F811
         # its value is a tuple: DocstringSectionKind["text" | "examples"], str
         data = map(qast.transform, el.value)
         return "\n\n".join(list(map(self.render, data)))
@@ -428,7 +443,7 @@ class Renderer:
     # returns ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionReturns):  # noqa: F811
+    def render(self, el: ds.DocstringSectionReturns) -> str:  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -456,7 +471,7 @@ class Renderer:
         return self._render_definition_list("Returns:", rows, title_class="highlight")
 
     @dispatch
-    def render(self, el: ds.DocstringSectionRaises):  # noqa: F811
+    def render(self, el: ds.DocstringSectionRaises) -> str:  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -483,7 +498,7 @@ class Renderer:
         else:
             rows.append(f"::: {{.callout-tip title={el.title!r}}}")
 
-        rows.append(el.value.description)
+        rows.append(sanitize(el.value.description, allow_markdown=True))
         rows.append(":::")
 
         return "\n".join(rows)
