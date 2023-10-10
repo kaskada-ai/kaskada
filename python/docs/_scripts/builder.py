@@ -137,12 +137,6 @@ class Builder:
         inv = create_inventory(self.package, "0.0.9999", self.items)
         convert_inventory(inv, self.out_inventory)
 
-    def get_package(self, item: Union[layout.Section, layout.Page]) -> str:
-        if item.package and f"{item.package}" != "":
-            return item.package
-        else:
-            return self.package
-
     def write_pages(self):
         root = layout.Section(
             title=self.title,
