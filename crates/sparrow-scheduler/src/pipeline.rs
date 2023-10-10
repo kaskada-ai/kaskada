@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 
 use crate::{Partition, Partitioned, Scheduler, TaskRef};
 

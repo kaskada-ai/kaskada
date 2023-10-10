@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 
 use crate::{Partition, Pipeline, PipelineError, Scheduler};
 

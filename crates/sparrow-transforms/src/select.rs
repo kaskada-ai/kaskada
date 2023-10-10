@@ -1,7 +1,7 @@
 use arrow_array::{cast::AsArray, BooleanArray};
 use arrow_schema::DataType;
 use error_stack::{IntoReport, ResultExt};
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 
 use sparrow_expressions::ExpressionExecutor;
 use sparrow_physical::Exprs;
@@ -99,7 +99,8 @@ mod tests {
     use arrow_array::{Int64Array, StructArray, TimestampNanosecondArray, UInt64Array};
     use arrow_schema::{Field, Fields};
     use index_vec::index_vec;
-    use sparrow_arrow::{scalar_value::ScalarValue, RowTime};
+    use sparrow_arrow::scalar_value::ScalarValue;
+    use sparrow_batch::RowTime;
 
     fn test_batch() -> Batch {
         let input_fields = Fields::from(vec![

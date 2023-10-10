@@ -1,23 +1,86 @@
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use arrow_array::RecordBatch;
-use arrow_schema::SchemaRef;
+use arrow_schema::{DataType, SchemaRef};
 use error_stack::{IntoReportCompat, ResultExt};
-use futures::Stream;
+use futures::{Stream, StreamExt, TryStreamExt};
 
-use crate::old::homogeneous_merge;
+use sparrow_batch::Batch;
+use sparrow_interfaces::{ReadConfig, Source};
+use sparrow_merge::old::homogeneous_merge;
 
-#[derive(derive_more::Display, Debug)]
-pub enum Error {
-    #[display(fmt = "failed to add in-memory batch")]
-    Add,
-    #[display(fmt = "receiver lagged")]
-    ReceiverLagged,
+use sparrow_interfaces::SourceError;
+
+/// A shared, synchronized container for in-memory batches.
+pub struct InMemory {
+    /// The prepared schema.
+    ///
+    /// Note this is not the `projected_schema`, which is the schema
+    /// after applying column projections.
+    prepared_schema: SchemaRef,
+    /// The in-memory batches.
+    data: Arc<InMemoryBatches>,
 }
 
-impl error_stack::Context for Error {}
+impl InMemory {
+    pub fn new(queryable: bool, schema: SchemaRef) -> error_stack::Result<Self, SourceError> {
+        let data = Arc::new(InMemoryBatches::new(queryable, schema.clone()));
+        let source = Self {
+            prepared_schema: schema,
+            data,
+        };
+        Ok(source)
+    }
+
+    /// Add a batch, publishing it to the subscribers.
+    pub async fn add_batch(&self, batch: RecordBatch) -> error_stack::Result<(), SourceError> {
+        self.data.add_batch(batch).await
+    }
+}
+
+impl Source for InMemory {
+    fn prepared_schema(&self) -> SchemaRef {
+        self.prepared_schema.clone()
+    }
+
+    fn read(
+        &self,
+        projected_datatype: &DataType,
+        read_config: ReadConfig,
+    ) -> futures::stream::BoxStream<'_, error_stack::Result<Batch, SourceError>> {
+        assert_eq!(
+            &DataType::Struct(self.prepared_schema().fields().clone()),
+            projected_datatype,
+            "Projection not yet supported"
+        );
+
+        let input_stream = if read_config.keep_open {
+            self.data
+                .subscribe()
+                .map_err(|e| e.change_context(SourceError::internal_msg("invalid input")))
+                .and_then(move |batch| async move {
+                    Batch::try_new_from_batch(batch)
+                        .change_context(SourceError::internal_msg("invalid input"))
+                })
+                .boxed()
+        } else if let Some(batch) = self.data.current() {
+            futures::stream::once(async move {
+                Batch::try_new_from_batch(batch)
+                    .change_context(SourceError::internal_msg("invalid input"))
+            })
+            .boxed()
+        } else {
+            futures::stream::empty().boxed()
+        };
+
+        input_stream
+    }
+}
 
 /// Struct for managing in-memory batches.
+///
+/// Note: several items left pub for use in old code path, can remove
+/// when that path is removed.
 #[derive(Debug)]
 pub struct InMemoryBatches {
     /// Whether rows added will be available for interactive queries.
@@ -39,7 +102,7 @@ struct Current {
 }
 
 impl Current {
-    pub fn new(schema: SchemaRef) -> Self {
+    fn new(schema: SchemaRef) -> Self {
         let batch = RecordBatch::new_empty(schema.clone());
         Self {
             schema,
@@ -48,7 +111,7 @@ impl Current {
         }
     }
 
-    pub fn add_batch(&mut self, batch: &RecordBatch) -> error_stack::Result<(), Error> {
+    fn add_batch(&mut self, batch: &RecordBatch) -> error_stack::Result<(), SourceError> {
         if self.batch.num_rows() == 0 {
             self.batch = batch.clone();
         } else {
@@ -57,7 +120,7 @@ impl Current {
             // put it in an option, or allow `homogeneous_merge` to take `&RecordBatch`.
             self.batch = homogeneous_merge(&self.schema, vec![self.batch.clone(), batch.clone()])
                 .into_report()
-                .change_context(Error::Add)?;
+                .change_context(SourceError::Add)?;
         }
         Ok(())
     }
@@ -82,13 +145,13 @@ impl InMemoryBatches {
     /// Add a batch, merging it into the in-memory version.
     ///
     /// Publishes the new batch to the subscribers.
-    pub async fn add_batch(&self, batch: RecordBatch) -> error_stack::Result<(), Error> {
+    pub async fn add_batch(&self, batch: RecordBatch) -> error_stack::Result<(), SourceError> {
         if batch.num_rows() == 0 {
             return Ok(());
         }
 
         let new_version = {
-            let mut write = self.current.write().map_err(|_| Error::Add)?;
+            let mut write = self.current.write().map_err(|_| SourceError::Add)?;
             if self.queryable {
                 write.add_batch(&batch)?;
             }
@@ -110,7 +173,7 @@ impl InMemoryBatches {
     /// added as they arrive.
     pub fn subscribe(
         &self,
-    ) -> impl Stream<Item = error_stack::Result<RecordBatch, Error>> + 'static {
+    ) -> impl Stream<Item = error_stack::Result<RecordBatch, SourceError>> + 'static {
         let (mut version, merged) = {
             let read = self.current.read().unwrap();
             (read.version, read.batch.clone())
@@ -139,7 +202,7 @@ impl InMemoryBatches {
                         break;
                     },
                     Err(async_broadcast::RecvError::Overflowed(_)) => {
-                        Err(Error::ReceiverLagged)?;
+                        Err(SourceError::ReceiverLagged)?;
                     }
                 }
             }

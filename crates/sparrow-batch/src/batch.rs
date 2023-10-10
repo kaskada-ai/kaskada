@@ -1,17 +1,23 @@
+use std::sync::Arc;
+
 use arrow_array::cast::AsArray;
 use arrow_array::types::{TimestampNanosecondType, UInt64Type};
-use arrow_array::{Array, ArrayRef, ArrowPrimitiveType, TimestampNanosecondArray, UInt64Array};
+use arrow_array::{
+    Array, ArrayRef, ArrowPrimitiveType, RecordBatch, StructArray, TimestampNanosecondArray,
+    UInt64Array,
+};
+use arrow_schema::{Fields, Schema};
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;
 
-use crate::downcast::downcast_primitive_array;
-use crate::RowTime;
+use crate::{Error, RowTime};
 
 /// A batch to be processed by the system.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Batch {
     /// The data associated with the batch.
     pub(crate) data: Option<BatchInfo>,
+
     /// An indication that the batch stream has completed up to the given time.
     /// Any rows in future batches on this stream must have a time strictly
     /// greater than this.
@@ -24,6 +30,51 @@ impl Batch {
             data: None,
             up_to_time,
         }
+    }
+
+    /// Construct a new batch, inferring the upper bound from the data.
+    ///
+    /// It is expected that that data is sorted.
+    pub fn try_new_from_batch(data: RecordBatch) -> error_stack::Result<Self, Error> {
+        error_stack::ensure!(
+            data.num_rows() > 0,
+            Error::internal_msg("Unable to create batch from empty data".to_owned())
+        );
+
+        let time_column: &TimestampNanosecondArray = data.column(0).as_primitive();
+        let up_to_time = RowTime::from_timestamp_ns(time_column.value(time_column.len() - 1));
+
+        #[cfg(debug_assertions)]
+        validate(&data, up_to_time)?;
+
+        let time: &TimestampNanosecondArray = data.column(0).as_primitive();
+        let min_present_time = time.value(0);
+        let max_present_time = time.value(time.len() - 1);
+
+        let time = data.column(0).clone();
+        let subsort = data.column(1).clone();
+        let key_hash = data.column(2).clone();
+
+        // TODO: This creates a `Fields` from the schema, dropping the key columns.
+        // Under the hood, this creates a new vec of fields. It would be better to
+        // do this outside of this try_new, then share that `Fields`.
+        let schema = data.schema();
+        let fields: Fields = schema.fields()[3..].into();
+        let columns: Vec<ArrayRef> = data.columns()[3..].to_vec();
+
+        let data = Arc::new(StructArray::new(fields, columns, None));
+
+        Ok(Self {
+            data: Some(BatchInfo {
+                data,
+                time,
+                subsort,
+                key_hash,
+                min_present_time: min_present_time.into(),
+                max_present_time: max_present_time.into(),
+            }),
+            up_to_time,
+        })
     }
 
     pub fn is_empty(&self) -> bool {
@@ -173,7 +224,7 @@ impl Batch {
             .collect();
         let time = arrow_select::concat::concat(&times)
             .into_report()
-            .change_context(Error::Internal)?;
+            .change_context(Error::internal())?;
 
         let subsorts: Vec<_> = batches
             .iter()
@@ -182,7 +233,7 @@ impl Batch {
             .collect();
         let subsort = arrow_select::concat::concat(&subsorts)
             .into_report()
-            .change_context(Error::Internal)?;
+            .change_context(Error::internal())?;
 
         let key_hashes: Vec<_> = batches
             .iter()
@@ -191,7 +242,7 @@ impl Batch {
             .collect();
         let key_hash = arrow_select::concat::concat(&key_hashes)
             .into_report()
-            .change_context(Error::Internal)?;
+            .change_context(Error::internal())?;
 
         let batches: Vec<_> = batches
             .iter()
@@ -200,7 +251,7 @@ impl Batch {
             .collect();
         let data = arrow_select::concat::concat(&batches)
             .into_report()
-            .change_context(Error::Internal)?;
+            .change_context(Error::internal())?;
 
         Ok(Self {
             data: Some(BatchInfo {
@@ -220,16 +271,16 @@ impl Batch {
             Some(info) => {
                 let data = arrow_select::take::take(info.data.as_ref(), indices, None)
                     .into_report()
-                    .change_context(Error::Internal)?;
+                    .change_context(Error::internal())?;
                 let time = arrow_select::take::take(info.time.as_ref(), indices, None)
                     .into_report()
-                    .change_context(Error::Internal)?;
+                    .change_context(Error::internal())?;
                 let subsort = arrow_select::take::take(info.subsort.as_ref(), indices, None)
                     .into_report()
-                    .change_context(Error::Internal)?;
+                    .change_context(Error::internal())?;
                 let key_hash = arrow_select::take::take(info.key_hash.as_ref(), indices, None)
                     .into_report()
-                    .change_context(Error::Internal)?;
+                    .change_context(Error::internal())?;
                 let info = BatchInfo {
                     data,
                     time,
@@ -283,10 +334,6 @@ impl Batch {
         key_hash: impl Into<arrow_array::UInt64Array>,
         up_to_time: i64,
     ) -> Self {
-        use std::sync::Arc;
-
-        use arrow_array::StructArray;
-
         let time: TimestampNanosecondArray = time.into();
         let subsort: UInt64Array = (0..(time.len() as u64)).collect_vec().into();
         let key_hash: UInt64Array = key_hash.into();
@@ -309,6 +356,126 @@ impl Batch {
             RowTime::from_timestamp_ns(up_to_time),
         )
     }
+}
+
+#[cfg(debug_assertions)]
+fn validate(data: &RecordBatch, up_to_time: RowTime) -> error_stack::Result<(), Error> {
+    validate_batch_schema(data.schema().as_ref())?;
+
+    for key_column in 0..3 {
+        error_stack::ensure!(
+            data.column(key_column).null_count() == 0,
+            Error::internal_msg(format!(
+                "Key column '{}' should not contain null",
+                data.schema().field(key_column).name()
+            ))
+        );
+    }
+
+    validate_bounds(data.column(0), data.column(1), data.column(2), up_to_time)
+}
+
+#[cfg(debug_assertions)]
+/// Validate that the result is sorted.
+///
+/// Note: This only validates the up_to_time bound.
+pub(crate) fn validate_bounds(
+    time: &ArrayRef,
+    subsort: &ArrayRef,
+    key_hash: &ArrayRef,
+    up_to_time: RowTime,
+) -> error_stack::Result<(), Error> {
+    if time.len() == 0 {
+        // No more validation necessary for empty batches.
+        return Ok(());
+    }
+
+    let time: &TimestampNanosecondArray = time.as_primitive();
+    let subsort: &UInt64Array = subsort.as_primitive();
+    let key_hash: &UInt64Array = key_hash.as_primitive();
+
+    let mut prev_time = time.value(0);
+    let mut prev_subsort = subsort.value(0);
+    let mut prev_key_hash = key_hash.value(0);
+
+    for i in 1..time.len() {
+        let curr_time = time.value(i);
+        let curr_subsort = subsort.value(i);
+        let curr_key_hash = key_hash.value(i);
+
+        let order = prev_time
+            .cmp(&curr_time)
+            .then(prev_subsort.cmp(&curr_subsort))
+            .then(prev_key_hash.cmp(&curr_key_hash));
+
+        error_stack::ensure!(
+            order.is_lt(),
+            Error::internal_msg(format!(
+                "Expected data[i - 1] < data[i], but ({}, {}, {}) >= ({}, {}, {})",
+                prev_time, prev_subsort, prev_key_hash, curr_time, curr_subsort, curr_key_hash
+            ))
+        );
+
+        prev_time = curr_time;
+        prev_subsort = curr_subsort;
+        prev_key_hash = curr_key_hash;
+    }
+
+    let curr_time: i64 = up_to_time.into();
+    let order = prev_time.cmp(&curr_time);
+    error_stack::ensure!(
+        order.is_le(),
+        Error::internal_msg(format!(
+            "Expected last data <= upper bound, but ({}) > ({})",
+            prev_time, curr_time
+        ))
+    );
+
+    Ok(())
+}
+
+fn validate_batch_schema(schema: &Schema) -> error_stack::Result<(), Error> {
+    use arrow::datatypes::{DataType, TimeUnit};
+
+    // Validate the three key columns are present, non-null and have the right type.
+    validate_key_column(
+        schema,
+        0,
+        "_time",
+        &DataType::Timestamp(TimeUnit::Nanosecond, None),
+    )?;
+    validate_key_column(schema, 1, "_subsort", &DataType::UInt64)?;
+    validate_key_column(schema, 2, "_key_hash", &DataType::UInt64)?;
+
+    Ok(())
+}
+
+fn validate_key_column(
+    schema: &Schema,
+    index: usize,
+    expected_name: &str,
+    expected_type: &arrow::datatypes::DataType,
+) -> error_stack::Result<(), Error> {
+    error_stack::ensure!(
+        schema.field(index).name() == expected_name,
+        Error::internal_msg(format!(
+            "Expected column {} to be '{}' but was '{}'",
+            index,
+            expected_name,
+            schema.field(index).name()
+        ))
+    );
+    error_stack::ensure!(
+        schema.field(index).data_type() == expected_type,
+        Error::internal_msg(format!(
+            "Key column '{}' should be '{:?}' but was '{:?}'",
+            expected_name,
+            schema.field(index).data_type(),
+            expected_type,
+        ))
+    );
+
+    Ok(())
 }
 
 #[derive(Clone, Debug)]
@@ -338,8 +505,7 @@ impl BatchInfo {
         debug_assert!(data.len() > 0);
         debug_assert_eq!(time.null_count(), 0);
 
-        let time_column: &TimestampNanosecondArray =
-            downcast_primitive_array(time.as_ref()).expect("time column to be timestamp");
+        let time_column: &TimestampNanosecondArray = time.as_primitive();
 
         // Debug assertion that the array is sorted by time.
         // Once `is_sorted` is stable (https://github.com/rust-lang/rust/issues/53485).
@@ -366,8 +532,7 @@ impl BatchInfo {
     /// Returns the rows less than or equal to the given time and
     /// leaves the remaining rows in `self`.
     fn split_up_to(&mut self, time_inclusive: RowTime) -> Self {
-        let time_column: &TimestampNanosecondArray =
-            downcast_primitive_array(self.time.as_ref()).expect("time column to be timestamp");
+        let time_column: &TimestampNanosecondArray = self.time.as_primitive();
 
         // 0..slice_start   (len = slice_start)       = what we return
         // slice_start..len (len = len - slice_start) = what we leave in self
@@ -408,14 +573,6 @@ impl BatchInfo {
         self.key_hash.as_primitive()
     }
 }
-
-#[derive(Debug, derive_more::Display)]
-pub enum Error {
-    #[display(fmt = "internal error")]
-    Internal,
-}
-
-impl error_stack::Context for Error {}
 
 #[cfg(any(test, feature = "testing"))]
 #[static_init::dynamic]

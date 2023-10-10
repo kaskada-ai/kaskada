@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use error_stack::ResultExt;
 use itertools::Itertools;
 use parking_lot::Mutex;
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 use sparrow_physical::{StepId, StepKind};
 use sparrow_scheduler::{
     Partition, Partitioned, Pipeline, PipelineError, PipelineInput, Scheduler, TaskRef,

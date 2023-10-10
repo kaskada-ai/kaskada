@@ -9,11 +9,11 @@ use error_stack::ResultExt;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha;
 use sparrow_compiler::{FileSets, TableInfo};
-use sparrow_merge::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
 use sparrow_runtime::stores::ObjectStoreUrl;
 use sparrow_runtime::ParquetFile;
 use sparrow_runtime::{key_hash_inverse::ThreadSafeKeyHashInverse, stores::ObjectStoreRegistry};
+use sparrow_sources::InMemoryBatches;
 
 use crate::{Error, Expr};
 

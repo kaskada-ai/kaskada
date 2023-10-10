@@ -1,6 +1,6 @@
 use arrow_array::ArrayRef;
 use arrow_schema::DataType;
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 
 use crate::evaluator::Evaluator;
 use crate::evaluators;

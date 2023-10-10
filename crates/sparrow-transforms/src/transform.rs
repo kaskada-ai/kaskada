@@ -1,5 +1,5 @@
 use arrow_schema::DataType;
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {

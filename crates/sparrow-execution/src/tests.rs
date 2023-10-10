@@ -10,6 +10,22 @@ use sparrow_arrow::scalar_value::ScalarValue;
 use sparrow_arrow::{Batch, RowTime};
 use sparrow_scheduler::{Pipeline, PipelineError, PipelineInput, WorkerPool};
 use sparrow_transforms::TransformPipeline;
+use std::sync::Arc;
+
+use arrow_array::cast::AsArray;
+use arrow_array::{ArrayRef, Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
+use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef, TimeUnit};
+use error_stack::{IntoReport, ResultExt};
+use futures::stream::BoxStream;
+use futures::TryStreamExt;
+use index_vec::index_vec;
+use parking_lot::Mutex;
+use sparrow_arrow::scalar_value::ScalarValue;
+use sparrow_batch::Batch;
+use sparrow_interfaces::ReadConfig;
+use sparrow_interfaces::Source;
+use sparrow_scheduler::{Pipeline, PipelineError, PipelineInput, WorkerPool};
+use sparrow_transforms::TransformPipeline;
 
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
@@ -21,46 +37,56 @@ pub enum Error {
 
 impl error_stack::Context for Error {}
 
+fn in_memory_source(schema: SchemaRef) -> sparrow_sources::InMemory {
+    let source = sparrow_sources::InMemory::new(true, schema.clone()).unwrap();
+    source
+}
+
 #[tokio::test]
 #[ignore]
 async fn test_query() {
     sparrow_testing::init_test_logging();
 
-    let (input_tx, input_rx) = tokio::sync::mpsc::channel(10);
     let (output_tx, mut output_rx) = tokio::sync::mpsc::channel(10);
 
     let input_fields = Fields::from(vec![
+        Field::new(
+            "_time",
+            DataType::Timestamp(TimeUnit::Nanosecond, None),
+            false,
+        ),
+        Field::new("_subsort", DataType::UInt64, true),
+        Field::new("_key_hash", DataType::UInt64, false),
         Field::new("a", DataType::Int64, true),
         Field::new("b", DataType::Int64, true),
         Field::new("c", DataType::Int64, true),
     ]);
+    let projected_datatype = DataType::Struct(input_fields.clone());
+    let schema = Arc::new(Schema::new(input_fields.clone()));
+    let read_config = ReadConfig {
+        keep_open: true,
+        start_time: None,
+        end_time: None,
+    };
+
+    let input_source = in_memory_source(schema.clone());
+    let input_rx = input_source.read(&projected_datatype, read_config);
 
     let output_fields = Fields::from(vec![
         Field::new("ab", DataType::Int64, true),
         Field::new("abc", DataType::Int64, true),
     ]);
 
-    let input_data = Arc::new(StructArray::new(
-        input_fields.clone(),
-        vec![
-            Arc::new(Int64Array::from(vec![0, 1, 2, 3])),
-            Arc::new(Int64Array::from(vec![4, 7, 10, 11])),
-            Arc::new(Int64Array::from(vec![Some(21), None, Some(387), Some(87)])),
-        ],
-        None,
-    ));
-    let time = Arc::new(TimestampNanosecondArray::from(vec![0, 1, 2, 3]));
-    let subsort = Arc::new(UInt64Array::from(vec![0, 1, 2, 3]));
-    let key_hash = Arc::new(UInt64Array::from(vec![0, 1, 2, 3]));
-    let input_batch = Batch::new_with_data(
-        input_data,
-        time,
-        subsort,
-        key_hash,
-        RowTime::from_timestamp_ns(3),
-    );
-    input_tx.send(input_batch).await.unwrap();
-    std::mem::drop(input_tx);
+    let input_columns: Vec<ArrayRef> = vec![
+        Arc::new(TimestampNanosecondArray::from(vec![0, 1, 2, 3])), // time
+        Arc::new(UInt64Array::from(vec![0, 1, 2, 3])),              // subsort
+        Arc::new(UInt64Array::from(vec![0, 1, 2, 3])),              // key_hash
+        Arc::new(Int64Array::from(vec![0, 1, 2, 3])),               // a
+        Arc::new(Int64Array::from(vec![4, 7, 10, 11])),             // b
+        Arc::new(Int64Array::from(vec![Some(21), None, Some(387), Some(87)])), // c
+    ];
+    let input_batch = RecordBatch::try_new(schema.clone(), input_columns).unwrap();
+    input_source.add_batch(input_batch).await.unwrap();
 
     execute(
         "hello".to_owned(),
@@ -87,14 +113,14 @@ async fn test_query() {
 pub async fn execute(
     query_id: String,
     input_type: DataType,
-    mut input: tokio::sync::mpsc::Receiver<Batch>,
+    mut input: BoxStream<'_, error_stack::Result<Batch, sparrow_interfaces::SourceError>>,
     output_type: DataType,
     output: tokio::sync::mpsc::Sender<Batch>,
 ) -> error_stack::Result<(), Error> {
     let mut worker_pool = WorkerPool::start(query_id).change_context(Error::Creating)?;
 
     // This sets up some fake stuff:
-    // - We don't have sources / sinks yet, so we use tokio channels.
+    // - We don't have sinks yet, so we use tokio channels.
     // - We create a "hypothetical" scan step (0)
     // - We create a hard-coded "project" step (1)
     // - We output the results to the channel.
@@ -169,7 +195,7 @@ pub async fn execute(
     let transform_pipeline_input = PipelineInput::new(transform_pipeline, 0);
 
     let mut injector = worker_pool.injector().clone();
-    while let Some(batch) = input.recv().await {
+    while let Some(batch) = input.try_next().await.unwrap() {
         transform_pipeline_input
             .add_input(0.into(), batch, &mut injector)
             .change_context(Error::Executing)?;

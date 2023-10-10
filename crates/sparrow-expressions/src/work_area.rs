@@ -1,5 +1,5 @@
 use arrow_array::ArrayRef;
-use sparrow_arrow::Batch;
+use sparrow_batch::Batch;
 
 use crate::values::WorkAreaValue;
 
