@@ -1356,8 +1356,8 @@ def record(fields: Mapping[str, Arg]) -> Timestream:
         fields: The fields to include in the record.
 
     See Also:
-        [Timestream.record](`kaskada.Timestream.record`): Method for creating a record from fields computed from
-            a timestream.
+        [Timestream.record](`kaskada.Timestream.record`): Method for creating a record
+            from fields computed from a timestream.
     """
     import itertools
 

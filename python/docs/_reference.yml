@@ -9,6 +9,11 @@ quartodoc:
   dynamic: true
 
   sections:
+    - title: Sessions
+      options:
+        children: embedded
+      contents:
+        - init_session
     - title: Timestream
       options:
         children: flat
@@ -16,8 +21,11 @@ quartodoc:
         - name: Timestream
           members:
             - data_type
-        - _timestream.LiteralValue
-        - _timestream.Arg
+            - is_continuous
+        - name: LiteralValue
+          dynamic: false
+        - name: Arg
+          dynamic: false
     - subtitle: Aggregation
       desc: |
         The User Guide has details on [aggregations in general](../../../guide/aggregation.qmd).
@@ -110,6 +118,7 @@ quartodoc:
         - Timestream.cast
         - Timestream.coalesce
         - Timestream.else_
+        - Timestream.explain
         - Timestream.filter
         - Timestream.hash
         - Timestream.if_
@@ -128,8 +137,10 @@ quartodoc:
         - record
     - subtitle: String
       contents:
+        - Timestream.len
         - Timestream.lower
         - Timestream.upper
+        - Timestream.substring
     - subtitle: Time
       contents:
         - Timestream.shift_by
