@@ -108,48 +108,52 @@ class Renderer:
     # render_annotation method --------------------------------------------------------
 
     @dispatch
-    def render_annotation(self, el: str) -> str:
+    def render_annotation(self, el: str) -> str:  # noqa: F811
         return sanitize(el)
 
     @dispatch
-    def render_annotation(self, el: None) -> str:
+    def render_annotation(self, el: None) -> str:  # noqa: F811
         return ""
 
     @dispatch
-    def render_annotation(self, el: expr.Name) -> str:
+    def render_annotation(self, el: expr.Name) -> str:  # noqa: F811
         if el.full not in skip_annotation_types:
             return f"[{sanitize(el.source)}](`{el.full}`)"
         return ""
 
     @dispatch
-    def render_annotation(self, el: expr.Expression) -> str:
+    def render_annotation(self, el: expr.Expression) -> str:  # noqa: F811
         text = "".join(map(self.render_annotation, el))
         return text.lstrip(".")
 
     # signature method --------------------------------------------------------
 
     @dispatch
-    def signature(self, el: layout.Doc):
+    def signature(self, el: layout.Doc):  # noqa: F811
         return self.signature(el.obj)
 
     @dispatch
-    def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None):
+    def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None):  # noqa: F811
         """Return a string representation of an object's signature."""
         return self.signature(el.target, el)
 
     @dispatch
-    def signature(self, el: dc.Function, source: Optional[dc.Alias] = None) -> str:
+    def signature(  # noqa: F811
+        self, el: dc.Function, source: Optional[dc.Alias] = None
+    ) -> str:
         name = self._get_display_name(source or el)
         pars = self.render(self._fetch_method_parameters(el))
         return f"{name}([{pars}]{{.bold-italic}})"
 
     @dispatch
-    def signature(self, el: dc.Class, source: Optional[dc.Alias] = None) -> str:
+    def signature(  # noqa: F811
+        self, el: dc.Class, source: Optional[dc.Alias] = None
+    ) -> str:
         name = self._get_display_name(source or el)
         return f"***class*** {name}"
 
     @dispatch
-    def signature(
+    def signature(  # noqa: F811
         self, el: Union[dc.Module, dc.Attribute], source: Optional[dc.Alias] = None
     ):
         name = self._get_display_name(source or el)
@@ -158,19 +162,21 @@ class Renderer:
     # render method -----------------------------------------------------------
 
     @dispatch
-    def render(self, el):
+    def render(self, el):  # noqa: F811
         """Return a string representation of an object, or layout element."""
 
         raise NotImplementedError(f"Unsupported type: {type(el)}")
 
     @dispatch
-    def render(self, el: str):
+    def render(self, el: str):  # noqa: F811
         return el
 
     # render layouts ==========================================================
 
     @dispatch
-    def render(self, el: layout.Section, order: Optional[int] = None) -> str:
+    def render(  # noqa: F811
+        self, el: layout.Section, order: Optional[int] = None
+    ) -> str:
         rows = [self._render_header(el.title or el.subtitle, order=order)]
 
         if el.desc:
@@ -187,7 +193,7 @@ class Renderer:
         return text
 
     @dispatch
-    def render(self, el: layout.Page, is_flat: bool = False):
+    def render(self, el: layout.Page, is_flat: bool = False):  # noqa: F811
         rows = []
         if el.summary:
             if el.summary.name:
@@ -204,11 +210,11 @@ class Renderer:
         return "\n\n".join(rows)
 
     @dispatch
-    def render(self, el: layout.Doc):
+    def render(self, el: layout.Doc):  # noqa: F811
         raise NotImplementedError(f"Unsupported Doc type: {type(el)}")
 
     @dispatch
-    def render(
+    def render(  # noqa: F811
         self, el: Union[layout.DocClass, layout.DocModule], is_flat: bool = False
     ) -> str:
         title = "" if is_flat else self._render_header(el.name)
@@ -230,19 +236,21 @@ class Renderer:
             # add classes
             for raw_class in el.members:
                 if raw_class.obj.is_class and isinstance(raw_class, layout.Doc):
-                    body_rows.extend(self.render(raw_class, is_flat=True).split("\n"))
+                    body_rows.extend(self.render(
+                        raw_class, is_flat=True).split("\n"))
 
             # add methods
             for raw_method in el.members:
                 if raw_method.obj.is_function and isinstance(raw_method, layout.Doc):
-                    body_rows.extend(self.render(raw_method, is_flat=True).split("\n"))
+                    body_rows.extend(self.render(
+                        raw_method, is_flat=True).split("\n"))
 
         text = self._render_definition_list(sig, body_rows)
 
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocFunction, is_flat: bool = False):
+    def render(self, el: layout.DocFunction, is_flat: bool = False):  # noqa: F811
         title = "" if is_flat else self._render_header(el.name)
 
         sig = self.signature(el)
@@ -252,7 +260,7 @@ class Renderer:
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocAttribute, is_flat: bool = False):
+    def render(self, el: layout.DocAttribute, is_flat: bool = False):  # noqa: F811
         link = f"[{el.name}](#{el.anchor})"
         description = self.summarizer.summarize(el.obj)
 
@@ -261,7 +269,7 @@ class Renderer:
     # render griffe objects ===================================================
 
     @dispatch
-    def render(self, el: Union[dc.Object, dc.Alias]):
+    def render(self, el: Union[dc.Object, dc.Alias]):  # noqa: F811
         """Render high level objects representing functions, classes, etc.."""
 
         str_body = []
@@ -279,10 +287,11 @@ class Renderer:
     # signature parts -------------------------------------------------------------
 
     @dispatch
-    def render(self, el: dc.Parameters):
+    def render(self, el: dc.Parameters):  # noqa: F811
         # index for switch from positional to kw args (via an unnamed *)
         try:
-            kw_only = [par.kind for par in el].index(dc.ParameterKind.keyword_only)
+            kw_only = [par.kind for par in el].index(
+                dc.ParameterKind.keyword_only)
         except ValueError:
             kw_only = None
 
@@ -318,8 +327,9 @@ class Renderer:
         return ", ".join(pars)
 
     @dispatch
-    def render(self, el: dc.Parameter):
-        splats = {dc.ParameterKind.var_keyword, dc.ParameterKind.var_positional}
+    def render(self, el: dc.Parameter):  # noqa: F811
+        splats = {dc.ParameterKind.var_keyword,
+                  dc.ParameterKind.var_positional}
         has_default = el.default and el.kind not in splats
 
         if el.kind == dc.ParameterKind.var_keyword:
@@ -343,7 +353,7 @@ class Renderer:
     # note this can be a number of things. for example, opening docstring text,
     # or a section with a header not included in the numpydoc standard
     @dispatch
-    def render(self, el: ds.DocstringSectionText):
+    def render(self, el: ds.DocstringSectionText):  # noqa: F811
         new_el = qast.transform(el)
         if isinstance(new_el, ds.DocstringSectionText):
             # ensures we don't recurse forever
@@ -354,7 +364,7 @@ class Renderer:
     # parameters ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionParameters):
+    def render(self, el: ds.DocstringSectionParameters):  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -378,7 +388,7 @@ class Renderer:
     # attributes ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionAttributes):
+    def render(self, el: ds.DocstringSectionAttributes):  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -400,25 +410,25 @@ class Renderer:
     # examples ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionExamples):
+    def render(self, el: ds.DocstringSectionExamples):  # noqa: F811
         # its value is a tuple: DocstringSectionKind["text" | "examples"], str
         data = map(qast.transform, el.value)
         return "\n\n".join(list(map(self.render, data)))
 
     @dispatch
-    def render(self, el: qast.ExampleCode):
+    def render(self, el: qast.ExampleCode):  # noqa: F811
         return f"""```python
 {el.value}
 ```"""
 
     @dispatch
-    def render(self, el: qast.ExampleText):
+    def render(self, el: qast.ExampleText):  # noqa: F811
         return el.value
 
     # returns ----
 
     @dispatch
-    def render(self, el: ds.DocstringSectionReturns):
+    def render(self, el: ds.DocstringSectionReturns):  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -446,7 +456,7 @@ class Renderer:
         return self._render_definition_list("Returns:", rows, title_class="highlight")
 
     @dispatch
-    def render(self, el: ds.DocstringSectionRaises):
+    def render(self, el: ds.DocstringSectionRaises):  # noqa: F811
         # if more than one param, render as un-ordered list
         prefix = "* " if len(el.value) > 1 else ""
         follow = "  " if len(el.value) > 1 else ""
@@ -464,14 +474,14 @@ class Renderer:
         return self._render_definition_list("Raises:", rows, title_class="highlight")
 
     @dispatch
-    def render(self, el: ds.DocstringSectionAdmonition) -> str:
+    def render(self, el: ds.DocstringSectionAdmonition) -> str:  # noqa: F811
         rows = []
         if el.title.lower().startswith("note"):
-            rows.append(f'::: {{.callout-note title="{el.title}"}}')
+            rows.append(f"::: {{.callout-note title={el.title!r}}}")
         elif el.title.lower().startswith("warn"):
-            rows.append(f'::: {{.callout-warning title="{el.title}"}}')
+            rows.append(f"::: {{.callout-warning title={el.title!r}}}")
         else:
-            rows.append(f'::: {{.callout-tip title="{el.title}"}}')
+            rows.append(f"::: {{.callout-tip title={el.title!r}}}")
 
         rows.append(el.value.description)
         rows.append(":::")
@@ -488,5 +498,5 @@ class Renderer:
         (ds.DocstringReceive,),
         (ds.DocstringAttribute,),
     )
-    def render(self, el):
+    def render(self, el):  # noqa: F811
         raise NotImplementedError(f"{type(el)}")
