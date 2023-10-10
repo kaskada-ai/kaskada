@@ -227,6 +227,15 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
+      - name: Lint reference docs
+        run: |
+          poetry env use 3.11
+          source $(poetry env info --path)/bin/activate
+          poetry install --with=docs
+          pip install ${WHEEL} --force-reinstall
+          cd docs
+          python _scripts/lint_reference.py
+          deactivate
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
       - name: Build docs
