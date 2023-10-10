@@ -539,7 +539,7 @@ class Parquet(Source):
 
     @staticmethod
     async def create(
-        url: Optional[str] = None,
+        file: Optional[str] = None,
         *,
         time_column: str,
         key_column: str,
@@ -566,9 +566,9 @@ class Parquet(Source):
               If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
-            if url is None:
+            if file is None:
                 raise ValueError("Must provide schema or url to parquet file")
-            schema = await _ffi.parquet_schema(_get_session(), url)
+            schema = await _ffi.parquet_schema(_get_session(), file)
         source = Parquet(
             time_column=time_column,
             key_column=key_column,
@@ -578,8 +578,8 @@ class Parquet(Source):
             time_unit=time_unit,
         )
 
-        if url:
-            await source.add_file(url)
+        if file:
+            await source.add_file(file)
         return source
 
     async def add_file(self, file: str) -> None:
