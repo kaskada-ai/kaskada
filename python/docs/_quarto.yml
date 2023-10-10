@@ -50,9 +50,6 @@ website:
       - guide/execution.qmd
   - title: Examples
     contents: examples
-  - title: Community
-    contents:
-      - community/index.qmd
   - title: API
     style: docked
     contents: reference
