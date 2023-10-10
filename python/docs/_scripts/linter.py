@@ -9,7 +9,9 @@ from pydantic import ValidationError
 from quartodoc import blueprint, collect, layout
 from quartodoc.validation import fmt
 
+
 _log = logging.getLogger("quartodoc")
+
 
 def load_layout(sections: dict, package: str, options=None):
     try:
@@ -22,6 +24,7 @@ def load_layout(sections: dict, package: str, options=None):
         ]  # we only want to show one error at a time b/c it is confusing otherwise
         msg += first_error
         raise ValueError(msg) from None
+
 
 class Linter:
     """Base class for linting API docs.
@@ -58,7 +61,6 @@ class Linter:
         source_dir: str | None = None,
         parser="google",
     ):
-
         self.package = package
         self.sections = sections
         self.options = options
@@ -88,8 +90,8 @@ class Linter:
         issue_count = 0
         for pkg_item in pkg_items:
             if pkg_item not in ref_items:
-                 _log.warning(f"Missing item: {pkg_item}")
-                 issue_count += 1
+                _log.warning(f"Missing item: {pkg_item}")
+                issue_count += 1
 
         if issue_count > 0:
             _log.error("Encountered un-documented items. Please fix.")
@@ -107,9 +109,12 @@ class Linter:
 
         cfg = quarto_cfg.get("quartodoc")
         if cfg is None:
-            raise KeyError(
-                "No `quartodoc:` section found in your _quarto.yml.")
+            raise KeyError("No `quartodoc:` section found in your _quarto.yml.")
 
         return Linter(
-            **{k: v for k, v in cfg.items() if k in ["package", "sections", "options", "parser"]},
+            **{
+                k: v
+                for k, v in cfg.items()
+                if k in ["package", "sections", "options", "parser"]
+            },
         )

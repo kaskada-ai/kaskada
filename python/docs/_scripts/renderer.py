@@ -144,7 +144,9 @@ class Renderer:
         return self.signature(el.obj)
 
     @dispatch
-    def signature(self, el: dc.Alias, source: Optional[dc.Alias] = None) -> str:  # noqa: F811
+    def signature(  # noqa: F811
+        self, el: dc.Alias, source: Optional[dc.Alias] = None
+    ) -> str:
         """Return a string representation of an object's signature."""
         return self.signature(el.target, el)
 
@@ -247,21 +249,21 @@ class Renderer:
             # add classes
             for raw_class in el.members:
                 if raw_class.obj.is_class and isinstance(raw_class, layout.Doc):
-                    body_rows.extend(self.render(
-                        raw_class, is_flat=True).split("\n"))
+                    body_rows.extend(self.render(raw_class, is_flat=True).split("\n"))
 
             # add methods
             for raw_method in el.members:
                 if raw_method.obj.is_function and isinstance(raw_method, layout.Doc):
-                    body_rows.extend(self.render(
-                        raw_method, is_flat=True).split("\n"))
+                    body_rows.extend(self.render(raw_method, is_flat=True).split("\n"))
 
         text = self._render_definition_list(sig, body_rows)
 
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocFunction, is_flat: bool = False) -> str:  # noqa: F811
+    def render(  # noqa: F811
+        self, el: layout.DocFunction, is_flat: bool = False
+    ) -> str:
         title = "" if is_flat else self._render_header(el.name)
 
         sig = self.signature(el)
@@ -271,13 +273,16 @@ class Renderer:
         return "\n\n".join([title, text])
 
     @dispatch
-    def render(self, el: layout.DocAttribute, is_flat: bool = False) -> str:  # noqa: F811
+    def render(  # noqa: F811
+        self, el: layout.DocAttribute, is_flat: bool = False
+    ) -> str:
         link = f"[{el.name}](#{el.anchor})"
         description = self.summarizer.summarize(el.obj)
 
-        # check for TypeAlias like "LiteralValue: TypeAlias = Optional[Union[int, str, float, bool, timedelta, datetime]]"
+        # check for alias like "IntStr: TypeAlias = Optional[Union[int, str]]"
         if isinstance(el.obj, dc.Alias) and el.obj.target and el.obj.target.value:
-            return self._render_definition_list(title=link, items=[description, self.render_annotation(el.obj.target)])
+            alias = f"alias of {self.render_annotation(el.obj.target)}"
+            return self._render_definition_list(title=link, items=[description, alias])
 
         return " -- ".join([link, description])
 
@@ -305,8 +310,7 @@ class Renderer:
     def render(self, el: dc.Parameters) -> str:  # noqa: F811
         # index for switch from positional to kw args (via an unnamed *)
         try:
-            kw_only = [par.kind for par in el].index(
-                dc.ParameterKind.keyword_only)
+            kw_only = [par.kind for par in el].index(dc.ParameterKind.keyword_only)
         except ValueError:
             kw_only = None
 
@@ -343,8 +347,7 @@ class Renderer:
 
     @dispatch
     def render(self, el: dc.Parameter) -> str:  # noqa: F811
-        splats = {dc.ParameterKind.var_keyword,
-                  dc.ParameterKind.var_positional}
+        splats = {dc.ParameterKind.var_keyword, dc.ParameterKind.var_positional}
         has_default = el.default and el.kind not in splats
 
         if el.kind == dc.ParameterKind.var_keyword:

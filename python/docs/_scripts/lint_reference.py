@@ -16,5 +16,4 @@ if __name__ == "__main__":
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
-    l = Linter.from_quarto_config("_reference.yml")
-    l.lint()
+    Linter.from_quarto_config("_reference.yml").lint()

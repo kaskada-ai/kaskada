@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 from pydantic import ValidationError
 from quartodoc import blueprint, collect, layout
@@ -11,6 +11,7 @@ from quartodoc.inventory import convert_inventory, create_inventory
 from quartodoc.validation import fmt
 from renderer import Renderer
 from summarizer import Summarizer
+
 
 # `preview()` can be used to help debug doc generation.
 # use it on a `section` or `page` element to see a visual
@@ -175,16 +176,14 @@ class Builder:
                         _log.info(f"Rendering {page.path}")
                         # preview(page, max_depth=4)
                         page_text = self.renderer.render(page)
-                        page_path = location / \
-                            (page.path + self.out_page_suffix)
+                        page_path = location / (page.path + self.out_page_suffix)
                         self.write_page_if_not_exists(page_path, page_text)
                     if page.path in self.page_map:
                         del self.page_map[page.path]
 
                     self.update_page_items(page, location, is_flat)
                 else:
-                    raise NotImplementedError(
-                        f"Unsupported section item: {type(page)}")
+                    raise NotImplementedError(f"Unsupported section item: {type(page)}")
 
         if len(self.page_map.keys()) > 0:
             _log.warning(f"Extra pages: {self.page_map.keys()}")
@@ -208,8 +207,7 @@ class Builder:
                 )
                 self.update_items(doc, page_path)
             else:
-                raise NotImplementedError(
-                    f"Unsupported page item: {type(doc)}")
+                raise NotImplementedError(f"Unsupported page item: {type(doc)}")
 
     def update_items(self, doc: layout.Doc, page_path: str):
         name = doc.obj.path
@@ -287,8 +285,7 @@ class Builder:
 
         cfg = quarto_cfg.get("quartodoc")
         if cfg is None:
-            raise KeyError(
-                "No `quartodoc:` section found in your _quarto.yml.")
+            raise KeyError("No `quartodoc:` section found in your _quarto.yml.")
 
         return Builder(
             **{k: v for k, v in cfg.items()},
