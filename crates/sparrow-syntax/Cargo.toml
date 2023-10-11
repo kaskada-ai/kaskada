@@ -13,10 +13,8 @@ Representation and parser for Fenl syntax.
 anyhow.workspace = true
 arrow.workspace = true
 arrow-schema.workspace = true
-bigdecimal.workspace = true
 bitvec.workspace = true
 codespan-reporting.workspace = true
-decorum.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
 lalrpop-util.workspace = true
@@ -25,8 +23,6 @@ serde.workspace = true
 smallvec.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 static_init.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
 
 [build-dependencies]
 lalrpop.workspace = true

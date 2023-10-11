@@ -11,7 +11,6 @@ Query Flight Recorder for Sparrow queries.
 
 [dependencies]
 clap.workspace = true
-cpu-time.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 fallible-iterator.workspace = true
@@ -22,10 +21,7 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
-sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-qfr = { path = "../sparrow-qfr" }
-sparrow-syntax = { path = "../sparrow-syntax" }
-tracing.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

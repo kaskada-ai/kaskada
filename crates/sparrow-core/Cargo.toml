@@ -12,18 +12,11 @@ Common components used by most Sparrow crates.
 [dependencies]
 anyhow.workspace = true
 arrow.workspace = true
-chrono.workspace = true
-decorum.workspace = true
 futures.workspace = true
-itertools.workspace = true
-num.workspace = true
 owning_ref.workspace = true
-parquet.workspace = true
-serde.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 static_init.workspace = true
 tonic.workspace = true
-tracing.workspace = true
 
 [lib]
 doctest = false

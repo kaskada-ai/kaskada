@@ -17,11 +17,8 @@ arrow-arith.workspace = true
 arrow-ord.workspace = true
 arrow-schema.workspace = true
 bincode.workspace = true
-bit-set.workspace = true
-bitvec.workspace = true
 chrono.workspace = true
 enum-map.workspace = true
-erased-serde.workspace = true
 error-stack.workspace = true
 derive_more.workspace = true
 hashbrown.workspace = true
@@ -42,10 +39,7 @@ sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
-tempfile.workspace = true
-tonic.workspace = true
 tracing.workspace = true
-lz4-sys.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]

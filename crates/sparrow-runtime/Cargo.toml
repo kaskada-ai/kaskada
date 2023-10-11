@@ -21,52 +21,39 @@ arrow.workspace = true
 arrow-array.workspace = true
 arrow-arith.workspace = true
 arrow-select.workspace = true
-async-once-cell.workspace = true
 async-stream.workspace = true
 async-trait.workspace = true
 avro-rs = { workspace = true }
 avro-schema = { workspace = true, optional = true }
-bit-set.workspace = true
 bitvec.workspace = true
 bytes.workspace = true
 chrono.workspace = true
-clap.workspace = true
 dashmap.workspace = true
-data-encoding.workspace = true
 derive_more.workspace = true
 enum-map.workspace = true
 erased-serde.workspace = true
 error-stack.workspace = true
-fallible-iterator.workspace = true
 futures-lite.workspace = true
 futures.workspace = true
-half.workspace = true
 hashbrown.workspace = true
 inventory.workspace = true
 itertools.workspace = true
 lz4 = { workspace = true, optional = true }
-num-traits.workspace = true
 object_store.workspace = true
-owning_ref.workspace = true
 parquet.workspace = true
 pin-project.workspace = true
 prost-wkt-types.workspace = true
 pulsar = { workspace = true, optional = true }
 reqwest.workspace = true
 serde_json.workspace = true
-serde_yaml.workspace = true
 serde.workspace = true
-sha2.workspace = true
-smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
-sparrow-kernels = { path = "../sparrow-kernels" }
 sparrow-merge = { path = "../sparrow-merge", features = ["testing"] }
 sparrow-qfr = { path = "../sparrow-qfr" }
-sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true
 tempfile.workspace = true
 tokio-stream.workspace = true
