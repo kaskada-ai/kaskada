@@ -18,7 +18,6 @@ error-stack.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
 serde.workspace = true
-sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-types = { path = "../sparrow-types" }
 static_init.workspace = true
 serde_yaml.workspace = true

@@ -487,12 +487,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-once-cell"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9338790e78aa95a416786ec8389546c4b6a1dfc3dc36071ed9518a9413a542eb"
-
-[[package]]
 name = "async-process"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -712,20 +706,6 @@ name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
-
-[[package]]
-name = "bigdecimal"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "454bca3db10617b88b566f205ed190aedb0e0e6dd4cad61d3988a72e8c5594cb"
-dependencies = [
- "autocfg",
- "libm",
- "num-bigint 0.4.3",
- "num-integer",
- "num-traits",
- "serde",
-]
 
 [[package]]
 name = "bincode"
@@ -1167,12 +1147,6 @@ dependencies = [
  "once_cell",
  "parking_lot_core 0.9.8",
 ]
-
-[[package]]
-name = "data-encoding"
-version = "2.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
 
 [[package]]
 name = "decorum"
@@ -3689,9 +3663,7 @@ dependencies = [
  "serde_yaml",
  "sparrow-arrow",
  "sparrow-syntax",
- "tempfile",
  "thiserror",
- "tokio",
  "tonic",
  "tonic-build",
  "url",
@@ -3727,49 +3699,36 @@ dependencies = [
 name = "sparrow-compiler"
 version = "0.11.0"
 dependencies = [
- "ahash 0.8.3",
  "anyhow",
  "arrow",
  "arrow-schema",
  "bit-set",
- "chrono",
  "clap",
  "codespan-reporting",
  "const_format",
- "decorum",
  "derive_more",
  "edit-distance",
  "egg",
- "enum-map",
  "error-stack",
  "hashbrown 0.14.0",
  "itertools 0.11.0",
  "lalrpop",
  "lalrpop-util",
- "logos",
- "num",
  "once_cell",
  "parking_lot 0.12.1",
  "prost",
- "prost-types",
- "prost-wkt",
- "prost-wkt-types",
- "serde",
- "serde_yaml",
  "sha2",
  "smallvec",
  "sparrow-api",
  "sparrow-arrow",
  "sparrow-core",
  "sparrow-instructions",
- "sparrow-kernels",
  "sparrow-merge",
  "sparrow-syntax",
  "static_init",
  "strum 0.25.0",
  "strum_macros 0.25.1",
  "termcolor",
- "thiserror",
  "tonic",
  "tracing",
  "uuid 1.4.1",
@@ -3781,18 +3740,11 @@ version = "0.11.0"
 dependencies = [
  "anyhow",
  "arrow",
- "chrono",
- "decorum",
  "futures",
- "itertools 0.11.0",
- "num",
  "owning_ref",
- "parquet",
- "serde",
  "sparrow-arrow",
  "static_init",
  "tonic",
- "tracing",
 ]
 
 [[package]]
@@ -3806,16 +3758,12 @@ dependencies = [
  "arrow-ord",
  "arrow-schema",
  "bincode",
- "bit-set",
- "bitvec",
  "chrono",
  "derive_more",
  "enum-map",
- "erased-serde",
  "error-stack",
  "hashbrown 0.14.0",
  "itertools 0.11.0",
- "lz4-sys",
  "num",
  "owning_ref",
  "parse-display",
@@ -3832,8 +3780,6 @@ dependencies = [
  "static_init",
  "strum 0.25.0",
  "strum_macros 0.25.1",
- "tempfile",
- "tonic",
  "tracing",
  "uuid 1.4.1",
 ]
@@ -3844,14 +3790,10 @@ version = "0.11.0"
 dependencies = [
  "anyhow",
  "arrow",
- "bitvec",
  "chrono",
  "chronoutil",
  "itertools 0.11.0",
- "num",
- "smallvec",
  "sparrow-arrow",
- "static_init",
  "substring",
 ]
 
@@ -3876,7 +3818,6 @@ dependencies = [
  "smallvec",
  "sparrow-arrow",
  "sparrow-core",
- "tokio",
  "tracing",
 ]
 
@@ -3889,13 +3830,11 @@ dependencies = [
  "error-stack",
  "fallible-iterator",
  "futures",
- "hashbrown 0.14.0",
  "inventory",
  "itertools 0.11.0",
  "once_cell",
  "pin-project",
  "prost",
- "prost-types",
  "tokio",
  "tokio-stream",
  "tonic-build",
@@ -3912,33 +3851,25 @@ dependencies = [
  "arrow-arith",
  "arrow-array",
  "arrow-select",
- "async-once-cell",
  "async-stream",
  "async-trait",
  "avro-rs",
  "avro-schema",
- "bit-set",
  "bitvec",
  "bytes",
  "chrono",
- "clap",
  "dashmap",
- "data-encoding",
  "derive_more",
  "enum-map",
  "erased-serde",
  "error-stack",
- "fallible-iterator",
  "futures",
  "futures-lite",
- "half",
  "hashbrown 0.14.0",
  "inventory",
  "itertools 0.11.0",
  "lz4",
- "num-traits",
  "object_store",
- "owning_ref",
  "parquet",
  "pin-project",
  "prost-wkt-types",
@@ -3946,18 +3877,13 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_yaml",
- "sha2",
- "smallvec",
  "sparrow-api",
  "sparrow-arrow",
  "sparrow-compiler",
  "sparrow-core",
  "sparrow-instructions",
- "sparrow-kernels",
  "sparrow-merge",
  "sparrow-qfr",
- "sparrow-syntax",
  "static_init",
  "tempfile",
  "tokio",
@@ -3975,7 +3901,6 @@ version = "0.11.0"
 dependencies = [
  "arrow-array",
  "arrow-schema",
- "arrow-select",
  "derive_more",
  "error-stack",
  "futures",
@@ -4002,10 +3927,8 @@ dependencies = [
  "anyhow",
  "arrow",
  "arrow-schema",
- "bigdecimal",
  "bitvec",
  "codespan-reporting",
- "decorum",
  "hashbrown 0.14.0",
  "itertools 0.11.0",
  "lalrpop",
@@ -4015,8 +3938,6 @@ dependencies = [
  "smallvec",
  "sparrow-arrow",
  "static_init",
- "thiserror",
- "tracing",
 ]
 
 [[package]]

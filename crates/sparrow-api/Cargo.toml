@@ -27,9 +27,7 @@ serde.workspace = true
 serde_yaml.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-syntax = { path = "../sparrow-syntax" }
-tempfile.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 tonic.workspace = true
 uuid.workspace = true
 url.workspace = true
@@ -38,6 +36,10 @@ url.workspace = true
 prost-build.workspace = true
 prost-wkt-build.workspace = true
 tonic-build.workspace = true
+
+[package.metadata.cargo-machete]
+# generated code depends on these
+ignored = ["clap", "enum-map", "prost", "prost-types", "prost-wkt"]
 
 [lib]
 # Disable doctests for the API, since we don't write any, and the
