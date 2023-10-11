@@ -21,7 +21,7 @@ jobs:
       - name: Draft Release Notes
         uses: release-drafter/release-drafter@v5
         with:
-          config-name: release-drafter.yml
+          config-name: release-drafter.yml # (default)
           disable-autolabeler: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
