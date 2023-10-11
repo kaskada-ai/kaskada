@@ -13,30 +13,6 @@ permissions:
   pull-requests: read
 
 jobs:
-  engine_draft:
-    runs-on: ubuntu-latest
-    concurrency:
-      group: engine-release
-    steps:
-      - name: Draft Engine release
-        uses: release-drafter/release-drafter@v5
-        with:
-          config-name: release-drafter-engine.yml
-          disable-autolabeler: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  python_client_draft:
-    runs-on: ubuntu-latest
-    concurrency:
-      group: python-client-release
-    steps:
-      - name: Draft Python Client release
-        uses: release-drafter/release-drafter@v5
-        with:
-          config-name: release-drafter-python-client.yml
-          disable-autolabeler: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   python_draft:
     runs-on: ubuntu-latest
     concurrency:
@@ -45,7 +21,7 @@ jobs:
       - name: Draft Release Notes
         uses: release-drafter/release-drafter@v5
         with:
-          config-name: release-drafter-python.yml
+          config-name: release-drafter.yml # (default)
           disable-autolabeler: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
