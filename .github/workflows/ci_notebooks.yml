@@ -1,5 +1,3 @@
-# TODO: Use Makefile provided in CI (might have to move to docker builds in CI or drop docker in Makefile)
-# TODO: Move ent generation out of build jon. Tried but something was off with cacing and builds would fail
 on:
   pull_request:
     branches: [ main ]

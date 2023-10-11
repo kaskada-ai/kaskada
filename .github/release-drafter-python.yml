@@ -1,6 +1,90 @@
-_extends: kaskada:.github/release-drafter.yml
+categories:
+  - title: 🏆 Highlights
+    labels: highlight
+  - title: ⚠️ Feature Removals
+    labels: removal
+  - title: ✨ Features & Enhancements
+    labels: enhancement
+  - title: 🐞 Bug fixes
+    labels:
+      - fix
+      - bug
+  - title: 🛠️ Other improvements
+    collapse-after: 10
 
-name-template: Kaskada $RESOLVED_VERSION-a.0
-tag-template: v$RESOLVED_VERSION-a.0
+exclude-labels:
+  - skip-changelog
+  - release
+
+change-template: '- $TITLE (#$NUMBER)'
+change-title-escapes: '\<*_&'
+replacers:
+  # Remove conventional commits from titles
+  - search: '/- ([a-z]+)(\(.*\))?(\!)?\: /g'
+    replace: '- '
+
+version-resolver:
+  minor:
+    labels:
+      # Removing existing functionality is at least a minor change.
+      - removal
+      # If we made any enhancements (feature changes) advance minor.
+      - enhancement
+  default: patch
+
+autolabeler:
+  # Component labels based on paths edited
+  - label: wren
+    files:
+      - wren/**
+  - label: sparrow
+    files:
+      - crates/**
+      - Cargo.*
+  - label: python
+    files:
+      - clients/python/**
+  - label: proto
+    files:
+      - proto/**
+  # Add labels reflecting the kind of change based on prefix
+  - label: build
+    title:
+      - '/^build(\(.*\))?(\!)?\:/'
+      - '/^ci(\(.*\))?(\!)?\:/'
+    files:
+      - .github/
+  - label: documentation
+    title:
+      - '/^docs(\(.*\))?(\!)?\:/'
+    files:
+      - docs/**
+      - docs-src/**
+  - label: enhancement
+    title:
+      - '/^feat(\(.*\))?(\!)?\:/'
+  - label: bug
+    title:
+      - '/^fix(\(.*\))?(\!)?\:/'
+      - '/^bug(\(.*\))?(\!)?\:/'
+  - label: refactor
+    title:
+      - '/^ref(\(.*\))?(\!)?\:/'
+      - '/^refactor(\(.*\))?(\!)?\:/'
+  - label: release
+    title:
+      - '/^release(\(.*\))?(\!)?\:/'
+  - label: test
+    title:
+      - '/^test(\(.*\))?(\!)?\:/'
+
+template: |
+  $CHANGES
+
+  Thank you to all our contributors for making this release possible!
+  $CONTRIBUTORS
+
+name-template: Kaskada $RESOLVED_VERSION
+tag-template: v$RESOLVED_VERSION
 tag-prefix: v
 include-pre-releases: true
