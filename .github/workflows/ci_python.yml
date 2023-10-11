@@ -80,7 +80,7 @@ jobs:
         run: |
           poetry run pydocstyle pysrc
 
-  build-test-rust:
+  rust-build-test:
     if: |
       github.event_name == 'pull_request' ||
       github.event_name == 'merge_group' ||
@@ -141,7 +141,7 @@ jobs:
             -Dclippy::print-stderr
             -Dclippy::undocumented-unsafe-blocks
 
-  build-test-python:
+  python-build-test:
     if: |
       github.event_name == 'pull_request' ||
       github.event_name == 'merge_group' ||
@@ -328,7 +328,7 @@ jobs:
       id-token: write   # to verify the deployment originates from an appropriate source
 
     runs-on: ubuntu-latest
-    needs: [build-test-python]
+    needs: [python-build-test]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
