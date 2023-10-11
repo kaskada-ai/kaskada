@@ -42,7 +42,7 @@ jobs:
   # Run lint separately from the build -- it doesn't need the built Rust code.
   #
   # Also, only do it on one machine.
-  lint:
+  lint-python:
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     steps:
@@ -72,12 +72,13 @@ jobs:
         run: |
           poetry run pydocstyle pysrc
 
-  debug:
+  build-and-test:
     if: |
       github.event_name == 'pull_request' ||
       github.event_name == 'merge_group' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
+    runs-on:
+        group: linux-rust-builds
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
@@ -92,6 +93,23 @@ jobs:
             3.10
             3.11
           cache: poetry
+      # For caching, we use a special `rust-cache` action, which ensures we
+      # cache based on the architecture, and also deletes stuff that shouldn't
+      # be put in the cache (such as the toolchain).
+      #
+      # See
+      # https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Caching.
+      #
+      # This currently saves the cache on each branch. This may exceed GitHub's
+      # cache size limit. If we start hitting that, we could choose to only
+      # cache the `main` branch, which would provide caching for cases where the
+      # dependencies of crates haven't changed. See
+      # https://github.com/Swatinem/rust-cache/issues/95.
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        with:
+          # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
+          cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
       - name: Build debug wheels
         uses: messense/maturin-action@v1
         with:
@@ -104,8 +122,12 @@ jobs:
             dnf -y install clang protobuf-devel lld
             clang --version
             protoc --version
+      # The `maturin develop` will have fetched packages and built the dev profile.
+      # These tests shouldn't need to rebuild anything beyond the tests themselves.
+      - name: Rust Tests
+        run: |
+          cargo test
       - name: Determine Version
-        if: github.event_name != 'release'
         run: |
           pip install tomlkit packaging
           VERSION=$(python ../scripts/version.py get --normalize pyproject.toml project.version)
@@ -154,6 +176,57 @@ jobs:
         with:
           # Automatically uploads an artifact from the './_site' directory by default
           path: ${{ github.workspace }}/python/docs/_build
+
+  rust-format:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install stable toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      # `cargo fmt` doesn't need any dependencies, so no need to cache.
+      # Restoring the cache takes 2m. Running rustfmt takes 10s.
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  rust-audit:
+    runs-on: ubuntu-20.04
+
+    # Audits don't need a toolchain or any of the dependencies, so we don't cache.
+    # Restoring the cache takes 2m. Running `cargo deny` takes 10s.
+
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}
+
+  rust-unused-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Machete
+        uses: bnjbvr/cargo-machete@main
 
   docs-deploy:
     # Deploy docs on push to main.
