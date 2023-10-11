@@ -9,5 +9,4 @@
 )]
 
 //! Implementations of the pipelines to be executed.
-
-mod tests
+mod tests;
