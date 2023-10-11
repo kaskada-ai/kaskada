@@ -14,7 +14,10 @@ pub trait Source: Send + Sync {
     /// a certain number of batches are read, a stop signal is received,
     /// etc.
     ///
-    /// TODO: Params
+    /// Parameters:
+    /// * `projected_datatype`: The datatype of the data to produce. Note that
+    ///    this may differ from the prepared type.
+    /// * `read_config`: Configuration for the read.
     fn read(
         &self,
         projected_datatype: &DataType,
