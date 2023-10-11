@@ -50,7 +50,7 @@ jobs:
   # Run lint separately from the build -- it doesn't need the built Rust code.
   #
   # Also, only do it on one machine.
-  lint-python:
+  python-lint:
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     steps:
