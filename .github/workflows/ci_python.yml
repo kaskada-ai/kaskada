@@ -258,8 +258,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      # This doesn't use the `cargo-machete` action since that doesn't cache
+      # the machete binary.env:
+      - name: Install cargo-machete from crates.io
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-machete
       - name: Machete
-        uses: bnjbvr/cargo-machete@main
+        run:
+          cargo machete
 
   docs-deploy:
     # Deploy docs on push to main.
