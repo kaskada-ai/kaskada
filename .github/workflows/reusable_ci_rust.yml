@@ -78,8 +78,11 @@ jobs:
       # https://github.com/Swatinem/rust-cache/issues/95.
       - name: Cache Rust Dependencies
         if: needs.rust_skip.outputs.should_skip != 'true'
-        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        uses: Swatinem/rust-cache@v2
         with:
+          workspaces:
+            .
+            python
           # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
           cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
 

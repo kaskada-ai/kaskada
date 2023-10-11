@@ -17,6 +17,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+
+env:
+  # See https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Workflow.
+  # Speeds up CI builds, which won't have previous results anyway.
+  CARGO_INCREMENTAL: 0
+
 on:
   push:
     branches:
