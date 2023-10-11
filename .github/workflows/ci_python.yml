@@ -107,6 +107,10 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler lld
+          version: 1.0
       # For caching, we use a special `rust-cache` action, which ensures we
       # cache based on the architecture, and also deletes stuff that shouldn't
       # be put in the cache (such as the toolchain).
@@ -127,18 +131,14 @@ jobs:
             python
           # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
           cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
+
       - name: Build debug wheels
         uses: messense/maturin-action@v1
         with:
-          target: x86_64
-          manylinux: 2_28
           args: --out dist --profile dev
+          # Build on host instead of a manylinux container.
+          container: off
           working-directory: python
-          before-script-linux: |
-            set -e
-            dnf -y install clang protobuf-devel lld
-            clang --version
-            protoc --version
       # The `maturin develop` will have fetched packages and built the dev profile.
       # These tests shouldn't need to rebuild anything beyond the tests themselves.
       - name: Rust Tests
@@ -237,7 +237,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check --manifest-path python/Cargo.toml
+          args: --all --manifest-path python/Cargo.toml -- --check
 
   rust-audit:
     runs-on: ubuntu-20.04
