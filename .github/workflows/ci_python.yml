@@ -17,7 +17,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
 env:
   # See https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Workflow.
   # Speeds up CI builds, which won't have previous results anyway.
@@ -42,6 +41,9 @@ defaults:
     working-directory: python
 
 permissions:
+  actions: write
+  # Used by clippy action to report lint errors.
+  checks: write
   contents: read
 
 jobs:
@@ -99,6 +101,12 @@ jobs:
             3.10
             3.11
           cache: poetry
+      - name: Install stable Rust toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
       # For caching, we use a special `rust-cache` action, which ensures we
       # cache based on the architecture, and also deletes stuff that shouldn't
       # be put in the cache (such as the toolchain).
@@ -112,8 +120,11 @@ jobs:
       # dependencies of crates haven't changed. See
       # https://github.com/Swatinem/rust-cache/issues/95.
       - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        uses: Swatinem/rust-cache@v2
         with:
+          workspaces:
+            .
+            python
           # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
           cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
       - name: Build debug wheels
@@ -160,6 +171,22 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
+      # Clippy needs to build the code, so we run it as part of the main CI since
+      # we've already spent the time building it.
+      - name: Cargo Clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # The `lib.rs` or `bin.rs` files for each create *should* specify the same
+          # flags to ensure vscode, etc. reports warnings. But, specifying them in the
+          # CI protects against cases where we forgot to do that.
+          args: >
+            --all-features
+            -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
+            -Dclippy::mod_module_files
+            -Dclippy::print-stdout
+            -Dclippy::print-stderr
+            -Dclippy::undocumented-unsafe-blocks
       - name: Setup QT
         # Needed by sphinx-social-cards.
         # https://github.com/2bndy5/sphinx-social-cards/blob/main/.github/workflows/build.yml#L54
