@@ -80,7 +80,68 @@ jobs:
         run: |
           poetry run pydocstyle pysrc
 
-  build-and-test:
+  build-test-rust:
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'merge_group' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on:
+        group: linux-rust-builds
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install stable Rust toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler lld
+          version: 1.0
+      # For caching, we use a special `rust-cache` action, which ensures we
+      # cache based on the architecture, and also deletes stuff that shouldn't
+      # be put in the cache (such as the toolchain).
+      #
+      # See
+      # https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Caching.
+      #
+      # This currently saves the cache on each branch. This may exceed GitHub's
+      # cache size limit. If we start hitting that, we could choose to only
+      # cache the `main` branch, which would provide caching for cases where the
+      # dependencies of crates haven't changed. See
+      # https://github.com/Swatinem/rust-cache/issues/95.
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces:
+            .
+            python
+          # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
+          cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
+      - name: Rust Tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features -- --nocapture --quiet
+      # Clippy needs to build the code, so we run it as part of the main CI since
+      # we've already spent the time building it.
+      - name: Cargo Clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # The `lib.rs` or `bin.rs` files for each create *should* specify the same
+          # flags to ensure vscode, etc. reports warnings. But, specifying them in the
+          # CI protects against cases where we forgot to do that.
+          args: >
+            --all-features
+            -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
+            -Dclippy::mod_module_files
+            -Dclippy::print-stdout
+            -Dclippy::print-stderr
+            -Dclippy::undocumented-unsafe-blocks
+
+  build-test-python:
     if: |
       github.event_name == 'pull_request' ||
       github.event_name == 'merge_group' ||
@@ -131,7 +192,6 @@ jobs:
             python
           # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
           cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"
-
       - name: Build debug wheels
         uses: messense/maturin-action@v1
         with:
@@ -139,17 +199,12 @@ jobs:
           # Build on host instead of a manylinux container.
           container: off
           working-directory: python
-      # The `maturin develop` will have fetched packages and built the dev profile.
-      # These tests shouldn't need to rebuild anything beyond the tests themselves.
-      - name: Rust Tests
-        working-directory:
-        run: |
-          cargo test
       - name: Determine Version
+        #  The wheel suffix is determined by seeing what `maturin build` printed.
         run: |
           pip install tomlkit packaging
           VERSION=$(python ../scripts/version.py get --normalize pyproject.toml project.version)
-          WHEEL=dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_28_x86_64.whl
+          WHEEL=dist/kaskada-${VERSION}-cp38-abi3-manylinux_2_31_x86_64.whl
           echo "WHEEL: ${WHEEL}"
           echo "WHEEL=${WHEEL}" >> $GITHUB_ENV
       - name: pytest and mypy
@@ -172,22 +227,6 @@ jobs:
             echo "::endgroup::"
             deactivate
           done
-      # Clippy needs to build the code, so we run it as part of the main CI since
-      # we've already spent the time building it.
-      - name: Cargo Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # The `lib.rs` or `bin.rs` files for each create *should* specify the same
-          # flags to ensure vscode, etc. reports warnings. But, specifying them in the
-          # CI protects against cases where we forgot to do that.
-          args: >
-            --all-features
-            -- -Dwarnings -Drust-2018-idioms -Dnonstandard-style -Dfuture-incompatible
-            -Dclippy::mod_module_files
-            -Dclippy::print-stdout
-            -Dclippy::print-stderr
-            -Dclippy::undocumented-unsafe-blocks
       - name: Setup QT
         # Needed by sphinx-social-cards.
         # https://github.com/2bndy5/sphinx-social-cards/blob/main/.github/workflows/build.yml#L54
@@ -289,7 +328,7 @@ jobs:
       id-token: write   # to verify the deployment originates from an appropriate source
 
     runs-on: ubuntu-latest
-    needs: [build-and-test]
+    needs: [build-test-python]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
