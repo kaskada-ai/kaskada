@@ -275,7 +275,7 @@ jobs:
       id-token: write   # to verify the deployment originates from an appropriate source
 
     runs-on: ubuntu-latest
-    needs: [debug]
+    needs: [build-and-test]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
