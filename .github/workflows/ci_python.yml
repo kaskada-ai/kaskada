@@ -142,6 +142,7 @@ jobs:
       # The `maturin develop` will have fetched packages and built the dev profile.
       # These tests shouldn't need to rebuild anything beyond the tests themselves.
       - name: Rust Tests
+        working-directory:
         run: |
           cargo test
       - name: Determine Version
@@ -226,11 +227,17 @@ jobs:
       # `cargo fmt` doesn't need any dependencies, so no need to cache.
       # Restoring the cache takes 2m. Running rustfmt takes 10s.
 
-      - name: Run cargo fmt
+      - name: Run cargo fmt (main Rust code)
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
+
+      - name: Run cargo fmt (Python Rust code)
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check --manifest-path python/Cargo.toml
 
   rust-audit:
     runs-on: ubuntu-20.04
