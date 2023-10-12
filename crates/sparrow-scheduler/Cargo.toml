@@ -17,6 +17,7 @@ index_vec.workspace = true
 itertools.workspace = true
 serde.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-batch = { path = "../sparrow-batch" }
 tracing.workspace = true
 work-queue = "0.1.4"
 

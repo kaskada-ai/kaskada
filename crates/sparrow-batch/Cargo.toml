@@ -1,0 +1,30 @@
+[package]
+name = "sparrow-batch"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Defines the main struct for wrapping RecordBatches in execution.
+"""
+
+[dependencies]
+arrow.workspace = true
+arrow-array.workspace = true
+arrow-schema.workspace = true
+arrow-select.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
+itertools.workspace = true
+static_init.workspace = true
+proptest = { workspace = true, optional = true }
+
+[dev-dependencies]
+sparrow-testing = { path = "../sparrow-testing" }
+sparrow-merge = { path = "../sparrow-merge" }
+proptest.workspace = true
+
+[lib]
+bench = false
+doctest = false

@@ -4280,6 +4280,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-batch"
+version = "0.11.0"
+dependencies = [
+ "arrow",
+ "arrow-array",
+ "arrow-schema",
+ "arrow-select",
+ "derive_more",
+ "error-stack",
+ "itertools 0.11.0",
+ "proptest",
+ "sparrow-merge",
+ "sparrow-testing",
+ "static_init",
+]
+
+[[package]]
 name = "sparrow-catalog"
 version = "0.11.0"
 dependencies = [
@@ -4342,6 +4359,7 @@ dependencies = [
  "sparrow-core",
  "sparrow-instructions",
  "sparrow-merge",
+ "sparrow-sources",
  "sparrow-syntax",
  "static_init",
  "strum 0.25.0",
@@ -4374,11 +4392,16 @@ dependencies = [
  "arrow-schema",
  "derive_more",
  "error-stack",
+ "futures",
  "index_vec",
  "parking_lot 0.12.1",
  "sparrow-arrow",
+ "sparrow-batch",
+ "sparrow-core",
+ "sparrow-interfaces",
  "sparrow-physical",
  "sparrow-scheduler",
+ "sparrow-sources",
  "sparrow-testing",
  "sparrow-transforms",
  "tokio",
@@ -4408,6 +4431,7 @@ dependencies = [
  "num",
  "serde_json",
  "sparrow-arrow",
+ "sparrow-batch",
  "sparrow-physical",
  "static_init",
  "substring",
@@ -4451,6 +4475,18 @@ dependencies = [
  "strum_macros 0.25.2",
  "tracing",
  "uuid 1.4.1",
+]
+
+[[package]]
+name = "sparrow-interfaces"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "sparrow-batch",
+ "sparrow-core",
 ]
 
 [[package]]
@@ -4704,6 +4740,7 @@ dependencies = [
  "loom",
  "serde",
  "sparrow-arrow",
+ "sparrow-batch",
  "tracing",
  "work-queue",
 ]
@@ -4725,12 +4762,31 @@ dependencies = [
  "sparrow-instructions",
  "sparrow-merge",
  "sparrow-runtime",
+ "sparrow-sources",
  "sparrow-syntax",
  "static_init",
  "tempfile",
  "tokio",
  "tokio-stream",
  "uuid 1.4.1",
+]
+
+[[package]]
+name = "sparrow-sources"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "async-broadcast",
+ "async-stream",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "sparrow-batch",
+ "sparrow-core",
+ "sparrow-interfaces",
+ "sparrow-merge",
+ "tracing",
 ]
 
 [[package]]
@@ -4788,6 +4844,7 @@ dependencies = [
  "itertools 0.11.0",
  "parking_lot 0.12.1",
  "sparrow-arrow",
+ "sparrow-batch",
  "sparrow-expressions",
  "sparrow-physical",
  "sparrow-scheduler",

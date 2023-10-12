@@ -28,6 +28,7 @@ itertools.workspace = true
 num.workspace = true
 serde_json.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-batch = { path = "../sparrow-batch" }
 sparrow-physical = { path = "../sparrow-physical" }
 static_init.workspace = true
 substring.workspace = true

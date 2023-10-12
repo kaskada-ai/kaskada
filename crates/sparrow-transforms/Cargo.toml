@@ -18,6 +18,7 @@ error-stack.workspace = true
 itertools.workspace = true
 parking_lot.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-batch = { path = "../sparrow-batch" }
 sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }

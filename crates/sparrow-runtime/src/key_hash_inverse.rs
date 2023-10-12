@@ -138,7 +138,7 @@ impl KeyHashInverse {
                 table
                     .in_memory
                     .as_ref()
-                    .and_then(|in_memroy| in_memroy.current())
+                    .and_then(|in_memory| in_memory.current())
                     .map(|batch| {
                         let keys = batch
                             .column_by_name(&table.config().group_column_name)

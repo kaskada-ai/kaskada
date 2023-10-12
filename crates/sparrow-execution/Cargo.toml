@@ -13,10 +13,15 @@ Implementations of the pipelines to be executed.
 derive_more.workspace = true
 error-stack.workspace = true
 parking_lot.workspace = true
+futures.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-batch = { path = "../sparrow-batch" }
+sparrow-core = { path = "../sparrow-core" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-transforms = { path = "../sparrow-transforms" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
+sparrow-sources = { path = "../sparrow-sources" }
 tokio.workspace = true
 uuid.workspace = true
 

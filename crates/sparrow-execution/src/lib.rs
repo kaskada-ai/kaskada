@@ -9,6 +9,4 @@
 )]
 
 //! Implementations of the pipelines to be executed.
-
-#[cfg(test)]
 mod tests;

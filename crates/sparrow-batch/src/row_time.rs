@@ -33,3 +33,9 @@ impl From<RowTime> for i64 {
         val.0
     }
 }
+
+impl From<i64> for RowTime {
+    fn from(value: i64) -> Self {
+        RowTime(value)
+    }
+}
