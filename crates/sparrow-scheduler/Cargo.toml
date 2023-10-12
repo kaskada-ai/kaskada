@@ -21,6 +21,10 @@ sparrow-batch = { path = "../sparrow-batch" }
 tracing.workspace = true
 work-queue = "0.1.4"
 
+[package.metadata.cargo-machete]
+# index_vec generates code that requires serde
+ignored = ["serde"]
+
 [dev-dependencies]
 
 [target.'cfg(loom)'.dependencies]

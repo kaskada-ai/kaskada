@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use arrow::pyarrow::ToPyArrow;
 use pyo3::prelude::*;
 use sparrow_session::Session as RustSession;
 use std::str::FromStr;
-use arrow::pyarrow::ToPyArrow;
 
 /// Kaskada session object.
 #[derive(Clone)]
@@ -44,17 +44,11 @@ pub(crate) fn parquet_schema<'py>(
     let url = sparrow_runtime::stores::ObjectStoreUrl::from_str(url)
         .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
 
-    Ok(pyo3_asyncio::tokio::future_into_py(py,
-        async move {
-            let file = sparrow_runtime::read::ParquetFile::try_new(
-                registry.as_ref(),
-                url,
-                None,
-            ).await;
-            Python::with_gil(|py| {
-                let schema = file
-                    .map_err(|e| crate::error::Error::from(e))?.schema;
-                Ok(schema.to_pyarrow(py)?)
-            })
+    Ok(pyo3_asyncio::tokio::future_into_py(py, async move {
+        let file = sparrow_runtime::read::ParquetFile::try_new(registry.as_ref(), url, None).await;
+        Python::with_gil(|py| {
+            let schema = file.map_err(|e| crate::error::Error::from(e))?.schema;
+            Ok(schema.to_pyarrow(py)?)
+        })
     })?)
 }

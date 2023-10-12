@@ -13,20 +13,16 @@ Executable for generating the Sparrow Catalog.
 arrow.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
-fallible-iterator.workspace = true
 futures.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
 logos.workspace = true
 parquet.workspace = true
-prettytable-rs.workspace = true
-prost-wkt-types.workspace = true
 serde.workspace = true
 similar.workspace = true
 static_init.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-main = { path = "../sparrow-main" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 sparrow-runtime = { path = "../sparrow-runtime" }

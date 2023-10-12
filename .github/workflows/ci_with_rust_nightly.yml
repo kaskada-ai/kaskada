@@ -13,6 +13,11 @@ permissions:
   checks: write
   contents: read
 
+env:
+  # See https://matklad.github.io/2021/09/04/fast-rust-builds.html#CI-Workflow.
+  # Speeds up CI builds, which won't have previous results anyway.
+  CARGO_INCREMENTAL: 0
+
 jobs:
   rust_check:
     name: Nightly Rust Check
@@ -50,7 +55,7 @@ jobs:
       # dependencies of crates haven't changed. See
       # https://github.com/Swatinem/rust-cache/issues/95.
       - name: Nightly Cache Rust Dependencies
-        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        uses: Swatinem/rust-cache@v2
         with:
           # Cache the rocksdb crate. https://github.com/MystenLabs/sui/pull/1164
           cache-directories: "~/.cargo/registry/src/**/librocksdb-sys-*"

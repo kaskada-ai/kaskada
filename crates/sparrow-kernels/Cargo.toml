@@ -12,14 +12,10 @@ Computation kernels defined over Arrow arrays.
 [dependencies]
 anyhow.workspace = true
 arrow.workspace = true
-bitvec.workspace = true
 chrono.workspace = true
 chronoutil.workspace = true
 itertools.workspace = true
-num.workspace = true
-smallvec.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
-static_init.workspace = true
 substring.workspace = true
 
 [dev-dependencies]
