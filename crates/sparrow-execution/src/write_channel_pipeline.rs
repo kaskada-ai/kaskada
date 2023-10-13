@@ -38,6 +38,9 @@ impl Pipeline for WriteChannelPipeline {
         batch: Batch,
         _scheduler: &mut dyn sparrow_scheduler::Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
+        // HACK: This converts `Batch` to `RecordBatch` because the current execution logic
+        //  expects `RecordBatch` outputs. This should be changed to standardize on `Batch`
+        //  which makes it easier to carry a primitive value out.
         if let Some(batch) = batch.into_record_batch(self.schema.clone()) {
             let channel = self.channel.lock();
             channel

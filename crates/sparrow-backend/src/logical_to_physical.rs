@@ -149,10 +149,13 @@ impl LogicalToPhysical {
                         // Start with replacement containing `?input => (fieldref ?input "step_<step_id>)")
                         let mut exprs = ExprPattern::new_input()?;
 
+                        // `new_input` adds `?input` as the first expression in the pattern.
+                        let input_id = egg::Id::from(0);
+
                         let data_type = self.reference_type(&arg)?.clone();
 
                         if let Some(input_step) = arg.step_id {
-                            exprs.add_instruction(
+                            let merged_input_id = exprs.add_instruction(
                                 "fieldref",
                                 // Note: that `merge` should produce a record with a
                                 // field for each merged step, identified by the
@@ -165,13 +168,13 @@ impl LogicalToPhysical {
                                 // step ID in the inputs" which would be more stable
                                 // as we change step IDs.
                                 smallvec![ScalarValue::Utf8(Some(format!("step_{}", input_step)))],
-                                smallvec![egg::Id::from(0)],
+                                smallvec![input_id],
                                 data_type,
                             )?;
 
                             // Then add the actual expression, replacing the `?input` with the fieldref.
                             let mut subst = egg::Subst::with_capacity(1);
-                            subst.insert(*crate::exprs::INPUT_VAR, egg::Id::from(1));
+                            subst.insert(*crate::exprs::INPUT_VAR, merged_input_id);
                             exprs.add_pattern(&arg.expr, &subst)?;
                         } else {
                             exprs.add_pattern(&arg.expr, &egg::Subst::default())?;
