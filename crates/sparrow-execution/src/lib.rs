@@ -125,15 +125,9 @@ impl PlanExecutor {
                     1,
                     "Transforms should have a single input"
                 );
-                let first_step_input_id = first_step_inputs[0];
 
                 // If all of the steps are transforms, then we use the transform pipeline.
-                executor.add_transform_pipeline(
-                    first_step_input_id,
-                    &plan,
-                    &pipeline.steps,
-                    consumers,
-                )?
+                executor.add_transform_pipeline(&plan, &pipeline.steps, consumers)?
             } else {
                 assert_eq!(
                     pipeline.steps.len(),
@@ -215,7 +209,6 @@ impl PlanExecutor {
     /// Convert a physical plan Pipeline into the executable scheduler Pipeline.
     fn add_transform_pipeline(
         &mut self,
-        first_step_input_id: sparrow_physical::StepId,
         plan: &sparrow_physical::Plan,
         steps: &[sparrow_physical::StepId],
         consumers: InputHandles,
@@ -228,8 +221,13 @@ impl PlanExecutor {
             })
         );
 
+        // Determine the producer of the
+        let first_step_inputs = &plan.steps[*steps.first().expect("at least one step")].inputs;
+        debug_assert_eq!(first_step_inputs.len(), 1);
+        let producer_id = first_step_inputs[0];
+
         let steps = steps.iter().map(|id| &plan.steps[*id]);
-        let pipeline = TransformPipeline::try_new(first_step_input_id, steps, consumers)
+        let pipeline = TransformPipeline::try_new(producer_id, steps, consumers)
             .change_context(Error::Creating)?;
         Ok(self.worker_pool.add_pipeline(1, pipeline))
     }

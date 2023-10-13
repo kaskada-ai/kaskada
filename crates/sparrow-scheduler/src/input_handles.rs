@@ -4,15 +4,15 @@ use sparrow_batch::Batch;
 
 use crate::{Partition, Pipeline, PipelineError, Scheduler};
 
+#[derive(Debug, Default)]
+pub struct InputHandles(smallvec::SmallVec<[InputHandle; 1]>);
+
 /// A struct used for sending batches to a specific input port of a down-stream pipeline.
 #[derive(Debug)]
 struct InputHandle {
     pipeline: Arc<dyn Pipeline>,
     input: usize,
 }
-
-#[derive(Debug, Default)]
-pub struct InputHandles(smallvec::SmallVec<[InputHandle; 1]>);
 
 impl InputHandles {
     pub fn is_empty(&self) -> bool {
@@ -24,7 +24,7 @@ impl InputHandles {
     }
 
     pub fn add_consumer(&mut self, pipeline: Arc<dyn Pipeline>, input: usize) {
-        self.0.push(InputHandle::new(pipeline, input));
+        self.0.push(InputHandle { pipeline, input });
     }
 
     pub fn add_input(
@@ -41,8 +41,10 @@ impl InputHandles {
         // first consumer that needs to be woken on the local queue, we could place the
         // others on the global queue. This would cause the batch to move to another
         // core, but would let both consumers run in parallel.
-        for input in self.0.iter() {
-            input.add_input(input_partition, batch.clone(), scheduler)?;
+        for handle in self.0.iter() {
+            handle
+                .pipeline
+                .add_input(input_partition, handle.input, batch.clone(), scheduler)?;
         }
         Ok(())
     }
@@ -54,34 +56,11 @@ impl InputHandles {
     ) -> error_stack::Result<(), PipelineError> {
         debug_assert!(!self.0.is_empty(), "Inputs should be non-empty when used.");
 
-        for input in self.0.iter() {
-            input.close_input(input_partition, scheduler)?;
+        for handle in self.0.iter() {
+            handle
+                .pipeline
+                .close_input(input_partition, handle.input, scheduler)?;
         }
         Ok(())
-    }
-}
-
-impl InputHandle {
-    pub fn new(pipeline: Arc<dyn Pipeline>, input: usize) -> Self {
-        Self { pipeline, input }
-    }
-
-    pub fn add_input(
-        &self,
-        input_partition: Partition,
-        batch: Batch,
-        scheduler: &mut dyn Scheduler,
-    ) -> error_stack::Result<(), PipelineError> {
-        self.pipeline
-            .add_input(input_partition, self.input, batch, scheduler)
-    }
-
-    pub fn close_input(
-        &self,
-        input_partition: Partition,
-        scheduler: &mut dyn Scheduler,
-    ) -> error_stack::Result<(), PipelineError> {
-        self.pipeline
-            .close_input(input_partition, self.input, scheduler)
     }
 }

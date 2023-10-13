@@ -64,7 +64,7 @@ fn is_pipeline_breaker(
             true
         }
         _ if !steps[step.inputs[0]].kind.is_transform() => {
-            tracing::trace!("Step {index} is a new pipeline since it's input is not a trasnform");
+            tracing::trace!("Step {index} is a new pipeline since it's input is not a transform");
             true
         }
         _ if references[step.inputs[0]] > 1 => {

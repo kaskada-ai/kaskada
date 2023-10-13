@@ -85,18 +85,18 @@ impl TransformPipeline {
     /// Create a new transform pipeline.
     ///
     /// Args:
-    ///   first_step_input_id: The `StepId` of the step that produces input to
-    ///     this pipeline. It should be the only input step to the first step in
+    ///   producer_id: The `StepId` of the step that produces input to this
+    ///     pipeline. It should be the only input step to the first step in
     ///     `steps`.
     ///   steps: Iterator over the steps (in order) comprising the pipeline.
     ///     They should all be transforms.
     ///   consumers: The `InputHandles` to output the result of the transform to.
     pub fn try_new<'a>(
-        first_step_input_id: StepId,
+        producer_id: StepId,
         steps: impl Iterator<Item = &'a sparrow_physical::Step> + ExactSizeIterator,
         consumers: InputHandles,
     ) -> error_stack::Result<Self, Error> {
-        let mut input_step_id = first_step_input_id;
+        let mut input_step_id = producer_id;
         let mut transforms = Vec::with_capacity(steps.len());
         for step in steps {
             error_stack::ensure!(
