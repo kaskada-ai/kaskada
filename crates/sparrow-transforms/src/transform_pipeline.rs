@@ -45,12 +45,12 @@ struct TransformPartition {
 
 impl TransformPartition {
     /// Close the input. Returns true if the input buffer is empty.
-    fn close_input(&self) -> bool {
+    fn close(&self) -> bool {
         self.is_closed.store(true, Ordering::Release);
         self.inputs.lock().is_empty()
     }
 
-    fn is_input_closed(&self) -> bool {
+    fn is_closed(&self) -> bool {
         self.is_closed.load(Ordering::Acquire)
     }
 
@@ -172,7 +172,7 @@ impl Pipeline for TransformPipeline {
         );
         let partition = &self.partitions[input_partition];
         error_stack::ensure!(
-            !partition.is_input_closed(),
+            !partition.is_closed(),
             PipelineError::InputClosed {
                 input,
                 input_partition
@@ -198,17 +198,18 @@ impl Pipeline for TransformPipeline {
         );
         let partition = &self.partitions[input_partition];
         error_stack::ensure!(
-            !partition.is_input_closed(),
+            !partition.is_closed(),
             PipelineError::InputClosed {
                 input,
                 input_partition
             }
         );
+        tracing::trace!("Closing input for {}", partition.task);
 
         // Don't close the sink here. We may be currently executing a `do_work`
         // loop, in which case we need to allow it to output to the sink before
         // we close it.
-        partition.close_input();
+        partition.close();
         scheduler.schedule(partition.task.clone());
 
         Ok(())
@@ -223,10 +224,13 @@ impl Pipeline for TransformPipeline {
 
         let Some(batch) = partition.pop_input() else {
             error_stack::ensure!(
-                partition.is_input_closed(),
+                partition.is_closed(),
                 PipelineError::illegal_state("scheduled without work")
             );
-            return self.consumers.close_input(input_partition, scheduler);
+            tracing::info!("Input is closed and empty. Closing consumers and finishing pipeline.");
+            self.consumers.close_input(input_partition, scheduler)?;
+            partition.task.complete();
+            return Ok(());
         };
 
         tracing::trace!(
@@ -259,12 +263,18 @@ impl Pipeline for TransformPipeline {
         }
 
         // If the input is closed and empty, then we should close the sink.
-        if partition.is_input_closed() && partition.is_input_empty() {
-            tracing::info!("Input is closed and empty. Closing consumers");
-            self.consumers
-                .close_input(input_partition, scheduler)
-                .change_context(PipelineError::Execution)?;
-            partition.task.complete();
+        if partition.is_closed() {
+            if partition.is_input_empty() {
+                tracing::info!(
+                    "Input is closed and empty. Closing consumers and finishing pipeline."
+                );
+                self.consumers
+                    .close_input(input_partition, scheduler)
+                    .change_context(PipelineError::Execution)?;
+                partition.task.complete();
+            } else {
+                tracing::trace!("Input is closed but not empty.")
+            }
         }
 
         // Note: We don't re-schedule the transform if there is input.

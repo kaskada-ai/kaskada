@@ -26,6 +26,16 @@ pub struct Task {
     schedule_count: ScheduleCount,
 }
 
+impl std::fmt::Display for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({}) partition {}",
+            self.name, self.pending.pipeline_index, self.pending.partition
+        )
+    }
+}
+
 impl Task {
     /// Create a new task executing the given pipeline and partition.
     pub(crate) fn new(

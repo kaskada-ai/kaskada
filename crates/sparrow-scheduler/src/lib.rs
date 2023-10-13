@@ -12,6 +12,7 @@
 
 mod error;
 mod input_handles;
+mod monitor;
 mod partition;
 mod pending;
 mod pipeline;

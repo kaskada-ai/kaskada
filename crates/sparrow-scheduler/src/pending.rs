@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use hashbrown::HashMap;
+use itertools::Itertools;
 use parking_lot::Mutex;
 
 use crate::Partition;
@@ -28,6 +29,20 @@ impl std::fmt::Debug for PendingSet {
             .field("pending_partitions", &pending_partitions)
             .field("pending_partition_count", &self.pending_partition_count)
             .finish()
+    }
+}
+
+impl std::fmt::Display for PendingSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let pending = self.pending_partitions.lock();
+        write!(
+            f,
+            "[{}]",
+            pending.iter().format_with(", ", |elt, f| f(&format_args!(
+                "{}({}) partition {}",
+                elt.1, elt.0.pipeline_index, elt.0.partition
+            )))
+        )
     }
 }
 
@@ -113,6 +128,7 @@ impl PendingPartition {
             self.partition,
             self.pipeline_index,
         );
+        tracing::trace!("Remaining pipelines: {}", self.pending_set);
     }
 
     /// Return true if this partition is completed.

@@ -21,6 +21,7 @@ serde.workspace = true
 smallvec.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
 tracing.workspace = true
+tokio.workspace = true
 work-queue = "0.1.4"
 
 [package.metadata.cargo-machete]
@@ -28,6 +29,7 @@ work-queue = "0.1.4"
 ignored = ["serde"]
 
 [dev-dependencies]
+sparrow-testing = { path = "../sparrow-testing" }
 
 [target.'cfg(loom)'.dependencies]
 loom = "0.6.0"

@@ -4739,6 +4739,8 @@ dependencies = [
  "serde",
  "smallvec",
  "sparrow-batch",
+ "sparrow-testing",
+ "tokio",
  "tracing",
  "work-queue",
 ]

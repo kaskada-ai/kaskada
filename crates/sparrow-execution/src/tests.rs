@@ -60,7 +60,7 @@ fn add_input_batch(session: &Session, source: &Arc<dyn Source>) {
 }
 
 #[test]
-fn test_logical_query() {
+fn test_logical_query_data_before_execute() {
     sparrow_testing::init_test_logging();
     let mut session = Session::default();
 
@@ -73,16 +73,12 @@ fn test_logical_query() {
     let source: Arc<dyn Source> = Arc::new(InMemory::new(true, source_schema.clone()).unwrap());
     let source_expr = session.add_source(source.clone()).unwrap();
 
-    // Add some data before running the query.
-    // Note this uses an odd downcast because we've "erased" the type to `dyn Expr`.
-    {}
+    add_input_batch(&session, &source);
 
     let query = query(&session, source_expr).unwrap();
     let execution = session
         .execute(&query, sparrow_session::ExecutionOptions::default())
         .unwrap();
-
-    add_input_batch(&session, &source);
 
     let output = execution.collect_all_blocking().unwrap();
     assert_eq!(output.len(), 1);

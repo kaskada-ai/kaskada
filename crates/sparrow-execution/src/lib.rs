@@ -182,7 +182,7 @@ impl PlanExecutor {
         let workers = worker_pool.start().change_context(Error::Starting)?;
         source_tasks.run_sources(injector).await?;
 
-        workers.join().change_context(Error::Stopping)?;
+        workers.join().await.change_context(Error::Stopping)?;
 
         Ok(())
     }

@@ -3,8 +3,8 @@ use crate::Partition;
 /// Top level errors reported during partitioned pipeline execution.
 #[derive(derive_more::Display, Debug)]
 pub enum Error {
-    #[display(fmt = "worker panicked")]
-    WorkerPanicked,
+    #[display(fmt = "pipeline panicked")]
+    PipelinePanic,
     #[display(fmt = "spawning worker")]
     SpawnWorker,
     #[display(
