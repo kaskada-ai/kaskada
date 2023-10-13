@@ -48,6 +48,7 @@ fn result_type_to_output_schema(result_type: &DataType) -> SchemaRef {
             DataType::Timestamp(TimeUnit::Nanosecond, None),
             false,
         )),
+        Arc::new(Field::new("_subsort", DataType::UInt64, false)),
         // TODO: Convert key hash to key.
         Arc::new(Field::new("_key_hash", DataType::UInt64, false)),
     ];

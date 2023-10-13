@@ -79,6 +79,8 @@ impl Batch {
 
     pub fn into_record_batch(self, schema: Arc<Schema>) -> Option<RecordBatch> {
         self.data.map(|data| {
+            println!("Schema: {schema:?}");
+            println!("Data: {:?}", data.data.data_type());
             if let Some(fields) = data.data.as_struct_opt() {
                 let mut columns = Vec::with_capacity(3 + fields.num_columns());
                 columns.extend_from_slice(&[data.time, data.subsort, data.key_hash]);
