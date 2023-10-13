@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::pending::PendingSet;
+use crate::idle_workers::{IdleWorkers, WakeReason};
 use crate::{queue::*, Error, TaskRef};
 
 pub trait Scheduler {
@@ -38,70 +38,91 @@ pub trait Scheduler {
 #[derive(Debug, Clone)]
 pub struct Injector {
     queue: GlobalQueue<TaskRef>,
+    pub(crate) idle_workers: Arc<IdleWorkers>,
 }
 
 impl Injector {
     pub fn create(workers: usize, local_queue_size: u16) -> (Self, Vec<Worker>) {
+        let idle_workers = IdleWorkers::new(workers);
         let queue = GlobalQueue::new(workers, local_queue_size);
         let workers = queue
             .take_local_queues()
-            .map(|queue| Worker { queue })
+            .map(|queue| Worker {
+                queue,
+                idle_workers: idle_workers.clone(),
+            })
             .collect();
-        (Injector { queue }, workers)
+        (
+            Injector {
+                queue,
+                idle_workers,
+            },
+            workers,
+        )
     }
 }
 
 impl Scheduler for Injector {
     fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push(task)
+            tracing::trace!("1 Added {task:?} to queue");
+            self.queue.push(task);
+        } else {
+            tracing::trace!("1 {task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 
     fn schedule(&mut self, task: TaskRef) {
-        self.schedule_global(task)
+        self.schedule_global(task);
     }
 
     fn schedule_yield(&mut self, task: TaskRef) {
-        self.schedule_global(task)
+        self.schedule_global(task);
     }
 }
 
 /// An individual worker that allows adding work to the local or global queue.
 pub struct Worker {
     queue: LocalQueue<TaskRef>,
+    idle_workers: Arc<IdleWorkers>,
 }
 
 impl Worker {
     /// Run the work loop to completion.
-    pub(crate) fn work_loop(
-        mut self,
-        index: usize,
-        pending_set: Arc<PendingSet>,
-    ) -> error_stack::Result<(), Error> {
+    pub(crate) fn work_loop(mut self, index: usize) -> error_stack::Result<(), Error> {
+        let thread_id = std::thread::current().id();
+        let _span = tracing::info_span!("Worker", ?thread_id, index).entered();
+        tracing::info!("Starting work loop on thread {thread_id:?}");
         loop {
             while let Some(task) = self.queue.pop() {
-                tracing::info!("Running task: {task:?} on worker {index}");
                 if task.do_work(&mut self)? {
+                    if task.is_complete() {
+                        tracing::warn!("Completed task scheduled during execution.");
+                    }
+
                     // This means that the task was scheduled while we were executing.
                     // As a result, we didn't add it to any queue yet, so we need to
-                    // do so now.
-                    self.queue.push_global(task);
+                    // do so now. We use the global queue because generlaly it won't
+                    // be processing data just produced.
+                    tracing::trace!("Task {task} scheduled during execution. Re-adding.");
+                    self.queue.push_yield(task);
+                } else {
+                    tracing::trace!("Task {task} not scheduled during execution.");
                 }
             }
 
-            let pending_count = pending_set.pending_partition_count();
-            if pending_count == 0 {
-                break;
-            } else {
-                // Right now, this "busy-waits" by immediately trying to pull more work.
-                // This potentially leads to thread thrashing. We should instead call
-                // `thread::park` to park this thread, and call thread::unpark` when
-                // work is added to the global queue / back of the local queues.
+            match self.idle_workers.idle() {
+                WakeReason::Woken => continue,
+                WakeReason::AllIdle => {
+                    if let Some(next) = self.queue.pop() {
+                        error_stack::bail!(Error::TaskAfterAllIdle(next));
+                    }
+
+                    break;
+                }
             }
         }
-
-        tracing::info!("All partitions completed. Shutting down worker {index}");
         Ok(())
     }
 }
@@ -109,19 +130,31 @@ impl Worker {
 impl Scheduler for Worker {
     fn schedule(&mut self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push(task)
+            tracing::trace!("2 Added {task:?} to queue");
+            self.queue.push(task);
+        } else {
+            tracing::trace!("2 {task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 
     fn schedule_yield(&mut self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_yield(task)
+            tracing::trace!("3 Added {task:?} to queue");
+            self.queue.push_yield(task);
+        } else {
+            tracing::trace!("3 {task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 
     fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_global(task)
+            tracing::trace!("4 Added {task:?} to queue");
+            self.queue.push_global(task);
+        } else {
+            tracing::trace!("4 {task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 }

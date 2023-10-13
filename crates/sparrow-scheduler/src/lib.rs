@@ -11,10 +11,10 @@
 //! Scheduler for local, multi-threaded execution of Sparrow plans.
 
 mod error;
+mod idle_workers;
 mod input_handles;
 mod monitor;
 mod partition;
-mod pending;
 mod pipeline;
 mod queue;
 mod schedule_count;

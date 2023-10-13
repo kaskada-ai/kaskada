@@ -1,13 +1,8 @@
 use std::sync::Arc;
-use std::thread::ThreadId;
 
 use crate::monitor::Monitor;
-use crate::pending::PendingSet;
 use crate::worker::Injector;
 use crate::{Error, Partition, Pipeline, Task, TaskRef, Worker};
-use error_stack::{IntoReport, ResultExt};
-use hashbrown::HashMap;
-use itertools::Itertools;
 
 /// Default thread count to use if we aren't able to determine
 /// the number of cores.
@@ -22,8 +17,6 @@ pub struct WorkerPool {
     workers: Vec<Worker>,
     /// A vector of the pipelines we created.
     pipelines: Vec<Arc<dyn Pipeline>>,
-    /// Track which pipelines / partitions are still running.
-    pending: Arc<PendingSet>,
 }
 
 impl WorkerPool {
@@ -41,6 +34,7 @@ impl WorkerPool {
             DEFAULT_THREAD_COUNT
         });
 
+        tracing::info!("Creating workers to execute query {query_id} with {threads} threads");
         let (injector, workers) = Injector::create(threads, LOCAL_QUEUE_SIZE);
 
         let scheduler = Self {
@@ -48,7 +42,6 @@ impl WorkerPool {
             injector,
             workers,
             pipelines: vec![],
-            pending: Arc::new(PendingSet::default()),
         };
         Ok(scheduler)
     }
@@ -65,21 +58,19 @@ impl WorkerPool {
     where
         T: Pipeline + 'static,
     {
-        let index = self.pipelines.len();
+        let pipeline_index = self.pipelines.len();
         let name = std::any::type_name::<T>();
 
         // `new_cyclic` provides a `Weak` reference to the pipeline before it is
         // created. This allows us to create tasks that reference the pipeline
         // (via weak references) and pass those tasks to the pipeline.
-        let pending = self.pending.clone();
         let pipeline: Arc<T> = Arc::new_cyclic(move |weak| {
             let tasks = (0..partitions)
                 .map(|partition| -> TaskRef {
                     let pipeline: std::sync::Weak<T> = weak.clone();
                     let partition: Partition = partition.into();
 
-                    let pending = pending.add_pending(index, partition, name);
-                    let task = Task::new(pending, name, pipeline);
+                    let task = Task::new(name, partition, pipeline_index, pipeline);
                     Arc::new(task)
                 })
                 .collect();
@@ -94,7 +85,7 @@ impl WorkerPool {
         let pipeline: Arc<dyn Pipeline> = pipeline;
         self.pipelines.push(pipeline.clone());
 
-        tracing::info!("Added {partitions} partitions for pipeline {index} {name}");
+        tracing::trace!("Added {partitions} partitions for pipeline {pipeline_index} {name}");
 
         pipeline
     }
@@ -104,11 +95,10 @@ impl WorkerPool {
     /// Returns a `RunningWorkers` used for completing the workers.
     pub fn start(self) -> error_stack::Result<RunningWorkers, Error> {
         let Self {
-            pending,
             workers,
             query_id,
             pipelines,
-            ..
+            injector,
         } = self;
 
         let core_ids = core_affinity::get_core_ids();
@@ -118,56 +108,34 @@ impl WorkerPool {
             .map(Some)
             .chain(std::iter::repeat(None));
 
-        let monitor = Monitor::with_capacity(workers.len());
-        let handles = workers
-            .into_iter()
-            .zip(core_ids)
-            .enumerate()
-            .map(|(index, (worker, core_id))| {
-                // Spawn the worker thread.
-                let span = tracing::info_span!("compute", query_id, index);
-                let pending = pending.clone();
-                let guard = monitor.guard();
-                std::thread::Builder::new()
-                    .name(format!("compute-{index}"))
-                    .spawn(move || {
-                        let _enter = span.enter();
+        let mut monitor = Monitor::default();
 
-                        // Set the core affinity, if possible, so this thread always
-                        // executes on the same core.
-                        if let Some(core_id) = core_id {
-                            if core_affinity::set_for_current(core_id) {
-                                tracing::info!(
-                                    "Set core affinity for thread {index} to {core_id:?}"
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Failed to set core affinity for thread {index} to {core_id:?}"
-                                );
-                            }
-                        } else {
-                            tracing::info!("Setting core affinity not supported");
-                        };
+        for (index, (worker, core_id)) in workers.into_iter().zip(core_ids).enumerate() {
+            // Spawn the worker thread.
+            let span = tracing::info_span!("compute", query_id, index);
+            monitor.spawn_guarded(format!("compute-{index}"), move || {
+                let _enter = span.enter();
 
-                        // Run the worker
-                        let result = worker.work_loop(index, pending.clone());
+                // Set the core affinity, if possible, so this thread always
+                // executes on the same core.
+                if let Some(core_id) = core_id {
+                    if core_affinity::set_for_current(core_id) {
+                        tracing::info!("Set core affinity for thread {index} to {core_id:?}");
+                    }
+                } else {
+                    tracing::info!("Setting core affinity not supported");
+                };
 
-                        // Make sure the monitor guard is moved into this thread
-                        // and dropped before returning.
-                        std::mem::drop(guard);
-                        result
-                    })
-                    .into_report()
-                    .change_context(Error::SpawnWorker)
-            })
-            .map_ok(|handle| (handle.thread().id(), handle))
-            .try_collect()?;
+                // Run the worker
+                worker.work_loop(index)
+            })?;
+        }
 
         Ok(RunningWorkers {
             query_id,
             _pipelines: pipelines,
-            handles,
-            finishing_threads: monitor.rx,
+            monitor,
+            injector,
         })
     }
 }
@@ -176,36 +144,20 @@ pub struct RunningWorkers {
     query_id: String,
     /// Hold the Arcs for the pipelines so they aren't dropped.
     _pipelines: Vec<Arc<dyn Pipeline>>,
-    handles: HashMap<ThreadId, std::thread::JoinHandle<error_stack::Result<(), Error>>>,
-    finishing_threads: tokio::sync::mpsc::Receiver<ThreadId>,
+    monitor: Monitor,
+    injector: Injector,
 }
 
 impl RunningWorkers {
-    pub async fn join(mut self) -> error_stack::Result<(), Error> {
+    /// Mark the sources as complete and wait for workres to finish.
+    ///
+    /// This should not be called until after all source tasks have been
+    /// added for processing.
+    pub async fn join(self) -> error_stack::Result<(), Error> {
         tracing::info!(self.query_id, "Waiting for completion of query");
-        while let Some(finished) = self.finishing_threads.recv().await {
-            let handle = self
-                .handles
-                .remove(&finished)
-                // This should only happen if a spawned thread had a `MonitorGuard`
-                // but was not added to `handles`. This should not happen.
-                .expect("Finished unregistered handle");
-
-            match handle.join() {
-                Ok(worker_result) => worker_result?,
-                Err(_) => {
-                    error_stack::bail!(Error::PipelinePanic)
-                }
-            }
-        }
-
-        // This should only happen if a spawned thread was added to the handles
-        // but did not register a `MonitorGuard`. This should not happen.
-        assert!(
-            self.handles.is_empty(),
-            "Not all handles reported completion via monitor"
-        );
-
+        self.injector.idle_workers.finish_sources();
+        self.monitor.join_all().await?;
+        tracing::info!(self.query_id, "Complete");
         Ok(())
     }
 }
