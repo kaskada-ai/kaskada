@@ -3696,6 +3696,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-batch"
+version = "0.11.0"
+dependencies = [
+ "arrow",
+ "arrow-array",
+ "arrow-schema",
+ "arrow-select",
+ "derive_more",
+ "error-stack",
+ "itertools 0.11.0",
+ "static_init",
+]
+
+[[package]]
 name = "sparrow-compiler"
 version = "0.11.0"
 dependencies = [
@@ -3724,6 +3738,7 @@ dependencies = [
  "sparrow-core",
  "sparrow-instructions",
  "sparrow-merge",
+ "sparrow-sources",
  "sparrow-syntax",
  "static_init",
  "strum 0.25.0",
@@ -3782,6 +3797,18 @@ dependencies = [
  "strum_macros 0.25.1",
  "tracing",
  "uuid 1.4.1",
+]
+
+[[package]]
+name = "sparrow-interfaces"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "sparrow-batch",
+ "sparrow-core",
 ]
 
 [[package]]
@@ -3912,12 +3939,31 @@ dependencies = [
  "sparrow-instructions",
  "sparrow-merge",
  "sparrow-runtime",
+ "sparrow-sources",
  "sparrow-syntax",
  "static_init",
  "tempfile",
  "tokio",
  "tokio-stream",
  "uuid 1.4.1",
+]
+
+[[package]]
+name = "sparrow-sources"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "async-broadcast",
+ "async-stream",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "sparrow-batch",
+ "sparrow-core",
+ "sparrow-interfaces",
+ "sparrow-merge",
+ "tracing",
 ]
 
 [[package]]

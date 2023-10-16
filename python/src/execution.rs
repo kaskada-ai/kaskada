@@ -73,7 +73,11 @@ impl Execution {
 
     fn next_pyarrow(&mut self, py: Python<'_>) -> Result<Option<PyObject>> {
         let mut execution = self.execution()?;
-        let batch = execution.as_mut().unwrap().next_blocking()?;
+
+        // Explicitly allow threads to take the gil during execution, so
+        // the udf evaluator can acquire it to execute python.
+        let batch = py.allow_threads(move || execution.as_mut().unwrap().next_blocking())?;
+
         let result = match batch {
             Some(batch) => Some(batch.to_pyarrow(py)?),
             None => None,
