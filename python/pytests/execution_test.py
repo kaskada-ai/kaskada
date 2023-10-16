@@ -41,16 +41,19 @@ async def test_iter_rows(source_int64) -> None:
     with pytest.raises(StopIteration):
         next(results)
 
+
 @kd.udf("add_one<N: number>(x: N) -> N")
 def add_one(x: pd.Series) -> pd.Series:
     """Use Pandas to one"""
     print("In UDF")
-    return (x + 1)
+    return x + 1
+
 
 async def test_iter_udf(source_int64) -> None:
     results = source_int64.col("m").pipe(add_one).run_iter("row", row_limit=2)
     assert next(results)["result"] == 6
     assert next(results)["result"] == 25
+
 
 async def test_iter_pandas_async(golden, source_int64) -> None:
     batches: AsyncIterator[pd.DataFrame] = source_int64.run_iter(
