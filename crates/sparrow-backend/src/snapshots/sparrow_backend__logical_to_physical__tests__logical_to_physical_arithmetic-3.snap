@@ -6,7 +6,7 @@ steps:
   - id: 0
     kind:
       read:
-        source_id: 00000000-0000-0000-0000-000000000001
+        source_uuid: 00000000-0000-0000-0000-000000000001
     inputs: []
     result_type:
       Struct:
@@ -26,7 +26,7 @@ steps:
   - id: 1
     kind:
       read:
-        source_id: 00000000-0000-0000-0000-000000000002
+        source_uuid: 00000000-0000-0000-0000-000000000002
     inputs: []
     result_type:
       Struct:

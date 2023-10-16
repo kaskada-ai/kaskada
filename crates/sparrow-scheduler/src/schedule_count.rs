@@ -13,12 +13,15 @@ impl ScheduleCount {
     ///
     /// Returns true if this task wasn't previously scheduled.
     pub fn schedule(&self) -> bool {
-        self.0.fetch_add(1, Ordering::SeqCst) == 0
+        let count = self.0.fetch_add(1, Ordering::SeqCst);
+        tracing::trace!("Schedule count {count}");
+        count == 0
     }
 
     /// Returns a `TaskGuard` which will return the count
     pub fn guard(&self) -> ScheduleGuard<'_> {
         let entry_count = self.0.load(Ordering::SeqCst);
+        tracing::trace!("Schedule count on start: {entry_count}");
         debug_assert!(entry_count > 0, "Running task with entry count 0");
         ScheduleGuard {
             count: self,
@@ -40,6 +43,10 @@ impl<'a> ScheduleGuard<'a> {
     /// this will return `true` to indicate the task should be re-scheduled.
     pub fn finish(self) -> bool {
         let schedule_count = self.count.0.fetch_sub(self.entry_count, Ordering::SeqCst);
+        tracing::trace!(
+            "Count on entry {}, count on finish {schedule_count}",
+            self.entry_count
+        );
         schedule_count != self.entry_count
     }
 }

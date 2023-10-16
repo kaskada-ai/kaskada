@@ -63,6 +63,10 @@ impl Pipeline for WriteChannelPipeline {
         _scheduler: &mut dyn sparrow_scheduler::Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         let mut channel = self.channel.lock();
+        tracing::info!("Closing input of write_channel");
+        assert_eq!(input, 0);
+        assert_eq!(input_partition, 0);
+
         error_stack::ensure!(
             channel.is_some(),
             PipelineError::InputClosed {
