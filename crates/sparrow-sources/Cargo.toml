@@ -6,7 +6,7 @@ edition.workspace = true
 license.workspace = true
 publish = false
 description = """
-Defines the input source implementations. 
+Defines the input source implementations.
 """
 
 [dependencies]
@@ -14,10 +14,8 @@ arrow-array.workspace = true
 async-broadcast.workspace = true
 async-stream.workspace = true
 arrow-schema.workspace = true
-derive_more.workspace = true
 error-stack.workspace = true
 futures.workspace = true
-sparrow-core = { path = "../sparrow-core" }
 sparrow-merge = { path = "../sparrow-merge" }
 sparrow-batch = { path = "../sparrow-batch" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }

@@ -93,5 +93,5 @@ mod values;
 mod work_area;
 
 pub use error::*;
-pub use evaluators::intern_name;
+pub use evaluators::{intern_name, names};
 pub use executor::*;

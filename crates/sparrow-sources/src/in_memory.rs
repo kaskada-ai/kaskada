@@ -6,7 +6,7 @@ use error_stack::{IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 
 use sparrow_batch::Batch;
-use sparrow_interfaces::{ReadConfig, Source};
+use sparrow_interfaces::{ExecutionOptions, Source};
 use sparrow_merge::old::homogeneous_merge;
 
 use sparrow_interfaces::SourceError;
@@ -39,6 +39,10 @@ impl InMemory {
 }
 
 impl Source for InMemory {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn prepared_schema(&self) -> SchemaRef {
         self.prepared_schema.clone()
     }
@@ -46,15 +50,15 @@ impl Source for InMemory {
     fn read(
         &self,
         projected_datatype: &DataType,
-        read_config: ReadConfig,
-    ) -> futures::stream::BoxStream<'_, error_stack::Result<Batch, SourceError>> {
+        execution_options: Arc<ExecutionOptions>,
+    ) -> futures::stream::BoxStream<'static, error_stack::Result<Batch, SourceError>> {
         assert_eq!(
             &DataType::Struct(self.prepared_schema().fields().clone()),
             projected_datatype,
             "Projection not yet supported"
         );
 
-        let input_stream = if read_config.keep_open {
+        let input_stream = if execution_options.materialize {
             self.data
                 .subscribe()
                 .map_err(|e| e.change_context(SourceError::internal_msg("invalid input")))

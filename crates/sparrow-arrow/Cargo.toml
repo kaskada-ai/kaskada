@@ -34,7 +34,6 @@ itertools.workspace = true
 num.workspace = true
 proptest = { workspace = true, optional = true }
 serde.workspace = true
-static_init.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
@@ -44,3 +43,7 @@ proptest.workspace = true
 
 [lib]
 doctest = false
+
+[package.metadata.cargo-machete]
+# Optional package enabled by `testing`
+ignored = ["proptest"]

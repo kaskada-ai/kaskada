@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use crate::idle_workers::{IdleWorkers, WakeReason};
 use crate::{queue::*, Error, TaskRef};
 
 pub trait Scheduler {
@@ -35,49 +38,89 @@ pub trait Scheduler {
 #[derive(Debug, Clone)]
 pub struct Injector {
     queue: GlobalQueue<TaskRef>,
+    pub(crate) idle_workers: Arc<IdleWorkers>,
 }
 
 impl Injector {
     pub fn create(workers: usize, local_queue_size: u16) -> (Self, Vec<Worker>) {
+        let idle_workers = IdleWorkers::new(workers);
         let queue = GlobalQueue::new(workers, local_queue_size);
         let workers = queue
             .take_local_queues()
-            .map(|queue| Worker { queue })
+            .map(|queue| Worker {
+                queue,
+                idle_workers: idle_workers.clone(),
+            })
             .collect();
-        (Injector { queue }, workers)
+        (
+            Injector {
+                queue,
+                idle_workers,
+            },
+            workers,
+        )
     }
 }
 
 impl Scheduler for Injector {
     fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push(task)
+            tracing::trace!("Added {task:?} to queue");
+            self.queue.push(task);
+        } else {
+            tracing::trace!("{task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 
     fn schedule(&mut self, task: TaskRef) {
-        self.schedule_global(task)
+        self.schedule_global(task);
     }
 
     fn schedule_yield(&mut self, task: TaskRef) {
-        self.schedule_global(task)
+        self.schedule_global(task);
     }
 }
 
 /// An individual worker that allows adding work to the local or global queue.
 pub struct Worker {
     queue: LocalQueue<TaskRef>,
+    idle_workers: Arc<IdleWorkers>,
 }
 
 impl Worker {
     /// Run the work loop to completion.
-    pub(crate) fn work_loop(mut self) -> error_stack::Result<(), Error> {
-        while let Some(task) = self.queue.pop() {
-            if task.do_work(&mut self)? {
-                // This means that the task was schedule while we were executing.
-                // As a result, we didn't add it to any queue yet, so we need to
-                // do so now.
-                self.queue.push_global(task);
+    pub(crate) fn work_loop(mut self, index: usize) -> error_stack::Result<(), Error> {
+        let thread_id = std::thread::current().id();
+        let _span = tracing::info_span!("Worker", ?thread_id, index).entered();
+        tracing::info!("Starting work loop");
+        loop {
+            while let Some(task) = self.queue.pop() {
+                if task.do_work(&mut self)? {
+                    if task.is_complete() {
+                        tracing::warn!("Completed task scheduled during execution.");
+                    }
+
+                    // This means that the task was scheduled while we were executing.
+                    // As a result, we didn't add it to any queue yet, so we need to
+                    // do so now. We use the global queue because generlaly it won't
+                    // be processing data just produced.
+                    tracing::trace!("Task {task} scheduled during execution. Re-adding.");
+                    self.queue.push_yield(task);
+                } else {
+                    tracing::trace!("Task {task} not scheduled during execution.");
+                }
+            }
+
+            match self.idle_workers.idle() {
+                WakeReason::Woken => continue,
+                WakeReason::AllIdle => {
+                    if let Some(next) = self.queue.pop() {
+                        error_stack::bail!(Error::TaskAfterAllIdle(next));
+                    }
+
+                    break;
+                }
             }
         }
         Ok(())
@@ -87,19 +130,31 @@ impl Worker {
 impl Scheduler for Worker {
     fn schedule(&mut self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push(task)
+            tracing::trace!("Added {task:?} to queue");
+            self.queue.push(task);
+        } else {
+            tracing::trace!("{task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 
     fn schedule_yield(&mut self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_yield(task)
+            tracing::trace!("Added {task:?} to queue");
+            self.queue.push_yield(task);
+        } else {
+            tracing::trace!("{task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 
     fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            self.queue.push_global(task)
+            tracing::trace!("Added {task:?} to queue");
+            self.queue.push_global(task);
+        } else {
+            tracing::trace!("{task:?} already executing");
         }
+        self.idle_workers.wake_one();
     }
 }

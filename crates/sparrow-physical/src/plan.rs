@@ -15,6 +15,27 @@ pub struct Plan {
     pub pipelines: Vec<Pipeline>,
 }
 
+impl Plan {
+    pub fn yaml(&self) -> impl std::fmt::Display + '_ {
+        PlanYaml(self)
+    }
+}
+
+/// Prints a plan as Yaml.
+struct PlanYaml<'a>(&'a Plan);
+
+impl<'a> std::fmt::Display for PlanYaml<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // If these YAML strings are large, we could potentially implement `std::io::Write`
+        // to the `std::fmt::Formatter`, but for now we go via a string.
+        let yaml = serde_yaml::to_string(self.0).map_err(|e| {
+            tracing::error!("Failed to write plan YAML: {e:?}");
+            std::fmt::Error
+        })?;
+        write!(f, "{yaml}")
+    }
+}
+
 /// Information about a specific "pipeline" within the plan.
 ///
 /// Pipelines take a single input through a linear sequence of

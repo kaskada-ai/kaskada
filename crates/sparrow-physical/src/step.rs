@@ -47,6 +47,15 @@ pub struct Step {
     pub exprs: IndexVec<ExprId, Expr>,
 }
 
+impl std::fmt::Display for Step {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            id, kind, inputs, ..
+        } = self;
+        write!(f, "Step {id}: kind {kind} reads {:?}", inputs)
+    }
+}
+
 /// The kinds of steps that can occur in the physical plan.
 #[derive(
     Clone,
@@ -60,11 +69,12 @@ pub struct Step {
     Hash,
 )]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 
 pub enum StepKind {
     /// Read the given source.
     Read {
-        source_id: uuid::Uuid,
+        source_uuid: uuid::Uuid,
     },
     /// Merge the given relations.
     Merge,
@@ -89,4 +99,45 @@ pub enum StepKind {
         num_partitions: usize,
     },
     Error,
+}
+
+impl StepKind {
+    /// Return true if the step is implemented as a transform (rather than an operation).
+    ///
+    /// This should generally be true for steps that take a single input and
+    /// effectively perform a "flat map" over the batches. Specifically, they
+    /// may change the number of rows in a batch (or omit the batch entirely)
+    /// and they may change the columns in the batch but they should not accept
+    /// multiple inputs or need to interact with scheduling.
+    ///
+    /// Examples:
+    ///
+    /// - `project` is a transform because it computes new columns for each row in
+    ///   every batch
+    /// - `filter` is a transform because it removes rows from each batch, and omits
+    ///   empty batches
+    /// - `merge` is not a transform because it accepts multiple inputs
+    /// - `shift` depends on how we choose to implement it. If it is implemented as
+    ///   a stateful transform that just buffers and emits as processing proceeds
+    ///   through time, then it would be a transform. If we find ways to implement
+    ///   it more efficiently by implementing the pipeline interface, then it may
+    ///   not be a transform.
+    pub fn is_transform(&self) -> bool {
+        matches!(self, StepKind::Project | StepKind::Filter)
+    }
+}
+
+impl std::fmt::Display for StepKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StepKind::Read {
+                source_uuid: source_id,
+            } => write!(f, "read({source_id})"),
+            StepKind::Repartition { num_partitions } => write!(f, "repartition({num_partitions})"),
+            _ => {
+                let name: &'static str = self.into();
+                write!(f, "{name}")
+            }
+        }
+    }
 }

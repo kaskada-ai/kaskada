@@ -1047,6 +1047,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
+name = "core_affinity"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "622892f5635ce1fc38c8f16dfc938553ed64af482edb5e150bf4caedbfcb2304"
+dependencies = [
+ "libc",
+ "num_cpus",
+ "winapi",
+]
+
+[[package]]
 name = "cpu-time"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1271,6 +1282,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071a31f4ee85403370b58aca746f01041ede6f0da2730960ad001edc2b71b394"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "enum-as-inner"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ffccbb6966c05b32ef8fbac435df276c4ae4d3dc55a8cd0eb9745e6c12f546a"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.27",
 ]
 
 [[package]]
@@ -1564,6 +1587,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "generator"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cc16584ff22b460a382b7feec54b23d2908d858152e5739a120b949293bd74e"
+dependencies = [
+ "cc",
+ "libc",
+ "log",
+ "rustversion",
+ "windows",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1828,6 +1864,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "index_vec"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74086667896a940438f2118212f313abba4aff3831fef6f4b17d02add5c8bb60"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1958,6 +2003,7 @@ dependencies = [
  "pyo3",
  "pyo3-asyncio",
  "sparrow-instructions",
+ "sparrow-interfaces",
  "sparrow-runtime",
  "sparrow-session",
  "sparrow-syntax",
@@ -2216,6 +2262,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "loom"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce9394216e2be01e607cf9e9e2b64c387506df1e768b14cbd2854a3650c3c03e"
+dependencies = [
+ "cfg-if",
+ "generator",
+ "scoped-tls",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lz4"
 version = "1.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2236,6 +2295,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "matchers"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
+dependencies = [
+ "regex-automata 0.1.10",
+]
+
+[[package]]
 name = "matchit"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2243,9 +2311,9 @@ checksum = "b87248edafb776e59e6ee64a79086f65890d3510f2c656c000bf2a7e8a0aea40"
 
 [[package]]
 name = "memchr"
-version = "2.5.0"
+version = "2.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
 name = "memoffset"
@@ -2335,6 +2403,16 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
+]
+
+[[package]]
+name = "nu-ansi-term"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a8165726e8236064dbb45459242600304b42a5ea24ee2948e18e023bf7ba84"
+dependencies = [
+ "overload",
+ "winapi",
 ]
 
 [[package]]
@@ -2542,6 +2620,12 @@ checksum = "7940cf2ca942593318d07fcf2596cdca60a85c9e7fab408a5e21a4f9dcd40d87"
 dependencies = [
  "num-traits",
 ]
+
+[[package]]
+name = "overload"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "owning_ref"
@@ -3197,25 +3281,34 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.9.1"
+version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2eae68fc220f7cf2532e4494aded17545fce192d59cd996e0fe7887f4ceb575"
+checksum = "380b951a9c5e80ddfd6136919eef32310721aa4aacd4889a8d39124b026ab343"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata",
- "regex-syntax 0.7.4",
+ "regex-automata 0.4.3",
+ "regex-syntax 0.8.2",
 ]
 
 [[package]]
 name = "regex-automata"
-version = "0.3.3"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39354c10dd07468c2e73926b23bb9c2caca74c5501e38a35da70406f1d923310"
+checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
+dependencies = [
+ "regex-syntax 0.6.29",
+]
+
+[[package]]
+name = "regex-automata"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f804c7828047e88b2d32e2d7fe5a105da8ee3264f01902f796c8e067dc2483f"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax 0.7.4",
+ "regex-syntax 0.8.2",
 ]
 
 [[package]]
@@ -3229,6 +3322,12 @@ name = "regex-syntax"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5ea92a5b6195c6ef2a0295ea818b312502c6fc94dde986c5553242e18fd4ce2"
+
+[[package]]
+name = "regex-syntax"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
 name = "reqwest"
@@ -3425,6 +3524,12 @@ checksum = "0c3733bf4cf7ea0880754e19cb5a462007c4a8c1914bff372ccc95b464f1df88"
 dependencies = [
  "windows-sys",
 ]
+
+[[package]]
+name = "scoped-tls"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
 
 [[package]]
 name = "scopeguard"
@@ -3691,8 +3796,29 @@ dependencies = [
  "itertools 0.11.0",
  "num",
  "serde",
+ "tracing",
+]
+
+[[package]]
+name = "sparrow-backend"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "bitvec",
+ "derive_more",
+ "egg",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "index_vec",
+ "itertools 0.11.0",
+ "smallvec",
+ "sparrow-arrow",
+ "sparrow-expressions",
+ "sparrow-logical",
+ "sparrow-physical",
  "static_init",
  "tracing",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -3737,7 +3863,6 @@ dependencies = [
  "sparrow-arrow",
  "sparrow-core",
  "sparrow-instructions",
- "sparrow-merge",
  "sparrow-sources",
  "sparrow-syntax",
  "static_init",
@@ -3760,6 +3885,56 @@ dependencies = [
  "sparrow-arrow",
  "static_init",
  "tonic",
+]
+
+[[package]]
+name = "sparrow-execution"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "hashbrown 0.14.0",
+ "itertools 0.11.0",
+ "parking_lot 0.12.1",
+ "sparrow-batch",
+ "sparrow-interfaces",
+ "sparrow-physical",
+ "sparrow-scheduler",
+ "sparrow-transforms",
+ "tokio",
+ "tracing",
+ "uuid 1.4.1",
+]
+
+[[package]]
+name = "sparrow-expressions"
+version = "0.11.0"
+dependencies = [
+ "arrow-arith",
+ "arrow-array",
+ "arrow-buffer",
+ "arrow-cast",
+ "arrow-data",
+ "arrow-ord",
+ "arrow-schema",
+ "arrow-select",
+ "arrow-string",
+ "derive_more",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "index_vec",
+ "inventory",
+ "itertools 0.11.0",
+ "num",
+ "serde_json",
+ "sparrow-arrow",
+ "sparrow-batch",
+ "sparrow-physical",
+ "static_init",
+ "substring",
 ]
 
 [[package]]
@@ -3808,7 +3983,6 @@ dependencies = [
  "error-stack",
  "futures",
  "sparrow-batch",
- "sparrow-core",
 ]
 
 [[package]]
@@ -3825,6 +3999,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-logical"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "decorum",
+ "derive_more",
+ "enum-as-inner",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "itertools 0.11.0",
+ "serde",
+ "serde_yaml",
+ "sparrow-types",
+ "static_init",
+ "uuid 1.4.1",
+]
+
+[[package]]
 name = "sparrow-merge"
 version = "0.11.0"
 dependencies = [
@@ -3834,18 +4026,26 @@ dependencies = [
  "arrow-csv",
  "arrow-schema",
  "arrow-select",
- "async-broadcast",
- "async-stream",
  "bit-set",
- "derive_more",
- "error-stack",
- "futures",
  "itertools 0.11.0",
  "proptest",
  "smallvec",
  "sparrow-arrow",
  "sparrow-core",
+]
+
+[[package]]
+name = "sparrow-physical"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "index_vec",
+ "serde",
+ "serde_yaml",
+ "sparrow-arrow",
+ "strum_macros 0.25.1",
  "tracing",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -3923,6 +4123,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-scheduler"
+version = "0.11.0"
+dependencies = [
+ "core_affinity",
+ "derive_more",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "index_vec",
+ "itertools 0.11.0",
+ "loom",
+ "parking_lot 0.12.1",
+ "serde",
+ "smallvec",
+ "sparrow-batch",
+ "tokio",
+ "tracing",
+ "work-queue",
+]
+
+[[package]]
 name = "sparrow-session"
 version = "0.11.0"
 dependencies = [
@@ -3935,9 +4155,13 @@ dependencies = [
  "itertools 0.11.0",
  "smallvec",
  "sparrow-api",
+ "sparrow-backend",
  "sparrow-compiler",
+ "sparrow-execution",
+ "sparrow-expressions",
  "sparrow-instructions",
- "sparrow-merge",
+ "sparrow-interfaces",
+ "sparrow-logical",
  "sparrow-runtime",
  "sparrow-sources",
  "sparrow-syntax",
@@ -3956,11 +4180,9 @@ dependencies = [
  "arrow-schema",
  "async-broadcast",
  "async-stream",
- "derive_more",
  "error-stack",
  "futures",
  "sparrow-batch",
- "sparrow-core",
  "sparrow-interfaces",
  "sparrow-merge",
  "tracing",
@@ -3983,6 +4205,40 @@ dependencies = [
  "serde",
  "smallvec",
  "sparrow-arrow",
+ "static_init",
+]
+
+[[package]]
+name = "sparrow-transforms"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "arrow-select",
+ "derive_more",
+ "error-stack",
+ "itertools 0.11.0",
+ "parking_lot 0.12.1",
+ "sparrow-arrow",
+ "sparrow-batch",
+ "sparrow-expressions",
+ "sparrow-physical",
+ "sparrow-scheduler",
+ "tracing",
+]
+
+[[package]]
+name = "sparrow-types"
+version = "0.11.0"
+dependencies = [
+ "arrow-schema",
+ "derive_more",
+ "enum-map",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "itertools 0.11.0",
+ "regex",
+ "serde",
  "static_init",
 ]
 
@@ -4473,6 +4729,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0955b8137a1df6f1a2e9a37d8a6656291ff0297c1a97c24e0d8425fe2312f79a"
 dependencies = [
  "once_cell",
+ "valuable",
 ]
 
 [[package]]
@@ -4486,14 +4743,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-log"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78ddad33d2d10b1ed7eb9d1f518a5674713876e97e5bb9b7345a7984fbb4f922"
+dependencies = [
+ "lazy_static",
+ "log",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30a651bc37f915e81f087d86e62a18eec5f79550c7faff886f7090b4ea757c77"
 dependencies = [
+ "matchers",
+ "nu-ansi-term",
+ "once_cell",
+ "regex",
  "sharded-slab",
+ "smallvec",
  "thread_local",
+ "tracing",
  "tracing-core",
+ "tracing-log",
 ]
 
 [[package]]
@@ -4654,6 +4929,12 @@ dependencies = [
  "rand 0.8.5",
  "serde",
 ]
+
+[[package]]
+name = "valuable"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 
 [[package]]
 name = "value-bag"
@@ -4951,6 +5232,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "work-queue"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1c8d5eab11a669da42347cdd5244563592edabfe06c7778553185ffeedb623d"
+dependencies = [
+ "concurrent-queue",
+ "loom",
 ]
 
 [[package]]

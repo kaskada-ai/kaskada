@@ -25,6 +25,7 @@ pyo3 = {version = "0.19.1", features = ["abi3-py38", "extension-module", "genera
 pyo3-asyncio = { version = "0.19.0", features = ["tokio-runtime"] }
 sparrow-session = { path = "../crates/sparrow-session" }
 sparrow-instructions = { path = "../crates/sparrow-instructions" }
+sparrow-interfaces = { path = "../crates/sparrow-interfaces" }
 sparrow-runtime = { path = "../crates/sparrow-runtime" }
 sparrow-syntax = { path = "../crates/sparrow-syntax" }
 tokio = { version = "1.27.0", features = ["sync"] }

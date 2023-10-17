@@ -5,11 +5,11 @@ use crate::values::StructValue;
 use crate::Error;
 
 inventory::submit!(crate::evaluators::EvaluatorFactory {
-    name: "field_ref",
+    name: "fieldref",
     create: &create
 });
 
-/// Evaluator for `field_ref` expressions.
+/// Evaluator for `fieldref` expressions.
 struct FieldRefEvaluator {
     input: StructValue,
     field: usize,
@@ -37,6 +37,7 @@ fn create(info: super::StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluator>
         DataType::Struct(fields) => {
             let (index, field) = fields.find(field).ok_or_else(|| Error::NoSuchField {
                 field_name: field.to_owned(),
+                fields: fields.clone(),
             })?;
             error_stack::ensure!(
                 result_type == field.data_type(),

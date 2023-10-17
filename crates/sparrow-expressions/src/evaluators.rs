@@ -15,7 +15,7 @@ use crate::Error;
 mod cast;
 mod coalesce;
 mod comparison;
-mod field_ref;
+mod fieldref;
 mod hash;
 mod input;
 mod is_valid;
@@ -217,6 +217,11 @@ fn create_evaluator(info: StaticInfo<'_>) -> error_stack::Result<Box<dyn Evaluat
 /// Returns `None` if no evaluator is registered for the given name.
 pub fn intern_name(name: &str) -> Option<&'static str> {
     EVALUATORS.get_key_value(name).map(|(k, _)| *k)
+}
+
+// Exposed so we can report "nearest" names.
+pub fn names() -> impl Iterator<Item = &'static str> {
+    EVALUATORS.keys().copied()
 }
 
 #[cfg(test)]

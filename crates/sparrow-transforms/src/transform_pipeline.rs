@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 use sparrow_batch::Batch;
 use sparrow_physical::{StepId, StepKind};
 use sparrow_scheduler::{
-    Partition, Partitioned, Pipeline, PipelineError, PipelineInput, Scheduler, TaskRef,
+    InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
 };
 
 use crate::transform::Transform;
@@ -17,8 +17,8 @@ pub struct TransformPipeline {
     /// The state for each partition.
     partitions: Partitioned<TransformPartition>,
     transforms: Vec<Box<dyn Transform>>,
-    /// Sink for the down-stream computation.
-    sink: PipelineInput,
+    /// Input handles for the consuming (receiving) computations.
+    consumers: InputHandles,
 }
 
 impl std::fmt::Debug for TransformPipeline {
@@ -45,17 +45,13 @@ struct TransformPartition {
 
 impl TransformPartition {
     /// Close the input. Returns true if the input buffer is empty.
-    fn close_input(&self) -> bool {
+    fn close(&self) -> bool {
         self.is_closed.store(true, Ordering::Release);
         self.inputs.lock().is_empty()
     }
 
-    fn is_input_closed(&self) -> bool {
+    fn is_closed(&self) -> bool {
         self.is_closed.load(Ordering::Acquire)
-    }
-
-    fn is_input_empty(&self) -> bool {
-        self.inputs.lock().is_empty()
     }
 
     fn add_input(&self, batch: Batch) {
@@ -82,12 +78,21 @@ pub enum Error {
 impl error_stack::Context for Error {}
 
 impl TransformPipeline {
+    /// Create a new transform pipeline.
+    ///
+    /// Args:
+    ///   producer_id: The `StepId` of the step that produces input to this
+    ///     pipeline. It should be the only input step to the first step in
+    ///     `steps`.
+    ///   steps: Iterator over the steps (in order) comprising the pipeline.
+    ///     They should all be transforms.
+    ///   consumers: The `InputHandles` to output the result of the transform to.
     pub fn try_new<'a>(
-        input_step: &sparrow_physical::Step,
+        producer_id: StepId,
         steps: impl Iterator<Item = &'a sparrow_physical::Step> + ExactSizeIterator,
-        sink: PipelineInput,
+        consumers: InputHandles,
     ) -> error_stack::Result<Self, Error> {
-        let mut input_step = input_step;
+        let mut input_step_id = producer_id;
         let mut transforms = Vec::with_capacity(steps.len());
         for step in steps {
             error_stack::ensure!(
@@ -98,9 +103,9 @@ impl TransformPipeline {
                 }
             );
             error_stack::ensure!(
-                step.inputs[0] == input_step.id,
+                step.inputs[0] == input_step_id,
                 Error::UnexpectedInput {
-                    expected: input_step.id,
+                    expected: input_step_id,
                     actual: step.inputs[0]
                 }
             );
@@ -125,12 +130,12 @@ impl TransformPipeline {
                 }
             };
             transforms.push(transform);
-            input_step = step;
+            input_step_id = step.id;
         }
         Ok(Self {
             partitions: Partitioned::default(),
             transforms,
-            sink,
+            consumers,
         })
     }
 }
@@ -163,13 +168,12 @@ impl Pipeline for TransformPipeline {
         );
         let partition = &self.partitions[input_partition];
         error_stack::ensure!(
-            !partition.is_input_closed(),
+            !partition.is_closed(),
             PipelineError::InputClosed {
                 input,
                 input_partition
             }
         );
-
         partition.add_input(batch);
         scheduler.schedule(partition.task.clone());
         Ok(())
@@ -189,8 +193,9 @@ impl Pipeline for TransformPipeline {
             }
         );
         let partition = &self.partitions[input_partition];
+        tracing::trace!("Closing input for transform {}", partition.task);
         error_stack::ensure!(
-            !partition.is_input_closed(),
+            !partition.is_closed(),
             PipelineError::InputClosed {
                 input,
                 input_partition
@@ -200,7 +205,7 @@ impl Pipeline for TransformPipeline {
         // Don't close the sink here. We may be currently executing a `do_work`
         // loop, in which case we need to allow it to output to the sink before
         // we close it.
-        partition.close_input();
+        partition.close();
         scheduler.schedule(partition.task.clone());
 
         Ok(())
@@ -212,19 +217,19 @@ impl Pipeline for TransformPipeline {
         scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         let partition = &self.partitions[input_partition];
+        let _enter = tracing::trace_span!("TransformPipeline::do_work", %partition.task).entered();
 
         let Some(batch) = partition.pop_input() else {
             error_stack::ensure!(
-                partition.is_input_closed(),
+                partition.is_closed(),
                 PipelineError::illegal_state("scheduled without work")
             );
-            return self.sink.close_input(input_partition, scheduler);
-        };
 
-        tracing::trace!(
-            "Performing work for partition {input_partition} on {} rows",
-            batch.num_rows()
-        );
+            tracing::info!("Input is closed and empty. Closing consumers and finishing pipeline.");
+            self.consumers.close_input(input_partition, scheduler)?;
+            partition.task.complete();
+            return Ok(());
+        };
 
         // If the batch is non empty, process it.
         // TODO: Propagate empty batches to further the watermark.
@@ -244,23 +249,17 @@ impl Pipeline for TransformPipeline {
 
             // If the result is non-empty, output it.
             if !batch.is_empty() {
-                self.sink
+                self.consumers
                     .add_input(input_partition, batch, scheduler)
                     .change_context(PipelineError::Execution)?;
             }
         }
 
-        // If the input is closed and empty, then we should close the sink.
-        if partition.is_input_closed() && partition.is_input_empty() {
-            self.sink
-                .close_input(input_partition, scheduler)
-                .change_context(PipelineError::Execution)?;
-        }
-
-        // Note: We don't re-schedule the transform if there is input.
-        // This should be handled by the fact that we scheduled the transform
-        // when we added the batch, which should trigger the "scheduled during
-        // execution" -> "re-schedule" logic (see ScheduleCount).
+        // Note: We don't re-schedule the transform if there is input or it's
+        // closed. This should be handled by the fact that we scheduled the
+        // transform when we added the batch (or closed it), which should
+        // trigger the "scheduled during execution" -> "re-schedule" logic (see
+        // ScheduleCount).
 
         Ok(())
     }

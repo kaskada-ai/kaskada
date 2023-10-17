@@ -11,7 +11,7 @@
 //! Pipeline for executing 1 or more transform.
 //!
 //! Transforms are simpler than pipelines -- they apply processing logic to an
-//! input batch to produce an output batch. Only the last trasnform in a pipeline
+//! input batch to produce an output batch. Only the last transform in a pipeline
 //! may affect the keys associated with rows -- after that a repartition pipeline
 //! must be executed to move data to the appropriate partitions.
 

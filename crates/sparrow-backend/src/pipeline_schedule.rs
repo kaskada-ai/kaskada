@@ -1,8 +1,5 @@
 use index_vec::{IndexSlice, IndexVec};
-use sparrow_core::debug_println;
-use sparrow_physical::{Pipeline, Step, StepId, StepKind};
-
-const DEBUG_SCHEDULING: bool = false;
+use sparrow_physical::{Pipeline, Step, StepId};
 
 /// Determine the pipeline each step should be part of.
 ///
@@ -29,7 +26,7 @@ pub fn pipeline_schedule(steps: &IndexSlice<StepId, [Step]>) -> Vec<Pipeline> {
 
     let mut pipelines = Vec::new();
     for (index, step) in steps.iter_enumerated() {
-        let assignment = if is_pipeline_breaker(index, step, &references) {
+        let assignment = if is_pipeline_breaker(index, step, &references, steps) {
             // A step with no input (such as a scan) starts a new pipeline.
             // A step with multiple inputs (such as a merge) is a separate pipeline.
             let index = pipelines.len();
@@ -49,29 +46,32 @@ pub fn pipeline_schedule(steps: &IndexSlice<StepId, [Step]>) -> Vec<Pipeline> {
 }
 
 /// Return true if the step is "pipeline breaking".
-fn is_pipeline_breaker(index: StepId, step: &Step, references: &IndexVec<StepId, usize>) -> bool {
+///
+/// A "pipeline breaker" must start a new pipeline.
+fn is_pipeline_breaker(
+    index: StepId,
+    step: &Step,
+    references: &IndexVec<StepId, usize>,
+    steps: &IndexSlice<StepId, [Step]>,
+) -> bool {
     match &step.kind {
+        _ if !step.kind.is_transform() => {
+            tracing::trace!("Step {index} is new pipeline since it not a transform");
+            true
+        }
         _ if step.inputs.len() != 1 => {
-            debug_println!(
-                DEBUG_SCHEDULING,
-                "Step {index} is new pipeline since it has multiple inputs"
-            );
+            tracing::trace!("Step {index} is new pipeline since it has multiple inputs");
+            true
+        }
+        _ if !steps[step.inputs[0]].kind.is_transform() => {
+            tracing::trace!("Step {index} is a new pipeline since it's input is not a transform");
             true
         }
         _ if references[step.inputs[0]] > 1 => {
-            debug_println!(
-                DEBUG_SCHEDULING,
+            tracing::trace!(
                 "Step {index} is new pipeline since it's only input ({}) is referenced {} times",
                 step.inputs[0],
                 references[step.inputs[0]]
-            );
-            true
-        }
-        StepKind::Read { .. } | StepKind::Merge | StepKind::Repartition { .. } => {
-            debug_println!(
-                DEBUG_SCHEDULING,
-                "Step {index} is new pipeline based on kind {:?}",
-                step.kind
             );
             true
         }
@@ -96,7 +96,9 @@ mod tests {
             // 0: scan table1
             Step {
                 id: 0.into(),
-                kind: StepKind::Read { source_id: table1 },
+                kind: StepKind::Read {
+                    source_uuid: table1
+                },
                 inputs: vec![],
                 result_type: result_type.clone(),
                 exprs: Exprs::new(),
@@ -104,7 +106,9 @@ mod tests {
             // 1: scan table2
             Step {
                 id: 1.into(),
-                kind: StepKind::Read { source_id: table2 },
+                kind: StepKind::Read {
+                    source_uuid: table2
+                },
                 inputs: vec![],
                 result_type: result_type.clone(),
                 exprs: Exprs::new(),
@@ -125,7 +129,7 @@ mod tests {
                 result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
-            // 4: project 2 -> same pipeline since only consumer
+            // 4: project 2 -> new pipeline since input (2) is a merge, not a transform
             Step {
                 id: 4.into(),
                 kind: StepKind::Project,
@@ -133,11 +137,19 @@ mod tests {
                 result_type: result_type.clone(),
                 exprs: Exprs::new(),
             },
-            // 5: merge 3 and 4 -> new pipeline since merge
+            // 5: filter 4 -> same pipeline since only consumer
             Step {
                 id: 5.into(),
+                kind: StepKind::Filter,
+                inputs: vec![4.into()],
+                result_type: result_type.clone(),
+                exprs: Exprs::new(),
+            },
+            // 6: merge 3 and 5 -> new pipeline since merge
+            Step {
+                id: 6.into(),
                 kind: StepKind::Merge,
-                inputs: vec![3.into(), 4.into()],
+                inputs: vec![3.into(), 5.into()],
                 result_type,
                 exprs: Exprs::new(),
             },
@@ -153,13 +165,16 @@ mod tests {
                     steps: vec![1.into()]
                 },
                 Pipeline {
-                    steps: vec![2.into(), 4.into()]
+                    steps: vec![2.into()]
                 },
                 Pipeline {
                     steps: vec![3.into()]
                 },
                 Pipeline {
-                    steps: vec![5.into()]
+                    steps: vec![4.into(), 5.into()]
+                },
+                Pipeline {
+                    steps: vec![6.into()]
                 }
             ]
         );

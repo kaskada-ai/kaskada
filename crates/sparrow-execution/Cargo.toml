@@ -10,25 +10,31 @@ Implementations of the pipelines to be executed.
 """
 
 [dependencies]
+arrow-array.workspace = true
+arrow-schema.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
-parking_lot.workspace = true
 futures.workspace = true
-sparrow-arrow = { path = "../sparrow-arrow" }
+hashbrown.workspace = true
+itertools.workspace = true
+parking_lot.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
-sparrow-core = { path = "../sparrow-core" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-transforms = { path = "../sparrow-transforms" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
-sparrow-sources = { path = "../sparrow-sources" }
 tokio.workspace = true
+tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
 arrow-array.workspace = true
 arrow-schema.workspace = true
 index_vec.workspace = true
+sparrow-backend = { path = "../sparrow-backend" }
+sparrow-logical = { path = "../sparrow-logical" }
+sparrow-session = { path = "../sparrow-session" }
+sparrow-sources = { path = "../sparrow-sources" }
 sparrow-testing = { path = "../sparrow-testing" }
 
 [lib]

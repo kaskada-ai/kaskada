@@ -1,4 +1,5 @@
 use hashbrown::HashMap;
+use sparrow_interfaces::{ExecutionOptions, Results};
 use sparrow_runtime::stores::{ObjectStoreRegistry, ObjectStoreUrl};
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -68,48 +69,11 @@ impl Default for Session {
     }
 }
 
-#[derive(Default)]
-pub enum Results {
-    #[default]
-    History,
-    Snapshot,
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum ExplanationKind {
     InitialDfg,
     FinalDfg,
     FinalPlan,
-}
-
-#[derive(Default)]
-pub struct ExecutionOptions {
-    /// The maximum number of rows to return.
-    pub row_limit: Option<usize>,
-    /// The maximum number of rows to return in a single batch.
-    pub max_batch_size: Option<usize>,
-    /// Whether to run execute as a materialization or not.
-    pub materialize: bool,
-    /// History or Snapshot results.
-    pub results: Results,
-    /// The changed since time. This is the minimum timestamp of changes to events.
-    /// For historic queries, this limits the output points.
-    /// For snapshot queries, this limits the set of entities that are considered changed.
-    pub changed_since_time_s: Option<i64>,
-    /// The final at time. This is the maximum timestamp output.
-    /// For historic queries, this limits the output points.
-    /// For snapshot queries, this determines the time at which the snapshot is produced.
-    pub final_at_time_s: Option<i64>,
-}
-
-impl ExecutionOptions {
-    pub fn per_entity_behavior(&self) -> PerEntityBehavior {
-        match self.results {
-            Results::History => PerEntityBehavior::All,
-            Results::Snapshot if self.final_at_time_s.is_some() => PerEntityBehavior::FinalAtTime,
-            Results::Snapshot => PerEntityBehavior::Final,
-        }
-    }
 }
 
 /// Adds a table to the session.
@@ -563,11 +527,26 @@ impl Session {
             .map_err(|e| e.change_context(Error::Execute))
             .boxed();
 
+        // Create a future that resolves to either `Err(first_error)` or `Ok`.
+        let future = Box::pin(async move {
+            let mut errors = progress
+                .filter_map(|result| {
+                    futures::future::ready(if let Err(e) = result { Some(e) } else { None })
+                })
+                .boxed();
+            let first_error = errors.next().await;
+            if let Some(first_error) = first_error {
+                Err(first_error)
+            } else {
+                Ok(())
+            }
+        });
+
         let handle = self.rt.handle().clone();
         Ok(Execution::new(
             handle,
             output_rx,
-            progress,
+            future,
             stop_signal_tx,
             schema,
         ))
@@ -635,7 +614,20 @@ static RECORD_EXTENSION_ARGUMENTS: [Located<String>; 2] = [
 #[static_init::dynamic]
 static CAST_ARGUMENTS: [Located<String>; 1] = [Located::internal_string("input")];
 
-impl ExecutionOptions {
+trait ExecutionOptionsExt {
+    fn per_entity_behavior(&self) -> PerEntityBehavior;
+    fn to_sparrow_options(&self) -> sparrow_runtime::execute::ExecutionOptions;
+}
+
+impl ExecutionOptionsExt for ExecutionOptions {
+    fn per_entity_behavior(&self) -> PerEntityBehavior {
+        match self.results {
+            Results::History => PerEntityBehavior::All,
+            Results::Snapshot if self.final_at_time_s.is_some() => PerEntityBehavior::FinalAtTime,
+            Results::Snapshot => PerEntityBehavior::Final,
+        }
+    }
+
     fn to_sparrow_options(&self) -> sparrow_runtime::execute::ExecutionOptions {
         let mut options = sparrow_runtime::execute::ExecutionOptions {
             max_batch_size: self.max_batch_size,

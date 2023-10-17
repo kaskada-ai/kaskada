@@ -2,6 +2,7 @@ use crate::{Error, ExprRef};
 use arrow_schema::DataType;
 use error_stack::ResultExt;
 use hashbrown::HashMap;
+use itertools::Itertools;
 use sparrow_types::{Signature, Types};
 
 /// Type-check the given function name.
@@ -10,7 +11,7 @@ pub(crate) fn typecheck(name: &str, args: &[ExprRef]) -> error_stack::Result<Typ
         "fieldref" => {
             error_stack::ensure!(
                 args.len() == 2,
-                Error::Internal("invalid arguments for fieldref")
+                Error::internal(format!("invalid arguments ({}) for fieldref", args.len()))
             );
 
             let DataType::Struct(fields) = &args[0].result_type else {
@@ -28,6 +29,37 @@ pub(crate) fn typecheck(name: &str, args: &[ExprRef]) -> error_stack::Result<Typ
             let types = Types {
                 arguments: vec![args[0].result_type.clone(), DataType::Utf8],
                 result: field.data_type().clone(),
+            };
+            Ok(types)
+        }
+        "record" => {
+            error_stack::ensure!(
+                !args.is_empty() && args.len() % 2 == 0,
+                Error::internal(format!(
+                    "expected non-zero, even number of arguments, was {}",
+                    args.len()
+                ))
+            );
+
+            let mut arguments = Vec::with_capacity(args.len());
+            let mut fields = Vec::with_capacity(args.len() / 2);
+            for (name, field) in args.iter().tuples() {
+                let Some(name) = name.literal_str_opt() else {
+                    error_stack::bail!(Error::InvalidNonStringLiteral(args[0].clone()))
+                };
+
+                arguments.push(DataType::Utf8);
+                arguments.push(field.result_type.clone());
+                fields.push(arrow_schema::Field::new(
+                    name,
+                    field.result_type.clone(),
+                    true,
+                ));
+            }
+
+            let types = Types {
+                arguments,
+                result: DataType::Struct(fields.into()),
             };
             Ok(types)
         }

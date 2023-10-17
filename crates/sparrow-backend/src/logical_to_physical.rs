@@ -28,7 +28,7 @@
 //!    For example, if the sequence of expressions exceeded a certain
 //!    threshold, or contained a UDF, we could introduce a projection.
 
-use arrow_schema::DataType;
+use arrow_schema::{DataType, Field};
 use egg::ENodeOrVar;
 use itertools::Itertools;
 use smallvec::smallvec;
@@ -50,7 +50,12 @@ pub(super) struct LogicalToPhysical {
 #[derive(Debug)]
 struct Reference {
     /// Reference to a specific step.
-    step_id: sparrow_physical::StepId,
+    ///
+    /// This should only be `None` if the expression is a literal. It should
+    /// not be `None` if the expression is a literal arising within a specific
+    /// step (domain) -- only for cases where the value originally has no
+    /// domain.
+    step_id: Option<sparrow_physical::StepId>,
     /// Expression corresponding to the result of compilation.
     ///
     /// Will be the "identity" pattern containing only `?input` if this
@@ -62,8 +67,18 @@ impl Reference {
     /// Create a reference to the input to the given step.
     fn step_input(step_id: sparrow_physical::StepId) -> error_stack::Result<Self, Error> {
         Ok(Self {
-            step_id,
+            step_id: Some(step_id),
             expr: ExprPattern::new_input()?,
+        })
+    }
+
+    fn literal(literal: ScalarValue) -> error_stack::Result<Self, Error> {
+        let mut expr = ExprPattern::default();
+        let data_type = literal.data_type();
+        expr.add_instruction("literal", smallvec![literal], smallvec![], data_type)?;
+        Ok(Self {
+            step_id: None,
+            expr,
         })
     }
 }
@@ -85,7 +100,7 @@ impl LogicalToPhysical {
     ) -> error_stack::Result<(sparrow_physical::StepId, Vec<ExprPattern>), Error> {
         match args
             .iter()
-            .map(|reference| reference.step_id)
+            .flat_map(|reference| reference.step_id)
             .unique()
             .sorted()
             .at_most_one()
@@ -100,7 +115,10 @@ impl LogicalToPhysical {
                     .map(|arg| {
                         // It shouldn't be possible to have an argument refer to the entire result of the
                         // projection step at this point (while we're building the physical plan).
-                        debug_assert_eq!(arg.step_id, step);
+                        debug_assert!(
+                            arg.step_id.is_none()
+                                || arg.step_id.is_some_and(|arg_step| arg_step == step)
+                        );
                         arg.expr
                     })
                     .collect();
@@ -118,11 +136,21 @@ impl LogicalToPhysical {
                 // of binary merges by choosing the order to perform the merges based on the number
                 // of rows.
                 let inputs: Vec<_> = must_merge.into_iter().collect();
+                let result_fields: arrow_schema::Fields = inputs
+                    .iter()
+                    .map(|input_step| {
+                        self.step_type(*input_step).map(|data_type| {
+                            Field::new(format!("step_{}", input_step), data_type, true)
+                        })
+                    })
+                    .try_collect()?;
+                let result_type = DataType::Struct(result_fields);
+
                 let merged_step = self.plan.get_or_create_step_id(
                     sparrow_physical::StepKind::Merge,
                     inputs.clone(),
                     ExprVec::empty(),
-                    DataType::Null,
+                    result_type,
                 );
                 let exprs = args
                     .into_iter()
@@ -131,28 +159,36 @@ impl LogicalToPhysical {
                         // Start with replacement containing `?input => (fieldref ?input "step_<step_id>)")
                         let mut exprs = ExprPattern::new_input()?;
 
-                        let data_type = self.reference_type(&arg)?.clone();
-                        exprs.add_instruction(
-                            "fieldref",
-                            // Note: that `merge` should produce a record with a
-                            // field for each merged step, identified by the
-                            // step ID being merged. This may change depending
-                            // on (a) optimizations that change steps and
-                            // whether it is difficult to update these and (b)
-                            // how we choose to implement merge.
-                            //
-                            // It may be more practical to use the "index of the
-                            // step ID in the inputs" which would be more stable
-                            // as we change step IDs.
-                            smallvec![ScalarValue::Utf8(Some(format!("step_{}", arg.step_id)))],
-                            smallvec![egg::Id::from(0)],
-                            data_type,
-                        )?;
+                        // `new_input` adds `?input` as the first expression in the pattern.
+                        let input_id = egg::Id::from(0);
 
-                        // Then add the actual expression, replacing the `?input` with the fieldref.
-                        let mut subst = egg::Subst::with_capacity(1);
-                        subst.insert(*crate::exprs::INPUT_VAR, egg::Id::from(1));
-                        exprs.add_pattern(&arg.expr, &subst)?;
+                        let data_type = self.reference_type(&arg)?.clone();
+
+                        if let Some(input_step) = arg.step_id {
+                            let merged_input_id = exprs.add_instruction(
+                                "fieldref",
+                                // Note: that `merge` should produce a record with a
+                                // field for each merged step, identified by the
+                                // step ID being merged. This may change depending
+                                // on (a) optimizations that change steps and
+                                // whether it is difficult to update these and (b)
+                                // how we choose to implement merge.
+                                //
+                                // It may be more practical to use the "index of the
+                                // step ID in the inputs" which would be more stable
+                                // as we change step IDs.
+                                smallvec![ScalarValue::Utf8(Some(format!("step_{}", input_step)))],
+                                smallvec![input_id],
+                                data_type,
+                            )?;
+
+                            // Then add the actual expression, replacing the `?input` with the fieldref.
+                            let mut subst = egg::Subst::with_capacity(1);
+                            subst.insert(*crate::exprs::INPUT_VAR, merged_input_id);
+                            exprs.add_pattern(&arg.expr, &subst)?;
+                        } else {
+                            exprs.add_pattern(&arg.expr, &egg::Subst::default())?;
+                        }
                         Ok(exprs)
                     })
                     .collect::<error_stack::Result<_, Error>>()?;
@@ -167,7 +203,16 @@ impl LogicalToPhysical {
     /// the result as well as expressions to apply to that steps output in order
     /// to prdouce the result.
     fn visit(&mut self, node: &sparrow_logical::ExprRef) -> error_stack::Result<Reference, Error> {
-        match node.name.as_ref() {
+        match node.name {
+            "literal" => {
+                let Some(literal) = node.literal_opt() else {
+                    error_stack::bail!(Error::invalid_logical_plan(
+                        "expected one literal argument to 'literal'"
+                    ))
+                };
+                let literal = logical_to_physical_literal(literal)?;
+                Ok(Reference::literal(literal)?)
+            }
             "read" => {
                 // A logical scan instruction should have a single literal argument
                 // containing the UUID of the table to scan.
@@ -180,7 +225,7 @@ impl LogicalToPhysical {
 
                 let step_id = self.plan.get_or_create_step_id(
                     sparrow_physical::StepKind::Read {
-                        source_id: table_id,
+                        source_uuid: table_id,
                     },
                     vec![],
                     ExprVec::empty(),
@@ -216,11 +261,31 @@ impl LogicalToPhysical {
                     )));
                 };
 
-                let args = node
-                    .args
-                    .iter()
-                    .map(|arg| self.visit(arg))
-                    .collect::<Result<_, _>>()?;
+                let args = if instruction != "record" {
+                    node.args
+                        .iter()
+                        .map(|arg| self.visit(arg))
+                        .collect::<Result<_, _>>()?
+                } else {
+                    // The arguments to the record are 2N -- (name, value) for each field.
+                    // However, we've already captured the names in the type. We could
+                    // have the creation of logical expressions drop the names, but then
+                    // we should move similar handling of literals there as well (eg., fieldrefs).
+                    //
+                    // TODO: Consider introducing a trait that allows (a) typechecking and (b)
+                    // configuring how arguments convert to logical nodes. This would benefit UDFs
+                    // as well as provide a place to encapsulate the various special handling.
+                    //
+                    // If such a trait had both `create_logical` and `logical_to_physical`, then
+                    // it would give us a place to see and test that the result of creating the
+                    // logical node can be turned into physical nodes, etc.
+                    node.args
+                        .iter()
+                        .skip(1)
+                        .step_by(2)
+                        .map(|arg| self.visit(arg))
+                        .collect::<Result<_, _>>()?
+                };
                 let (step_id, args) = self.resolve_args(args)?;
 
                 assert_eq!(
@@ -236,7 +301,10 @@ impl LogicalToPhysical {
                     args,
                     node.result_type.clone(),
                 )?;
-                Ok(Reference { step_id, expr })
+                Ok(Reference {
+                    step_id: Some(step_id),
+                    expr,
+                })
             }
         }
     }
@@ -248,7 +316,10 @@ impl LogicalToPhysical {
         let result = self.visit(root)?;
 
         // Make sure the resulting step is the last step.
-        assert!(result.step_id == self.plan.last_step_id());
+        let result_step_id = result.step_id.ok_or_else(|| {
+            Error::internal("result must be associated with a step (non-literal)")
+        })?;
+        assert!(result_step_id == self.plan.last_step_id());
 
         debug_assert_eq!(self.reference_type(&result)?, root.result_type);
 
@@ -260,7 +331,7 @@ impl LogicalToPhysical {
             // trivially instantiated within a projection, but we do this check here
             // for the case of the expression being the result of a non-projection
             // step, since it lets us avoid adding the projection step.
-            result.step_id
+            result_step_id
         } else {
             // Add a projection for the remaining expressions.
             //
@@ -268,12 +339,13 @@ impl LogicalToPhysical {
             // need to deal with mutating the expressions in the projection. For now, we think it
             // is easier to treat steps as immutable once created, and then combine steps in a
             // later optimization pass of the physical plan.
+            let input_type = self.plan.step_result_type(result_step_id).clone();
             let result_type = root.result_type.clone();
             self.plan.get_or_create_step_id(
                 sparrow_physical::StepKind::Project,
-                vec![result.step_id],
-                result.expr.instantiate(result_type)?,
-                root.result_type.clone(),
+                vec![result_step_id],
+                result.expr.instantiate(input_type)?,
+                result_type,
             )
         };
 
@@ -281,10 +353,17 @@ impl LogicalToPhysical {
         Ok(plan)
     }
 
+    fn step_type(&self, step_id: sparrow_physical::StepId) -> error_stack::Result<DataType, Error> {
+        Ok(self.plan.step_result_type(step_id).clone())
+    }
+
     fn reference_type(&self, reference: &Reference) -> error_stack::Result<DataType, Error> {
         match reference.expr.last() {
             ENodeOrVar::Var(var) if *var == *crate::exprs::INPUT_VAR => {
-                Ok(self.plan.step_result_type(reference.step_id).clone())
+                let reference_step_id = reference
+                    .step_id
+                    .ok_or_else(|| Error::internal("literal expressions don't have `?input`"))?;
+                self.step_type(reference_step_id)
             }
             ENodeOrVar::Var(other) => {
                 error_stack::bail!(Error::internal(format!(
@@ -293,6 +372,24 @@ impl LogicalToPhysical {
             }
             ENodeOrVar::ENode(expr) => Ok(expr.result_type.clone()),
         }
+    }
+}
+
+fn logical_to_physical_literal(
+    literal: &sparrow_logical::Literal,
+) -> error_stack::Result<ScalarValue, Error> {
+    match literal {
+        sparrow_logical::Literal::Null => todo!(),
+        sparrow_logical::Literal::Bool(_) => todo!(),
+        sparrow_logical::Literal::String(s) => Ok(ScalarValue::Utf8(Some(s.clone()))),
+        sparrow_logical::Literal::Int64(_) => todo!(),
+        sparrow_logical::Literal::UInt64(_) => todo!(),
+        sparrow_logical::Literal::Float64(_) => todo!(),
+        sparrow_logical::Literal::Timedelta {
+            seconds: _,
+            nanos: _,
+        } => todo!(),
+        sparrow_logical::Literal::Uuid(_) => todo!(),
     }
 }
 
@@ -324,17 +421,15 @@ mod tests {
         ));
         let x = Arc::new(sparrow_logical::Expr::new_literal_str("x"));
         let y = Arc::new(sparrow_logical::Expr::new_literal_str("y"));
-        let x1 = Arc::new(
-            sparrow_logical::Expr::try_new("fieldref".into(), vec![source1.clone(), x]).unwrap(),
-        );
+        let x1 =
+            Arc::new(sparrow_logical::Expr::try_new("fieldref", vec![source1.clone(), x]).unwrap());
         let physical_x1 = LogicalToPhysical::new().apply(&x1).unwrap();
         insta::assert_yaml_snapshot!(physical_x1);
 
-        let y1 = Arc::new(
-            sparrow_logical::Expr::try_new("fieldref".into(), vec![source1, y.clone()]).unwrap(),
-        );
+        let y1 =
+            Arc::new(sparrow_logical::Expr::try_new("fieldref", vec![source1, y.clone()]).unwrap());
         let add_x1_y1 =
-            Arc::new(sparrow_logical::Expr::try_new("add".into(), vec![x1.clone(), y1]).unwrap());
+            Arc::new(sparrow_logical::Expr::try_new("add", vec![x1.clone(), y1]).unwrap());
         let physical_add_x1_y1 = LogicalToPhysical::new().apply(&add_x1_y1).unwrap();
         insta::assert_yaml_snapshot!(physical_add_x1_y1);
 
@@ -345,10 +440,8 @@ mod tests {
             struct_type.clone(),
             group,
         ));
-        let y2 =
-            Arc::new(sparrow_logical::Expr::try_new("fieldref".into(), vec![source2, y]).unwrap());
-        let add_x1_y2 =
-            Arc::new(sparrow_logical::Expr::try_new("add".into(), vec![x1, y2]).unwrap());
+        let y2 = Arc::new(sparrow_logical::Expr::try_new("fieldref", vec![source2, y]).unwrap());
+        let add_x1_y2 = Arc::new(sparrow_logical::Expr::try_new("add", vec![x1, y2]).unwrap());
         let physical_add_x1_y2 = LogicalToPhysical::new().apply(&add_x1_y2).unwrap();
         insta::assert_yaml_snapshot!(physical_add_x1_y2);
     }
