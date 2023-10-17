@@ -2,17 +2,11 @@
 # Kaskada: Modern, open-source event-processing
 
 <p align="center">
-  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml">
-    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_proto.yml/badge.svg" alt="Protobuf CI" style="max-width: 100%;">
-  </a>
-  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml">
-    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_engine.yml/badge.svg" alt="Engine CI" style="max-width: 100%;">
+  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_python.yml">
+    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_python.yml/badge.svg" alt="Python CI" style="max-width: 100%;">
   </a>
   <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml">
     <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_with_rust_nightly.yml/badge.svg" alt="Rust CI (Nightly)" style="max-width: 100%;">
-  </a>
-  <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml">
-    <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_client_python.yml/badge.svg" alt="Python Client CI" style="max-width: 100%;">
   </a>
   <a href="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml">
     <img src="https://github.com/kaskada-ai/kaskada/actions/workflows/ci_notebooks.yml/badge.svg" alt="Notebooks CI" style="max-width: 100%;">
