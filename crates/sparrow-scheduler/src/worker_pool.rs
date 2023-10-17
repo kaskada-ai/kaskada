@@ -92,7 +92,7 @@ impl WorkerPoolBuilder {
 
     /// Start executing the pipelines.
     ///
-    /// Returns a `RunningWorkers` used for completing the workers.
+    /// Returns a `WorkerPool` used for completing the workers.
     pub fn start(self) -> error_stack::Result<WorkerPool, Error> {
         let Self {
             workers,
