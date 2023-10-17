@@ -3813,7 +3813,7 @@ dependencies = [
  "itertools 0.11.0",
  "smallvec",
  "sparrow-arrow",
- "sparrow-expressions",
+ "sparrow-interfaces",
  "sparrow-logical",
  "sparrow-physical",
  "static_init",
@@ -3888,6 +3888,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-expr-execution"
+version = "0.11.0"
+dependencies = [
+ "arrow-arith",
+ "arrow-array",
+ "arrow-buffer",
+ "arrow-cast",
+ "arrow-data",
+ "arrow-ord",
+ "arrow-schema",
+ "arrow-select",
+ "arrow-string",
+ "derive_more",
+ "error-stack",
+ "hashbrown 0.14.0",
+ "index_vec",
+ "inventory",
+ "itertools 0.11.0",
+ "num",
+ "serde_json",
+ "sparrow-arrow",
+ "sparrow-batch",
+ "sparrow-interfaces",
+ "sparrow-physical",
+ "static_init",
+ "substring",
+]
+
+[[package]]
 name = "sparrow-expressions"
 version = "0.11.0"
 dependencies = [
@@ -3910,6 +3939,7 @@ dependencies = [
  "serde_json",
  "sparrow-arrow",
  "sparrow-batch",
+ "sparrow-interfaces",
  "sparrow-physical",
  "static_init",
  "substring",
@@ -3956,11 +3986,17 @@ dependencies = [
 name = "sparrow-interfaces"
 version = "0.11.0"
 dependencies = [
+ "arrow-array",
  "arrow-schema",
  "derive_more",
  "error-stack",
  "futures",
+ "hashbrown 0.14.0",
+ "inventory",
+ "itertools 0.11.0",
+ "sparrow-arrow",
  "sparrow-batch",
+ "static_init",
 ]
 
 [[package]]
@@ -4221,7 +4257,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "sparrow-arrow",
  "sparrow-batch",
- "sparrow-expressions",
+ "sparrow-expr-execution",
  "sparrow-physical",
  "sparrow-scheduler",
  "tracing",

@@ -1,4 +1,7 @@
 {
     "rust-analyzer.cargo.features": "all",
     "editor.formatOnSave": true,
+    "rust-analyzer.linkedProjects": [
+        "./crates/sparrow-interfaces/Cargo.toml"
+    ],
 }

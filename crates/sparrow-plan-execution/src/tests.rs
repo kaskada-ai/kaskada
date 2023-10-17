@@ -61,6 +61,8 @@ fn add_input_batch(session: &Session, source: &Arc<dyn Source>) {
 
 #[test]
 fn test_logical_query_data_before_execute() {
+    sparrow_expressions::ensure_registered();
+
     sparrow_testing::init_test_logging();
     let mut session = Session::default();
 

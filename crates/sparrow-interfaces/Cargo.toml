@@ -10,11 +10,17 @@ Common interfaces for the Sparrow compilation and runtime.
 """
 
 [dependencies]
+arrow-array.workspace = true
 arrow-schema.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 futures.workspace = true
+hashbrown.workspace = true
+inventory.workspace = true
+itertools.workspace = true
+sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-batch = { path = "../sparrow-batch" }
+static_init.workspace = true
 
 [dev-dependencies]
 
