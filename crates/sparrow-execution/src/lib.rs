@@ -218,7 +218,8 @@ impl PlanExecutor {
             })
         );
 
-        // Determine the producer of the
+        // Determine the producer of the input to the transform pipeline.
+        // This is the input of the first step in the pipeline.
         let first_step_inputs = &plan.steps[*steps.first().expect("at least one step")].inputs;
         debug_assert_eq!(first_step_inputs.len(), 1);
         let producer_id = first_step_inputs[0];
