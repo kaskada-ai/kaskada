@@ -20,7 +20,7 @@ pub struct WorkerPoolBuilder {
 }
 
 impl WorkerPoolBuilder {
-    /// Create a worker pool.
+    /// Create a worker pool builder.
     ///
     /// Args:
     ///   query_id: The query ID associated with this worker pool. Used as a

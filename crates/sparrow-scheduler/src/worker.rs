@@ -65,10 +65,10 @@ impl Injector {
 impl Scheduler for Injector {
     fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            tracing::trace!("1 Added {task:?} to queue");
+            tracing::trace!("Added {task:?} to queue");
             self.queue.push(task);
         } else {
-            tracing::trace!("1 {task:?} already executing");
+            tracing::trace!("{task:?} already executing");
         }
         self.idle_workers.wake_one();
     }
@@ -93,7 +93,7 @@ impl Worker {
     pub(crate) fn work_loop(mut self, index: usize) -> error_stack::Result<(), Error> {
         let thread_id = std::thread::current().id();
         let _span = tracing::info_span!("Worker", ?thread_id, index).entered();
-        tracing::info!("Starting work loop on thread {thread_id:?}");
+        tracing::info!("Starting work loop");
         loop {
             while let Some(task) = self.queue.pop() {
                 if task.do_work(&mut self)? {
@@ -130,30 +130,30 @@ impl Worker {
 impl Scheduler for Worker {
     fn schedule(&mut self, task: TaskRef) {
         if task.schedule() {
-            tracing::trace!("2 Added {task:?} to queue");
+            tracing::trace!("Added {task:?} to queue");
             self.queue.push(task);
         } else {
-            tracing::trace!("2 {task:?} already executing");
+            tracing::trace!("{task:?} already executing");
         }
         self.idle_workers.wake_one();
     }
 
     fn schedule_yield(&mut self, task: TaskRef) {
         if task.schedule() {
-            tracing::trace!("3 Added {task:?} to queue");
+            tracing::trace!("Added {task:?} to queue");
             self.queue.push_yield(task);
         } else {
-            tracing::trace!("3 {task:?} already executing");
+            tracing::trace!("{task:?} already executing");
         }
         self.idle_workers.wake_one();
     }
 
     fn schedule_global(&self, task: TaskRef) {
         if task.schedule() {
-            tracing::trace!("4 Added {task:?} to queue");
+            tracing::trace!("Added {task:?} to queue");
             self.queue.push_global(task);
         } else {
-            tracing::trace!("4 {task:?} already executing");
+            tracing::trace!("{task:?} already executing");
         }
         self.idle_workers.wake_one();
     }

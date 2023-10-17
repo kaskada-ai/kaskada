@@ -13,17 +13,6 @@ use crate::Error;
 #[derive(Default)]
 pub(super) struct SourceTasks {
     tasks: Vec<SourceTask>,
-    // /// Streams to be read. Each stream should produce a `(batch, index)` pair,
-    // /// with indices corresponding to the input in `read_inputs` to send the batch
-    // /// to.
-    // ///
-    // // TODO: We may want to encapsulate this differently / better. Could we use
-    // // `futures::sink(...)` to do this in some way? We may also want to allow
-    // // the polling of these sources to be weighted towards the inputs that need
-    // // a new batch to progress (eg., back-pressure).
-    // reads: Vec<BoxStream<'static, error_stack::Result<(Batch, usize), SourceError>>>,
-    // /// For each read operation, the `PipelineInputs` to send the batches to.
-    // read_inputs: Vec<InputHandles>,
 }
 
 struct SourceTask {

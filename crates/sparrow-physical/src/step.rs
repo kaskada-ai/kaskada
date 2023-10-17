@@ -117,9 +117,11 @@ impl StepKind {
     /// - `filter` is a transform because it removes rows from each batch, and omits
     ///   empty batches
     /// - `merge` is not a transform because it accepts multiple inputs
-    /// - `shift` may be a transform if it uses the time in the input batch to determine
-    ///   which rows to output or it may be an operation if it interacts with scheduling
-    ///   in a more sophisticated way.
+    /// - `shift` depends on how we choose to implement it. If it is implemented as
+    ///   a stateful transform that just buffers and emits as processing proceeds
+    ///   through time, then it would be a transform. If we find ways to implement
+    ///   it more efficiently by implementing the pipeline interface, then it may
+    ///   not be a transform.
     pub fn is_transform(&self) -> bool {
         matches!(self, StepKind::Project | StepKind::Filter)
     }
