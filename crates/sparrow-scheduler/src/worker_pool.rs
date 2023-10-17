@@ -11,7 +11,7 @@ const DEFAULT_THREAD_COUNT: usize = 8;
 /// Number of slots each thread should have in it's local task queue.
 const LOCAL_QUEUE_SIZE: u16 = 32;
 
-pub struct WorkerPool {
+pub struct WorkerPoolBuilder {
     query_id: String,
     injector: Injector,
     workers: Vec<Worker>,
@@ -19,7 +19,7 @@ pub struct WorkerPool {
     pipelines: Vec<Arc<dyn Pipeline>>,
 }
 
-impl WorkerPool {
+impl WorkerPoolBuilder {
     /// Create a worker pool.
     ///
     /// Args:
@@ -93,7 +93,7 @@ impl WorkerPool {
     /// Start executing the pipelines.
     ///
     /// Returns a `RunningWorkers` used for completing the workers.
-    pub fn start(self) -> error_stack::Result<RunningWorkers, Error> {
+    pub fn start(self) -> error_stack::Result<WorkerPool, Error> {
         let Self {
             workers,
             query_id,
@@ -131,7 +131,7 @@ impl WorkerPool {
             })?;
         }
 
-        Ok(RunningWorkers {
+        Ok(WorkerPool {
             query_id,
             _pipelines: pipelines,
             monitor,
@@ -140,7 +140,7 @@ impl WorkerPool {
     }
 }
 
-pub struct RunningWorkers {
+pub struct WorkerPool {
     query_id: String,
     /// Hold the Arcs for the pipelines so they aren't dropped.
     _pipelines: Vec<Arc<dyn Pipeline>>,
@@ -148,7 +148,7 @@ pub struct RunningWorkers {
     injector: Injector,
 }
 
-impl RunningWorkers {
+impl WorkerPool {
     /// Mark the sources as complete and wait for workres to finish.
     ///
     /// This should not be called until after all source tasks have been
@@ -173,7 +173,8 @@ mod tests {
     use sparrow_batch::{Batch, RowTime};
 
     use crate::{
-        Error, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef, WorkerPool,
+        Error, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
+        WorkerPoolBuilder,
     };
 
     #[derive(Debug, Default)]
@@ -219,7 +220,7 @@ mod tests {
     async fn test_pipeline_panic() {
         sparrow_testing::init_test_logging();
 
-        let mut workers = WorkerPool::new("query".to_owned()).unwrap();
+        let mut workers = WorkerPoolBuilder::new("query".to_owned()).unwrap();
         let pipeline = workers.add_pipeline(1, PanicPipeline::default());
         let mut injector = workers.injector().clone();
         let workers = workers.start().unwrap();

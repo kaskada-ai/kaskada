@@ -189,9 +189,9 @@ impl Literal {
     }
 }
 
-fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::ExecutionOptions> {
+fn extract_options(options: Option<&PyAny>) -> Result<sparrow_interfaces::ExecutionOptions> {
     match options {
-        None => Ok(sparrow_session::ExecutionOptions::default()),
+        None => Ok(sparrow_interfaces::ExecutionOptions::default()),
         Some(options) => {
             let py = options.py();
             let row_limit = pyo3::intern!(py, "row_limit");
@@ -203,8 +203,8 @@ fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::Execution
 
             let results: &str = options.getattr(results)?.extract()?;
             let results = match results {
-                "history" => sparrow_session::Results::History,
-                "snapshot" => sparrow_session::Results::Snapshot,
+                "history" => sparrow_interfaces::Results::History,
+                "snapshot" => sparrow_interfaces::Results::Snapshot,
                 invalid => {
                     return Err(
                         PyValueError::new_err(format!("invalid results '{invalid}'")).into(),
@@ -212,7 +212,7 @@ fn extract_options(options: Option<&PyAny>) -> Result<sparrow_session::Execution
                 }
             };
 
-            Ok(sparrow_session::ExecutionOptions {
+            Ok(sparrow_interfaces::ExecutionOptions {
                 row_limit: options.getattr(row_limit)?.extract()?,
                 max_batch_size: options.getattr(max_batch_size)?.extract()?,
                 materialize: options.getattr(materialize)?.extract()?,

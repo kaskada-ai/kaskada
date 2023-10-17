@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use error_stack::ResultExt;
 use itertools::Itertools;
-use sparrow_scheduler::{InputHandles, WorkerPool};
+use sparrow_scheduler::{InputHandles, WorkerPoolBuilder};
 use uuid::Uuid;
 
 mod error;
@@ -36,7 +36,7 @@ use crate::source_tasks::SourceTasks;
 use crate::write_channel_pipeline::WriteChannelPipeline;
 
 pub struct PlanExecutor {
-    worker_pool: WorkerPool,
+    worker_pool: WorkerPoolBuilder,
     source_tasks: SourceTasks,
     execution_options: Arc<ExecutionOptions>,
 }
@@ -75,7 +75,7 @@ impl PlanExecutor {
         execution_options: Arc<ExecutionOptions>,
     ) -> error_stack::Result<Self, Error> {
         let mut executor = PlanExecutor {
-            worker_pool: WorkerPool::new(query_id).change_context(Error::Creating)?,
+            worker_pool: WorkerPoolBuilder::new(query_id).change_context(Error::Creating)?,
             source_tasks: SourceTasks::default(),
             execution_options: execution_options.clone(),
         };
