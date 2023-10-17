@@ -123,7 +123,7 @@ impl PlanExecutor {
                 debug_assert_eq!(
                     first_step_inputs.len(),
                     1,
-                    "Transforms should have a single input"
+                    "Transform steps should have a single input"
                 );
 
                 // If all of the steps are transforms, then we use the transform pipeline.
@@ -132,7 +132,7 @@ impl PlanExecutor {
                 assert_eq!(
                     pipeline.steps.len(),
                     1,
-                    "Non-transforms should be in separate pipelines"
+                    "Non-transform steps should be in separate pipelines"
                 );
 
                 let step = &plan.steps[pipeline.steps[0]];
