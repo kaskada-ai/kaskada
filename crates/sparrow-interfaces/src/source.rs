@@ -4,7 +4,7 @@ use arrow_schema::{DataType, SchemaRef};
 use futures::stream::BoxStream;
 use sparrow_batch::Batch;
 
-use crate::{ExecutionOptions, SourceError};
+use crate::ExecutionOptions;
 
 /// Trait implemented by sources.
 pub trait Source: Send + Sync {
@@ -28,6 +28,29 @@ pub trait Source: Send + Sync {
 
     /// Allow downcasting the source.
     fn as_any(&self) -> &dyn std::any::Any;
+}
+
+#[non_exhaustive]
+#[derive(derive_more::Display, Debug)]
+pub enum SourceError {
+    #[display(fmt = "internal error: {}", _0)]
+    Internal(&'static str),
+    #[display(fmt = "failed to add in-memory batch")]
+    Add,
+    #[display(fmt = "receiver lagged")]
+    ReceiverLagged,
+}
+
+impl error_stack::Context for SourceError {}
+
+impl SourceError {
+    pub fn internal() -> Self {
+        SourceError::Internal("no additional context")
+    }
+
+    pub fn internal_msg(msg: &'static str) -> Self {
+        SourceError::Internal(msg)
+    }
 }
 
 pub trait SourceExt {

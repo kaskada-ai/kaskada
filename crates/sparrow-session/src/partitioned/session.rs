@@ -5,7 +5,8 @@ use error_stack::ResultExt;
 use futures::FutureExt;
 use hashbrown::HashMap;
 use sparrow_compiler::NearestMatches;
-use sparrow_interfaces::{ExecutionOptions, Source};
+use sparrow_interfaces::source::Source;
+use sparrow_interfaces::ExecutionOptions;
 use sparrow_logical::{ExprRef, Literal};
 use uuid::Uuid;
 

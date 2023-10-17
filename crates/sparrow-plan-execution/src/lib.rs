@@ -13,7 +13,8 @@
 use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use hashbrown::HashMap;
-use sparrow_interfaces::{ExecutionOptions, Source};
+use sparrow_interfaces::source::Source;
+use sparrow_interfaces::ExecutionOptions;
 use sparrow_physical::StepId;
 use sparrow_transforms::TransformPipeline;
 use std::sync::Arc;

@@ -6,10 +6,9 @@ use error_stack::{IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 
 use sparrow_batch::Batch;
-use sparrow_interfaces::{ExecutionOptions, Source};
+use sparrow_interfaces::source::{Source, SourceError};
+use sparrow_interfaces::ExecutionOptions;
 use sparrow_merge::old::homogeneous_merge;
-
-use sparrow_interfaces::SourceError;
 
 /// A shared, synchronized container for in-memory batches.
 pub struct InMemory {
