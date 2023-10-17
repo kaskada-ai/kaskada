@@ -5,11 +5,11 @@ use error_stack::ResultExt;
 use futures::FutureExt;
 use hashbrown::HashMap;
 use sparrow_compiler::NearestMatches;
-use sparrow_interfaces::Source;
+use sparrow_interfaces::{ExecutionOptions, Source};
 use sparrow_logical::{ExprRef, Literal};
 use uuid::Uuid;
 
-use crate::{Error, Execution, ExecutionOptions};
+use crate::{Error, Execution};
 
 /// Session for creating and executing partitioned queries.
 pub struct Session {
@@ -78,7 +78,7 @@ impl Session {
     pub fn execute(
         &self,
         query: &ExprRef,
-        _options: ExecutionOptions,
+        execution_options: ExecutionOptions,
     ) -> error_stack::Result<Execution, Error> {
         let plan = sparrow_backend::compile(query, None).change_context(Error::Compile)?;
 
@@ -88,6 +88,7 @@ impl Session {
             plan,
             &self.sources,
             output_tx,
+            Arc::new(execution_options),
         )
         .change_context(Error::Execute)?;
 

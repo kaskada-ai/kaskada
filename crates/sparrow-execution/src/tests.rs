@@ -77,7 +77,7 @@ fn test_logical_query_data_before_execute() {
 
     let query = query(&session, source_expr).unwrap();
     let execution = session
-        .execute(&query, sparrow_session::ExecutionOptions::default())
+        .execute(&query, sparrow_interfaces::ExecutionOptions::default())
         .unwrap();
 
     let output = execution.collect_all_blocking().unwrap();

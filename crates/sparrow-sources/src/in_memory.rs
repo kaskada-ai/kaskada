@@ -6,7 +6,7 @@ use error_stack::{IntoReportCompat, ResultExt};
 use futures::{Stream, StreamExt, TryStreamExt};
 
 use sparrow_batch::Batch;
-use sparrow_interfaces::{ReadConfig, Source};
+use sparrow_interfaces::{ExecutionOptions, Source};
 use sparrow_merge::old::homogeneous_merge;
 
 use sparrow_interfaces::SourceError;
@@ -50,7 +50,7 @@ impl Source for InMemory {
     fn read(
         &self,
         projected_datatype: &DataType,
-        read_config: Arc<ReadConfig>,
+        execution_options: Arc<ExecutionOptions>,
     ) -> futures::stream::BoxStream<'static, error_stack::Result<Batch, SourceError>> {
         assert_eq!(
             &DataType::Struct(self.prepared_schema().fields().clone()),
@@ -58,7 +58,7 @@ impl Source for InMemory {
             "Projection not yet supported"
         );
 
-        let input_stream = if read_config.keep_open {
+        let input_stream = if execution_options.materialize {
             self.data
                 .subscribe()
                 .map_err(|e| e.change_context(SourceError::internal_msg("invalid input")))

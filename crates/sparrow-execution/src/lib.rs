@@ -13,7 +13,7 @@
 use arrow_array::RecordBatch;
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use hashbrown::HashMap;
-use sparrow_interfaces::{ReadConfig, Source};
+use sparrow_interfaces::{ExecutionOptions, Source};
 use sparrow_physical::StepId;
 use sparrow_transforms::TransformPipeline;
 use std::sync::Arc;
@@ -38,7 +38,7 @@ use crate::write_channel_pipeline::WriteChannelPipeline;
 pub struct PlanExecutor {
     worker_pool: WorkerPool,
     source_tasks: SourceTasks,
-    read_config: Arc<ReadConfig>,
+    execution_options: Arc<ExecutionOptions>,
 }
 
 fn result_type_to_output_schema(result_type: &DataType) -> SchemaRef {
@@ -72,15 +72,12 @@ impl PlanExecutor {
         plan: sparrow_physical::Plan,
         sources: &HashMap<Uuid, Arc<dyn Source>>,
         output: tokio::sync::mpsc::Sender<RecordBatch>,
+        execution_options: Arc<ExecutionOptions>,
     ) -> error_stack::Result<Self, Error> {
         let mut executor = PlanExecutor {
             worker_pool: WorkerPool::new(query_id).change_context(Error::Creating)?,
             source_tasks: SourceTasks::default(),
-            read_config: Arc::new(ReadConfig {
-                keep_open: false,
-                start_time: None,
-                end_time: None,
-            }),
+            execution_options: execution_options.clone(),
         };
 
         let last_step = plan.steps.last().expect("at least one step");
@@ -193,7 +190,7 @@ impl PlanExecutor {
                 let channel = sources.get(&source_uuid).ok_or(Error::NoSuchSource {
                     source_id: source_uuid,
                 })?;
-                let stream = channel.read(&step.result_type, self.read_config.clone());
+                let stream = channel.read(&step.result_type, self.execution_options.clone());
                 self.source_tasks.add_read(source_uuid, stream, consumers);
                 Ok(None)
             }
