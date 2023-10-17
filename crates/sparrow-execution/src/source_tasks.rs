@@ -2,7 +2,7 @@ use error_stack::ResultExt;
 use futures::stream::{BoxStream, FuturesUnordered};
 use futures::{StreamExt, TryStreamExt};
 use sparrow_batch::Batch;
-use sparrow_interfaces::SourceError;
+use sparrow_interfaces::source::SourceError;
 use sparrow_scheduler::{Injector, InputHandles};
 use tracing::Instrument;
 use uuid::Uuid;

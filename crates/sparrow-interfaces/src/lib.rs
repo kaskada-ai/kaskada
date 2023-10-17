@@ -8,9 +8,6 @@
 )]
 
 mod execution_options;
-mod source;
-mod source_error;
+pub mod source;
 
 pub use execution_options::*;
-pub use source::*;
-pub use source_error::SourceError;
