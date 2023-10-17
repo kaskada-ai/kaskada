@@ -44,8 +44,7 @@ async def test_iter_rows(source_int64) -> None:
 
 @kd.udf("add_one<N: number>(x: N) -> N")
 def add_one(x: pd.Series) -> pd.Series:
-    """Use Pandas to one"""
-    print("In UDF")
+    """Use Pandas to add one."""
     return x + 1
 
 
