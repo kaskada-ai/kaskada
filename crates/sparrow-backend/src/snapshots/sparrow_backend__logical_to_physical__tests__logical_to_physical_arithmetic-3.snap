@@ -48,7 +48,46 @@ steps:
     inputs:
       - 0
       - 1
-    result_type: "Null"
+    result_type:
+      Struct:
+        - name: step_0
+          data_type:
+            Struct:
+              - name: x
+                data_type: Int64
+                nullable: false
+                dict_id: 0
+                dict_is_ordered: false
+                metadata: {}
+              - name: y
+                data_type: Float64
+                nullable: false
+                dict_id: 0
+                dict_is_ordered: false
+                metadata: {}
+          nullable: true
+          dict_id: 0
+          dict_is_ordered: false
+          metadata: {}
+        - name: step_1
+          data_type:
+            Struct:
+              - name: x
+                data_type: Int64
+                nullable: false
+                dict_id: 0
+                dict_is_ordered: false
+                metadata: {}
+              - name: y
+                data_type: Float64
+                nullable: false
+                dict_id: 0
+                dict_is_ordered: false
+                metadata: {}
+          nullable: true
+          dict_id: 0
+          dict_is_ordered: false
+          metadata: {}
     exprs: []
   - id: 3
     kind: project
@@ -59,7 +98,46 @@ steps:
       - name: input
         literal_args: []
         args: []
-        result_type: "Null"
+        result_type:
+          Struct:
+            - name: step_0
+              data_type:
+                Struct:
+                  - name: x
+                    data_type: Int64
+                    nullable: false
+                    dict_id: 0
+                    dict_is_ordered: false
+                    metadata: {}
+                  - name: y
+                    data_type: Float64
+                    nullable: false
+                    dict_id: 0
+                    dict_is_ordered: false
+                    metadata: {}
+              nullable: true
+              dict_id: 0
+              dict_is_ordered: false
+              metadata: {}
+            - name: step_1
+              data_type:
+                Struct:
+                  - name: x
+                    data_type: Int64
+                    nullable: false
+                    dict_id: 0
+                    dict_is_ordered: false
+                    metadata: {}
+                  - name: y
+                    data_type: Float64
+                    nullable: false
+                    dict_id: 0
+                    dict_is_ordered: false
+                    metadata: {}
+              nullable: true
+              dict_id: 0
+              dict_is_ordered: false
+              metadata: {}
       - name: fieldref
         literal_args:
           - Utf8: step_1

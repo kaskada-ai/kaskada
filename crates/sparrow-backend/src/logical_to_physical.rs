@@ -28,7 +28,7 @@
 //!    For example, if the sequence of expressions exceeded a certain
 //!    threshold, or contained a UDF, we could introduce a projection.
 
-use arrow_schema::DataType;
+use arrow_schema::{DataType, Field};
 use egg::ENodeOrVar;
 use itertools::Itertools;
 use smallvec::smallvec;
@@ -136,11 +136,21 @@ impl LogicalToPhysical {
                 // of binary merges by choosing the order to perform the merges based on the number
                 // of rows.
                 let inputs: Vec<_> = must_merge.into_iter().collect();
+                let result_fields: arrow_schema::Fields = inputs
+                    .iter()
+                    .map(|input_step| {
+                        self.step_type(*input_step).map(|data_type| {
+                            Field::new(format!("step_{}", input_step), data_type, true)
+                        })
+                    })
+                    .try_collect()?;
+                let result_type = DataType::Struct(result_fields);
+
                 let merged_step = self.plan.get_or_create_step_id(
                     sparrow_physical::StepKind::Merge,
                     inputs.clone(),
                     ExprVec::empty(),
-                    DataType::Null,
+                    result_type,
                 );
                 let exprs = args
                     .into_iter()
@@ -343,13 +353,17 @@ impl LogicalToPhysical {
         Ok(plan)
     }
 
+    fn step_type(&self, step_id: sparrow_physical::StepId) -> error_stack::Result<DataType, Error> {
+        Ok(self.plan.step_result_type(step_id).clone())
+    }
+
     fn reference_type(&self, reference: &Reference) -> error_stack::Result<DataType, Error> {
         match reference.expr.last() {
             ENodeOrVar::Var(var) if *var == *crate::exprs::INPUT_VAR => {
                 let reference_step_id = reference
                     .step_id
                     .ok_or_else(|| Error::internal("literal expressions don't have `?input`"))?;
-                Ok(self.plan.step_result_type(reference_step_id).clone())
+                self.step_type(reference_step_id)
             }
             ENodeOrVar::Var(other) => {
                 error_stack::bail!(Error::internal(format!(
