@@ -21,14 +21,14 @@ smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-backend = { path = "../sparrow-backend" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-execution = { path = "../sparrow-execution" }
 sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-logical = { path = "../sparrow-logical" }
+sparrow-plan-execution = { path = "../sparrow-plan-execution" }
 sparrow-runtime = { path = "../sparrow-runtime" }
 sparrow-sources = { path = "../sparrow-sources" }
 sparrow-syntax = { path = "../sparrow-syntax" }
-sparrow-instructions = { path = "../sparrow-instructions" }
 static_init.workspace = true
 tempfile.workspace = true
 tokio.workspace = true

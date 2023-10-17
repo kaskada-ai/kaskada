@@ -84,7 +84,7 @@ impl Session {
         let plan = sparrow_backend::compile(query, None).change_context(Error::Compile)?;
 
         let (output_tx, output_rx) = tokio::sync::mpsc::channel(10);
-        let executor = sparrow_execution::PlanExecutor::try_new(
+        let executor = sparrow_plan_execution::PlanExecutor::try_new(
             "query_id".to_owned(),
             plan,
             &self.sources,
