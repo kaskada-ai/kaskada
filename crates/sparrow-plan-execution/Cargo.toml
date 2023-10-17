@@ -1,5 +1,5 @@
 [package]
-name = "sparrow-execution"
+name = "sparrow-plan-execution"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

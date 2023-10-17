@@ -3888,28 +3888,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sparrow-execution"
-version = "0.11.0"
-dependencies = [
- "arrow-array",
- "arrow-schema",
- "derive_more",
- "error-stack",
- "futures",
- "hashbrown 0.14.0",
- "itertools 0.11.0",
- "parking_lot 0.12.1",
- "sparrow-batch",
- "sparrow-interfaces",
- "sparrow-physical",
- "sparrow-scheduler",
- "sparrow-transforms",
- "tokio",
- "tracing",
- "uuid 1.4.1",
-]
-
-[[package]]
 name = "sparrow-expressions"
 version = "0.11.0"
 dependencies = [
@@ -4049,6 +4027,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-plan-execution"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "derive_more",
+ "error-stack",
+ "futures",
+ "hashbrown 0.14.0",
+ "itertools 0.11.0",
+ "parking_lot 0.12.1",
+ "sparrow-batch",
+ "sparrow-interfaces",
+ "sparrow-physical",
+ "sparrow-scheduler",
+ "sparrow-transforms",
+ "tokio",
+ "tracing",
+ "uuid 1.4.1",
+]
+
+[[package]]
 name = "sparrow-qfr"
 version = "0.11.0"
 dependencies = [
@@ -4157,11 +4157,11 @@ dependencies = [
  "sparrow-api",
  "sparrow-backend",
  "sparrow-compiler",
- "sparrow-execution",
  "sparrow-expressions",
  "sparrow-instructions",
  "sparrow-interfaces",
  "sparrow-logical",
+ "sparrow-plan-execution",
  "sparrow-runtime",
  "sparrow-sources",
  "sparrow-syntax",
