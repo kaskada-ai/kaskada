@@ -21,3 +21,11 @@ mod transform;
 mod transform_pipeline;
 
 pub use transform_pipeline::*;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_ensure_expressions_registered() {
+        sparrow_expressions::ensure_registered()
+    }
+}

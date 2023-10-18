@@ -6,7 +6,7 @@ edition.workspace = true
 license.workspace = true
 publish = false
 description = """
-Execution of expressions over record batches.
+Implementation of stateless expressions over batches.
 """
 
 [dependencies]
@@ -19,18 +19,13 @@ arrow-ord.workspace = true
 arrow-schema.workspace = true
 arrow-select.workspace = true
 arrow-string.workspace = true
-derive_more.workspace = true
 error-stack.workspace = true
-hashbrown.workspace = true
-index_vec.workspace = true
 inventory.workspace = true
 itertools.workspace = true
 num.workspace = true
 serde_json.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
-sparrow-batch = { path = "../sparrow-batch" }
-sparrow-physical = { path = "../sparrow-physical" }
-static_init.workspace = true
+sparrow-interfaces = { path = "../sparrow-interfaces" }
 substring.workspace = true
 
 [dev-dependencies]

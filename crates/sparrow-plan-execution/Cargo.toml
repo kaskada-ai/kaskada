@@ -32,6 +32,7 @@ arrow-array.workspace = true
 arrow-schema.workspace = true
 index_vec.workspace = true
 sparrow-backend = { path = "../sparrow-backend" }
+sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-logical = { path = "../sparrow-logical" }
 sparrow-session = { path = "../sparrow-session" }
 sparrow-sources = { path = "../sparrow-sources" }

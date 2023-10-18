@@ -1,29 +1,26 @@
 [package]
-name = "sparrow-interfaces"
+name = "sparrow-expr-execution"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 description = """
-Common interfaces for the Sparrow compilation and runtime.
+Execution of expressions over record batches.
 """
 
 [dependencies]
 arrow-array.workspace = true
 arrow-schema.workspace = true
-derive_more.workspace = true
 error-stack.workspace = true
-futures.workspace = true
-hashbrown.workspace = true
-inventory.workspace = true
-itertools.workspace = true
-sparrow-arrow = { path = "../sparrow-arrow" }
+index_vec.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
-static_init.workspace = true
+sparrow-interfaces = { path = "../sparrow-interfaces" }
+sparrow-physical = { path = "../sparrow-physical" }
 
 [dev-dependencies]
+approx.workspace = true
+sparrow-expressions = { path = "../sparrow-expressions" }
 
 [lib]
-bench = false
 doctest = false

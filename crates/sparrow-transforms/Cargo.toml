@@ -19,13 +19,14 @@ itertools.workspace = true
 parking_lot.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-batch = { path = "../sparrow-batch" }
-sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-expr-execution = { path = "../sparrow-expr-execution" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
 tracing.workspace = true
 
 [dev-dependencies]
 index_vec.workspace = true
+sparrow-expressions = { path = "../sparrow-expressions" }
 
 [lib]
 doctest = false
