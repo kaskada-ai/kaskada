@@ -15,7 +15,6 @@ derive_more.workspace = true
 error-stack.workspace = true
 hashbrown.workspace = true
 index_vec.workspace = true
-itertools.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 smallvec.workspace = true
