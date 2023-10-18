@@ -255,7 +255,7 @@ impl LogicalToPhysical {
                 Ok(input)
             }
             other => {
-                let Some(instruction) = sparrow_expressions::intern_name(other) else {
+                let Some(instruction) = sparrow_interfaces::expression::intern_name(other) else {
                     error_stack::bail!(Error::invalid_logical_plan(format!(
                         "unknown instruction '{other}' in logical plan"
                     )));
@@ -402,6 +402,8 @@ mod tests {
 
     #[test]
     fn test_logical_to_physical_arithmetic() {
+        sparrow_expressions::ensure_registered();
+
         let struct_type = DataType::Struct(
             vec![
                 Field::new("x", DataType::Int64, false),

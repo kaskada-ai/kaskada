@@ -1,0 +1,26 @@
+[package]
+name = "sparrow-expr-execution"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Execution of expressions over record batches.
+"""
+
+[dependencies]
+arrow-array.workspace = true
+arrow-schema.workspace = true
+error-stack.workspace = true
+index_vec.workspace = true
+sparrow-batch = { path = "../sparrow-batch" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
+sparrow-physical = { path = "../sparrow-physical" }
+
+[dev-dependencies]
+approx.workspace = true
+sparrow-expressions = { path = "../sparrow-expressions" }
+
+[lib]
+doctest = false

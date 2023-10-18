@@ -20,7 +20,7 @@ index_vec.workspace = true
 itertools.workspace = true
 smallvec.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
-sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-logical = { path = "../sparrow-logical" }
 sparrow-physical = { path = "../sparrow-physical" }
 uuid.workspace = true
@@ -29,6 +29,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+sparrow-expressions = { path = "../sparrow-expressions" }
 
 [lib]
 doctest = false

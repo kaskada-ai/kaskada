@@ -61,14 +61,18 @@ impl Session {
             "record" => "record",
             "fieldref" => "fieldref",
             other => {
-                // TODO: This *should* use a list of available _logical_ functions.
-                // For now, we approximate that with the set of available _physical_ functions.
-                sparrow_expressions::intern_name(other).ok_or_else(|| Error::NoSuchFunction {
-                    name: other.to_owned(),
-                    nearest: NearestMatches::new_nearest_strings(
-                        other,
-                        sparrow_expressions::names().map(|s| s.to_owned()),
-                    ),
+                // TODO(https://github.com/kaskada-ai/kaskada/issues/818): This
+                // *should* use a list of available _logical_ functions. For
+                // now, we approximate that with the set of available _physical_
+                // functions.
+                sparrow_interfaces::expression::intern_name(other).ok_or_else(|| {
+                    Error::NoSuchFunction {
+                        name: other.to_owned(),
+                        nearest: NearestMatches::new_nearest_strings(
+                            other,
+                            sparrow_interfaces::expression::names().map(|s| s.to_owned()),
+                        ),
+                    }
                 })?
             }
         };

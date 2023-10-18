@@ -5,7 +5,7 @@ use arrow_array::types::ArrowPrimitiveType;
 use arrow_array::{ArrayRef, BooleanArray, PrimitiveArray, StringArray, StructArray};
 use arrow_schema::DataType;
 
-use crate::Error;
+use sparrow_interfaces::expression::Error;
 
 pub trait WorkAreaValue: std::fmt::Debug + Clone + Copy {
     type Array<'a>;
