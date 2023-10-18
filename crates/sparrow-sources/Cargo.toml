@@ -22,6 +22,7 @@ sparrow-interfaces = { path = "../sparrow-interfaces" }
 tracing.workspace = true
 
 [dev-dependencies]
+tokio.workspace = true
 
 [lib]
 bench = false
