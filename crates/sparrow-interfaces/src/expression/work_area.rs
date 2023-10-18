@@ -1,12 +1,49 @@
-use std::marker::PhantomData;
-
 use arrow_array::cast::{as_boolean_array, as_primitive_array, as_string_array, as_struct_array};
 use arrow_array::types::ArrowPrimitiveType;
 use arrow_array::{ArrayRef, BooleanArray, PrimitiveArray, StringArray, StructArray};
 use arrow_schema::DataType;
+use sparrow_batch::Batch;
+use std::marker::PhantomData;
 
-use sparrow_interfaces::expression::Error;
+use super::Error;
 
+/// Information about an in-progress batch used for evaluation.
+pub struct WorkArea<'a> {
+    pub input: &'a Batch,
+    pub expressions: Vec<ArrayRef>,
+}
+
+impl<'a> WorkArea<'a> {
+    /// Create a work area for processing the given batch.
+    ///
+    /// Arguments:
+    /// - `input`: The [Batch] to process
+    /// - `expressions`: The number of expressions processed.
+    pub fn with_capacity(input: &'a Batch, expressions: usize) -> Self {
+        assert!(!input.is_empty());
+        Self {
+            input,
+            expressions: Vec::with_capacity(expressions),
+        }
+    }
+
+    /// Return the [ArrayRef] for the given input index.
+    pub fn input_column(&self) -> &ArrayRef {
+        self.input.data().expect("non empty")
+    }
+
+    /// Return the [Value] for the given expression index.
+    pub fn expression<R: WorkAreaValue>(&self, index: R) -> R::Array<'_> {
+        index.access(&self.expressions)
+    }
+
+    /// Return the number of rows in the current work area.
+    pub fn num_rows(&self) -> usize {
+        self.input.num_rows()
+    }
+}
+
+/// A reference to a value that may be retrieved from the [WorkArea].
 pub trait WorkAreaValue: std::fmt::Debug + Clone + Copy {
     type Array<'a>;
     fn access<'a>(&self, arrays: &'a [ArrayRef]) -> Self::Array<'a>;

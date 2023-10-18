@@ -2,7 +2,7 @@ use arrow_schema::DataType;
 use error_stack::ResultExt;
 use sparrow_batch::Batch;
 
-use sparrow_expressions::ExpressionExecutor;
+use sparrow_expr_execution::ExpressionExecutor;
 use sparrow_physical::Exprs;
 
 use crate::transform::{Error, Transform};

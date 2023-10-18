@@ -21,7 +21,6 @@ smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-backend = { path = "../sparrow-backend" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-logical = { path = "../sparrow-logical" }

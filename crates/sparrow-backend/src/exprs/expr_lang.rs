@@ -62,7 +62,7 @@ impl egg::FromOp for ExprLang {
     type Error = error_stack::Report<Error>;
 
     fn from_op(op: &str, children: Vec<Id>) -> Result<Self, Self::Error> {
-        let name = sparrow_expressions::intern_name(op)
+        let name = sparrow_interfaces::expression::intern_name(op)
             .ok_or_else(|| Error::NoSuchInstruction(op.to_owned()))?;
 
         let args = SmallVec::from_vec(children);

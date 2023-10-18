@@ -8,6 +8,7 @@
 )]
 
 mod execution_options;
+pub mod expression;
 pub mod source;
 
 pub use execution_options::*;

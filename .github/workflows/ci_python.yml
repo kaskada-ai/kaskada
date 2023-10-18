@@ -310,7 +310,11 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-machete
-      - name: Machete
+      - name: Machete (Sparrow)
+        working-directory:
+        run:
+          cargo machete
+      - name: Machete (Python)
         run:
           cargo machete
 
