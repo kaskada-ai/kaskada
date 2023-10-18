@@ -130,6 +130,8 @@ def golden(
 ) -> GoldenFixture:
     """Test fixture for checking results against a golden file."""
     test_name = request.node.name
+    if test_name.endswith("]"):
+        test_name = test_name.removesuffix("]").replace("[", "_")
     module_name = request.node.module.__name__
     dirname = os.path.join("pytests", "golden", module_name)
 

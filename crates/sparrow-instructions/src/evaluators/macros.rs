@@ -36,8 +36,12 @@ macro_rules! create_number_evaluator {
     ($input_type:expr, $evaluator:ident, $aggf:ident, $info:expr) => {{
         use arrow::datatypes::*;
         match $input_type {
+            DataType::Int8 => $evaluator::<$aggf<Int8Type>>::try_new($info),
+            DataType::Int16 => $evaluator::<$aggf<Int16Type>>::try_new($info),
             DataType::Int32 => $evaluator::<$aggf<Int32Type>>::try_new($info),
             DataType::Int64 => $evaluator::<$aggf<Int64Type>>::try_new($info),
+            DataType::UInt8 => $evaluator::<$aggf<UInt8Type>>::try_new($info),
+            DataType::UInt16 => $evaluator::<$aggf<UInt16Type>>::try_new($info),
             DataType::UInt32 => $evaluator::<$aggf<UInt32Type>>::try_new($info),
             DataType::UInt64 => $evaluator::<$aggf<UInt64Type>>::try_new($info),
             DataType::Float32 => $evaluator::<$aggf<Float32Type>>::try_new($info),

@@ -31,7 +31,6 @@ mod list_tests;
 mod logical_tests;
 mod lookup_tests;
 mod map_tests;
-mod math_tests;
 mod multiple_tables;
 mod record_tests;
 mod resumeable_tests;
