@@ -84,7 +84,7 @@ async def test_greatest(source, golden) -> None:
     golden.jsonl(kd.record({"m": source.m, "n": source.n, "result": source.m.greatest(source.n)}))
 
 async def test_greatest_literal(source, golden) -> None:
-    golden.jsonl(kd.record({"m": source.m, "result": source.m.greatest(8)}))
+    golden.jsonl(kd.record({"m": source.m, "result": source.m.greatest(14)}))
 
 async def test_least(source, golden) -> None:
     golden.jsonl(kd.record({"m": source.m, "n": source.n, "result": source.m.least(source.n)}))
