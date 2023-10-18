@@ -307,7 +307,12 @@ jobs:
     environment: pypi
     needs: [build-wheel-linux, build-wheel-windows, build-wheel-macos, sdist]
     permissions:
+      # Fetch the OpenID Connect token used to publish to PyPi.
       id-token: write
+      # For deploying release artifacts.
+      contents: write
+      # For creating the release announcement.
+      discussions: write
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - uses: actions/checkout@v3
