@@ -212,6 +212,7 @@ impl InMemoryBatches {
                 }
             }
         }
+        .boxed()
     }
 
     /// Retrieve the current in-memory batch.
