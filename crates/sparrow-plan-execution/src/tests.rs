@@ -1,9 +1,9 @@
 use arrow_array::cast::AsArray;
 use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
 use sparrow_interfaces::source::{Source, SourceExt};
+use sparrow_io::in_memory::in_memory_source::InMemoryBatches;
 use sparrow_logical::ExprRef;
 use sparrow_session::partitioned::Session;
-use sparrow_sources::InMemory;
 use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, Schema};

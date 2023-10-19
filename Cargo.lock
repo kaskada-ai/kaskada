@@ -4358,7 +4358,7 @@ dependencies = [
  "sparrow-arrow",
  "sparrow-core",
  "sparrow-instructions",
- "sparrow-sources",
+ "sparrow-io",
  "sparrow-syntax",
  "static_init",
  "strum 0.25.0",
@@ -4477,6 +4477,22 @@ dependencies = [
  "sparrow-arrow",
  "sparrow-batch",
  "static_init",
+]
+
+[[package]]
+name = "sparrow-io"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "async-broadcast",
+ "async-stream",
+ "error-stack",
+ "futures",
+ "sparrow-batch",
+ "sparrow-interfaces",
+ "sparrow-merge",
+ "tracing",
 ]
 
 [[package]]
@@ -4626,11 +4642,11 @@ dependencies = [
  "sparrow-batch",
  "sparrow-expressions",
  "sparrow-interfaces",
+ "sparrow-io",
  "sparrow-logical",
  "sparrow-physical",
  "sparrow-scheduler",
  "sparrow-session",
- "sparrow-sources",
  "sparrow-testing",
  "sparrow-transforms",
  "tokio",
@@ -4779,10 +4795,10 @@ dependencies = [
  "sparrow-compiler",
  "sparrow-instructions",
  "sparrow-interfaces",
+ "sparrow-io",
  "sparrow-logical",
  "sparrow-plan-execution",
  "sparrow-runtime",
- "sparrow-sources",
  "sparrow-syntax",
  "static_init",
  "tempfile",
@@ -4792,6 +4808,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "sparrow-sources"
 version = "0.11.0"
 dependencies = [
@@ -4811,6 +4828,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> d1cf9ed4 (Rename sparrow-sources to sparrow-io)
 name = "sparrow-syntax"
 version = "0.11.0"
 dependencies = [

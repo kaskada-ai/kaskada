@@ -7,6 +7,4 @@
     clippy::print_stderr
 )]
 
-mod in_memory;
-
-pub use in_memory::*;
+pub mod in_memory;

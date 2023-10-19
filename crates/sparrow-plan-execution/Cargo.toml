@@ -35,7 +35,7 @@ sparrow-backend = { path = "../sparrow-backend" }
 sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-logical = { path = "../sparrow-logical" }
 sparrow-session = { path = "../sparrow-session" }
-sparrow-sources = { path = "../sparrow-sources" }
+sparrow-io = { path = "../sparrow-io" }
 sparrow-testing = { path = "../sparrow-testing" }
 
 [lib]
