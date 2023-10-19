@@ -50,7 +50,7 @@ def fix_lint(session: nox.Session) -> None:
 @nox.session(python=python_versions[0])
 def safety(session: nox.Session) -> None:
     """Scan dependencies for insecure packages."""
-     # NOTE: Pass `extras` to `export_requirements` if the project supports any.
+    # NOTE: Pass `extras` to `export_requirements` if the project supports any.
     requirements = export_requirements(session)
     install(session, groups=["safety"], root=False)
     session.run("safety", "check", "--full-report", f"--file={requirements}")
@@ -114,36 +114,60 @@ def xdoctest(session: nox.Session) -> None:
     install(session, groups=["test"])
     session.run("python", "-m", "xdoctest", *args)
 
-@nox.session(name="docs-build", python=python_versions[0])
-def docs_build(session: nox.Session) -> None:
-    """Build the documentation."""
-    # ablog doesn't currently indicate whether it supports parallel reads,
-    # leading to a warning.
-    # when possible, add `"-j", "auto",` to do parallel builds (and in CI).
-    args = session.posargs or ["docs/source", "docs/_build", "-W"]
-    if not session.posargs and "FORCE_COLOR" in os.environ:
-        args.insert(0, "--color")
 
-    install(session, groups=["typecheck", "docs"])
+@nox.session(name="docs-clean", python=python_versions[0])
+def docs_clean(session: nox.Session) -> None:
+    """Clean up generated and cached docs"""
 
-    build_dir = Path("docs", "_build")
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
+    for item in ["_inv", "_site", ".quarto", "objects.json", "reference"]:
+        p = Path("docs", item)
+        if p.exists() and p.is_dir():
+            shutil.rmtree(p)
+        elif p.exists() and p.is_file():
+            p.unlink()
 
-    session.run("sphinx-build", *args)
+
+@nox.session(name="docs-gen", python=python_versions[0])
+def docs_gen(session: nox.Session) -> None:
+    """Generate API reference docs"""
+    install(session, groups=["docs"])
+
+    with session.chdir("docs"):
+        session.run("python", "_scripts/gen_reference.py")
+        session.run("python", "-m", "quartodoc", "interlinks")
 
 
 @nox.session(python=python_versions[0])
 def docs(session: nox.Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
-    args = ["--open-browser", "docs/source", "docs/_build", "-j", "auto", "--ignore", "*/apidocs/*", "--watch", "pysrc/kaskada"]
-    install(session, groups=["typecheck", "docs"])
+    if not shutil.which("quarto"):
+        session.error("Unable to execute `quarto`. Is it installed and in your path?\n"
+                      "See https://quarto.org/docs/get-started/")
 
-    build_dir = Path("docs", "_build")
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
+    install(session, groups=["docs"])
 
-    session.run("sphinx-autobuild", *args)
+    with session.chdir("docs"):
+        session.run("quarto", "preview", external=True)
+
+@nox.session(name="docs-lint", python=python_versions[0])
+def docs_gen(session: nox.Session) -> None:
+    """Lints the API reference config and lets you know about any missing items"""
+    install(session, groups=["docs"])
+
+    with session.chdir("docs"):
+        session.run("python", "_scripts/lint_reference.py")
+
+@nox.session(name="docs-build", python=python_versions[0])
+def docs_build(session: nox.Session) -> None:
+    """Build the docs."""
+    if not shutil.which("quarto"):
+        session.error("Unable to execute `quarto`. Is it installed and in your path?\n"
+                      "See https://quarto.org/docs/get-started/")
+
+    install(session, groups=["docs"])
+
+    with session.chdir("docs"):
+        session.run("quarto", "render", "--output-dir", "_site", external=True)
 
 
 def install(session: nox.Session, *, groups: Iterable[str], root: bool = True) -> None:

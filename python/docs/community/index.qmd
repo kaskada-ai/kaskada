@@ -1,0 +1,51 @@
+---
+title: Community
+format:
+  html:
+    css:
+      - /_static/css/design-style.css
+    link-external-icon: true
+    link-external-newwindow: true
+
+listing:
+  - id: cards
+    template: ../_templates/card.ejs
+    contents:
+      - name: GitHub Discussions
+        icon: bi bi-github
+        content: Ask questions and discuss Kaskada on GitHub.
+        link: https://github.com/kaskada-ai/kaskada/discussions
+        link_label: See GitHub Discussions
+      - name: Slack
+        icon: bi bi-slack
+        content: Join us on Slack to chat about Proactive AI!
+        link: https://join.slack.com/t/kaskada-hq/shared_invite/zt-1t1lms085-bqs2jtGO2TYr9kuuam~c9w
+        link_label: Join Slack
+      - name: Office Hours
+        icon: bi bi-camera-video-fill
+        content:  Discuss your real-time Gen AI needs and ideas with us!
+        link: https://calendly.com/kaskada-io/office-hours
+        link_label: Schedule a video call
+---
+
+::: {#cards }
+:::
+
+Welcome to the Kaskada community!
+
+The Kaskada project was open-sourced in 2023. As a growing community, we're here to explore new ways to interact with event-based data at scale and have some fun along the way. We build in the open and use the channels below for communication.
+
+## Contributing
+
+Nothing makes us happier than community contributions. See the README in the main Kaskada repository to get a grasp of the project layout and reference the [`CONTRIBUTING.md`](https://github.com/kaskada-ai/kaskada/blob/main/CONTRIBUTING.md){target="_blank" rel="noopener noreferrer"} file for detailed steps.
+
+Use the [GitHub issue tracker](https://github.com/kaskada-ai/kaskada/issues) to file bugs and feature requests.
+
+Acceptance of the DataStax [contributor license agreement (CLA)](https://cla.datastax.com/) is required in order for us to be able to accept your code contribution. You will see this on the standard pull request checklist for the Kaskada repositories.
+
+If you're interested in contributing but don't know where to start, we also recommend looking for a good first issue in the main repository.
+
+## Code of Conduct
+
+To make Kaskada a welcoming and harassment-free experience for everyone, we adopt and follow the [Contributor Covenant](https://www.contributor-covenant.org/).
+Please read our [Code of Conduct](https://github.com/kaskada-ai/kaskada/blob/main/CODE_OF_CONDUCT.md) before engaging with the community.

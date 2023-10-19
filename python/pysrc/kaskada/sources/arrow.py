@@ -35,12 +35,12 @@ class Pandas(Source):
             key_column: The name of the column containing the key.
             schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         super().__init__(
             schema=schema,
@@ -69,13 +69,13 @@ class Pandas(Source):
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             if dataframe is None:
@@ -123,17 +123,17 @@ class PyDict(Source):
             key_column: The name of the column containing the key.
             schema: The schema to use.
             queryable: Whether added rows will be available for running queries.
-              If True, rows (both provided to the constructor and added later) will be available
-              for interactive queries. If False, rows will be discarded after being sent to any
-              running materializations. Consider setting this to False when the source will only
-              be used for materialization to avoid unnecessary memory usage.
+                If True, rows (both provided to the constructor and added later) will be available
+                for interactive queries. If False, rows will be discarded after being sent to any
+                running materializations. Consider setting this to False when the source will only
+                be used for materialization to avoid unnecessary memory usage.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         super().__init__(
             queryable=queryable,
@@ -166,18 +166,18 @@ class PyDict(Source):
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             queryable: Whether added rows will be available for running queries.
-              If True, rows (both provided to the constructor and added later) will be available
-              for interactive queries. If False, rows will be discarded after being sent to any
-              running materializations. Consider setting this to False when the source will only
-              be used for materialization to avoid unnecessary memory usage.
+                If True, rows (both provided to the constructor and added later) will be available
+                for interactive queries. If False, rows will be discarded after being sent to any
+                running materializations. Consider setting this to False when the source will only
+                be used for materialization to avoid unnecessary memory usage.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             if rows is None:
@@ -227,12 +227,12 @@ class CsvString(Source):
             key_column: The name of the column containing the key.
             schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         super().__init__(
             schema=schema,
@@ -270,13 +270,13 @@ class CsvString(Source):
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if isinstance(csv_string, str):
             csv_string = BytesIO(csv_string.encode("utf-8"))
@@ -427,12 +427,12 @@ class JsonlString(Source):
             key_column: The name of the column containing the key.
             schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         super().__init__(
             schema=schema,
@@ -462,13 +462,13 @@ class JsonlString(Source):
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             schema: The schema to use. If not provided, it will be inferred from the input.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if isinstance(json_string, str):
             json_string = BytesIO(json_string.encode("utf-8"))
@@ -520,12 +520,12 @@ class Parquet(Source):
             key_column: The name of the column containing the key.
             schema: The schema to use.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         super().__init__(
             schema=schema,
@@ -552,18 +552,18 @@ class Parquet(Source):
 
         Args:
             file: The url or path of the Parquet file to add. Paths should be relative to the
-              current working directory or absolute. URLs may describe local file paths or
-              object-store locations.
+                current working directory or absolute. URLs may describe local file paths or
+                object-store locations.
             time_column: The name of the column containing the time.
             key_column: The name of the column containing the key.
             schema: The schema to use. If not provided, it will be inferred from the input.
             subsort_column: The name of the column containing the subsort.
-              If not provided, the subsort will be assigned by the system.
+                If not provided, the subsort will be assigned by the system.
             grouping_name: The name of the group associated with each key.
-              This is used to ensure implicit joins are only performed between data grouped
-              by the same entity.
+                This is used to ensure implicit joins are only performed between data grouped
+                by the same entity.
             time_unit: The unit of the time column. One of `ns`, `us`, `ms`, or `s`.
-              If not specified (and not specified in the data), nanosecond will be assumed.
+                If not specified (and not specified in the data), nanosecond will be assumed.
         """
         if schema is None:
             if file is None:

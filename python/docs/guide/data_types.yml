@@ -1,0 +1,31 @@
+- types: [bool]
+  desc: Booleans represent true or false.
+  examples: [true, false]
+- types: [u8, u16, u32, u64]
+  desc: Unsigned integer numbers of the specified bit width.
+  examples: [0, 1, 1000]
+- types: [i8, i16, i32, i64]
+  desc: Signed integer numbers of the specified bit width.
+  examples: [0, 1, -100]
+- types: [f32, f64]
+  desc: Floating point numbers of the specified bit width.
+  examples: [0, 1, -100, 1000, 0.0, -1.0, -100837.631]
+- types: [str]
+  desc: Unicode strings.
+  examples: ["hello", "hi 'bob'"]
+- types: [timestamp_s, timestamp_ms, timestamp_us, timestamp_ns]
+  desc: |
+    Points in time relative the Unix Epoch (00:00:00 UTC on January 1, 1970).
+    Time unit may be seconds (s), milliseconds (ms), microseconds (us) or nanoseconds (ns).
+  examples: [1639595174 as timestamp_s]
+- types: [duration_s, duration_ms, duration_us, duration_ns]
+  desc: |
+    A duration of a fixed amount of a specific time unit.
+    Time unit may be seconds (s), milliseconds (ms), microseconds (us) or nanoseconds (ns).
+  examples: [-100 as duration_ms]
+- types: [interval_days, interval_months]
+  desc: |
+    A calendar interval corresponding to the given amount of the corresponding time.
+    The length of an interval depends on the point in time it is added to.
+    For instance, adding 1 `interval_month` to a timestamp will shift to the same day of the next month.
+  examples: [1 as interval_days, -100 as interval_months]
