@@ -32,7 +32,7 @@ sparrow-api = { path = "../sparrow-api" }
 sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
-sparrow-sources = { path = "../sparrow-sources" }
+sparrow-io = { path = "../sparrow-io" }
 sparrow-syntax = { path = "../sparrow-syntax" }
 static_init.workspace = true
 strum.workspace = true

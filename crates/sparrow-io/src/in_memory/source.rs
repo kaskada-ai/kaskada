@@ -11,7 +11,7 @@ use sparrow_interfaces::ExecutionOptions;
 use sparrow_merge::old::homogeneous_merge;
 
 /// A shared, synchronized container for in-memory batches.
-pub struct InMemory {
+pub struct InMemorySource {
     /// The prepared schema.
     ///
     /// Note this is not the `projected_schema`, which is the schema
@@ -21,7 +21,7 @@ pub struct InMemory {
     data: Arc<InMemoryBatches>,
 }
 
-impl InMemory {
+impl InMemorySource {
     pub fn new(queryable: bool, schema: SchemaRef) -> error_stack::Result<Self, SourceError> {
         let data = Arc::new(InMemoryBatches::new(queryable, schema.clone()));
         let source = Self {
@@ -37,7 +37,7 @@ impl InMemory {
     }
 }
 
-impl Source for InMemory {
+impl Source for InMemorySource {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -412,7 +412,6 @@ mod tests {
 
         // Second subscription should only see second batch
         let b1_s2 = s2.next().await.unwrap().unwrap();
-        println!("read 3");
         assert_eq!(batch2, b1_s2);
     }
 }
