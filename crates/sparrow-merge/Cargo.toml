@@ -14,17 +14,25 @@ testing = ["arrow-csv", "proptest"]
 
 [dependencies]
 anyhow.workspace = true
-arrow-arith.workspace = true
 arrow-array.workspace = true
+arrow-arith.workspace = true
 arrow-csv = { workspace = true, optional = true }
 arrow-schema.workspace = true
 arrow-select.workspace = true
 bit-set.workspace = true
+derive_more.workspace = true
+error-stack.workspace = true
 itertools.workspace = true
+parking_lot.workspace = true
 proptest = { workspace = true, optional = true }
 smallvec.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-batch = { path = "../sparrow-batch" }
 sparrow-core = { path = "../sparrow-core" }
+sparrow-expr-execution = { path = "../sparrow-expr-execution" }
+sparrow-physical = { path = "../sparrow-physical" }
+sparrow-scheduler = { path = "../sparrow-scheduler" }
+tracing.workspace = true
 
 [dev-dependencies]
 arrow-csv.workspace = true

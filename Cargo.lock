@@ -4587,11 +4587,19 @@ dependencies = [
  "arrow-schema",
  "arrow-select",
  "bit-set",
+ "derive_more",
+ "error-stack",
  "itertools 0.11.0",
+ "parking_lot 0.12.1",
  "proptest",
  "smallvec",
  "sparrow-arrow",
+ "sparrow-batch",
  "sparrow-core",
+ "sparrow-expr-execution",
+ "sparrow-physical",
+ "sparrow-scheduler",
+ "tracing",
 ]
 
 [[package]]
@@ -4627,6 +4635,7 @@ dependencies = [
  "sparrow-expressions",
  "sparrow-interfaces",
  "sparrow-logical",
+ "sparrow-merge",
  "sparrow-physical",
  "sparrow-scheduler",
  "sparrow-session",

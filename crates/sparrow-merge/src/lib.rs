@@ -9,4 +9,5 @@
     clippy::undocumented_unsafe_blocks
 )]
 
+pub mod merge_pipeline;
 pub mod old;

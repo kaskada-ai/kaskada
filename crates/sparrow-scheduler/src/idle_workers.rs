@@ -14,7 +14,7 @@ struct State {
     /// Number of workers.
     num_workers: usize,
 
-    /// Number of (curretly) active workers.
+    /// Number of (currently) active workers.
     num_idle: usize,
 
     /// Whether sources have been completed.
