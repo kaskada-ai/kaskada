@@ -14,13 +14,7 @@ The "script" type application is sufficient for this example.
 Before we can receive events from Reddit, we need to create a data source to tell Kaskada how to handle the events.
 We'll provide a schema and configure the time and entity fields.
 
-```{literalinclude} reddit.py
-:language: python
-:start-after: "[start_setup]"
-:end-before: "[end_setup]"
-:linenos:
-:lineno-match:
-:dedent: 4
+```{.python include="reddit.py" code-line-numbers="true" start-line=29 end-line=48 dedent=4}
 ```
 
 ## Define the incoming event handler
@@ -28,13 +22,7 @@ We'll provide a schema and configure the time and entity fields.
 The `asyncpraw` python library takes care of requesting and receiving events from Reddit, all you need to do is create a handler to configure what to do with each event.
 This handler converts [Comment](https://praw.readthedocs.io/en/stable/code_overview/models/comment.html#praw.models.Comment) messages into a dict, and passes the dict to Kaskada.
 
-```{literalinclude} reddit.py
-:language: python
-:start-after: "[start_incoming]"
-:end-before: "[end_incoming]"
-:linenos:
-:lineno-match:
-:dedent: 4
+```{.python include="reddit.py" code-line-numbers="true" start-line=52 end-line=69 dedent=4}
 ```
 
 ## Construct a real-time query and result handler
@@ -43,27 +31,14 @@ Now we can use Kaskada to transform the events as they arrive.
 First we'll use `with_key` to regroup events by author, then we'll apply a simple `count` aggregation.
 Finally, we create a handler for the transformed results - here just printing them out.
 
-
-```{literalinclude} reddit.py
-:language: python
-:start-after: "[start_result]"
-:end-before: "[end_result]"
-:linenos:
-:lineno-match:
-:dedent: 4
+```{.python include="reddit.py" code-line-numbers="true" start-line=74 end-line=81 dedent=4}
 ```
 
 ## Final touches
 
 Now we just need to kick it all off by calling `asyncio.gather` on the two handler coroutines. This kicks off all the async processing.
 
-```{literalinclude} reddit.py
-:start-after: "[start_run]"
-:end-before: "[end_run]"
-:language: python
-:linenos:
-:lineno-match:
-:dedent: 4
+```{.python include="reddit.py" code-line-numbers="true" start-line=86 end-line=87 dedent=4}
 ```
 
 Try running it yourself and playing different transformations!
