@@ -1,1 +1,4 @@
-pub mod in_memory_source;
+mod source;
+
+pub use source::InMemoryBatches;
+pub use source::InMemorySource;

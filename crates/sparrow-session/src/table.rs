@@ -9,7 +9,7 @@ use error_stack::ResultExt;
 use futures::TryStreamExt;
 use sparrow_api::kaskada::v1alpha;
 use sparrow_compiler::{FileSets, TableInfo};
-use sparrow_io::in_memory::in_memory_source::InMemoryBatches;
+use sparrow_io::in_memory::InMemoryBatches;
 use sparrow_runtime::preparer::Preparer;
 use sparrow_runtime::stores::ObjectStoreUrl;
 use sparrow_runtime::ParquetFile;
