@@ -1,7 +1,7 @@
 use arrow_array::cast::AsArray;
 use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
 use sparrow_interfaces::source::{Source, SourceExt};
-use sparrow_io::in_memory::{InMemory, InMemoryBatches};
+use sparrow_io::in_memory::InMemorySource;
 use sparrow_logical::ExprRef;
 use sparrow_session::partitioned::Session;
 use std::sync::Arc;
@@ -55,7 +55,7 @@ fn add_input_batch(session: &Session, source: &Arc<dyn Source>) {
     )
     .unwrap();
 
-    let source: &InMemory = source.downcast_source();
+    let source: &InMemorySource = source.downcast_source();
     session.block_on(source.add_batch(batch)).unwrap();
 }
 
@@ -72,7 +72,8 @@ fn test_logical_query_data_before_execute() {
         Field::new("c", DataType::Int64, true),
     ]));
 
-    let source: Arc<dyn Source> = Arc::new(InMemory::new(true, source_schema.clone()).unwrap());
+    let source: Arc<dyn Source> =
+        Arc::new(InMemorySource::new(true, source_schema.clone()).unwrap());
     let source_expr = session.add_source(source.clone()).unwrap();
 
     add_input_batch(&session, &source);
