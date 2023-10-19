@@ -4797,6 +4797,7 @@ version = "0.11.0"
 dependencies = [
  "arrow-array",
  "arrow-schema",
+ "arrow-select",
  "async-broadcast",
  "async-stream",
  "error-stack",
@@ -4804,6 +4805,7 @@ dependencies = [
  "sparrow-batch",
  "sparrow-interfaces",
  "sparrow-merge",
+ "static_init",
  "tokio",
  "tracing",
 ]

@@ -23,6 +23,8 @@ tracing.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+arrow-select.workspace = true
+static_init.workspace = true
 
 [lib]
 bench = false
