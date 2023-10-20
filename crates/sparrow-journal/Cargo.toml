@@ -1,34 +1,32 @@
 [package]
-name = "sparrow-batch"
+name = "sparrow-journal"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 description = """
-Defines the main struct for wrapping RecordBatches in execution.
+Durable journaling of batches.
 """
 
-[features]
-default = []
-testing = ["proptest"]
-
 [dependencies]
-arrow.workspace = true
 arrow-array.workspace = true
+arrow-buffer.workspace = true
+arrow-ipc.workspace = true
 arrow-schema.workspace = true
-arrow-select.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
+futures.workspace = true
 itertools.workspace = true
-static_init.workspace = true
-proptest = { workspace = true, optional = true }
+okaywal = "0.3.0"
+parking_lot.workspace = true
+sparrow-batch = { path = "../sparrow-batch" }
+tracing.workspace = true
 
 [dev-dependencies]
+sparrow-batch = { path = "../sparrow-batch", features = ["testing"] }
 sparrow-testing = { path = "../sparrow-testing" }
-sparrow-merge = { path = "../sparrow-merge" }
-proptest.workspace = true
+tempfile.workspace = true
 
 [lib]
-bench = false
 doctest = false

@@ -17,7 +17,7 @@ use crate::{Error, RowTime};
 #[derive(Clone, PartialEq, Debug)]
 pub struct Batch {
     /// The data associated with the batch.
-    pub(crate) data: Option<BatchInfo>,
+    pub data: Option<BatchInfo>,
 
     /// An indication that the batch stream has completed up to the given time.
     /// Any rows in future batches on this stream must have a time strictly
@@ -475,6 +475,35 @@ impl Batch {
             RowTime::from_timestamp_ns(up_to_time),
         )
     }
+
+    /// Creates a batch with the given times and key hashes, and `null` data.
+    #[cfg(any(test, feature = "testing"))]
+    pub fn null_from(
+        time: impl Into<TimestampNanosecondArray>,
+        subsort: impl Into<arrow_array::UInt64Array>,
+        key_hash: impl Into<arrow_array::UInt64Array>,
+        up_to_time: i64,
+    ) -> Self {
+        use arrow_array::NullArray;
+
+        let time: TimestampNanosecondArray = time.into();
+        let subsort: UInt64Array = subsort.into();
+        let key_hash: UInt64Array = key_hash.into();
+
+        let time: ArrayRef = Arc::new(time);
+        let subsort: ArrayRef = Arc::new(subsort);
+        let key_hash: ArrayRef = Arc::new(key_hash);
+
+        let data = Arc::new(NullArray::new(time.len()));
+
+        Batch::new_with_data(
+            data,
+            time,
+            subsort,
+            key_hash,
+            RowTime::from_timestamp_ns(up_to_time),
+        )
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -602,13 +631,14 @@ fn validate_key_column(
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct BatchInfo {
-    pub(crate) data: ArrayRef,
-    pub(crate) time: ArrayRef,
-    pub(crate) subsort: ArrayRef,
-    pub(crate) key_hash: ArrayRef,
-    min_present_time: RowTime,
-    max_present_time: RowTime,
+#[non_exhaustive]
+pub struct BatchInfo {
+    pub data: ArrayRef,
+    pub time: ArrayRef,
+    pub subsort: ArrayRef,
+    pub key_hash: ArrayRef,
+    pub min_present_time: RowTime,
+    pub max_present_time: RowTime,
 }
 
 impl PartialEq for BatchInfo {
@@ -708,6 +738,10 @@ impl BatchInfo {
 
     pub(crate) fn key_hash(&self) -> &UInt64Array {
         self.key_hash.as_primitive()
+    }
+
+    pub fn len(&self) -> usize {
+        self.time.len()
     }
 }
 
