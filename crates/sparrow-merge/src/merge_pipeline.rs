@@ -7,9 +7,10 @@ use parking_lot::Mutex;
 use sparrow_batch::Batch;
 use sparrow_physical::{StepId, StepKind};
 use sparrow_scheduler::{
-    InputHandles, Partition, PartitionIndex, Partitioned, Pipeline, PipelineError, Scheduler,
-    TaskRef,
+    InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
 };
+
+use crate::Gatherer;
 
 /// Runs a merge as a pipeline.
 pub struct MergePipeline {
@@ -19,6 +20,8 @@ pub struct MergePipeline {
     partitions: Partitioned<MergePartition>,
     /// Input handles for the consuming (receiving) computations.
     consumers: InputHandles,
+    /// Gathers batches from multiple for each partition.
+    gatherers: Vec<Gatherer>,
 }
 
 impl std::fmt::Debug for MergePipeline {
@@ -56,6 +59,7 @@ impl MergePipeline {
             producer_ids,
             partitions: Partitioned::default(),
             consumers,
+            gatherers: Vec::new(),
         })
     }
 }
@@ -74,7 +78,7 @@ impl Pipeline for MergePipeline {
 
     fn add_input(
         &self,
-        input_partition: PartitionIndex,
+        input_partition: Partition,
         input: usize,
         batch: Batch,
         scheduler: &mut dyn Scheduler,
@@ -94,26 +98,22 @@ impl Pipeline for MergePipeline {
                 input_partition
             }
         );
-        // TODO: may need to add input usize here, so
-        // when the merge worker takes the batch off the queue it knows
-        // from which side it was
-        // Does that work? Go look at where it takes it off to see if it would
-        partition.add_input(batch);
+        partition.add_input(batch, input);
         scheduler.schedule(partition.task.clone());
         Ok(())
     }
 
     fn close_input(
         &self,
-        input_partition: PartitionIndex,
+        input_partition: Partition,
         input: usize,
         scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         error_stack::ensure!(
-            input == 0,
+            input == 0 || input == 1,
             PipelineError::InvalidInput {
                 input,
-                input_len: 1
+                input_len: 2
             }
         );
         let partition = &self.partitions[input_partition];
@@ -137,13 +137,13 @@ impl Pipeline for MergePipeline {
 
     fn do_work(
         &self,
-        input_partition: PartitionIndex,
+        input_partition: Partition,
         scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         let partition = &self.partitions[input_partition];
         let _enter = tracing::trace_span!("MergePipeline::do_work", %partition.task).entered();
 
-        let Some(batch) = partition.pop_input() else {
+        let Some((batch, index)) = partition.pop_input() else {
             error_stack::ensure!(
                 partition.is_closed(),
                 PipelineError::illegal_state("scheduled without work")
@@ -159,17 +159,17 @@ impl Pipeline for MergePipeline {
         // TODO: Propagate empty batches to further the watermark.
         if !batch.is_empty() {
             let mut batch = batch;
-            for transform in self.transforms.iter() {
-                batch = transform
-                    .apply(batch)
-                    .change_context(PipelineError::Execution)?;
+            // for transform in self.transforms.iter() {
+            //     batch = transform
+            //         .apply(batch)
+            //         .change_context(PipelineError::Execution)?;
 
-                // Exit the sequence of transforms early if the batch is empty.
-                // Merges don't add rows.
-                if batch.is_empty() {
-                    break;
-                }
-            }
+            //     // Exit the sequence of transforms early if the batch is empty.
+            //     // Merges don't add rows.
+            //     if batch.is_empty() {
+            //         break;
+            //     }
+            // }
 
             // If the result is non-empty, output it.
             if !batch.is_empty() {
@@ -194,8 +194,10 @@ struct MergePartition {
     is_closed: AtomicBool,
     /// Inputs for this partition.
     ///
+    /// The usize is the index of the input (0 or 1).
+    ///
     /// TODO: This could use a thread-safe queue to avoid locking.
-    inputs: Mutex<VecDeque<Batch>>,
+    inputs: Mutex<VecDeque<(Batch, usize)>>,
     /// Task for this partition.
     task: TaskRef,
 }
@@ -211,11 +213,11 @@ impl MergePartition {
         self.is_closed.load(Ordering::Acquire)
     }
 
-    fn add_input(&self, batch: Batch) {
-        self.inputs.lock().push_back(batch);
+    fn add_input(&self, batch: Batch, index: usize) {
+        self.inputs.lock().push_back((batch, index));
     }
 
-    fn pop_input(&self) -> Option<Batch> {
+    fn pop_input(&self) -> Option<(Batch, usize)> {
         self.inputs.lock().pop_front()
     }
 }

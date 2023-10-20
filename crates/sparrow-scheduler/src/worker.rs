@@ -103,8 +103,10 @@ impl Worker {
 
                     // This means that the task was scheduled while we were executing.
                     // As a result, we didn't add it to any queue yet, so we need to
-                    // do so now. We use the global queue because generlaly it won't
-                    // be processing data just produced.
+                    // do so now.
+                    //
+                    // This task can be pushed to either the local or global queue.
+                    // We try the local queue, as there may be less contention.
                     tracing::trace!("Task {task} scheduled during execution. Re-adding.");
                     self.queue.push_yield(task);
                 } else {

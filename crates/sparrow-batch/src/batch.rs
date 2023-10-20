@@ -6,7 +6,7 @@ use arrow_array::{
     Array, ArrayRef, ArrowPrimitiveType, RecordBatch, StructArray, TimestampNanosecondArray,
     UInt64Array,
 };
-use arrow_schema::{Fields, Schema};
+use arrow_schema::{Field, Fields, Schema};
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;
 
@@ -77,6 +77,7 @@ impl Batch {
         })
     }
 
+    /// Creates a record batch from the batch data.
     pub fn into_record_batch(self, schema: Arc<Schema>) -> Option<RecordBatch> {
         self.data.map(|data| {
             if let Some(fields) = data.data.as_struct_opt() {
@@ -91,6 +92,25 @@ impl Batch {
                 )
                 .expect("create_batch")
             }
+        })
+    }
+
+    /// Constructs a record batch directly with the data column named "data".
+    pub fn record_batch(&self) -> Option<RecordBatch> {
+        self.data.clone().map(|data| {
+            let data_type = data.data.data_type();
+            let schema = Schema::new(vec![
+                Field::new("_time", data.time.data_type().clone(), false),
+                Field::new("_subsort", data.subsort.data_type().clone(), false),
+                Field::new("_time", data.key_hash.data_type().clone(), false),
+                Field::new("data", data_type.clone(), true),
+            ]);
+
+            RecordBatch::try_new(
+                Arc::new(schema),
+                vec![data.time, data.subsort, data.key_hash, data.data],
+            )
+            .expect("create_batch")
         })
     }
 

@@ -20,6 +20,7 @@ itertools.workspace = true
 parking_lot.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }
+sparrow-merge = { path = "../sparrow-merge" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-transforms = { path = "../sparrow-transforms" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
@@ -34,7 +35,6 @@ index_vec.workspace = true
 sparrow-backend = { path = "../sparrow-backend" }
 sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-logical = { path = "../sparrow-logical" }
-sparrow-merge = { path = "../sparrow-merge" }
 sparrow-session = { path = "../sparrow-session" }
 sparrow-sources = { path = "../sparrow-sources" }
 sparrow-testing = { path = "../sparrow-testing" }

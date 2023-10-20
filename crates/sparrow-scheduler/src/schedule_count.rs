@@ -4,6 +4,14 @@ pub(crate) use loom::sync::atomic::{AtomicUsize, Ordering};
 #[cfg(not(loom))]
 pub(crate) use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// Keeps track of the number of times a task has been scheduled.
+///
+/// This is used to avoid scheduling a task multiple times. Because
+/// a task can be bumped from a local to global queue and taken by any worker,
+/// we cannot add the same task to a queue if it currently executing (otherwise,
+/// we would have multiple workers attempting to run the same task concurrently).
+/// Instead, we track the number of times a task has been scheduled, and continue to
+/// re-schedule the task after the previous execution of that task is complete.
 #[repr(transparent)]
 #[derive(Debug, Default)]
 pub(crate) struct ScheduleCount(AtomicUsize);

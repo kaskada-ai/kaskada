@@ -15,7 +15,7 @@ use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use hashbrown::HashMap;
 use sparrow_interfaces::source::Source;
 use sparrow_interfaces::ExecutionOptions;
-use sparrow_merge::merge_pipeline::MergePipeline;
+// use sparrow_merge::merge_pipeline::MergePipeline;
 use sparrow_physical::StepId;
 use sparrow_transforms::TransformPipeline;
 use std::sync::Arc;
@@ -196,14 +196,14 @@ impl PlanExecutor {
                 self.source_tasks.add_read(source_uuid, stream, consumers);
                 Ok(None)
             }
-            sparrow_physical::StepKind::Merge => {
-                let inputs = step.inputs;
-                // TODO: This isn't actually true - we have an n-way merge?
-                assert_eq!(inputs.len(), 2, "expected 2 inputs for a merge");
-                let pipeline = MergePipeline::try_new(inputs, step, consumers)
-                    .change_context(Error::Creating)?;
-                Ok(Some(self.worker_pool.add_pipeline(1, pipeline)))
-            }
+            // sparrow_physical::StepKind::Merge => {
+            //     let inputs = step.inputs;
+            //     // TODO: This isn't actually true - we have an n-way merge?
+            //     assert_eq!(inputs.len(), 2, "expected 2 inputs for a merge");
+            //     let pipeline = MergePipeline::try_new(inputs, step, consumers)
+            //         .change_context(Error::Creating)?;
+            //     Ok(Some(self.worker_pool.add_pipeline(1, pipeline)))
+            // }
             other if other.is_transform() => {
                 unreachable!("Transforms should use add_transform_pipeline")
             }
