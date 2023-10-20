@@ -1,14 +1,13 @@
 # Kaskada Timestreams
 
 <!-- start elevator-pitch -->
-Kaskada's `timestreams` library makes it easy to work with structured event-based data.
+Kaskada's makes it easy to work with structured event-based data.
 Define temporal queries on event-based data loaded from Python, using Pandas or PyArrow and push new data in as it occurs.
 Or, execute the queries directly on events in your data lake and/or as they arrive on a stream.
 
 With Kaskada you can unleash the value of real-time, temporal queries without the complexity of "big" infrastructure components like a distributed stream or stream processing system.
 
-Under the hood, `timestreams` is an efficient temporal query engine built in Rust.
-It is built on Apache Arrow, using the same columnar execution strategy that makes ...
+Under the hood, `kaskada` is an efficient temporal query engine built in Rust.
 
 <!-- end elevator-pitch -->
 

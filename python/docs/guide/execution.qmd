@@ -23,21 +23,56 @@ Executing a Timestream for the history outputs every point in the Timestream.
 This means that each entity likely appears in the output multiple times.
 This is particularly useful for creating training examples from past data points, or visualizing how the Timestream has changed over time.
 
+```{code-cell} python
+import asyncio
+import kaskada as kd
+kd.init_session()
+data = "\n".join(
+    [
+        "time,key,m",
+        "1996-12-19T16:39:57,A,5",
+        "1996-12-19T17:42:57,B,8",
+        "1996-12-19T18:13:43,C,1",
+        "1996-12-20T16:39:59,A,17",
+        "1996-12-23T12:18:57,B,6",
+        "1996-12-23T16:40:01,A,12",
+    ]
+)
+ts = await kd.sources.CsvString.create(data, time_column="time", key_column="key")
+
+# Execute the expression as a history
+ts.to_pandas(results=kd.results.History())
+```
+
 Executing a Timestream for a snapshot produces a value for each entity at a specific point in time.
 This means that each entity appears at-most once in the results.
 This is useful for maintaining a feature store based on the latest values.
 
-::: {.callout-note title=Todo}
-Expose the configuration for snapshots.
-See https://github.com/kaskada-ai/kaskada/issues/719
-:::
+```{code-cell} python
+# Execute the expression as a snapshot
+ts.to_pandas(results=kd.results.Snapshot())
+```
 
+## Once vs. Live
 
-## Query vs. Materialize
-Every Timestream may be executed as a single query or used to start a materialization.
-Single queries are useful when you want the results for some later batch process, such as fine-tuning a model or populating an in-memory feature store.
-Materialization is useful when you want to stream new results out as quickly as possible, such as maintaining an in-memory feature store or reacting to specific conditions.
+Every Timestream may be executed "once" using the data currently present in the sources you've defined or executed "live", producuing new results as data is added to those sources.
+"Once" execution suseful when you want the results for a batch process, such as fine-tuning a model or populating an in-memory feature store.
 
+```{code-cell} python
+for res in ts.run_iter(mode="once"):
+    print(res)
+```
+
+"Live" execution is useful when you want to stream new results out as quickly as possible, such as maintaining an in-memory feature store or reacting to specific conditions.
+
+```{code-block} python
+async def run_background():
+    async for res in ts.run_iter(mode="live"):
+        print(res)
+
+asyncio.create_task(run_background())
+await ts.add_string("time,key,m\n1996-12-24T16:40:01,D,12")
+```
 
 ## Changed Since
 
@@ -46,39 +81,48 @@ Configuring the _changed since time_ lets you control the points or entities inc
 For a historic query, only points occurring after the changed since time are included in the output.
 This allows incrementally outputting the entire history to some external store, by repeatedly performing a "changed since" query.
 
-For a snapshot query, only entities that have changed after this time are included in the output.
-This reduces the amount of data written when the past snapshot is already present in the destination.
+```{code-cell} python
+import datetime as dt
 
-::: {.callout-note title=Todo}
-Expose the configuration for changed since.
-See https://github.com/kaskada-ai/kaskada/issues/719
-:::
+ts.to_pandas(
+    results=kd.results.History(since=dt.datetime(1996, 12, 20, 0, 0, 0)),
+)
+```
+
+For a snapshot query, only entities that have changed after this time are included in the output.
+This reduces the amount of data written when the past snapshot is already present in the destination
+
+```{code-cell} python
+ts.to_pandas(
+    results=kd.results.Snapshot(changed_since=dt.datetime(1996, 12, 20, 0, 0, 0)),
+)
+```
 
 ## Up To
 
 Configuring the _up to time_ lets you control the maximum points output (and in the case of snapshots, the time represented in the snapshot).
 
 For a historic query, only points occurring before or at the up to time are included in the output.
+
+```{code-cell} python
+import datetime as dt
+
+ts.to_pandas(
+    results=kd.results.History(until=dt.datetime(1996, 12, 20, 0, 0, 0)),
+)
+```
+
 For a snapshot query, this corresponds to the time at which the snapshot will be taken.
 
-::: {.callout-note title=Todo}
+```{code-cell} python
+ts.to_pandas(
+    results=kd.results.Snapshot(at=dt.datetime(1996, 12, 20, 0, 0, 0)),
+)
+```
+
+```{note}
 Currently when not specified, the up to time is determined from the maximum event present in the data.
-We have plans to change this to a parameter to `run` defaulting to the current time.
-:::
-
-::: {.callout-note title=Todo}
-Expose the configuration for up-to.
-See https://github.com/kaskada-ai/kaskada/issues/719
-:::
-
-## State
-
-Kaskada checkpoints state during and after execution.
-This provides fault-tolerance, incremental querying and automatic handling of late-data.
-
-When a query is executed, Kaskada determines whether it can use any of the available states to reduce the amount of processing needed.
-For instance, when producing a snapshot Kaskada can use any persisted state before the earliest new event and before the time to snapshot.
-Similarly, when producing a history, Kaskada can use any persisted state before the earliest new event and before the "changed since" time.
+```
 
 ## Destinations
 
@@ -87,6 +131,14 @@ The methods [](`kaskada.Timestream.preview`) and [](`kaskada.Timestream.to_panda
 The [](`kaskada.Timestream.run_iter`) methods provides synchronous and asynchronous iterators over the results in a variety of formats including Pandas DataFrames, PyArrow RecordBatches, and rows as Python dictionaries.
 This allows you to run the entire retrieve-evaluate-respond loop within a single Python process.
 
-The [](`kaskada.Timestream.write`) function allows you to specify a destination from [`kaskada.destinations`](../reference/Destinations/index.qmd) for results. This supports both `once` and `live` queries.
-
+The [](`kaskada.Timestream.write`) function allows you to specify a destination from [`kaskada.destinations`](../reference/Destinations/index.qmd) for results.
+This supports both `once` and `live` queries
 See the reference on [destinations](../reference/Destinations/index.qmd) for more on the supported destinations.
+
+## Durability
+
+At the moment, "live" Kaskada queries do not durably persist their progress - results are returned for the full data set each time {py:func}`Timestream.run_iter<kaskada.Timestream.run_iter>` is called. 
+The ability to automatically persists progress is under active development.
+
+Similarly, values added to dynamic data sources (for example [](`kaskada.sources.PyDict`) are not currently persisted durably. 
+By default, such values are retained in memory - to discard values after they're processed specify `queryable=False` when creating the data source. 
