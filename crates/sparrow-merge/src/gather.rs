@@ -4,6 +4,9 @@ use crate::gather::gathered_batches::GatheredBatches;
 use sparrow_batch::{Batch, RowTime};
 use std::collections::BinaryHeap;
 
+/// Gathers batches from multiple inputs, keeping track of the
+/// minimum `up_to_time` across all inputs, which acts as a
+/// "watermark" for the batches.
 pub struct Gatherer {
     /// Information about the input with the *minimum* `up_to_time`.
     ///
@@ -24,38 +27,13 @@ impl Gatherer {
             })
             .collect();
 
-        let pending = vec![Pending::default(); active.len()];
+        let pending = (0..inputs).into_iter().map(Pending::new).collect();
         Self {
             active,
             pending,
             emitted_up_to_time: RowTime::ZERO,
         }
     }
-
-    /// Used to peek at the first *true* active item.
-    // fn peek_active(&mut self) -> Option<&MinPriority> {
-    //     while let Some((active_index, active_up_to_time)) = self
-    //         .active
-    //         .peek()
-    //         .map(|active| (active.index, active.up_to_time))
-    //     {
-    //         // If the input is closed, it's no longer blocking anything.
-    //         if self.pending[active_index].closed {
-    //             self.active.pop();
-    //             continue;
-    //         } else if self.pending[active_index].up_to_time > active_up_to_time {
-    //             // SAFETY: We peeked an active item to enter this loop.
-    //             let mut active = unsafe { self.active.pop().unwrap_unchecked() };
-    //             active.up_to_time = self.pending[active_index].up_to_time;
-    //             self.active.push(active);
-    //             continue;
-    //         } else {
-    //             return self.active.peek();
-    //         };
-    //     }
-
-    //     None
-    // }
 
     /// Return the index of the input we need in order to advance.
     ///
@@ -68,28 +46,14 @@ impl Gatherer {
     ///
     /// Returns `true` if the gatherer is ready to produce output.
     pub fn add_batch(&mut self, index: usize, batch: Batch) -> bool {
-        println!("ADD BATCH---------");
-        println!("Total number of pending inputs: {:?}", self.pending.len());
-        println!("Adding batch for index: {}", index);
         let batch_up_to_time = batch.up_to_time;
-        self.pending[index].batches.push(batch);
-        println!(
-            "Current pending index batches length: {:?}",
-            self.pending[index].batches.len()
-        );
+        self.pending[index].add_batch(batch);
 
         if let Some(mut entry) = self.active.pop() {
-            // print popped active:
-            println!(
-                "Setting entry up to_time: {} with batch up to_time: {}",
-                entry.up_to_time, batch_up_to_time
-            );
             entry.up_to_time = batch_up_to_time;
             self.active.push(entry);
             // SAFETY: We just pushed an element so we know it's not empty.
             let top = unsafe { self.active.peek().unwrap_unchecked() };
-            println!("Top up to time: {}", top.up_to_time);
-            println!("Emitted up to time: {}", self.emitted_up_to_time);
             // We can output if minimum pending index is larger than previous emitted up to.
             top.up_to_time > self.emitted_up_to_time
         } else {
@@ -104,10 +68,13 @@ impl Gatherer {
         }
     }
 
+    /// Closes the pending set for the given index.
     pub fn close(&mut self, index: usize) -> bool {
-        println!("ClOSING INDEX: {}", index);
         assert!(!self.pending[index].closed);
         self.pending[index].closed = true;
+
+        // Because we expect the callee to to have called `blocking_input` before,
+        // we know that the top active item is the given one here.
         let active = self.active.pop().expect("non empty");
         assert_eq!(active.index, index);
 
@@ -116,16 +83,13 @@ impl Gatherer {
 
     /// If a batch is ready to be processed, returns it.
     pub fn next_batch(&mut self) -> Option<GatheredBatches> {
-        println!("NEXT BATCH ---------------");
         match self.active.peek() {
             None => {
-                println!("No active peek");
                 if self
                     .pending
                     .iter()
                     .all(|p| p.batches.iter().all(|b| b.is_empty()))
                 {
-                    println!("All empty pending returning None");
                     return None;
                 }
 
@@ -138,36 +102,36 @@ impl Gatherer {
                         pending.batches
                     })
                     .collect();
-                println!("All inputs closed, gathering {} batches", batches.len());
+
+                // We get the max up_to_time here specifically so we know the upper
+                // bound of the batches we are producing. This is important for downstream
+                // windows, which may need to know the upper time bound they are
+                // producing window rows up to.
+                let max_up_to_time = batches
+                    .iter()
+                    .flat_map(|batches| batches.iter())
+                    .map(|batch| batch.up_to_time)
+                    .max()
+                    .unwrap_or_else(|| panic!("expected max up to time"));
 
                 Some(GatheredBatches {
                     batches,
-                    up_to_time: RowTime::MAX, // TODO: We may have to do this for real, and find the max up to time.
-                                              // Otherwise I worry a downstream window function will think it needs to produce a window up to max row time?
+                    up_to_time: max_up_to_time,
                 })
             }
             Some(top) if top.up_to_time > self.emitted_up_to_time => {
-                println!("Emitting something here");
-                println!("Top up to time: {}", top.up_to_time);
-                println!("Self emitted up to time: {}", self.emitted_up_to_time);
                 self.emitted_up_to_time = top.up_to_time;
                 let batches = self
                     .pending
                     .iter_mut()
                     .map(|pending| pending.split_up_to(top.up_to_time))
                     .collect();
-                println!("Batches after split: {:?}", batches);
                 Some(GatheredBatches {
                     batches,
                     up_to_time: top.up_to_time,
                 })
             }
-            Some(top) => {
-                println!("Not emitting something here");
-                println!("Top up to time: {:?}", top.up_to_time);
-                println!("Self emitted up to time: {:?}", self.emitted_up_to_time);
-                None
-            }
+            Some(_) => None,
         }
     }
 }
@@ -179,6 +143,7 @@ struct Pending {
     /// The batches should arrive (and be stored) non-decreasing by `up_to_time`.
     batches: Vec<Batch>,
     /// The `up_to_time` of the latest batch received on this input index.
+    #[allow(unused)]
     up_to_time: RowTime,
     /// True if the given entry has reported closed.
     closed: bool,
@@ -195,6 +160,7 @@ impl Pending {
     }
 
     fn add_batch(&mut self, batch: Batch) {
+        tracing::trace!("Adding batch to pending index: {}", self.input);
         if !batch.is_empty() {
             self.batches.push(batch)
         }
@@ -202,31 +168,30 @@ impl Pending {
 
     /// Split the vector of pending batches into the output and remainder.
     ///
-    /// TODO: FRAZ - I think this should be exclusive
-    /// Returns the batches containing all rows up to `time_exclusive`.
+    /// Returns the batches containing all rows up to but excluding `time_exclusive`.
     ///
     /// Modifies `pending_batches` to contain the remainder -- those batches contain
-    /// rows after `time_inclusive`.
+    /// rows at and after `time_exclusive`.
     ///
     /// Order of the pending batches is preserved.
     fn split_up_to(&mut self, time_exclusive: RowTime) -> Vec<Batch> {
-        println!("SPLIT UP TO time: {}", time_exclusive);
+        tracing::trace!(
+            "Splitting pending index {} at time {}",
+            self.input,
+            time_exclusive
+        );
         let pending = &mut self.batches;
 
         // The partition point is the index of the first element in second partition.
         // In this case, it is the index of the first batch with up_to_time < time_exclusive.
         let partition_index = pending.partition_point(|batch| batch.up_to_time < time_exclusive);
-        println!("Partition index: {}", partition_index);
 
         // After this, `pending_batches` contains the elements that can be output
         // in their entirety.
         //
         // Note that `split_off` is inclusive, so the pending set will contain
         // [0, partition_index), and the remainder will contain [partition_index, len)
-        println!("Pending before split: {:?}", pending);
         let mut remainder = pending.split_off(partition_index);
-        println!("Pending after split: {:?}", pending);
-        println!("Remainder here: {:?}", remainder);
 
         match remainder.first().and_then(|batch| batch.min_present_time()) {
             None => {
@@ -263,16 +228,12 @@ impl Pending {
                 // If we reach this point we know the data in the first remainder is non-empty
                 // *and* it contains data at or before `up_to_time` which needs to be included
                 // in the pending batches.
-                println!("HERE-----");
                 if let Some(split_lt) = remainder[0].split_up_to(time_exclusive) {
-                    println!("Split lt: {:?}", split_lt);
                     pending.push(split_lt);
                 }
             }
         }
 
-        println!("Pending set: {:?}", pending);
-        println!("Remainder set: {:?}", remainder);
         std::mem::replace(pending, remainder)
     }
 }
@@ -325,9 +286,7 @@ mod tests {
         while let Some(next_index) = gatherer.blocking_input() {
             let ready = match items[next_index].next() {
                 Some(batch) => {
-                    // println!("FRAZ - batch: {:?}", batch);
                     let result = gatherer.add_batch(next_index, batch);
-                    println!("READY? {}", result);
                     result
                 }
                 None => gatherer.close(next_index),
@@ -343,7 +302,6 @@ mod tests {
     // Prop test -- arbitrary batch on each side.
     // Generate a single batch on each side. The result should be a single
     // gathered batch containing the batch from each side.
-
     proptest::proptest! {
         #[test]
         fn test_two_one_batch_streams(a in arb_batch(2..100), b in arb_batch(2..100)) {

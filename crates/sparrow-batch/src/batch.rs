@@ -122,9 +122,6 @@ impl Batch {
                 fields.extend(data_fields);
                 let schema = Arc::new(Schema::new(fields));
 
-                println!("XXXXXXX Schema: {:?}", schema);
-                println!("XXXXXXX Columns: {:?}", columns);
-
                 RecordBatch::try_new(schema, columns).expect("create_batch")
             } else {
                 let schema = Arc::new(Schema::new(vec![
