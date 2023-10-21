@@ -683,7 +683,7 @@ mod tests {
     fn test_split_batch() {
         let mut batch = Batch::minimal_from(vec![0, 1], vec![0, 0], 1);
 
-        let result = batch.split_up_to(RowTime::from_timestamp_ns(0)).unwrap();
+        let result = batch.split_up_to(RowTime::from_timestamp_ns(1)).unwrap();
 
         assert_eq!(result, Batch::minimal_from(vec![0], vec![0], 0));
         assert_eq!(batch, Batch::minimal_from(vec![1], vec![0], 1));
@@ -712,24 +712,19 @@ mod tests {
                     };
                     prop_assert_eq!(&concatenated, original.data().unwrap());
 
-                    prop_assert!(result.data.is_some());
-                    let result = result.data.unwrap();
-
-                    prop_assert_eq!(result.data.len(), result.time.len());
-                    prop_assert_eq!(result.time().values()[0], i64::from(result.min_present_time));
-                    prop_assert_eq!(result.time().values()[result.time.len() - 1], i64::from(result.max_present_time));
-
-                    if time == original.max_present_time().unwrap() {
-                        // If the time equalled the max present time, then we consume the batch.
-                        prop_assert!(remainder.is_empty());
-                    } else {
-                        prop_assert!(remainder.data.is_some());
-                        let remainder = remainder.data.unwrap();
-
-                        prop_assert_eq!(remainder.data.len(), remainder.time.len());
-                        prop_assert_eq!(remainder.time().values()[0], i64::from(remainder.min_present_time));
-                        prop_assert_eq!(remainder.time().values()[remainder.time.len() - 1], i64::from(remainder.max_present_time));
+                    // The result may be empty since the `time` is exclusive
+                    if let Some(result) = result.data {
+                        prop_assert_eq!(result.data.len(), result.time.len());
+                        prop_assert_eq!(result.time().values()[0], i64::from(result.min_present_time));
+                        prop_assert_eq!(result.time().values()[result.time.len() - 1], i64::from(result.max_present_time));
                     }
+
+                    prop_assert!(remainder.data.is_some());
+                    let remainder = remainder.data.unwrap();
+
+                    prop_assert_eq!(remainder.data.len(), remainder.time.len());
+                    prop_assert_eq!(remainder.time().values()[0], i64::from(remainder.min_present_time));
+                    prop_assert_eq!(remainder.time().values()[remainder.time.len() - 1], i64::from(remainder.max_present_time));
                 } else {
                     prop_assert!(false)
                 }
