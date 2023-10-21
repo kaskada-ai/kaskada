@@ -233,34 +233,43 @@ impl Batch {
         };
 
         if time_exclusive < data.min_present_time {
-            // time_inclusive < min_present <= max_present.
+            // time_exclusive < min_present <= max_present.
             // none of the rows in the batch should be taken.
             return None;
         }
 
         if data.max_present_time < time_exclusive {
-            // min_present <= max_present < time_inclusive
+            // min_present <= max_present < time_exclusive
             // all rows should be taken
             return Some(Batch {
                 data: self.data.take(),
                 // Even though we took all the rows, the batch
                 // we return is only as complete as the original
                 // batch. There may be other batches after this
-                // that have equal rows less than time inclusive.
+                // that have equal rows less than time exclusive.
                 up_to_time: self.up_to_time,
             });
         }
 
         // If we reach this point, then we need to actually split the data.
         debug_assert!(time_exclusive <= self.up_to_time);
-        Some(Batch {
-            data: data.split_up_to(time_exclusive),
-            // We can be complete up to time_inclusive because it is less
-            // than or equal to the time this batch was complete to. We put
-            // all of the rows this batch had up to that time in the result,
-            // and only left the batches after that time.
-            up_to_time: time_exclusive,
-        })
+
+        let split = data.split_up_to(time_exclusive);
+        if let Some(data) = split {
+            // Use the new max_present_time as the up_to_time.
+            let up_to_time = data.time().value(data.time.len() - 1).into();
+            Some(Batch {
+                data: Some(data),
+                // We can be complete up to time_exclusive because it is less
+                // than the time this batch was complete to. We put
+                // all of the rows this batch had up to that time in the result,
+                // and only left the batches after that time.
+                up_to_time,
+            })
+        } else {
+            // If there's no data after we split at `time_exclusive`, return None
+            None
+        }
     }
 
     pub fn concat(batches: Vec<Batch>, up_to_time: RowTime) -> error_stack::Result<Batch, Error> {
@@ -598,11 +607,11 @@ impl BatchInfo {
     ///
     /// Returns the rows less than the given time and
     /// leaves the remaining rows in `self`, or returns None if
-    /// the `time_inclusive` is less than the min present time.
+    /// the `time_exclusive` is less than the min present time.
     fn split_up_to(&mut self, time_exclusive: RowTime) -> Option<BatchInfo> {
         let time_column: &TimestampNanosecondArray = self.time.as_primitive();
-        if time_column.len() > 0 && time_column.value(0) > time_exclusive.into() {
-            // time_inclusive < min_present
+        if !time_column.is_empty() && time_column.value(0) > time_exclusive.into() {
+            // time_exclusive < min_present
             // none of the rows in the batch should be taken.
             return None;
         }
@@ -698,8 +707,9 @@ mod tests {
                 let mut remainder = original.clone();
 
                 if let Some(result) = remainder.split_up_to(time) {
-                    // The result of the split is complete up to the requested time.
-                    prop_assert_eq!(result.up_to_time, time);
+                    // The time to split at is exclusive, and should be greater than
+                    // the results up_to_time.
+                    prop_assert!(result.up_to_time < time);
                     // The remainder is complete up to the original time.
                     prop_assert_eq!(remainder.up_to_time, original.up_to_time);
 
@@ -726,7 +736,8 @@ mod tests {
                     prop_assert_eq!(remainder.time().values()[0], i64::from(remainder.min_present_time));
                     prop_assert_eq!(remainder.time().values()[remainder.time.len() - 1], i64::from(remainder.max_present_time));
                 } else {
-                    prop_assert!(false)
+                    // It's possible we split at the first row (or before the first row)
+                    // which returns no batch.
                 }
             }
         }

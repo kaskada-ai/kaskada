@@ -20,14 +20,13 @@ pub struct Gatherer {
 impl Gatherer {
     pub fn new(inputs: usize) -> Self {
         let active: BinaryHeap<_> = (0..inputs)
-            .into_iter()
             .map(|index| MinPriority {
                 up_to_time: RowTime::ZERO,
                 index,
             })
             .collect();
 
-        let pending = (0..inputs).into_iter().map(Pending::new).collect();
+        let pending = (0..inputs).map(Pending::new).collect();
         Self {
             active,
             pending,
