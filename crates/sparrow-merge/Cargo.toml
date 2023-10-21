@@ -24,7 +24,9 @@ itertools.workspace = true
 proptest = { workspace = true, optional = true }
 smallvec.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
+sparrow-batch = { path = "../sparrow-batch", features = ["testing"] }
 sparrow-core = { path = "../sparrow-core" }
+tracing.workspace = true
 
 [dev-dependencies]
 arrow-csv.workspace = true

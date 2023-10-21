@@ -9,6 +9,9 @@ description = """
 Defines the main struct for wrapping RecordBatches in execution.
 """
 
+[features]
+testing = ["proptest"]
+
 [dependencies]
 arrow.workspace = true
 arrow-array.workspace = true

@@ -94,6 +94,55 @@ impl Batch {
         })
     }
 
+    #[cfg(any(test, feature = "testing"))]
+    pub fn record_batch(self) -> Option<RecordBatch> {
+        use arrow_schema::Field;
+        use itertools::izip;
+
+        self.data.map(|data| {
+            if let Some(fields) = data.data.as_struct_opt() {
+                let time_ty = data.time.data_type().clone();
+                let subsort_ty = data.subsort.data_type().clone();
+                let key_ty = data.key_hash.data_type().clone();
+
+                let mut columns = Vec::with_capacity(3 + fields.num_columns());
+                columns.extend_from_slice(&[data.time, data.subsort, data.key_hash]);
+                columns.extend_from_slice(fields.columns());
+
+                let data_fields: Vec<Field> = izip!(fields.column_names(), fields.columns())
+                    .map(|(name, column)| {
+                        Field::new(name, column.data_type().clone(), column.is_nullable())
+                    })
+                    .collect();
+                let mut fields = vec![
+                    Field::new("_time", time_ty, false),
+                    Field::new("_subsort", subsort_ty, false),
+                    Field::new("_key_hash", key_ty, false),
+                ];
+                fields.extend(data_fields);
+                let schema = Arc::new(Schema::new(fields));
+
+                println!("XXXXXXX Schema: {:?}", schema);
+                println!("XXXXXXX Columns: {:?}", columns);
+
+                RecordBatch::try_new(schema, columns).expect("create_batch")
+            } else {
+                let schema = Arc::new(Schema::new(vec![
+                    Field::new("_time", data.time.data_type().clone(), false),
+                    Field::new("_subsort", data.subsort.data_type().clone(), false),
+                    Field::new("_key_hash", data.key_hash.data_type().clone(), false),
+                    Field::new("data", data.data.data_type().clone(), true),
+                ]));
+
+                RecordBatch::try_new(
+                    schema,
+                    vec![data.time, data.subsort, data.key_hash, data.data],
+                )
+                .expect("create_batch")
+            }
+        })
+    }
+
     pub fn is_empty(&self) -> bool {
         self.data.is_none()
     }
@@ -179,21 +228,21 @@ impl Batch {
 
     /// Split off the rows less or equal to the given time.
     ///
-    /// Returns the rows less than or equal to the given time and
+    /// Returns the rows less than the given time and
     /// leaves the remaining rows in `self`.
-    pub fn split_up_to(&mut self, time_inclusive: RowTime) -> Option<Batch> {
+    pub fn split_up_to(&mut self, time_exclusive: RowTime) -> Option<Batch> {
         let Some(data) = &mut self.data else {
             return None;
         };
 
-        if time_inclusive < data.min_present_time {
+        if time_exclusive < data.min_present_time {
             // time_inclusive < min_present <= max_present.
             // none of the rows in the batch should be taken.
             return None;
         }
 
-        if data.max_present_time <= time_inclusive {
-            // min_present <= max_present <= time_inclusive
+        if data.max_present_time < time_exclusive {
+            // min_present <= max_present < time_inclusive
             // all rows should be taken
             return Some(Batch {
                 data: self.data.take(),
@@ -206,14 +255,14 @@ impl Batch {
         }
 
         // If we reach this point, then we need to actually split the data.
-        debug_assert!(time_inclusive <= self.up_to_time);
+        debug_assert!(time_exclusive <= self.up_to_time);
         Some(Batch {
-            data: Some(data.split_up_to(time_inclusive)),
+            data: data.split_up_to(time_exclusive),
             // We can be complete up to time_inclusive because it is less
             // than or equal to the time this batch was complete to. We put
             // all of the rows this batch had up to that time in the result,
             // and only left the batches after that time.
-            up_to_time: time_inclusive,
+            up_to_time: time_exclusive,
         })
     }
 
@@ -550,16 +599,29 @@ impl BatchInfo {
 
     /// Split off the rows less or equal to the given time.
     ///
-    /// Returns the rows less than or equal to the given time and
-    /// leaves the remaining rows in `self`.
-    fn split_up_to(&mut self, time_inclusive: RowTime) -> Self {
+    /// Returns the rows less than the given time and
+    /// leaves the remaining rows in `self`, or returns None if
+    /// the `time_inclusive` is less than the min present time.
+    fn split_up_to(&mut self, time_exclusive: RowTime) -> Option<BatchInfo> {
         let time_column: &TimestampNanosecondArray = self.time.as_primitive();
+        if time_column.len() > 0 && time_column.value(0) > time_exclusive.into() {
+            // time_inclusive < min_present
+            // none of the rows in the batch should be taken.
+            return None;
+        }
 
         // 0..slice_start   (len = slice_start)       = what we return
         // slice_start..len (len = len - slice_start) = what we leave in self
         let slice_start = time_column
             .values()
-            .partition_point(|time| RowTime::from_timestamp_ns(*time) <= time_inclusive);
+            .partition_point(|time| RowTime::from_timestamp_ns(*time) < time_exclusive);
+
+        if slice_start == 0 {
+            // time is exclusive, so if the first row is greater than or equal to the time,
+            // we shouldn't split anything.
+            return None;
+        }
+
         let slice_len = self.data.len() - slice_start;
 
         let max_result_time = RowTime::from_timestamp_ns(time_column.values()[slice_start - 1]);
@@ -576,10 +638,11 @@ impl BatchInfo {
 
         self.data = self.data.slice(slice_start, slice_len);
         self.time = self.time.slice(slice_start, slice_len);
+        self.subsort = self.subsort.slice(slice_start, slice_len);
         self.key_hash = self.key_hash.slice(slice_start, slice_len);
         self.min_present_time = min_self_time;
 
-        result
+        Some(result)
     }
 
     pub(crate) fn time(&self) -> &TimestampNanosecondArray {
