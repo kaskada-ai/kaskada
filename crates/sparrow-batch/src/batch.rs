@@ -77,6 +77,9 @@ impl Batch {
         })
     }
 
+    // NOTE: The current execution logic expects `RecordBatch` outputs (as well as some existing
+    // testing functionality that is compatible with the old non-partitioned execution path. In the
+    // future, we should standardize on `Batch` which makes it easier to carry a primitive value out.
     pub fn into_record_batch(self, schema: Arc<Schema>) -> Option<RecordBatch> {
         self.data.map(|data| {
             if let Some(fields) = data.data.as_struct_opt() {
@@ -223,7 +226,7 @@ impl Batch {
         }
     }
 
-    /// Split off the rows less or equal to the given time.
+    /// Split off the rows less than the given time.
     ///
     /// Returns the rows less than the given time and
     /// leaves the remaining rows in `self`.
@@ -603,7 +606,7 @@ impl BatchInfo {
         }
     }
 
-    /// Split off the rows less or equal to the given time.
+    /// Split off the rows less than the given time.
     ///
     /// Returns the rows less than the given time and
     /// leaves the remaining rows in `self`, or returns None if
