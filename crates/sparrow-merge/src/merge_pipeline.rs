@@ -1,11 +1,12 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use arrow_schema::DataType;
 use error_stack::ResultExt;
 use itertools::Itertools;
 use parking_lot::Mutex;
 use sparrow_batch::Batch;
-use sparrow_physical::{StepId, StepKind};
+use sparrow_physical::{Step, StepId, StepKind};
 use sparrow_scheduler::{
     InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
 };
@@ -22,6 +23,10 @@ pub struct MergePipeline {
     input_l: StepId,
     /// The id for the right input
     input_r: StepId,
+    /// The left data type
+    datatype_l: DataType,
+    /// The right data type
+    datatype_r: DataType,
 }
 
 impl std::fmt::Debug for MergePipeline {
@@ -42,7 +47,9 @@ struct MergePartition {
     /// Right side inputs for this partition.
     input_r: Mutex<VecDeque<Batch>>,
     /// Implementation of `spread` to use for this input
-    spread: Spread,
+    spread_l: Spread,
+    /// Implementation of `spread` to use for this input
+    spread_r: Spread,
 }
 
 impl MergePartition {
@@ -91,6 +98,8 @@ impl MergePipeline {
     pub fn try_new<'a>(
         input_l: StepId,
         input_r: StepId,
+        datatype_l: &DataType,
+        datatype_r: &DataType,
         consumers: InputHandles,
     ) -> error_stack::Result<Self, Error> {
         Ok(Self {
@@ -98,12 +107,15 @@ impl MergePipeline {
             consumers,
             input_l,
             input_r,
+            datatype_l: datatype_l.clone(),
+            datatype_r: datatype_r.clone(),
         })
     }
 }
 
 impl Pipeline for MergePipeline {
     fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
+        // TODO: error?
         self.partitions = tasks
             .into_iter()
             .map(|task| MergePartition {
@@ -111,7 +123,8 @@ impl Pipeline for MergePipeline {
                 task,
                 input_l: Mutex::new(VecDeque::new()),
                 input_r: Mutex::new(VecDeque::new()),
-                spread: todo!("need interpolations"),
+                spread_l: Spread::try_new(false, &self.datatype_l).expect("spread"),
+                spread_r: Spread::try_new(false, &self.datatype_r).expect("spread"),
             })
             .collect();
     }

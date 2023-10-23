@@ -140,7 +140,7 @@ impl PlanExecutor {
                 // pipeline for the step. It returns `None` if the step is a source and
                 // thus has no corresponding pipeline.
                 if let Some(pipeline) =
-                    executor.add_non_transform_pipeline(step, consumers, sources)?
+                    executor.add_non_transform_pipeline(&plan, step, consumers, sources)?
                 {
                     pipeline
                 } else {
@@ -183,6 +183,7 @@ impl PlanExecutor {
 
     fn add_non_transform_pipeline(
         &mut self,
+        plan: &sparrow_physical::Plan,
         step: &sparrow_physical::Step,
         consumers: InputHandles,
         sources: &HashMap<Uuid, Arc<dyn Source>>,
@@ -199,8 +200,14 @@ impl PlanExecutor {
             sparrow_physical::StepKind::Merge => {
                 // TODO: n-way input merges
                 assert_eq!(step.inputs.len(), 2, "expected 2 inputs for merge");
-                let pipeline = MergePipeline::try_new(step.inputs[0], step.inputs[1], consumers)
-                    .change_context(Error::Creating)?;
+                let input_l = plan.steps[step.inputs[0]].id;
+                let datatype_l = &plan.steps[step.inputs[0]].result_type;
+                let input_r = plan.steps[step.inputs[1]].id;
+                let datatype_r = &plan.steps[step.inputs[1]].result_type;
+
+                let pipeline =
+                    MergePipeline::try_new(input_l, input_r, datatype_l, datatype_r, consumers)
+                        .change_context(Error::Creating)?;
                 Ok(Some(self.worker_pool.add_pipeline(1, pipeline)))
             }
             other if other.is_transform() => {
