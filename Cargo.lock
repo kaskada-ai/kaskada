@@ -4677,7 +4677,9 @@ dependencies = [
  "proptest",
  "smallvec",
  "sparrow-arrow",
+ "sparrow-batch",
  "sparrow-core",
+ "tracing",
 ]
 
 [[package]]
