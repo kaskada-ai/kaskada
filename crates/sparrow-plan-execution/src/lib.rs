@@ -15,6 +15,7 @@ use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use hashbrown::HashMap;
 use sparrow_interfaces::source::Source;
 use sparrow_interfaces::ExecutionOptions;
+use sparrow_merge::MergePipeline;
 use sparrow_physical::StepId;
 use sparrow_transforms::TransformPipeline;
 use std::sync::Arc;
@@ -194,6 +195,13 @@ impl PlanExecutor {
                 let stream = channel.read(&step.result_type, self.execution_options.clone());
                 self.source_tasks.add_read(source_uuid, stream, consumers);
                 Ok(None)
+            }
+            sparrow_physical::StepKind::Merge => {
+                // TODO: n-way input merges
+                assert_eq!(step.inputs.len(), 2, "expected 2 inputs for merge");
+                let pipeline = MergePipeline::try_new(step.inputs[0], step.inputs[1], consumers)
+                    .change_context(Error::Creating)?;
+                Ok(Some(self.worker_pool.add_pipeline(1, pipeline)))
             }
             other if other.is_transform() => {
                 unreachable!("Transforms should use add_transform_pipeline")
