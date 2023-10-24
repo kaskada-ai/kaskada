@@ -3832,6 +3832,7 @@ dependencies = [
  "derive_more",
  "error-stack",
  "itertools 0.11.0",
+ "proptest",
  "static_init",
 ]
 
@@ -3863,7 +3864,7 @@ dependencies = [
  "sparrow-arrow",
  "sparrow-core",
  "sparrow-instructions",
- "sparrow-sources",
+ "sparrow-io",
  "sparrow-syntax",
  "static_init",
  "strum 0.25.0",
@@ -3891,58 +3892,13 @@ dependencies = [
 name = "sparrow-expr-execution"
 version = "0.11.0"
 dependencies = [
- "arrow-arith",
  "arrow-array",
- "arrow-buffer",
- "arrow-cast",
- "arrow-data",
- "arrow-ord",
  "arrow-schema",
- "arrow-select",
- "arrow-string",
- "derive_more",
  "error-stack",
- "hashbrown 0.14.0",
  "index_vec",
- "inventory",
- "itertools 0.11.0",
- "num",
- "serde_json",
- "sparrow-arrow",
  "sparrow-batch",
  "sparrow-interfaces",
  "sparrow-physical",
- "static_init",
- "substring",
-]
-
-[[package]]
-name = "sparrow-expressions"
-version = "0.11.0"
-dependencies = [
- "arrow-arith",
- "arrow-array",
- "arrow-buffer",
- "arrow-cast",
- "arrow-data",
- "arrow-ord",
- "arrow-schema",
- "arrow-select",
- "arrow-string",
- "derive_more",
- "error-stack",
- "hashbrown 0.14.0",
- "index_vec",
- "inventory",
- "itertools 0.11.0",
- "num",
- "serde_json",
- "sparrow-arrow",
- "sparrow-batch",
- "sparrow-interfaces",
- "sparrow-physical",
- "static_init",
- "substring",
 ]
 
 [[package]]
@@ -4000,6 +3956,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sparrow-io"
+version = "0.11.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "async-broadcast",
+ "async-stream",
+ "error-stack",
+ "futures",
+ "sparrow-batch",
+ "sparrow-interfaces",
+ "sparrow-merge",
+ "tracing",
+]
+
+[[package]]
 name = "sparrow-kernels"
 version = "0.11.0"
 dependencies = [
@@ -4045,7 +4017,9 @@ dependencies = [
  "proptest",
  "smallvec",
  "sparrow-arrow",
+ "sparrow-batch",
  "sparrow-core",
+ "tracing",
 ]
 
 [[package]]
@@ -4076,6 +4050,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "sparrow-batch",
  "sparrow-interfaces",
+ "sparrow-io",
  "sparrow-physical",
  "sparrow-scheduler",
  "sparrow-transforms",
@@ -4167,7 +4142,6 @@ dependencies = [
  "error-stack",
  "hashbrown 0.14.0",
  "index_vec",
- "itertools 0.11.0",
  "loom",
  "parking_lot 0.12.1",
  "serde",
@@ -4193,35 +4167,18 @@ dependencies = [
  "sparrow-api",
  "sparrow-backend",
  "sparrow-compiler",
- "sparrow-expressions",
  "sparrow-instructions",
  "sparrow-interfaces",
+ "sparrow-io",
  "sparrow-logical",
  "sparrow-plan-execution",
  "sparrow-runtime",
- "sparrow-sources",
  "sparrow-syntax",
  "static_init",
  "tempfile",
  "tokio",
  "tokio-stream",
  "uuid 1.4.1",
-]
-
-[[package]]
-name = "sparrow-sources"
-version = "0.11.0"
-dependencies = [
- "arrow-array",
- "arrow-schema",
- "async-broadcast",
- "async-stream",
- "error-stack",
- "futures",
- "sparrow-batch",
- "sparrow-interfaces",
- "sparrow-merge",
- "tracing",
 ]
 
 [[package]]
