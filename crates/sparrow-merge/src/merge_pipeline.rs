@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use arrow_schema::DataType;
-use error_stack::ResultExt;
+use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use itertools::Itertools;
 use parking_lot::Mutex;
 use sparrow_batch::Batch;
@@ -12,12 +13,13 @@ use sparrow_scheduler::{
 };
 
 use crate::gather::Gatherer;
+use crate::merge::BinaryMergeInput;
 use crate::spread::Spread;
 
 /// Runs a merge operation.
 pub struct MergePipeline {
     /// The state for each partition.
-    partitions: Partitioned<MergePartition>,
+    partitions: Partitioned<Mutex<MergePartition>>,
     /// Input handles for the consuming (receiving) computations.
     consumers: InputHandles,
     /// The id for the left input
@@ -60,6 +62,8 @@ struct MergePartition {
     /// Gathers batches from both sides and produced [GatheredBatches]
     /// up to a valid watermark.
     gatherer: Mutex<Gatherer>,
+    // Keeps track of the entities seen by this partition
+    // TODO: key_hash_index: KeyHashIndex,
 }
 
 impl MergePartition {
@@ -125,16 +129,18 @@ impl Pipeline for MergePipeline {
     fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
         self.partitions = tasks
             .into_iter()
-            .map(|task| MergePartition {
-                is_closed: AtomicBool::new(false),
-                task,
-                inputs: Mutex::new(VecDeque::new()),
-                // TODO: Error handling
-                // TODO: Interpolation
-                // Current impl uses unlatched spread (`Null` interpolation), meaning discrete behavior.
-                spread_l: Spread::try_new(false, &self.datatype_l).expect("spread"),
-                spread_r: Spread::try_new(false, &self.datatype_r).expect("spread"),
-                gatherer: Mutex::new(Gatherer::new(2)),
+            .map(|task| {
+                Mutex::new(MergePartition {
+                    is_closed: AtomicBool::new(false),
+                    task,
+                    inputs: Mutex::new(VecDeque::new()),
+                    // TODO: Error handling
+                    // TODO: Interpolation
+                    // Current impl uses unlatched spread (`Null` interpolation), meaning discrete behavior.
+                    spread_l: Spread::try_new(false, &self.datatype_l).expect("spread"),
+                    spread_r: Spread::try_new(false, &self.datatype_r).expect("spread"),
+                    gatherer: Mutex::new(Gatherer::new(2)),
+                })
             })
             .collect();
     }
@@ -153,7 +159,7 @@ impl Pipeline for MergePipeline {
                 input_len: 2
             }
         );
-        let partition = &self.partitions[input_partition];
+        let partition = &self.partitions[input_partition].lock();
         error_stack::ensure!(
             !partition.is_closed(),
             PipelineError::InputClosed {
@@ -226,7 +232,7 @@ impl Pipeline for MergePipeline {
         input_partition: Partition,
         scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
-        let partition = &self.partitions[input_partition];
+        let mut partition = &self.partitions[input_partition];
         let _enter = tracing::trace_span!("MergePipeline::do_work", %partition.task).entered();
 
         // TODO: Decide how to pop sides and see which can progress.
@@ -270,6 +276,7 @@ impl Pipeline for MergePipeline {
             // Though both inputs have closed, we may still have ungathered batches.
             // Gather the rest here and merge them.
             let mut gatherer = partition.gatherer.lock();
+
             // We _should_ only have to call `next_batch` once, as both inputs should have
             // been marked as closed, and the gatherer will concatenate all leftover batches.
             assert!(gatherer.all_closed());
@@ -281,7 +288,36 @@ impl Pipeline for MergePipeline {
                 let concatted_batches: Vec<Batch> = gathered_batches.concat();
                 let left: &Batch = &concatted_batches[0];
                 let right: &Batch = &concatted_batches[1];
-                // TODO: Bring over merge code
+
+                // TODO: Assumes batch data is non-empty.
+                let left_merge_input = BinaryMergeInput::new(
+                    left.time().expect("time"),
+                    left.subsort().expect("subsort"),
+                    left.key_hash().expect("key_hash"),
+                );
+                let right_merge_input = BinaryMergeInput::new(
+                    right.time().expect("time"),
+                    right.subsort().expect("subsort"),
+                    right.key_hash().expect("key_hash"),
+                );
+                let merged_result = crate::binary_merge(left_merge_input, right_merge_input)
+                    .into_report()
+                    .change_context(PipelineError::Execution)?;
+
+                let left_spread_bits = arrow::compute::is_not_null(&merged_result.take_a)
+                    .into_report()
+                    .change_context(PipelineError::Execution)?;
+                let right_spread_bits = arrow::compute::is_not_null(&merged_result.take_b)
+                    .into_report()
+                    .change_context(PipelineError::Execution)?;
+
+                let merged_time = Arc::new(merged_result.time);
+                let merged_subsort = Arc::new(merged_result.subsort);
+                let merged_key_hash = Arc::new(merged_result.key_hash);
+
+                let spread_l = &mut partition.spread_l;
+                let spread_r = &mut partition.spread_r;
+                todo!()
             }
 
             tracing::info!(
