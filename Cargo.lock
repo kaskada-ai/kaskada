@@ -4692,6 +4692,7 @@ dependencies = [
  "sparrow-instructions",
  "sparrow-physical",
  "sparrow-scheduler",
+ "tokio",
  "tracing",
 ]
 

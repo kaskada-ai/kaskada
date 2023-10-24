@@ -46,6 +46,10 @@ impl Gatherer {
         self.pending[index].add_batch(batch);
 
         if let Some(mut entry) = self.active.pop() {
+            // Expect `blocking_input` to be called first, ensuring we're working
+            // on the current blocking input
+            assert_eq!(entry.index, index);
+
             entry.up_to_time = batch_up_to_time;
             self.active.push(entry);
             // SAFETY: We just pushed an element so we know it's not empty.
@@ -75,6 +79,11 @@ impl Gatherer {
         assert_eq!(active.index, index);
 
         self.active.is_empty() || self.active.peek().unwrap().up_to_time > self.emitted_up_to_time
+    }
+
+    /// Returns true if all inputs have been closed.
+    pub fn all_closed(&self) -> bool {
+        self.pending.iter().all(|p| p.closed)
     }
 
     /// If a batch is ready to be processed, returns it.
@@ -282,6 +291,13 @@ pub struct GatheredBatches {
     ///
     /// Any rows in future gathered batches must be strictly greater than this.
     pub up_to_time: RowTime,
+}
+
+impl GatheredBatches {
+    /// For each input, concats the gathered batches together.
+    pub fn concat(self) -> Vec<Batch> {
+        todo!()
+    }
 }
 
 #[cfg(test)]

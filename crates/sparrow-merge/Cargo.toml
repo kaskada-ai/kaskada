@@ -37,6 +37,7 @@ sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
+tokio.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
