@@ -205,9 +205,15 @@ impl PlanExecutor {
                 let input_r = plan.steps[step.inputs[1]].id;
                 let datatype_r = &plan.steps[step.inputs[1]].result_type;
 
-                let pipeline =
-                    MergePipeline::try_new(input_l, input_r, datatype_l, datatype_r, consumers)
-                        .change_context(Error::Creating)?;
+                let pipeline = MergePipeline::try_new(
+                    input_l,
+                    input_r,
+                    datatype_l,
+                    datatype_r,
+                    &step.result_type,
+                    consumers,
+                )
+                .change_context(Error::Creating)?;
                 Ok(Some(self.worker_pool.add_pipeline(1, pipeline)))
             }
             other if other.is_transform() => {
