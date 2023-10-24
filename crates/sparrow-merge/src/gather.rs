@@ -1,14 +1,12 @@
 use sparrow_batch::{Batch, RowTime};
-use std::collections::BinaryHeap;
+use std::collections::BTreeSet;
 
 /// Gathers batches from multiple inputs, keeping track of the
 /// minimum `up_to_time` across all inputs, which acts as a
 /// "watermark" for the batches.
 pub struct Gatherer {
-    /// Information about the input with the *minimum* `up_to_time`.
-    ///
-    // TODO: Use a "tournament heap" for improved performance for our needs.
-    active: BinaryHeap<MinPriority>,
+    /// Ordered information about the input with the *minimum* `up_to_time`.
+    active: BTreeSet<MinPriority>,
     /// Batches which are pending for each input index.
     pending: Vec<Pending>,
     emitted_up_to_time: RowTime,
@@ -16,7 +14,7 @@ pub struct Gatherer {
 
 impl Gatherer {
     pub fn new(inputs: usize) -> Self {
-        let active: BinaryHeap<_> = (0..inputs)
+        let active: BTreeSet<_> = (0..inputs)
             .map(|index| MinPriority {
                 up_to_time: RowTime::ZERO,
                 index,
@@ -31,11 +29,12 @@ impl Gatherer {
         }
     }
 
-    /// Return the index of the input we need in order to advance.
+    /// Return the index of the first input.
     ///
     /// If all inputs have been closed, returns `None`.
-    pub fn blocking_input(&self) -> Option<usize> {
-        self.active.peek().map(|min| min.index)
+    #[cfg(test)]
+    fn first_input(&self) -> Option<usize> {
+        self.active.first().map(|min| min.index)
     }
 
     /// Adds a batch to the pending set for the given index.
@@ -45,23 +44,24 @@ impl Gatherer {
         let batch_up_to_time = batch.up_to_time;
         self.pending[index].add_batch(batch);
 
-        if let Some(mut entry) = self.active.pop() {
-            entry.up_to_time = batch_up_to_time;
-            self.active.push(entry);
-            // SAFETY: We just pushed an element so we know it's not empty.
-            let top = unsafe { self.active.peek().unwrap_unchecked() };
-            // We can output if minimum pending index is larger than previous emitted up to.
-            top.up_to_time > self.emitted_up_to_time
-        } else {
-            // We could make the logic more complex to handle this case.
-            // Specifically, the information for an index stored in pending
-            // could be updated, and we could check the front of the queue
-            // on each peek/pop to see if the information we get is fresh.
-            //
-            // For now, we choose not to do that and instead require that
-            // we only operate on the "blocking" element.
-            panic!("should only add batch for the current blocking input");
-        }
+        // NOTE: Requires linear search through set. Not ideal.
+        if let Some(existing) = self.active.iter().find(|item| item.index == index) {
+            let previous_up_to_time = existing.up_to_time;
+            self.active.remove(&MinPriority {
+                up_to_time: previous_up_to_time,
+                index,
+            });
+        };
+        let new_item = MinPriority {
+            up_to_time: batch_up_to_time,
+            index,
+        };
+        self.active.insert(new_item);
+
+        // SAFETY: We just pushed an element so we know it's not empty.
+        let top = unsafe { self.active.first().unwrap_unchecked() };
+        // We can output if minimum pending index is larger than previous emitted up to.
+        top.up_to_time > self.emitted_up_to_time
     }
 
     /// Closes the pending set for the given index.
@@ -69,17 +69,28 @@ impl Gatherer {
         assert!(!self.pending[index].closed);
         self.pending[index].closed = true;
 
-        // Because we expect the callee to to have called `blocking_input` before,
-        // we know that the top active item is the given one here.
-        let active = self.active.pop().expect("non empty");
-        assert_eq!(active.index, index);
+        // NOTE: Requires linear search through set. Not ideal.
+        if let Some(existing) = self.active.iter().find(|item| item.index == index) {
+            let previous_up_to_time = existing.up_to_time;
+            self.active.remove(&MinPriority {
+                up_to_time: previous_up_to_time,
+                index,
+            });
+        } else {
+            panic!("expected to remove element at index {}", index)
+        }
 
-        self.active.is_empty() || self.active.peek().unwrap().up_to_time > self.emitted_up_to_time
+        self.active.is_empty() || self.active.first().unwrap().up_to_time > self.emitted_up_to_time
+    }
+
+    /// Returns a boolean indicating whether all inputs have been closed.
+    pub fn all_closed(&self) -> bool {
+        self.pending.iter().all(|p| p.closed)
     }
 
     /// If a batch is ready to be processed, returns it.
     pub fn next_batch(&mut self) -> Option<GatheredBatches> {
-        match self.active.peek() {
+        match self.active.first() {
             None => {
                 if self
                     .pending
@@ -192,7 +203,7 @@ impl Pending {
         match remainder.first().and_then(|batch| batch.min_present_time()) {
             None => {
                 // Either there is no remainder or the first batch in the remainder is empty.
-                // If there is no remainder, we can just return that.
+                // If there is no remainder, we can just return the full pending set.
                 //
                 // If there was a remainder and the first batch is empty we *don't* need
                 // to consider later batches in the remainder. Consider the case where
@@ -210,7 +221,7 @@ impl Pending {
                 // `up_to_time`.
                 //
                 // Thus, if the the first batch in the remainder is empty we also can just
-                // return the remainder.
+                // return the pending set.
             }
             Some(min_time) if min_time >= time_exclusive => {
                 // The first row of the first batch in the remainder is *after*
@@ -235,6 +246,7 @@ impl Pending {
 }
 
 /// Treat the smallest priority as the greatest value for use with max heap.
+#[derive(Debug)]
 struct MinPriority {
     up_to_time: RowTime,
     index: usize,
@@ -258,7 +270,6 @@ impl Ord for MinPriority {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.up_to_time
             .cmp(&other.up_to_time)
-            .reverse()
             .then_with(|| self.index.cmp(&other.index))
     }
 }
@@ -284,6 +295,13 @@ pub struct GatheredBatches {
     pub up_to_time: RowTime,
 }
 
+impl GatheredBatches {
+    // Concats all batches together for each input
+    pub fn concat(self) -> Vec<Batch> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use arrow_select::concat::concat_batches;
@@ -293,6 +311,39 @@ mod tests {
     use sparrow_batch::testing::arb_arrays::arb_batch;
     use sparrow_batch::Batch;
 
+    #[test]
+    fn test_min_priority_equality() {
+        let mut set = BTreeSet::new();
+        set.insert(MinPriority {
+            up_to_time: RowTime::ZERO,
+            index: 0,
+        });
+        assert!(set.len() == 1);
+
+        set.insert(MinPriority {
+            up_to_time: RowTime::ZERO,
+            index: 1,
+        });
+        assert!(set.len() == 2);
+
+        set.insert(MinPriority {
+            up_to_time: RowTime::ZERO,
+            index: 0,
+        });
+        assert!(set.len() == 2);
+
+        set.remove(&MinPriority {
+            up_to_time: RowTime::ZERO,
+            index: 1,
+        });
+
+        assert!(!set.contains(&MinPriority {
+            up_to_time: RowTime::ZERO,
+            index: 1,
+        }));
+        assert!(set.len() == 1);
+    }
+
     fn run_gather(items: Vec<Vec<Batch>>) -> Vec<GatheredBatches> {
         let mut results = Vec::new();
         let mut gatherer = Gatherer::new(items.len());
@@ -300,7 +351,7 @@ mod tests {
             .into_iter()
             .map(|batches| batches.into_iter())
             .collect();
-        while let Some(next_index) = gatherer.blocking_input() {
+        while let Some(next_index) = gatherer.first_input() {
             let ready = match items[next_index].next() {
                 Some(batch) => {
                     let result = gatherer.add_batch(next_index, batch);
