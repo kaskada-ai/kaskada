@@ -72,7 +72,6 @@ format:
       dark: darkly #vapor
     css:
       - _static/css/styles.css
-    include-in-header: _templates/announcement.html
     toc: true
     link-external-icon: false
     link-external-newwindow: false
