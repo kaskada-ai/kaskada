@@ -136,6 +136,7 @@ impl MergePipeline {
 
 impl Pipeline for MergePipeline {
     fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
+        // TODO: FRAZ - need to have the channels here.
         self.partitions = tasks
             .into_iter()
             .map(|task| {
@@ -277,7 +278,7 @@ impl Pipeline for MergePipeline {
                     }
                 }
                 Err(TryRecvError::Empty) => {
-                    // TODO: This is an invalid state? We called do_work, but have
+                    // TODO: This is uhh an invalid state? We called do_work, but have
                     // no work to do
                     todo!("?")
                 }

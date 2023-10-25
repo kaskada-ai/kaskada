@@ -1,9 +1,10 @@
+use arrow_array::{Array, TimestampNanosecondArray};
 use sparrow_batch::{Batch, RowTime};
-use std::collections::BinaryHeap;
+use std::{collections::BinaryHeap, sync::Arc};
 
 /// Gathers batches from multiple inputs, keeping track of the
 /// minimum `up_to_time` across all inputs, which acts as a
-/// "watermark" for the batches.
+/// watermark for the batches.
 pub struct Gatherer {
     /// Information about the input with the *minimum* `up_to_time`.
     ///
@@ -298,7 +299,15 @@ pub struct GatheredBatches {
 impl GatheredBatches {
     /// For each input, concats the gathered batches together.
     pub fn concat(self) -> Vec<Batch> {
-        todo!()
+        self.batches
+            .iter()
+            .map(|batches| {
+                let time: &TimestampNanosecondArray = batches[batches.len() - 1].time().unwrap();
+                let up_to_time = time.value(time.len() - 1);
+                let batches = batches.into_iter().cloned().collect();
+                Batch::concat(batches, up_to_time.into()).unwrap()
+            })
+            .collect()
     }
 }
 

@@ -6,6 +6,7 @@ use arrow_array::{
     Array, ArrayRef, ArrowPrimitiveType, RecordBatch, StructArray, TimestampNanosecondArray,
     UInt64Array,
 };
+use arrow_schema::DataType;
 use arrow_schema::{Fields, Schema};
 use error_stack::{IntoReport, ResultExt};
 use itertools::Itertools;
@@ -514,7 +515,7 @@ pub(crate) fn validate_bounds(
 }
 
 fn validate_batch_schema(schema: &Schema) -> error_stack::Result<(), Error> {
-    use arrow::datatypes::{DataType, TimeUnit};
+    use arrow::datatypes::TimeUnit;
 
     // Validate the three key columns are present, non-null and have the right type.
     validate_key_column(
@@ -677,8 +678,8 @@ static MINIMAL_SCHEMA: arrow_schema::SchemaRef = {
     use arrow_schema::{Field, Schema};
 
     let schema = Schema::new(vec![
-        Field::new("time", TimestampNanosecondType::DATA_TYPE, false),
-        Field::new("key_hash", UInt64Type::DATA_TYPE, false),
+        Field::new("time", TimestampNanosecondType::DATA_TYPE, true),
+        Field::new("key_hash", UInt64Type::DATA_TYPE, true),
     ]);
     Arc::new(schema)
 };
