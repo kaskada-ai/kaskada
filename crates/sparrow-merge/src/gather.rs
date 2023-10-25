@@ -83,6 +83,8 @@ impl Gatherer {
 
     /// Returns true if all inputs have been closed.
     pub fn all_closed(&self) -> bool {
+        // Note: We could separately track the pending count to avoid
+        // this iteration.
         self.pending.iter().all(|p| p.closed)
     }
 

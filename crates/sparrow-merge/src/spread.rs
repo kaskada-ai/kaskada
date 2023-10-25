@@ -132,6 +132,7 @@ impl Spread {
     /// `values` should correspond to the number of `true` bits in `signal`.
     ///
     /// The result should have the same length as `grouping` (and `signal`).
+    /// TODO: FRAZ - Error stack
     pub fn spread_signaled(
         &mut self,
         grouping: &GroupingIndices,

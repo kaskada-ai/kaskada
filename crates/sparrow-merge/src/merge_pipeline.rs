@@ -19,15 +19,6 @@ use crate::spread::Spread;
 
 /// Runs a merge operation.
 pub struct MergePipeline {
-    /// The senders for each input and partition.
-    ///
-    /// Batches are first placed into the channels, which allows us to use
-    /// [Gatherer] to choose which input needs to be merged next.
-    ///
-    /// This vec should contains one element for each input.
-    txs: Vec<Partitioned<tokio::sync::mpsc::UnboundedSender<Batch>>>,
-    /// The matching receivers for each sender.
-    rxs: Vec<Partitioned<tokio::sync::mpsc::UnboundedReceiver<Batch>>>,
     /// The state for each partition.
     partitions: Partitioned<MergePartition>,
     /// Input handles for the consuming (receiving) computations.
@@ -60,10 +51,19 @@ struct MergePartition {
     is_closed: AtomicBool,
     /// Task for this partition.
     task: TaskRef,
-
+    /// The senders for each input.
+    ///
+    /// Batches are first placed into the channels, which allows us to use
+    /// [Gatherer] to choose which input needs to be merged next.
+    ///
+    /// This vec should contains one element for each input.
+    txs: Vec<tokio::sync::mpsc::UnboundedSender<Batch>>,
     // Keeps track of the entities seen by this partition
     // TODO: key_hash_index: KeyHashIndex,
-    merger: Mutex<HeterogeneousMerge>,
+    /// Handles the merge logic.
+    ///
+    /// All objects that require locking should be within this handler.
+    handler: Mutex<MergePartitionHandler>,
 }
 
 impl MergePartition {
@@ -75,6 +75,18 @@ impl MergePartition {
     fn is_closed(&self) -> bool {
         self.is_closed.load(Ordering::Acquire)
     }
+}
+
+/// Handles the merge logic.
+///
+/// Separated from the [MergePartition] to avoid multiple locks.
+struct MergePartitionHandler {
+    /// The batch receivers for each input.
+    ///
+    /// This vec should contains one element for each input.
+    rxs: Vec<tokio::sync::mpsc::UnboundedReceiver<Batch>>,
+    /// Tracks the state and handles merge logic.
+    merger: HeterogeneousMerge,
 }
 
 #[derive(derive_more::Display, Debug)]
@@ -113,8 +125,6 @@ impl MergePipeline {
             is_closed: Mutex::new(false),
         };
         Ok(Self {
-            txs: Vec::new(),
-            rxs: Vec::new(),
             partitions: Partitioned::default(),
             consumers,
             left,
@@ -130,16 +140,20 @@ impl Pipeline for MergePipeline {
             .into_iter()
             .map(|task| {
                 MergePartition {
-                    is_closed: AtomicBool::new(false),
                     task,
+                    is_closed: AtomicBool::new(false),
+                    txs: Vec::new(),
                     // TODO: Error handling
                     // TODO: Interpolation
                     // Current impl uses unlatched spread (`Null` interpolation), meaning discrete behavior.
-                    merger: Mutex::new(HeterogeneousMerge::new(
-                        &self.result_type,
-                        &self.left.datatype,
-                        &self.right.datatype,
-                    )),
+                    handler: Mutex::new(MergePartitionHandler {
+                        rxs: Vec::new(),
+                        merger: HeterogeneousMerge::new(
+                            &self.result_type,
+                            &self.left.datatype,
+                            &self.right.datatype,
+                        ),
+                    }),
                 }
             })
             .collect();
@@ -169,7 +183,7 @@ impl Pipeline for MergePipeline {
             }
         );
 
-        self.txs[input][input_partition]
+        partition.txs[input]
             .send(batch)
             .into_report()
             .change_context(PipelineError::Execution)?;
@@ -208,7 +222,7 @@ impl Pipeline for MergePipeline {
         // since this should only be called once per input on completion.
         let partition = &self.partitions[input_partition];
         {
-            partition.merger.lock().close(input);
+            partition.handler.lock().merger.close(input);
         }
 
         tracing::trace!("Closing input {} for merge {}", input, partition.task);
@@ -240,19 +254,21 @@ impl Pipeline for MergePipeline {
         input_partition: Partition,
         scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
-        let mut partition = &self.partitions[input_partition];
+        let partition = &self.partitions[input_partition];
         let _enter = tracing::trace_span!("MergePipeline::do_work", %partition.task).entered();
 
-        let merger = partition.merger.lock();
-        if let Some(active_input) = merger.blocking_input() {
-            let mut receiver = self.rxs[active_input][input_partition];
+        let mut handler = partition.handler.lock();
+        if let Some(active_input) = handler.merger.blocking_input() {
+            let receiver = &mut handler.rxs[active_input];
             match receiver.try_recv() {
                 Ok(batch) => {
                     // Add the batch to the active input
-                    let ready_to_produce = merger.add_batch(active_input, batch);
+                    let ready_to_produce = handler.merger.add_batch(active_input, batch);
                     if ready_to_produce {
-                        let merged_batch =
-                            merger.merge().change_context(PipelineError::Execution)?;
+                        let merged_batch = handler
+                            .merger
+                            .merge()
+                            .change_context(PipelineError::Execution)?;
 
                         // If the result is non-empty, output it.
                         self.consumers
@@ -261,7 +277,7 @@ impl Pipeline for MergePipeline {
                     }
                 }
                 Err(TryRecvError::Empty) => {
-                    // TODO: This is uhh an invalid state? We called do_work, but have
+                    // TODO: This is an invalid state? We called do_work, but have
                     // no work to do
                     todo!("?")
                 }
@@ -276,82 +292,28 @@ impl Pipeline for MergePipeline {
                 }
             }
         } else {
-            // TODO: Are we actually sure all inputs are empty, just because the merger
-            // blocking input is none?
-            // NO! We need to call `next_batch` on the gatherer one last time to flush.
+            // Though all inputs are closed, the merger may have batches remaining to flush.
+            tracing::info!("Inputs are closed. Flushing merger.");
+            assert!(handler.merger.all_closed());
 
-            todo!("Call next_batch on the gatherer");
+            let last_batch = handler
+                .merger
+                .merge()
+                .change_context(PipelineError::Execution)?;
+            if !last_batch.is_empty() {
+                self.consumers
+                    .add_input(input_partition, last_batch, scheduler)
+                    .change_context(PipelineError::Execution)?;
+            }
+
             tracing::info!(
-                "Input is closed and empty. Closing consumers and finishing partition {}.",
+                "Closing consumers and finishing partition {}.",
                 input_partition
             );
             self.consumers.close_input(input_partition, scheduler)?;
             partition.task.complete();
             return Ok(());
         }
-
-        // let Some((batch, input)) = receiver.try_recv() else {
-        //     error_stack::ensure!(
-        //         partition.is_closed(),
-        //         PipelineError::illegal_state("scheduled without work")
-        //     );
-
-        //     // We _should_ only have to call `next_batch` once, as both inputs should have
-        //     // been marked as closed, and the gatherer will concatenate all leftover batches.
-        //     assert!(partition.all_closed());
-        //     // let gathered_batches =gatherer.next_batch();
-        //     // debug_assert!(gatherer.next_batch().is_none(), "expected only one batch");
-
-        //     let gathered_batches = todo!();
-        //     if let Some(gathered_batches) = gathered_batches {
-        //         todo!()
-        //     assert_eq!(gathered_batches.batches.len(), 2);
-        //     let concatted_batches: Vec<Batch> = gathered_batches.concat();
-        //     let left: &Batch = &concatted_batches[0];
-        //     let right: &Batch = &concatted_batches[1];
-
-        //     // TODO: Assumes batch data is non-empty.
-        //     let left_merge_input = BinaryMergeInput::new(
-        //         left.time().expect("time"),
-        //         left.subsort().expect("subsort"),
-        //         left.key_hash().expect("key_hash"),
-        //     );
-        //     let right_merge_input = BinaryMergeInput::new(
-        //         right.time().expect("time"),
-        //         right.subsort().expect("subsort"),
-        //         right.key_hash().expect("key_hash"),
-        //     );
-        //     let merged_result = crate::binary_merge(left_merge_input, right_merge_input)
-        //         .into_report()
-        //         .change_context(PipelineError::Execution)?;
-
-        //     let left_spread_bits = arrow::compute::is_not_null(&merged_result.take_a)
-        //         .into_report()
-        //         .change_context(PipelineError::Execution)?;
-        //     let right_spread_bits = arrow::compute::is_not_null(&merged_result.take_b)
-        //         .into_report()
-        //         .change_context(PipelineError::Execution)?;
-
-        //     let merged_time = Arc::new(merged_result.time);
-        //     let merged_subsort = Arc::new(merged_result.subsort);
-        //     let merged_key_hash = Arc::new(merged_result.key_hash);
-
-        //     let spread_l = &mut partition.spread_l;
-        //     let spread_r = &mut partition.spread_r;
-        //     todo!()
-        // }
-
-        //     tracing::info!(
-        //         "Input is closed and empty. Closing consumers and finishing partition {}.",
-        //         input_partition
-        //     );
-        //     self.consumers.close_input(input_partition, scheduler)?;
-        //     partition.task.complete();
-        //     return Ok(());
-        // };
-
-        // If the batch is non empty, process it.
-        // TODO: Propagate empty batches to further the watermark.
 
         Ok(())
     }
