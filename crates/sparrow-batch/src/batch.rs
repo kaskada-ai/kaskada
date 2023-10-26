@@ -78,6 +78,35 @@ impl Batch {
         })
     }
 
+    /// Updates the up_to_time.
+    pub fn with_up_to_time(self, up_to_time: RowTime) -> Self {
+        Batch {
+            data: self.data,
+            up_to_time,
+        }
+    }
+
+    /// Replaces the batch's data with the given data.
+    ///
+    /// Panics if the [BatchInfo] is empty.
+    pub fn with_data(self, data: ArrayRef) -> Self {
+        if let Some(info) = self.data {
+            Self {
+                data: Some(BatchInfo {
+                    data,
+                    time: info.time,
+                    subsort: info.subsort,
+                    key_hash: info.key_hash,
+                    min_present_time: info.min_present_time,
+                    max_present_time: info.max_present_time,
+                }),
+                up_to_time: self.up_to_time,
+            }
+        } else {
+            panic!("Cannot replace data of empty batch");
+        }
+    }
+
     // NOTE: The current execution logic expects `RecordBatch` outputs (as well as some existing
     // testing functionality that is compatible with the old non-partitioned execution path. In the
     // future, we should standardize on `Batch` which makes it easier to carry a primitive value out.

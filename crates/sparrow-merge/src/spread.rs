@@ -143,6 +143,7 @@ impl Spread {
     }
 
     /// Special case of spread when `signal` is all `true`.
+    #[allow(unused)]
     pub fn spread_true(
         &mut self,
         grouping: &GroupingIndices,
@@ -152,6 +153,7 @@ impl Spread {
     }
 
     /// Special case of `spread` when `signal` is all `false`.
+    #[allow(unused)]
     pub fn spread_false(
         &mut self,
         grouping: &GroupingIndices,

@@ -1,6 +1,9 @@
-use arrow_array::{Array, TimestampNanosecondArray};
 use sparrow_batch::{Batch, RowTime};
-use std::{collections::BinaryHeap, sync::Arc};
+use std::collections::BinaryHeap;
+
+use error_stack::ResultExt;
+
+use crate::merge::Error;
 
 /// Gathers batches from multiple inputs, keeping track of the
 /// minimum `up_to_time` across all inputs, which acts as a
@@ -298,14 +301,14 @@ pub struct GatheredBatches {
 
 impl GatheredBatches {
     /// For each input, concats the gathered batches together.
-    pub fn concat(self) -> Vec<Batch> {
+    pub fn concat(self) -> error_stack::Result<Vec<Batch>, Error> {
         self.batches
             .iter()
             .map(|batches| {
-                let time: &TimestampNanosecondArray = batches[batches.len() - 1].time().unwrap();
-                let up_to_time = time.value(time.len() - 1);
-                let batches = batches.into_iter().cloned().collect();
-                Batch::concat(batches, up_to_time.into()).unwrap()
+                let up_to_time = batches[batches.len() - 1].up_to_time;
+                let batches = batches.to_vec();
+                Batch::concat(batches, up_to_time)
+                    .change_context(Error::Internal("failed to concat batches"))
             })
             .collect()
     }

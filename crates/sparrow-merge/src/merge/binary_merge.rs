@@ -8,9 +8,11 @@
 use std::cmp::Ordering;
 
 use arrow_array::builder::{TimestampNanosecondBuilder, UInt64Builder};
-use arrow_array::{ArrayRef, TimestampNanosecondArray, UInt64Array};
+use arrow_array::{TimestampNanosecondArray, UInt64Array};
 use arrow_schema::ArrowError;
-use sparrow_batch::Batch;
+
+#[cfg(test)]
+use arrow_array::ArrayRef;
 
 /// Struct describing one of the two inputs to the [binary_merge]
 /// function.

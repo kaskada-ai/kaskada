@@ -17,4 +17,3 @@ mod spread;
 
 pub(crate) use merge::*;
 pub use merge_pipeline::MergePipeline;
-pub(crate) use spread::*;

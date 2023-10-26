@@ -1,21 +1,15 @@
-use std::collections::VecDeque;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-
 use arrow_schema::DataType;
-use error_stack::{IntoReport, IntoReportCompat, ResultExt};
-use itertools::Itertools;
+use error_stack::{IntoReport, ResultExt};
 use parking_lot::Mutex;
 use sparrow_batch::Batch;
 use sparrow_physical::StepId;
 use sparrow_scheduler::{
     InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc::error::TryRecvError;
 
-use crate::gather::Gatherer;
-use crate::merge::{BinaryMergeInput, HeterogeneousMerge};
-use crate::spread::Spread;
+use crate::merge::HeterogeneousMerge;
 
 /// Runs a merge operation.
 pub struct MergePipeline {
@@ -39,7 +33,8 @@ impl std::fmt::Debug for MergePipeline {
 
 struct Input {
     /// The input id for this input
-    input: StepId,
+    #[allow(unused)]
+    id: StepId,
     /// The data type for this input
     datatype: DataType,
     /// Whether this side is closed
@@ -106,7 +101,7 @@ impl MergePipeline {
     ///
     /// Args:
     ///   consumers: The `InputHandles` to output the result of the transform to.
-    pub fn try_new<'a>(
+    pub fn try_new(
         input_l: StepId,
         input_r: StepId,
         datatype_l: &DataType,
@@ -115,12 +110,12 @@ impl MergePipeline {
         consumers: InputHandles,
     ) -> error_stack::Result<Self, Error> {
         let left = Input {
-            input: input_l,
+            id: input_l,
             datatype: datatype_l.clone(),
             is_closed: Mutex::new(false),
         };
         let right = Input {
-            input: input_r,
+            id: input_r,
             datatype: datatype_r.clone(),
             is_closed: Mutex::new(false),
         };
@@ -136,7 +131,7 @@ impl MergePipeline {
 
 impl Pipeline for MergePipeline {
     fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
-        // TODO: FRAZ - need to have the channels here.
+        // TODO: FRAZ - need to create the channels here.
         self.partitions = tasks
             .into_iter()
             .map(|task| {
@@ -148,7 +143,7 @@ impl Pipeline for MergePipeline {
                     // TODO: Interpolation
                     // Current impl uses unlatched spread (`Null` interpolation), meaning discrete behavior.
                     handler: Mutex::new(MergePartitionHandler {
-                        rxs: Vec::new(),
+                        rxs: Vec::new(), // TODO: create channels
                         merger: HeterogeneousMerge::new(
                             &self.result_type,
                             &self.left.datatype,
