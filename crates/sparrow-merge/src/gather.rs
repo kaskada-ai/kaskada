@@ -286,7 +286,7 @@ pub struct GatheredBatches {
     /// This may be multiple batches for each input stream -- for instance, the
     /// slice of a previous batch that wasn't emitted or a few batches that were
     /// collected while waiting for a different input stream to receive a batch
-    /// and "unblock" gathering up to a certain tiime.
+    /// and "unblock" gathering up to a certain time.
     ///
     /// We don't concatenate the input batches because that would lead to
     /// allocating and copying data into the concatenated chunk. Instead, we
@@ -301,14 +301,21 @@ pub struct GatheredBatches {
 
 impl GatheredBatches {
     /// For each input, concats the gathered batches together.
-    pub fn concat(self) -> error_stack::Result<Vec<Batch>, Error> {
+    ///
+    /// If the inner vec is empty, the result will be None.
+    pub fn concat(self) -> error_stack::Result<Vec<Option<Batch>>, Error> {
         self.batches
             .iter()
-            .map(|batches| {
-                let up_to_time = batches[batches.len() - 1].up_to_time;
-                let batches = batches.to_vec();
-                Batch::concat(batches, up_to_time)
-                    .change_context(Error::Internal("failed to concat batches"))
+            .map(|batches| -> error_stack::Result<Option<Batch>, Error> {
+                if batches.len() > 0 {
+                    let up_to_time = batches[batches.len() - 1].up_to_time;
+                    let batches = batches.to_vec();
+                    Ok(Some(Batch::concat(batches, up_to_time).change_context(
+                        Error::Internal("failed to concat batches"),
+                    )?))
+                } else {
+                    Ok(None)
+                }
             })
             .collect()
     }

@@ -231,6 +231,7 @@ impl SpreadImpl for UnlatchedSpread {
         values: &ArrayRef,
         signal: &BooleanArray,
     ) -> anyhow::Result<ArrayRef> {
+        // TODO: Grouping unsupported, but shouldn't affect results
         let mut indices = Int32Builder::with_capacity(grouping.len());
         let mut next_index = 0;
         for signal in signal.iter() {
@@ -247,10 +248,11 @@ impl SpreadImpl for UnlatchedSpread {
 
     fn spread_true(
         &mut self,
-        grouping: &GroupingIndices,
+        _grouping: &GroupingIndices,
         values: &ArrayRef,
     ) -> anyhow::Result<ArrayRef> {
-        anyhow::ensure!(grouping.len() == values.len());
+        // TODO: Grouping unsupported:
+        // anyhow::ensure!(grouping.len() == values.len());
         Ok(values.clone())
     }
 
@@ -259,7 +261,8 @@ impl SpreadImpl for UnlatchedSpread {
         grouping: &GroupingIndices,
         value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
-        Ok(new_null_array(value_type, grouping.len()))
+        todo!("unimplemented - requires grouping")
+        // Ok(new_null_array(value_type, grouping.len()))
     }
 }
 

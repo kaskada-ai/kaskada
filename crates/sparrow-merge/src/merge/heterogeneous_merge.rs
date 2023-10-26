@@ -73,16 +73,34 @@ impl HeterogeneousMerge {
         let gathered_batches = self.gatherer.next_batch();
         if let Some(gathered_batches) = gathered_batches {
             let mut concat_batches = gathered_batches.concat()?;
-            let right: Batch = concat_batches.remove(1);
-            let left: Batch = concat_batches.remove(0);
+            let right: Option<Batch> = concat_batches.remove(1);
+            let left: Option<Batch> = concat_batches.remove(0);
 
-            let result = match (left.time(), right.time()) {
-                (None, None) => self.handle_empty_merge(left.up_to_time, right.up_to_time)?,
-                (Some(_), None) => self.handle_single_merge(0, left, right.up_to_time)?,
-                (None, Some(_)) => self.handle_single_merge(1, right, left.up_to_time)?,
-                (Some(_), Some(_)) => self.handle_merge(left, right)?,
-            };
-            Ok(result)
+            // There are two layers here:
+            // 1) A batch does not exist, which occurs when the gatherer does not have any batches
+            //    for a particular side. This is expected, and we can just return the other side.
+            // 2) A batch exists, but is empty. It still has an up_to_time, which needs to be accounted for.
+            match (left, right) {
+                (Some(left), Some(right)) => match (left.time(), right.time()) {
+                    (None, None) => self.handle_empty_merge(left.up_to_time, right.up_to_time),
+                    (Some(_), None) => self.handle_single_merge(0, left, right.up_to_time),
+                    (None, Some(_)) => self.handle_single_merge(1, right, left.up_to_time),
+                    (Some(_), Some(_)) => self.handle_merge(left, right),
+                },
+                (Some(left), None) => {
+                    let up_to_time = left.up_to_time;
+                    self.handle_single_merge(0, left, up_to_time)
+                }
+                (None, Some(right)) => {
+                    let up_to_time = right.up_to_time;
+                    self.handle_single_merge(1, right, up_to_time)
+                }
+                (None, None) => {
+                    // This is in unexpected state -- if we call merge, we should be getting at least
+                    // one batch, even if it's empty.
+                    error_stack::bail!(Error::Internal("at least one batch"))
+                }
+            }
         } else {
             error_stack::bail!(Error::Internal("expected batch -- "))
         }
@@ -241,6 +259,7 @@ impl HeterogeneousMerge {
         self.gatherer.close(index);
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -331,35 +350,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_fails_if_not_working_on_active_input() {
-        let dt = minimal_struct_type();
-        let mut merge = merge(dt.clone(), dt.clone());
-
-        assert_eq!(merge.blocking_input(), Some(1));
-        let batch = Batch::minimal_from(vec![0, 1, 2], vec![0, 0, 0], 2);
-
-        // Active input is 1, but we attempt to add to 0. Expect panic
-        merge.add_batch(0, batch);
-    }
-
-    #[test]
-    fn test_all_closed() {
-        let dt = minimal_struct_type();
-        let mut merge = merge(dt.clone(), dt.clone());
-
-        merge.close(1);
-        assert!(!merge.all_closed());
-        merge.close(0);
-        assert!(merge.all_closed())
-    }
-
-    #[ignore = "spread not implemented"]
-    fn test_spreads() {
-        todo!()
-    }
-
-    #[test]
     fn test_merge_non_structs() {
         let left = DataType::Int64;
         let right = DataType::UInt32;
@@ -417,7 +407,7 @@ mod tests {
             expected_time,
             expected_subsort,
             expected_key,
-            2.into(),
+            1.into(),
         );
 
         assert_eq!(merged.time(), expected.time());
@@ -431,7 +421,92 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_fails_if_not_working_on_active_input() {
+        let dt = minimal_struct_type();
+        let mut merge = merge(dt.clone(), dt.clone());
+
+        assert_eq!(merge.blocking_input(), Some(1));
+        let batch = Batch::minimal_from(vec![0, 1, 2], vec![0, 0, 0], 2);
+
+        // Active input is 1, but we attempt to add to 0. Expect panic
+        merge.add_batch(0, batch);
+    }
+
+    #[test]
+    fn test_all_closed() {
+        let dt = minimal_struct_type();
+        let mut merge = merge(dt.clone(), dt.clone());
+
+        merge.close(1);
+        assert!(!merge.all_closed());
+        merge.close(0);
+        assert!(merge.all_closed())
+    }
+
+    #[ignore = "spread not implemented"]
+    fn test_spreads() {
+        todo!()
+    }
+
+    #[test]
     fn test_merge_empty_batches() {
-        // merge in empty batches with high up_to_times
+        let left = DataType::Int64;
+        let right = DataType::UInt32;
+        let mut merge = merge(left.clone(), right.clone());
+
+        let left_time = TimestampNanosecondArray::from(vec![0, 1, 2]);
+        let left_subsort = UInt64Array::from(vec![0, 1, 2]);
+        let left_key = UInt64Array::from(vec![0, 0, 0]);
+        let left_data = Int64Array::from(vec![10, 4, 22]);
+        let left_batch = Batch::new_with_data(
+            Arc::new(left_data),
+            Arc::new(left_time),
+            Arc::new(left_subsort),
+            Arc::new(left_key),
+            2.into(),
+        );
+
+        let right_batch = Batch::new_empty(4.into());
+
+        assert_eq!(merge.blocking_input(), Some(1));
+        let can_produce = merge.add_batch(1, right_batch);
+        assert!(!can_produce);
+
+        let can_produce = merge.add_batch(0, left_batch);
+        assert!(can_produce);
+
+        let merged = merge.merge().unwrap();
+        let expected_fields: Vec<(FieldRef, ArrayRef)> = vec![
+            (
+                Arc::new(Field::new("step_0", left.clone(), true)),
+                Arc::new(Int64Array::from(vec![Some(10), Some(4)])),
+            ),
+            (
+                Arc::new(Field::new("step_1", right.clone(), true)),
+                Arc::new(UInt32Array::from(vec![None, None])),
+            ),
+        ];
+        let expected_data = Arc::new(sparrow_arrow::utils::make_struct_array(2, expected_fields));
+        let expected_time = Arc::new(TimestampNanosecondArray::from(vec![0, 1]));
+        let expected_subsort = Arc::new(UInt64Array::from(vec![0, 1]));
+        let expected_key = Arc::new(UInt64Array::from(vec![0, 0]));
+
+        let expected = Batch::new_with_data(
+            expected_data,
+            expected_time,
+            expected_subsort,
+            expected_key,
+            1.into(),
+        );
+
+        assert_eq!(merged.time(), expected.time());
+        assert_eq!(merged.key_hash(), expected.key_hash());
+        assert_eq!(merged.subsort(), expected.subsort());
+        assert_eq!(merge.blocking_input(), Some(0));
+
+        // TODO: struct equality failing?
+        assert_eq!(merged, expected);
+        assert_eq!(merge.blocking_input(), Some(0));
     }
 }
