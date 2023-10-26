@@ -166,27 +166,33 @@ mod tests {
 
     use arrow_array::{
         types::{ArrowPrimitiveType, TimestampNanosecondType, UInt32Type, UInt64Type},
-        RecordBatch, StructArray, TimestampNanosecondArray, UInt64Array, UInt8Array,
+        Int64Array, RecordBatch, StructArray, TimestampNanosecondArray, UInt32Array, UInt64Array,
+        UInt8Array,
     };
     use arrow_schema::{Field, Fields};
-    use proptest::prelude::*;
-    use sparrow_core::TableSchema;
 
     use super::*;
 
-    #[test]
-    fn test_merge() {
-        // Batches share the same datatype in this case
-        let dt = DataType::Struct(Fields::from(vec![
+    fn minimal_struct_type() -> DataType {
+        DataType::Struct(Fields::from(vec![
             Field::new("time", TimestampNanosecondType::DATA_TYPE, true),
             Field::new("key_hash", UInt64Type::DATA_TYPE, true),
-        ]));
-        let result_type = DataType::Struct(Fields::from(vec![
-            Field::new("step_0", dt.clone(), true),
-            Field::new("step_1", dt.clone(), true),
-        ]));
+        ]))
+    }
 
-        let mut merge = HeterogeneousMerge::new(&result_type, &dt, &dt);
+    fn merge(left: DataType, right: DataType) -> HeterogeneousMerge {
+        let result_type = DataType::Struct(Fields::from(vec![
+            Field::new("step_0", left.clone(), true),
+            Field::new("step_1", right.clone(), true),
+        ]));
+        HeterogeneousMerge::new(&result_type, &left, &right)
+    }
+
+    #[test]
+    fn test_merge() {
+        let dt = minimal_struct_type();
+        let mut merge = merge(dt.clone(), dt.clone());
+
         assert_eq!(merge.blocking_input(), Some(1));
         let lb_1 = Batch::minimal_from(vec![0, 1, 2], vec![0, 0, 0], 2);
         let rb_1 = Batch::minimal_from(vec![0, 4], vec![0, 0], 4);
@@ -248,17 +254,104 @@ mod tests {
     }
 
     #[test]
-    fn test_fails_if_not_working_on_active_input() {}
+    #[should_panic]
+    fn test_fails_if_not_working_on_active_input() {
+        let dt = minimal_struct_type();
+        let mut merge = merge(dt.clone(), dt.clone());
+
+        assert_eq!(merge.blocking_input(), Some(1));
+        let batch = Batch::minimal_from(vec![0, 1, 2], vec![0, 0, 0], 2);
+
+        // Active input is 1, but we attempt to add to 0. Expect panic
+        merge.add_batch(0, batch);
+    }
+
     #[test]
-    fn test_all_closed() {}
+    fn test_all_closed() {
+        let dt = minimal_struct_type();
+        let mut merge = merge(dt.clone(), dt.clone());
+
+        merge.close(1);
+        assert!(!merge.all_closed());
+        merge.close(0);
+        assert!(merge.all_closed())
+    }
 
     #[ignore = "spread not implemented"]
-    fn test_spreads() {}
-    #[test]
-    fn test_merging_structs() {}
+    fn test_spreads() {
+        todo!()
+    }
 
     #[test]
-    fn test_merge_non_structs() {}
+    fn test_merge_non_structs() {
+        let left = DataType::Int64;
+        let right = DataType::UInt32;
+        let mut merge = merge(left.clone(), right.clone());
+
+        let left_time = TimestampNanosecondArray::from(vec![0, 1, 2]);
+        let left_subsort = UInt64Array::from(vec![0, 1, 2]);
+        let left_key = UInt64Array::from(vec![0, 0, 0]);
+        let left_data = Int64Array::from(vec![10, 4, 22]);
+        let left_batch = Batch::new_with_data(
+            Arc::new(left_data),
+            Arc::new(left_time),
+            Arc::new(left_subsort),
+            Arc::new(left_key),
+            2.into(),
+        );
+
+        let right_time = TimestampNanosecondArray::from(vec![0, 1, 4]);
+        let right_subsort = UInt64Array::from(vec![0, 1, 2]);
+        let right_key = UInt64Array::from(vec![0, 1, 0]);
+        let right_data = UInt32Array::from(vec![100, 101, 102]);
+        let right_batch = Batch::new_with_data(
+            Arc::new(right_data),
+            Arc::new(right_time),
+            Arc::new(right_subsort),
+            Arc::new(right_key),
+            4.into(),
+        );
+
+        assert_eq!(merge.blocking_input(), Some(1));
+        let can_produce = merge.add_batch(1, right_batch);
+        assert!(!can_produce);
+
+        let can_produce = merge.add_batch(0, left_batch);
+        assert!(can_produce);
+
+        let merged = merge.merge().unwrap();
+        let expected_fields: Vec<(FieldRef, ArrayRef)> = vec![
+            (
+                Arc::new(Field::new("step_0", left.clone(), true)),
+                Arc::new(Int64Array::from(vec![Some(10), Some(4), None])),
+            ),
+            (
+                Arc::new(Field::new("step_1", right.clone(), true)),
+                Arc::new(UInt32Array::from(vec![Some(100), None, Some(101)])),
+            ),
+        ];
+        let expected_data = Arc::new(sparrow_arrow::utils::make_struct_array(3, expected_fields));
+        let expected_time = Arc::new(TimestampNanosecondArray::from(vec![0, 1, 1]));
+        let expected_subsort = Arc::new(UInt64Array::from(vec![0, 1, 1]));
+        let expected_key = Arc::new(UInt64Array::from(vec![0, 0, 1]));
+
+        let expected = Batch::new_with_data(
+            expected_data,
+            expected_time,
+            expected_subsort,
+            expected_key,
+            2.into(),
+        );
+
+        assert_eq!(merged.time(), expected.time());
+        assert_eq!(merged.key_hash(), expected.key_hash());
+        assert_eq!(merged.subsort(), expected.subsort());
+        assert_eq!(merge.blocking_input(), Some(0));
+
+        // TODO: struct equality failing?
+        assert_eq!(merged, expected);
+        assert_eq!(merge.blocking_input(), Some(0));
+    }
 
     #[test]
     fn test_merge_empty_batches() {}
