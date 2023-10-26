@@ -78,31 +78,35 @@ impl HeterogeneousMerge {
 
             // There are two layers here:
             // 1) A batch does not exist, which occurs when the gatherer does not have any batches
-            //    for a particular side. This is expected, and we can just return the other side.
+            //    for a particular side. This is expected, and we can just produce the non-empty.
             // 2) A batch exists, but is empty. It still has an up_to_time, which needs to be accounted for.
             match (left, right) {
                 (Some(left), Some(right)) => match (left.time(), right.time()) {
                     (None, None) => self.handle_empty_merge(left.up_to_time, right.up_to_time),
-                    (Some(_), None) => self.handle_single_merge(0, left, right.up_to_time),
-                    (None, Some(_)) => self.handle_single_merge(1, right, left.up_to_time),
+                    (Some(_), None) => {
+                        self.handle_left_merge(left.up_to_time.max(right.up_to_time), left)
+                    }
+                    (None, Some(_)) => {
+                        self.handle_right_merge(left.up_to_time.max(right.up_to_time), right)
+                    }
                     (Some(_), Some(_)) => self.handle_merge(left, right),
                 },
                 (Some(left), None) => {
                     let up_to_time = left.up_to_time;
-                    self.handle_single_merge(0, left, up_to_time)
+                    self.handle_left_merge(up_to_time, left)
                 }
                 (None, Some(right)) => {
                     let up_to_time = right.up_to_time;
-                    self.handle_single_merge(1, right, up_to_time)
+                    self.handle_right_merge(up_to_time, right)
                 }
                 (None, None) => {
                     // This is in unexpected state -- if we call merge, we should be getting at least
                     // one batch, even if it's empty.
-                    error_stack::bail!(Error::Internal("at least one batch"))
+                    error_stack::bail!(Error::Internal("expected at least one batch"))
                 }
             }
         } else {
-            error_stack::bail!(Error::Internal("expected batch -- "))
+            error_stack::bail!(Error::Internal("expected gathered batch"))
         }
     }
 
@@ -115,54 +119,64 @@ impl HeterogeneousMerge {
         Ok(Batch::new_empty(up_to_time))
     }
 
-    /// Handles merging where one batch is empty.
+    /// Handles merging where the right batch is empty.
     ///
-    /// The `input` indicates from which input the `batch` is from.
-    fn handle_single_merge(
+    /// Arguments:
+    /// - up_to_time: the up_to_time of the merged batch
+    /// - batch: the left side non-empty batch
+    fn handle_left_merge(
         &mut self,
-        input: usize,
+        up_to_time: RowTime,
         batch: Batch,
-        other_up_to: RowTime,
     ) -> error_stack::Result<Batch, Error> {
-        let up_to_time = batch.up_to_time.max(other_up_to);
-
         // TODO: Grouping
         let grouping = GroupingIndices::new_empty();
 
         // SAFETY: Verified batch is non-empty
-        if input == 0 {
-            let left_data = self
-                .spread_left
-                .spread_true(&grouping, batch.data().expect("data"))
-                .into_report()
-                .change_context(Error::Internal("TODO"))?;
-            let num_rows = left_data.len();
-            assert_eq!(num_rows, batch.time().expect("time").len());
+        let left_data = self
+            .spread_left
+            .spread_true(&grouping, batch.data().expect("data"))
+            .into_report()
+            .change_context(Error::Internal("TODO"))?;
+        let num_rows = left_data.len();
+        assert_eq!(num_rows, batch.time().expect("time").len());
 
-            let right_data = new_null_array(&self.right_data_type, num_rows);
-            let merged_data = self.create_merged_data(num_rows, left_data, right_data)?;
+        let right_data = new_null_array(&self.right_data_type, num_rows);
+        let merged_data = self.create_merged_data(num_rows, left_data, right_data)?;
 
-            let batch = batch.with_data(merged_data);
-            let batch = batch.with_up_to_time(up_to_time);
-            Ok(batch)
-        } else if input == 1 {
-            let right_data = self
-                .spread_right
-                .spread_true(&grouping, batch.data().expect("data"))
-                .into_report()
-                .change_context(Error::Internal("TODO"))?;
-            let num_rows = right_data.len();
-            assert_eq!(num_rows, batch.time().expect("time").len());
+        let batch = batch.with_data(merged_data);
+        let batch = batch.with_up_to_time(up_to_time);
+        Ok(batch)
+    }
 
-            let left_data = new_null_array(&self.left_data_type, num_rows);
-            let merged_data = self.create_merged_data(num_rows, left_data, right_data)?;
+    /// Handles merging where the left batch is empty.
+    ///
+    /// Arguments:
+    /// - up_to_time: the up_to_time of the merged batch
+    /// - batch: the right side non-empty batch
+    fn handle_right_merge(
+        &mut self,
+        up_to_time: RowTime,
+        batch: Batch,
+    ) -> error_stack::Result<Batch, Error> {
+        // TODO: Grouping
+        let grouping = GroupingIndices::new_empty();
 
-            let batch = batch.with_data(merged_data);
-            let batch = batch.with_up_to_time(up_to_time);
-            Ok(batch)
-        } else {
-            panic!("unexpected input: {}", input);
-        }
+        // SAFETY: Verified batch is non-empty
+        let right_data = self
+            .spread_right
+            .spread_true(&grouping, batch.data().expect("data"))
+            .into_report()
+            .change_context(Error::Internal("TODO"))?;
+        let num_rows = right_data.len();
+        assert_eq!(num_rows, batch.time().expect("time").len());
+
+        let left_data = new_null_array(&self.left_data_type, num_rows);
+        let merged_data = self.create_merged_data(num_rows, left_data, right_data)?;
+
+        let batch = batch.with_data(merged_data);
+        let batch = batch.with_up_to_time(up_to_time);
+        Ok(batch)
     }
 
     fn handle_merge(&mut self, left: Batch, right: Batch) -> error_stack::Result<Batch, Error> {
