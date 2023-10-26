@@ -308,11 +308,11 @@ impl GatheredBatches {
             .iter()
             .map(|batches| -> error_stack::Result<Option<Batch>, Error> {
                 if batches.len() > 0 {
-                    let up_to_time = batches[batches.len() - 1].up_to_time;
                     let batches = batches.to_vec();
-                    Ok(Some(Batch::concat(batches, up_to_time).change_context(
-                        Error::Internal("failed to concat batches"),
-                    )?))
+                    Ok(Some(
+                        Batch::concat(batches, self.up_to_time)
+                            .change_context(Error::Internal("failed to concat batches"))?,
+                    ))
                 } else {
                     Ok(None)
                 }
@@ -390,5 +390,26 @@ mod tests {
                 up_to = i64::from(gathered.up_to_time);
             }
         }
+    }
+
+    #[test]
+    fn test_concat_gathered() {
+        let batch1 = Batch::minimal_from(vec![0, 1, 4], vec![0, 0, 0], 4);
+        let batch2 = Batch::minimal_from(vec![4, 5, 6], vec![0, 0, 0], 9);
+        let batch3 = Batch::minimal_from(vec![10, 12], vec![0, 0], 15);
+        let gathered = vec![batch1, batch2, batch3];
+        let gathered_batches = GatheredBatches {
+            batches: vec![gathered],
+            up_to_time: 15.into(),
+        };
+
+        let actual = gathered_batches.concat().unwrap();
+        let expected = vec![Some(Batch::minimal_from(
+            vec![0, 1, 4, 4, 5, 6, 10, 12],
+            vec![0, 0, 0, 0, 0, 0, 0, 0],
+            15,
+        ))];
+
+        assert_eq!(actual, expected);
     }
 }

@@ -1,7 +1,6 @@
 use anyhow::Context;
 use arrow::array::{
-    new_null_array, Array, ArrayData, ArrayRef, BooleanArray, Int32Builder, UInt32Array,
-    UInt32Builder,
+    Array, ArrayData, ArrayRef, BooleanArray, Int32Builder, UInt32Array, UInt32Builder,
 };
 use arrow::datatypes::DataType;
 use sparrow_instructions::GroupingIndices;
@@ -258,11 +257,11 @@ impl SpreadImpl for UnlatchedSpread {
 
     fn spread_false(
         &mut self,
-        grouping: &GroupingIndices,
-        value_type: &DataType,
+        _grouping: &GroupingIndices,
+        _value_type: &DataType,
     ) -> anyhow::Result<ArrayRef> {
-        todo!("unimplemented - requires grouping")
         // Ok(new_null_array(value_type, grouping.len()))
+        todo!("unimplemented - requires grouping")
     }
 }
 

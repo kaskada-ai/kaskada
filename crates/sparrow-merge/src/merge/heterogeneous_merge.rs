@@ -1,11 +1,10 @@
-use std::sync::Arc;
-
 use arrow_array::{new_null_array, ArrayRef, StructArray};
 use arrow_schema::{DataType, FieldRef};
 use binary_merge::BinaryMergeInput;
 use error_stack::{IntoReport, IntoReportCompat, ResultExt};
 use sparrow_batch::{Batch, RowTime};
 use sparrow_instructions::GroupingIndices;
+use std::sync::Arc;
 
 use crate::{gather::Gatherer, spread::Spread};
 
@@ -235,6 +234,8 @@ impl HeterogeneousMerge {
         ))
     }
 
+    /// Merges the left and right data into a struct array matching the
+    /// expected result type.
     fn create_merged_data(
         &self,
         num_rows: usize,
@@ -277,9 +278,10 @@ impl HeterogeneousMerge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arrow::buffer::NullBuffer;
     use arrow_array::{
         types::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type},
-        Int64Array, StructArray, TimestampNanosecondArray, UInt32Array, UInt64Array,
+        Array, Int64Array, StructArray, TimestampNanosecondArray, UInt32Array, UInt64Array,
     };
     use arrow_schema::{Field, Fields};
 
@@ -315,34 +317,38 @@ mod tests {
         assert!(can_produce);
 
         let merged = merge.merge().unwrap();
-        let step_0_fields: Vec<(FieldRef, ArrayRef)> = vec![
-            (
+        let step_0_array = StructArray::new(
+            vec![
                 Arc::new(Field::new("time", TimestampNanosecondType::DATA_TYPE, true)),
+                Arc::new(Field::new("key_hash", UInt64Type::DATA_TYPE, true)),
+            ]
+            .into(),
+            vec![
                 Arc::new(TimestampNanosecondArray::from(vec![0, 1])),
-            ),
-            (
-                Arc::new(Field::new("key_hash", UInt64Type::DATA_TYPE, true)),
-                Arc::new(UInt64Array::from(vec![0, 0])),
-            ),
-        ];
-        let step_1_fields: Vec<(FieldRef, ArrayRef)> = vec![
-            (
+                Arc::new(UInt64Array::from(vec![Some(0), Some(0)])),
+            ],
+            None,
+        );
+        let step_1_array = StructArray::new(
+            vec![
                 Arc::new(Field::new("time", TimestampNanosecondType::DATA_TYPE, true)),
-                Arc::new(TimestampNanosecondArray::from(vec![Some(0), None])),
-            ),
-            (
                 Arc::new(Field::new("key_hash", UInt64Type::DATA_TYPE, true)),
+            ]
+            .into(),
+            vec![
+                Arc::new(TimestampNanosecondArray::from(vec![Some(0), None])),
                 Arc::new(UInt64Array::from(vec![Some(0), None])),
-            ),
-        ];
+            ],
+            Some(NullBuffer::from(vec![true, false])),
+        );
         let expected_fields: Vec<(FieldRef, ArrayRef)> = vec![
             (
                 Arc::new(Field::new("step_0", dt.clone(), true)),
-                Arc::new(StructArray::from(step_0_fields)),
+                Arc::new(step_0_array),
             ),
             (
                 Arc::new(Field::new("step_1", dt.clone(), true)),
-                Arc::new(StructArray::from(step_1_fields)),
+                Arc::new(step_1_array),
             ),
         ];
         let expected_data = Arc::new(sparrow_arrow::utils::make_struct_array(2, expected_fields));
@@ -351,14 +357,13 @@ mod tests {
         let expected_key = Arc::new(UInt64Array::from(vec![0, 0]));
 
         let expected = Batch::new_with_data(
-            expected_data,
+            expected_data.clone(),
             expected_time,
             expected_subsort,
             expected_key,
-            1.into(),
+            2.into(),
         );
 
-        // TODO: struct equality failing?
         assert_eq!(merged, expected);
         assert_eq!(merge.blocking_input(), Some(0));
     }
@@ -421,15 +426,9 @@ mod tests {
             expected_time,
             expected_subsort,
             expected_key,
-            1.into(),
+            2.into(),
         );
 
-        assert_eq!(merged.time(), expected.time());
-        assert_eq!(merged.key_hash(), expected.key_hash());
-        assert_eq!(merged.subsort(), expected.subsort());
-        assert_eq!(merge.blocking_input(), Some(0));
-
-        // TODO: struct equality failing?
         assert_eq!(merged, expected);
         assert_eq!(merge.blocking_input(), Some(0));
     }
@@ -459,6 +458,7 @@ mod tests {
     }
 
     #[ignore = "spread not implemented"]
+    #[allow(dead_code)]
     fn test_spreads() {
         todo!()
     }
@@ -505,22 +505,115 @@ mod tests {
         let expected_time = Arc::new(TimestampNanosecondArray::from(vec![0, 1]));
         let expected_subsort = Arc::new(UInt64Array::from(vec![0, 1]));
         let expected_key = Arc::new(UInt64Array::from(vec![0, 0]));
-
         let expected = Batch::new_with_data(
             expected_data,
             expected_time,
             expected_subsort,
             expected_key,
-            1.into(),
+            2.into(),
         );
 
-        assert_eq!(merged.time(), expected.time());
-        assert_eq!(merged.key_hash(), expected.key_hash());
-        assert_eq!(merged.subsort(), expected.subsort());
-        assert_eq!(merge.blocking_input(), Some(0));
-
-        // TODO: struct equality failing?
         assert_eq!(merged, expected);
         assert_eq!(merge.blocking_input(), Some(0));
+    }
+
+    #[test]
+    fn test_multiple_merges() {
+        let left = minimal_struct_type();
+        let right = DataType::UInt32;
+        let mut merge = merge(left.clone(), right.clone());
+
+        let left_batch = Batch::minimal_from(vec![0, 1, 2], vec![0, 0, 0], 10);
+        let right_batch = Batch::new_empty(5.into());
+
+        assert_eq!(merge.blocking_input(), Some(1));
+        let can_produce = merge.add_batch(1, right_batch);
+        assert!(!can_produce);
+
+        let can_produce = merge.add_batch(0, left_batch);
+        assert!(can_produce);
+
+        let merged = merge.merge().unwrap();
+        let step_0_array = StructArray::new(
+            vec![
+                Arc::new(Field::new("time", TimestampNanosecondType::DATA_TYPE, true)),
+                Arc::new(Field::new("key_hash", UInt64Type::DATA_TYPE, true)),
+            ]
+            .into(),
+            vec![
+                Arc::new(TimestampNanosecondArray::from(vec![0, 1, 2])),
+                Arc::new(UInt64Array::from(vec![0, 0, 0])),
+            ],
+            None,
+        );
+        let step_0_datatype = step_0_array.data_type().clone();
+        let expected_fields: Vec<(FieldRef, ArrayRef)> = vec![
+            (
+                Arc::new(Field::new("step_0", left.clone(), true)),
+                Arc::new(step_0_array),
+            ),
+            (
+                Arc::new(Field::new("step_1", right.clone(), true)),
+                Arc::new(UInt32Array::from(vec![None, None, None])),
+            ),
+        ];
+        let expected_data = Arc::new(sparrow_arrow::utils::make_struct_array(3, expected_fields));
+        let expected_time = Arc::new(TimestampNanosecondArray::from(vec![0, 1, 2]));
+        let expected_subsort = Arc::new(UInt64Array::from(vec![0, 1, 2]));
+        let expected_key = Arc::new(UInt64Array::from(vec![0, 0, 0]));
+        let expected = Batch::new_with_data(
+            expected_data,
+            expected_time,
+            expected_subsort,
+            expected_key,
+            5.into(),
+        );
+
+        assert_eq!(merged, expected);
+        assert_eq!(merge.blocking_input(), Some(1));
+
+        // Add another batch for the right side
+        let right_time = TimestampNanosecondArray::from(vec![5, 6, 7]);
+        let right_subsort = UInt64Array::from(vec![0, 0, 0]);
+        let right_key = UInt64Array::from(vec![0, 1, 0]);
+        let right_data = UInt32Array::from(vec![100, 101, 102]);
+        let right_batch = Batch::new_with_data(
+            Arc::new(right_data),
+            Arc::new(right_time),
+            Arc::new(right_subsort),
+            Arc::new(right_key),
+            7.into(),
+        );
+
+        let can_produce = merge.add_batch(1, right_batch);
+        assert!(can_produce);
+
+        let merged = merge.merge().unwrap();
+
+        let step_0_array = new_null_array(&step_0_datatype, 2);
+        let expected_fields: Vec<(FieldRef, ArrayRef)> = vec![
+            (
+                Arc::new(Field::new("step_0", left.clone(), true)),
+                Arc::new(step_0_array),
+            ),
+            (
+                Arc::new(Field::new("step_1", right.clone(), true)),
+                Arc::new(UInt32Array::from(vec![100, 101])),
+            ),
+        ];
+        let expected_data = Arc::new(sparrow_arrow::utils::make_struct_array(2, expected_fields));
+        let expected_time = Arc::new(TimestampNanosecondArray::from(vec![5, 6]));
+        let expected_subsort = Arc::new(UInt64Array::from(vec![0, 0]));
+        let expected_key = Arc::new(UInt64Array::from(vec![0, 1]));
+        let expected = Batch::new_with_data(
+            expected_data,
+            expected_time,
+            expected_subsort,
+            expected_key,
+            7.into(),
+        );
+
+        assert_eq!(merged, expected);
+        assert_eq!(merge.blocking_input(), Some(1));
     }
 }
