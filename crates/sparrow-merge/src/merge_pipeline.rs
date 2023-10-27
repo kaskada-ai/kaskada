@@ -53,12 +53,12 @@ struct MergePartition {
     ///
     /// This vec should contains one element for each input.
     txs: Vec<tokio::sync::mpsc::UnboundedSender<Batch>>,
-    // Keeps track of the entities seen by this partition
-    // TODO: key_hash_index: KeyHashIndex,
     /// Handles the merge logic.
     ///
     /// All objects that require locking should be within this handler.
     handler: Mutex<MergePartitionHandler>,
+    // Keeps track of the entities seen by this partition
+    // TODO: key_hash_index: KeyHashIndex,
 }
 
 impl MergePartition {
@@ -76,7 +76,7 @@ impl MergePartition {
 ///
 /// Separated from the [MergePartition] to avoid multiple locks.
 struct MergePartitionHandler {
-    /// The batch receivers for each input.
+    /// The receivers for each input.
     ///
     /// This vec should contains one element for each input.
     rxs: Vec<tokio::sync::mpsc::UnboundedReceiver<Batch>>,
@@ -100,7 +100,12 @@ impl MergePipeline {
     /// Create a new merge pipeline.
     ///
     /// Args:
-    ///   consumers: The `InputHandles` to output the result of the transform to.
+    /// - `input_l`: The left input.
+    /// - `input_r`: The right input.
+    /// - `datatype_l`: The data type for the left input.
+    /// - `datatype_r`: The data type for the right input.
+    /// - `result_type`: The result type of this merge.
+    /// - `consumers`: The consumers for this merge.
     pub fn try_new(
         input_l: StepId,
         input_r: StepId,
@@ -127,23 +132,38 @@ impl MergePipeline {
             result_type: result_type.clone(),
         })
     }
+
+    fn complete_partition(
+        &self,
+        input_partition: Partition,
+        merge_partition: &MergePartition,
+        scheduler: &mut dyn Scheduler,
+    ) -> error_stack::Result<(), PipelineError> {
+        tracing::info!(
+            "Input is closed and empty. Closing consumers and finishing partition {}.",
+            input_partition
+        );
+        self.consumers.close_input(input_partition, scheduler)?;
+        merge_partition.task.complete();
+        Ok(())
+    }
 }
 
 impl Pipeline for MergePipeline {
     fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
-        // TODO: FRAZ - need to create the channels here.
         self.partitions = tasks
             .into_iter()
             .map(|task| {
+                let (tx_l, rx_l) = tokio::sync::mpsc::unbounded_channel();
+                let (tx_r, rx_r) = tokio::sync::mpsc::unbounded_channel();
                 MergePartition {
                     task,
                     is_closed: AtomicBool::new(false),
-                    txs: Vec::new(),
-                    // TODO: Error handling
+                    txs: vec![tx_l, tx_r],
                     // TODO: Interpolation
-                    // Current impl uses unlatched spread (`Null` interpolation), meaning discrete behavior.
+                    // Current impl uses unlatched spread (`Null` interpolation).
                     handler: Mutex::new(MergePartitionHandler {
-                        rxs: Vec::new(), // TODO: create channels
+                        rxs: vec![rx_l, rx_r],
                         merger: HeterogeneousMerge::new(
                             &self.result_type,
                             &self.left.datatype,
@@ -273,18 +293,18 @@ impl Pipeline for MergePipeline {
                     }
                 }
                 Err(TryRecvError::Empty) => {
-                    // TODO: This is uhh an invalid state? We called do_work, but have
-                    // no work to do
-                    todo!("?")
+                    error_stack::ensure!(
+                        partition.is_closed(),
+                        PipelineError::illegal_state("scheduled without work")
+                    );
+
+                    // The channel is empty and the partition is closed, but the input may
+                    // not have disconnected from the channel yet. This is okay -- if the partition
+                    // is verified closed, we can continue to close our consumers here.
+                    return self.complete_partition(input_partition, partition, scheduler);
                 }
                 Err(TryRecvError::Disconnected) => {
-                    tracing::info!(
-                        "Input is closed and empty. Closing consumers and finishing partition {}.",
-                        input_partition
-                    );
-                    self.consumers.close_input(input_partition, scheduler)?;
-                    partition.task.complete();
-                    return Ok(());
+                    return self.complete_partition(input_partition, partition, scheduler)
                 }
             }
         } else {
@@ -292,14 +312,18 @@ impl Pipeline for MergePipeline {
             tracing::info!("Inputs are closed. Flushing merger.");
             assert!(handler.merger.all_closed());
 
-            let last_batch = handler
-                .merger
-                .merge()
-                .change_context(PipelineError::Execution)?;
-            if !last_batch.is_empty() {
-                self.consumers
-                    .add_input(input_partition, last_batch, scheduler)
+            // Check whether we need to flush the leftovers
+            if handler.merger.can_produce() {
+                let last_batch = handler
+                    .merger
+                    .merge()
                     .change_context(PipelineError::Execution)?;
+                if !last_batch.is_empty() {
+                    self.consumers
+                        .add_input(input_partition, last_batch, scheduler)
+                        .change_context(PipelineError::Execution)?;
+                }
+                assert!(!handler.merger.can_produce(), "expected only one batch");
             }
 
             tracing::info!(

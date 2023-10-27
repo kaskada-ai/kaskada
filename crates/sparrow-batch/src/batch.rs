@@ -730,8 +730,8 @@ mod tests {
     use crate::testing::arb_arrays::arb_batch;
     use crate::{Batch, RowTime};
     use arrow_array::cast::AsArray;
+    use arrow_array::new_empty_array;
     use arrow_array::types::{ArrowPrimitiveType, TimestampNanosecondType, UInt64Type};
-    use arrow_array::{new_empty_array, UInt64Array};
     use itertools::Itertools;
     use proptest::prelude::*;
 

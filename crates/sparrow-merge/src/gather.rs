@@ -42,6 +42,15 @@ impl Gatherer {
         self.active.peek().map(|min| min.index)
     }
 
+    /// Returns a boolean indicating whether the gatherer can produce a batch.
+    pub fn can_produce(&self) -> bool {
+        if let Some(top) = self.active.peek() {
+            top.up_to_time > self.emitted_up_to_time
+        } else {
+            false
+        }
+    }
+
     /// Adds a batch to the pending set for the given index.
     ///
     /// Returns `true` if the gatherer is ready to produce output.
@@ -307,7 +316,7 @@ impl GatheredBatches {
         self.batches
             .iter()
             .map(|batches| -> error_stack::Result<Option<Batch>, Error> {
-                if batches.len() > 0 {
+                if !batches.is_empty() {
                     let batches = batches.to_vec();
                     Ok(Some(
                         Batch::concat(batches, self.up_to_time)

@@ -64,6 +64,11 @@ impl HeterogeneousMerge {
         self.gatherer.add_batch(input, batch)
     }
 
+    /// Returns a boolean indicating if the merge can produce a batch.
+    pub fn can_produce(&self) -> bool {
+        self.gatherer.can_produce()
+    }
+
     /// Merges the next batch.
     ///
     /// Note that this method can only be called on the active index,
@@ -244,8 +249,8 @@ impl HeterogeneousMerge {
     ) -> error_stack::Result<Arc<StructArray>, Error> {
         // The result type of the merge does not flatten the structs.
         //
-        // e.g. have X.a + Y.a then we have left: { a: i64 } and right: { a: i64 }.
-        // If we flatten that to {a: i64} we can no longer perform the arithmetic.
+        // e.g. we have [X.a + Y.a] then we have left: { a: i64 } and right: { a: i64 }.
+        // If we flatten that to { a: i64 } we can no longer perform the arithmetic.
         // Instead, we want {left: {a: i64}, right: {a: i64 }} so we can do
         // merged.left.a + merged.right.
         let fields: Vec<(FieldRef, ArrayRef)> = match &self.result_type {
