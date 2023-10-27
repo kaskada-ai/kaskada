@@ -1,3 +1,7 @@
+execute:
+  daemon: false
+  warning: false
+
 filters:
    - include-code-files
 
@@ -5,3 +9,5 @@ format:
   html:
     link-external-icon: true
     link-external-newwindow: true
+
+jupyter: python3

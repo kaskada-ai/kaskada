@@ -1,0 +1,209 @@
+---
+title: "Time-centric Calculations"
+subtitle: "Work with time and produce past training examples and recent results for applying models."
+order: 1
+---
+
+Kaskada was built to process and perform temporal calculations on event streams,
+with real-time analytics and machine learning in mind. It is not exclusively for
+real-time applications, but Kaskada excels at time-centric computations and
+aggregations on event-based data.
+
+For example, let's say you're building a user analytics dashboard at an
+ecommerce retailer. You have event streams showing all actions the user has
+taken, and you'd like to include in the dashboard:
+
+* the total number of events the user has ever generated
+* the total number of purchases the user has made
+* the total revenue from the user
+* the number of purchases made by the user today
+* the total revenue from the user today
+* the number of events the user has generated in the past hour
+
+Because the calculations needed here are a mix of hourly, daily, and over all of
+history, more than one type of event aggregation needs to happen. Table-centric
+tools like those based on SQL would require multiple JOINs and window functions,
+which would be spread over multiple queries or CTEs.
+
+Kaskada was designed for these types of time-centric calculations, so we can do
+each of the calculations in the list in one line:
+
+```{.python}
+record({
+    "event_count_total": DemoEvents.count(),
+    "purchases_total_count": DemoEvents.filter(DemoEvents.col("event_name").eq("purchase")).count(),
+    "revenue_total": DemoEvents.col("revenue").sum(),
+    "purchases_daily": DemoEvents.filter(DemoEvents.col("event_name").eq("purchase")).count(window=Daily()),
+    "revenue_daily": DemoEvents.col("revenue").sum(window=Daily()),
+    "event_count_hourly": DemoEvents.count(window=Hourly()),
+})
+```
+
+::: {.callout-warning}
+The previous example demonstrates the use of `Daily()` and `Hourly()` windowing which aren't yet part of the new Python library.
+:::
+
+Of course, a few more lines of code are needed to put these calculations to work,
+but these six lines are all that is needed to specify the calculations
+themselves. Each line may specify:
+
+* the name of a calculation (e.g. `event_count_total`)
+* the input data to start with (e.g. `DemoEvents`)
+* selecting event fields (e.g. `DemoEvents.col("revenue")`)
+* function calls (e.g. `count()`)
+* event filtering (e.g. `filter(DemoEvents.col("event_name").eq("purchase"))`)
+* time windows to calculate over (e.g. `window=Daily()`)
+
+...with consecutive steps chained together in a familiar way.
+
+Because Kaskada was built for time-centric calculations on event-based data, a
+calculation we might describe as "total number of purchase events for the user"
+can be defined in Kaskada in roughly the same number of terms as the verbal
+description itself.
+
+Continue through the demo below to find out how it works.
+
+See [the Kaskada documentation](../guide) for lots more information.
+
+## Kaskada Client Setup
+
+```
+%pip install kaskada
+```
+
+```{python}
+import kaskada as kd
+
+kd.init_session()
+```
+
+## Example dataset
+
+For this demo, we'll use a very small example data set, which, for simplicity and portability of this demo notebook, we'll read from a string.
+
+:::{.callout-note}
+For simplicity, instead of a CSV file or other file format we read and then parse data from a CSV string.
+You can load your own event data from many common sources, including Pandas DataFrames and Parquet files.
+See [sources](../reference/Sources/index.qmd) for more information on the available sources.
+:::
+
+```{python}
+import asyncio
+
+# For demo simplicity, instead of a CSV file, we read and then parse data from a
+# CSV string. Kaskada
+event_data_string = """
+    event_id,event_at,entity_id,event_name,revenue
+    ev_00001,2022-01-01 22:01:00,user_001,login,0
+    ev_00002,2022-01-01 22:05:00,user_001,view_item,0
+    ev_00003,2022-01-01 22:20:00,user_001,view_item,0
+    ev_00004,2022-01-01 23:10:00,user_001,view_item,0
+    ev_00005,2022-01-01 23:20:00,user_001,view_item,0
+    ev_00006,2022-01-01 23:40:00,user_001,purchase,12.50
+    ev_00007,2022-01-01 23:45:00,user_001,view_item,0
+    ev_00008,2022-01-01 23:59:00,user_001,view_item,0
+    ev_00009,2022-01-02 05:30:00,user_001,login,0
+    ev_00010,2022-01-02 05:35:00,user_001,view_item,0
+    ev_00011,2022-01-02 05:45:00,user_001,view_item,0
+    ev_00012,2022-01-02 06:10:00,user_001,view_item,0
+    ev_00013,2022-01-02 06:15:00,user_001,view_item,0
+    ev_00014,2022-01-02 06:25:00,user_001,purchase,25
+    ev_00015,2022-01-02 06:30:00,user_001,view_item,0
+    ev_00016,2022-01-02 06:31:00,user_001,purchase,5.75
+    ev_00017,2022-01-02 07:01:00,user_001,view_item,0
+    ev_00018,2022-01-01 22:17:00,user_002,view_item,0
+    ev_00019,2022-01-01 22:18:00,user_002,view_item,0
+    ev_00020,2022-01-01 22:20:00,user_002,view_item,0
+"""
+
+events = await kd.sources.CsvString.create(
+    event_data_string, time_column="event_at", key_column="entity_id"
+)
+
+# Inspect the event data
+events.preview()
+```
+
+## Define queries and calculations
+
+Kaskada queries are defined in Python, using the [](`kaskada.Timestream`) class.
+Sources are Timestreams generally containing [records](../guide/data_types.qmd#record-types).
+
+Let's do a simple query for events for a specific entity ID.
+
+```{python}
+events.filter(events.col("entity_id").eq("user_002")).preview()
+```
+
+Beyond querying for events, Kaskada has a powerful syntax for defining
+calculations on events, temporally across history.
+
+The six calculations discussed at the top of this demo notebook are below.
+
+(Note that some functions return `NaN` if no events for that user have occurred
+within the time window.)
+
+```{python}
+purchases = events.filter(events.col("event_name").eq("purchase"))
+
+features = kd.record(
+    {
+        "event_count_total": events.count(),
+        # "event_count_hourly": events.count(window=Hourly()),
+        "purchases_total_count": purchases.count(),
+        # "purchases_today": purchases.count(window=Since(Daily()),
+        # "revenue_today": events.col("revenue").sum(window=Since(Daily())),
+        "revenue_total": events.col("revenue").sum(),
+    }
+)
+features.preview()
+```
+
+## At Any Time
+
+A key feature of Kaskada's time-centric design is the ability to query for
+calculation values at any point in time. Traditional query languages (e.g. SQL)
+can only return data that already exists---if we want to return a row of
+computed/aggregated data, we have to compute the row first, then return it. As a
+specific example, suppose we have SQL queries that produce daily aggregations
+over event data, and now we want to have the same aggregations on an hourly
+basis. In SQL, we would need to write new queries for hourly aggregations; the
+queries would look very similar to the daily ones, but they would still be
+different queries.
+
+With Kaskada, we can define the calculations once, and then specify the points
+in time at which we want to know the calculation values when we query them.
+
+In the examples so far, we have used [](`kaskada.Timestream.preview`) to get a DataFrame containing
+some of the rows from the Timestreams we've defined. By default, this produces
+a _history_ containing all the times the result changed. This is useful for
+using past values to create training examples.
+
+We can also execute the query for the values at a specific point in time.
+
+```{.python}
+features.preview(at="2022-01-01 22:00")
+```
+
+You can also compose a query that produces values at specific points in time.
+
+```{.python}
+features.when(hourly())
+```
+
+Regardless of the time cadence of the calculations themselves, the query output
+can contain rows for whatever time points you specify. You can define a set of
+daily calculations and then get hourly updates during the day. Or, you can
+publish the definitions of some features in a Python module and different users
+can query those same calculations for hourly, daily, and monthly
+values---without editing the calculation definitions themselves.
+
+## Adding more calculations to the query
+
+We can add two new calculations, also in one line each, representing:
+
+* the time of the user's first event
+* the time of the user's last event
+
+This is only a small sample of possible Kaskada queries and capabilities. See
+everything that's possible with [Timestreams](../reference/Timestream/index.qmd).
