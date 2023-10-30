@@ -16,7 +16,7 @@
 <p align="center">
   <a href="https://kaskada.io">kaskada.io</a>
   |
-  <a href="https://kaskada.io/docs-site/">Docs</a>
+  <a href="https://kaskada.io/guide/">Docs</a>
 </p>
 
 Kaskada is a unified event processing engine that provides all the power of stateful stream processing in a high-level, declarative query language designed specifically for reasoning about events in bulk and in real time.
@@ -26,7 +26,7 @@ Kaskada's query language builds on the best features of SQL to provide a more ex
 Kaskada is implemented as a modern compute engine designed for processing events in bulk or real-time. Written in Rust and built on Apache Arrow, Kaskada can compute most workloads without the complexity and overhead of distributed execution.
 
 Read more at [kaskada.io](https://kaskada.io).
-See the [docs](https://kaskada.io/docs-site/) to get started in a [Jupyter Notebook](https://kaskada.io/docs-site/kaskada/main/getting-started/hello-world-jupyter.html) or the [CLI](https://kaskada.io/docs-site/kaskada/main/getting-started/hello-world-cli.html).
+See the [docs](https://kaskada.io/guide/) to get started.
 
 ## Features
 

@@ -1,0 +1,93 @@
+project:
+  type: website
+  output-dir: .quarto/_site
+  preview:
+    port: 4200
+    browser: true # Open a web browser to view the preview
+    navigate: true # Navigate the browser automatically when outputs are updated
+    watch-inputs: true # Re-render input files when they change
+
+website:
+  favicon: "_static/images/favicon.png"
+  google-analytics: G-HR9E2E6TG4
+  page-navigation: true
+  navbar:
+    background: primary
+    logo: "_static/images/kaskada-negative.svg"
+    logo-alt: "Kaskada logo."
+    title: false
+    left:
+      - href: guide/index.qmd
+        text: User Guide
+      - href: examples/index.qmd
+        text: Examples
+      - href: community/index.qmd
+        text: Community
+      - href: reference/index.qmd
+        text: API
+      - href: blog/index.qmd
+        text: Blog
+    right:
+      - icon: slack
+        href: https://join.slack.com/t/kaskada-hq/shared_invite/zt-1t1lms085-bqs2jtGO2TYr9kuuam~c9w
+      - icon: github
+        href: https://github.com/kaskada-ai/kaskada
+  sidebar:
+  - title: User Guide
+    style: docked
+    contents:
+      - guide/index.qmd
+      - guide/quickstart.qmd
+      - guide/tour.qmd
+      - guide/why.qmd
+      - guide/installation.qmd
+      - guide/timestreams.qmd
+      - guide/data_types.qmd
+      - guide/entities.qmd
+      - guide/aggregation.qmd
+      - guide/joins.qmd
+      - guide/sources.qmd
+      - guide/execution.qmd
+  - title: Examples
+    contents: examples
+  - title: API
+    style: docked
+    contents: reference
+
+  page-footer:
+    border: true
+    left: "© Copyright 2023, Kaskada Contributors."
+  repo-url: https://github.com/kaskada-ai/kaskada/
+  repo-subdir: python/docs
+  repo-actions:
+    - edit
+    - source
+  site-url: https://kaskada.io
+  title: Kaskada
+
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly #vapor
+    css:
+      - _static/css/styles.css
+    toc: true
+    link-external-icon: false
+    link-external-newwindow: false
+    link-external-filter: '^(?:http:|https:)\/\/kaskada\.io\/'
+
+filters:
+  - interlinks
+
+interlinks:
+  fast: true
+  sources:
+    numpy:
+      url: https://numpy.org/doc/stable/
+    pandas:
+      url: https://pandas.pydata.org/docs/
+    pyarrow:
+      url: https://arrow.apache.org/docs/
+    python:
+      url: https://docs.python.org/3/

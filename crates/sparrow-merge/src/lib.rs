@@ -9,4 +9,5 @@
     clippy::undocumented_unsafe_blocks
 )]
 
+pub mod gather;
 pub mod old;

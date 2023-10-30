@@ -77,6 +77,9 @@ impl Batch {
         })
     }
 
+    // NOTE: The current execution logic expects `RecordBatch` outputs (as well as some existing
+    // testing functionality that is compatible with the old non-partitioned execution path. In the
+    // future, we should standardize on `Batch` which makes it easier to carry a primitive value out.
     pub fn into_record_batch(self, schema: Arc<Schema>) -> Option<RecordBatch> {
         self.data.map(|data| {
             if let Some(fields) = data.data.as_struct_opt() {
@@ -85,6 +88,52 @@ impl Batch {
                 columns.extend_from_slice(fields.columns());
                 RecordBatch::try_new(schema, columns).expect("create_batch")
             } else {
+                RecordBatch::try_new(
+                    schema,
+                    vec![data.time, data.subsort, data.key_hash, data.data],
+                )
+                .expect("create_batch")
+            }
+        })
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn record_batch(self) -> Option<RecordBatch> {
+        use arrow_schema::Field;
+        use itertools::izip;
+
+        self.data.map(|data| {
+            if let Some(fields) = data.data.as_struct_opt() {
+                let time_ty = data.time.data_type().clone();
+                let subsort_ty = data.subsort.data_type().clone();
+                let key_ty = data.key_hash.data_type().clone();
+
+                let mut columns = Vec::with_capacity(3 + fields.num_columns());
+                columns.extend_from_slice(&[data.time, data.subsort, data.key_hash]);
+                columns.extend_from_slice(fields.columns());
+
+                let data_fields: Vec<Field> = izip!(fields.column_names(), fields.columns())
+                    .map(|(name, column)| {
+                        Field::new(name, column.data_type().clone(), column.is_nullable())
+                    })
+                    .collect();
+                let mut fields = vec![
+                    Field::new("_time", time_ty, false),
+                    Field::new("_subsort", subsort_ty, false),
+                    Field::new("_key_hash", key_ty, false),
+                ];
+                fields.extend(data_fields);
+                let schema = Arc::new(Schema::new(fields));
+
+                RecordBatch::try_new(schema, columns).expect("create_batch")
+            } else {
+                let schema = Arc::new(Schema::new(vec![
+                    Field::new("_time", data.time.data_type().clone(), false),
+                    Field::new("_subsort", data.subsort.data_type().clone(), false),
+                    Field::new("_key_hash", data.key_hash.data_type().clone(), false),
+                    Field::new("data", data.data.data_type().clone(), true),
+                ]));
+
                 RecordBatch::try_new(
                     schema,
                     vec![data.time, data.subsort, data.key_hash, data.data],
@@ -177,44 +226,53 @@ impl Batch {
         }
     }
 
-    /// Split off the rows less or equal to the given time.
+    /// Split off the rows less than the given time.
     ///
-    /// Returns the rows less than or equal to the given time and
+    /// Returns the rows less than the given time and
     /// leaves the remaining rows in `self`.
-    pub fn split_up_to(&mut self, time_inclusive: RowTime) -> Option<Batch> {
+    pub fn split_up_to(&mut self, time_exclusive: RowTime) -> Option<Batch> {
         let Some(data) = &mut self.data else {
             return None;
         };
 
-        if time_inclusive < data.min_present_time {
-            // time_inclusive < min_present <= max_present.
+        if time_exclusive < data.min_present_time {
+            // time_exclusive < min_present <= max_present.
             // none of the rows in the batch should be taken.
             return None;
         }
 
-        if data.max_present_time <= time_inclusive {
-            // min_present <= max_present <= time_inclusive
+        if data.max_present_time < time_exclusive {
+            // min_present <= max_present < time_exclusive
             // all rows should be taken
             return Some(Batch {
                 data: self.data.take(),
                 // Even though we took all the rows, the batch
                 // we return is only as complete as the original
                 // batch. There may be other batches after this
-                // that have equal rows less than time inclusive.
+                // that have equal rows less than time exclusive.
                 up_to_time: self.up_to_time,
             });
         }
 
         // If we reach this point, then we need to actually split the data.
-        debug_assert!(time_inclusive <= self.up_to_time);
-        Some(Batch {
-            data: Some(data.split_up_to(time_inclusive)),
-            // We can be complete up to time_inclusive because it is less
-            // than or equal to the time this batch was complete to. We put
-            // all of the rows this batch had up to that time in the result,
-            // and only left the batches after that time.
-            up_to_time: time_inclusive,
-        })
+        debug_assert!(time_exclusive <= self.up_to_time);
+
+        let split = data.split_up_to(time_exclusive);
+        if let Some(data) = split {
+            // Use the new max_present_time as the up_to_time.
+            let up_to_time = data.time().value(data.time.len() - 1).into();
+            Some(Batch {
+                data: Some(data),
+                // We can be complete up to time_exclusive because it is less
+                // than the time this batch was complete to. We put
+                // all of the rows this batch had up to that time in the result,
+                // and only left the batches after that time.
+                up_to_time,
+            })
+        } else {
+            // If there's no data after we split at `time_exclusive`, return None
+            None
+        }
     }
 
     pub fn concat(batches: Vec<Batch>, up_to_time: RowTime) -> error_stack::Result<Batch, Error> {
@@ -402,49 +460,53 @@ pub(crate) fn validate_bounds(
     key_hash: &ArrayRef,
     up_to_time: RowTime,
 ) -> error_stack::Result<(), Error> {
+    use arrow::compute::SortColumn;
+
     if time.len() == 0 {
         // No more validation necessary for empty batches.
         return Ok(());
     }
 
+    let sort_indices = arrow::compute::lexsort_to_indices(
+        &[
+            SortColumn {
+                values: time.clone(),
+                options: None,
+            },
+            SortColumn {
+                values: subsort.clone(),
+                options: None,
+            },
+            SortColumn {
+                values: key_hash.clone(),
+                options: None,
+            },
+        ],
+        None,
+    )
+    .into_report()
+    .change_context(Error::internal_msg("lexsort_to_indices".to_owned()))?;
+
+    let is_sorted = sort_indices
+        .values()
+        .iter()
+        .enumerate()
+        .all(|(i, x)| i == *x as usize);
+
+    error_stack::ensure!(
+        is_sorted,
+        Error::internal_msg("Expected sorted batch".to_owned())
+    );
+
     let time: &TimestampNanosecondArray = time.as_primitive();
-    let subsort: &UInt64Array = subsort.as_primitive();
-    let key_hash: &UInt64Array = key_hash.as_primitive();
-
-    let mut prev_time = time.value(0);
-    let mut prev_subsort = subsort.value(0);
-    let mut prev_key_hash = key_hash.value(0);
-
-    for i in 1..time.len() {
-        let curr_time = time.value(i);
-        let curr_subsort = subsort.value(i);
-        let curr_key_hash = key_hash.value(i);
-
-        let order = prev_time
-            .cmp(&curr_time)
-            .then(prev_subsort.cmp(&curr_subsort))
-            .then(prev_key_hash.cmp(&curr_key_hash));
-
-        error_stack::ensure!(
-            order.is_lt(),
-            Error::internal_msg(format!(
-                "Expected data[i - 1] < data[i], but ({}, {}, {}) >= ({}, {}, {})",
-                prev_time, prev_subsort, prev_key_hash, curr_time, curr_subsort, curr_key_hash
-            ))
-        );
-
-        prev_time = curr_time;
-        prev_subsort = curr_subsort;
-        prev_key_hash = curr_key_hash;
-    }
-
-    let curr_time: i64 = up_to_time.into();
-    let order = prev_time.cmp(&curr_time);
+    let last_time = time.values()[time.len() - 1];
+    let up_to_time: i64 = up_to_time.into();
+    let order = last_time.cmp(&up_to_time);
     error_stack::ensure!(
         order.is_le(),
         Error::internal_msg(format!(
             "Expected last data <= upper bound, but ({}) > ({})",
-            prev_time, curr_time
+            last_time, up_to_time
         ))
     );
 
@@ -544,18 +606,31 @@ impl BatchInfo {
         }
     }
 
-    /// Split off the rows less or equal to the given time.
+    /// Split off the rows less than the given time.
     ///
-    /// Returns the rows less than or equal to the given time and
-    /// leaves the remaining rows in `self`.
-    fn split_up_to(&mut self, time_inclusive: RowTime) -> Self {
+    /// Returns the rows less than the given time and
+    /// leaves the remaining rows in `self`, or returns None if
+    /// the `time_exclusive` is less than the min present time.
+    fn split_up_to(&mut self, time_exclusive: RowTime) -> Option<BatchInfo> {
         let time_column: &TimestampNanosecondArray = self.time.as_primitive();
+        if !time_column.is_empty() && time_column.value(0) > time_exclusive.into() {
+            // time_exclusive < min_present
+            // none of the rows in the batch should be taken.
+            return None;
+        }
 
         // 0..slice_start   (len = slice_start)       = what we return
         // slice_start..len (len = len - slice_start) = what we leave in self
         let slice_start = time_column
             .values()
-            .partition_point(|time| RowTime::from_timestamp_ns(*time) <= time_inclusive);
+            .partition_point(|time| RowTime::from_timestamp_ns(*time) < time_exclusive);
+
+        if slice_start == 0 {
+            // time is exclusive, so if the first row is greater than or equal to the time,
+            // we shouldn't split anything.
+            return None;
+        }
+
         let slice_len = self.data.len() - slice_start;
 
         let max_result_time = RowTime::from_timestamp_ns(time_column.values()[slice_start - 1]);
@@ -572,10 +647,11 @@ impl BatchInfo {
 
         self.data = self.data.slice(slice_start, slice_len);
         self.time = self.time.slice(slice_start, slice_len);
+        self.subsort = self.subsort.slice(slice_start, slice_len);
         self.key_hash = self.key_hash.slice(slice_start, slice_len);
         self.min_present_time = min_self_time;
 
-        result
+        Some(result)
     }
 
     pub(crate) fn time(&self) -> &TimestampNanosecondArray {
@@ -619,7 +695,7 @@ mod tests {
     fn test_split_batch() {
         let mut batch = Batch::minimal_from(vec![0, 1], vec![0, 0], 1);
 
-        let result = batch.split_up_to(RowTime::from_timestamp_ns(0)).unwrap();
+        let result = batch.split_up_to(RowTime::from_timestamp_ns(1)).unwrap();
 
         assert_eq!(result, Batch::minimal_from(vec![0], vec![0], 0));
         assert_eq!(batch, Batch::minimal_from(vec![1], vec![0], 1));
@@ -634,8 +710,9 @@ mod tests {
                 let mut remainder = original.clone();
 
                 if let Some(result) = remainder.split_up_to(time) {
-                    // The result of the split is complete up to the requested time.
-                    prop_assert_eq!(result.up_to_time, time);
+                    // The time to split at is exclusive, and should be greater than
+                    // the results up_to_time.
+                    prop_assert!(result.up_to_time < time);
                     // The remainder is complete up to the original time.
                     prop_assert_eq!(remainder.up_to_time, original.up_to_time);
 
@@ -648,26 +725,22 @@ mod tests {
                     };
                     prop_assert_eq!(&concatenated, original.data().unwrap());
 
-                    prop_assert!(result.data.is_some());
-                    let result = result.data.unwrap();
-
-                    prop_assert_eq!(result.data.len(), result.time.len());
-                    prop_assert_eq!(result.time().values()[0], i64::from(result.min_present_time));
-                    prop_assert_eq!(result.time().values()[result.time.len() - 1], i64::from(result.max_present_time));
-
-                    if time == original.max_present_time().unwrap() {
-                        // If the time equalled the max present time, then we consume the batch.
-                        prop_assert!(remainder.is_empty());
-                    } else {
-                        prop_assert!(remainder.data.is_some());
-                        let remainder = remainder.data.unwrap();
-
-                        prop_assert_eq!(remainder.data.len(), remainder.time.len());
-                        prop_assert_eq!(remainder.time().values()[0], i64::from(remainder.min_present_time));
-                        prop_assert_eq!(remainder.time().values()[remainder.time.len() - 1], i64::from(remainder.max_present_time));
+                    // The result may be empty since the `time` is exclusive
+                    if let Some(result) = result.data {
+                        prop_assert_eq!(result.data.len(), result.time.len());
+                        prop_assert_eq!(result.time().values()[0], i64::from(result.min_present_time));
+                        prop_assert_eq!(result.time().values()[result.time.len() - 1], i64::from(result.max_present_time));
                     }
+
+                    prop_assert!(remainder.data.is_some());
+                    let remainder = remainder.data.unwrap();
+
+                    prop_assert_eq!(remainder.data.len(), remainder.time.len());
+                    prop_assert_eq!(remainder.time().values()[0], i64::from(remainder.min_present_time));
+                    prop_assert_eq!(remainder.time().values()[remainder.time.len() - 1], i64::from(remainder.max_present_time));
                 } else {
-                    prop_assert!(false)
+                    // It's possible we split at the first row (or before the first row)
+                    // which returns no batch.
                 }
             }
         }

@@ -1,0 +1,7 @@
+---
+title: Examples
+listing:
+    type: default
+    sort: order
+    fields: [title, subtitle, reading-time, categories]
+---

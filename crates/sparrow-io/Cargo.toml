@@ -1,0 +1,31 @@
+[package]
+name = "sparrow-io"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = """
+Defines the IO implementations.
+"""
+
+[dependencies]
+arrow-array.workspace = true
+async-broadcast.workspace = true
+async-stream.workspace = true
+arrow-schema.workspace = true
+error-stack.workspace = true
+futures.workspace = true
+sparrow-merge = { path = "../sparrow-merge" }
+sparrow-batch = { path = "../sparrow-batch" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
+tracing.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+arrow-select.workspace = true
+static_init.workspace = true
+
+[lib]
+bench = false
+doctest = false

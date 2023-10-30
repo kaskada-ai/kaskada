@@ -1,5 +1,21 @@
-_build
-.jupyter_cache
-jupyter_execute
-source/reference/apidocs
-source/iframe_figures
+# quarto build cache
+/.quarto/
+
+# quartodoc interlink artifacts
+/_inv/
+/objects.json
+
+# generated API docs
+/reference/
+
+# files that might remain if a quarto build is interrupted
+index.html
+/blog/*.html
+/examples/*.html
+/guide/*.html
+index-listing.json
+data_types-listing.json
+/site_libs/
+
+# output of the site from `nox -s docs-build`
+/_site/

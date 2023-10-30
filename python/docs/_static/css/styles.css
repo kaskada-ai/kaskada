@@ -1,0 +1,68 @@
+/* css styles */
+
+.navbar-brand-logo img {
+    max-width: 100%;
+    width: auto;
+    height: 36px;
+    max-height: 36px;
+    vertical-align: middle;
+}
+
+body.quarto-light nav.navbar {
+    box-shadow: 0 0.125rem 0.25rem 0 var(--bs-gray-400);
+}
+
+body.quarto-light .only-dark {
+    display: none !important;
+}
+
+body.quarto-dark .only-light {
+    display: none !important;
+}
+
+h2 {
+    border-bottom: none;
+}
+
+body.quarto-dark .sd-card {
+    border: 1px solid white;
+}
+
+body.quarto-dark .sd-card-header {
+    border-bottom: 1px solid white;
+}
+
+th> :last-child,
+td> :last-child {
+    margin-bottom: 0px;
+}
+
+dd {
+    margin-bottom: 10px;
+    margin-left: 30px;
+    margin-top: 3px;
+}
+
+.red {
+    color: #e83e8c
+}
+
+.highlight dt {
+    padding-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+}
+
+body.quarto-light .highlight dt {
+    background-color: #f5f5f5;
+}
+
+body.quarto-dark .highlight dt {
+    background-color: #2f2f2f;
+}
+
+.bold-italic {
+    font-weight: bolder;
+    font-style: italic;
+}

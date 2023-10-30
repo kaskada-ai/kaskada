@@ -7,7 +7,7 @@ use sparrow_api::kaskada::v1alpha::slice_plan::Slice;
 use sparrow_api::kaskada::v1alpha::{self, compute_table, ComputeTable, PreparedFile, TableConfig};
 use sparrow_core::context_code;
 use sparrow_instructions::{GroupId, TableId};
-use sparrow_sources::InMemoryBatches;
+use sparrow_io::in_memory::InMemoryBatches;
 use sparrow_syntax::Location;
 use uuid::Uuid;
 

@@ -1,0 +1,200 @@
+quartodoc:
+  title: API
+  dir: reference
+  package: kaskada
+  source_dir: ../pysrc
+  options:
+    children: separate
+    include_empty: true
+  dynamic: true
+
+  sections:
+    - title: Sessions
+      options:
+        children: embedded
+      contents:
+        - init_session
+    - title: Timestream
+      options:
+        children: flat
+      contents:
+        - name: Timestream
+          members:
+            - data_type
+            - is_continuous
+        - name: LiteralValue
+          dynamic: false
+        - name: Arg
+          dynamic: false
+    - subtitle: Aggregation
+      desc: |
+        The User Guide has details on [aggregations in general](../../../guide/aggregation.qmd).
+
+        ::: {.callout-important}
+        It is important to remember that aggregations are partitioned by entity and windowed, with the default behavior being cumulative up to the current time.
+        :::
+      contents:
+        - Timestream.collect
+        - Timestream.count
+        - Timestream.count_if
+        - Timestream.first
+        - Timestream.last
+        - Timestream.max
+        - Timestream.mean
+        - Timestream.min
+        - Timestream.stddev
+        - Timestream.sum
+        - Timestream.variance
+    - subtitle: Arithmetic
+      desc: |
+        Timestreams support a variety of arithmetic operations.
+
+        ::: {.callout-important}
+        In addition to the chainable methods, standard operators are implemented where appropriate.
+        For instance, `a.add(b)` may be written as `a + b`.
+        See the notes on the specific functions for more information.
+        :::
+      contents:
+        - Timestream.add
+        - Timestream.ceil
+        - Timestream.clamp
+        - Timestream.div
+        - Timestream.exp
+        - Timestream.floor
+        - Timestream.greatest
+        - Timestream.least
+        - Timestream.mul
+        - Timestream.neg
+        - Timestream.powf
+        - Timestream.round
+        - Timestream.sqrt
+        - Timestream.sub
+    - subtitle: Collection
+      desc: |
+        Timestreams allow each point to contain a collection -- a `list` or `map` -- of elements.
+      contents:
+        - Timestream.__getitem__
+        - Timestream.flatten
+        - Timestream.index
+        - Timestream.length
+        - Timestream.union
+    - subtitle: Comparison
+      desc: |
+        Comparison operations produce boolean Timestreams.
+
+        ::: {.callout-important}
+        In addition to the chainable methods, standard operators are implemented where appropriate.
+        For instance, `a.ge(b)` may be written as `a >= b`.
+        See the notes on the specific functions for more information.
+
+        To respect the semantics of `__eq__` and `__ne__`, `a == b` and `a != b` are *not* overloaded.
+        :::
+      contents:
+        - Timestream.eq
+        - Timestream.ge
+        - Timestream.gt
+        - Timestream.le
+        - Timestream.lt
+        - Timestream.ne
+        - Timestream.is_null
+        - Timestream.is_not_null
+    - subtitle: Execution
+      contents:
+        - Timestream.preview
+        - Timestream.to_pandas
+        - Timestream.run_iter
+        - Timestream.write
+    - subtitle: Grouping
+      contents:
+        - Timestream.lookup
+        - Timestream.with_key
+    - subtitle: Logical
+      contents:
+        - Timestream.and_
+        - Timestream.or_
+        - Timestream.not_
+    - subtitle: Misc
+      contents:
+        - Timestream.cast
+        - Timestream.coalesce
+        - Timestream.else_
+        - Timestream.explain
+        - Timestream.filter
+        - Timestream.hash
+        - Timestream.if_
+        - Timestream.lag
+        - Timestream.null_if
+        - Timestream.pipe
+    - subtitle: Records
+      desc: |
+        Record operations create, extract or manipulate Timestreams of records.
+      contents:
+        - Timestream.col
+        - Timestream.select
+        - Timestream.remove
+        - Timestream.extend
+        - Timestream.record
+        - record
+    - subtitle: String
+      contents:
+        - Timestream.len
+        - Timestream.lower
+        - Timestream.upper
+        - Timestream.substring
+    - subtitle: Time
+      contents:
+        - Timestream.shift_by
+        - Timestream.shift_to
+        - Timestream.shift_until
+        - Timestream.time
+        - Timestream.seconds_since
+        - Timestream.seconds_since_previous
+    - title: Windows
+      package: kaskada.windows
+      options:
+        children: embedded
+      contents:
+        - Window
+        - Since
+        - Sliding
+        - Trailing
+        - Tumbling
+    - title: Sources
+      package: kaskada.sources
+      options:
+        children: embedded
+      contents:
+        # - Source
+        - CsvString
+        - JsonlString
+        - Pandas
+        - Parquet
+        - PyDict
+        # - package: kaskada.sources.source
+        #   name: TimeUnit
+    - subtitle: Source
+      package: kaskada.sources
+      options:
+        children: flat
+      contents:
+        - Source
+        - source.TimeUnit
+    - title: Destinations
+      package: kaskada.destinations
+      options:
+        children: embedded
+      contents:
+        - Destination
+    - title: Execution
+      options:
+        children: embedded
+      contents:
+        - Execution
+        - ResultIterator
+    - title: Results
+      package: kaskada.results
+      options:
+        children: embedded
+      contents:
+        - History
+        - Snapshot

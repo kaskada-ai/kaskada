@@ -33,3 +33,41 @@ Alternatively, install nox and run the tests inside an isolated environment:
 ```shell
 nox
 ```
+
+
+## Previewing Docs
+
+* Install `quarto-cli` on your machine. Also consider installing an IDE extension.
+
+  See: https://quarto.org/docs/get-started/
+
+* Generate reference docs
+
+  ```shell
+  nox -s docs-gen
+  ```
+
+  You should re-run this after making any updates to the `pysrc` docstrings.
+  If _Preview Docs_ is running in another shell, the system should auto-refresh with your changes.
+
+* Preview docs (with auto-refresh on edit)
+
+  ```shell
+  nox -s docs
+  ```
+
+* Cleanup generated and cached docs
+
+  ```shell
+  nox -s docs-clean
+  ```
+
+  Try this if you see something unexpected (especially after deleting or renaming).
+
+* Builds docs to `docs/_site`
+
+  ```shell
+  nox -s docs-build
+  ```
+
+  This is primarily used in CI.

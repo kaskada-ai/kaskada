@@ -1,0 +1,116 @@
+---
+format:
+  html:
+    css:
+      - _static/css/design-style.css
+    link-external-icon: true
+    link-external-newwindow: true
+    toc: false
+
+listing:
+  - id: cards
+    template: _templates/card.ejs
+    contents:
+      - name: "Real-time Aggregation"
+        icon: bi bi-clock-history
+        content: Precompute model inputs from streaming data with robust data connectors, transformations & aggregations.
+      - name: Event Detection
+        icon: bi bi-binoculars-fill
+        content: Trigger pro-active AI behaviors by identifying important activities, as they happen.
+      - name: History Replay
+        icon: bi bi-skip-backward-fill
+        content: Backtest and fine-tune from historical data using per-example time travel and point-in-time joins.
+---
+
+::::: {.px-4 .py-5 .my-5 .text-center}
+<img class="d-block mx-auto mb-4 only-light" src="_static/images/kaskada-positive.svg" alt="" width="50%">
+<img class="d-block mx-auto mb-4 only-dark" src="_static/images/kaskada-negative.svg" alt="" width="50%">
+<h1 class="display-5 fw-bold">Real-Time AI without the fuss.</h1>
+::: {.col-lg-7 .mx-auto}
+[Kaskada is a next-generation streaming engine that connects AI models to real-time & historical data.]{.lead .mb-4}
+:::
+:::::
+
+## Kaskada completes the Real-Time AI stack, providing...
+
+::: {#cards .column-page}
+:::
+
+
+## Real-time AI in minutes
+
+Connect and compute over databases, streaming data, _and_ data loaded dynamically using Python..
+Kaskada is seamlessly integrated with Python's ecosystem of AI/ML tooling so you can load data, process it, train and serve models all in the same place.
+
+There's no infrastructure to provision (and no JVM hiding under the covers), so you can jump right in - check out the [Quick Start](./guide/quickstart.qmd).
+
+
+## Built for scale and reliability
+
+Implemented in [Rust](https://www.rust-lang.org/) using [Apache Arrow](https://arrow.apache.org/), Kaskada's compute engine uses columnar data to efficiently execute large historic and high-throughput streaming queries.
+Every operation in Kaskada is implemented incrementally, allowing automatic recovery if the process is terminated or killed.
+
+With Kaskada, most jobs are fast enough to run locally, so it's easy to build and test your real-time queries.
+As your needs grow, Kaskada's cloud-native design and support for partitioned execution gives you the volume and throughput you need to scale.
+Kaskada was built by core contributors to [Apache Beam](https://beam.apache.org/), [Google Cloud Dataflow](https://cloud.google.com/dataflow), and [Apache Cassandra](https://cassandra.apache.org/), and is under active development
+
+* * *
+
+## Example Real-Time App: BeepGPT
+
+[BeepGPT](https://github.com/kaskada-ai/beep-gpt/tree/main) keeps you in the loop without disturbing your focus. Its personalized, intelligent AI continuously monitors your Slack workspace, alerting you to important conversations and freeing you to concentrate on what’s most important.
+
+The core of BeepGPT's real-time processing requires only a few lines of code using Kaskada:
+
+```python
+import asyncio
+import kaskada as kd
+kd.init_session()
+
+# Bootstrap from historical data
+messages = await kd.sources.PyDict.create(
+    rows = pyarrow.parquet.read_table("./messages.parquet")
+        .to_pylist(),
+    time_column = "ts",
+    key_column = "channel",
+)
+
+# Send each Slack message to Kaskada
+def handle_message(client, req):
+    messages.add_rows(req.payload["event"])
+slack.socket_mode_request_listeners.append(handle_message)
+slack.connect()
+
+# Aggregate multiple messages into a "conversation"
+conversations = ( messages
+    .select("user", "text")
+    .collect(max=20)
+)
+
+# Handle each conversation as it occurs
+async for row in conversations.run_iter(mode='live'):
+
+    # Use a pre-trained model to identify interested users
+    prompt = "\n\n".join([f'{msg["user"]} --> {msg["text"]}' for msg in row["result"]])
+    res = openai.Completion.create(
+        model="davinci:ft-personal:coversation-users-full-kaskada-2023-08-05-14-25-30",
+        prompt=prompt + "\n\n###\n\n",
+        logprobs=5,
+        max_tokens=1,
+        stop=" end",
+        temperature=0.25,
+    )
+
+    # Notify interested users using the Slack API
+    for user_id in interested_users(res):
+        notify_user(row, user_id)
+```
+
+For more details, check out the [BeepGPT Github project](https://github.com/kaskada-ai/beep-gpt).
+
+* * *
+
+## Get Started
+
+Getting started with Kaskda is a `pip install kaskada` away.
+Check out the [Quick Start](./guide/quickstart.qmd) now!
