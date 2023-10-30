@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::monitor::Monitor;
 use crate::worker::Injector;
-use crate::{Error, Partition, Pipeline, Task, TaskRef, Worker};
+use crate::{Error, Pipeline, Task, TaskRef, Worker};
+use sparrow_interfaces::types::Partition;
 
 /// Default thread count to use if we aren't able to determine
 /// the number of cores.
@@ -171,11 +172,9 @@ impl error_stack::Context for CreateError {}
 #[cfg(test)]
 mod tests {
     use sparrow_batch::{Batch, RowTime};
+    use sparrow_interfaces::types::{Partition, Partitioned};
 
-    use crate::{
-        Error, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
-        WorkerPoolBuilder,
-    };
+    use crate::{Error, Pipeline, PipelineError, Scheduler, TaskRef, WorkerPoolBuilder};
 
     #[derive(Debug, Default)]
     struct PanicPipeline {

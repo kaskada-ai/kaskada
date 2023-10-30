@@ -3,7 +3,8 @@ use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, ResultExt};
 use parking_lot::Mutex;
 use sparrow_batch::Batch;
-use sparrow_scheduler::{Pipeline, PipelineError};
+use sparrow_interfaces::types::{Partition, Partitioned};
+use sparrow_scheduler::{Pipeline, PipelineError, Scheduler, TaskRef};
 
 /// Pipeline for writing to a Tokio channel.
 ///
@@ -11,7 +12,7 @@ use sparrow_scheduler::{Pipeline, PipelineError};
 #[derive(Debug)]
 pub(super) struct WriteChannelPipeline {
     channel: Mutex<Option<tokio::sync::mpsc::Sender<RecordBatch>>>,
-    tasks: sparrow_scheduler::Partitioned<sparrow_scheduler::TaskRef>,
+    tasks: Partitioned<TaskRef>,
     schema: SchemaRef,
 }
 
@@ -19,24 +20,24 @@ impl WriteChannelPipeline {
     pub fn new(channel: tokio::sync::mpsc::Sender<RecordBatch>, schema: SchemaRef) -> Self {
         Self {
             channel: Mutex::new(Some(channel)),
-            tasks: sparrow_scheduler::Partitioned::new(),
+            tasks: Partitioned::new(),
             schema,
         }
     }
 }
 
 impl Pipeline for WriteChannelPipeline {
-    fn initialize(&mut self, tasks: sparrow_scheduler::Partitioned<sparrow_scheduler::TaskRef>) {
+    fn initialize(&mut self, tasks: Partitioned<TaskRef>) {
         assert_eq!(tasks.len(), 1);
         self.tasks = tasks;
     }
 
     fn add_input(
         &self,
-        input_partition: sparrow_scheduler::Partition,
+        input_partition: Partition,
         input: usize,
         batch: Batch,
-        _scheduler: &mut dyn sparrow_scheduler::Scheduler,
+        _scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         // HACK: This converts `Batch` to `RecordBatch` because the current execution logic
         //  expects `RecordBatch` outputs. This should be changed to standardize on `Batch`
@@ -58,9 +59,9 @@ impl Pipeline for WriteChannelPipeline {
 
     fn close_input(
         &self,
-        input_partition: sparrow_scheduler::Partition,
+        input_partition: Partition,
         input: usize,
-        _scheduler: &mut dyn sparrow_scheduler::Scheduler,
+        _scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         let mut channel = self.channel.lock();
         tracing::info!("Closing input of write_channel");
@@ -81,8 +82,8 @@ impl Pipeline for WriteChannelPipeline {
 
     fn do_work(
         &self,
-        _partition: sparrow_scheduler::Partition,
-        _scheduler: &mut dyn sparrow_scheduler::Scheduler,
+        _partition: Partition,
+        _scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         Ok(())
     }

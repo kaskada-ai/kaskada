@@ -4,7 +4,8 @@ use std::sync::Arc;
 use error_stack::ResultExt;
 
 use crate::schedule_count::ScheduleCount;
-use crate::{Error, Partition, Pipeline, Scheduler};
+use crate::{Error, Pipeline, Scheduler};
+use sparrow_interfaces::types::Partition;
 
 /// The unit of work executed by the scheduler.
 ///

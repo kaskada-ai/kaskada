@@ -85,6 +85,7 @@ impl PlanExecutor {
         let last_step = plan.steps.last().expect("at least one step");
         let output_schema = result_type_to_output_schema(&last_step.result_type);
 
+        // TODO: FRAZ - write channel pipeline
         let sink_pipeline = executor
             .worker_pool
             .add_pipeline(1, WriteChannelPipeline::new(output, output_schema));
@@ -112,7 +113,7 @@ impl PlanExecutor {
 
             let first_step_inputs = &plan.steps[first_step_id].inputs;
 
-            // Create a transform pipeline (if possible), othrewise create the
+            // Create a transform pipeline (if possible), otherwise create the
             // appropriate non-transform pipeline.
             let pipeline = if pipeline
                 .steps

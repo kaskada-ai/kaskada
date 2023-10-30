@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
 use sparrow_batch::Batch;
+use sparrow_interfaces::types::{Partition, Partitioned};
 
-use crate::{Partition, Partitioned, Scheduler, TaskRef};
+use crate::{Scheduler, TaskRef};
 
 #[derive(derive_more::Display, Debug)]
 pub enum PipelineError {

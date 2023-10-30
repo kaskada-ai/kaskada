@@ -5,10 +5,9 @@ use error_stack::ResultExt;
 use itertools::Itertools;
 use parking_lot::Mutex;
 use sparrow_batch::Batch;
+use sparrow_interfaces::types::{Partition, Partitioned};
 use sparrow_physical::{StepId, StepKind};
-use sparrow_scheduler::{
-    InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
-};
+use sparrow_scheduler::{InputHandles, Pipeline, PipelineError, Scheduler, TaskRef};
 
 use crate::transform::Transform;
 

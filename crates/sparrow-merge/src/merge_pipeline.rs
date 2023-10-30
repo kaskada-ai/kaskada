@@ -2,10 +2,9 @@ use arrow_schema::DataType;
 use error_stack::{IntoReport, ResultExt};
 use parking_lot::Mutex;
 use sparrow_batch::Batch;
+use sparrow_interfaces::types::{Partition, Partitioned};
 use sparrow_physical::StepId;
-use sparrow_scheduler::{
-    InputHandles, Partition, Partitioned, Pipeline, PipelineError, Scheduler, TaskRef,
-};
+use sparrow_scheduler::{InputHandles, Pipeline, PipelineError, Scheduler, TaskRef};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc::error::TryRecvError;
 
