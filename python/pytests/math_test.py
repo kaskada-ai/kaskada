@@ -11,7 +11,7 @@ SourceCols = NamedTuple(
     [("m", kd.Timestream), ("n", kd.Timestream), ("datatype", pa.DataType)],
 )
 
-Data = collections.namedtuple("math_fixture", "m, n, param")
+Data = collections.namedtuple("Data", "m, n, param")
 
 
 def datatype_id(datatype: pa.DataType) -> str:
