@@ -150,7 +150,7 @@ def docs(session: nox.Session) -> None:
         session.run("quarto", "preview", external=True)
 
 @nox.session(name="docs-lint", python=python_versions[0])
-def docs_gen(session: nox.Session) -> None:
+def docs_lint(session: nox.Session) -> None:
     """Lints the API reference config and lets you know about any missing items"""
     install(session, groups=["docs"])
 
