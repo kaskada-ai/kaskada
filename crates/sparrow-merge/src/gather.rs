@@ -44,11 +44,9 @@ impl Gatherer {
 
     /// Returns a boolean indicating whether the gatherer can produce a batch.
     pub fn can_produce(&self) -> bool {
-        if let Some(top) = self.active.peek() {
-            top.up_to_time > self.emitted_up_to_time
-        } else {
-            false
-        }
+        self.active
+            .peek()
+            .is_some_and(|top| top.up_to_time > self.emitted_up_to_time)
     }
 
     /// Adds a batch to the pending set for the given index.
@@ -61,7 +59,11 @@ impl Gatherer {
         if let Some(mut entry) = self.active.pop() {
             // Expect `blocking_input` to be called first, ensuring we're working
             // on the current blocking input
-            assert_eq!(entry.index, index);
+            assert_eq!(
+                entry.index, index,
+                "expected next batch from blocking input {}, but was {index}",
+                entry.index
+            );
 
             entry.up_to_time = batch_up_to_time;
             self.active.push(entry);

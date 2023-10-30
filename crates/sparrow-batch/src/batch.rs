@@ -79,27 +79,27 @@ impl Batch {
     }
 
     /// Updates the up_to_time.
+    ///
+    /// The new `up_to_time` must be >= the existing `self.up_to_time`.
     pub fn with_up_to_time(self, up_to_time: RowTime) -> Self {
+        assert!(up_to_time >= self.up_to_time);
         Batch {
             data: self.data,
             up_to_time,
         }
     }
 
-    /// Replaces the batch's data with the given data.
+    /// Replaces the batch's data column with the given data column.
+    /// The other existing columns and properties are preserved and validated
+    /// with the new data column.
     ///
-    /// Panics if the [BatchInfo] is empty.
+    /// Panics if the existing [BatchInfo] is empty (as there would be no corresponding
+    /// key columns for the data).
     pub fn with_data(self, data: ArrayRef) -> Self {
         if let Some(info) = self.data {
+            let data = Some(BatchInfo::new(data, info.time, info.subsort, info.key_hash));
             Self {
-                data: Some(BatchInfo {
-                    data,
-                    time: info.time,
-                    subsort: info.subsort,
-                    key_hash: info.key_hash,
-                    min_present_time: info.min_present_time,
-                    max_present_time: info.max_present_time,
-                }),
+                data,
                 up_to_time: self.up_to_time,
             }
         } else {
@@ -311,6 +311,9 @@ impl Batch {
             // between self.up_to_time and time_exclusive.
             // 2) self.up_to_time > time_exclusive: We requested a split at
             // time_exclusive, so we can't return a batch with a greater time.
+            //
+            // TODO: Split up watermark from batch
+            // https://github.com/kaskada-ai/kaskada/issues/836
             let new_up_to = time_exclusive.min(self.up_to_time);
             Some(Batch::new_empty(new_up_to))
         }

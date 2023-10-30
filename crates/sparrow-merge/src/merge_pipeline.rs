@@ -38,7 +38,7 @@ struct Input {
     /// The data type for this input
     datatype: DataType,
     /// Whether this side is closed
-    is_closed: Mutex<bool>,
+    is_closed: AtomicBool,
 }
 
 struct MergePartition {
@@ -53,10 +53,10 @@ struct MergePartition {
     ///
     /// This vec should contains one element for each input.
     txs: Vec<tokio::sync::mpsc::UnboundedSender<Batch>>,
-    /// Handles the merge logic.
+    /// Handles the merge logic and keeps track of the state.
     ///
-    /// All objects that require locking should be within this handler.
-    handler: Mutex<MergePartitionHandler>,
+    /// All objects that require locking should be within this state.
+    state: Mutex<MergePartitionState>,
     // Keeps track of the entities seen by this partition
     // TODO: key_hash_index: KeyHashIndex,
 }
@@ -75,7 +75,7 @@ impl MergePartition {
 /// Handles the merge logic.
 ///
 /// Separated from the [MergePartition] to avoid multiple locks.
-struct MergePartitionHandler {
+struct MergePartitionState {
     /// The receivers for each input.
     ///
     /// This vec should contains one element for each input.
@@ -117,12 +117,12 @@ impl MergePipeline {
         let left = Input {
             id: input_l,
             datatype: datatype_l.clone(),
-            is_closed: Mutex::new(false),
+            is_closed: AtomicBool::new(false),
         };
         let right = Input {
             id: input_r,
             datatype: datatype_r.clone(),
-            is_closed: Mutex::new(false),
+            is_closed: AtomicBool::new(false),
         };
         Ok(Self {
             partitions: Partitioned::default(),
@@ -162,7 +162,7 @@ impl Pipeline for MergePipeline {
                     txs: vec![tx_l, tx_r],
                     // TODO: Interpolation
                     // Current impl uses unlatched spread (`Null` interpolation).
-                    handler: Mutex::new(MergePartitionHandler {
+                    state: Mutex::new(MergePartitionState {
                         rxs: vec![rx_l, rx_r],
                         merger: HeterogeneousMerge::new(
                             &self.result_type,
@@ -221,14 +221,10 @@ impl Pipeline for MergePipeline {
             }
         );
 
-        {
-            // In a separate block to ensure the lock is released
-            let mut is_closed = if input == 0 {
-                self.left.is_closed.lock()
-            } else {
-                self.right.is_closed.lock()
-            };
-            *is_closed = true;
+        if input == 0 {
+            self.left.is_closed.store(true, Ordering::Release);
+        } else {
+            self.right.is_closed.store(true, Ordering::Release);
         }
 
         // Close the specific input -- required for the merge to know that the remaining
@@ -238,7 +234,7 @@ impl Pipeline for MergePipeline {
         // since this should only be called once per input on completion.
         let partition = &self.partitions[input_partition];
         {
-            partition.handler.lock().merger.close(input);
+            partition.state.lock().merger.close(input);
         }
 
         tracing::trace!("Closing input {} for merge {}", input, partition.task);
@@ -250,7 +246,9 @@ impl Pipeline for MergePipeline {
             }
         );
 
-        if *self.left.is_closed.lock() && *self.right.is_closed.lock() {
+        if self.left.is_closed.load(Ordering::Acquire)
+            && self.right.is_closed.load(Ordering::Acquire)
+        {
             // Don't close the sink (consumers) here. We may be currently executing a `do_work`
             // loop, in which case we need to allow it to output to the sink before
             // we close it.
@@ -273,7 +271,7 @@ impl Pipeline for MergePipeline {
         let partition = &self.partitions[input_partition];
         let _enter = tracing::trace_span!("MergePipeline::do_work", %partition.task).entered();
 
-        let mut handler = partition.handler.lock();
+        let mut handler = partition.state.lock();
         if let Some(active_input) = handler.merger.blocking_input() {
             let receiver = &mut handler.rxs[active_input];
             match receiver.try_recv() {
@@ -308,9 +306,10 @@ impl Pipeline for MergePipeline {
                 }
             }
         } else {
-            // Though all inputs are closed, the merger may have batches remaining to flush.
-            tracing::info!("Inputs are closed. Flushing merger.");
+            // Though nothing is blocking the gatherer (in this case, all inputs must be closed),
+            // the merger may have batches remaining to flush.
             assert!(handler.merger.all_closed());
+            tracing::info!("Inputs are closed. Flushing merger.");
 
             // Check whether we need to flush the leftovers
             if handler.merger.can_produce() {
