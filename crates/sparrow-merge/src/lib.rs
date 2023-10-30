@@ -10,4 +10,10 @@
 )]
 
 pub mod gather;
+mod merge;
+mod merge_pipeline;
 pub mod old;
+mod spread;
+
+pub(crate) use merge::*;
+pub use merge_pipeline::MergePipeline;

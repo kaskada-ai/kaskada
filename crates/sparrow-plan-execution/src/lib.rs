@@ -15,6 +15,7 @@ use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use hashbrown::HashMap;
 use sparrow_interfaces::source::Source;
 use sparrow_interfaces::ExecutionOptions;
+use sparrow_merge::MergePipeline;
 use sparrow_physical::StepId;
 use sparrow_transforms::TransformPipeline;
 use std::sync::Arc;
@@ -139,7 +140,7 @@ impl PlanExecutor {
                 // pipeline for the step. It returns `None` if the step is a source and
                 // thus has no corresponding pipeline.
                 if let Some(pipeline) =
-                    executor.add_non_transform_pipeline(step, consumers, sources)?
+                    executor.add_non_transform_pipeline(&plan, step, consumers, sources)?
                 {
                     pipeline
                 } else {
@@ -182,6 +183,7 @@ impl PlanExecutor {
 
     fn add_non_transform_pipeline(
         &mut self,
+        plan: &sparrow_physical::Plan,
         step: &sparrow_physical::Step,
         consumers: InputHandles,
         sources: &HashMap<Uuid, Arc<dyn Source>>,
@@ -194,6 +196,25 @@ impl PlanExecutor {
                 let stream = channel.read(&step.result_type, self.execution_options.clone());
                 self.source_tasks.add_read(source_uuid, stream, consumers);
                 Ok(None)
+            }
+            sparrow_physical::StepKind::Merge => {
+                // TODO: n-way input merges
+                assert_eq!(step.inputs.len(), 2, "expected 2 inputs for merge");
+                let input_l = plan.steps[step.inputs[0]].id;
+                let datatype_l = &plan.steps[step.inputs[0]].result_type;
+                let input_r = plan.steps[step.inputs[1]].id;
+                let datatype_r = &plan.steps[step.inputs[1]].result_type;
+
+                let pipeline = MergePipeline::try_new(
+                    input_l,
+                    input_r,
+                    datatype_l,
+                    datatype_r,
+                    &step.result_type,
+                    consumers,
+                )
+                .change_context(Error::Creating)?;
+                Ok(Some(self.worker_pool.add_pipeline(1, pipeline)))
             }
             other if other.is_transform() => {
                 unreachable!("Transforms should use add_transform_pipeline")

@@ -202,9 +202,13 @@ impl Pipeline for TransformPipeline {
             }
         );
 
-        // Don't close the sink here. We may be currently executing a `do_work`
+        // Don't close the sink (consumers) here. We may be currently executing a `do_work`
         // loop, in which case we need to allow it to output to the sink before
         // we close it.
+        //
+        // We call `close` on the partition to indicate that once the work loop sees
+        // that the partition is empty of inputs, it can close its consumers and
+        // complete itself.
         partition.close();
         scheduler.schedule(partition.task.clone());
 
@@ -225,7 +229,10 @@ impl Pipeline for TransformPipeline {
                 PipelineError::illegal_state("scheduled without work")
             );
 
-            tracing::info!("Input is closed and empty. Closing consumers and finishing pipeline.");
+            tracing::info!(
+                "Input is closed and empty. Closing consumers and finishing partition {}.",
+                input_partition
+            );
             self.consumers.close_input(input_partition, scheduler)?;
             partition.task.complete();
             return Ok(());

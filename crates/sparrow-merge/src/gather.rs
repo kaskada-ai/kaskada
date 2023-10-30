@@ -1,9 +1,13 @@
 use sparrow_batch::{Batch, RowTime};
 use std::collections::BinaryHeap;
 
+use error_stack::ResultExt;
+
+use crate::merge::Error;
+
 /// Gathers batches from multiple inputs, keeping track of the
 /// minimum `up_to_time` across all inputs, which acts as a
-/// "watermark" for the batches.
+/// watermark for the batches.
 pub struct Gatherer {
     /// Information about the input with the *minimum* `up_to_time`.
     ///
@@ -38,6 +42,13 @@ impl Gatherer {
         self.active.peek().map(|min| min.index)
     }
 
+    /// Returns a boolean indicating whether the gatherer can produce a batch.
+    pub fn can_produce(&self) -> bool {
+        self.active
+            .peek()
+            .is_some_and(|top| top.up_to_time > self.emitted_up_to_time)
+    }
+
     /// Adds a batch to the pending set for the given index.
     ///
     /// Returns `true` if the gatherer is ready to produce output.
@@ -46,6 +57,14 @@ impl Gatherer {
         self.pending[index].add_batch(batch);
 
         if let Some(mut entry) = self.active.pop() {
+            // Expect `blocking_input` to be called first, ensuring we're working
+            // on the current blocking input
+            assert_eq!(
+                entry.index, index,
+                "expected next batch from blocking input {}, but was {index}",
+                entry.index
+            );
+
             entry.up_to_time = batch_up_to_time;
             self.active.push(entry);
             // SAFETY: We just pushed an element so we know it's not empty.
@@ -75,6 +94,13 @@ impl Gatherer {
         assert_eq!(active.index, index);
 
         self.active.is_empty() || self.active.peek().unwrap().up_to_time > self.emitted_up_to_time
+    }
+
+    /// Returns true if all inputs have been closed.
+    pub fn all_closed(&self) -> bool {
+        // Note: We could separately track the pending count to avoid
+        // this iteration.
+        self.pending.iter().all(|p| p.closed)
     }
 
     /// If a batch is ready to be processed, returns it.
@@ -271,7 +297,7 @@ pub struct GatheredBatches {
     /// This may be multiple batches for each input stream -- for instance, the
     /// slice of a previous batch that wasn't emitted or a few batches that were
     /// collected while waiting for a different input stream to receive a batch
-    /// and "unblock" gathering up to a certain tiime.
+    /// and "unblock" gathering up to a certain time.
     ///
     /// We don't concatenate the input batches because that would lead to
     /// allocating and copying data into the concatenated chunk. Instead, we
@@ -282,6 +308,28 @@ pub struct GatheredBatches {
     ///
     /// Any rows in future gathered batches must be strictly greater than this.
     pub up_to_time: RowTime,
+}
+
+impl GatheredBatches {
+    /// For each input, concats the gathered batches together.
+    ///
+    /// If the inner vec is empty, the result will be None.
+    pub fn concat(self) -> error_stack::Result<Vec<Option<Batch>>, Error> {
+        self.batches
+            .iter()
+            .map(|batches| -> error_stack::Result<Option<Batch>, Error> {
+                if !batches.is_empty() {
+                    let batches = batches.to_vec();
+                    Ok(Some(
+                        Batch::concat(batches, self.up_to_time)
+                            .change_context(Error::Internal("failed to concat batches"))?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -353,5 +401,26 @@ mod tests {
                 up_to = i64::from(gathered.up_to_time);
             }
         }
+    }
+
+    #[test]
+    fn test_concat_gathered() {
+        let batch1 = Batch::minimal_from(vec![0, 1, 4], vec![0, 0, 0], 4);
+        let batch2 = Batch::minimal_from(vec![4, 5, 6], vec![0, 0, 0], 9);
+        let batch3 = Batch::minimal_from(vec![10, 12], vec![0, 0], 15);
+        let gathered = vec![batch1, batch2, batch3];
+        let gathered_batches = GatheredBatches {
+            batches: vec![gathered],
+            up_to_time: 15.into(),
+        };
+
+        let actual = gathered_batches.concat().unwrap();
+        let expected = vec![Some(Batch::minimal_from(
+            vec![0, 1, 4, 4, 5, 6, 10, 12],
+            vec![0, 0, 0, 0, 0, 0, 0, 0],
+            15,
+        ))];
+
+        assert_eq!(actual, expected);
     }
 }
