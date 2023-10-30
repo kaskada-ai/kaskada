@@ -10,7 +10,7 @@ pub trait NumericProperties {
 }
 
 impl NumericProperties for f32 {
-    const ZERO: f32 = 0.0;
+    const ZERO: Self = 0.0;
 
     fn max(a: Self, b: Self) -> Self {
         a.max(b)
@@ -44,6 +44,42 @@ impl NumericProperties for f64 {
     }
 }
 
+impl NumericProperties for i8 {
+    const ZERO: Self = 0;
+
+    fn max(a: Self, b: Self) -> Self {
+        a.max(b)
+    }
+    fn min(a: Self, b: Self) -> Self {
+        a.min(b)
+    }
+    fn as_f64(&self) -> f64 {
+        *self as f64
+    }
+
+    fn saturating_add(a: Self, b: Self) -> Self {
+        a + b
+    }
+}
+
+impl NumericProperties for i16 {
+    const ZERO: Self = 0;
+
+    fn max(a: Self, b: Self) -> Self {
+        a.max(b)
+    }
+    fn min(a: Self, b: Self) -> Self {
+        a.min(b)
+    }
+    fn as_f64(&self) -> f64 {
+        *self as f64
+    }
+
+    fn saturating_add(a: Self, b: Self) -> Self {
+        a + b
+    }
+}
+
 impl NumericProperties for i32 {
     const ZERO: Self = 0;
 
@@ -64,6 +100,44 @@ impl NumericProperties for i32 {
 }
 
 impl NumericProperties for i64 {
+    const ZERO: Self = 0;
+
+    fn max(a: Self, b: Self) -> Self {
+        a.max(b)
+    }
+
+    fn min(a: Self, b: Self) -> Self {
+        a.min(b)
+    }
+
+    fn as_f64(&self) -> f64 {
+        *self as f64
+    }
+    fn saturating_add(a: Self, b: Self) -> Self {
+        a.saturating_add(b)
+    }
+}
+
+impl NumericProperties for u8 {
+    const ZERO: Self = 0;
+
+    fn max(a: Self, b: Self) -> Self {
+        a.max(b)
+    }
+
+    fn min(a: Self, b: Self) -> Self {
+        a.min(b)
+    }
+
+    fn as_f64(&self) -> f64 {
+        *self as f64
+    }
+    fn saturating_add(a: Self, b: Self) -> Self {
+        a.saturating_add(b)
+    }
+}
+
+impl NumericProperties for u16 {
     const ZERO: Self = 0;
 
     fn max(a: Self, b: Self) -> Self {

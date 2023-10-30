@@ -92,8 +92,12 @@ impl<'a> StaticInfo<'a> {
 
 fn check_numeric(evaluator: &'static str, data_type: &DataType) -> anyhow::Result<()> {
     match data_type {
-        DataType::Int32
+        DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
         | DataType::Int64
+        | DataType::UInt8
+        | DataType::UInt16
         | DataType::UInt32
         | DataType::UInt64
         | DataType::Float32
