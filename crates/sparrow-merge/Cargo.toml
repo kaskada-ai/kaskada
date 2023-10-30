@@ -21,14 +21,12 @@ arrow-csv = { workspace = true, optional = true }
 arrow-schema.workspace = true
 arrow-select.workspace = true
 bit-set.workspace = true
-bitvec.workspace = true
 derive_more.workspace = true
 erased-serde.workspace = true
 error-stack.workspace = true
 itertools.workspace = true
 parking_lot.workspace = true
 proptest = { workspace = true, optional = true }
-serde_json.workspace = true
 serde.workspace = true
 smallvec.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
