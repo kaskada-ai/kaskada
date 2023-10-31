@@ -270,15 +270,15 @@ impl Pipeline for MergePipeline {
         let partition = &self.partitions[input_partition];
         let _enter = tracing::trace_span!("MergePipeline::do_work", %partition.task).entered();
 
-        let mut handler = partition.state.lock();
-        if let Some(active_input) = handler.merger.blocking_input() {
-            let receiver = &mut handler.rxs[active_input];
+        let mut state = partition.state.lock();
+        if let Some(active_input) = state.merger.blocking_input() {
+            let receiver = &mut state.rxs[active_input];
             match receiver.try_recv() {
                 Ok(batch) => {
                     // Add the batch to the active input
-                    let ready_to_produce = handler.merger.add_batch(active_input, batch);
+                    let ready_to_produce = state.merger.add_batch(active_input, batch);
                     if ready_to_produce {
-                        let merged_batch = handler
+                        let merged_batch = state
                             .merger
                             .merge()
                             .change_context(PipelineError::Execution)?;
@@ -288,6 +288,8 @@ impl Pipeline for MergePipeline {
                             .add_input(input_partition, merged_batch, scheduler)
                             .change_context(PipelineError::Execution)?;
                     }
+
+                    // TODO: Reschedule the task if the channel is non-empty.
                 }
                 Err(TryRecvError::Empty) => {
                     error_stack::ensure!(
@@ -307,12 +309,12 @@ impl Pipeline for MergePipeline {
         } else {
             // Though nothing is blocking the gatherer (in this case, all inputs must be closed),
             // the merger may have batches remaining to flush.
-            assert!(handler.merger.all_closed());
+            assert!(state.merger.all_closed());
             tracing::info!("Inputs are closed. Flushing merger.");
 
             // Check whether we need to flush the leftovers
-            if handler.merger.can_produce() {
-                let last_batch = handler
+            if state.merger.can_produce() {
+                let last_batch = state
                     .merger
                     .merge()
                     .change_context(PipelineError::Execution)?;
@@ -321,7 +323,7 @@ impl Pipeline for MergePipeline {
                         .add_input(input_partition, last_batch, scheduler)
                         .change_context(PipelineError::Execution)?;
                 }
-                assert!(!handler.merger.can_produce(), "expected only one batch");
+                assert!(!state.merger.can_produce(), "expected only one batch");
             }
 
             tracing::info!(

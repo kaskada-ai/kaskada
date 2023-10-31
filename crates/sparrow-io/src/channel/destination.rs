@@ -3,7 +3,7 @@ use arrow_schema::SchemaRef;
 use error_stack::{IntoReport, ResultExt};
 use sparrow_batch::Batch;
 use sparrow_interfaces::{
-    destination::{Destination, DestinationError, WriteError, Writer},
+    destination::{Destination, WriteError, Writer},
     types::Partition,
 };
 
@@ -27,17 +27,12 @@ impl ChannelDestination {
 }
 
 impl Destination for ChannelDestination {
-    fn new_writer(
-        &self,
-        partition: Partition,
-    ) -> error_stack::Result<Box<dyn Writer>, DestinationError> {
+    fn new_writer(&self, partition: Partition) -> error_stack::Result<Box<dyn Writer>, WriteError> {
         let partition: usize = partition.into();
         let tx = self
             .txs
             .get(partition)
-            .ok_or_else(|| {
-                DestinationError::internal_msg("expected channel for partition {partition}")
-            })?
+            .ok_or_else(|| WriteError::internal_msg("expected channel for partition {partition}"))?
             .clone(); // Senders can be cloned cheaply
         Ok(Box::new(ChannelWriter {
             schema: self.schema.clone(),

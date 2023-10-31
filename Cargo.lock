@@ -4542,6 +4542,7 @@ dependencies = [
  "index_vec",
  "inventory",
  "itertools 0.11.0",
+ "serde",
  "sparrow-arrow",
  "sparrow-batch",
  "static_init",

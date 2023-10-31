@@ -49,8 +49,10 @@ impl WritePartition {
 
 #[derive(Debug)]
 enum WriterState {
+    #[allow(dead_code)]
     NotStarted,
     Writing(Mutex<Box<dyn Writer>>),
+    #[allow(dead_code)]
     Complete,
 }
 
@@ -153,9 +155,10 @@ impl Pipeline for WritePipeline {
             }
         );
 
-        // We may be currently executing a `do_work` loop... TODO: FRAZ
+        // We may be currently executing a `do_work` loop, in which case we need to allow
+        // the writer to write output before it is closed.
         //
-        // We call `close` on the partition to indicate that once the work loop sees
+        // We do call `close` on the partition to indicate that once the work loop sees
         // that the partition is empty of inputs, it can complete.
         partition.close();
         scheduler.schedule(partition.task.clone());
@@ -166,7 +169,7 @@ impl Pipeline for WritePipeline {
     fn do_work(
         &self,
         partition: Partition,
-        _scheduler: &mut dyn Scheduler,
+        scheduler: &mut dyn Scheduler,
     ) -> error_stack::Result<(), PipelineError> {
         let partition = &self.partitions[partition];
         let _enter = tracing::trace_span!("WritePipeline::do_work", %partition.task).entered();
@@ -195,19 +198,23 @@ impl Pipeline for WritePipeline {
                         .change_context(PipelineError::Execution)?;
                 }
                 WriterState::NotStarted => {
-                    error_stack::bail!(PipelineError::illegal_state("writer not initialized"))
+                    error_stack::bail!(PipelineError::illegal_state(
+                        "work scheduled for uninitialized writer"
+                    ))
                 }
                 WriterState::Complete => {
-                    error_stack::bail!(PipelineError::illegal_state("writer is complete"));
+                    error_stack::bail!(PipelineError::illegal_state(
+                        "work scheduled for a complete writer"
+                    ));
                 }
             }
         }
 
-        // Note: We don't re-schedule the write if there is input or it's
-        // closed. This should be handled by the fact that we scheduled the
-        // write when we added the batch (or closed it), which should
-        // trigger the "scheduled during execution" -> "re-schedule" logic (see
-        // ScheduleCount).
+        // Reschedule the transform if there exists more batches to process.
+        // See the [ScheduleCount].
+        if !partition.inputs.lock().is_empty() {
+            scheduler.schedule(partition.task.clone());
+        }
 
         Ok(())
     }
