@@ -1,4 +1,3 @@
-mod source;
+mod destination;
 
-pub use source::InMemoryBatches;
-pub use source::InMemorySource;
+pub use destination::*;

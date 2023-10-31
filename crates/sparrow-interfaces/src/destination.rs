@@ -1,9 +1,10 @@
 use sparrow_batch::Batch;
+use std::fmt::Debug;
 
 use crate::types::Partition;
 
 /// Trait implemented by destinations.
-trait Destination: Send + Sync {
+pub trait Destination: Send + Sync + Debug {
     /// Creates a new writer to this destination.
     fn new_writer(
         &self,
@@ -11,7 +12,7 @@ trait Destination: Send + Sync {
     ) -> error_stack::Result<Box<dyn Writer>, DestinationError>;
 }
 
-trait Writer {
+pub trait Writer: Send + Sync + Debug {
     /// Write a batch to the given writer.
     ///
     /// NOTE: Some destinations (such as Parquet) may actually rotate files during / after
@@ -21,7 +22,7 @@ trait Writer {
     fn write_batch(&mut self, batch: Batch) -> error_stack::Result<(), WriteError>;
 
     /// Close this writer.
-    fn close(self) -> error_stack::Result<(), WriteError>;
+    fn close(&self) -> error_stack::Result<(), WriteError>;
 }
 
 #[non_exhaustive]

@@ -15,7 +15,7 @@ use sparrow_interfaces::types::Partition;
 pub struct Task {
     /// Name of the pipeline implementation.
     name: &'static str,
-    partition: Partition,
+    pub partition: Partition,
     pipeline_index: usize,
     /// The pipeline to execute.
     ///
