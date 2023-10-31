@@ -187,8 +187,6 @@ impl Pipeline for WritePipeline {
         };
 
         if !batch.is_empty() {
-            // TODO: Any post processing?
-
             match &partition.writer {
                 WriterState::Writing(writer) => {
                     writer

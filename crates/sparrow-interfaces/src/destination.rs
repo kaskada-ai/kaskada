@@ -17,8 +17,6 @@ pub trait Writer: Send + Sync + Debug {
     ///
     /// NOTE: Some destinations (such as Parquet) may actually rotate files during / after
     /// calls to `write_batch`.
-    /// TODO: FRAZ - write_batch doesn't need an "outputconfig" because at the time of execution,
-    /// we're able to create the writer _with_ the output config already (I THINK).
     fn write_batch(&mut self, batch: Batch) -> error_stack::Result<(), WriteError>;
 
     /// Close this writer.

@@ -14,7 +14,6 @@ core_affinity.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 hashbrown.workspace = true
-index_vec.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 smallvec.workspace = true

@@ -20,7 +20,6 @@ itertools.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-backend = { path = "../sparrow-backend" }
-sparrow-batch = { path = "../sparrow-batch" }
 sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }
