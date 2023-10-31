@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use sparrow_batch::Batch;
+use sparrow_interfaces::types::Partition;
 
-use crate::{Partition, Pipeline, PipelineError, Scheduler};
+use crate::{Pipeline, PipelineError, Scheduler};
 
 #[derive(Debug, Default)]
 pub struct InputHandles(smallvec::SmallVec<[InputHandle; 1]>);

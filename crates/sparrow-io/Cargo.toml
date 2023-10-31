@@ -16,6 +16,7 @@ async-stream.workspace = true
 arrow-schema.workspace = true
 error-stack.workspace = true
 futures.workspace = true
+tokio.workspace = true
 sparrow-merge = { path = "../sparrow-merge" }
 sparrow-batch = { path = "../sparrow-batch" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }

@@ -4,6 +4,21 @@ pub(crate) use loom::sync::atomic::{AtomicUsize, Ordering};
 #[cfg(not(loom))]
 pub(crate) use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// Manages the rescheduling logic for a [Task].
+///
+/// This is used to ensure that a [Task] is only scheduled once at a time,
+/// which is required to prevent multiple threads from working on the same task at once.
+///
+/// The reason a count is required, rather than just a flag indicating whether the
+/// task is scheduled, is because we may have the race condition where:
+/// 1. (thread 1) Doing work, sees input queue is empty.
+/// 2. (thread 2) Add input to input queue.
+/// 3. (thread 2) Set flag.
+/// 4. (thread 1) Unset flag.
+/// -> Task is not scheduled, even though it should be.
+///
+/// The count allows us to indicate whether the task was scheduled during execution,
+/// and if so, we can re-add it to the queue if necessary.
 #[repr(transparent)]
 #[derive(Debug, Default)]
 pub(crate) struct ScheduleCount(AtomicUsize);

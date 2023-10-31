@@ -14,7 +14,6 @@ mod error;
 mod idle_workers;
 mod input_handles;
 mod monitor;
-mod partition;
 mod pipeline;
 mod queue;
 mod schedule_count;
@@ -24,7 +23,6 @@ mod worker_pool;
 
 pub use error::*;
 pub use input_handles::*;
-pub use partition::*;
 pub use pipeline::*;
 pub use task::*;
 pub use worker::*;

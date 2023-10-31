@@ -7,8 +7,10 @@
     clippy::print_stderr
 )]
 
+pub mod destination;
 mod execution_options;
 pub mod expression;
 pub mod source;
+pub mod types;
 
 pub use execution_options::*;

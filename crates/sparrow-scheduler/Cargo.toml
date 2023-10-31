@@ -14,11 +14,11 @@ core_affinity.workspace = true
 derive_more.workspace = true
 error-stack.workspace = true
 hashbrown.workspace = true
-index_vec.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 smallvec.workspace = true
 sparrow-batch = { path = "../sparrow-batch" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
 tracing.workspace = true
 tokio.workspace = true
 work-queue = "0.1.4"

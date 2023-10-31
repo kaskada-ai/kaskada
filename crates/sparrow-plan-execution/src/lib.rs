@@ -15,10 +15,12 @@ use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use hashbrown::HashMap;
 use sparrow_interfaces::source::Source;
 use sparrow_interfaces::ExecutionOptions;
+use sparrow_io::channel::ChannelDestination;
 use sparrow_merge::MergePipeline;
 use sparrow_physical::StepId;
 use sparrow_transforms::TransformPipeline;
 use std::sync::Arc;
+use write_pipeline::WritePipeline;
 
 use error_stack::ResultExt;
 use itertools::Itertools;
@@ -27,7 +29,7 @@ use uuid::Uuid;
 
 mod error;
 mod source_tasks;
-mod write_channel_pipeline;
+mod write_pipeline;
 
 #[cfg(test)]
 mod tests;
@@ -35,7 +37,6 @@ mod tests;
 pub use error::*;
 
 use crate::source_tasks::SourceTasks;
-use crate::write_channel_pipeline::WriteChannelPipeline;
 
 pub struct PlanExecutor {
     worker_pool: WorkerPoolBuilder,
@@ -85,9 +86,11 @@ impl PlanExecutor {
         let last_step = plan.steps.last().expect("at least one step");
         let output_schema = result_type_to_output_schema(&last_step.result_type);
 
+        // Creates a single channel destination for the output.
+        let destination = Arc::new(ChannelDestination::new(output_schema.clone(), vec![output]));
         let sink_pipeline = executor
             .worker_pool
-            .add_pipeline(1, WriteChannelPipeline::new(output, output_schema));
+            .add_pipeline(1, WritePipeline::new(destination, output_schema));
 
         // Map from the producing step ID to the consumers.
         let mut step_consumers: HashMap<StepId, InputHandles> = HashMap::new();
@@ -112,7 +115,7 @@ impl PlanExecutor {
 
             let first_step_inputs = &plan.steps[first_step_id].inputs;
 
-            // Create a transform pipeline (if possible), othrewise create the
+            // Create a transform pipeline (if possible), otherwise create the
             // appropriate non-transform pipeline.
             let pipeline = if pipeline
                 .steps

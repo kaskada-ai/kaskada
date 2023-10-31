@@ -1,4 +1,5 @@
-use crate::{Partition, TaskRef};
+use crate::TaskRef;
+use sparrow_interfaces::types::Partition;
 
 /// Top level errors reported during partitioned pipeline execution.
 #[derive(derive_more::Display, Debug)]

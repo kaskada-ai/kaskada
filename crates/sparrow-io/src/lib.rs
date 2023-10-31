@@ -7,4 +7,5 @@
     clippy::print_stderr
 )]
 
+pub mod channel;
 pub mod in_memory;

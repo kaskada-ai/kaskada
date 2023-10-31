@@ -20,6 +20,7 @@ parking_lot.workspace = true
 sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-batch = { path = "../sparrow-batch" }
 sparrow-expr-execution = { path = "../sparrow-expr-execution" }
+sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-physical = { path = "../sparrow-physical" }
 sparrow-scheduler = { path = "../sparrow-scheduler" }
 tracing.workspace = true
