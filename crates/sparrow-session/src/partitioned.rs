@@ -1,5 +1,5 @@
 mod session;
 pub use session::*;
 
-#[cfg(tests)]
+#[cfg(test)]
 mod tests;
