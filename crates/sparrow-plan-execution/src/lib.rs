@@ -31,9 +31,6 @@ mod error;
 mod source_tasks;
 mod write_pipeline;
 
-#[cfg(test)]
-mod tests;
-
 pub use error::*;
 
 use crate::source_tasks::SourceTasks;

@@ -1,17 +1,15 @@
+use crate::partitioned::Session;
 use arrow_array::cast::AsArray;
 use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
 use sparrow_interfaces::source::{Source, SourceExt};
 use sparrow_io::in_memory::InMemorySource;
 use sparrow_logical::ExprRef;
-use sparrow_session::partitioned::Session;
 use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, Schema};
 
-fn query(
-    session: &Session,
-    source: ExprRef,
-) -> error_stack::Result<ExprRef, sparrow_session::Error> {
+#[cfg(test)]
+fn query(session: &Session, source: ExprRef) -> error_stack::Result<ExprRef, crate::Error> {
     let a_str = session.add_literal(sparrow_logical::Literal::new_str("a"))?;
     let a = session.add_expr("fieldref", vec![source.clone(), a_str])?;
 
@@ -29,6 +27,7 @@ fn query(
     session.add_expr("record", vec![ab_str, a_plus_b, abc_str, a_plus_b_plus_c])
 }
 
+#[cfg(test)]
 fn add_input_batch(session: &Session, source: &Arc<dyn Source>) {
     let source_prepared_schema = Arc::new(Schema::new(vec![
         Field::new(

@@ -13,6 +13,7 @@ mod expr;
 pub mod partitioned;
 mod session;
 mod table;
+mod tests;
 
 pub use error::Error;
 pub use execution::Execution;
