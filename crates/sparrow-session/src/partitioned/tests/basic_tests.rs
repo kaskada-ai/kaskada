@@ -1,17 +1,14 @@
+use crate::partitioned::Session;
 use arrow_array::cast::AsArray;
 use arrow_array::{Int64Array, RecordBatch, TimestampNanosecondArray, UInt64Array};
 use sparrow_interfaces::source::{Source, SourceExt};
 use sparrow_io::in_memory::InMemorySource;
 use sparrow_logical::ExprRef;
-use sparrow_session::partitioned::Session;
 use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, Schema};
 
-fn query(
-    session: &Session,
-    source: ExprRef,
-) -> error_stack::Result<ExprRef, sparrow_session::Error> {
+fn query(session: &Session, source: ExprRef) -> error_stack::Result<ExprRef, crate::Error> {
     let a_str = session.add_literal(sparrow_logical::Literal::new_str("a"))?;
     let a = session.add_expr("fieldref", vec![source.clone(), a_str])?;
 

@@ -36,7 +36,6 @@ index_vec.workspace = true
 sparrow-backend = { path = "../sparrow-backend" }
 sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-logical = { path = "../sparrow-logical" }
-sparrow-session = { path = "../sparrow-session" }
 sparrow-testing = { path = "../sparrow-testing" }
 
 [lib]

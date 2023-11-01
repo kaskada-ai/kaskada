@@ -35,6 +35,8 @@ tokio-stream.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-testing = { path = "../sparrow-testing" }
 
 [lib]
 bench = false

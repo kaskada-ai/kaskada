@@ -25,7 +25,6 @@ proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
 sparrow-testing = { path = "../sparrow-testing" }
-sparrow-merge = { path = "../sparrow-merge" }
 proptest.workspace = true
 
 [lib]
