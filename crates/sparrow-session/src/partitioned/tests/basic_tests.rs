@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, Schema};
 
-#[cfg(test)]
 fn query(session: &Session, source: ExprRef) -> error_stack::Result<ExprRef, crate::Error> {
     let a_str = session.add_literal(sparrow_logical::Literal::new_str("a"))?;
     let a = session.add_expr("fieldref", vec![source.clone(), a_str])?;
@@ -27,7 +26,6 @@ fn query(session: &Session, source: ExprRef) -> error_stack::Result<ExprRef, cra
     session.add_expr("record", vec![ab_str, a_plus_b, abc_str, a_plus_b_plus_c])
 }
 
-#[cfg(test)]
 fn add_input_batch(session: &Session, source: &Arc<dyn Source>) {
     let source_prepared_schema = Arc::new(Schema::new(vec![
         Field::new(

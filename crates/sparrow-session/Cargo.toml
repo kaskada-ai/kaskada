@@ -21,7 +21,6 @@ smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-backend = { path = "../sparrow-backend" }
 sparrow-compiler = { path = "../sparrow-compiler" }
-sparrow-expressions = { path = "../sparrow-expressions" }
 sparrow-instructions = { path = "../sparrow-instructions" }
 sparrow-interfaces = { path = "../sparrow-interfaces" }
 sparrow-logical = { path = "../sparrow-logical" }
@@ -29,7 +28,6 @@ sparrow-plan-execution = { path = "../sparrow-plan-execution" }
 sparrow-runtime = { path = "../sparrow-runtime" }
 sparrow-io = { path = "../sparrow-io" }
 sparrow-syntax = { path = "../sparrow-syntax" }
-sparrow-testing = { path = "../sparrow-testing" }
 static_init.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
@@ -37,6 +35,8 @@ tokio-stream.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+sparrow-expressions = { path = "../sparrow-expressions" }
+sparrow-testing = { path = "../sparrow-testing" }
 
 [lib]
 bench = false
