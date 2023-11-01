@@ -1,0 +1,29 @@
+---
+layout: post
+title: Why Kaskada? – The Three Reasons
+date: "2022-10-01"
+image: /_static/images/blog/why-kaskada_banner.png
+draft: true
+---
+
+Kaskada accelerates your model training workflows by allowing you to easily create and iterate on new features from event-based data. In doing so, data scientists and engineers can now control the context of model predictions. For example, Kaskada allows data scientists to assess whether a model is best suited to predict on a daily/hourly basis or to make predictions in real-time—as users are about to take action or make a purchase decision—flexibility that allows them to understand customer behavior better. Additionally, they can rapidly ship features to production and accelerate the model development lifecycle.
+
+## Fast Feature Engineering and Iteration
+
+The  [typical process](2022-05-01-why-you-need-a-unified-feature-engine-not-a-unified-compute-model.html)  for generating features from event-based data is complex, manual, and frustrating. Suppose you’ve ever tried building a training dataset for a model that required taking examples at different data-dependent points in time or necessitated doing a point-in-time join. In that case, you probably know what we’re talking about. These problems are just too hard to accomplish within the iterative exploration process needed in feature engineering.
+
+What really happens in these cases is a lot of friction—building bespoke ETL pipelines, waiting for data to be collected, or managing complex backfill jobs—often only to find the needed data is missing from those pipelines or the features aren’t observed when the model will be making predictions. And even if you can make it work, the model will often underperform, and temporal leakage will be introduced, kicking off a long process of diagnosing an underperforming model.
+
+[Kaskada bypasses this difficulty](2022-09-01-6-factors-to-consider-when-evaluating-a-new-ml-tool.html)  by allowing users to define features and model context in terms of computations and then apply those computations to data across arbitrary slices of time. Once in production, these time-based features undergo an efficient incremental update as new data is streamed in, saving valuable time compared to having to recompute the feature using the entire history of the data. Furthermore, Kaskada can be accessed via a Python client library, integrates with your existing data silos, and can ingest any type of structured data, meaning there’s very little additional work needed to incorporate it into your feature engineering process.
+
+## Discover How Different Contexts Affect Behavior
+
+A context describes how a person’s behavior is informed. In particular, understanding the situation surrounding what a customer is doing before and after taking a certain action is critical to understanding their mindset as well as how they’re likely to act again in the future. Machine learning is predicated on this assumption, but it can be challenging to adjust the contexts that are provided to a model in order to see how predicted behavior changes. Kaskada allows data scientists to specify and iterate on the context under which customer behavior is observed before training models, all without having to rewrite a data pipeline and manually recompute feature values. This allows data scientists to  [_explore a wider variety of contexts and learn which ones are most predictive_](2022-12-02-discover-how-different-model-contexts-affect-behavior.html) _with enough time left to achieve_  the desired end goal, such as higher engagement or retention.
+
+## Easily Deploy Features to Production
+
+One of the  [primary barriers](2022-07-15-why-data-engineers-need-kaskada.html)  to getting features into production is that data scientists are not working in a scalable, performant language or environment. Costly rewrites of code and feature definitions are required to achieve the desired latency. It can also be difficult to share feature definitions between data scientists and across teams, slowing down the process further with repeated work. Kaskada provides a declarative framework enabling you to share resources as code, from table definitions to views and materialized views that fully define a feature. Resources can easily be version controlled and shared. Furthermore, once features are ready for production, they can be kept up to date in any data store, such as Amazon S3, DynamoDB, Redis, BigTable, or a whole host of others. Finally, it is easy to replace production features and assess new ones, all without affecting the availability of your ML system.
+
+## Summary
+
+Behavioral ML involves working with event-based data, a process that is more difficult, tedious, and time-consuming than traditional batch prediction methods. Models need to be provided with the right features in real time in order to make correct predictions, and digging into these contexts can be incredibly difficult with existing tools. However, this is where Kaskada shines. Kaskada allows you to rapidly iterate on feature definitions and observation times from event-based data, allowing you to move features into production 26x faster and experiment with thousands of hypotheses quickly. Kaskada also makes your modeling more interpretable, giving insight into how context affects customer behavior without requiring you to rewrite your data pipelines or manually recompute feature values. Finally, Kaskada makes deploying to production easy by allowing you to share resources as code and integrate with your existing CI/CD systems.

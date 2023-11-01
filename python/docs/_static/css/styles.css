@@ -66,3 +66,18 @@ body.quarto-dark .highlight dt {
     font-weight: bolder;
     font-style: italic;
 }
+
+figcaption {
+    text-align: center;
+}
+
+.quarto-grid-item {
+    border-radius: 10px;
+}
+
+.card-img-top img {
+   border-top-right-radius: 10px;
+   border-top-left-radius: 10px;
+   border-bottom-left-radius: 0px;
+   border-bottom-right-radius: 0px;
+}

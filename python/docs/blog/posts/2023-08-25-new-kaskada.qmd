@@ -5,6 +5,7 @@ categories:
  - releases
 title: Introducing the New Kaskada
 subtitle: Embedded in Python for accessible Real-Time AI
+image: /_static/images/blog/new-kaskada_banner.png
 ---
 
 We started Kaskada with the goal of simplifying the real-time AI/ML lifecycle, and in the past year AI has exploded in usefulness and accessibility. Generative models and Large Language Models (LLMs) have revolutionized how we approach AI. Their accessibility and incredible capabilities have made AI more valuable than it has ever been and democratized the practice of AI.
