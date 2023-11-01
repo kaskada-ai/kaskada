@@ -9,9 +9,6 @@
 )]
 
 //! Journaling of Batches.
-//!
-//! This is used by sources to ensure batches are durably stored before
-//! acknowledging new data.
 
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use futures::stream::BoxStream;
@@ -32,12 +29,19 @@ mod error;
 
 /// A journal of batches.
 ///
-/// Batches should be written to the journal before being acknowledged to ensure
-/// durability.
+/// This may be used by sources to ensure batches are durably stored before
+/// acknowledging new data.
 ///
-/// The journal is built on `okaywal`, which has an active segment used for
-/// appending batches as they arrive. As the segment rolls over, they are
-/// combined to create checkpoints.
+/// The journal consists of two parts -- append only "write-ahead logs" (WALs)
+/// and "checkpoints". The WALs are used to store new batches as they arrive.
+/// The batches are appended in arrival time order. When a segment of the WAL
+/// exceeds a certain size a new segment is started and the previous segment
+/// is checkpointed.
+///
+/// The journal is built on `okaywal` which automatically manages the active
+/// segments and rollovers. As batches are added to the active segment, they
+/// are also added to an in-memory view of the "current". This allows for a
+/// quicker read of recent data.
 pub struct BatchJournal {
     wal: okaywal::WriteAheadLog,
     batches: Arc<Batches>,
@@ -236,6 +240,8 @@ impl okaywal::LogManager for BatchCheckpointer {
         _checkpointed_entries: &mut okaywal::SegmentReader,
         _wal: &okaywal::WriteAheadLog,
     ) -> std::io::Result<()> {
+        // TODO: This should use `_last_checkpointed_id` to ensure that only batches
+        // that are part of the checkpoint are included.
         self.batches
             .checkpoint()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
