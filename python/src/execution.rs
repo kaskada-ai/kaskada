@@ -89,6 +89,8 @@ impl Execution {
         let execution = self.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
             // We can't use `?` here because it attempts to acquire the GIL unexpectedly.
+            println!("In future-into-py");
+
             let next = execution
                 .owned_execution()
                 .map_err(|e| e.into_error())
@@ -97,6 +99,13 @@ impl Execution {
                 })
                 .await;
 
+                // let ten_millis = std::time::Duration::from_millis(10000);
+                // TODO: Do I suspect that th with_gil is getting the gil isntead of 
+                // waiting at await? does that make sense? 
+                // Why would this sleep change the behavior? 
+                // std::thread::sleep(ten_millis);
+
+            println!("Acquiring GIL");
             Python::with_gil(|py| {
                 if let Some(batch) = next? {
                     Ok(batch.to_pyarrow(py)?)

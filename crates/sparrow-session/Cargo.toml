@@ -17,6 +17,7 @@ derive_more.workspace = true
 error-stack.workspace = true
 futures.workspace = true
 itertools.workspace = true
+parking_lot.workspace = true
 smallvec.workspace = true
 sparrow-api = { path = "../sparrow-api" }
 sparrow-backend = { path = "../sparrow-backend" }

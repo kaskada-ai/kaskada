@@ -190,9 +190,11 @@ impl ScanOperation {
                     })
                     // TODO: Share this code / unify it with other scans.
                     .take_until(async move {
+                        println!("FRAZ - Take until");
                         let mut stop_signal_rx =
                             stop_signal_rx.expect("stop signal for use with materialization");
                         while !*stop_signal_rx.borrow() {
+                            println!("Stop signal: {:?}", *stop_signal_rx.borrow());
                             match stop_signal_rx.changed().await {
                                 Ok(_) => (),
                                 Err(e) => {
