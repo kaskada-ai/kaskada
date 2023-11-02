@@ -1,0 +1,41 @@
+---
+title: Feature Stores vs. Feature Engines
+image: /_static/images/blog/stores-vs-engines_banner.png
+author: ""
+date: "2022-12-20"
+draft: true
+---
+
+## Introduction
+
+In the ML world, feature stores are all the rage. They bring the power of MLOps to feature orchestration by providing a scalable architecture that stores and computes features from raw data and serves those features within a production environment. Feature stores may automate many of the more tedious tasks associated with feature handling such as versioning and monitoring features in production for drift. This sort of automation of the feature computation and deployment process makes it easy to get from experimentation to production and reuse feature definitions, allowing data scientists to hand off production-ready features to development teams for their machine learning models. What’s not to like?
+
+Unfortunately, there are a few ways in which feature stores fall flat. For one, they do not enable the iteration and discovery of new features that is essential to the feature engineering process itself. From the moment ML models are trained, they begin to age and deteriorate. It is impractical to expect that a data scientist can simply find all the features that will be needed for all problems for all time—the only constant is change. A few example scenarios include: modeling data that changes over time, modeling behavior in the context of changing environments, or predicting outcomes that depend on human decisions. Feature stores also inherit the limitations of the feature engines they interact with, so choosing the correct feature engine is vital.
+
+Behavior, human decision-making, and changing data over time necessitate a new paradigm for dealing with time and event-based data. Enter the feature engine. Working with time fundamentally alters the feature engineering loop, requiring that it include the ability to select what to compute and when. Relative event times, features, prediction times, labels, and label times are all important. The feature authoring and selection processes need the ability to look back in time for predictor features and forward in time for labels. A feature engine provides the right abstractions, computational model and integrations to enable data scientists to iterate during experimentation and bridge the gap to production.
+
+## Feature Engines
+
+Feature engines can be integrated with specialized  [feature stores](https://www.featurestore.org/)  in order to provide additional functionality. They enable all of the useful elements we’ve come to expect from MLOps such as feature versioning, logging, and feature serving, as well as computing features, and providing useful metadata around each computation. However, feature engines take things a step further by providing an intuitive way to perform event-based feature calculations forward and backward in time, thus giving engineers and data scientists a new and efficient way by which to isolate and iterate upon important features and serve those features in production. Feature engines derive their name from the powerful engine they provide by which features can be iteratively recomputed in a real-time, dynamic environment. They leverage powerful abstractions that make designing time and event-based features intuitive and easy, allowing engineers and data scientists to save valuable time by doing away with complicated and error-prone queries, backfill jobs, and feature pipelines that often need to be rewritten to meet production requirements.
+
+### How They Work
+
+![](https://images.ctfassets.net/fkvz3lhe2g1w/1dn4JZzpP6TqbP05M2GQhx/ece9ef681a8a1e65b5c71134de5fcc4f/Screen_Shot_2022-05-16_at_3.18.47_PM.png)
+
+The fundamental unit (data object) in a feature engine is the event stream, grouped by an entity. Feature engines consume and produce these event streams or timelines. Timelines provide a way to capture a given feature’s value as it changes over time. They can be created, combined, and operated on in almost any conceivable way, allowing data scientists to apply arbitrary functions to the sequences they hold.
+
+This means that different time-based features, or the same feature across different entities (like objects/users), can be readily compared. Timelines are also efficiently implemented under the hood, meaning that these sequential features can be incrementally updated in response to new data without having to be recomputed across the entire data lineage. This saves time and valuable compute power as well as reduces costly errors, vastly speeding up iteration. Simultaneously, feature engines produce the current feature values needed for storage in feature stores. In fact, the feature values stored in a feature store are just the timeline’s last values updated as new data arrives.
+
+### A Mobile Gaming Use Case
+
+Mobile gaming companies understand that in their fast-paced industry, traditional, static feature stores are not enough. In today’s world, where new free games are constantly being built with new game mechanics, it can be difficult to attract, engage and retain players for more than a day. In fact, the mobile gaming industry as a whole suffers from abysmal player retention rates. For innumerable companies, only 24% of players come back the next day, and as many as 94% of players will leave within the first month. The reasons for which they abandon a game are often unknown.
+
+Thus, building and deploying ML models which can predict what will cause a player to leave, with enough time to intervene, are key for these businesses to  [maximize their ROI](https://schedule.gdconf.com/session/boost-engagement-in-your-game-by-supercharging-liveops-with-time-based-machine-learning-presented-by-kaskada/886577?_mc=we_gdcmc_3pvr_x_un_x_LWT_London_2022). However, games are highly dynamic environments in which players may take and respond to hundreds of treatments every single minute. With this deluge of time-based data, how can gaming companies reduce the noise and discover which features are predictive of player frustration and engagement?
+
+A feature engine makes this once impossible task easy. It can effortlessly connect to massive quantities of event-based data to generate behavioral features such as a player’s number of attempts compared to their cohort, their win-loss rate over time, and the time between purchasing in-game power-ups. Feature engines can then combine behavioral features with helpful context features such as the device’s operating system, game version, current location, and connection status and latency. This potent combination of behavior and context features is what allows feature engines to excel in highly dynamic business environments and sets them apart from basic feature store counterparts.
+
+In one partnership with a popular gaming company, Kaskada’s feature engine enabled thousands of feature iterations in just 2.5 weeks, ultimately leading to eight production machine learning models that successfully predicted player survival at four key points for the business. This was an exponential improvement compared to the planned 12-month model development roadmap.
+
+## Conclusion
+
+Feature stores are great for certain production requirements, but in many business contexts, they’re not enough. Instead, they are best used when you already discovered which features are important. Any business which processes event-based data could hugely benefit from the incorporation of a feature engine into their machine learning pipeline. This includes businesses needing to accurately predict LTV, learn segments, predict behavior or decision making or personalize products. Feature engines provide the powerful abstractions and computational models necessary to handle this data, to compute and identify features, and rapidly iterate in a way that can exponentially increase engagement and decrease churn.

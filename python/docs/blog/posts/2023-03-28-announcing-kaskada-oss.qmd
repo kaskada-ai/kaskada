@@ -5,6 +5,7 @@ categories:
  - releases
 title: Announcing Kaskada OSS
 subtitle: From Startup to Open Source Project
+image: /_static/images/blog/announcing-kaskada-oss_banner.png
 ---
 
 # Announcing Kaskada OSS

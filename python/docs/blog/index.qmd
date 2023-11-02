@@ -3,10 +3,17 @@ title: Blog
 listing:
   contents: posts
   sort: "date desc"
-  type: default
+  type: grid
   categories: true
   sort-ui: true
   filter-ui: true
-  fields: ["title", "date", "author", "subtitle", "description", "reading-time", "categories"] # "image", "image-alt",
+  # the commented out fields are the remaining potential fields to include in the listing
+  fields: ["title", "date", "author", "subtitle", "reading-time", "categories", "image", "image-alt"] # "description"
+  image-height: auto
 page-layout: full
+format:
+  html:
+    grid:
+      margin-width: 150px
+      body-width: 1000px
 ---
