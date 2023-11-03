@@ -11,9 +11,12 @@ With the rise of Large-Language Models (LLMs), it is now possible for everyone t
 Starting with foundation models, developers can rapidly prototype the application and then jump into advanced techniques by tuning the prompt or introducing Retrieval-Augmented Generation (RAG), Few-Shot Learning, and Fine-Tuning, all without having to dive deep into machine learning and model learning.
 While current LLM uses often revolve around a few simple applications – chatbots, content summarization, etc. – I see a vast potential in real-time applications.
 
-Imagine a world where LLMs take actions you request – sending an e-mail for you or scheduling a meeting based on multiple people’s calendar.
-Imagine LLMs automatically reacting by categorizing incoming e-mail messages or monitoring the news for articles you’d be interested in.
-Imagine LLMs proactively deciding an email was worth your attention and presenting a summary to you, with the relevant information.
+Imagine a world where LLMs are constantly watching the world around and looking out for your interests.
+Instead of using GPT to draft an e-mail, ask the agent to send it for you.
+As e-mails arrive, they are constantly triaged, with some receiving immediate (generated) responses, most being provided in occassionally summaries for your attention, and only the most important actually interrupting you.
+As news articles are posted, they may be filtered and grouped based on your interests and summarized when you request.
+[BeepGPT](https://epinzur.github.io/posts/001-openai-fine-tuning-1/post.html), an example agent that automatically listens to messages on Slack and pings you if appropriate is just the beginning.
+Such agents are "always on" and tapped into the firehose of evetns happening around you.
 
 Throughout this article, I’ll use the example of an agent assisting a travel booking agency. The agency will work with customers via email and an online booking portal.
 The core ideas can be generalized across industries and applications.
@@ -64,8 +67,11 @@ When online bookings are made, we need to update the availability of the tours s
 Depending on the application, we may want to limit the actions automatically taken by the agent based on the user configuration.
 For instance, only sending email responses to questions that I have told it to handle, rather than automatically handling everything.
 
-The set of actions and when (and how) to include the human in the loop depends on the real-time application.
-Needless to say, this is another place where human judgment will be needed when creating real-time AI applications.
+The set of actions and when (and how) to __include the human in the loop__ depends on the real-time application.
+Seamlessly including the operator in the loop allows for a much wider range of actions to be taken.
+While I may not (yet) trust the agent to automatically book my trip, if it summarizes the suggestions and then asks for confirmation, that would be great!
+
+Needless to say, implementing actions and the appropriate human involvement is another place where your judgment will be needed when creating real-time AI applications.
 
 ## Learn
 A real-time agent continues to improve over-time. There are a variety of ways to learn and improve the quality of responses:
