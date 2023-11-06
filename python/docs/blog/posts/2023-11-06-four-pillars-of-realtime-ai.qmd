@@ -1,0 +1,114 @@
+---
+date: 2023-Nov-06
+author: Ben Chambers
+categories:
+ - real-time AI
+ - GenAI
+title: "Always On: Four Pillars of Real-Time Generative AI"
+---
+
+With the rise of Large-Language Models (LLMs), it is now possible for everyone to create AI-powered applications and agents.
+Starting with foundation models, developers can rapidly prototype the application and then jump into advanced techniques by tuning the prompt or introducing Retrieval-Augmented Generation (RAG), Few-Shot Learning, and Fine-Tuning, all without having to dive deep into machine learning and model learning.
+While current LLM uses often revolve around a few simple applications – chatbots, content summarization, etc. – I see a vast potential in real-time applications.
+
+Imagine a world where LLMs are constantly watching the world around you and looking out for your
+interests.
+Instead of being interrupted by emails or chats and having to read, filter, and construct responses, AI-powered agents constantly triage and take appropriate actions.
+Some messages will receive generated responses, some will be summarized for later review, and only the time-sensitive ones will actually interrupt you.
+For example, [BeepGPT](https://epinzur.github.io/posts/001-openai-fine-tuning-1/post.html) is an agent that automatically listens to messages on Slack and pings you, if appropriate based on learned interests. Such agents are __*always on*__ and tapped into the firehose of events happening around you.
+
+Throughout this article, I’ll use the example of an agent assisting a travel booking agency. The agency will work with customers via email and an online booking portal.
+The core ideas can be generalized across industries and applications.
+
+This article delves deep into four pillars of real-time AI – things your application will need to do to provide active, reactive and proactive experiences powered by LLMs.
+I’ll talk more about each of these pillars below.
+
+![Four Pillars of Real-Time Generative AI](/_static/images/blog/four_pillars_of_realtime_genai.svg)
+
+## Watch
+To be truly real-time, an AI agent must connect with events as they happen. In our email booking scenario, the application should detect incoming emails – possibly implementing an SMTP service or integrating with the e-mail application. It must also observe bookings made via the web portal so that it has up-to-date availability information for both the e-mail service and the web bookings.
+
+The source of the relevant events likely vary, and include both structured and unstructured events:
+
+- Internal events might be available from a streaming platform, like Apache Kafka.
+- Public APIs may provide events via websocket or webhook handlers, or require some form of scraping.
+- Other events may be generated within the application as part of other workflows, for example when a user confirms a booking via email.
+
+Often, there are a variety of events of different kinds coming from different sources, all of which need to be combined for the real-time agent to understand what is happening and respond to it – in the example, we need to use events from email and the web application.
+
+Many existing LLM applications respond to specific user requests.
+In contrast, Real-Time AI needs to be “always on” – observing things that happen and ready to jump in with assistance.
+This starts with the ability to watch the events.
+
+## Trigger
+The essence of a real-time application – and AI agents are no exception – lies in discerning when to act.
+An email asking about tour availability demands a prompt answer, while a promotion from a local store does not need any action.
+
+Implementing the behaviors and applying them in response to the right kinds of events is where you, as the creator of the real-time AI application, get to apply your experience.
+Not all events necessarily merit an LLM invocation – for instance, when someone books online, you can update the remaining slots in the tour directly.
+Similarly, if an email is classified as spam you may not need to do anything with it.
+Using “intelligent” triggers and behaviors allows you to ensure the time (and possibly cost) of applying LLM is “worth it” for the value provided.
+
+While triggering, you may also use other models – to decide whether (and what) to do.
+For instance, you may use an LLM as a “router” to decide which actions to take, or a more traditional classifier model.
+
+When building a Real-Time AI application, you need to identify which events matter and what behaviors to take in response to each of those events.
+The behaviors likely include computations over the events as well as LLM invocations.
+
+## Act
+The range of actions available to the real-time AI agent is paramount to providing amazing experiences.
+Agents will likely require a variety of actions – applying an LLM, updating values within a computation, interacting with external systems, etc.
+In fact, often there may be an entire process initiated in response to an event or request.
+
+For our travel booking agent, we may want to use the LLM to suggest a response to an email as well as actually sending that response.
+When online bookings are made, we need to update the availability of the tours so that the latest information is reflected in future email and online responses.
+
+Depending on the application, we may want to limit the actions automatically taken by the agent based on the user configuration.
+For instance, only sending email responses to questions that I have told it to handle, rather than automatically handling everything.
+
+The set of actions and when (and how) to __include the human in the loop__ depends on the real-time application.
+Seamlessly including the operator in the loop allows for a much wider range of actions to be taken.
+While I may not (yet) trust the agent to automatically book my trip, if it summarizes the suggestions and then asks for confirmation, that would be great!
+
+Needless to say, implementing actions and the appropriate human involvement is another place where your judgment will be needed when creating real-time AI applications.
+
+## Learn
+A real-time agent continues to improve over-time. There are a variety of ways to learn and improve the quality of responses:
+
+RAG
+: Add information to a vector database and provide that to the LLM for richer, more precise responses.
+  For instance, load information describing the tours to answer questions like “how long is the tour” and “what visas do I need to go on the tour”.
+
+Prompt tuning
+: As you develop your application, you’ll likely want to explore variations in how you use LLMs.
+  Changes to the prompt and how the LLM is used (for instance, asking the LLM to explain the steps, as in chain-of-thought reasoning) often lead to higher quality answers.
+
+Instructions / Few-Shot Learning
+: Some behaviors may benefit from providing some few-shot learning (examples) of how we’d like the LLM to respond.
+  For instance, this may be used to manage the tone of the responses being generated, etc.
+
+Fine-Tuning
+: For some applications, creating a fine-tuned LLM for the specific questions being asked may lead to significant improvements in response quality.
+
+These learning techniques can broadly be divided into those that can be automated or scripted – such as adding new tours to the vector database – and those which require changes to the application – such as changing from a single prompt to chain-of-thought.
+While useful, this distinction between automated and manual improvements can be blurry – for instance, you could automate the collection of new training examples and fine-tuning of a new generation of model.
+
+It will be important to identify the metrics you use for quality of responses.
+While LLMs have been shown to be effective at evaluating the quality of their own output, the quality of real-time agents should be measured in terms of how helpful the overall agent is, not just the response the LLM provided within an individual action.
+User feedback is a valuable metric, especially for identifying what parts of the real-time application delight them and which parts left them confused.
+
+At the end of the day, while foundation models make it really easy to get started with an application using generative AI, you will likely find a point where you do need to look at improving the model itself.
+This shouldn’t be avoided – it means that your application has reached a point where what matters is the quality of the model responses, and you have opportunities to improve that!
+
+## Conclusion
+These four pillars are critical to creating amazing real-time AI agents:
+
+1. Watching what happens in real-time, so the agent can respond to and be aware of what is happening.
+2. Triggering actions when appropriate.
+3. Acting in response to what is happening.
+4. Learning from what has happened and the results of those actions.
+
+This list should serve as a good starting point when evaluating technologies to use when building these real-time applications.
+
+What real-time applications can you envision with the rise of LLMs?
+Discuss this post and the potential for Real-Time Agents in the [GitHub discussion thread]()!
