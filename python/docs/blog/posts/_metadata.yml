@@ -1,2 +1,5 @@
 title-block-style: "default"
+# Background for the title banner.
 title-block-banner: "#c3c8cd"
+# Font color for the title banner.
+title-block-banner-color: "#212529"

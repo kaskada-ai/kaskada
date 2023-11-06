@@ -111,4 +111,4 @@ These four pillars are critical to creating amazing real-time AI agents:
 This list should serve as a good starting point when evaluating technologies to use when building these real-time applications.
 
 What real-time applications can you envision with the rise of LLMs?
-Discuss this post and the potential for Real-Time Agents in the [GitHub discussion thread]()!
+Discuss this post and the potential for Real-Time Agents in the [GitHub discussion thread](https://github.com/kaskada-ai/kaskada/discussions/851)!
