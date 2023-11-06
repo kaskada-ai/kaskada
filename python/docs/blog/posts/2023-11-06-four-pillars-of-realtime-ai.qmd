@@ -4,19 +4,18 @@ author: Ben Chambers
 categories:
  - real-time AI
  - GenAI
-title: "Always On: Four Pillars of Real-time Generative AI"
+title: "Always On: Four Pillars of Real-Time Generative AI"
 ---
 
 With the rise of Large-Language Models (LLMs), it is now possible for everyone to create AI-powered applications and agents.
 Starting with foundation models, developers can rapidly prototype the application and then jump into advanced techniques by tuning the prompt or introducing Retrieval-Augmented Generation (RAG), Few-Shot Learning, and Fine-Tuning, all without having to dive deep into machine learning and model learning.
 While current LLM uses often revolve around a few simple applications – chatbots, content summarization, etc. – I see a vast potential in real-time applications.
 
-Imagine a world where LLMs are constantly watching the world around and looking out for your interests.
-Instead of using GPT to draft an e-mail, ask the agent to send it for you.
-As e-mails arrive, they are constantly triaged, with some receiving immediate (generated) responses, most being provided in occassionally summaries for your attention, and only the most important actually interrupting you.
-As news articles are posted, they may be filtered and grouped based on your interests and summarized when you request.
-[BeepGPT](https://epinzur.github.io/posts/001-openai-fine-tuning-1/post.html), an example agent that automatically listens to messages on Slack and pings you if appropriate is just the beginning.
-Such agents are "always on" and tapped into the firehose of evetns happening around you.
+Imagine a world where LLMs are constantly watching the world around you and looking out for your
+interests.
+Instead of being interrupted by emails or chats and having to read, filter, and construct responses, AI-powered agents constantly triage and take appropriate actions.
+Some messages will receive generated responses, some will be summarized for later review, and only the time-sensitive ones will actually interrupt you.
+For example, [BeepGPT](https://epinzur.github.io/posts/001-openai-fine-tuning-1/post.html) is an agent that automatically listens to messages on Slack and pings you, if appropriate based on learned interests. Such agents are __*always on*__ and tapped into the firehose of events happening around you.
 
 Throughout this article, I’ll use the example of an agent assisting a travel booking agency. The agency will work with customers via email and an online booking portal.
 The core ideas can be generalized across industries and applications.
@@ -43,7 +42,7 @@ This starts with the ability to watch the events.
 
 ## Trigger
 The essence of a real-time application – and AI agents are no exception – lies in discerning when to act.
-An email asking about tour availability demands a prompt answer, while a grocery list from a relative might not need any action.
+An email asking about tour availability demands a prompt answer, while a promotion from a local store does not need any action.
 
 Implementing the behaviors and applying them in response to the right kinds of events is where you, as the creator of the real-time AI application, get to apply your experience.
 Not all events necessarily merit an LLM invocation – for instance, when someone books online, you can update the remaining slots in the tour directly.
@@ -104,12 +103,12 @@ This shouldn’t be avoided – it means that your application has reached a poi
 ## Conclusion
 These four pillars are critical to creating amazing real-time AI agents:
 
-1. Watching what happens in real-time, so the agent can respond (if appropriate) and respond with awareness of what has happened.
-2. Knowing when to act by triggering actions based on the events.
+1. Watching what happens in real-time, so the agent can respond to and be aware of what is happening.
+2. Triggering actions when appropriate.
 3. Acting in response to what is happening.
 4. Learning from what has happened and the results of those actions.
 
 This list should serve as a good starting point when evaluating technologies to use when building these real-time applications.
 
 What real-time applications can you envision with the rise of LLMs?
-Share your thoughts in the comments below!
+Discuss this post and the potential for Real-Time Agents in the [GitHub discussion thread]()!
