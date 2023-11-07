@@ -32,6 +32,8 @@ pub enum Error {
     Execute,
     #[display(fmt = "execution failed")]
     ExecutionFailed,
+    #[display(fmt = "execution results already consumed")]
+    AlreadyConsumed,
 }
 
 impl error_stack::Context for Error {}
