@@ -124,7 +124,7 @@ pub(crate) enum Event {
 #[derive(Serialize, Eq, PartialEq, Debug, Default)]
 #[allow(dead_code)]
 pub(crate) enum EventScope {
-    /// The event will be drawn from the top to bottom of the timestream.
+    /// The event will be drawn from the top to bottom of the timeline.
     #[serde(rename = "g")]
     Global,
     /// The event will be drawn through all threads of a given process.

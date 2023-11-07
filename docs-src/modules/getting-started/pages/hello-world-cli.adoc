@@ -90,7 +90,7 @@ You should see output similar to the following:
 
 Kaskada stores data in _tables_. Tables consist of multiple rows, and
 each row is a value of the same type.
-When querying Kaskada, the contents of a table are interpreted as a xref:fenl:continuity.adoc[discrete timestream]: the value associated with each event corresponds to a value in the timestream.
+When querying Kaskada, the contents of a table are interpreted as a xref:fenl:continuity.adoc[discrete timeline]: the value associated with each event corresponds to a value in the timeline.
 
 === Creating a Table
 
@@ -264,7 +264,7 @@ _time,_subsort,_key_hash,_key,id,purchase_time,customer_id,vendor_id,amount,subs
 === Complex Examples with Fenl functions
 
 In this example, we build a pipeline of functions using the `|` character.
-We begin with the timestream produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"` using the `xref:fenl:catalog.adoc#when[when()]` function.
+We begin with the timeline produced by the table `Purchase`, then filter it to the set of times where the purchase's customer is `"patrick"` using the `xref:fenl:catalog.adoc#when[when()]` function.
 
 Kaskada's query language provides a rich set of xref:fenl:catalog.adoc[operations] for reasoning about time.
 Here's a more sophisticated example that touches on many of the unique features of Kaskada queries:
@@ -281,15 +281,15 @@ include::partial$cli-unique.adoc[]
 A given query can be computed in different ways.
 You can configure how a query is executed by providing arguments to the CLI command.
 
-==== Changing how the result timestream is output
+==== Changing how the result timeline is output
 
-When you make a query, the resulting timestream is interpreted in one of two ways: as a history or as a snapshot.
+When you make a query, the resulting timeline is interpreted in one of two ways: as a history or as a snapshot.
 
-* A timestream *History* generates a value each time there is a change in the value for the entity, and each row is associated with a different entity and point in time.
-* A timestream *Snapshot* generates a value for each entity at the same point in time; each row is associated with a different entity, but all rows are associated with the same time.
+* A timeline *History* generates a value each time there is a change in the value for the entity, and each row is associated with a different entity and point in time.
+* A timeline *Snapshot* generates a value for each entity at the same point in time; each row is associated with a different entity, but all rows are associated with the same time.
 
-By default, timestreams are output as histories.
-You can output a timestream as a snapshot by setting the `--result-behavior` argument to `final-results`.
+By default, timelines are output as histories.
+You can output a timeline as a snapshot by setting the `--result-behavior` argument to `final-results`.
 
 [source,Fenl]
 ----
