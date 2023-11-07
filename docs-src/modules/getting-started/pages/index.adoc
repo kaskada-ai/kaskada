@@ -88,7 +88,7 @@ Kaskada can be configured to run as a remote service or as a local process.
 
 == Kaskada's data model
 
-timestreams begin with xref:developing:tables.adoc[tables].
+Timestreams begin with xref:developing:tables.adoc[tables].
 Tables are how Kaskada stores input events.
 Tables consist of multiple events, and each event is a value of the same xref:fenl:data-model.adoc[type].
 

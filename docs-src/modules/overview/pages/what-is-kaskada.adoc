@@ -7,7 +7,7 @@ Getting to this type of contextual real-time insight has historically been diffi
 
 Kaskada provides a single, high-level, declarative query language. The power and convenience of Kaskada's query language come from the fact that it's built from a new abstraction: the timestream. timestreams give you the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc. Any query can be used, unchanged, in either batch or streaming mode.
 
-== What are timestreams?
+== What are Timestreams?
 
 Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about changes over time, and is built on the idea of a timestream.
 
@@ -33,7 +33,7 @@ Having the right tool makes every job easier: different data-processing jobs ben
 
 A timestream describes how a value changes over time. In the same way that SQL queries transform tables and graph queries transform nodes and edges, Kaskada queries transforms timestreams. In comparison to a timeseries which is defined at fixed, periodic times (i.e., every minute), a timestream is defined at arbitrary times.
 
-timestreams simplify reasoning about time, change, and behavior. timestreams support SQL’s aggregations but extend them with sequential operations typically provided by complex event processing (CEP) systems.
+Timestreams simplify reasoning about time, change, and behavior. Timestreams support SQL’s aggregations but extend them with sequential operations typically provided by complex event processing (CEP) systems.
 
 == Current Challenges
 

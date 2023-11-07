@@ -107,7 +107,7 @@ Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.a
 
 === Continuous expressions
 
-Observe the value of aggregations at arbitrary points in time. timestreams are either “xref:fenl:continuity.adoc#discrete-expressions[discrete]” (instantaneous values or events) or “xref:fenl:continuity.adoc#continuous-expressions[continuous]” (values produced by a stateful aggregations). Continuous timestreams let you combine aggregates computed from different event sources.
+Observe the value of aggregations at arbitrary points in time. Timestreams are either “xref:fenl:continuity.adoc#discrete-expressions[discrete]” (instantaneous values or events) or “xref:fenl:continuity.adoc#continuous-expressions[continuous]” (values produced by a stateful aggregations). Continuous timestreams let you combine aggregates computed from different event sources.
 
 [source,Fenl]
 ----
