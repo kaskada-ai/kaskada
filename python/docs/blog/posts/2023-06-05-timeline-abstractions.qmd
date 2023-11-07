@@ -1,8 +1,8 @@
 ---
 date: 2023-Jun-05
 author: Brian Godsey
-title: "It’s Time for a Time-centric Stack: Timeline Abstractions Save Time and Money"
-image: "/_static/images/blog/timeline-abstractions_banner.png"
+title: "It’s Time for a Time-centric Stack: Timestream Abstractions Save Time and Money"
+image: "/_static/images/blog/timestream-abstractions_banner.png"
 draft: true
 ---
 
@@ -254,10 +254,10 @@ letting Kaskada handle time logic in the intuitive way (unless you want to use
 different logic).
 
 
-### Kaskada’s native timeline abstraction was built for this
+### Kaskada’s native timestream abstraction was built for this
 
 [Kaskada's concept of
-timelines](https://kaskada.io/2023/05/09/introducing-timelines-part-1.html) and
+timestreams](https://kaskada.io/2023/05/09/introducing-timestreams-part-1.html) and
 its overall time-centric design means that natural logic around time
 calculations happens natively. Kaskada can do a 30-day rolling average with a
 single line of code, more or less, and you don't have to think about the rows
@@ -281,7 +281,7 @@ should work on each and every query that needs it—a recipe that invites troubl
 ### Try it out and let us know what you think!
 
 Kaskada is open-source and easy to set up on your local machine in just a few
-minutes. For more information about how Kaskada and native timelines can
+minutes. For more information about how Kaskada and native timestreams can
 dramatically simplify coding logic and computational efficiency for time-centric
 feature engineering and analytics on event-based data, see [our
 documentation](/guide),

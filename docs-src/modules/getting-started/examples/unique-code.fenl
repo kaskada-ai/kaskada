@@ -9,7 +9,7 @@ let hourly_big_purchases = Purchase
 # Aggregate anything
 | when(hourly())
 
-# Shift timelines relative to each other
+# Shift timestreams relative to each other
 let purchases_now = count(Purchase)
 let purchases_yesterday =
    purchases_now | shift_by(days(1))

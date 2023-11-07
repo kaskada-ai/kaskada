@@ -7,17 +7,17 @@ This document will show you how to quickly get started using Kaskada.
 [TIP]
 ====
 Before jumping in to writing queries in Kaskada, it's a good idea to take a minute understanding "how to think with Kaskada".
-Kaskada is built on timelines - a simple, powerful abstraction that may be different than what you're accustomed to.
+Kaskada is built on timestreams - a simple, powerful abstraction that may be different than what you're accustomed to.
 
 If you'd prefer to jump right in, scroll down to the xref:#quick-starts[] section
 ====
 
-== Thinking with Kaskada's timelines
+== Thinking with Kaskada's timestreams
 
-Kaskada is built on the idea of a _timeline_ - the history of how a value changes over time for a specific entity or group.
+Kaskada is built on the idea of a _timestream_ - the history of how a value changes over time for a specific entity or group.
 
 [stream_viz,name=basic-sum]
-.Aggregating events as a timeline
+.Aggregating events as a timestream
 ....
 [
     {
@@ -47,22 +47,22 @@ Kaskada is built on the idea of a _timeline_ - the history of how a value change
 ]
 ....
 
-Timelines allow you to reason about temporal context, time travel, sequencing, time-series, and more.
+timestreams allow you to reason about temporal context, time travel, sequencing, time-series, and more.
 They allow simple, composable, declarative queries over events.
-Transforming and combining timelines allows you to intuitively express computations over events.
+Transforming and combining timestreams allows you to intuitively express computations over events.
 
 ****
-⭢ Read more about timelines in xref:overview:what-is-kaskada.adoc[]
+⭢ Read more about timestreams in xref:overview:what-is-kaskada.adoc[]
 ****
 
-With Kaskada, it's timelines all the way down - every operation's inputs and outputs are timelines.
-The timeline is a flexible abstraction that can be used in different ways depending on your needs.
-In some cases, you may want to know what the timeline's value is at a specific point in time, in other cases you may want to know how the timeline's value changes over time.
+With Kaskada, it's timestreams all the way down - every operation's inputs and outputs are timestreams.
+The timestream is a flexible abstraction that can be used in different ways depending on your needs.
+In some cases, you may want to know what the timestream's value is at a specific point in time, in other cases you may want to know how the timestream's value changes over time.
 
-When making a query, you configure how to use the query's output timeline: you can use the timeline as either a _history_ or as a _snapshot_.
+When making a query, you configure how to use the query's output timestream: you can use the timestream as either a _history_ or as a _snapshot_.
 
-* A timeline *History* contains a value each time the timeline changes, and each row describes a different entity at a different point in time.
-* A timeline *Snapshot* contains a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows reflect the same point in time.
+* A timestream *History* contains a value each time the timestream changes, and each row describes a different entity at a different point in time.
+* A timestream *Snapshot* contains a value for each entity at the _same_ point in time; each row is associated with a different entity, but all rows reflect the same point in time.
 
 This output may be written in different ways -- for example, they may be written to a Parquet file or sent as events to a stream.
 
@@ -88,7 +88,7 @@ Kaskada can be configured to run as a remote service or as a local process.
 
 == Kaskada's data model
 
-Timelines begin with xref:developing:tables.adoc[tables].
+timestreams begin with xref:developing:tables.adoc[tables].
 Tables are how Kaskada stores input events.
 Tables consist of multiple events, and each event is a value of the same xref:fenl:data-model.adoc[type].
 
@@ -102,10 +102,10 @@ Tables consist of multiple events, and each event is a value of the same xref:fe
 | 8:52 | Alice | `{amount: 4}`
 |===
 
-When querying Kaskada, the contents of a table are interpreted as a xref:fenl:continuity.adoc[discrete timeline]: the value associated with each event corresponds to a value in the timeline.
+When querying Kaskada, the contents of a table are interpreted as a xref:fenl:continuity.adoc[discrete timestream]: the value associated with each event corresponds to a value in the timestream.
 
-[stream_viz,name=purchase-timeline]
-.Discrete timeline describing the `Purchase` table
+[stream_viz,name=purchase-timestream]
+.Discrete timestream describing the `Purchase` table
 ....
 [
     {

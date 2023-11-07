@@ -35,12 +35,12 @@ Visualizing events chronologically allows us to understand the context of each e
 * The third player pays for upgrades when they get frustrated.
 
 We'd like to capture this type of time-based insight as feature values we can use to train a model.
-We can do this by drawing the result of feature computations as a timeline showing how the feature's value changes as each event is observed.
-This timeline allows us to “observe” the value of the feature at any point in time, giving us a framework for training real-time ML models:
+We can do this by drawing the result of feature computations as a timestream showing how the feature's value changes as each event is observed.
+This timestream allows us to “observe” the value of the feature at any point in time, giving us a framework for training real-time ML models:
 
 image::framework.png[Real-time ML framework]
 
-1. Start with raw events and compute feature timelines
+1. Start with raw events and compute feature timestreams
 2. Observe features at the points in time a prediction would be made to build a training example
 3. Move each example forward in time until the predicted outcome can be observed
 4. Compute the correct target value and append it to the example
@@ -140,7 +140,7 @@ let features = { <1>
 | { loss_dur: 106s }
 |===
 
-Notice that the result is a timeline describing the step function of how this feature has changed over time. We can “observe” the value of this step function at any time, regardless of the times at which the original events occurred.
+Notice that the result is a timestream describing the step function of how this feature has changed over time. We can “observe” the value of this step function at any time, regardless of the times at which the original events occurred.
 
 Another thing to notice is that these results are automatically grouped by user. We didn't have to explicitly group by user because tables in Kaskada specify an "entity" associated with each row. 
 
@@ -192,7 +192,7 @@ let examples = features
   | shift_by(hours(1)) <2>
 ----
 <1> The examples we created previously
-<2> Shift the results of the last step forward in time by one hour - visually you could imagine dragging the examples forward in the timeline by one hour
+<2> Shift the results of the last step forward in time by one hour - visually you could imagine dragging the examples forward in the timestream by one hour
 
 [cols="1m,2m,4m"]
 |===

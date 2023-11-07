@@ -5,11 +5,11 @@ You need the ability to understand if what just happened is unusual, how it rela
 
 Getting to this type of contextual real-time insight has historically been difficult, as it required bringing together incompatible tools designed for either bulk or streaming applications. Recent stream-processing frameworks make it easier to work across streams and bulk data sources, but force you to pick one: either you get the power of a low-level API or the convenience of a high-level query language.
 
-Kaskada provides a single, high-level, declarative query language. The power and convenience of Kaskada's query language come from the fact that it's built from a new abstraction: the timeline. Timelines give you the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc. Any query can be used, unchanged, in either batch or streaming mode.
+Kaskada provides a single, high-level, declarative query language. The power and convenience of Kaskada's query language come from the fact that it's built from a new abstraction: the timestream. timestreams give you the declarative transformations and aggregations of SQL without losing the ability to reason about temporal context, time travel, sequencing, timeseries, etc. Any query can be used, unchanged, in either batch or streaming mode.
 
-== What are Timelines?
+== What are timestreams?
 
-Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about changes over time, and is built on the idea of a timeline.
+Having the right tool makes every job easier: different data-processing jobs benefit from different ways of thinking. Tables are useful for inter-related records, graphs are useful for thinking about networks - Kaskada was designed for thinking about changes over time, and is built on the idea of a timestream.
 
 .Where I was at various times
 [stream_viz,name=my-location]
@@ -31,9 +31,9 @@ Having the right tool makes every job easier: different data-processing jobs ben
 ]
 ....
 
-A timeline describes how a value changes over time. In the same way that SQL queries transform tables and graph queries transform nodes and edges, Kaskada queries transforms timelines. In comparison to a timeseries which is defined at fixed, periodic times (i.e., every minute), a timeline is defined at arbitrary times.
+A timestream describes how a value changes over time. In the same way that SQL queries transform tables and graph queries transform nodes and edges, Kaskada queries transforms timestreams. In comparison to a timeseries which is defined at fixed, periodic times (i.e., every minute), a timestream is defined at arbitrary times.
 
-Timelines simplify reasoning about time, change, and behavior. Timelines support SQL’s aggregations but extend them with sequential operations typically provided by complex event processing (CEP) systems.
+timestreams simplify reasoning about time, change, and behavior. timestreams support SQL’s aggregations but extend them with sequential operations typically provided by complex event processing (CEP) systems.
 
 == Current Challenges
 
@@ -93,11 +93,11 @@ GROUP BY user_id
 
 If you wanted to know how that value has changed over time you'd need to re-write the query from scratch, and the result would be too long to show in this quick introduction.
 
-Many time and sequence related questions end up being surprisingly hard to answer with SQL. This is where the notion of timelines can make your life much easier.
+Many time and sequence related questions end up being surprisingly hard to answer with SQL. This is where the notion of timestreams can make your life much easier.
 
-== The solution offered by timelines
+== The solution offered by timestreams
 
-Rather than thinking of each event as a row in a table, we can think of it as a point along a timeline.
+Rather than thinking of each event as a row in a table, we can think of it as a point along a timestream.
 
 [stream_viz,name=purchase]
 ....
@@ -118,7 +118,7 @@ Rather than thinking of each event as a row in a table, we can think of it as a 
 ]
 ....
 
-Kaskada provides many ways of transforming timelines, for example we can compute the simple sum we saw earlier:
+Kaskada provides many ways of transforming timestreams, for example we can compute the simple sum we saw earlier:
 
 [source,fenl]
 ----
@@ -155,9 +155,9 @@ Purchase.amount | sum()
 ]
 ....
 
-Aggregating a timeline produces a _new_ timeline - rather than computing a single answer, the timeline describes how the result of the aggregation changes over time.
+Aggregating a timestream produces a _new_ timestream - rather than computing a single answer, the timestream describes how the result of the aggregation changes over time.
 
-Since the value of a timeline is specific to a point in time, we can easily describe aggregations in a temporal context.
+Since the value of a timestream is specific to a point in time, we can easily describe aggregations in a temporal context.
 See how easy it is to describe the earlier example of counting page views since the last purchase:
 
 [source,fenl]
@@ -204,7 +204,7 @@ Pageview
 ]
 ....
 
-This timeline describes the result of a query at every point in time, so we can easily observe its value at specific points in time without making any changes to the query:
+This timestream describes the result of a query at every point in time, so we can easily observe its value at specific points in time without making any changes to the query:
 
 [source,fenl]
 ----
@@ -287,7 +287,7 @@ Pageview
 
 
 Finally, we're not limited to only thinking about a single point in time.
-By shifting timelines relative to each other we can easily describe how values change over time, for example how the previous result has changed hour-over-hour:
+By shifting timestreams relative to each other we can easily describe how values change over time, for example how the previous result has changed hour-over-hour:
 
 [source,fenl]
 ----
@@ -342,7 +342,7 @@ in daily_average - (daily_average | shift_by(hours(1)))
 ]
 ....
 
-Writing these simple-seeming queries over timelines with SQL queries over tables would have been _much_ harder, more verbose, and less maintainable due to the lack of alignment between the problem and the abstractions used to solve the problem.
+Writing these simple-seeming queries over timestreams with SQL queries over tables would have been _much_ harder, more verbose, and less maintainable due to the lack of alignment between the problem and the abstractions used to solve the problem.
 Aligning our mental model with the problem being solved makes reasoning about time and behavior much easier.
 
 == The shift away from technology-specific solutions
@@ -355,7 +355,7 @@ SQL queries written against OLAP offline data stores often aren't supported by s
 While some real-time systems support "streaming SQL", streams and tables are very different things and much of the power of stream processing is lost in translation.
 
 How a computation is described shouldn't depend on where events are stored - streaming vs batch is an implementation detail.
-By building Kaskada's query language on timelines, it brings the abstractions of streaming to bulk storage, rather than the other way around.
+By building Kaskada's query language on timestreams, it brings the abstractions of streaming to bulk storage, rather than the other way around.
 
 Kaskada allows developers to focus on solving problems with event data by raising the abstraction level used to describe queries.
 

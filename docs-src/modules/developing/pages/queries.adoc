@@ -20,19 +20,19 @@ The following is a quick overview of the query language's main features and synt
 === Viewing and filtering the contents of a table
 
 Kaskada queries are built by composing simple expressions.
-Every expression returns a timeline.
+Every expression returns a timestream.
 
 [source,Fenl]
 ----
 Purchase | when(Purchase.amount > 10)
 ----
 
-In this example we start with the expression `Purchase` (the timeline of all purchase events) then filter it using `xref:fenl:catalog.adoc#when[when()]`.
-The result is a timeline of purchase events whose amount is greater than 10.
+In this example we start with the expression `Purchase` (the timestream of all purchase events) then filter it using `xref:fenl:catalog.adoc#when[when()]`.
+The result is a timestream of purchase events whose amount is greater than 10.
 
 === Stateful aggregations
 
-Aggregate events to produce a continuous timeline whose value can be observed at arbitrary points in time.
+Aggregate events to produce a continuous timestream whose value can be observed at arbitrary points in time.
 
 [source,Fenl]
 ----
@@ -47,8 +47,8 @@ Records allow one or more values to be grouped into a single row.
 You can create a record using the syntax `{key: value, key2: value2}`.
 ====
 
-In this example we first filter the timeline of `Review` events to only include verified reviews, then aggregate the filtered results using the `xref:fenl:catalog.adoc#max[max()]` aggregation.
-The resulting timeline describes the maximum number of stars as-of every point in time.
+In this example we first filter the timestream of `Review` events to only include verified reviews, then aggregate the filtered results using the `xref:fenl:catalog.adoc#max[max()]` aggregation.
+The resulting timestream describes the maximum number of stars as-of every point in time.
 
 === Automatic joins
 
@@ -60,7 +60,7 @@ Every expression is associated with an xref:fenl:entities.adoc[entity], allowing
 ----
 
 Here we've used the `xref:fenl:catalog.adoc#count[count()]` aggregation to divide the number of purchases up to each point in time by the number of pageviews up to the same point in time.
-The result is a timeline describing how each user's purchase-per-pageview changes over time.
+The result is a timestream describing how each user's purchase-per-pageview changes over time.
 Since both the `Purchase` and `Pageview` tables have the same entity, we can easily combine them.
 
 === Event-based windowing
@@ -80,7 +80,7 @@ By default, aggregations are applied from the beginning of time, but here we've 
 
 === Pipelined operations
 
-Pipe syntax allows multiple operations to be chained together. Write your operations in the same order you think about them. It's timelines all the way down, making it easy to aggregate the results of aggregations.
+Pipe syntax allows multiple operations to be chained together. Write your operations in the same order you think about them. It's timestreams all the way down, making it easy to aggregate the results of aggregations.
 
 [source,Fenl]
 ----
@@ -107,7 +107,7 @@ Pivot from events to time-series. Unlike grouped aggregates, xref:fenl:catalog.a
 
 === Continuous expressions
 
-Observe the value of aggregations at arbitrary points in time. Timelines are either “xref:fenl:continuity.adoc#discrete-expressions[discrete]” (instantaneous values or events) or “xref:fenl:continuity.adoc#continuous-expressions[continuous]” (values produced by a stateful aggregations). Continuous timelines let you combine aggregates computed from different event sources.
+Observe the value of aggregations at arbitrary points in time. timestreams are either “xref:fenl:continuity.adoc#discrete-expressions[discrete]” (instantaneous values or events) or “xref:fenl:continuity.adoc#continuous-expressions[continuous]” (values produced by a stateful aggregations). Continuous timestreams let you combine aggregates computed from different event sources.
 
 [source,Fenl]
 ----
@@ -135,7 +135,7 @@ let purchases_yesterday =
 in { purchases_in_last_day: purchases_now - purchases_yesterday }
 ----
 
-In this example we take the timeline produced by `purchases_now` and move it forward in time by one day using the `xref:fenl:catalog.adoc#shift-by[shift_by()]` function.
+In this example we take the timestream produced by `purchases_now` and move it forward in time by one day using the `xref:fenl:catalog.adoc#shift-by[shift_by()]` function.
 We then subtract the shifted value from the original, unshifted value
 
 === Simple, composable syntax
@@ -167,11 +167,11 @@ in {hourly_big_purchases}
 
 A given query can be computed in different ways.
 
-=== Configuring how timelines are converted into tables
+=== Configuring how timestreams are converted into tables
 
-You can either return a table describing each change in the timeline, or a table describing the "final" value of the timeline.
+You can either return a table describing each change in the timestream, or a table describing the "final" value of the timestream.
 
-Every query produces a timeline which may be returned in two different ways -- the final results (at a specific time) or all historic results.
+Every query produces a timestream which may be returned in two different ways -- the final results (at a specific time) or all historic results.
 The "result behavior" configures which results are produced.
 Queries for historic results return the full history of how the values changed over time for each entity.
 Queries for final results return the latest result for each entity at the specified time (default is after all events have been processed).
