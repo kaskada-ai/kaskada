@@ -87,7 +87,9 @@ class Execution:
 
         After this call, the execution will no longer produce results.
         """
+        print("PyExecution: Stop")
         self._ffi_execution.stop()
+        print("PyExecution: Stop done")
 
 
 class ResultIterator(Execution, Iterator[T], AsyncIterator[T]):
@@ -135,14 +137,19 @@ class ResultIterator(Execution, Iterator[T], AsyncIterator[T]):
 
     async def __anext__(self) -> T:
         """Return the next item asynchronously."""
+        print("Anext")
         try:
+            print("???")
             return next(self._items)
         except StopIteration:
             pass
 
         while True:
+            print("PyExecution: NextPyarrowAsync")
             next_batch = await self._ffi_execution.next_pyarrow_async()
+            print("PyExecution: Got batch")
             if next_batch is None:
+                print("Batch is none")
                 raise StopAsyncIteration
 
             # Annoyingly, PyArrow doesn't suport `drop_columns` on batches.

@@ -13,7 +13,7 @@ use crate::error::{ErrorContext, IntoError, Result};
 #[pyclass]
 #[derive(Clone)]
 pub(crate) struct Execution {
-    execution: Arc<Mutex<Option<RustExecution>>>,
+    execution: Arc<Option<RustExecution>>,
     schema: SchemaRef,
 }
 
@@ -21,7 +21,7 @@ impl Execution {
     pub(crate) fn new(execution: RustExecution) -> Self {
         let schema = execution.schema.clone();
         Self {
-            execution: Arc::new(Mutex::new(Some(execution))),
+            execution: Arc::new(Some(execution)),
             schema,
         }
     }
@@ -58,7 +58,7 @@ impl Execution {}
 #[pymethods]
 impl Execution {
     fn collect_pyarrow(&mut self, py: Python<'_>) -> Result<Vec<PyObject>> {
-        let execution = self.take_execution().unwrap();
+        let execution = self.execution.unwrap();
 
         // Explicitly allow threads to take the gil during execution, so
         // the udf evaluator can acquire it to execute python.
@@ -72,11 +72,11 @@ impl Execution {
     }
 
     fn next_pyarrow(&mut self, py: Python<'_>) -> Result<Option<PyObject>> {
-        let mut execution = self.execution()?;
+        // let mut execution = self.execution()?;
 
         // Explicitly allow threads to take the gil during execution, so
         // the udf evaluator can acquire it to execute python.
-        let batch = py.allow_threads(move || execution.as_mut().unwrap().next_blocking())?;
+        let batch = py.allow_threads(move || self.execution.unwrap().as_mut().unwrap().next_blocking())?;
 
         let result = match batch {
             Some(batch) => Some(batch.to_pyarrow(py)?),
@@ -86,19 +86,27 @@ impl Execution {
     }
 
     fn next_pyarrow_async<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
-        let execution = self.clone();
+        // let execution = self.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
             // We can't use `?` here because it attempts to acquire the GIL unexpectedly.
-            let next = execution
-                .owned_execution()
-                .map_err(|e| e.into_error())
-                .and_then(|mut execution| async move {
-                    execution.as_mut().unwrap().next().await.into_error()
-                })
-                .await;
+            println!("In future-into-py");
 
+            let next = self.execution.unwrap().next().await.unwrap();
+                // .map_err(|e| e.into_error())
+                // .and_then(|mut execution| async move {
+                //     execution.as_mut().unwrap().next().await.into_error()
+                // })
+                // .await;
+
+                // let ten_millis = std::time::Duration::from_millis(10000);
+                // TODO: Do I suspect that th with_gil is getting the gil isntead of 
+                // waiting at await? does that make sense? 
+                // Why would this sleep change the behavior? 
+                // std::thread::sleep(ten_millis);
+
+            println!("Acquiring GIL");
             Python::with_gil(|py| {
-                if let Some(batch) = next? {
+                if let Some(batch) = next {
                     Ok(batch.to_pyarrow(py)?)
                 } else {
                     Ok(py.None())
