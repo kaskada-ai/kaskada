@@ -52,7 +52,7 @@ sparrow-arrow = { path = "../sparrow-arrow" }
 sparrow-compiler = { path = "../sparrow-compiler" }
 sparrow-core = { path = "../sparrow-core" }
 sparrow-instructions = { path = "../sparrow-instructions" }
-sparrow-merge = { path = "../sparrow-merge", features = ["testing"] }
+sparrow-merge = { path = "../sparrow-merge" }
 sparrow-qfr = { path = "../sparrow-qfr" }
 static_init.workspace = true
 tempfile.workspace = true
@@ -71,6 +71,7 @@ proptest.workspace = true
 rand.workspace = true
 serde_json.workspace = true
 postcard.workspace = true
+sparrow-merge = { path = "../sparrow-merge", features = ["testing"] }
 sparrow-testing = { path = "../sparrow-testing" }
 tempfile.workspace = true
 
