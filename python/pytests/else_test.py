@@ -65,3 +65,36 @@ async def test_else_debug(record_source, golden) -> None:
             }
         )
     )
+
+
+@pytest.fixture(scope="module")
+def record_source_slack() -> kd.sources.JsonlString:
+    content = "\n".join(
+        [
+            """{"text":"Thread 1","user":"UCZ4","time":1,"thread_ts":1,"key":"dev"}""",
+            """{"text":"Thread 2","user":"U016","time":2,"thread_ts":1,"key":"dev"}""",
+            """{"text":"Msg 1","user":"U016","time":3,"thread_ts":null,"key":"dev"}""",
+            """{"text":"Msg 2","user":"U016","time":4,"thread_ts":null,"key":"dev"}""",
+        ]
+    )
+    return kd.sources.JsonlString(
+        content, time_column_name="time", key_column_name="key"
+    )
+
+
+def test_else_unordered_record(record_source_slack, golden) -> None:
+    threads = record_source_slack.filter(record_source_slack.col("thread_ts").is_not_null())
+    non_threads = record_source_slack.filter(record_source_slack.col("thread_ts").is_null())
+
+    # this call re-orders the columns in the non_threads timestream
+    # and causes the bug to occur
+    non_threads = non_threads.extend({"user": non_threads.col("user")})
+
+    joined = kd.record({"threads": threads, "non_threads": non_threads})
+
+    threads = joined.col("threads")
+    non_threads = joined.col("non_threads")
+
+    golden.jsonl(
+        joined.extend({"joined": threads.else_(non_threads)})
+    )
