@@ -4,6 +4,7 @@ from typing import AsyncIterator, Iterator
 import kaskada as kd
 import pandas as pd
 import pytest
+import asyncio
 
 
 @pytest.fixture
@@ -139,3 +140,33 @@ async def test_history(golden, source_int64) -> None:
             )
         )
     )
+
+async def test_iter_pandas_async_live_timeout(golden, source_int64) -> None:
+    data2 = "\n".join(
+        [
+            "time,key,m,n",
+            "1996-12-20T16:39:57,A,5,10",
+            "1996-12-20T16:39:58,B,24,3",
+            "1996-12-20T16:39:59,A,17,6",
+            "1996-12-20T16:40:00,C,,9",
+            "1996-12-20T16:40:01,A,12,",
+            "1996-12-20T16:40:02,A,,",
+        ]
+    )
+
+    execution = source_int64.run_iter(mode="live")
+
+    # Await the first batch.
+    golden.jsonl(await execution.__anext__())
+
+    # Add data and await the second batch.
+    await source_int64.add_string(data2)
+    golden.jsonl(await execution.__anext__())
+
+    with pytest.raises(TimeoutError):
+        async with asyncio.timeout(1):
+            await execution.__anext__()
+
+    execution.stop()
+    with pytest.raises(StopAsyncIteration):
+        print(await execution.__anext__())
