@@ -23,9 +23,8 @@ utilizing timestreams.
 
 This post is the first in a series introducing Kaskada, an open-source event processing engine designed around the
 timestream abstraction. The full series will include (1) this introduction to the timestream abstraction, (2) [how Kaskada
-builds an expressive temporal query language on the timestream abstraction][timestreams_part2], (3) how the timestream data
-model enables Kaskada to efficiently execute temporal queries, and (4) how timestreams allow Kaskada to execute
-incrementally over event streams.
+builds an expressive temporal query language on the timestream abstraction][timestreams_part2], and (3) how the timestream data
+model enables Kaskada to efficiently execute temporal queries.
 
 ## Rising Abstractions in Stream Processing
 
